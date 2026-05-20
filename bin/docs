@@ -22,11 +22,12 @@ from __future__ import annotations
 __version__ = "0.1.0-m1"
 
 import argparse  # noqa: F401  (used in Phase 7)
+import os
 import re
 import sys
-import tomllib  # noqa: F401  (used in Phase 6)
+import tomllib
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 
@@ -348,7 +349,61 @@ def parse(text: str, path: Path, root: Path) -> Doc:
             For the bare `parse()` call (used in tests), validation
             uses BUILTIN_STATUSES and BUILTIN_ROLES.
     """
-    raise NotImplementedError("parse() — Phase 6")
+    title, metadata, body = parse_metadata_block(text)
+
+    for required in ("Status", "Role", "Updated"):
+        if required not in metadata or not metadata[required]:
+            raise MetadataError(f"{path}: missing {required}")
+        if not isinstance(metadata[required], str):
+            raise MetadataError(f"{path}: {required} must be a single value")
+
+    status = metadata["Status"]
+    role = metadata["Role"]
+    updated_raw = metadata["Updated"]
+    assert isinstance(status, str)
+    assert isinstance(role, str)
+    assert isinstance(updated_raw, str)
+
+    validate_status(status, BUILTIN_STATUSES)
+    validate_role(role, BUILTIN_ROLES)
+    updated = parse_date(updated_raw)
+
+    project_raw = metadata.get("Project")
+    project: str | None
+    if project_raw is None:
+        project = None
+    elif isinstance(project_raw, str):
+        project = project_raw
+    else:
+        raise MetadataError(f"{path}: Project must be a single value")
+
+    related: tuple[tuple[str, str], ...] = ()
+    raw_related = metadata.get("Related")
+    if raw_related is not None:
+        entries = raw_related if isinstance(raw_related, tuple) else (raw_related,)
+        parsed_related: list[tuple[str, str]] = []
+        for entry in entries:
+            verb, sep, target = entry.partition(":")
+            if not sep or not target.strip():
+                raise MetadataError(f"{path}: malformed Related entry {entry!r}")
+            parsed_related.append((verb.strip(), target.strip()))
+        related = tuple(parsed_related)
+
+    known = {"Status", "Role", "Updated", "Project", "Related"}
+    extra: dict[str, str | tuple[str, ...]] = {k: v for k, v in metadata.items() if k not in known}
+
+    return Doc(
+        path=path,
+        title=title,
+        status=status,
+        role=role,
+        project=project,
+        updated=updated,
+        related=related,
+        extra=extra,
+        body=body,
+        archived=False,
+    )
 
 
 def walk(root: Path, config: Config) -> Iterator[Doc]:
@@ -365,7 +420,26 @@ def walk(root: Path, config: Config) -> Iterator[Doc]:
     (lexicographic). The `archived` flag is set per `Doc.archived` based
     on whether the path lies under `root/config.archive_dir`.
     """
-    raise NotImplementedError("walk() — Phase 6")
+    archive_prefix = config.archive_dir
+    yielded: list[Doc] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fname in filenames:
+            if fname.startswith("."):
+                continue
+            if not fname.endswith(".md"):
+                continue
+            file_path = Path(dirpath) / fname
+            rel = file_path.relative_to(root).as_posix()
+            if rel == INDEX_FILENAME:
+                continue
+            text = file_path.read_text()
+            doc = parse(text, file_path, root)
+            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+                doc = replace(doc, archived=True)
+            yielded.append(doc)
+    yielded.sort(key=lambda d: d.path.relative_to(root).as_posix())
+    yield from yielded
 
 
 def render_index(
@@ -393,7 +467,89 @@ def render_index(
     The renderer is deterministic: same `docs` and `existing` inputs
     produce byte-identical output.
     """
-    raise NotImplementedError("render_index() — Phase 6")
+    active = [d for d in docs if not d.archived]
+    archived = [d for d in docs if d.archived]
+    today = date.today().strftime(config.date_format)
+    summary = f"_Generated {today}. {len(active)} docs active, {len(archived)} archived._"
+
+    role_groups: dict[str, list[Doc]] = {}
+    for d in active:
+        role_groups.setdefault(d.role, []).append(d)
+
+    role_order = ["status"] + [r for r in CANONICAL_ROLE_ORDER if r != "status"]
+    sort_key = lambda d: (-d.updated.toordinal(), d.path.name)  # noqa: E731
+
+    lines: list[str] = [summary, ""]
+    for role in role_order:
+        group = role_groups.get(role)
+        if not group:
+            continue
+        group.sort(key=sort_key)
+        lines.append(f"## Active — {role.title()}")
+        lines.append("")
+        for d in group:
+            lines.append(_format_entry(d, config))
+        lines.append("")
+
+    lines.append("## Archived")
+    lines.append("")
+    if archived:
+        archived.sort(key=sort_key)
+        for d in archived:
+            lines.append(_format_entry(d, config))
+    else:
+        lines.append("_None._")
+
+    derived = "\n".join(lines).rstrip() + "\n"
+
+    if existing and MARKER_START in existing and MARKER_END in existing:
+        pre = existing.split(MARKER_START, 1)[0]
+        trailer = existing.split(MARKER_END, 1)[1]
+        return f"{pre}{MARKER_START}\n{derived}{MARKER_END}{trailer}"
+    return f"{MARKER_START}\n{derived}{MARKER_END}\n"
+
+
+def _format_entry(doc: Doc, config: Config) -> str:
+    filename = doc.path.name
+    desc = _description(doc.body)
+    updated = doc.updated.strftime(config.date_format)
+    return f"- [{filename}]({filename}) — _{doc.role}_ — {desc}. Updated {updated}."
+
+
+def _description(body: str, limit: int = 120) -> str:
+    """Extract the first content paragraph from a doc body.
+
+    Skips leading blank lines and header lines (``## ``, ``### ``, etc.),
+    then joins consecutive non-blank lines into a single paragraph with
+    whitespace collapsed. Trims to ``limit`` characters at the last
+    whitespace boundary; appends ``…`` if truncated.
+    """
+    lines = body.splitlines()
+    i = 0
+    n = len(lines)
+    while i < n:
+        stripped = lines[i].strip()
+        if stripped == "":
+            i += 1
+            continue
+        if stripped.startswith("#"):
+            i += 1
+            continue
+        break
+    if i >= n:
+        return ""
+    para: list[str] = []
+    while i < n and lines[i].strip() != "":
+        para.append(lines[i].strip())
+        i += 1
+    text = " ".join(para)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    cut = text.rfind(" ", 0, limit)
+    if cut == -1:
+        return text[:limit] + "…"
+    return text[:cut].rstrip() + "…"
 
 
 def load_config(root: Path) -> Config:
@@ -409,7 +565,33 @@ def load_config(root: Path) -> Config:
     Returns:
         A frozen `Config` instance.
     """
-    raise NotImplementedError("load_config() — Phase 6")
+    data: dict = {}
+    toml_path = root / ".docs.toml"
+    if toml_path.is_file():
+        data = tomllib.loads(toml_path.read_text())
+
+    project_section = data.get("project", {})
+    archive_section = data.get("archive", {})
+    vocab_section = data.get("vocabulary", {})
+
+    project = project_section.get("name")
+    if not project:
+        resolved_name = root.resolve().name
+        project = resolved_name if resolved_name else "root"
+
+    archive_dir = archive_section.get("dir", "archive")
+    date_format = archive_section.get("date_format", "%Y-%m-%d")
+
+    statuses = BUILTIN_STATUSES | frozenset(vocab_section.get("add_statuses", []))
+    roles = BUILTIN_ROLES | frozenset(vocab_section.get("add_roles", []))
+
+    return Config(
+        project=project,
+        archive_dir=archive_dir,
+        date_format=date_format,
+        statuses=statuses,
+        roles=roles,
+    )
 
 
 def find_root(start: Path) -> Path:
@@ -420,7 +602,14 @@ def find_root(start: Path) -> Path:
     as a cwd-as-root fallback. The walk explicitly stops at the root
     sentinel to avoid an infinite loop.
     """
-    raise NotImplementedError("find_root() — Phase 6")
+    current = start.resolve()
+    while True:
+        if (current / ".docs.toml").is_file():
+            return current
+        parent = current.parent
+        if parent == current:
+            return start.resolve()
+        current = parent
 
 
 # ---------------------------------------------------------------------------

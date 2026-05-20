@@ -17,7 +17,7 @@ Related:
 
 **Task plan:** [m1-parser-and-index.md](m1-parser-and-index.md)
 **Implementation log:** [m1-parser-and-index-log.md](m1-parser-and-index-log.md)
-**Current phase:** Phase 6 — Implement Offline/Core Path (next; Phases 1–5 complete)
+**Current phase:** Phase 7 — Update Tool/Wrapper Layer (next; Phases 1–6 complete)
 
 ## Milestone progress
 
@@ -77,7 +77,7 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 ```
 Then re-run pytest; baseline = **54 failed, 3 passed in <1s**. All failures are `NotImplementedError`. This is the expected RED state.
 
-**Next action: Phase 6 — Implement Offline/Core Path.** Implement `parse()`, `walk()`, `render_index()`, `load_config()`, `find_root()` using the Phase 5 utilities (`parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, `atomic_write`). All `tests/test_model.py`, `tests/test_walker.py`, `tests/test_index.py`, `tests/test_config.py` should go green; `tests/test_cli_index.py` stays RED until Phase 7 wires `main()`.
+**Next action: Phase 7 — Update Tool/Wrapper Layer.** Implement `main()` with argparse: `index` subcommand, global flags (`--root`, `--quiet`, `--dry-run`), exit-code dispatch (0 success, 1 recoverable, 2 hard error per `cli.md`). All `tests/test_cli_index.py` (6 currently failing) should go green; tighten `test_index_nonexistent_root_exits_nonzero` to assert stderr contains a recognizable error message (Phase 4 log false-pass).
 
 **Watch out for** (issues already resolved but worth knowing):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; same-name file would collide.

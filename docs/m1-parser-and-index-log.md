@@ -32,7 +32,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 3. Create Data/Fixtures | Complete | 2026-05-20 | 15 fixture files across `parser/`, `trees/{minimal,with-archive,marker-preservation}/`, `expected/`. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-20 | 54 failed (all `NotImplementedError`), 3 passed (1 legit, 2 false-pass). Log-only, no commit. |
 | 5. Update Base Interfaces | Complete | 2026-05-20 | `__post_init__` on `Doc` and `Config`; 5 shared utilities (`parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, `atomic_write`). RED baseline preserved at 54/3. |
-| 6. Implement Offline/Core Path | Pending | — | — |
+| 6. Implement Offline/Core Path | Complete | 2026-05-20 | `parse`, `walk`, `render_index`, `load_config`, `find_root` implemented. 4 unit-test files all green (50/50). Tightened false-pass `test_load_config_invalid_toml_raises` → `pytest.raises(tomllib.TOMLDecodeError)`. Suite now 51 passed / 6 failed (CLI tests). |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
 | 8. Run Tests (GREEN) | Pending | — | — |
 | 9. Dogfood pass | Pending | — | — |
@@ -326,3 +326,77 @@ Quality gates over the changed file:
 - [x] RED baseline preserved (54 failed, 3 passed).
 - [x] ruff + mypy clean on `bin/docs`.
 - [x] Ready for Phase 6: implement `parse`, `walk`, `render_index`, `load_config`, `find_root` using these utilities.
+
+### Phase 6 — Implement Offline/Core Path
+
+**Completed:** 2026-05-20
+
+#### Objective
+Implement the five core functions on top of the Phase 5 utilities: `parse`, `walk`, `render_index`, `load_config`, `find_root`. Drive all four unit-test files (`test_model.py`, `test_walker.py`, `test_index.py`, `test_config.py`) green. CLI subprocess tests in `test_cli_index.py` stay RED until Phase 7 wires `main()`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | Implementations replace `NotImplementedError` stubs for `parse`, `walk`, `render_index`, `load_config`, `find_root`. New module-level helpers `_format_entry` and `_description`. New imports: `os`, `dataclasses.replace`. `tomllib` and `re` lose their `# noqa: F401` markers (now used). |
+| `tests/test_config.py` | Modify | Tightened `test_load_config_invalid_toml_raises` from `pytest.raises(Exception)` to `pytest.raises(tomllib.TOMLDecodeError)` (Phase 4 false-pass cleanup). |
+| `docs/m1-parser-and-index.md` | Modify | Phase 6 checkbox ticked. |
+| `docs/m1-parser-and-index-log.md` | Modify | This entry; progress table row updated. |
+| `docs/status.md` | Modify | Current phase → Phase 7; next-action paragraph rewritten for CLI work. |
+
+#### What landed
+
+**`parse(text, path, root)`** — uses `parse_metadata_block` for syntax, then checks required `Status`/`Role`/`Updated`, runs `validate_status`/`validate_role` against `BUILTIN_STATUSES`/`BUILTIN_ROLES`, parses the date via `parse_date`, splits `Related:` bullets into `(verb, target)` tuples, and harvests every remaining metadata field into `extra`. Always sets `archived=False`; walker flips it.
+
+**`walk(root, config)`** — `os.walk` with `topdown=True` so dotdirs prune in-place via `dirnames[:] = ...`. Skips dotfiles, non-`.md`, and the root-level `INDEX.md` (root-relative path == `"INDEX.md"`). Re-stamps `archived=True` via `dataclasses.replace` for paths under `config.archive_dir`. Final sort is by root-relative POSIX path, lexicographic.
+
+**`render_index(docs, config, existing)`** — builds the derived content (summary line + per-role groups + Archived section) and handles marker-block preservation. Role ordering: `status` pinned first, then `CANONICAL_ROLE_ORDER` minus `status`. Within-group sort: `(-updated.toordinal(), path.name)` so newer comes first and ties break by filename. Empty role groups omitted. Archived section shows `_None._` when empty. Marker handling splits on `MARKER_START` / `MARKER_END` substrings to preserve preamble and trailer verbatim.
+
+**`_format_entry(doc, config)`** — emits `- [name](name) — _role_ — desc. Updated YYYY-MM-DD.`. Link target is the basename (matches the test contract and the snapshot's root-doc format).
+
+**`_description(body, limit=120)`** — skips leading blank and header lines (`#…` of any depth), joins the first paragraph's lines with spaces, collapses runs of whitespace, and truncates at the last whitespace ≤ `limit` with a `…` suffix. Falls back to a hard cut if no whitespace is found within `limit`.
+
+**`load_config(root)`** — reads `root/.docs.toml` with `tomllib.loads` (propagating `tomllib.TOMLDecodeError` on malformed input), pulls `[project] name`, `[archive] dir`, `[archive] date_format`, and `[vocabulary] add_statuses` / `add_roles`. Project name falls back to `root.resolve().name` and then `"root"` for the empty-name edge case. Vocab is the frozenset union of built-ins with project additions.
+
+**`find_root(start)`** — walks up from `start.resolve()` looking for `.docs.toml`. Terminates at the filesystem root (`parent == current`) and falls back to `start.resolve()` when none is found.
+
+#### Issues / decisions
+
+- **`parse()` validates against built-in vocab only.** Per the Phase 1 docstring decision: the bare `parse()` call doesn't have a Config, so it uses `BUILTIN_STATUSES` / `BUILTIN_ROLES`. The walker passes through the parsed Doc without re-validating against the project's extended vocab. M3's `docs check` is the place to enforce extended vocab consistently across the tree.
+- **`Related:` paths preserved as-written.** Spec says paths normalize to root-relative, but the M1 test contract just uses simple filenames like `other.md`. Preserving as-written is byte-equivalent for those cases and avoids guessing what root-relative means when the path is already root-relative. M3's `docs check` will resolve and validate.
+- **Renderer uses `d.path.name` for the link.** Matches `test_render_entry_format` and the snapshot's format. For nested docs (e.g., `archive/2026-01-01/old-plan.md`), links would be ambiguous if two siblings share a basename — flagged in the plan's open/deferred section, no M1 test exercises it.
+- **Renderer date uses `date.today()`.** No test asserts a specific date; idempotency tests pass twice in quick succession. Phase 9 dogfood will be sensitive to this on day boundaries — acceptable risk for M1.
+- **Empty body → empty description.** No test exercises this; entry line gets awkward spacing (`— _role_ — . Updated …`) but no behavioral breakage. Leave for Phase 9 polish if it shows up.
+- **`tomllib` and `re` lose `# noqa: F401`.** Both are now consumed; the comments became stale.
+
+#### Test results
+
+```
+.venv/bin/python -m pytest tests/ -q
+=========================== 6 failed, 51 passed in 0.24s ===========================
+```
+
+Breakdown:
+- `tests/test_model.py` 16/16 ✓
+- `tests/test_walker.py` 9/9 ✓
+- `tests/test_index.py` 13/13 ✓
+- `tests/test_config.py` 12/12 ✓ (including the tightened false-pass)
+- `tests/test_cli_index.py` 1/7 (only the surviving false-pass `test_index_nonexistent_root_exits_nonzero` passes; the rest fail on `main()` `NotImplementedError`)
+
+The plan predicted 50 passing, 7 failing. The actual 51/6 split reflects the lingering CLI false-pass: `test_index_nonexistent_root_exits_nonzero` only checks `returncode != 0`, which `main()` raising `NotImplementedError` satisfies. Phase 7 will tighten it.
+
+Quality gates:
+```
+.venv/bin/ruff check bin/docs             # All checks passed!
+.venv/bin/ruff format --check bin/docs    # 1 file already formatted
+.venv/bin/mypy bin/docs                   # Success: no issues found in 1 source file
+```
+
+#### Exit criteria
+
+- [x] `parse`, `walk`, `render_index`, `load_config`, `find_root` implemented.
+- [x] All four unit-test files green (50/50 unit tests passing).
+- [x] False-pass `test_load_config_invalid_toml_raises` tightened.
+- [x] Quality gates clean on `bin/docs`.
+- [x] CLI tests fail only because `main()` is still `NotImplementedError` (expected).
+- [x] Ready for Phase 7: wire argparse, dispatch `index` subcommand, handle exit codes.

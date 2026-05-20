@@ -121,6 +121,8 @@ def test_find_root_stops_at_filesystem_root(tmp_path):
 
 def test_load_config_invalid_toml_raises(tmp_path):
     """Malformed .docs.toml is a hard error."""
+    import tomllib
+
     (tmp_path / ".docs.toml").write_text("this is = not [valid toml")
-    with pytest.raises(Exception):  # tomllib.TOMLDecodeError or wrapped
+    with pytest.raises(tomllib.TOMLDecodeError):
         load_config(tmp_path)
