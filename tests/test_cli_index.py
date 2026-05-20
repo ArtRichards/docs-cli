@@ -28,8 +28,10 @@ def test_help_prints_usage(docs_script):
     assert "index" in proc.stdout.lower()
 
 
-def test_index_minimal_tree_exits_zero(docs_script, fixtures_dir):
-    root = fixtures_dir / "trees" / "minimal"
+def test_index_minimal_tree_exits_zero(docs_script, fixtures_dir, tmp_path):
+    src = fixtures_dir / "trees" / "minimal"
+    root = tmp_path / "tree"
+    shutil.copytree(src, root)
     proc = _run(docs_script, "index", "--root", str(root))
     assert proc.returncode == 0, proc.stderr
 
@@ -60,7 +62,8 @@ def test_index_nonexistent_root_exits_nonzero(docs_script, tmp_path):
     bogus = tmp_path / "does-not-exist"
     proc = _run(docs_script, "index", "--root", str(bogus))
     assert proc.returncode != 0
-    assert proc.stderr  # some error message on stderr
+    assert proc.stderr
+    assert "not found" in proc.stderr.lower()
 
 
 def test_index_marker_preservation_fixture(docs_script, fixtures_dir, tmp_path):

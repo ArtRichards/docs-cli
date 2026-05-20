@@ -139,7 +139,7 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 - [x] Phase 4: Run Tests (RED Baseline)
 - [x] Phase 5: Update Base Interfaces
 - [x] Phase 6: Implement Offline/Core Path
-- [ ] Phase 7: Update Tool/Wrapper Layer
+- [x] Phase 7: Update Tool/Wrapper Layer
 - [ ] Phase 8: Run Tests (GREEN)
 - [ ] Phase 9: Dogfood pass (Online/Integration mapping)
 - [ ] Phase 10: Quality, Docs, Refactor

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 __version__ = "0.1.0-m1"
 
-import argparse  # noqa: F401  (used in Phase 7)
+import argparse
 import os
 import re
 import sys
@@ -617,6 +617,81 @@ def find_root(start: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="docs",
+        description="Prescriptive CLI for managing trees of structured Markdown docs.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    idx = subparsers.add_parser(
+        "index",
+        help="Regenerate INDEX.md from metadata in the docs root.",
+        description=(
+            "Walk the docs root, parse every .md file, and regenerate the "
+            "INDEX.md marker block. Hand-edited content outside the markers "
+            "is preserved verbatim."
+        ),
+    )
+    idx.add_argument(
+        "dir",
+        nargs="?",
+        default=None,
+        help="Docs root (positional alternative to --root).",
+    )
+    idx.add_argument(
+        "--root",
+        help="Explicit docs root; overrides positional DIR.",
+    )
+    idx.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress success messages on stderr.",
+    )
+    idx.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the would-be INDEX.md to stdout; do not write.",
+    )
+    return parser
+
+
+def _cmd_index(args: argparse.Namespace) -> int:
+    if args.root:
+        root = Path(args.root)
+    elif args.dir:
+        root = Path(args.dir)
+    else:
+        root = find_root(Path.cwd())
+
+    if not root.exists() or not root.is_dir():
+        print(f"docs: root not found: {root}", file=sys.stderr)
+        return 1
+
+    try:
+        config = load_config(root)
+        collected = list(walk(root, config))
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 2
+
+    index_path = root / config.index_filename
+    existing = index_path.read_text() if index_path.is_file() else None
+    output = render_index(collected, config, existing)
+
+    if args.dry_run:
+        sys.stdout.write(output)
+        return 0
+
+    atomic_write(index_path, output)
+    if not args.quiet:
+        print(f"docs: wrote {index_path}", file=sys.stderr)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code.
 
@@ -630,7 +705,10 @@ def main(argv: list[str] | None = None) -> int:
         2 — hard error (invalid vocab, atomic-operation failure,
             validation errors).
     """
-    raise NotImplementedError("main() — Phase 7")
+    args = _build_parser().parse_args(argv)
+    if args.command == "index":
+        return _cmd_index(args)
+    return 2
 
 
 if __name__ == "__main__":

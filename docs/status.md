@@ -17,7 +17,7 @@ Related:
 
 **Task plan:** [m1-parser-and-index.md](m1-parser-and-index.md)
 **Implementation log:** [m1-parser-and-index-log.md](m1-parser-and-index-log.md)
-**Current phase:** Phase 7 — Update Tool/Wrapper Layer (next; Phases 1–6 complete)
+**Current phase:** Phase 8 — Run Tests (GREEN) (next; Phases 1–7 complete)
 
 ## Milestone progress
 
@@ -77,7 +77,7 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 ```
 Then re-run pytest; baseline = **54 failed, 3 passed in <1s**. All failures are `NotImplementedError`. This is the expected RED state.
 
-**Next action: Phase 7 — Update Tool/Wrapper Layer.** Implement `main()` with argparse: `index` subcommand, global flags (`--root`, `--quiet`, `--dry-run`), exit-code dispatch (0 success, 1 recoverable, 2 hard error per `cli.md`). All `tests/test_cli_index.py` (6 currently failing) should go green; tighten `test_index_nonexistent_root_exits_nonzero` to assert stderr contains a recognizable error message (Phase 4 log false-pass).
+**Next action: Phase 8 — Run Tests (GREEN).** Run the full quality gate (`pytest -q`, `ruff check .`, `ruff format --check .`, `mypy bin/docs`). All except `test_index_output_matches_frozen_snapshot` should be green — 56/57. Phase 8 will likely fold into Phase 9 since the only outstanding failure is the dogfood snapshot match; decide at the top of Phase 8 whether to run as a no-op gate check + log entry, or merge into Phase 9's reconciliation work.
 
 **Watch out for** (issues already resolved but worth knowing):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; same-name file would collide.

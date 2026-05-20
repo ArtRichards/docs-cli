@@ -33,7 +33,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-20 | 54 failed (all `NotImplementedError`), 3 passed (1 legit, 2 false-pass). Log-only, no commit. |
 | 5. Update Base Interfaces | Complete | 2026-05-20 | `__post_init__` on `Doc` and `Config`; 5 shared utilities (`parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, `atomic_write`). RED baseline preserved at 54/3. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-20 | `parse`, `walk`, `render_index`, `load_config`, `find_root` implemented. 4 unit-test files all green (50/50). Tightened false-pass `test_load_config_invalid_toml_raises` → `pytest.raises(tomllib.TOMLDecodeError)`. Suite now 51 passed / 6 failed (CLI tests). |
-| 7. Update Tool/Wrapper Layer | Pending | — | — |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-20 | `main()` wired with argparse + `_cmd_index` dispatch. 6/7 CLI tests green; the 7th (`test_index_output_matches_frozen_snapshot`) fails on hand-curated snapshot text — deferred to Phase 9. Tightened false-pass `test_index_nonexistent_root_exits_nonzero` with stderr substring check. Suite now 56 passed / 1 failed. |
 | 8. Run Tests (GREEN) | Pending | — | — |
 | 9. Dogfood pass | Pending | — | — |
 | 10. Quality, Docs, Refactor | Pending | — | — |
@@ -400,3 +400,82 @@ Quality gates:
 - [x] Quality gates clean on `bin/docs`.
 - [x] CLI tests fail only because `main()` is still `NotImplementedError` (expected).
 - [x] Ready for Phase 7: wire argparse, dispatch `index` subcommand, handle exit codes.
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+**Completed:** 2026-05-20
+
+#### Objective
+Wire the CLI: argparse for the `index` subcommand, dispatch to the Phase 6 implementations, map errors to the `cli.md` exit-code matrix, and tighten the second Phase-4-flagged false-pass. After this phase, every test except the dogfood snapshot match goes green.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | `main()` replaced with argparse dispatcher + `_build_parser()` + `_cmd_index()`. Dropped `# noqa: F401` on `argparse` (now used). |
+| `tests/test_cli_index.py` | Modify | (1) Tightened `test_index_nonexistent_root_exits_nonzero` to additionally assert `"not found" in proc.stderr.lower()`. (2) Fixed `test_index_minimal_tree_exits_zero` to `shutil.copytree` the fixture into `tmp_path` first; previously it ran the CLI directly against the source fixture and wrote `INDEX.md` into `tests/fixtures/trees/minimal/`, polluting the working tree. |
+| `docs/m1-parser-and-index.md` | Modify | Phase 7 checkbox ticked. |
+| `docs/m1-parser-and-index-log.md` | Modify | This entry; progress table row updated. |
+| `docs/status.md` | Modify | Current phase advanced to Phase 8; next-action paragraph rewritten to flag the Phase 8 + Phase 9 overlap. |
+
+#### What landed
+
+**`_build_parser()`** — `ArgumentParser(prog="docs")` with `add_subparsers(required=True)`. One subparser `index` carrying:
+- `dir` (positional, optional) — alternative to `--root`.
+- `--root ROOT` — explicit docs root; overrides positional `DIR` if both given.
+- `--quiet` — suppresses the "wrote …" success message on stderr.
+- `--dry-run` — writes the rendered output to stdout instead of touching the INDEX.md file.
+
+`--json` from cli.md is not relevant to `index` (write-only operation) and is deferred to M3 when `docs list` / `docs check` land.
+
+**`_cmd_index(args)`** — root resolution → existence check → load_config + walk (wrapped in try/except for the two exception categories) → render → either dry-run print or `atomic_write`. Exit-code mapping per cli.md:
+- `0` — success, including dry-run.
+- `1` — recoverable: root path missing or not a directory.
+- `2` — hard error: TOMLDecodeError on `.docs.toml`, MetadataError or VocabularyError surfacing from `parse()` during `walk`.
+
+**`main(argv=None)`** — builds the parser, parses args, dispatches to `_cmd_index`. The defensive `return 2` for unknown commands is unreachable in practice (`required=True` on the subparsers makes argparse error before we look at `args.command`) but documents intent.
+
+**Tightened test.** `test_index_nonexistent_root_exits_nonzero` was a Phase 4 false-pass — `NotImplementedError` triggered a nonzero exit, satisfying `returncode != 0` for the wrong reason. Now it pins:
+- `returncode != 0`
+- `proc.stderr` non-empty
+- `"not found" in proc.stderr.lower()` — locks the error wording from `_cmd_index` step 2.
+
+#### Issues / decisions
+
+- **Root resolution precedence.** `--root` > positional `dir` > `find_root(Path.cwd())`. This matches cli.md's "--root DIR — explicit docs root" wording (explicit means it wins over inference). The positional `dir` is the `[DIR]` form from cli.md for `docs index [DIR]`.
+- **Dry-run writes to stdout, not stderr.** Pipe-friendly (`docs index --dry-run | less`). Tests don't assert the stream, so the choice is free; stdout is the conventional "data" stream.
+- **`--quiet` only silences success messages.** Errors always go to stderr regardless of `--quiet`. cli.md's "Human output goes to stdout; errors and progress to stderr" is the guiding rule.
+- **Exception → exit code mapping.** TOMLDecodeError, MetadataError, VocabularyError → 2 (per cli.md "invalid vocab, atomic operation failure, validation errors"). Missing root → 1 (per cli.md "missing input"). No other branches needed for M1's `index`.
+- **No global flags before the subcommand.** All flags live on the `index` subparser. When M2 adds more subcommands, refactor to a parent parser if they share flags. YAGNI for one subcommand.
+
+#### Test results
+
+```
+.venv/bin/python -m pytest tests/test_cli_index.py -q
+1 failed, 6 passed in 0.23s
+
+.venv/bin/python -m pytest tests/ -q
+1 failed, 56 passed in 0.27s
+```
+
+The lone failure is `test_index_output_matches_frozen_snapshot`. The hand-curated descriptions in `tests/fixtures/expected/docs-INDEX.md` (e.g. "What we're building, why, success criteria, non-goals, audience.") don't match the renderer's `_description()` extraction of the first body paragraph from the source docs. This is exactly the dogfood-acceptance gap that Phase 9 exists to reconcile.
+
+Manual smoke confirmed clean:
+- `./bin/docs index --help` exits 0 and prints the subcommand usage.
+- `./bin/docs index --root tests/fixtures/trees/minimal --dry-run` prints the marker block + entry for `lone-doc.md` with no file written.
+
+Quality gates:
+```
+.venv/bin/ruff check bin/docs              # All checks passed!
+.venv/bin/ruff format --check bin/docs     # 1 file already formatted
+.venv/bin/mypy bin/docs                    # Success: no issues found in 1 source file
+```
+
+#### Exit criteria
+
+- [x] `main()` and the `index` subcommand fully wired.
+- [x] argparse `--help` / exit codes / flag combinations exercised by tests.
+- [x] False-pass `test_index_nonexistent_root_exits_nonzero` tightened.
+- [x] All but the dogfood-snapshot test pass.
+- [x] Quality gates clean on `bin/docs`.
+- [x] Ready for Phase 8 (quality gate sweep) and Phase 9 (snapshot reconciliation) — likely combined in the next session since the snapshot diff is the only outstanding work.
