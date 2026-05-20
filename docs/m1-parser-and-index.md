@@ -39,10 +39,10 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 
 - [ ] `bin/docs` executable (Python 3.11+, single file, stdlib only) with `index` subcommand functional.
 - [ ] `pyproject.toml` (project metadata, dev dependencies: pytest, ruff, mypy).
-- [ ] `tests/test_model.py`, `tests/test_walker.py`, `tests/test_index.py`, `tests/test_cli_index.py`.
+- [ ] `tests/test_model.py`, `tests/test_walker.py`, `tests/test_index.py`, `tests/test_config.py`, `tests/test_cli_index.py`.
 - [ ] `tests/fixtures/` with `minimal/`, `with-archive/`, `marker-preservation/` trees.
-- [ ] Dogfood: `./docs index docs/` produces output that matches the hand-written `docs/INDEX.md` byte-for-byte (or with a diff small enough to review and intentionally accept).
-- [ ] All quality gates green: `ruff check`, `ruff format --check`, `mypy docs`, `pytest -q`.
+- [ ] Dogfood: `./bin/docs index docs/` produces output that matches the hand-written `docs/INDEX.md` byte-for-byte (or with a diff small enough to review and intentionally accept).
+- [ ] All quality gates green: `ruff check`, `ruff format --check`, `mypy bin/docs`, `pytest -q`.
 - [ ] `docs/status.md` and `docs/plan.md` updated to reflect M1 complete.
 
 ## Current state analysis
@@ -103,19 +103,19 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 
 - **Objective:** Wire `main()` with argparse; resolve `--root`; dispatch `index` subcommand; exit-code handling.
 - **Files:** `docs` (executable), bottom of file.
-- **Exit:** `./docs index --help` prints usage. `./docs index tests/fixtures/trees/minimal` runs without error. `tests/test_cli_index.py` green.
+- **Exit:** `./bin/docs index --help` prints usage. `./bin/docs index tests/fixtures/trees/minimal` runs without error. `tests/test_cli_index.py` green.
 
 ### Phase 8: Run Tests (GREEN)
 
 - **Objective:** Full suite passing; quality gates clean.
-- **Actions:** `pytest -q tests/`; `ruff check`; `ruff format --check`; `mypy docs`.
+- **Actions:** `pytest -q tests/`; `ruff check`; `ruff format --check`; `mypy bin/docs`.
 - **Exit:** All four commands exit 0. Any deferred TODOs documented in log.
 
 ### Phase 9: Dogfood pass (mapped from "Online/Integration")
 
-- **Objective:** Run `./docs index docs/` against this repo's own docs root; reconcile any drift between hand-written and generated INDEX.md.
+- **Objective:** Run `./bin/docs index docs/` against this repo's own docs root; reconcile any drift between hand-written and generated INDEX.md.
 - **Actions:**
-  - `./docs index docs/` — capture output.
+  - `./bin/docs index docs/` — capture output.
   - `diff docs/INDEX.md <generated>` — if diff exists, decide: edit the hand-written file to match the tool, edit the tool to match the hand-written file, or split the difference and document why.
 - **Exit:** Hand-written INDEX.md reproduces under `docs index` with no diff, or the surviving diff is documented in the log as intentional and consistent across runs.
 
@@ -136,7 +136,7 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 - [x] Phase 1: Define Contract
 - [x] Phase 2: Write Tests (RED)
 - [x] Phase 3: Create Data/Fixtures
-- [ ] Phase 4: Run Tests (RED Baseline)
+- [x] Phase 4: Run Tests (RED Baseline)
 - [ ] Phase 5: Update Base Interfaces
 - [ ] Phase 6: Implement Offline/Core Path
 - [ ] Phase 7: Update Tool/Wrapper Layer
@@ -159,9 +159,9 @@ Commands run at Phase 8 and Phase 10:
 ```
 ruff check .
 ruff format --check .
-mypy docs
+mypy bin/docs
 pytest -q
-./docs index docs/   # dogfood smoke
+./bin/docs index docs/   # dogfood smoke
 ```
 
 Expected at Phase 10: all commands exit 0. Dogfood produces zero diff against the committed `docs/INDEX.md`.
@@ -173,6 +173,6 @@ M1 is complete when:
 - All Phase Checklist items are checked.
 - The `docs` executable is committed, executable, and works from `~/bin/docs` (or wherever symlinked).
 - All deliverables above are checked off.
-- `./docs index docs/` reproduces this repo's `docs/INDEX.md`.
+- `./bin/docs index docs/` reproduces this repo's `docs/INDEX.md`.
 - [status.md](status.md) reflects M1 → Complete, M2 → ACTIVE.
 - [m1-parser-and-index-log.md](m1-parser-and-index-log.md) contains a milestone-completion summary.

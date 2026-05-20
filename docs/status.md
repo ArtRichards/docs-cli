@@ -17,7 +17,7 @@ Related:
 
 **Task plan:** [m1-parser-and-index.md](m1-parser-and-index.md)
 **Implementation log:** [m1-parser-and-index-log.md](m1-parser-and-index-log.md)
-**Current phase:** Phase 4 — RED Baseline (next; Phases 1–3 complete)
+**Current phase:** Phase 5 — Base Interfaces + Utilities (next; Phases 1–4 complete)
 
 ## Milestone progress
 

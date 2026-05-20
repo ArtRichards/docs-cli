@@ -30,7 +30,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 1. Define Contract | Complete | 2026-05-20 | Skeleton + test infra; corrected file location to `bin/docs`. |
 | 2. Write Tests (RED) | Complete | 2026-05-20 | 57 tests across 5 files. Collect cleanly; expected to fail with NotImplementedError. |
 | 3. Create Data/Fixtures | Complete | 2026-05-20 | 15 fixture files across `parser/`, `trees/{minimal,with-archive,marker-preservation}/`, `expected/`. |
-| 4. Run Tests (RED Baseline) | Pending | — | — |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-20 | 54 failed (all `NotImplementedError`), 3 passed (1 legit, 2 false-pass). Log-only, no commit. |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
@@ -43,25 +43,32 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 - **Codebase:** No source code. `tests/` contains only `.gitkeep`.
 - **Docs:** Eleven Markdown files in `docs/` plus this log. All hand-authored.
 - **Build/test infra:** None. `pyproject.toml` does not yet exist.
-- **Install path:** Intended `~/bin/docs` symlink to `~/opt/docs/docs`; symlink not yet created.
+- **Install path:** Intended `~/bin/docs` symlink to `~/opt/docs/bin/docs`; symlink not yet created.
 
 ## Files to Create / Modify
 
 | File | Action | Phase | Notes |
 |---|---|---|---|
-| `docs` (executable) | Create | 1, 5, 6, 7 | Single-file Python script |
-| `pyproject.toml` | Create | 5 | Project metadata + dev deps (pytest, ruff, mypy) |
-| `tests/test_model.py` | Create | 2 | Parser unit tests |
-| `tests/test_walker.py` | Create | 2 | Walker unit tests |
-| `tests/test_index.py` | Create | 2 | Index render unit tests |
-| `tests/test_cli_index.py` | Create | 2 | End-to-end CLI tests via subprocess |
-| `tests/fixtures/parser/*.md` | Create | 3 | Single-doc parser fixtures |
-| `tests/fixtures/trees/minimal/` | Create | 3 | Smallest valid tree |
-| `tests/fixtures/trees/with-archive/` | Create | 3 | Active + archive subtree |
-| `tests/fixtures/trees/marker-preservation/` | Create | 3 | INDEX with hand-edited regions |
-| `docs/status.md` | Modify | 10 | M1 → Complete, M2 → ACTIVE |
-| `docs/plan.md` | Modify | 10 | If M1 work surfaces plan changes |
-| `docs/INDEX.md` | Regenerate | 9, 10 | Via `./docs index docs/` |
+| `bin/docs` (executable) | Create | 1, 5, 6, 7 | Single-file Python script. Relocated from repo root to `bin/` to avoid the file-vs-directory name collision with `docs/`. |
+| `pyproject.toml` | Create | 1 | Project metadata + dev deps (pytest, ruff, mypy). Moved into Phase 1 from Phase 5 so pytest is discoverable before tests are written. |
+| `tests/conftest.py` | Create | 1 | Loads `bin/docs` via `importlib.SourceFileLoader`, registers in `sys.modules['docs']`; provides `docs_script` and `fixtures_dir` fixtures. |
+| `tests/test_model.py` | Create | 2 | Parser unit tests (16). |
+| `tests/test_walker.py` | Create | 2 | Walker unit tests (9). |
+| `tests/test_index.py` | Create | 2 | Renderer unit tests (13). |
+| `tests/test_config.py` | Create | 2 | `load_config` + `find_root` (12). Added on Plan-agent recommendation to isolate pure functions from the walker. |
+| `tests/test_cli_index.py` | Create | 2 | End-to-end CLI tests via subprocess (7). |
+| `tests/fixtures/parser/*.md` | Create | 3 | Single-doc parser fixtures. |
+| `tests/fixtures/trees/minimal/` | Create | 3 | Smallest valid tree (1 doc + `.docs.toml`). |
+| `tests/fixtures/trees/with-archive/` | Create | 3 | Active + archive subtree + non-md + dotfile + dotdir + nested INDEX. |
+| `tests/fixtures/trees/marker-preservation/` | Create | 3 | INDEX with hand-edited preamble + trailer outside the markers. |
+| `tests/fixtures/expected/docs-INDEX.md` | Create | 3 | Frozen snapshot of live `docs/INDEX.md`; breaks circular acceptance in the dogfood test. |
+| `docs/architecture.md` | Modify | 1 | Renderer-format subspec; file-location correction (`bin/docs`). |
+| `README.md` | Modify | 1 | Install path corrected to `~/opt/docs/bin/docs`. |
+| `docs/m1-parser-and-index.md` | Modify | every phase | Phase Checklist updated as phases complete. |
+| `docs/m1-parser-and-index-log.md` | Modify | every phase | Phase log entries appended. |
+| `docs/status.md` | Modify | every phase | Current phase advanced; M1 → Complete + M2 → ACTIVE at Phase 10. |
+| `docs/plan.md` | Modify | 10 | If M1 work surfaces plan changes. |
+| `docs/INDEX.md` | Regenerate | 9, 10 | Via `./bin/docs index docs/`. |
 
 ## Phase logs
 
@@ -196,3 +203,44 @@ Hand-build the fixture trees and the frozen INDEX snapshot referenced by Phase 2
 - [x] `with-archive/` includes the full matrix of fixture concerns: non-md, dotfile, dotdir, archive subtree, nested INDEX.
 - [x] Frozen `expected/docs-INDEX.md` snapshot in place.
 - [x] Ready for Phase 4: run pytest and capture the RED baseline.
+
+### Phase 4 — Run Tests (RED Baseline)
+
+**Completed:** 2026-05-20
+
+#### Objective
+Confirm that all 57 collected tests fail for the **right** reason — missing implementation, not misconfiguration or fixture errors. Log-only phase; no commit.
+
+#### Command + summary
+
+```
+.venv/bin/python -m pytest tests/
+=========================== 54 failed, 3 passed in 0.34s ===========================
+```
+
+Every failure traces to one of:
+- `NotImplementedError: parse() — Phase 6`
+- `NotImplementedError: walk() — Phase 6`
+- `NotImplementedError: render_index() — Phase 6`
+- `NotImplementedError: load_config() — Phase 6`
+- `NotImplementedError: find_root() — Phase 6`
+- `NotImplementedError: main() — Phase 7` (CLI tests, raised inside subprocess)
+
+No import errors. No fixture-path errors. No collection errors. Conftest loads cleanly.
+
+#### The three baseline passes
+
+| Test | Reason it passes | Action |
+|---|---|---|
+| `test_model.py::test_builtin_vocab_sizes` | Legitimate — only inspects constants, doesn't invoke any unimplemented function. | None. |
+| `test_config.py::test_load_config_invalid_toml_raises` | **False pass.** Uses `pytest.raises(Exception)` which catches `NotImplementedError` too. | Tighten in Phase 6 to expect a more specific exception (e.g., `tomllib.TOMLDecodeError`). |
+| `test_cli_index.py::test_index_nonexistent_root_exits_nonzero` | **False pass.** Asserts `returncode != 0`; `main()` raises NotImplementedError → nonzero exit → assertion satisfied. | Tighten in Phase 7 to additionally check stderr contains a recognizable error message. |
+
+The two false-passes are flagged in this log so they're remembered when Phase 6/7 lands the implementations — without that, they would continue to pass and silently mask regressions.
+
+#### Exit criteria
+
+- [x] All failures attributable to missing implementation, not misconfiguration.
+- [x] False-pass tests identified and queued for tightening in later phases.
+- [x] No code committed in this phase (log-only).
+- [x] Ready for Phase 5: implement dataclass validation and shared utilities.

@@ -56,9 +56,9 @@ Per the methodology, run before each milestone closes:
 ```
 ruff check .
 ruff format --check .
-mypy docs                  # warnings OK in v1; errors must be zero
+mypy bin/docs                  # warnings OK in v1; errors must be zero
 pytest -q
-./docs check docs/         # once M3 lands; for M1 this is `./docs index docs/`
+./bin/docs check docs/         # once M3 lands; for M1 this is `./bin/docs index docs/`
 ```
 
 Phase 10 of each milestone runs these.

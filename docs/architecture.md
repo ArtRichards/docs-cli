@@ -161,9 +161,9 @@ For archive operations (M2): edit in-place first (atomic write), then move (`Pat
 ```
 ruff check .
 ruff format .
-mypy docs        # if mypy installed
+mypy bin/docs        # if mypy installed
 pytest -q
-./docs index docs/   # smoke test against own docs root
+./bin/docs index docs/   # smoke test against own docs root
 ```
 
 ## Install
