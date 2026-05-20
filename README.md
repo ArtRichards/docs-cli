@@ -52,7 +52,7 @@ See [`docs/cli.md`](docs/cli.md) for full surface and exit codes.
 
 ```sh
 git clone https://github.com/<you>/docs.git ~/opt/docs
-ln -s ~/opt/docs/docs.py ~/bin/docs   # or wherever your $PATH wants it
+ln -s ~/opt/docs/bin/docs ~/bin/docs   # or wherever your $PATH wants it
 ```
 
 Requires Python 3.11+ (for stdlib `tomllib`). No third-party dependencies.

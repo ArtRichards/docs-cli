@@ -27,7 +27,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | — |
+| 1. Define Contract | Complete | 2026-05-20 | Skeleton + test infra; corrected file location to `bin/docs`. |
 | 2. Write Tests (RED) | Pending | — | — |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
@@ -65,10 +65,46 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 
 ## Phase logs
 
-_Phase logs are appended below as each phase completes._
+### Phase 1 — Define Contract
 
-<!-- Phase 1 log goes here -->
+**Completed:** 2026-05-20
 
-<!-- Phase 2 log goes here -->
+#### Objective
+Lock in the public API surface of the `docs` executable: dataclasses, exception classes, function signatures. No business logic. Make the test infrastructure (`pyproject.toml`, `tests/conftest.py`) ready so Phase 2 can write failing tests.
 
-<!-- ...etc... -->
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Create | Skeleton with constants, exceptions, `Doc`/`Config` dataclasses, function signatures (`NotImplementedError` bodies); shebanged + executable. |
+| `pyproject.toml` | Create | Project metadata, dev deps (`pytest`, `ruff`, `mypy`), tool configs. `[tool.ruff] extend-include = ["bin/docs"]` and `[tool.mypy] scripts_are_modules = true` handle the no-extension executable. |
+| `tests/conftest.py` | Create | Loads `bin/docs` via `importlib.machinery.SourceFileLoader`, registers in `sys.modules['docs']` so tests can `from docs import …`. Provides `docs_script` and `fixtures_dir` session fixtures. |
+| `docs/architecture.md` | Modify | (1) File-location correction: executable lives at `bin/docs`, not at repo root, because of POSIX file-vs-dir name collision with `docs/`. (2) Added "INDEX renderer format" subspec codifying summary-line, section-headings, role group order (`status` pinned), within-section sort, entry format, and marker handling. (3) Noted INDEX exclusion is root-level only. |
+| `README.md` | Modify | Install path: `~/opt/docs/bin/docs`, not `~/opt/docs/docs.py`. |
+| `.venv/` (local only, gitignored) | Create | Python venv with pytest/ruff/mypy installed. |
+
+#### Actions taken
+
+- Created `bin/` subdir and the `docs` executable (skeleton).
+- Verified the skeleton imports cleanly via `importlib` after registering in `sys.modules` before `exec_module` (a subtlety required because `@dataclass(frozen=True)` resolves field annotations through `sys.modules[cls.__module__]`).
+- Installed `python3-venv` via scoped sudo (per CLAUDE.md sudo grant), then created `~/opt/docs/.venv/` with `pytest`, `ruff`, `mypy`.
+- Ran `pytest -q tests/` to confirm conftest loads without errors — 0 tests collected (none written yet), 0 errors.
+
+#### Issues / decisions
+
+- **File-location correction.** The committed design said the executable was named `docs` at the repo root. That's impossible because `~/opt/docs/docs/` is a directory — POSIX disallows a file and directory with the same name in one parent. **Resolution:** moved to `~/opt/docs/bin/docs`. Updated `architecture.md`, `README.md`, and noted here. Clean Unix convention; minor extra hop in the install symlink command.
+- **`Doc.archived` semantics.** Decided that the parser sets `archived` from path location, not from the in-doc `Status:` field. The two should agree (and `docs check` will report drift in M3), but at parse time we trust the filesystem as ground truth. This matches the dual-status decision (`docs/dual-status-adr.md`).
+- **Vocabulary validation in `parse()`.** Documented in the `parse()` docstring that the bare call validates against `BUILTIN_STATUSES`/`BUILTIN_ROLES`. Callers needing per-project additions go through the walker, which has the Config in hand.
+- **`scripts_are_modules` for mypy.** Mypy doesn't treat extensionless files as Python by default; the `scripts_are_modules = true` setting in `pyproject.toml` makes it work without renaming the file or symlinking a `.py` shim.
+
+#### Exit criteria
+
+- [x] Skeleton imports cleanly (`importlib` + `sys.modules` registration).
+- [x] All declared dataclass fields and function signatures present.
+- [x] Test infrastructure ready (`pyproject.toml`, `conftest.py`); `pytest` discovers 0 tests cleanly.
+- [x] `architecture.md` renderer-format subspec written; file-location corrected.
+- [x] Ready for Phase 2 to write failing tests against the contract.
+
+#### Test results
+
+`.venv/bin/python -m pytest tests/ -q` → `no tests ran in 0.00s` (expected; Phase 2 adds them).

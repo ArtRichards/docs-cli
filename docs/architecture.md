@@ -13,10 +13,10 @@ Related:
 
 ## Shape
 
-Single Python file at the repo root, executable, shebanged. Layout inside the file is logical (no separate modules) until v1.1 forces a package split.
+Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — the `docs/` documentation directory already lives there, and POSIX filesystems don't allow a file and directory with the same name in the same parent.) Layout inside the file is logical (no separate modules) until v1.1 forces a package split.
 
 ```
-docs (executable; Python 3.11+, stdlib only)
+bin/docs (executable; Python 3.11+, stdlib only)
 ├── shebang + dunder version
 ├── config        — TOML load, Vocab merging, archive-dir resolution
 ├── model         — Doc dataclass; metadata block parser; serializer
@@ -62,7 +62,49 @@ most navigation. Within each Role section, entries are sorted by `Updated:`
 descending, then by path ascending as a deterministic tiebreaker.
 
 **INDEX.md is excluded from walking** by name. The file is read once for
-marker-block preservation, then ignored as a traversal target.
+marker-block preservation, then ignored as a traversal target. The exclusion
+is **root-level only** — a nested file named `INDEX.md` deeper in the tree
+IS a walkable doc and is treated like any other Markdown file.
+
+### INDEX renderer format
+
+The renderer's output between the markers has a fixed shape so that
+`docs index` is byte-deterministic and reviewable in diffs:
+
+- **Summary line.** First line inside the marker block:
+  ```
+  _Generated YYYY-MM-DD. N docs active, M archived._
+  ```
+- **Section headings.** One heading per Role group:
+  ```
+  ## Active — <Role-titlecased>
+  ```
+  Archived docs share one heading: `## Archived`.
+- **Role group order.** `status` is pinned to the top of the Active
+  sections. The remaining Roles follow `CANONICAL_ROLE_ORDER` (defined
+  in `bin/docs`) — charter, plan, spec, milestone, log, decision, guide,
+  runbook, reference, postmortem, idea, notes. Role groups with zero
+  entries are omitted. `## Archived` appears last.
+- **Within-section sort.** Primary key: `Updated:` descending. Tiebreaker:
+  path ascending (lexicographic on the root-relative path).
+- **Entry format.** One bullet per doc:
+  ```
+  - [filename.md](filename.md) — _role_ — <description>. Updated YYYY-MM-DD.
+  ```
+  Description source: the first non-empty paragraph of the doc body
+  (after the metadata block), with internal newlines collapsed to spaces
+  and trimmed to ~120 characters (cut at the last whitespace before the
+  limit; suffix with `…` if truncated).
+- **Markers verbatim.** `<!-- docs:generated start -->` and
+  `<!-- docs:generated end -->` — exact strings, including the spacing.
+  The renderer matches them as literal substrings; no regex with variant
+  whitespace.
+
+Preservation rule: everything outside the markers (preamble before
+`<!-- docs:generated start -->` and trailer after `<!-- docs:generated end -->`)
+is copied verbatim into the regenerated file. If the existing INDEX
+contains no markers, the renderer creates a minimal file containing only
+the marker block and the derived content.
 
 ### `cli`
 
@@ -127,7 +169,7 @@ pytest -q
 ## Install
 
 ```
-ln -s $PWD/docs ~/bin/docs
+ln -s $PWD/bin/docs ~/bin/docs
 ```
 
 The script is self-contained; no `pip install` step needed.

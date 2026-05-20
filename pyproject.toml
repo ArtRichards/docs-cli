@@ -1,0 +1,48 @@
+[project]
+name = "docs"
+version = "0.1.0-m1"
+description = "Prescriptive CLI for managing trees of structured Markdown docs."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [{name = "Art Richards", email = "art@bitholdersinc.com"}]
+keywords = ["markdown", "documentation", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+]
+# No runtime dependencies — stdlib only.
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.4",
+    "mypy>=1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# The executable doesn't have a .py extension; explicitly include it.
+extend-include = ["bin/docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP", "SIM"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+files = ["bin/docs", "tests/"]
+# Treat the extensionless executable as a Python module.
+scripts_are_modules = true

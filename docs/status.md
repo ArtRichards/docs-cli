@@ -17,7 +17,7 @@ Related:
 
 **Task plan:** [m1-parser-and-index.md](m1-parser-and-index.md)
 **Implementation log:** [m1-parser-and-index-log.md](m1-parser-and-index-log.md)
-**Current phase:** Phase 1 — Define Contract (not yet started)
+**Current phase:** Phase 2 — Write Tests (RED) (next; Phase 1 complete)
 
 ## Milestone progress
 

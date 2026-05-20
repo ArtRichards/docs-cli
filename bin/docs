@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+"""docs — prescriptive CLI for managing trees of structured Markdown docs.
+
+See `docs/` (relative to repo root) for the full specification:
+
+- convention.md      on-disk Markdown convention this tool reads/writes
+- cli.md             command surface (only `index` implemented in M1)
+- architecture.md    module sketch, data flow, INDEX renderer format
+
+This file is a single-file Python script. The repo's `docs/` directory
+shares the project name; the executable lives in `bin/` to avoid the
+filename-vs-directory collision (POSIX disallows a file and directory
+with the same name in the same parent).
+
+M1 surface: parser, walker, renderer, `docs index` subcommand, config
+loading. Mutating verbs (archive, mv, new, touch) land in M2; check
+and list land in M3.
+"""
+
+from __future__ import annotations
+
+__version__ = "0.1.0-m1"
+
+import argparse  # noqa: F401  (used in Phase 7)
+import sys
+import tomllib  # noqa: F401  (used in Phase 6)
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Vocabulary
+# ---------------------------------------------------------------------------
+
+BUILTIN_STATUSES: frozenset[str] = frozenset(
+    {"draft", "active", "blocked", "done", "archived", "superseded"}
+)
+
+# Order matches convention.md. The INDEX renderer pins `status` to the top
+# of the Active section; this order applies to all other Roles.
+CANONICAL_ROLE_ORDER: tuple[str, ...] = (
+    "charter",
+    "plan",
+    "spec",
+    "milestone",
+    "log",
+    "status",
+    "decision",
+    "guide",
+    "runbook",
+    "reference",
+    "postmortem",
+    "idea",
+    "notes",
+)
+BUILTIN_ROLES: frozenset[str] = frozenset(CANONICAL_ROLE_ORDER)
+
+# Filenames and markers — exact strings.
+INDEX_FILENAME = "INDEX.md"
+MARKER_START = "<!-- docs:generated start -->"
+MARKER_END = "<!-- docs:generated end -->"
+
+
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+
+class MetadataError(Exception):
+    """Doc metadata is missing, malformed, or structurally invalid.
+
+    Raised by `parse()`. The message includes the file path and a
+    short description of the problem.
+    """
+
+
+class VocabularyError(Exception):
+    """Doc uses a Status or Role value not in the configured vocabulary.
+
+    Distinct from MetadataError because the metadata block parsed
+    successfully — the issue is the value, not the structure.
+    """
+
+
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Doc:
+    """A parsed Markdown doc.
+
+    Attributes:
+        path: Absolute path on disk.
+        title: The H1 title (text after the leading `# `).
+        status: Lifecycle status; must be in the configured vocabulary.
+        role: Doc role; must be in the configured vocabulary.
+        project: Project slug, from the metadata `Project:` line or the
+            `.docs.toml` default. None only if no default is configured
+            and the doc has no `Project:` line.
+        updated: Last meaningful update date, from `Updated:`.
+        related: Tuple of (verb, root-relative path) pairs harvested
+            from the `Related:` block. Paths are normalized to be
+            relative to the docs root, not the doc's own directory.
+        extra: Additional `Label: value` fields harvested from the
+            metadata block (e.g. Owner, Tags). Single-value labels
+            become strings; multi-value labels (those followed by a
+            bullet list) become tuples of strings.
+        body: Doc text after the metadata block. Used by the index
+            renderer to extract a one-line description (first non-empty
+            paragraph).
+        archived: True iff `path` is under the configured archive
+            subtree (root/archive_dir/...). May disagree with `status`
+            if the doc was hand-edited; the `check` verb (M3) surfaces
+            such drift.
+    """
+
+    path: Path
+    title: str
+    status: str
+    role: str
+    project: str | None
+    updated: date
+    related: tuple[tuple[str, str], ...]
+    extra: Mapping[str, str | tuple[str, ...]]
+    body: str
+    archived: bool
+
+
+@dataclass(frozen=True)
+class Config:
+    """Resolved configuration for a docs root.
+
+    Loaded from `.docs.toml` at the root, with built-in defaults for any
+    missing fields. The vocabulary frozensets are the *union* of the
+    built-in set and any `add_statuses`/`add_roles` from the config
+    (additive only — removing built-ins is not supported).
+
+    Defaults when `.docs.toml` is absent:
+        project = root.resolve().name or "root"
+        archive_dir = "archive"
+        date_format = "%Y-%m-%d"
+        statuses = BUILTIN_STATUSES
+        roles = BUILTIN_ROLES
+        index_filename = INDEX_FILENAME ("INDEX.md")
+    """
+
+    project: str
+    archive_dir: str
+    date_format: str
+    statuses: frozenset[str]
+    roles: frozenset[str]
+    index_filename: str = INDEX_FILENAME
+
+
+# ---------------------------------------------------------------------------
+# Core API (skeleton — implementations land in Phases 5–7)
+# ---------------------------------------------------------------------------
+
+
+def parse(text: str, path: Path, root: Path) -> Doc:
+    """Parse a Markdown doc into a Doc.
+
+    Reads the H1 title, the metadata block (a contiguous run of
+    `Label: value` lines under the H1, ending at a blank line),
+    and the body.
+
+    Args:
+        text: Full doc text.
+        path: Doc's absolute path. Used for the `Doc.path` field and
+            for error messages.
+        root: Docs root (used to determine the archived flag and to
+            keep `Related:` paths root-relative).
+
+    Returns:
+        A frozen `Doc` instance.
+
+    Raises:
+        MetadataError: structural problems (missing H1, missing
+            required label, malformed Updated, etc.).
+        VocabularyError: Status or Role value not in the vocabulary.
+            Vocabulary validation is performed at parse time but
+            requires a Config; in practice this means callers should
+            re-validate via the walker when a Config is available.
+            For the bare `parse()` call (used in tests), validation
+            uses BUILTIN_STATUSES and BUILTIN_ROLES.
+    """
+    raise NotImplementedError("parse() — Phase 6")
+
+
+def walk(root: Path, config: Config) -> Iterator[Doc]:
+    """Yield every parseable Markdown doc under root in deterministic order.
+
+    Skip rules:
+        - Files not ending in `.md`.
+        - The root-level file literally named `INDEX.md` (it's a
+          generated view, not a managed doc). Nested `INDEX.md` files
+          deeper in the tree ARE walked.
+        - Dotfiles and dotdirectories (`.docs.toml`, `.git`, etc.).
+
+    Order: Docs are yielded sorted by their root-relative POSIX path
+    (lexicographic). The `archived` flag is set per `Doc.archived` based
+    on whether the path lies under `root/config.archive_dir`.
+    """
+    raise NotImplementedError("walk() — Phase 6")
+
+
+def render_index(
+    docs: list[Doc],
+    config: Config,
+    existing: str | None,
+) -> str:
+    """Render an INDEX.md from a list of Docs.
+
+    Behavior:
+        - If `existing` contains the markers `MARKER_START` and
+          `MARKER_END`, only the content between them is rewritten;
+          everything outside the markers is preserved verbatim.
+        - If `existing` is None or contains no markers, returns a
+          minimal INDEX containing only the marker block.
+
+    Format details (see architecture.md "INDEX renderer format"):
+        - Summary line: `_Generated YYYY-MM-DD. N docs active, M archived._`
+        - Section headings: `## Active — <Role-titlecased>` and `## Archived`.
+        - Role groups follow CANONICAL_ROLE_ORDER, with `status` pinned
+          to the top of the Active groups.
+        - Within each group: Updated descending, then path ascending.
+        - Entry format: `- [name.md](name.md) — _role_ — <desc>. Updated YYYY-MM-DD.`
+
+    The renderer is deterministic: same `docs` and `existing` inputs
+    produce byte-identical output.
+    """
+    raise NotImplementedError("render_index() — Phase 6")
+
+
+def load_config(root: Path) -> Config:
+    """Load `.docs.toml` from root, or return defaults if absent.
+
+    Vocabulary additions from `.docs.toml [vocabulary]` are merged
+    into the built-in sets. Removals are not supported (additive
+    only — see vocab-adr.md).
+
+    Args:
+        root: Docs root directory (the one that may contain `.docs.toml`).
+
+    Returns:
+        A frozen `Config` instance.
+    """
+    raise NotImplementedError("load_config() — Phase 6")
+
+
+def find_root(start: Path) -> Path:
+    """Walk up from `start` looking for `.docs.toml`; return its directory.
+
+    If no `.docs.toml` is found by the time the walk reaches the
+    filesystem root (`Path('/')` on POSIX), returns `start.resolve()`
+    as a cwd-as-root fallback. The walk explicitly stops at the root
+    sentinel to avoid an infinite loop.
+    """
+    raise NotImplementedError("find_root() — Phase 6")
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point. Returns the process exit code.
+
+    Subcommands implemented in M1:
+        index — regenerate INDEX.md from metadata in the docs root.
+
+    Exit codes (per cli.md):
+        0 — success (or warnings-only on `check`).
+        1 — recoverable error (file conflict, validation warning,
+            missing input).
+        2 — hard error (invalid vocab, atomic-operation failure,
+            validation errors).
+    """
+    raise NotImplementedError("main() — Phase 7")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

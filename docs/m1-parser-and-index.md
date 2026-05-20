@@ -37,7 +37,7 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 
 ### Deliverables
 
-- [ ] `docs` executable (Python 3.11+, single file, stdlib only) with `index` subcommand functional.
+- [ ] `bin/docs` executable (Python 3.11+, single file, stdlib only) with `index` subcommand functional.
 - [ ] `pyproject.toml` (project metadata, dev dependencies: pytest, ruff, mypy).
 - [ ] `tests/test_model.py`, `tests/test_walker.py`, `tests/test_index.py`, `tests/test_cli_index.py`.
 - [ ] `tests/fixtures/` with `minimal/`, `with-archive/`, `marker-preservation/` trees.
@@ -133,7 +133,7 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 
 ## Phase Checklist
 
-- [ ] Phase 1: Define Contract
+- [x] Phase 1: Define Contract
 - [ ] Phase 2: Write Tests (RED)
 - [ ] Phase 3: Create Data/Fixtures
 - [ ] Phase 4: Run Tests (RED Baseline)
