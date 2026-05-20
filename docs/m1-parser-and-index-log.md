@@ -1,6 +1,6 @@
 # M1 — Implementation Log
 
-Status: active
+Status: done
 Role: log
 Project: docs
 Updated: 2026-05-20
@@ -14,7 +14,8 @@ Related:
 - Project: docs
 - Milestone: M1 — Parser and `docs index`
 - Started: 2026-05-20
-- Progress: Phase 1 (Define Contract) — not yet started; foundations complete
+- Shipped: 2026-05-20
+- Progress: Phase 10 complete; M1 shipped (see Milestone-completion summary at the bottom of this log)
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -38,7 +39,10 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 9. Dogfood pass | Complete | 2026-05-20 | Dogfood revealed a renderer bug: substring-based marker detection false-matched against backtick-quoted marker mentions in the preamble prose, corrupting `docs/INDEX.md`. Fixed with line-anchored detection (`_find_marker_lines`). Added regression test. Reconciled `tests/fixtures/expected/docs-INDEX.md` against the spec-correct rendered output. Suite now 58 passed / 0 failed. |
 | 10. Quality, Docs, Refactor | Complete | 2026-05-20 | M1 closed out. Status doc flipped (M1 → Complete, M2 → ACTIVE). Milestone doc Status flipped to `done`, Overview Status → COMPLETE, all deliverable + success-criteria checkboxes ticked, completion summary appended. No refactor needed — `bin/docs` is ~520 lines, within budget. |
 
-## Current State Analysis
+## Current State Analysis (snapshot at milestone kickoff, 2026-05-20)
+
+_Captured before Phase 1; historical. Post-milestone state lives in the
+Milestone-completion summary at the bottom of this log._
 
 - **Codebase:** No source code. `tests/` contains only `.gitkeep`.
 - **Docs:** Eleven Markdown files in `docs/` plus this log. All hand-authored.
@@ -54,14 +58,14 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | `tests/conftest.py` | Create | 1 | Loads `bin/docs` via `importlib.SourceFileLoader`, registers in `sys.modules['docs']`; provides `docs_script` and `fixtures_dir` fixtures. |
 | `tests/test_model.py` | Create | 2 | Parser unit tests (16). |
 | `tests/test_walker.py` | Create | 2 | Walker unit tests (9). |
-| `tests/test_index.py` | Create | 2 | Renderer unit tests (13). |
+| `tests/test_index.py` | Create | 2 | Renderer unit tests (13 in Phase 2; grew to 14 in Phase 9 with the marker-mention regression test). |
 | `tests/test_config.py` | Create | 2 | `load_config` + `find_root` (12). Added on Plan-agent recommendation to isolate pure functions from the walker. |
 | `tests/test_cli_index.py` | Create | 2 | End-to-end CLI tests via subprocess (7). |
 | `tests/fixtures/parser/*.md` | Create | 3 | Single-doc parser fixtures. |
 | `tests/fixtures/trees/minimal/` | Create | 3 | Smallest valid tree (1 doc + `.docs.toml`). |
 | `tests/fixtures/trees/with-archive/` | Create | 3 | Active + archive subtree + non-md + dotfile + dotdir + nested INDEX. |
 | `tests/fixtures/trees/marker-preservation/` | Create | 3 | INDEX with hand-edited preamble + trailer outside the markers. |
-| `tests/fixtures/expected/docs-INDEX.md` | Create | 3 | Frozen snapshot of live `docs/INDEX.md`; breaks circular acceptance in the dogfood test. |
+| `tests/fixtures/expected/docs-INDEX.md` | Create | 3 | Dogfood-acceptance snapshot. Phase 3 froze the hand-authored live `docs/INDEX.md`; Phase 9 reconciled it against the spec-compliant renderer output. Still breaks circular acceptance — the test asserts against a committed string, not against the live file at test-time. |
 | `docs/architecture.md` | Modify | 1 | Renderer-format subspec; file-location correction (`bin/docs`). |
 | `README.md` | Modify | 1 | Install path corrected to `~/opt/docs/bin/docs`. |
 | `docs/m1-parser-and-index.md` | Modify | every phase | Phase Checklist updated as phases complete. |

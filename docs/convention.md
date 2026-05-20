@@ -34,7 +34,7 @@ The first non-empty line of the file MUST be a single `#` H1. This is the doc's 
 
 ### Metadata block
 
-Lines immediately after the H1 (separated by a blank line) form the **metadata block**. The block is a contiguous run of `Label: value` lines, ending at the next blank line.
+Lines immediately after the H1 (separated by a blank line) form the **metadata block**.
 
 Within the block, two line shapes are allowed:
 
@@ -47,7 +47,19 @@ Label:
 
 The first form is for single values. The second form is for multi-valued labels (used by `Related:` and any other label that takes a list).
 
-The metadata block terminates at the first blank line. Content sections begin after that.
+The metadata block may be split into groups separated by blank lines, provided each group after the first is a bare `Label:` followed by `- value` bullets (a multi-value group). This permits the common style of grouping inline metadata above and `Related:` (or any other list-valued label) below, with a visual blank line between them:
+
+```
+Status: active
+Role: spec
+Updated: 2026-05-20
+
+Related:
+- pairs-with: convention.md
+- implements: charter.md
+```
+
+The block terminates at the first blank line whose next non-empty line is *not* a bare-label multi-value group. An inline `Label: value` line after a blank line is body content, not metadata — this preserves the rule that anything looking like an isolated `Label: value` outside the block is opaque to the parser.
 
 ### Required fields
 

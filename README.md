@@ -59,7 +59,7 @@ Requires Python 3.11+ (for stdlib `tomllib`). No third-party dependencies.
 
 ## Status
 
-Pre-implementation. The convention and CLI surface are designed; the binary is being built. See [`docs/plan.md`](docs/plan.md) for milestones.
+M1 — Parser and `docs index` — shipped 2026-05-20. `docs index [DIR]` walks a docs root, parses each `.md` file's metadata, and regenerates `INDEX.md` with hand-edited preamble/trailer preserved. Stdlib-only, ~520 lines of Python, 58 passing tests. M2 (mutating verbs: `new`, `archive`, `mv`, `touch`) is the active milestone — see [`docs/plan.md`](docs/plan.md) and [`docs/status.md`](docs/status.md).
 
 ## License
 

@@ -30,7 +30,7 @@ _Generated 2026-05-20. 12 docs active, 0 archived._
 
 ## Active — Log
 
-- [m1-parser-and-index-log.md](m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Progress: Phase 1 (Define Contract) —…. Updated 2026-05-20.
+- [m1-parser-and-index-log.md](m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Shipped: 2026-05-20 - Progress: Phase…. Updated 2026-05-20.
 
 ## Active — Decision
 

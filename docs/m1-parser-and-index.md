@@ -45,7 +45,10 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 - [x] All quality gates green: `ruff check .`, `ruff format --check .`, `mypy bin/docs`, `pytest -q`.
 - [x] `docs/status.md` updated to reflect M1 complete + M2 active.
 
-## Current state analysis
+## Current state analysis (snapshot at milestone kickoff, 2026-05-20)
+
+_Captured before Phase 1; historical. Post-milestone state lives in the
+Milestone-completion summary at the bottom of this file._
 
 - **Existing code:** none. No `docs` executable, no `tests/` content beyond `.gitkeep`.
 - **Existing docs:** charter, convention, cli, plan, architecture, test-strategy, vocab-adr, dual-status-adr, INDEX, definition-of-ready, status, this file. All authored manually.
@@ -60,6 +63,8 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 - **Files:**
   - `docs` (executable) — top of file: `Doc` dataclass, `Vocab` dataclass, `Config` dataclass, exception classes (`MetadataError`, `VocabularyError`), function signatures (`parse`, `walk`, `render_index`, `load_config`, `find_root`, `main`).
 - **Exit:** Types compile under `python -c "import docs"` (or equivalent ast parse). No business logic. Docstrings reference [convention.md](convention.md) for semantics.
+
+> _Deviation: `Vocab` dataclass was not added — `Config.statuses` / `Config.roles` already carry the merged vocab and no consumer needed a standalone `Vocab` value in M1. See the Phase 5 log entry for rationale._
 
 ### Phase 2: Write Tests (RED)
 
