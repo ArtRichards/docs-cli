@@ -135,7 +135,7 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 
 - [x] Phase 1: Define Contract
 - [x] Phase 2: Write Tests (RED)
-- [ ] Phase 3: Create Data/Fixtures
+- [x] Phase 3: Create Data/Fixtures
 - [ ] Phase 4: Run Tests (RED Baseline)
 - [ ] Phase 5: Update Base Interfaces
 - [ ] Phase 6: Implement Offline/Core Path

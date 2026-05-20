@@ -29,7 +29,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-20 | Skeleton + test infra; corrected file location to `bin/docs`. |
 | 2. Write Tests (RED) | Complete | 2026-05-20 | 57 tests across 5 files. Collect cleanly; expected to fail with NotImplementedError. |
-| 3. Create Data/Fixtures | Pending | — | — |
+| 3. Create Data/Fixtures | Complete | 2026-05-20 | 15 fixture files across `parser/`, `trees/{minimal,with-archive,marker-preservation}/`, `expected/`. |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
@@ -150,3 +150,49 @@ Total: 57 tests collected. Pytest collection time: 0.03s, no import errors.
 - [x] Tests use the conftest-loaded `docs` module; no path manipulation in individual test files.
 - [x] Subprocess CLI tests use `sys.executable` for portability.
 - [x] Ready for Phase 3 (build fixtures) → Phase 4 (RED baseline confirms NotImplementedError failures).
+
+### Phase 3 — Create Data/Fixtures
+
+**Completed:** 2026-05-20
+
+#### Objective
+Hand-build the fixture trees and the frozen INDEX snapshot referenced by Phase 2 tests, so the only remaining cause of test failures at Phase 4 is `NotImplementedError`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/fixtures/parser/well-formed.md` | Create | Single-doc parser fixture: H1, full metadata block, two content sections. |
+| `tests/fixtures/trees/minimal/.docs.toml` | Create | Root marker + all defaults explicit (also documents what defaults look like). |
+| `tests/fixtures/trees/minimal/lone-doc.md` | Create | Only doc in the minimal tree. `Role: notes`. |
+| `tests/fixtures/trees/with-archive/.docs.toml` | Create | Root marker. |
+| `tests/fixtures/trees/with-archive/alpha.md` | Create | Active spec. Newer Updated date (2026-05-21). |
+| `tests/fixtures/trees/with-archive/beta.md` | Create | Active charter. Older Updated date (2026-05-19). |
+| `tests/fixtures/trees/with-archive/notes.txt` | Create | Non-Markdown file. Walker must skip. |
+| `tests/fixtures/trees/with-archive/.hidden-file` | Create | Dotfile. Walker must skip. |
+| `tests/fixtures/trees/with-archive/.private/should-not-be-walked.md` | Create | Doc under a dotdir. Walker must skip the directory entirely. |
+| `tests/fixtures/trees/with-archive/archive/2026-01-01/old-plan.md` | Create | Archived plan. `Status: archived`, under archive subtree. Walker sets `archived=True`. |
+| `tests/fixtures/trees/with-archive/archive/2026-01-01/INDEX.md` | Create | Nested INDEX.md. `Role: log` (exercises the broadened log definition from vocab-adr.md). Walker treats it as a regular doc — only the **root-level** INDEX is special. |
+| `tests/fixtures/trees/marker-preservation/.docs.toml` | Create | Root marker. |
+| `tests/fixtures/trees/marker-preservation/lone-doc.md` | Create | Active spec, sole doc in the tree. |
+| `tests/fixtures/trees/marker-preservation/INDEX.md` | Create | Has hand-edited preamble before `<!-- docs:generated start -->` and trailer after `<!-- docs:generated end -->`. Renderer must preserve both. |
+| `tests/fixtures/expected/docs-INDEX.md` | Create | Frozen snapshot of the live `docs/INDEX.md` at the time of this commit. The CLI test `test_index_output_matches_frozen_snapshot` asserts against this, breaking the circular-acceptance risk that Phase 9 alone would have. |
+
+#### Actions taken
+
+- Created the directory structure under `tests/fixtures/` (parser, trees/minimal, trees/with-archive + archive subtree + dotdir, trees/marker-preservation, expected).
+- Used `cp` to freeze the current `docs/INDEX.md` into `tests/fixtures/expected/docs-INDEX.md`. If Phase 9 produces output that diverges, reconciliation will update either the snapshot or the renderer (per the dogfood acceptance criterion).
+- Verified `git add --dry-run` includes all 15 fixture files, including the dotfile and dotdir contents (git tracks them; the walker just needs to ignore them at runtime).
+
+#### Issues / decisions
+
+- **Nested INDEX.md uses `Role: log`.** Per the convention.md update broadening the `log` role, a chronological snapshot at archive time is a natural fit (the doc accumulated entries for the duration of that archive date, then closed when the directory was sealed).
+- **Both active docs in `with-archive/` have distinct Updated dates** so renderer tests can verify descending-by-Updated sort independently of the path-ascending tiebreaker.
+- **`marker-preservation/INDEX.md` placeholder content.** Inside the markers I put a deliberately wrong placeholder (`_Generated 2000-01-01. 0 docs active, 0 archived._`) so it's obvious when a successful run has overwritten it.
+
+#### Exit criteria
+
+- [x] All test fixture paths referenced by Phase 2 tests exist.
+- [x] `with-archive/` includes the full matrix of fixture concerns: non-md, dotfile, dotdir, archive subtree, nested INDEX.
+- [x] Frozen `expected/docs-INDEX.md` snapshot in place.
+- [x] Ready for Phase 4: run pytest and capture the RED baseline.

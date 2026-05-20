@@ -1,0 +1,1 @@
+Plain text file co-located with the docs. The walker must skip non-Markdown files; this fixture exercises that rule.
