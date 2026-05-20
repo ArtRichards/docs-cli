@@ -43,6 +43,8 @@ The 13 roles fall into four clusters:
 
 `decision` (ADRs) and `postmortem` are explicit because they're common, distinct patterns that other doc systems treat as second-class. `reference` is distinct from `guide` because instructional vs. evergreen-lookup is a real-world distinction.
 
+`log` covers any chronological record where entries accumulate over time. The role isn't narrowly tied to "implementation log per milestone" — it also fits decision logs (a reviewer's running record of choices), operational logs (recurring on-call notes), and similar patterns where the doc grows over time rather than being rewritten. What distinguishes a `log` from a `status` doc: a status doc is rewritten as state evolves (snapshot of "where we are now"); a log appends.
+
 `notes` is the explicit escape hatch. Without it, anything that doesn't fit gets shoehorned into a wrong role.
 
 ## Alternatives considered

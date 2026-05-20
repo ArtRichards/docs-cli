@@ -89,7 +89,7 @@ Any additional `Label:` fields are harvested and exposed under `docs list --json
 | `plan` | How we'll get there (sequencing, milestones). |
 | `spec` | Detailed design or contract. |
 | `milestone` | A specific milestone definition. |
-| `log` | Implementation log tied to a milestone. |
+| `log` | A chronological record where entries accumulate over time — implementation log tied to a milestone, decision log accumulating reviewer choices, or operational log of recurring work. The distinguishing feature is that the doc grows over time rather than being rewritten. |
 | `status` | Living status document. |
 | `decision` | ADR-style: one decision, alternatives, rationale. |
 | `guide` | Instructional / how-to. |
@@ -116,7 +116,7 @@ Any additional `Label:` fields are harvested and exposed under `docs list --json
 - `decision` — points at a decision doc that justifies this one.
 - `references` — weakest form, "see also."
 
-`docs check` does not validate verbs (free-form), but it does validate that every `Related:` path resolves to a file under the docs root.
+`docs check` does not validate verbs (free-form), but it does validate that every `Related:` path resolves to a file under the docs root. The target file does **not** need to be a `.md` doc — it may be any file (YAML data, HTML report, spreadsheet, generated artifact). The tool checks existence, not file type. This lets specs cross-reference canonical data files, reviewer worksheets, or other artifacts that live in the same tree without forcing them through `docs`'s Markdown convention.
 
 ## Archive subtree
 
@@ -149,6 +149,19 @@ The docs root contains an `INDEX.md` with this structure:
 ```
 
 `docs` only rewrites content between the markers. Everything outside is preserved verbatim. The derived section groups by Status and Role, lists every `.md` file in the tree with its title and a one-line excerpt, and separates the active tree from the archive subtree.
+
+## Non-Markdown files in the tree
+
+A docs root frequently contains files that aren't Markdown — HTML review packets, spreadsheet workbooks, YAML data files, generated validation artifacts, exported PDFs, screenshots, and so on. These are not docs in the sense `docs` cares about; they are **silently ignored** by `docs index`, `docs check`, and every other verb that walks the tree.
+
+- They do not need a metadata block.
+- They do not appear as entries in `INDEX.md`.
+- Their absence of metadata is not an error.
+- They may be referenced from `.md` docs via `Related:` (see "Relationship verbs") or via prose links in the body. `Related:` will check that the referenced file exists, regardless of its extension.
+
+This keeps `docs` focused on the Markdown navigation layer while letting authors keep canonical data, presentation artifacts, and generated outputs co-located with the specs that describe them. The Markdown layer is the navigable map; everything else lives alongside it.
+
+If you want a non-Markdown artifact to appear *prominently* in `INDEX.md` (e.g., a key reviewer packet that needs to be the first thing readers see), describe it in a short companion `.md` doc that points at it via `Related:` — the companion doc carries the metadata and appears in the index; the artifact stays as the canonical file. A future v1.1 may add a first-class `Attachments:` field; for v1 the companion-doc pattern is the recommendation.
 
 ## File naming
 
