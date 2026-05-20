@@ -49,6 +49,37 @@ Per-milestone task plans are created when each milestone is activated, not all u
 - [Charter](charter.md) — what + why
 - [Convention spec](convention.md) — on-disk format
 - [CLI spec](cli.md) — command surface
-- [Architecture](architecture.md) — module sketch
+- [Architecture](architecture.md) — module sketch + dev setup commands
 - [Plan](plan.md) — five-milestone roadmap
 - [Definition of Ready](definition-of-ready.md) — gate to start
+
+## Resuming this work (fresh session)
+
+If you're starting a new Claude Code session against this repo:
+
+**Reading order** (≤ 10 minutes):
+1. `~/CLAUDE.md` — host-level guidance + memory pointers
+2. `docs/status.md` — this file
+3. `docs/m1-parser-and-index.md` — current milestone TDD plan
+4. `docs/m1-parser-and-index-log.md` — per-phase history (skim Phase 1–4 entries)
+5. `docs/convention.md`, `docs/architecture.md`, `docs/cli.md` — the specs the implementation must satisfy
+6. (Optional) `~/.claude/plans/start-m1-phase-1-quiet-bonbon.md` — the full execution plan with design choices the Plan agent surfaced
+
+**Verify environment** before doing any work:
+```sh
+cd ~/opt/docs
+.venv/bin/python -m pytest tests/ -q          # expect: 54 failed, 3 passed
+```
+If `.venv/` is missing (fresh clone):
+```sh
+python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
+.venv/bin/pip install pytest ruff mypy
+```
+Then re-run pytest; baseline = **54 failed, 3 passed in <1s**. All failures are `NotImplementedError`. This is the expected RED state.
+
+**Next action: Phase 5 — Update Base Interfaces.** Implement dataclass `__post_init__` validation hooks and shared utilities (`parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, atomic-write helper). Read Phase 5 in `m1-parser-and-index.md` for the concrete plan. No business logic yet — parser/walker/renderer/config implementations land in Phase 6.
+
+**Watch out for** (issues already resolved but worth knowing):
+- The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; same-name file would collide.
+- Two false-pass tests at the RED baseline (logged in Phase 4 entry of m1 log). Tighten them when their target functions land.
+- This repo uses `art@bitholdersinc.com` as git author email (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`. Memory entry at `~/.claude/projects/-home-user/memory/project_docs_cli.md` records this.

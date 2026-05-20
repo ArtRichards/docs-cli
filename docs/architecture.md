@@ -154,22 +154,34 @@ For archive operations (M2): edit in-place first (atomic write), then move (`Pat
 
 - Python 3.11+ (for `tomllib` in stdlib).
 - No third-party runtime dependencies.
-- Test-time: `pytest`. Development: `ruff`, optionally `mypy`. Specified in `pyproject.toml` (created in M1 Phase 5).
+- Test-time: `pytest`. Development: `ruff` and `mypy`. All declared under `[project.optional-dependencies] dev` in `pyproject.toml`.
+
+## Install (end users)
+
+```sh
+git clone https://github.com/<you>/docs.git ~/opt/docs
+ln -s $PWD/bin/docs ~/bin/docs   # or wherever your $PATH wants it
+```
+
+The script is self-contained; no `pip install` step needed for runtime use.
+
+## Development setup
+
+```sh
+cd ~/opt/docs
+python3 -m venv .venv                          # Python 3.11+; needs python3-venv on Debian/Ubuntu
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install pytest ruff mypy         # or: .venv/bin/pip install -e ".[dev]"
+```
+
+The `.venv/` directory is gitignored. Recreate it from scratch in a fresh clone.
 
 ## Commands (development)
 
+```sh
+.venv/bin/python -m pytest -q                  # run tests
+.venv/bin/ruff check .                         # lint
+.venv/bin/ruff format --check .                # format check
+.venv/bin/mypy bin/docs                        # type-check the executable
+./bin/docs index docs/                         # dogfood smoke (post-M1)
 ```
-ruff check .
-ruff format .
-mypy bin/docs        # if mypy installed
-pytest -q
-./bin/docs index docs/   # smoke test against own docs root
-```
-
-## Install
-
-```
-ln -s $PWD/bin/docs ~/bin/docs
-```
-
-The script is self-contained; no `pip install` step needed.
