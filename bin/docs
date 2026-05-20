@@ -22,13 +22,13 @@ from __future__ import annotations
 __version__ = "0.1.0-m1"
 
 import argparse  # noqa: F401  (used in Phase 7)
+import re
 import sys
 import tomllib  # noqa: F401  (used in Phase 6)
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
-
 
 # ---------------------------------------------------------------------------
 # Vocabulary
@@ -129,6 +129,18 @@ class Doc:
     body: str
     archived: bool
 
+    def __post_init__(self) -> None:
+        if not self.title.strip():
+            raise MetadataError(f"{self.path}: empty title")
+        if not self.status:
+            raise MetadataError(f"{self.path}: empty Status")
+        if not self.role:
+            raise MetadataError(f"{self.path}: empty Role")
+        if not isinstance(self.updated, date):
+            raise MetadataError(
+                f"{self.path}: Updated must be a date, got {type(self.updated).__name__}"
+            )
+
 
 @dataclass(frozen=True)
 class Config:
@@ -154,6 +166,154 @@ class Config:
     statuses: frozenset[str]
     roles: frozenset[str]
     index_filename: str = INDEX_FILENAME
+
+    def __post_init__(self) -> None:
+        if not self.project.strip():
+            raise ValueError("Config.project must be non-empty")
+        if not self.archive_dir or "/" in self.archive_dir:
+            raise ValueError(
+                f"Config.archive_dir must be a single path segment, got {self.archive_dir!r}"
+            )
+        if not self.date_format:
+            raise ValueError("Config.date_format must be non-empty")
+        if not self.statuses >= BUILTIN_STATUSES:
+            missing = BUILTIN_STATUSES - self.statuses
+            raise ValueError(f"Config.statuses missing built-ins: {sorted(missing)}")
+        if not self.roles >= BUILTIN_ROLES:
+            missing = BUILTIN_ROLES - self.roles
+            raise ValueError(f"Config.roles missing built-ins: {sorted(missing)}")
+
+
+# ---------------------------------------------------------------------------
+# Shared utilities
+# ---------------------------------------------------------------------------
+
+
+def parse_date(value: str, date_format: str = "%Y-%m-%d") -> date:
+    """Parse a date string, raising MetadataError on malformed input.
+
+    The default format matches `convention.md`. Trims surrounding whitespace
+    before parsing so trailing newlines from metadata-line splits don't trip
+    the parser.
+    """
+    try:
+        return datetime.strptime(value.strip(), date_format).date()
+    except ValueError as exc:
+        raise MetadataError(f"Updated: malformed date {value!r} (expected {date_format})") from exc
+
+
+def validate_status(value: str, statuses: frozenset[str]) -> None:
+    """Raise VocabularyError if `value` is not in `statuses`."""
+    if value not in statuses:
+        raise VocabularyError(f"Status: {value!r} not in vocabulary")
+
+
+def validate_role(value: str, roles: frozenset[str]) -> None:
+    """Raise VocabularyError if `value` is not in `roles`."""
+    if value not in roles:
+        raise VocabularyError(f"Role: {value!r} not in vocabulary")
+
+
+_LABEL_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
+
+
+def parse_metadata_block(
+    text: str,
+) -> tuple[str, dict[str, str | tuple[str, ...]], str]:
+    """Split doc text into (title, metadata, body).
+
+    Pure syntax: extracts the H1, the metadata block that follows it,
+    and the remaining body. The metadata block is a run of `Label: value`
+    lines and bare-label-with-bullet groups (e.g. `Related:` followed by
+    `- pairs-with: ...`). Bare-label-with-bullet groups may be separated
+    from earlier metadata by a blank line — this matches the convention
+    used in the project's own docs. An inline `Label: value` line after
+    a blank line is treated as body, not metadata.
+
+    Does not enforce required fields, vocabulary, or date format —
+    `parse()` layers those on top.
+
+    Raises:
+        MetadataError: missing H1, or a malformed line inside the metadata
+            block.
+    """
+    lines = text.splitlines()
+    n = len(lines)
+
+    # Find the H1.
+    i = 0
+    while i < n and lines[i].strip() == "":
+        i += 1
+    if i >= n:
+        raise MetadataError("missing H1 (file is empty)")
+    if not lines[i].startswith("# "):
+        raise MetadataError(f"missing H1 (first non-empty line: {lines[i]!r})")
+    title = lines[i][2:].rstrip()
+    i += 1
+
+    # Skip the blank line(s) between H1 and metadata block.
+    while i < n and lines[i].strip() == "":
+        i += 1
+
+    metadata: dict[str, str | tuple[str, ...]] = {}
+    while i < n:
+        if lines[i].strip() == "":
+            # Blank line: continue iff the next non-blank line is a bare
+            # label followed by a bullet — that's a multi-value group that
+            # belongs to the same metadata block.
+            j = i + 1
+            while j < n and lines[j].strip() == "":
+                j += 1
+            if j >= n:
+                break
+            m = _LABEL_RE.match(lines[j])
+            if not m or m.group(2).strip():
+                break
+            if j + 1 >= n or not lines[j + 1].startswith("- "):
+                break
+            i = j
+            continue
+
+        m = _LABEL_RE.match(lines[i])
+        if not m:
+            # First non-label content terminates the metadata block; the
+            # line is the start of the body. `parse()` reports any missing
+            # required fields with a clearer error than we could here.
+            break
+        label, rest = m.group(1), m.group(2)
+        rest_stripped = rest.strip()
+        if rest_stripped:
+            metadata[label] = rest_stripped
+            i += 1
+            continue
+        # Bare label → multi-value list of "- value" bullets.
+        i += 1
+        values: list[str] = []
+        while i < n and lines[i].startswith("- "):
+            values.append(lines[i][2:].strip())
+            i += 1
+        metadata[label] = tuple(values)
+
+    # i is at the terminating blank line (or EOF). Skip blanks so body
+    # starts at the first content line.
+    while i < n and lines[i].strip() == "":
+        i += 1
+    body_lines = lines[i:]
+    body = "\n".join(body_lines)
+    if text.endswith("\n") and body and not body.endswith("\n"):
+        body += "\n"
+    return title, metadata, body
+
+
+def atomic_write(path: Path, content: str) -> None:
+    """Write `content` to `path` atomically via tmpfile + rename.
+
+    POSIX-atomic on the same filesystem. Cross-filesystem renames fall back
+    to a copy + unlink under the hood (`Path.replace` handles that).
+    """
+    tmp = path.with_suffix(path.suffix + ".docs-tmp")
+    tmp.write_text(content)
+    tmp.replace(path)
 
 
 # ---------------------------------------------------------------------------

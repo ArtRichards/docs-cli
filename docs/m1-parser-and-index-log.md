@@ -31,7 +31,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 2. Write Tests (RED) | Complete | 2026-05-20 | 57 tests across 5 files. Collect cleanly; expected to fail with NotImplementedError. |
 | 3. Create Data/Fixtures | Complete | 2026-05-20 | 15 fixture files across `parser/`, `trees/{minimal,with-archive,marker-preservation}/`, `expected/`. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-20 | 54 failed (all `NotImplementedError`), 3 passed (1 legit, 2 false-pass). Log-only, no commit. |
-| 5. Update Base Interfaces | Pending | — | — |
+| 5. Update Base Interfaces | Complete | 2026-05-20 | `__post_init__` on `Doc` and `Config`; 5 shared utilities (`parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, `atomic_write`). RED baseline preserved at 54/3. |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
 | 8. Run Tests (GREEN) | Pending | — | — |
@@ -244,3 +244,85 @@ The two false-passes are flagged in this log so they're remembered when Phase 6/
 - [x] False-pass tests identified and queued for tightening in later phases.
 - [x] No code committed in this phase (log-only).
 - [x] Ready for Phase 5: implement dataclass validation and shared utilities.
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-20
+
+#### Objective
+Lock in dataclass invariants and ship the small, pure helpers that Phase 6 will compose into `parse()`, `load_config()`, and `render_index()` (and that M2 verbs will reuse for atomic writes). No business logic — `parse`, `walk`, `render_index`, `load_config`, `find_root`, and `main` stay `NotImplementedError`. RED baseline must not move.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | Added `__post_init__` to `Doc` and `Config`; new "Shared utilities" section with `parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, `atomic_write`; added `import re` and `datetime` to the existing `from datetime import date` line. |
+| `docs/m1-parser-and-index.md` | Modify | Phase 5 checkbox ticked. |
+| `docs/m1-parser-and-index-log.md` | Modify | This entry; progress table row updated. |
+| `docs/status.md` | Modify | Current phase advanced to Phase 6; resuming-this-work next action rewritten. |
+
+#### What landed
+
+**`Doc.__post_init__`** — structural invariants only (no vocab lookup, since vocab is Config-dependent):
+- `title.strip()` non-empty
+- `status`, `role` non-empty strings
+- `updated` is a `date` instance
+
+Raises `MetadataError` on violation. Compatible with the test_index.py `_doc()` helper and walker construction patterns.
+
+**`Config.__post_init__`** — invariants on a resolved config:
+- `project.strip()` non-empty
+- `archive_dir` non-empty and a single path segment (no `/`)
+- `date_format` non-empty
+- `statuses` ⊇ `BUILTIN_STATUSES` (additive vocab per `vocab-adr.md`)
+- `roles` ⊇ `BUILTIN_ROLES`
+
+Raises `ValueError` (Config comes from TOML / programmer code, not from doc text — `MetadataError` would be the wrong category).
+
+**`parse_date(value, date_format="%Y-%m-%d") -> date`** — wraps `datetime.strptime(...).date()`; raises `MetadataError` with a uniform message on `ValueError`. Pulled out so Phase 6 `parse()` gets a consistent error string for the `Updated:` field.
+
+**`validate_status` / `validate_role`** — pure value-in-set checks; raise `VocabularyError` on miss.
+
+**`parse_metadata_block(text) -> (title, metadata, body)`** — combined helper per the answered design question. Pure syntax extraction:
+
+- Finds the H1 (raises `MetadataError` if missing or wrong shape).
+- Parses a run of `Label: value` and `Label:` + `- bullet` items.
+- **Allows blank-line-separated multi-value groups** (e.g., `Related:` after a blank line, with bullets) — this matches the project's own doc fixtures (`tests/fixtures/parser/well-formed.md`, the `WELL_FORMED` string in `test_model.py`).
+- An inline `Label: value` line after a blank line terminates the metadata block (body), matching `test_parse_metadata_block_terminates_at_blank_line`.
+- A non-label non-blank line silently ends the metadata block — `parse()` will report the actual missing-required-field error in Phase 6 with better context than this helper could give.
+
+The body preserves blank lines between paragraphs and a trailing newline if the input ended in one.
+
+**`atomic_write(path, content)`** — tmpfile + `Path.replace`, exactly as `architecture.md` specifies. Used by Phase 6 `render_index` (INDEX.md write) and reused by every M2 mutating verb.
+
+#### Issues / decisions
+
+- **No `Vocab` dataclass.** The M1 plan Phase 5 description listed `Doc`, `Vocab`, `Config`. Phase 1 settled on `Config` carrying `statuses` and `roles` directly, and no Phase 2 test references `Vocab`. Introducing it now would be churn with no consumer. Defer until something needs to pass vocab around independently of Config (possibly M3 query views).
+- **`find_root` deferred to Phase 6.** The M1 plan lists it under Phase 5, but the session brief from the user groups it with `load_config` in Phase 6. Both `load_config` and `find_root` touch the filesystem and are best implemented together with consistent error handling — keeping them in Phase 6 simplifies that.
+- **Lenient metadata-block termination.** Originally drafted strict: any non-label non-blank line inside the block raised `MetadataError("malformed metadata line: …")`. Relaxed to "non-label terminates the block" because (a) it handles the degenerate "H1 + body, no metadata" case gracefully, and (b) `parse()` will produce a clearer "missing Status" / "missing Role" / "missing Updated" message in Phase 6 than a "malformed metadata line" error pointing at the first body line ever could.
+- **Blank-line-separated multi-value groups.** `convention.md` says "contiguous run of Label: value lines, ending at the next blank line", but the project's own fixtures (and the `WELL_FORMED` test string) separate the inline group from `Related:` with a blank line and still expect `Related` to be metadata. The helper handles this with a peek-past-blank-lines pass that continues the block iff the next non-blank line is a bare label followed by a `- ` bullet. The convention text may want a follow-up clarification; flagged here rather than edited in Phase 5.
+
+#### Test results
+
+```
+.venv/bin/python -m pytest tests/ -q
+=========================== 54 failed, 3 passed in 0.36s ===========================
+```
+
+Identical to the Phase 4 RED baseline — Phase 5 changes are purely additive and don't alter any test outcome.
+
+Quality gates over the changed file:
+```
+.venv/bin/ruff check bin/docs              # All checks passed!
+.venv/bin/ruff format --check bin/docs     # 1 file already formatted
+.venv/bin/mypy bin/docs                    # Success: no issues found in 1 source file
+```
+
+#### Exit criteria
+
+- [x] `Doc.__post_init__` and `Config.__post_init__` enforce structural invariants without referencing Config-dependent vocab.
+- [x] Five shared utilities implemented and importable.
+- [x] `import re`, `datetime` added; no other new top-level deps.
+- [x] RED baseline preserved (54 failed, 3 passed).
+- [x] ruff + mypy clean on `bin/docs`.
+- [x] Ready for Phase 6: implement `parse`, `walk`, `render_index`, `load_config`, `find_root` using these utilities.
