@@ -65,10 +65,11 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/m1-parser-and-index.md` — current milestone TDD plan
-4. `docs/m1-parser-and-index-log.md` — per-phase history (skim Phase 1–4 entries)
-5. `docs/convention.md`, `docs/architecture.md`, `docs/cli.md` — the specs the implementation must satisfy
-6. (Optional) `~/.claude/plans/start-m1-phase-1-quiet-bonbon.md` — the full execution plan with design choices the Plan agent surfaced
+3. `docs/plan.md` — five-milestone roadmap (M2 scope is the active section)
+4. `docs/m1-parser-and-index.md` — completed M1 milestone doc; scan the **Milestone-completion summary** at the bottom for the code surface, the design decisions, and the lessons compounded
+5. `docs/m1-parser-and-index-log.md` — per-phase history; skim entries that look relevant. The Phase 9 entry documents a real renderer bug (substring vs line-anchored marker detection); the Phase 5 entry documents the Vocab deferral and the convention.md blank-line nuance.
+6. `docs/convention.md`, `docs/architecture.md`, `docs/cli.md` — the specs the implementation must satisfy
+7. (Optional) `~/.claude/plans/` — historical Claude Code plan files; M1's are archived. M2 will author its own plan files there.
 
 **Verify environment** before doing any work:
 ```sh
@@ -89,6 +90,8 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 
 **Watch out for** (issues already resolved but worth knowing):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; same-name file would collide.
-- The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is now spec-compliant, not hand-authored. If you edit a body in `docs/*.md`, the renderer's "first paragraph" extraction changes — regenerate both `docs/INDEX.md` and the snapshot in lockstep.
+- The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is now spec-compliant, not hand-authored. If you edit a body in `docs/*.md`, the renderer's "first paragraph" extraction changes — regenerate both `docs/INDEX.md` and the snapshot in lockstep. The Phase 9 + consistency-sweep commits show the workflow.
 - Markers in the preamble must be quoted in backticks (or otherwise not appear as a standalone line). The line-anchored detector (`_find_marker_lines` in `bin/docs`) prevents false-matches but only when prose mentions are styled as inline code.
+- The metadata-block rule in `convention.md` is more permissive than the original "ends at first blank line" wording: a blank line is allowed between inline `Label: value` lines and a following bare-label multi-value group (e.g. `Related:` + bullets). Both the parser and every project doc use this style. The convention text was rewritten in the post-M1 audit to match practice — read the "Metadata block" section if writing a new doc.
 - This repo uses `art@bitholdersinc.com` as git author email (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`. Memory entry at `~/.claude/projects/-home-user/memory/project_docs_cli.md` records this.
+- Quality-gate scope: `ruff check .` / `ruff format --check .` / `mypy` should run **tree-wide**, not just over `bin/docs`. Phases 1–7 only checked the executable and missed lint debt in `tests/` that Phase 8 found. The configured `mypy` (no args) covers `bin/docs` + `tests/` per `pyproject.toml`.

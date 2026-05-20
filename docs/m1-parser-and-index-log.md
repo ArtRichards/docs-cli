@@ -627,3 +627,20 @@ M1 — Parser and `docs index` shipped 2026-05-20 across ten TDD phases. See the
 Phase 1–4 laid the contract, tests, fixtures, and RED baseline. Phase 5 added dataclass invariants and pure utilities. Phase 6 implemented the offline core (parser/walker/renderer/config). Phase 7 wired the CLI. Phase 8 surfaced repo-wide lint debt. Phase 9 dogfooded the tool against this repo's own `docs/`, surfaced a real renderer bug (marker false-match in prose mentions), fixed it with a regression test, and reconciled the hand-authored snapshot to the spec-compliant output. Phase 10 closed out the docs.
 
 Final shape: ~520 lines of stdlib-only Python in `bin/docs`, 58 passing tests, dogfood idempotent against this repo's own `docs/INDEX.md`. M2 starts next.
+
+## Post-M1 audit (consistency sweep, commit `386d4fa`)
+
+Ran a full consistency / completeness / accuracy audit after Phase 10. Findings and fixes (no behavior changes):
+
+- **`README.md` Status section** — was "Pre-implementation"; rewrote to reflect M1 shipped, 58 passing tests, M2 active.
+- **Log front-matter `Status:`** — was `active`; flipped to `done` (log is finalized; stays in active tree as evergreen reference per `dual-status-adr.md`).
+- **Log "Implementation metadata" Progress line** — was frozen at "Phase 1 (Define Contract) — not yet started"; rewrote to "Phase 10 complete; M1 shipped" and added a `Shipped: 2026-05-20` line.
+- **Log "Files to Create" table** — `test_index.py` row said `Renderer unit tests (13)`; reality is 14 (Phase 9 added `test_render_ignores_marker_mentions_inside_prose`). Annotated. The `tests/fixtures/expected/docs-INDEX.md` row's "Frozen snapshot" wording was annotated to reflect the Phase 9 reconciliation.
+- **Historical sections labelled** — both the log's "Current State Analysis" and the milestone doc's "Current state analysis" are kickoff snapshots. Added `(snapshot at milestone kickoff, 2026-05-20)` markers with pointers to the post-milestone summary.
+- **Milestone doc Phase 1 description** — listed a `Vocab` dataclass that was never created (deferred in Phase 5). Added a small deviation note cross-referencing the Phase 5 log.
+- **`convention.md` metadata-block section** — said the block "terminates at the first blank line". Both the parser and every project doc actually use a blank-line separator before bare-label multi-value groups (e.g. `Related:` + bullets). Rewrote the section to document the relaxed rule and the precise termination condition. **Spec rewrite to match practice; behavior unchanged.**
+- **`docs/INDEX.md` + snapshot lockstep** — the Implementation-metadata edit above shifted the m1 log's first-paragraph extraction. Regenerated `docs/INDEX.md` via dogfood and re-synced `tests/fixtures/expected/docs-INDEX.md`. Verified idempotent.
+
+Verified clean: 58 passed, `ruff check .`, `ruff format --check .`, `mypy` (tree-wide, 7 files) — all green. No `NotImplementedError` / `TODO` / `FIXME` markers anywhere in `bin/docs` or `tests/`. Git tree clean.
+
+This concludes M1.
