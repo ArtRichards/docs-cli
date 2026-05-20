@@ -28,7 +28,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-20 | Skeleton + test infra; corrected file location to `bin/docs`. |
-| 2. Write Tests (RED) | Pending | — | — |
+| 2. Write Tests (RED) | Complete | 2026-05-20 | 57 tests across 5 files. Collect cleanly; expected to fail with NotImplementedError. |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
@@ -108,3 +108,45 @@ Lock in the public API surface of the `docs` executable: dataclasses, exception 
 #### Test results
 
 `.venv/bin/python -m pytest tests/ -q` → `no tests ran in 0.00s` (expected; Phase 2 adds them).
+
+### Phase 2 — Write Tests (RED)
+
+**Completed:** 2026-05-20
+
+#### Objective
+Express every required behavior as a failing test. Tests will fail with `NotImplementedError` (or fixture-missing errors until Phase 3 lands) — the GREEN state is Phase 6+.
+
+#### Files changed
+
+| File | Action | Tests |
+|---|---|---|
+| `tests/test_model.py` | Create | 16 — parser happy path, missing fields, malformed Updated, unknown vocab, multi-value Related, extra labels harvested, body extraction, archived-false-by-default. |
+| `tests/test_walker.py` | Create | 9 — minimal tree, root-INDEX exclusion, nested-INDEX inclusion, non-md exclusion, dotfile exclusion, determinism, sort order, archived flag set under archive_dir, active+archive counts. |
+| `tests/test_index.py` | Create | 13 — minimal vs preserved INDEX, idempotency, summary line, count correctness, status pinned, canonical role order, empty role omission, sort tiebreaker, archived section, entry format, description from first paragraph, truncation. |
+| `tests/test_config.py` | Create | 12 — defaults, project from dir name, explicit project, archive_dir override, additive status/role extension, root edge case, find_root upward walk and fallback, invalid TOML. |
+| `tests/test_cli_index.py` | Create | 7 — `--help`, minimal-tree exit 0, writes INDEX.md, `--dry-run` non-mutating, nonexistent root nonzero, marker preservation, frozen-snapshot match. |
+
+Total: 57 tests collected. Pytest collection time: 0.03s, no import errors.
+
+#### Actions taken
+
+- Wrote unit tests against the imported `docs` module (`from docs import …`).
+- CLI tests use `subprocess.run([sys.executable, str(docs_script), …])` rather than relying on `chmod +x` or PATH — robust across hosts.
+- Tests reference fixture files at `tests/fixtures/{parser,trees,expected}/`. These don't exist yet; Phase 3 creates them.
+- The `test_index_output_matches_frozen_snapshot` test is the dogfood guard against circular acceptance — it asserts against a frozen snapshot rather than the live `docs/INDEX.md`.
+
+#### Issues / decisions
+
+- **`parse()` does not set `archived`.** During test design realized that `parse()` doesn't have access to `Config.archive_dir`, so it can't know if a path is "under the archive subtree." Decision: `parse()` always sets `archived=False`; the walker uses `dataclasses.replace(doc, archived=True)` when the path is under `root/config.archive_dir`. Updated `test_parse_archived_flag_is_false_by_default` (model) and `test_walk_archived_flag_set_for_archive_subtree` (walker) to reflect this split of responsibilities.
+- **Vocab validation in `parse()` (bare call).** Tests construct text inline and call `parse(text, path, root)` directly — no Config. The `parse()` docstring (Phase 1) says the bare call validates against `BUILTIN_STATUSES`/`BUILTIN_ROLES`. Tests rely on this.
+- **CLI test `test_index_nonexistent_root_exits_nonzero`** asserts only that exit code is non-zero — leaving Phase 7 free to choose 1 or 2 per `cli.md`'s exit-code matrix.
+- **Description truncation indicator.** Test accepts either Unicode ellipsis `…` or ASCII `...` to give Phase 6 implementation flexibility (the spec in `architecture.md` says "suffix with `…`" but `...` is acceptable for terminals without good Unicode).
+- **No fixture for `tests/fixtures/expected/docs-INDEX.md` at this point.** Phase 3 creates it as a frozen snapshot of the live `docs/INDEX.md`.
+
+#### Exit criteria
+
+- [x] 57 tests collected without import errors.
+- [x] Tests cover every critical-path item from `test-strategy.md`.
+- [x] Tests use the conftest-loaded `docs` module; no path manipulation in individual test files.
+- [x] Subprocess CLI tests use `sys.executable` for portability.
+- [x] Ready for Phase 3 (build fixtures) → Phase 4 (RED baseline confirms NotImplementedError failures).

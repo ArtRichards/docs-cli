@@ -17,7 +17,7 @@ Related:
 
 **Task plan:** [m1-parser-and-index.md](m1-parser-and-index.md)
 **Implementation log:** [m1-parser-and-index-log.md](m1-parser-and-index-log.md)
-**Current phase:** Phase 2 — Write Tests (RED) (next; Phase 1 complete)
+**Current phase:** Phase 3 — Create Data/Fixtures (next; Phases 1–2 complete)
 
 ## Milestone progress
 
