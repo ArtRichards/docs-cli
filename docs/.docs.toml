@@ -1,0 +1,16 @@
+# Marks this directory as a docs root managed by `docs`.
+# Without this file, `docs` still runs but with conservative defaults.
+
+[project]
+name = "docs"
+
+[archive]
+dir = "archive"               # subdir name treated as archive subtree
+date_format = "%Y-%m-%d"
+
+[vocabulary]
+# Additions only. Built-in statuses and roles are always recognized.
+# add_statuses = ["shipped"]
+# add_roles    = ["adr"]
+add_statuses = []
+add_roles    = []
