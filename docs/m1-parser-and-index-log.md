@@ -36,7 +36,7 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-20 | `main()` wired with argparse + `_cmd_index` dispatch. 6/7 CLI tests green; the 7th (`test_index_output_matches_frozen_snapshot`) fails on hand-curated snapshot text — deferred to Phase 9. Tightened false-pass `test_index_nonexistent_root_exits_nonzero` with stderr substring check. Suite now 56 passed / 1 failed. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-20 | First repo-wide `ruff check .` / `ruff format --check .` surfaced an import-block lint warning in `tests/test_model.py`; fixed. Test count unchanged. |
 | 9. Dogfood pass | Complete | 2026-05-20 | Dogfood revealed a renderer bug: substring-based marker detection false-matched against backtick-quoted marker mentions in the preamble prose, corrupting `docs/INDEX.md`. Fixed with line-anchored detection (`_find_marker_lines`). Added regression test. Reconciled `tests/fixtures/expected/docs-INDEX.md` against the spec-correct rendered output. Suite now 58 passed / 0 failed. |
-| 10. Quality, Docs, Refactor | Pending | — | — |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-20 | M1 closed out. Status doc flipped (M1 → Complete, M2 → ACTIVE). Milestone doc Status flipped to `done`, Overview Status → COMPLETE, all deliverable + success-criteria checkboxes ticked, completion summary appended. No refactor needed — `bin/docs` is ~520 lines, within budget. |
 
 ## Current State Analysis
 
@@ -575,3 +575,51 @@ Dogfood idempotency confirmed: running `./bin/docs index docs/` twice in a row p
 - [x] Hand-edited preamble and trailer in `docs/INDEX.md` survived the dogfood run.
 - [x] Bug surfaced by dogfood is fixed with a regression test.
 - [x] Ready for Phase 10: M1 close-out (status.md, plan.md, milestone summary).
+
+### Phase 10 — Quality, Docs, Refactor
+
+**Completed:** 2026-05-20
+
+#### Objective
+Close out M1. Update `status.md` (M1 → Complete, M2 → ACTIVE). Flip the M1 milestone doc's lifecycle to `done`. Tick remaining checkboxes. Append a milestone-completion summary to both the milestone doc and this log. Decide whether any refactor is needed.
+
+#### What landed
+
+- `docs/status.md`: Current-milestone block rewritten for M2; progress table flips M1 to Complete (2026-05-20) and M2 to ACTIVE; "Verify environment" rewritten to the post-M1 baseline (58 passed, all gates clean, dogfood smoke); "Next action" rewritten as "kick off M2"; watch-out list refreshed (snapshot lockstep, marker-in-prose rule).
+- `docs/m1-parser-and-index.md`: front-matter `Status: done`; Overview "Status: COMPLETE (2026-05-20)"; all Deliverable + Success Criteria checkboxes ticked; "Milestone-completion summary" section appended (code, tests, fixtures, quality gates, lessons, files added, next).
+- `docs/m1-parser-and-index-log.md`: this entry; progress table row for Phase 10 updated.
+- No code changes — the executable is at ~520 lines, within the M1 "stay under ~500 lines, defer refinements rather than split" budget. No refactor warranted.
+- `docs/plan.md`: read; no edits needed. M2–M5 scope descriptions still match what the M1 work surfaced.
+
+#### Issues / decisions
+
+- **Lifecycle `Status:` is now `done`, not `archived`.** The milestone doc stays in the active tree as evergreen reference (per the `dual-status-adr.md` distinction: `done` keeps the doc in the active tree, `archived` moves it under `archive/`). The M2 work will reference M1's plan + log directly; archiving would just add a path-resolution hop.
+- **No refactor needed.** Reviewed the file: cohesive sections, clear single-file budget, every public function tested. The renderer's role-ordering and description-extraction helpers are pure and named — leaving them inline aids readability in a single-file script. Phase 10 is a no-code phase.
+- **Dogfood regenerated `docs/INDEX.md`.** Already committed in Phase 9. Phase 10 doesn't touch INDEX.md.
+
+#### Test results
+
+```
+.venv/bin/python -m pytest tests/ -q       # 58 passed
+.venv/bin/ruff check .                     # All checks passed!
+.venv/bin/ruff format --check .            # 7 files already formatted
+.venv/bin/mypy bin/docs                    # Success
+```
+
+#### Exit criteria
+
+- [x] All Phase Checklist items in `m1-parser-and-index.md` checked.
+- [x] All Deliverables in `m1-parser-and-index.md` checked.
+- [x] `status.md` flipped to M1 Complete / M2 ACTIVE.
+- [x] M1 milestone doc carries `Status: done` + completion summary.
+- [x] This log carries a Phase 10 entry + a milestone-completion line.
+- [x] Quality gates clean.
+- [x] **M1 SHIPPED.**
+
+## Milestone-completion summary
+
+M1 — Parser and `docs index` shipped 2026-05-20 across ten TDD phases. See the per-phase entries above for detail; a one-line summary is in the M1 milestone doc under "Milestone-completion summary".
+
+Phase 1–4 laid the contract, tests, fixtures, and RED baseline. Phase 5 added dataclass invariants and pure utilities. Phase 6 implemented the offline core (parser/walker/renderer/config). Phase 7 wired the CLI. Phase 8 surfaced repo-wide lint debt. Phase 9 dogfooded the tool against this repo's own `docs/`, surfaced a real renderer bug (marker false-match in prose mentions), fixed it with a regression test, and reconciled the hand-authored snapshot to the spec-compliant output. Phase 10 closed out the docs.
+
+Final shape: ~520 lines of stdlib-only Python in `bin/docs`, 58 passing tests, dogfood idempotent against this repo's own `docs/INDEX.md`. M2 starts next.
