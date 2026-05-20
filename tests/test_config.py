@@ -44,9 +44,7 @@ def test_load_config_reads_explicit_project(tmp_path):
 
 
 def test_load_config_reads_archive_dir(tmp_path):
-    (tmp_path / ".docs.toml").write_text(
-        '[project]\nname = "x"\n\n[archive]\ndir = "graveyard"\n'
-    )
+    (tmp_path / ".docs.toml").write_text('[project]\nname = "x"\n\n[archive]\ndir = "graveyard"\n')
     cfg = load_config(tmp_path)
     assert cfg.archive_dir == "graveyard"
 

@@ -34,8 +34,8 @@ Implement the parser, walker, and `docs index` subcommand. Foundational mileston
 | 5. Update Base Interfaces | Complete | 2026-05-20 | `__post_init__` on `Doc` and `Config`; 5 shared utilities (`parse_date`, `validate_status`, `validate_role`, `parse_metadata_block`, `atomic_write`). RED baseline preserved at 54/3. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-20 | `parse`, `walk`, `render_index`, `load_config`, `find_root` implemented. 4 unit-test files all green (50/50). Tightened false-pass `test_load_config_invalid_toml_raises` → `pytest.raises(tomllib.TOMLDecodeError)`. Suite now 51 passed / 6 failed (CLI tests). |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-20 | `main()` wired with argparse + `_cmd_index` dispatch. 6/7 CLI tests green; the 7th (`test_index_output_matches_frozen_snapshot`) fails on hand-curated snapshot text — deferred to Phase 9. Tightened false-pass `test_index_nonexistent_root_exits_nonzero` with stderr substring check. Suite now 56 passed / 1 failed. |
-| 8. Run Tests (GREEN) | Pending | — | — |
-| 9. Dogfood pass | Pending | — | — |
+| 8. Run Tests (GREEN) | Complete | 2026-05-20 | First repo-wide `ruff check .` / `ruff format --check .` surfaced an import-block lint warning in `tests/test_model.py`; fixed. Test count unchanged. |
+| 9. Dogfood pass | Complete | 2026-05-20 | Dogfood revealed a renderer bug: substring-based marker detection false-matched against backtick-quoted marker mentions in the preamble prose, corrupting `docs/INDEX.md`. Fixed with line-anchored detection (`_find_marker_lines`). Added regression test. Reconciled `tests/fixtures/expected/docs-INDEX.md` against the spec-correct rendered output. Suite now 58 passed / 0 failed. |
 | 10. Quality, Docs, Refactor | Pending | — | — |
 
 ## Current State Analysis
@@ -479,3 +479,99 @@ Quality gates:
 - [x] All but the dogfood-snapshot test pass.
 - [x] Quality gates clean on `bin/docs`.
 - [x] Ready for Phase 8 (quality gate sweep) and Phase 9 (snapshot reconciliation) — likely combined in the next session since the snapshot diff is the only outstanding work.
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-20
+
+#### Objective
+Run the full quality gate over the repo (not just `bin/docs`). Confirm the only outstanding failure is the dogfood snapshot mismatch — which Phase 9 owns.
+
+#### What landed
+
+- Found and fixed an import-block lint issue in `tests/test_model.py` (extra blank line between `from docs import (…)` and `WELL_FORMED`). Ruff's `--fix` handled it; format pass picked up `tests/test_config.py` for a trivial line collapse too.
+- Tests unchanged at 56 passed / 1 failed (snapshot mismatch). Quality gates clean.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_model.py` | Modify | Lint fix (`I001`) — removed extra blank line. |
+| `tests/test_config.py` | Modify | Format pass — single line collapse, no semantic change. |
+| `docs/m1-parser-and-index.md` | Modify | Phase 8 checkbox ticked. |
+| `docs/m1-parser-and-index-log.md` | Modify | This entry. |
+
+#### Issues / decisions
+
+- **Repo-wide ruff was never invoked.** Prior phases ran `ruff check bin/docs` and `ruff format --check bin/docs` because the executable was the only Phase 1–7 work. The test files inherited lint debt from when they were written in Phase 2. Phase 8 closes that gap; from now on the quality gate covers `.` (the whole tree).
+
+#### Exit criteria
+
+- [x] `pytest -q` — same baseline as Phase 7 entry (56 passed / 1 failed).
+- [x] `ruff check .` clean.
+- [x] `ruff format --check .` clean.
+- [x] `mypy bin/docs` clean.
+- [x] Ready for Phase 9: reconcile the dogfood snapshot.
+
+### Phase 9 — Dogfood pass (mapped from "Online/Integration")
+
+**Completed:** 2026-05-20
+
+#### Objective
+Run `./bin/docs index docs/` against this repo's own docs root, surface any drift between hand-written and generated INDEX.md, and reconcile. Originally framed as a snapshot-update step; uncovered a real renderer bug along the way.
+
+#### What landed
+
+**Bug found and fixed:** the renderer's marker detection used `existing.split(MARKER_START, 1)` which matches the first occurrence anywhere in the text. The live `docs/INDEX.md` preamble documents the marker convention with backtick-quoted mentions like `` `<!-- docs:generated start -->` ``. The naive split matched the prose mention, treated the preamble's first marker reference as the real marker, and corrupted the output (the trailer became literal text like `` ` is rewritten.\n ``).
+
+**Fix:** new module-level helper `_find_marker_lines(text)` scans the input line by line and matches a marker only when it appears as a standalone line. Returns character offsets so the renderer can slice `pre` / `trailer` precisely. The trailer "owns" what's past the marker text (including newlines), keeping idempotency byte-exact.
+
+**Regression test:** `tests/test_index.py::test_render_ignores_marker_mentions_inside_prose` constructs a preamble that mentions the markers inside backticks and verifies the real (standalone-line) marker is the one consumed.
+
+**Snapshot reconciliation:** with the bug fixed, ran `./bin/docs index --root docs/` to regenerate the live INDEX.md, then copied the result over `tests/fixtures/expected/docs-INDEX.md`. The previous snapshot had two issues that came from being hand-authored before the implementation existed:
+1. **Hand-curated descriptions** — every entry's description was custom prose, while the spec (`architecture.md`'s "INDEX renderer format") says descriptions come from the first non-empty body paragraph. The snapshot text wasn't derivable from any doc body.
+2. **Non-canonical section order** — Spec appeared after Log, but `CANONICAL_ROLE_ORDER` puts Spec at position 2 (after charter, plan) — well before Milestone and Log.
+
+Reconciliation favored the spec: the snapshot now matches what the spec-compliant renderer produces. Future drift in the live `docs/INDEX.md` (real bodies change) will require updating both files in lockstep — the dogfood test guards against silent drift.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | Replaced `existing.split(MARKER_START, 1)` with a line-anchored `_find_marker_lines` helper. Trailer now owns what follows the marker text. |
+| `tests/test_index.py` | Modify | Added `test_render_ignores_marker_mentions_inside_prose` regression test. |
+| `tests/fixtures/expected/docs-INDEX.md` | Modify | Reconciled against the spec-compliant renderer output. Replaces the hand-authored aspirational snapshot. |
+| `docs/INDEX.md` | Modify | Regenerated via `./bin/docs index docs/`. Hand-edited preamble and trailer preserved verbatim. |
+| `docs/m1-parser-and-index.md` | Modify | Phase 9 checkbox ticked. |
+| `docs/m1-parser-and-index-log.md` | Modify | This entry. |
+
+#### Issues / decisions
+
+- **Bug class: substring vs line.** The original `MARKER_START in existing` check is forgiving (it'll match anywhere), but the slice operation downstream relies on the marker appearing in a structural position. Mixing those two contracts is the bug. Line-anchored matching aligns the structural use with the contract.
+- **Reconciling forward, not backward.** The hand-authored snapshot's descriptions were unreachable from any algorithmic source. Three options were considered: (a) update the renderer to match — but the renderer follows the spec, and there's no derivable rule; (b) add a `Description:` metadata field — out of M1 scope; (c) update the snapshot — accepts the spec as the source of truth. Picked (c).
+- **Idempotency preserved.** The line-anchored helper returns `post_start = cursor + len(stripped_marker)`, so the trailer takes ownership of the marker line's `\n`. Re-rendering yields byte-identical output (`test_render_is_idempotent` still passes).
+
+#### Test results
+
+```
+.venv/bin/python -m pytest tests/ -q
+=========================== 58 passed in 0.27s ===========================
+```
+
+Includes the new regression test. All Phase 7 false-pass cleanup holds.
+
+```
+.venv/bin/ruff check .                  # All checks passed!
+.venv/bin/ruff format --check .         # 7 files already formatted
+.venv/bin/mypy bin/docs                 # Success: no issues found
+```
+
+Dogfood idempotency confirmed: running `./bin/docs index docs/` twice in a row produces zero diff against the committed snapshot.
+
+#### Exit criteria
+
+- [x] `./bin/docs index docs/` produces output matching the (reconciled) snapshot byte-for-byte.
+- [x] Re-running is a no-op (idempotent).
+- [x] Hand-edited preamble and trailer in `docs/INDEX.md` survived the dogfood run.
+- [x] Bug surfaced by dogfood is fixed with a regression test.
+- [x] Ready for Phase 10: M1 close-out (status.md, plan.md, milestone summary).

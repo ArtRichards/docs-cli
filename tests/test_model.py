@@ -18,7 +18,6 @@ from docs import (
     parse,
 )
 
-
 WELL_FORMED = """\
 # Title
 

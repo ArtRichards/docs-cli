@@ -73,6 +73,32 @@ def test_render_preserves_preamble_and_trailer():
     assert "OLD CONTENT" not in out
 
 
+def test_render_ignores_marker_mentions_inside_prose():
+    """A preamble that mentions the marker text in prose must not false-match.
+
+    The dogfood `docs/INDEX.md` documents the marker convention by quoting
+    `<!-- docs:generated start -->` inside backticks. A naive substring split
+    on the marker would treat that mention as the real marker and corrupt the
+    output. Markers are recognized only when they appear as standalone lines.
+    """
+    preamble = (
+        f"# Docs\n\nOnly content between `{MARKER_START}` and `{MARKER_END}` is rewritten.\n\n"
+    )
+    trailer = "\n\nTrailer paragraph.\n"
+    existing = f"{preamble}{MARKER_START}\nOLD CONTENT\n{MARKER_END}{trailer}"
+    out = render_index([_doc("a.md")], _config(), existing=existing)
+    # The preamble (including its backtick-quoted marker mentions) must survive.
+    assert out.startswith(preamble)
+    # The trailer (after the real end marker) must survive.
+    assert out.endswith(trailer)
+    # The previous derived content must be gone.
+    assert "OLD CONTENT" not in out
+    # The real marker block appears exactly once (the prose mentions are in
+    # backticks, the real marker is on its own line).
+    assert out.count(f"\n{MARKER_START}\n") == 1
+    assert out.count(f"\n{MARKER_END}") == 1
+
+
 def test_render_is_idempotent():
     docs = [
         _doc("alpha.md", role="spec"),

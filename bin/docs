@@ -502,11 +502,47 @@ def render_index(
 
     derived = "\n".join(lines).rstrip() + "\n"
 
-    if existing and MARKER_START in existing and MARKER_END in existing:
-        pre = existing.split(MARKER_START, 1)[0]
-        trailer = existing.split(MARKER_END, 1)[1]
-        return f"{pre}{MARKER_START}\n{derived}{MARKER_END}{trailer}"
+    if existing:
+        marker_span = _find_marker_lines(existing)
+        if marker_span is not None:
+            pre_end, post_start = marker_span
+            pre = existing[:pre_end]
+            trailer = existing[post_start:]
+            return f"{pre}{MARKER_START}\n{derived}{MARKER_END}{trailer}"
     return f"{MARKER_START}\n{derived}{MARKER_END}\n"
+
+
+def _find_marker_lines(text: str) -> tuple[int, int] | None:
+    """Locate the standalone marker lines in `text`.
+
+    Returns ``(pre_end, post_start)`` where ``pre_end`` is the offset where the
+    preamble ends (exclusive — the marker-start line begins here) and
+    ``post_start`` is the offset where the trailer begins (the character after
+    the marker-end line's trailing newline, if any).
+
+    A marker is recognized only when it appears as a whole line. This avoids
+    matching the marker text inside prose mentions (e.g. backtick-quoted
+    references in the preamble).
+
+    Returns ``None`` if either marker is missing or they're out of order.
+    """
+    pre_end: int | None = None
+    post_start: int | None = None
+    cursor = 0
+    for line in text.splitlines(keepends=True):
+        stripped = line.rstrip("\r\n")
+        if pre_end is None and stripped == MARKER_START:
+            pre_end = cursor
+        elif pre_end is not None and stripped == MARKER_END:
+            # Trailer "owns" everything past the marker text, including the
+            # marker line's own trailing newline. This keeps idempotency: a
+            # re-render produces byte-identical output.
+            post_start = cursor + len(stripped)
+            break
+        cursor += len(line)
+    if pre_end is None or post_start is None:
+        return None
+    return pre_end, post_start
 
 
 def _format_entry(doc: Doc, config: Config) -> str:
