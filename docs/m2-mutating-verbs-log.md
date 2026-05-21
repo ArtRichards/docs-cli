@@ -14,8 +14,8 @@ Related:
 - Project: docs
 - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 - Started: 2026-05-21
-- Progress: Phases 1–7 complete (contract, tests, fixtures, RED baseline,
-  base interfaces, verb cores, CLI wrapper + `--cascade`). Full suite green.
+- Progress: Phases 1–9 complete (through the dogfood pass). Full suite green;
+  the verbs are dogfooded drift-free. Phase 10 (close-out) remains.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -38,8 +38,8 @@ metadata-editing helpers and a renderer fix for nested-doc links.
 | 5. Update Base Interfaces | Complete | 2026-05-21 | Editing helpers + `_metadata_line_span` + renderer root-relative fix + `_refresh_index`. 77 passed / 33 failed (verb cores remain). |
 | 6. Implement Offline/Core Path | Complete | 2026-05-21 | `_cmd_new` / `_cmd_touch` / `_cmd_archive` / `_cmd_mv` on the Phase 5 helpers. Full suite green: 110 passed. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-21 | `archive --cascade` one-hop prompt (`_archive_one` / `_cascade_archive`) + 2 cascade tests. Exit codes & `--dry-run` parity already covered by Phase 6. 112 passed. |
-| 8. Run Tests (GREEN) | Pending | — | Full suite + tree-wide quality gates. |
-| 9. Implement Online/Integration | Pending | — | Dogfood the verbs against this repo's own `docs/`. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-21 | 112 passed; `ruff check`, `ruff format --check`, `mypy` all clean tree-wide. |
+| 9. Implement Online/Integration | Complete | 2026-05-21 | Dogfooded `new` / `touch` / `mv` / `archive` against a copy of `docs/`; correct, drift-free, idempotent. |
 | 10. Quality, Docs, Refactor | Pending | — | Close out: status.md, plan.md, completion summaries. |
 
 ## Current State Analysis (snapshot at milestone kickoff, 2026-05-21)
@@ -472,6 +472,66 @@ tested in Phase 6.
 - [x] `docs <verb> --help` works for all four verbs.
 - [x] Every CLI test green, including the two new `--cascade` tests.
 - [x] Full suite green: 112 passed. Tree-wide gates clean (ruff, mypy).
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-21
+
+#### Objective
+Confirm the full suite passes and the quality gates are clean tree-wide.
+
+#### Command + summary
+
+```
+.venv/bin/pytest -q             -> 112 passed
+.venv/bin/ruff check .          -> All checks passed!
+.venv/bin/ruff format --check . -> 12 files already formatted
+.venv/bin/mypy                  -> Success: no issues found in 12 source files
+```
+
+#### Exit criteria
+- [x] 112 passed, 0 failed — the four verbs and the shared helpers all green.
+- [x] `ruff check`, `ruff format --check`, and `mypy` clean tree-wide.
+
+### Phase 9 — Implement Online/Integration (dogfood pass)
+
+**Completed:** 2026-05-21
+
+#### Objective
+Exercise the four verbs end-to-end against a copy of this repo's own `docs/`
+tree and confirm the result is correct, drift-free, and idempotent.
+
+#### Actions taken
+Copied `docs/` to a scratch directory and ran:
+- `docs new spec dogfood-throwaway --title …` — flat doc created with
+  `Status: draft` and today's `Updated:`; `docs new notes topics/sub-note`
+  created the nested doc and its directory; `docs new spec charter` (an
+  existing slug) exited 1.
+- `docs touch charter.md` — `Updated:` bumped to today, every other line
+  byte-identical; a second `touch` produced no change (idempotent).
+- `docs mv cli.md cli-spec.md` — file renamed; all 7 `Related:` bullets that
+  pointed at `cli.md` rewritten to `cli-spec.md` across the tree, 0 stale
+  `Related:` bullets left.
+- `docs archive dogfood-throwaway.md --reason …` — moved into
+  `archive/2026-05-21/`, `Status: archived`, `Archived-reason:` recorded; the
+  regenerated INDEX links it by its root-relative path
+  (`archive/2026-05-21/dogfood-throwaway.md`).
+- `docs index` run twice — byte-identical output (idempotent).
+
+#### Issues / decisions
+- `docs mv` rewrites `Related:` metadata bullets only — prose markdown links
+  such as `[cli.md](cli.md)` in doc bodies are left untouched. This is the
+  documented contract (cli.md: "rewrite every `Related:` reference"): the
+  `Related:` block is the machine-tracked edge; prose mentions are not.
+  Stale prose links after a rename are drift that `docs check` (M3) surfaces.
+  Recorded here as the intentional, documented surviving diff for Phase 9.
+- The dogfood ran against a scratch copy; the repo's own `docs/` tree was
+  untouched (`git status` clean).
+
+#### Exit criteria
+- [x] All four verbs produce correct, drift-free state on a real tree.
+- [x] Idempotency confirmed for `touch` and `index`.
+- [x] The one surviving diff (prose links after `mv`) documented as intentional.
 
 ## Milestone-completion summary
 
