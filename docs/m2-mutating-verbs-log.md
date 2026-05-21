@@ -533,6 +533,51 @@ Copied `docs/` to a scratch directory and ran:
 - [x] Idempotency confirmed for `touch` and `index`.
 - [x] The one surviving diff (prose links after `mv`) documented as intentional.
 
+### Phase 10 — Quality, Docs, Refactor
+
+**Completed:** 2026-05-21
+
+#### Objective
+Close out M2: final quality gate, record the deferred decisions, write the
+milestone-completion summaries.
+
+#### Files changed
+- `docs/plan.md` — resolved the `--cascade` and INDEX-excerpt open questions;
+  added the directory- / `Project`-grouped INDEX deferral as a new M3 open
+  question.
+- `docs/status.md` — M2 → Complete; M3 set as the next milestone.
+- `docs/m2-mutating-verbs.md` — Deliverables, Phase Checklist, and Success
+  Criteria all ticked; milestone-completion summary filled in.
+- `docs/m2-mutating-verbs-log.md` — this entry and the summary below.
+- `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` — regenerated in
+  lockstep (`plan.md`'s `Updated:` moved 2026-05-20 → 2026-05-21).
+
+#### Issues / decisions
+- **`--cascade` stays opt-in.** Phase 6 left it as a `store_true`; Phase 7
+  implemented the prompt. Making it default-on would archive a doc's
+  neighbours as a surprise side effect. Recorded in `plan.md`.
+- **`bin/docs` stays single-file.** It is ~1.3k lines — large, but sectioned
+  with header comments and clean under `ruff` / `mypy`. The milestone's
+  Decisions deferred the split to M3 "unless it becomes unworkable"; it has
+  not, so no split this milestone.
+- **M3 is "Next", not "ACTIVE".** The plan said "M3 → ACTIVE", but M3 has no
+  plan doc yet and the project gates implementation on a ready milestone doc.
+  `status.md` marks M2 Complete and M3 as the next milestone to be planned.
+
+#### Exit criteria
+- [x] Quality gate green: 112 passed; `ruff` + `mypy` clean.
+- [x] `plan.md` records the `--cascade` decision and the INDEX-grouping deferral.
+- [x] `status.md` reflects M2 → Complete, M3 → Next.
+- [x] Milestone-completion summaries written here and in the plan.
+
 ## Milestone-completion summary
 
-_Appended at Phase 10._
+M2 shipped 2026-05-21. Ten TDD phases, committed per phase on `main` (Phases
+1–4 batched at kickoff, 8–9 combined, the rest individually). Final state: 112
+tests passing, `ruff` and `mypy` clean tree-wide, the four verbs dogfooded
+drift-free against a copy of `docs/`.
+
+Per-phase detail is in the phase logs above; the milestone summary and the
+recorded decisions live in [m2-mutating-verbs.md](m2-mutating-verbs.md) and
+[plan.md](plan.md). Next milestone: M3 — Validation and query (`check`,
+`list`).

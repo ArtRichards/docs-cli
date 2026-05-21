@@ -13,11 +13,16 @@ Related:
 
 ## Current milestone
 
-**Active:** M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
+_No milestone is in flight._ **M2 shipped 2026-05-21**; M3 has not been planned yet.
 
-**Task plan:** [m2-mutating-verbs.md](m2-mutating-verbs.md)
-**Implementation log:** [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md)
-**Current phase:** Phase 10 — Quality, Docs, Refactor (next). Phases 1–9 complete (through the dogfood pass); the full suite is green and the verbs are dogfooded drift-free.
+**Next:** M3 — Validation and query (`check`, `list`). Scaffold
+`m3-validation-and-query.md` with the milestone-planning workflow before
+implementation begins.
+
+M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) shipped 2026-05-21
+across ten TDD phases. See [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md)
+for the per-phase history and [m2-mutating-verbs.md](m2-mutating-verbs.md)
+for the milestone summary.
 
 M1 — Parser and `docs index` shipped 2026-05-20 across ten TDD phases.
 See [m1-parser-and-index-log.md](m1-parser-and-index-log.md) for the
@@ -29,8 +34,8 @@ for the milestone summary.
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
 | M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](m1-parser-and-index.md) | [Log](m1-parser-and-index-log.md) |
-| M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **ACTIVE** (Phases 1–9 done) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
-| M3 — Validation and query (`check`, `list`) | Pending | _not yet created_ | _not yet created_ |
+| M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
+| M3 — Validation and query (`check`, `list`) | **Next** | _not yet created_ | _not yet created_ |
 | M4 — Migration helper (`docs migrate`) | Pending | _not yet created_ | _not yet created_ |
 | M5 — Claude Code skill | Pending | _not yet created_ | _not yet created_ |
 

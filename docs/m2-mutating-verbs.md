@@ -46,19 +46,19 @@ is atomic: a failure never leaves a partially-edited doc.
 
 ### Deliverables
 
-- [ ] Four subcommands functional on `bin/docs`: `new`, `archive`, `mv`, `touch`.
-- [ ] Shared editing helpers (`set_metadata_field`, `rewrite_related_refs`,
+- [x] Four subcommands functional on `bin/docs`: `new`, `archive`, `mv`, `touch`.
+- [x] Shared editing helpers (`set_metadata_field`, `rewrite_related_refs`,
       `scaffold_doc`) — pure, unit-tested, reused across verbs.
-- [ ] Renderer fix: `_format_entry` emits root-relative paths so nested docs
+- [x] Renderer fix: `_format_entry` emits root-relative paths so nested docs
       (every archived doc, every doc in a subdir) get working INDEX links.
-- [ ] `tests/test_edit.py`, `tests/test_cli_new.py`, `tests/test_cli_touch.py`,
+- [x] `tests/test_edit.py`, `tests/test_cli_new.py`, `tests/test_cli_touch.py`,
       `tests/test_cli_archive.py`, `tests/test_cli_mv.py`.
-- [ ] Fixture trees for cross-reference rewriting and archive moves.
-- [ ] Dogfood: archiving and renaming this repo's own docs through M2 produces
+- [x] Fixture trees for cross-reference rewriting and archive moves.
+- [x] Dogfood: archiving and renaming this repo's own docs through M2 produces
       correct, drift-free state.
-- [ ] All quality gates green tree-wide: `ruff check .`, `ruff format --check .`,
+- [x] All quality gates green tree-wide: `ruff check .`, `ruff format --check .`,
       `mypy`, `pytest -q`.
-- [ ] `docs/status.md` updated to M2 complete + M3 active.
+- [x] `docs/status.md` updated to M2 complete + M3 active.
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-21)
 
@@ -228,7 +228,7 @@ implementation**; phases 5–10 implement and ship.
 - [x] Phase 7: Update Tool/Wrapper Layer
 - [x] Phase 8: Run Tests (GREEN)
 - [x] Phase 9: Implement Online/Integration (dogfood pass)
-- [ ] Phase 10: Quality, Docs, Refactor
+- [x] Phase 10: Quality, Docs, Refactor
 
 ## Decisions
 
@@ -295,18 +295,41 @@ commands exit 0.
 
 M2 is complete when:
 
-- [ ] All Phase Checklist items are checked.
-- [ ] All four verbs (`new`, `archive`, `mv`, `touch`) work per [cli.md](cli.md),
+- [x] All Phase Checklist items are checked.
+- [x] All four verbs (`new`, `archive`, `mv`, `touch`) work per [cli.md](cli.md),
       including `--dry-run` and the documented exit codes.
-- [ ] Every write is atomic — a failure leaves the original doc untouched.
-- [ ] Nested docs (archived docs especially) get working INDEX links.
-- [ ] All Deliverables above are checked off.
-- [ ] Dogfood: archiving and renaming this repo's own docs produces correct,
+- [x] Every write is atomic — a failure leaves the original doc untouched.
+- [x] Nested docs (archived docs especially) get working INDEX links.
+- [x] All Deliverables above are checked off.
+- [x] Dogfood: archiving and renaming this repo's own docs produces correct,
       drift-free state.
-- [ ] [status.md](status.md) reflects M2 → Complete, M3 → ACTIVE.
-- [ ] [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) contains a
+- [x] [status.md](status.md) reflects M2 → Complete, M3 → Next.
+- [x] [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) contains a
       milestone-completion summary.
 
 ## Milestone-completion summary
 
-_Appended at Phase 10._
+**M2 — Mutating verbs — shipped 2026-05-21**, across the ten TDD phases. The
+docs tree is now writable under the convention: `docs new` scaffolds, `docs
+touch` bumps `Updated:`, `docs archive` does the dual-status move, and `docs
+mv` relocates a doc while rewriting every `Related:` reference to it.
+
+- **Surface:** four subcommands on `bin/docs`, each with `--dry-run` and the
+  [cli.md](cli.md) exit-code matrix (0 / 1 / 2).
+- **Shared core:** three pure editing helpers (`set_metadata_field`,
+  `rewrite_related_refs`, `scaffold_doc`) plus `_metadata_line_span`,
+  `_archive_one`, `_cascade_archive`, and `_refresh_index`. Metadata edits are
+  surgical and minimal-diff — every byte outside the touched line survives.
+- **Renderer fix:** INDEX entries link by root-relative POSIX path, so
+  archived docs and docs in subdirectories get working links.
+- **Tests:** 112 passing (was 58 at M1) — `test_edit.py` plus four CLI test
+  files, all green; tree-wide `ruff` and `mypy` clean.
+- **Dogfood:** all four verbs exercised against a copy of this repo's `docs/`
+  — correct, drift-free, idempotent (see the Phase 9 log).
+- **Decisions recorded** in [plan.md](plan.md): `--cascade` stays opt-in;
+  directory- / `Project`-grouped INDEX deferred to M3. `bin/docs` is ~1.3k
+  lines and still single-file — the split stays deferred to M3 per this
+  milestone's Decisions; the code is sectioned and passes every gate, so it is
+  not yet "unworkable."
+
+Next: M3 — Validation and query (`check`, `list`).

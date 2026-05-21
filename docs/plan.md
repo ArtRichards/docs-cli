@@ -3,7 +3,7 @@
 Status: active
 Role: plan
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-05-21
 
 Related:
 - implements: charter.md
@@ -91,7 +91,11 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 - Per-doc revisions / history (git owns this).
 - Cross-root federation.
 
+## Resolved questions
+
+- **`docs archive --cascade` stays opt-in** (M2, 2026-05-21). Archiving a doc must not silently pull its neighbours along — cascading is a deliberate per-invocation choice. `--cascade` is a plain `store_true` flag; it prompts (`y/N`, defaulting to no) before archiving each one-hop `pairs-with` / `child-of` relation. No `--no-cascade` is needed.
+- **INDEX carries a one-paragraph description per doc** (M1). The renderer emits title + description + Status + Updated; the description is the doc's first body paragraph, trimmed to ~120 characters.
+
 ## Open questions
 
-- Should `docs archive --cascade` be the default, with a `--no-cascade` to opt out? Currently planned the other way. Revisit after M2 lands.
-- Should INDEX include doc body excerpts (first paragraph) or just titles? Currently planned title + Status + Updated. Revisit after dogfooding M1.
+- Should the INDEX be grouped by directory or `Project` instead of (or alongside) `Role`? M2's renderer fix made nested-doc links correct, but a large tree navigates better grouped by location. Deferred to M3 together with `docs list --project` — both are query/view concerns, not mutating-verb concerns.
