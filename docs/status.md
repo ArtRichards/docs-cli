@@ -17,7 +17,7 @@ Related:
 
 **Task plan:** [m2-mutating-verbs.md](m2-mutating-verbs.md)
 **Implementation log:** [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md)
-**Current phase:** Phase 6 — Implement Offline/Core Path (next). Phases 1–5 complete (contract, tests, fixtures, RED baseline, base interfaces).
+**Current phase:** Phase 7 — Update Tool/Wrapper Layer (next). Phases 1–6 complete (contract, tests, fixtures, RED baseline, base interfaces, verb cores).
 
 M1 — Parser and `docs index` shipped 2026-05-20 across ten TDD phases.
 See [m1-parser-and-index-log.md](m1-parser-and-index-log.md) for the
@@ -29,7 +29,7 @@ for the milestone summary.
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
 | M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](m1-parser-and-index.md) | [Log](m1-parser-and-index-log.md) |
-| M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **ACTIVE** (Phases 1–5 done) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
+| M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **ACTIVE** (Phases 1–6 done) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
 | M3 — Validation and query (`check`, `list`) | Pending | _not yet created_ | _not yet created_ |
 | M4 — Migration helper (`docs migrate`) | Pending | _not yet created_ | _not yet created_ |
 | M5 — Claude Code skill | Pending | _not yet created_ | _not yet created_ |

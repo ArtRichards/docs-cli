@@ -14,8 +14,8 @@ Related:
 - Project: docs
 - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 - Started: 2026-05-21
-- Progress: Phases 1–5 complete (contract, tests, fixtures, RED baseline,
-  base interfaces).
+- Progress: Phases 1–6 complete (contract, tests, fixtures, RED baseline,
+  base interfaces, verb cores). Full suite green.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -36,7 +36,7 @@ metadata-editing helpers and a renderer fix for nested-doc links.
 | 3. Create Data/Fixtures | Complete | 2026-05-21 | Two fixture trees: `cross-refs/` (3 docs, cross-`Related:`), `nested/` (active doc in a subdir). |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-21 | 48 failed / 62 passed. Every M2 failure traces to `NotImplementedError` or a stub exit code. **Session paused here by request.** |
 | 5. Update Base Interfaces | Complete | 2026-05-21 | Editing helpers + `_metadata_line_span` + renderer root-relative fix + `_refresh_index`. 77 passed / 33 failed (verb cores remain). |
-| 6. Implement Offline/Core Path | Pending | — | Implement the four verb cores. |
+| 6. Implement Offline/Core Path | Complete | 2026-05-21 | `_cmd_new` / `_cmd_touch` / `_cmd_archive` / `_cmd_mv` on the Phase 5 helpers. Full suite green: 110 passed. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Exit codes, `--dry-run` parity, `--cascade` prompt. |
 | 8. Run Tests (GREEN) | Pending | — | Full suite + tree-wide quality gates. |
 | 9. Implement Online/Integration | Pending | — | Dogfood the verbs against this repo's own `docs/`. |
@@ -392,6 +392,49 @@ four `_cmd_*` handlers stay stubbed until Phase 6.
 - [x] Tree-wide gates clean: `ruff check`, `ruff format --check`, `mypy`.
 - [x] Suite: 77 passed / 33 failed — the 33 are the verb-core CLI tests
       (Phases 6–7); 15 tests flipped green vs. the Phase 4 baseline.
+
+### Phase 6 — Implement Offline/Core Path
+
+**Completed:** 2026-05-21
+
+#### Objective
+Implement the four verb cores on top of the Phase 5 helpers.
+
+#### Files changed
+- `bin/docs` — `_cmd_new`, `_cmd_touch`, `_cmd_archive`, `_cmd_mv` implemented;
+  `_slug_to_title` helper added.
+
+#### Actions taken
+- `_cmd_new` — resolves the root, validates the role against the config
+  vocabulary (exit 2), resolves the slug to a path under the root (strips a
+  trailing `.md`; rejects absolute paths, `..`, and the archive subtree —
+  exit 2), rejects an existing file (exit 1), scaffolds via `scaffold_doc`,
+  and creates any intermediate directories. Does not refresh the INDEX.
+- `_cmd_touch` — bumps `Updated:` via `set_metadata_field` (surgical, so the
+  body and every other line survive byte-for-byte), then `_refresh_index`.
+- `_cmd_archive` — validates required metadata via `parse`, edits `Status` →
+  archived and bumps `Updated:` (plus optional `Archived-reason:`), then moves
+  the doc to `<archive_dir>/<date>/` and refreshes the INDEX. The edit lands
+  before the move, so a failure leaves the original untouched. `--date`
+  controls both the bumped date and the dated directory.
+- `_cmd_mv` — rejects a collision (exit 1), moves the doc (creating any
+  intermediate directory), rewrites every matching `Related:` bullet target
+  across the tree via `rewrite_related_refs`, then refreshes the INDEX.
+- `--dry-run` short-circuits all four verbs after validation, before any
+  write or move.
+
+#### Issues / decisions
+- `archive --cascade` (the one-hop pairs-with / child-of prompt) is declared
+  but left as a no-op for Phase 6 — the interactive prompt is Phase 7 scope.
+  It has no test, so the suite is green without it.
+- `touch` / `archive` / `mv` resolve the docs root by walking up from the
+  target file (`find_root`), since the CLI tests invoke them without `--root`.
+
+#### Exit criteria
+- [x] `test_cli_new.py`, `test_cli_touch.py`, `test_cli_archive.py`,
+      `test_cli_mv.py`, `test_edit.py` green.
+- [x] Full suite green: 110 passed (was 77 passed / 33 failed after Phase 5).
+- [x] Tree-wide gates clean: `ruff check`, `ruff format --check`, `mypy`.
 
 ## Milestone-completion summary
 

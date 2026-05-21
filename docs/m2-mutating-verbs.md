@@ -224,7 +224,7 @@ implementation**; phases 5–10 implement and ship.
 - [x] Phase 3: Create Data/Fixtures
 - [x] Phase 4: Run Tests (RED Baseline)
 - [x] Phase 5: Update Base Interfaces
-- [ ] Phase 6: Implement Offline/Core Path
+- [x] Phase 6: Implement Offline/Core Path
 - [ ] Phase 7: Update Tool/Wrapper Layer
 - [ ] Phase 8: Run Tests (GREEN)
 - [ ] Phase 9: Implement Online/Integration (dogfood pass)

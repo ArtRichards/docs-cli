@@ -981,20 +981,227 @@ def _cmd_index(args: argparse.Namespace) -> int:
     return 0
 
 
+def _slug_to_title(slug: str) -> str:
+    """Derive a default H1 title from a slug: last path segment, title-cased.
+
+    `-` and `_` are treated as word separators (`sub/my-feature` → `My Feature`).
+    """
+    segment = slug.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+    return segment.replace("-", " ").replace("_", " ").title()
+
+
 def _cmd_new(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_new() — Phase 6")
+    root = Path(args.root) if args.root else find_root(Path.cwd())
+    if not root.is_dir():
+        print(f"docs: root not found: {root}", file=sys.stderr)
+        return 1
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    if args.role not in config.roles:
+        print(f"docs: invalid role {args.role!r} (not in the Role vocabulary)", file=sys.stderr)
+        return 2
+
+    # Resolve the slug to a path under the root. A trailing `.md` is stripped;
+    # absolute paths, `..` components, and the archive subtree are rejected.
+    slug = args.slug
+    if slug.endswith(".md"):
+        slug = slug[:-3]
+    rel = Path(slug)
+    target_rel = Path(slug + ".md")
+    if (
+        not slug.strip()
+        or rel.is_absolute()
+        or ".." in rel.parts
+        or (len(target_rel.parts) >= 2 and target_rel.parts[0] == config.archive_dir)
+    ):
+        print(f"docs: invalid slug {args.slug!r}", file=sys.stderr)
+        return 2
+    target = root / target_rel
+
+    if target.exists():
+        print(f"docs: file already exists: {target}", file=sys.stderr)
+        return 1
+
+    title = args.title or _slug_to_title(slug)
+    project = args.project or config.project
+    text = scaffold_doc(title, args.role, project, date.today(), config.date_format)
+
+    if args.dry_run:
+        if not args.quiet:
+            print(f"docs: would create {target}", file=sys.stderr)
+        return 0
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write(target, text)
+    if not args.quiet:
+        print(f"docs: created {target}", file=sys.stderr)
+    return 0
 
 
 def _cmd_archive(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_archive() — Phase 6")
+    file_path = Path(args.file)
+    if not file_path.is_file():
+        print(f"docs: file not found: {file_path}", file=sys.stderr)
+        return 1
+
+    root = Path(args.root) if args.root else find_root(file_path.parent)
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    if args.date:
+        try:
+            archive_date = parse_date(args.date, config.date_format)
+        except MetadataError as exc:
+            print(f"docs: --date: {exc}", file=sys.stderr)
+            return 2
+    else:
+        archive_date = date.today()
+    date_str = archive_date.strftime(config.date_format)
+
+    # Validate the doc has the required metadata before mutating anything.
+    text = file_path.read_text()
+    try:
+        parse(text, file_path, root)
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        new_text = set_metadata_field(text, "Status", "archived")
+        new_text = set_metadata_field(new_text, "Updated", date_str)
+        if args.reason:
+            new_text = set_metadata_field(new_text, "Archived-reason", args.reason)
+    except MetadataError as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 1
+
+    dest = root / config.archive_dir / date_str / file_path.name
+
+    if args.dry_run:
+        if not args.quiet:
+            print(f"docs: would archive {file_path} -> {dest}", file=sys.stderr)
+        return 0
+
+    # --cascade (one-hop prompt over pairs-with / child-of) lands in Phase 7.
+
+    if dest.exists():
+        print(f"docs: archive destination already exists: {dest}", file=sys.stderr)
+        return 1
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        print(f"docs: could not create archive directory {dest.parent}: {exc}", file=sys.stderr)
+        return 2
+
+    # Edit in place atomically, then move — the move runs only after the edit
+    # succeeds, so a failure leaves the original doc untouched.
+    atomic_write(file_path, new_text)
+    file_path.replace(dest)
+
+    try:
+        _refresh_index(root, config)
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        return 2
+    if not args.quiet:
+        print(f"docs: archived {file_path.name} -> {dest}", file=sys.stderr)
+    return 0
 
 
 def _cmd_mv(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_mv() — Phase 6")
+    old_path = Path(args.old)
+    new_path = Path(args.new)
+    if not old_path.is_file():
+        print(f"docs: file not found: {old_path}", file=sys.stderr)
+        return 1
+    if new_path.exists():
+        print(f"docs: destination already exists: {new_path}", file=sys.stderr)
+        return 1
+
+    root = Path(args.root) if args.root else find_root(old_path.parent)
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    root_abs = root.resolve()
+    try:
+        old_rel = old_path.resolve().relative_to(root_abs).as_posix()
+        new_rel = new_path.resolve().relative_to(root_abs).as_posix()
+    except ValueError:
+        print(f"docs: mv: both paths must be under the docs root {root}", file=sys.stderr)
+        return 2
+
+    if args.dry_run:
+        if not args.quiet:
+            print(f"docs: would move {old_rel} -> {new_rel}", file=sys.stderr)
+        return 0
+
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+    old_path.replace(new_path)
+
+    try:
+        rewrites = 0
+        for doc in walk(root, config):
+            updated_text, n = rewrite_related_refs(doc.path.read_text(), old_rel, new_rel)
+            if n:
+                atomic_write(doc.path, updated_text)
+                rewrites += n
+        _refresh_index(root, config)
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 2
+
+    if not args.quiet:
+        print(
+            f"docs: moved {old_rel} -> {new_rel} ({rewrites} reference(s) rewritten)",
+            file=sys.stderr,
+        )
+    return 0
 
 
 def _cmd_touch(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_touch() — Phase 6")
+    file_path = Path(args.file)
+    if not file_path.is_file():
+        print(f"docs: file not found: {file_path}", file=sys.stderr)
+        return 1
+
+    root = Path(args.root) if args.root else find_root(file_path.parent)
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    today = date.today().strftime(config.date_format)
+    try:
+        new_text = set_metadata_field(file_path.read_text(), "Updated", today)
+    except MetadataError as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 1
+
+    if args.dry_run:
+        if not args.quiet:
+            print(f"docs: would touch {file_path} (Updated: {today})", file=sys.stderr)
+        return 0
+
+    atomic_write(file_path, new_text)
+    try:
+        _refresh_index(root, config)
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        return 2
+    if not args.quiet:
+        print(f"docs: touched {file_path}", file=sys.stderr)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
