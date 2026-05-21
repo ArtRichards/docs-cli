@@ -14,8 +14,8 @@ Related:
 - Project: docs
 - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 - Started: 2026-05-21
-- Progress: Phases 1–4 complete (contract, tests, fixtures, RED baseline);
-  implementation paused before Phase 5 by request.
+- Progress: Phases 1–5 complete (contract, tests, fixtures, RED baseline,
+  base interfaces).
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -35,7 +35,7 @@ metadata-editing helpers and a renderer fix for nested-doc links.
 | 2. Write Tests (RED) | Complete | 2026-05-21 | 52 M2 tests: 5 new test files + 1 renderer regression test. Collect cleanly. |
 | 3. Create Data/Fixtures | Complete | 2026-05-21 | Two fixture trees: `cross-refs/` (3 docs, cross-`Related:`), `nested/` (active doc in a subdir). |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-21 | 48 failed / 62 passed. Every M2 failure traces to `NotImplementedError` or a stub exit code. **Session paused here by request.** |
-| 5. Update Base Interfaces | Pending | — | Implement editing helpers + renderer root-relative fix + `_refresh_index`. |
+| 5. Update Base Interfaces | Complete | 2026-05-21 | Editing helpers + `_metadata_line_span` + renderer root-relative fix + `_refresh_index`. 77 passed / 33 failed (verb cores remain). |
 | 6. Implement Offline/Core Path | Pending | — | Implement the four verb cores. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Exit codes, `--dry-run` parity, `--cascade` prompt. |
 | 8. Run Tests (GREEN) | Pending | — | Full suite + tree-wide quality gates. |
@@ -337,6 +337,61 @@ confirmed to fail on their stderr-substring assertions — no false passes.
 - [x] M1's 58 tests green (snapshot repaired + regenerated in lockstep).
 - [x] No code implemented (contract/tests/fixtures only).
 - [x] Ready for Phase 5: implement the editing helpers and the renderer fix.
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-21
+
+#### Objective
+Implement the shared pure helpers the mutating verbs compose, and fix the
+renderer so docs in subdirectories get working INDEX links. Logic only — the
+four `_cmd_*` handlers stay stubbed until Phase 6.
+
+#### Files changed
+- `bin/docs` — `_metadata_line_span` (new), `parse_metadata_block` (refactored
+  to consume it), `set_metadata_field` / `rewrite_related_refs` / `scaffold_doc`
+  (implemented), `_format_entry` / `render_index` (thread `root`),
+  `_refresh_index` (new), `_cmd_index` (restructured).
+- `tests/test_index.py` — thread `root` through the 15 `render_index` calls.
+- `architecture.md` — INDEX "Entry format" subspec now specifies the
+  root-relative POSIX path; `Updated:` bumped to 2026-05-21.
+- `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` — regenerated in
+  lockstep (only `architecture.md`'s `Updated` line moved).
+
+#### Actions taken
+- Extracted `_metadata_line_span` as the single source of metadata-block
+  boundary detection; `parse_metadata_block` now layers the dict + body on
+  top of it, so the parser and the editing helpers cannot drift.
+- The editing helpers do surgical, minimal-diff edits: they splice
+  `splitlines(keepends=True)` so line endings and the trailing-newline state
+  survive byte-for-byte. `set_metadata_field` replaces an inline value in
+  place or inserts a line at the end of the inline run; `rewrite_related_refs`
+  rewrites matching `Related:` bullet targets and preserves the verb;
+  `scaffold_doc` is a pure builder that round-trips through `parse()`.
+- The renderer threads the docs `root` through `render_index` →
+  `_format_entry`, emitting the root-relative POSIX path for both the link
+  text and the href. The within-section sort tiebreaker was aligned to the
+  same root-relative path (`architecture.md` already specified it).
+- `_refresh_index(root, config)` was extracted from `_cmd_index`'s write path
+  for the verbs to reuse; `_cmd_index` keeps its `--dry-run` branch inline.
+
+#### Issues / decisions
+- `render_index` takes `root` as a required parameter (not optional with a
+  basename fallback) — a renderer that needs `root` to be correct should
+  require it. Cost: the 15 `test_index.py` call sites got a mechanical
+  `root=_ROOT`.
+- `architecture.md`'s `Updated:` was bumped and both INDEX snapshots
+  regenerated within this phase, so the Phase 5 commit leaves the tree
+  convention-consistent rather than deferring reconciliation to Phase 9.
+
+#### Exit criteria
+- [x] `test_edit.py` green (14).
+- [x] `test_index_nested_doc_link_is_root_relative` green.
+- [x] The seven other `test_cli_index.py` tests green after the renderer refactor.
+- [x] `test_index.py` (15) and all M1 tests green.
+- [x] Tree-wide gates clean: `ruff check`, `ruff format --check`, `mypy`.
+- [x] Suite: 77 passed / 33 failed — the 33 are the verb-core CLI tests
+      (Phases 6–7); 15 tests flipped green vs. the Phase 4 baseline.
 
 ## Milestone-completion summary
 

@@ -3,7 +3,7 @@
 Status: active
 Role: reference
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-05-21
 
 Related:
 - implements: charter.md
@@ -89,8 +89,11 @@ The renderer's output between the markers has a fixed shape so that
   path ascending (lexicographic on the root-relative path).
 - **Entry format.** One bullet per doc:
   ```
-  - [filename.md](filename.md) — _role_ — <description>. Updated YYYY-MM-DD.
+  - [<path>](<path>) — _role_ — <description>. Updated YYYY-MM-DD.
   ```
+  Both the link text and the href are the doc's **root-relative POSIX
+  path** (e.g. `topics/deep-dive.md` for a doc in a subdirectory) — not the
+  bare basename, which would break links for any doc outside the root.
   Description source: the first non-empty paragraph of the doc body
   (after the metadata block), with internal newlines collapsed to spaces
   and trimmed to ~120 characters (cut at the last whitespace before the

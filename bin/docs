@@ -218,25 +218,22 @@ def validate_role(value: str, roles: frozenset[str]) -> None:
 _LABEL_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
 
 
-def parse_metadata_block(
-    text: str,
-) -> tuple[str, dict[str, str | tuple[str, ...]], str]:
-    """Split doc text into (title, metadata, body).
+def _metadata_line_span(text: str) -> tuple[list[str], str, int, int]:
+    """Locate the H1 and the metadata block within `text`.
 
-    Pure syntax: extracts the H1, the metadata block that follows it,
-    and the remaining body. The metadata block is a run of `Label: value`
-    lines and bare-label-with-bullet groups (e.g. `Related:` followed by
-    `- pairs-with: ...`). Bare-label-with-bullet groups may be separated
-    from earlier metadata by a blank line — this matches the convention
-    used in the project's own docs. An inline `Label: value` line after
-    a blank line is treated as body, not metadata.
+    Returns ``(lines, title, start, end)`` where ``lines`` is
+    ``text.splitlines()``, ``title`` is the H1 text, and ``[start, end)`` is
+    the half-open line span of the metadata block — from the first metadata
+    line through the line after the last. The span may contain a single
+    internal blank line separating the inline run from a trailing bare-label
+    multi-value group (the convention the project's own docs use).
 
-    Does not enforce required fields, vocabulary, or date format —
-    `parse()` layers those on top.
+    This is the single source of metadata-block boundary detection:
+    `parse_metadata_block` and the M2 editing helpers all rely on it, so
+    their notion of "where the block is" cannot drift.
 
     Raises:
-        MetadataError: missing H1, or a malformed line inside the metadata
-            block.
+        MetadataError: missing H1.
     """
     lines = text.splitlines()
     n = len(lines)
@@ -255,13 +252,12 @@ def parse_metadata_block(
     # Skip the blank line(s) between H1 and metadata block.
     while i < n and lines[i].strip() == "":
         i += 1
+    start = i
 
-    metadata: dict[str, str | tuple[str, ...]] = {}
+    # Scan the block. A blank line continues the block only when the next
+    # non-blank line is a bare label immediately followed by a `- ` bullet.
     while i < n:
         if lines[i].strip() == "":
-            # Blank line: continue iff the next non-blank line is a bare
-            # label followed by a bullet — that's a multi-value group that
-            # belongs to the same metadata block.
             j = i + 1
             while j < n and lines[j].strip() == "":
                 j += 1
@@ -278,9 +274,54 @@ def parse_metadata_block(
         m = _LABEL_RE.match(lines[i])
         if not m:
             # First non-label content terminates the metadata block; the
-            # line is the start of the body. `parse()` reports any missing
-            # required fields with a clearer error than we could here.
+            # line is the start of the body.
             break
+        if m.group(2).strip():
+            # Inline `Label: value`.
+            i += 1
+            continue
+        # Bare label → consume the `- value` bullet run.
+        i += 1
+        while i < n and lines[i].startswith("- "):
+            i += 1
+
+    return lines, title, start, i
+
+
+def parse_metadata_block(
+    text: str,
+) -> tuple[str, dict[str, str | tuple[str, ...]], str]:
+    """Split doc text into (title, metadata, body).
+
+    Pure syntax: extracts the H1, the metadata block that follows it,
+    and the remaining body. The metadata block is a run of `Label: value`
+    lines and bare-label-with-bullet groups (e.g. `Related:` followed by
+    `- pairs-with: ...`). Bare-label-with-bullet groups may be separated
+    from earlier metadata by a blank line — this matches the convention
+    used in the project's own docs. An inline `Label: value` line after
+    a blank line is treated as body, not metadata.
+
+    Block-boundary detection is delegated to `_metadata_line_span`; this
+    function layers the metadata dict and body extraction on top. Does not
+    enforce required fields, vocabulary, or date format — `parse()` does.
+
+    Raises:
+        MetadataError: missing H1, or a malformed line inside the metadata
+            block.
+    """
+    lines, title, start, end = _metadata_line_span(text)
+    n = len(lines)
+
+    metadata: dict[str, str | tuple[str, ...]] = {}
+    i = start
+    while i < end:
+        if lines[i].strip() == "":
+            i += 1
+            continue
+        m = _LABEL_RE.match(lines[i])
+        if not m:
+            i += 1
+            continue
         label, rest = m.group(1), m.group(2)
         rest_stripped = rest.strip()
         if rest_stripped:
@@ -290,17 +331,16 @@ def parse_metadata_block(
         # Bare label → multi-value list of "- value" bullets.
         i += 1
         values: list[str] = []
-        while i < n and lines[i].startswith("- "):
+        while i < end and lines[i].startswith("- "):
             values.append(lines[i][2:].strip())
             i += 1
         metadata[label] = tuple(values)
 
-    # i is at the terminating blank line (or EOF). Skip blanks so body
-    # starts at the first content line.
-    while i < n and lines[i].strip() == "":
-        i += 1
-    body_lines = lines[i:]
-    body = "\n".join(body_lines)
+    # Body starts at the first content line after the block.
+    j = end
+    while j < n and lines[j].strip() == "":
+        j += 1
+    body = "\n".join(lines[j:])
     if text.endswith("\n") and body and not body.endswith("\n"):
         body += "\n"
     return title, metadata, body
@@ -446,6 +486,7 @@ def render_index(
     docs: list[Doc],
     config: Config,
     existing: str | None,
+    root: Path,
 ) -> str:
     """Render an INDEX.md from a list of Docs.
 
@@ -462,9 +503,12 @@ def render_index(
         - Role groups follow CANONICAL_ROLE_ORDER, with `status` pinned
           to the top of the Active groups.
         - Within each group: Updated descending, then path ascending.
-        - Entry format: `- [name.md](name.md) — _role_ — <desc>. Updated YYYY-MM-DD.`
+        - Entry format: `- [path](path) — _role_ — <desc>. Updated YYYY-MM-DD.`
+          where `path` is the doc's `root`-relative POSIX path, so docs in
+          subdirectories link correctly.
 
-    The renderer is deterministic: same `docs` and `existing` inputs
+    `root` is the docs root, used to derive each entry's root-relative path.
+    The renderer is deterministic: same `docs`, `existing`, and `root` inputs
     produce byte-identical output.
     """
     active = [d for d in docs if not d.archived]
@@ -477,7 +521,10 @@ def render_index(
         role_groups.setdefault(d.role, []).append(d)
 
     role_order = ["status"] + [r for r in CANONICAL_ROLE_ORDER if r != "status"]
-    sort_key = lambda d: (-d.updated.toordinal(), d.path.name)  # noqa: E731
+    sort_key = lambda d: (  # noqa: E731
+        -d.updated.toordinal(),
+        d.path.relative_to(root).as_posix(),
+    )
 
     lines: list[str] = [summary, ""]
     for role in role_order:
@@ -488,7 +535,7 @@ def render_index(
         lines.append(f"## Active — {role.title()}")
         lines.append("")
         for d in group:
-            lines.append(_format_entry(d, config))
+            lines.append(_format_entry(d, config, root))
         lines.append("")
 
     lines.append("## Archived")
@@ -496,7 +543,7 @@ def render_index(
     if archived:
         archived.sort(key=sort_key)
         for d in archived:
-            lines.append(_format_entry(d, config))
+            lines.append(_format_entry(d, config, root))
     else:
         lines.append("_None._")
 
@@ -545,11 +592,11 @@ def _find_marker_lines(text: str) -> tuple[int, int] | None:
     return pre_end, post_start
 
 
-def _format_entry(doc: Doc, config: Config) -> str:
-    filename = doc.path.name
+def _format_entry(doc: Doc, config: Config, root: Path) -> str:
+    rel = doc.path.relative_to(root).as_posix()
     desc = _description(doc.body)
     updated = doc.updated.strftime(config.date_format)
-    return f"- [{filename}]({filename}) — _{doc.role}_ — {desc}. Updated {updated}."
+    return f"- [{rel}]({rel}) — _{doc.role}_ — {desc}. Updated {updated}."
 
 
 def _description(body: str, limit: int = 120) -> str:
@@ -676,7 +723,34 @@ def set_metadata_field(text: str, label: str, value: str) -> str:
     Raises:
         MetadataError: `text` has no H1 / metadata block.
     """
-    raise NotImplementedError("set_metadata_field() — Phase 5")
+    lines, _title, start, end = _metadata_line_span(text)
+    keep = text.splitlines(keepends=True)
+
+    # Replace an existing inline `<label>: <value>` line in place, keeping
+    # the line's original ending so the trailing-newline state survives.
+    for idx in range(start, end):
+        m = _LABEL_RE.match(lines[idx])
+        if m and m.group(1) == label and m.group(2).strip():
+            ending = keep[idx][len(lines[idx]) :]
+            keep[idx] = f"{label}: {value}{ending}"
+            return "".join(keep)
+
+    # No such line — insert at the end of the inline-metadata run: before
+    # the first bare-label group or internal blank line in the span.
+    insert_at = end
+    for idx in range(start, end):
+        line = lines[idx]
+        if line.strip() == "":
+            insert_at = idx
+            break
+        m = _LABEL_RE.match(line)
+        if m and not m.group(2).strip():
+            insert_at = idx
+            break
+    if insert_at > 0 and not keep[insert_at - 1].endswith(("\n", "\r")):
+        keep[insert_at - 1] += "\n"
+    keep.insert(insert_at, f"{label}: {value}\n")
+    return "".join(keep)
 
 
 def rewrite_related_refs(text: str, old_rel: str, new_rel: str) -> tuple[str, int]:
@@ -689,7 +763,29 @@ def rewrite_related_refs(text: str, old_rel: str, new_rel: str) -> tuple[str, in
 
     `old_rel` and `new_rel` are root-relative POSIX paths. Used by `mv`.
     """
-    raise NotImplementedError("rewrite_related_refs() — Phase 5")
+    lines, _title, start, end = _metadata_line_span(text)
+    keep = text.splitlines(keepends=True)
+
+    count = 0
+    in_related = False
+    for idx in range(start, end):
+        line = lines[idx]
+        if not in_related:
+            m = _LABEL_RE.match(line)
+            if m and m.group(1) == "Related" and not m.group(2).strip():
+                in_related = True
+            continue
+        if not line.startswith("- "):
+            break
+        verb, sep, target = line[2:].partition(":")
+        if sep and target.strip() == old_rel:
+            ending = keep[idx][len(line) :]
+            keep[idx] = f"- {verb.strip()}: {new_rel}{ending}"
+            count += 1
+
+    if count == 0:
+        return text, 0
+    return "".join(keep), count
 
 
 def scaffold_doc(
@@ -707,7 +803,11 @@ def scaffold_doc(
     `date_format`. The body is empty. Output ends with a single trailing
     newline and parses cleanly back through `parse()`. Used by `new`.
     """
-    raise NotImplementedError("scaffold_doc() — Phase 5")
+    lines = [f"# {title}", "", "Status: draft", f"Role: {role}"]
+    if project is not None:
+        lines.append(f"Project: {project}")
+    lines.append(f"Updated: {updated.strftime(date_format)}")
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -830,6 +930,24 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _refresh_index(root: Path, config: Config) -> Path:
+    """Walk `root`, render its INDEX.md, and write it atomically.
+
+    Returns the INDEX path. Shared by `docs index` (write path) and the M2
+    mutating verbs, which reindex after a successful mutation.
+
+    Raises:
+        MetadataError, VocabularyError: a doc in the tree is malformed;
+            callers map these to exit code 2.
+    """
+    collected = list(walk(root, config))
+    index_path = root / config.index_filename
+    existing = index_path.read_text() if index_path.is_file() else None
+    output = render_index(collected, config, existing, root)
+    atomic_write(index_path, output)
+    return index_path
+
+
 def _cmd_index(args: argparse.Namespace) -> int:
     if args.root:
         root = Path(args.root)
@@ -844,7 +962,13 @@ def _cmd_index(args: argparse.Namespace) -> int:
 
     try:
         config = load_config(root)
-        collected = list(walk(root, config))
+        if args.dry_run:
+            collected = list(walk(root, config))
+            index_path = root / config.index_filename
+            existing = index_path.read_text() if index_path.is_file() else None
+            sys.stdout.write(render_index(collected, config, existing, root))
+            return 0
+        index_path = _refresh_index(root, config)
     except tomllib.TOMLDecodeError as exc:
         print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
         return 2
@@ -852,15 +976,6 @@ def _cmd_index(args: argparse.Namespace) -> int:
         print(f"docs: {exc}", file=sys.stderr)
         return 2
 
-    index_path = root / config.index_filename
-    existing = index_path.read_text() if index_path.is_file() else None
-    output = render_index(collected, config, existing)
-
-    if args.dry_run:
-        sys.stdout.write(output)
-        return 0
-
-    atomic_write(index_path, output)
     if not args.quiet:
         print(f"docs: wrote {index_path}", file=sys.stderr)
     return 0

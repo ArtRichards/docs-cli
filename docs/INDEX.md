@@ -41,7 +41,7 @@ _Generated 2026-05-21. 14 docs active, 0 archived._
 
 ## Active — Reference
 
-- [architecture.md](architecture.md) — _reference_ — Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — the `docs/` documentation directory…. Updated 2026-05-20.
+- [architecture.md](architecture.md) — _reference_ — Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — the `docs/` documentation directory…. Updated 2026-05-21.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-20.
 - [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-05-20.
 
