@@ -14,8 +14,8 @@ Related:
 - Project: docs
 - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 - Started: 2026-05-21
-- Progress: Phases 1–9 complete (through the dogfood pass). Full suite green;
-  the verbs are dogfooded drift-free. Phase 10 (close-out) remains.
+- Progress: Phases 1–10 complete — **M2 shipped 2026-05-21**. Full suite green
+  (112 passed); the verbs are dogfooded drift-free.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)

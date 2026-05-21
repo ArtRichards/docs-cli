@@ -70,38 +70,43 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — five-milestone roadmap (M2 scope is the active section)
-4. `docs/m2-mutating-verbs.md` — active milestone task plan; Phases 1–4 done, Phase 5 next
-5. `docs/m2-mutating-verbs-log.md` — M2 per-phase history; read the Phase 4 entry and the **Pre-Phase-1 design note** (subdirectories, the renderer bug, scope)
-6. `docs/m1-parser-and-index.md` — completed M1 milestone; the **Milestone-completion summary** has the code surface and design decisions
-7. `docs/m1-parser-and-index-log.md` — M1 per-phase history; skim entries that look relevant
-8. `docs/convention.md`, `docs/architecture.md`, `docs/cli.md` — the specs the implementation must satisfy
+3. `docs/plan.md` — five-milestone roadmap; M1 and M2 are shipped, **M3 is next**. Read the M3 section and the Resolved / Open questions.
+4. `docs/cli.md` — the command spec; the `docs check` and `docs list` subsections are the M3 contract
+5. `docs/m2-mutating-verbs.md` — most recently shipped milestone; the **Milestone-completion summary** lists the M2 code surface (four verbs + shared helpers)
+6. `docs/m2-mutating-verbs-log.md` — M2 per-phase history, for implementation detail
+7. `docs/m1-parser-and-index.md` — M1 summary: the parser / walker / renderer / config surface M3 builds on
+8. `docs/convention.md`, `docs/architecture.md` — the specs the implementation must satisfy
+9. `docs/definition-of-ready.md` — the gate to clear before M3 implementation starts
 
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # expect: 48 failed, 62 passed (M2 RED baseline)
+.venv/bin/python -m pytest tests/ -q          # expect: 112 passed
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
-
-The 48 failures are the expected M2 RED baseline — every mutating verb and
-editing helper is a `NotImplementedError` stub. They are the spec for
-Phases 5–7; do not "fix" them by deleting tests.
 If `.venv/` is missing (fresh clone):
 ```sh
 python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: resume M2 at Phase 5 — Update Base Interfaces.** Phases 1–4 (contract, tests, fixtures, RED baseline) are complete — see [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md). Phase 5 implements the three editing helpers (`set_metadata_field`, `rewrite_related_refs`, `scaffold_doc`), extracts `_refresh_index` from `_cmd_index`, and fixes `_format_entry` to emit root-relative INDEX links (the regression test `test_index_nested_doc_link_is_root_relative` goes green). The 48 RED tests are the executable spec; drive them green across Phases 5–7. See [m2-mutating-verbs.md](m2-mutating-verbs.md) for the full phase breakdown.
+**Next action: plan M3 — Validation and query (`check`, `list`).** M1 and M2
+are shipped; M3 has no milestone task plan yet. Create
+`docs/m3-validation-and-query.md` and its `-log.md` with the milestone-planning
+workflow, following the shape of `m2-mutating-verbs.md`, then run the ten TDD
+phases. M3's surface is already specified in `cli.md` (`docs check`,
+`docs list`); the exit criterion is `docs check` returning 0 on this repo's
+own `docs/` and `docs list --json` matching the documented schema. Do not
+start implementation before the M3 plan clears `definition-of-ready.md`.
 
-**Watch out for** (issues already resolved but worth knowing):
-- The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; same-name file would collide.
-- The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is now spec-compliant, not hand-authored. If you edit a body in `docs/*.md`, the renderer's "first paragraph" extraction changes — regenerate both `docs/INDEX.md` and the snapshot in lockstep. The Phase 9 + consistency-sweep commits show the workflow.
-- Markers in the preamble must be quoted in backticks (or otherwise not appear as a standalone line). The line-anchored detector (`_find_marker_lines` in `bin/docs`) prevents false-matches but only when prose mentions are styled as inline code.
-- The metadata-block rule in `convention.md` is more permissive than the original "ends at first blank line" wording: a blank line is allowed between inline `Label: value` lines and a following bare-label multi-value group (e.g. `Related:` + bullets). Both the parser and every project doc use this style. The convention text was rewritten in the post-M1 audit to match practice — read the "Metadata block" section if writing a new doc.
-- This repo uses `art@bitholdersinc.com` as git author email (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`. Memory entry at `~/.claude/projects/-home-user/memory/project_docs_cli.md` records this.
-- Quality-gate scope: `ruff check .` / `ruff format --check .` / `mypy` should run **tree-wide**, not just over `bin/docs`. Phases 1–7 only checked the executable and missed lint debt in `tests/` that Phase 8 found. The configured `mypy` (no args) covers `bin/docs` + `tests/` per `pyproject.toml`.
+**Watch out for** (durable gotchas, still current):
+- The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
+- Quality gates run **tree-wide**: `ruff check .`, `ruff format --check .`, and `mypy` (no args — `pyproject.toml` scopes it to `bin/docs` + `tests/`). Commit once per TDD phase on `main`.
+- The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is spec-compliant, not hand-authored. If you change a `docs/*.md` body so its first paragraph or `Updated:` line changes, regenerate `docs/INDEX.md` and the snapshot in lockstep (`./bin/docs index --root docs`, then copy `docs/INDEX.md` onto the fixture). Editing a doc means bumping that doc's own `Updated:` per the convention.
+- `docs mv` rewrites `Related:` metadata bullets only — prose markdown links in bodies are deliberately left alone (see the M2 Phase 9 log). Relevant to M3: `docs check` validates `Related:` paths, not prose links.
+- INDEX markers quoted in a doc's preamble must be backtick-styled inline code, so the line-anchored detector (`_find_marker_lines`) does not false-match them.
+- The metadata block may contain one blank line between the inline `Label: value` run and a trailing bare-label group (`Related:` + bullets). `_metadata_line_span` in `bin/docs` is the single source of that block-boundary rule.
+- Git author email for this repo is `art@bitholdersinc.com` (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`.
