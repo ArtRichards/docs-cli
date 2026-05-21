@@ -3,7 +3,7 @@
 Status: active
 Role: spec
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-05-21
 
 Related:
 - implements: charter.md
@@ -36,12 +36,12 @@ Global flags:
 Scaffold a new doc in the active tree.
 
 - `<role>` must be in the built-in or configured Role vocabulary.
-- `<slug>` becomes the filename (`<slug>.md`).
-- `--title` overrides the inferred H1 (default: title-cased slug).
+- `<slug>` becomes the filename (`<slug>.md`), created in the resolved docs root. A trailing `.md` on the slug is stripped. The slug may name a subdirectory (`sub/feature` → `sub/feature.md`); missing intermediate directories are created. The slug may **not** be an absolute path, contain a `..` component, or resolve under the archive subtree — those are rejected. To create a doc in the archive subtree use `docs archive`; to relocate an existing doc use `docs mv`.
+- `--title` overrides the inferred H1 (default: the slug's last path segment, title-cased, with `-` and `_` treated as word separators).
 - Writes the metadata block with `Status: draft`, `Role: <role>`, `Project: <inferred>`, `Updated: <today>`.
 - Does not refresh INDEX (the new doc is empty; the user is expected to fill it, then run `docs index` or let another verb trigger it).
 
-Exits 2 on invalid role; 1 on existing file.
+Exits 2 on invalid role or invalid slug; 1 on existing file.
 
 ### `docs index [DIR]`
 

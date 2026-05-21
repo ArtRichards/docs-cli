@@ -3,7 +3,7 @@
 Status: active
 Role: spec
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-05-21
 
 Related:
 - implements: charter.md
@@ -141,6 +141,16 @@ Status/location consistency rules:
 - `docs check` reports any mismatch with nonzero exit.
 
 `done` vs `archived`: `done` stays in the active tree (evergreen reference); `archived` is moved to the archive subtree. Use `done` when the doc is finished but still referenced day-to-day.
+
+## Subdirectories
+
+A docs root is not required to be flat. Beyond the machine-managed archive subtree, authors may organize docs into free-form subdirectories — grouping a body of work, a set of brainstorms, or a sub-project under its own folder. The tool is directory-agnostic:
+
+- `docs index` walks the whole tree recursively and lists every doc by its root-relative path. A subdirectory imposes no constraint on a doc's metadata.
+- The only directory the tool treats specially is the configured `archive_dir` — docs under it form the archive subtree (see above). Every other subdirectory is opaque to `docs`.
+- The status/location consistency rule applies *only* to the archive subtree. A doc in any other subdirectory may carry any active-tree status.
+
+Whether to keep a tree flat or nest it is the author's call. The metadata block and the generated `INDEX.md` — not the directory layout — are the primary navigation surface; subdirectories are a convenience for humans browsing with `ls` or an editor file-tree. `docs new` can create a doc directly into a subdirectory (`docs new spec sub/feature`); `docs mv` can relocate one between directories.
 
 ## INDEX file
 

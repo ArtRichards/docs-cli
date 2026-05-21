@@ -7,6 +7,7 @@ or on `PATH` configuration.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,16 @@ def _run(script: Path, *args: str, cwd: Path | None = None) -> subprocess.Comple
         text=True,
         cwd=str(cwd) if cwd else None,
     )
+
+
+def _normalize_generated_date(text: str) -> str:
+    """Blank the wall-clock date in the INDEX `_Generated …_` summary line.
+
+    `render_index` stamps `date.today()` into the summary, so a snapshot frozen
+    on one day can never byte-match on another. Normalizing that single line
+    keeps the test asserting structure, not the calendar.
+    """
+    return re.sub(r"_Generated \d{4}-\d{2}-\d{2}\.", "_Generated <date>.", text)
 
 
 def test_help_prints_usage(docs_script):
@@ -95,4 +106,21 @@ def test_index_output_matches_frozen_snapshot(docs_script, fixtures_dir, tmp_pat
     assert proc.returncode == 0, proc.stderr
     generated = (dst / "INDEX.md").read_text()
     expected = (fixtures_dir / "expected" / "docs-INDEX.md").read_text()
-    assert generated == expected
+    assert _normalize_generated_date(generated) == _normalize_generated_date(expected)
+
+
+def test_index_nested_doc_link_is_root_relative(docs_script, fixtures_dir, tmp_path):
+    """A doc in a subdirectory must get a root-relative INDEX link.
+
+    M1's `_format_entry` links by `doc.path.name` (basename), so any doc
+    outside the root — every archived doc, every doc in a subdir — gets a
+    broken link. M2's renderer fix (Phase 5) makes the link the root-relative
+    POSIX path. RED until then.
+    """
+    src = fixtures_dir / "trees" / "nested"
+    dst = tmp_path / "tree"
+    shutil.copytree(src, dst)
+    proc = _run(docs_script, "index", "--root", str(dst))
+    assert proc.returncode == 0, proc.stderr
+    index = (dst / "INDEX.md").read_text()
+    assert "(topics/deep-dive.md)" in index

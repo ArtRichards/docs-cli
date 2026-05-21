@@ -4,7 +4,7 @@
 See `docs/` (relative to repo root) for the full specification:
 
 - convention.md      on-disk Markdown convention this tool reads/writes
-- cli.md             command surface (only `index` implemented in M1)
+- cli.md             command surface
 - architecture.md    module sketch, data flow, INDEX renderer format
 
 This file is a single-file Python script. The repo's `docs/` directory
@@ -13,13 +13,13 @@ filename-vs-directory collision (POSIX disallows a file and directory
 with the same name in the same parent).
 
 M1 surface: parser, walker, renderer, `docs index` subcommand, config
-loading. Mutating verbs (archive, mv, new, touch) land in M2; check
-and list land in M3.
+loading. M2 (in progress) adds the mutating verbs `new`, `archive`,
+`mv`, and `touch`. `check` and `list` land in M3.
 """
 
 from __future__ import annotations
 
-__version__ = "0.1.0-m1"
+__version__ = "0.2.0-m2"
 
 import argparse
 import os
@@ -649,6 +649,68 @@ def find_root(start: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Doc-editing helpers (M2 — implementations land in Phase 5)
+# ---------------------------------------------------------------------------
+#
+# M1 only reads metadata. The mutating verbs must write it back. Rather than
+# re-serialize a whole doc (lossy — `parse_metadata_block` discards line order
+# and in-block formatting), these helpers do surgical, minimal-diff edits:
+# every byte outside the target line(s) is preserved. See the M2 milestone
+# doc's Decisions section for the rationale.
+
+
+def set_metadata_field(text: str, label: str, value: str) -> str:
+    """Return `text` with the inline metadata line `<label>: …` set to `value`.
+
+    If a line `<label>: <old>` exists in the metadata block, its value is
+    replaced in place — the label, indentation, and every other line are left
+    byte-for-byte identical. If no such line exists, a new `<label>: <value>`
+    line is appended to the end of the inline-metadata run (before any
+    bare-label multi-value group and before the terminating blank line).
+
+    Only the metadata block is considered: a `Label:`-shaped line in the body
+    is never matched. The file's trailing-newline state is preserved.
+
+    Used by `touch` (Updated), `archive` (Status, Updated, Archived-reason).
+
+    Raises:
+        MetadataError: `text` has no H1 / metadata block.
+    """
+    raise NotImplementedError("set_metadata_field() — Phase 5")
+
+
+def rewrite_related_refs(text: str, old_rel: str, new_rel: str) -> tuple[str, int]:
+    """Rewrite `Related:` bullets whose target path equals `old_rel`.
+
+    Scans the metadata block's `Related:` group; for every bullet of the form
+    `- <verb>: <old_rel>`, replaces the path with `new_rel`. The verb and every
+    non-matching line are preserved. Returns `(new_text, n)` where `n` is the
+    number of bullets rewritten — `n == 0` means `text` is returned unchanged.
+
+    `old_rel` and `new_rel` are root-relative POSIX paths. Used by `mv`.
+    """
+    raise NotImplementedError("rewrite_related_refs() — Phase 5")
+
+
+def scaffold_doc(
+    title: str,
+    role: str,
+    project: str | None,
+    updated: date,
+    date_format: str = "%Y-%m-%d",
+) -> str:
+    """Return the full text of a freshly scaffolded doc.
+
+    Produces an `# <title>` H1, a blank line, then the metadata block:
+    `Status: draft`, `Role: <role>`, `Project: <project>` (the `Project:` line
+    is omitted entirely when `project` is None), and `Updated:` formatted with
+    `date_format`. The body is empty. Output ends with a single trailing
+    newline and parses cleanly back through `parse()`. Used by `new`.
+    """
+    raise NotImplementedError("scaffold_doc() — Phase 5")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -659,6 +721,25 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Prescriptive CLI for managing trees of structured Markdown docs.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # Shared flags for the M2 mutating verbs. `index` keeps its own copies
+    # (M1); folding it into this parent is a Phase 7 cleanup, not a contract
+    # change.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--root",
+        help="Explicit docs root; overrides the upward .docs.toml search.",
+    )
+    common.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress success messages on stderr.",
+    )
+    common.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change; make no edits.",
+    )
 
     idx = subparsers.add_parser(
         "index",
@@ -689,6 +770,63 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the would-be INDEX.md to stdout; do not write.",
     )
+
+    new_p = subparsers.add_parser(
+        "new",
+        parents=[common],
+        help="Scaffold a new doc with a correct metadata block.",
+        description=(
+            "Create <slug>.md in the resolved docs root with a metadata block "
+            "(Status: draft, Role, Project, Updated: today). Does not refresh "
+            "INDEX.md. A slug may name a subdirectory (sub/foo); it may not "
+            "escape the root or land under the archive subtree."
+        ),
+    )
+    new_p.add_argument("role", help="Doc role; must be in the Role vocabulary.")
+    new_p.add_argument("slug", help="File slug, without the .md suffix.")
+    new_p.add_argument("--project", help="Project slug (overrides the inferred default).")
+    new_p.add_argument("--title", help="H1 title (default: title-cased slug).")
+
+    archive_p = subparsers.add_parser(
+        "archive",
+        parents=[common],
+        help="Archive a doc: edit Status, move to archive/<date>/, reindex.",
+        description=(
+            "Set Status: archived and bump Updated:, move the file to "
+            "<archive_dir>/<YYYY-MM-DD>/, then regenerate INDEX.md. The "
+            "metadata edit is atomic; the move runs only after it succeeds."
+        ),
+    )
+    archive_p.add_argument("file", help="Path to the doc to archive.")
+    archive_p.add_argument("--reason", help="Free-form Archived-reason: metadata line.")
+    archive_p.add_argument("--date", help="Archive date YYYY-MM-DD (default: today).")
+    archive_p.add_argument(
+        "--cascade",
+        action="store_true",
+        help="Also prompt to archive docs related by pairs-with / child-of (one hop).",
+    )
+
+    mv_p = subparsers.add_parser(
+        "mv",
+        parents=[common],
+        help="Move/rename a doc and rewrite Related: references tree-wide.",
+        description=(
+            "Move <old> to <new> (a new name in the same directory or a "
+            "different directory under the root), rewrite every Related: entry "
+            "across the tree that points at <old>, and regenerate INDEX.md."
+        ),
+    )
+    mv_p.add_argument("old", help="Current path of the doc.")
+    mv_p.add_argument("new", help="New path for the doc.")
+
+    touch_p = subparsers.add_parser(
+        "touch",
+        parents=[common],
+        help="Bump a doc's Updated: field to today and reindex.",
+        description=("Set Updated: to today in <file>. No other change. Regenerates INDEX.md."),
+    )
+    touch_p.add_argument("file", help="Path to the doc to touch.")
+
     return parser
 
 
@@ -728,11 +866,28 @@ def _cmd_index(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_new(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_new() — Phase 6")
+
+
+def _cmd_archive(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_archive() — Phase 6")
+
+
+def _cmd_mv(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_mv() — Phase 6")
+
+
+def _cmd_touch(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_touch() — Phase 6")
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code.
 
-    Subcommands implemented in M1:
-        index — regenerate INDEX.md from metadata in the docs root.
+    Subcommands:
+        index — regenerate INDEX.md from metadata in the docs root (M1).
+        new, archive, mv, touch — mutating verbs (M2, in progress).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).
@@ -744,6 +899,14 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.command == "index":
         return _cmd_index(args)
+    if args.command == "new":
+        return _cmd_new(args)
+    if args.command == "archive":
+        return _cmd_archive(args)
+    if args.command == "mv":
+        return _cmd_mv(args)
+    if args.command == "touch":
+        return _cmd_touch(args)
     return 2
 
 

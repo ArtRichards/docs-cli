@@ -27,7 +27,7 @@ Related:
 ## …
 ```
 
-- Plain `Label: value` lines under the H1, ending at the first blank line.
+- Plain `Label: value` lines under the H1; a bare-label list group (like `Related:`) may follow after a blank line.
 - `Status` and `Role` come from controlled vocabularies (extensible per-project, additive only).
 - `Related:` is followed by bullets in `<verb>: <path>` form.
 - No YAML frontmatter, no parser dependency, readable in any Markdown viewer.
@@ -59,7 +59,9 @@ Requires Python 3.11+ (for stdlib `tomllib`). No third-party dependencies.
 
 ## Status
 
-M1 — Parser and `docs index` — shipped 2026-05-20. `docs index [DIR]` walks a docs root, parses each `.md` file's metadata, and regenerates `INDEX.md` with hand-edited preamble/trailer preserved. Stdlib-only, ~520 lines of Python, 58 passing tests. M2 (mutating verbs: `new`, `archive`, `mv`, `touch`) is the active milestone — see [`docs/plan.md`](docs/plan.md) and [`docs/status.md`](docs/status.md).
+M1 — Parser and `docs index` — shipped 2026-05-20. `docs index [DIR]` walks a docs root, parses each `.md` file's metadata, and regenerates `INDEX.md` with hand-edited preamble/trailer preserved. Stdlib-only Python, no third-party dependencies.
+
+M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) — is the active milestone: the contract, test suite, and fixtures are in place (Phases 1–4), implementation is underway. See [`docs/m2-mutating-verbs.md`](docs/m2-mutating-verbs.md), [`docs/plan.md`](docs/plan.md), and [`docs/status.md`](docs/status.md).
 
 ## License
 

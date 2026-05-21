@@ -1,0 +1,5 @@
+[project]
+name = "cross-refs"
+
+[archive]
+dir = "archive"

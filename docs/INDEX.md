@@ -5,11 +5,11 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-20. 12 docs active, 0 archived._
+_Generated 2026-05-21. 14 docs active, 0 archived._
 
 ## Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-20.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-21.
 
 ## Active — Charter
 
@@ -21,15 +21,17 @@ _Generated 2026-05-20. 12 docs active, 0 archived._
 
 ## Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-05-20.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-05-20.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-05-21.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-05-21.
 
 ## Active — Milestone
 
+- [m2-mutating-verbs.md](m2-mutating-verbs.md) — _milestone_ — - Milestone: M2 - Title: Mutating verbs (`new`, `archive`, `mv`, `touch`) - Surface: four new CLI subcommands on the…. Updated 2026-05-21.
 - [m1-parser-and-index.md](m1-parser-and-index.md) — _milestone_ — - Milestone: M1 - Title: Parser and `docs index` - Surface: Python module `docs`, CLI subcommand `docs index` - Status:…. Updated 2026-05-20.
 
 ## Active — Log
 
+- [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-05-21.
 - [m1-parser-and-index-log.md](m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Shipped: 2026-05-20 - Progress: Phase…. Updated 2026-05-20.
 
 ## Active — Decision
