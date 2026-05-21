@@ -14,8 +14,8 @@ Related:
 - Project: docs
 - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 - Started: 2026-05-21
-- Progress: Phases 1–6 complete (contract, tests, fixtures, RED baseline,
-  base interfaces, verb cores). Full suite green.
+- Progress: Phases 1–7 complete (contract, tests, fixtures, RED baseline,
+  base interfaces, verb cores, CLI wrapper + `--cascade`). Full suite green.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -37,7 +37,7 @@ metadata-editing helpers and a renderer fix for nested-doc links.
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-21 | 48 failed / 62 passed. Every M2 failure traces to `NotImplementedError` or a stub exit code. **Session paused here by request.** |
 | 5. Update Base Interfaces | Complete | 2026-05-21 | Editing helpers + `_metadata_line_span` + renderer root-relative fix + `_refresh_index`. 77 passed / 33 failed (verb cores remain). |
 | 6. Implement Offline/Core Path | Complete | 2026-05-21 | `_cmd_new` / `_cmd_touch` / `_cmd_archive` / `_cmd_mv` on the Phase 5 helpers. Full suite green: 110 passed. |
-| 7. Update Tool/Wrapper Layer | Pending | — | Exit codes, `--dry-run` parity, `--cascade` prompt. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-21 | `archive --cascade` one-hop prompt (`_archive_one` / `_cascade_archive`) + 2 cascade tests. Exit codes & `--dry-run` parity already covered by Phase 6. 112 passed. |
 | 8. Run Tests (GREEN) | Pending | — | Full suite + tree-wide quality gates. |
 | 9. Implement Online/Integration | Pending | — | Dogfood the verbs against this repo's own `docs/`. |
 | 10. Quality, Docs, Refactor | Pending | — | Close out: status.md, plan.md, completion summaries. |
@@ -435,6 +435,43 @@ Implement the four verb cores on top of the Phase 5 helpers.
       `test_cli_mv.py`, `test_edit.py` green.
 - [x] Full suite green: 110 passed (was 77 passed / 33 failed after Phase 5).
 - [x] Tree-wide gates clean: `ruff check`, `ruff format --check`, `mypy`.
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+**Completed:** 2026-05-21
+
+#### Objective
+Finalize the CLI: the `archive --cascade` interactive prompt. Exit-code
+mapping, `--dry-run` parity, and error messages were already implemented and
+tested in Phase 6.
+
+#### Files changed
+- `bin/docs` — `_archive_one` and `_cascade_archive` helpers (new);
+  `_cmd_archive` refactored to use them; `_CASCADE_VERBS` constant.
+- `tests/test_cli_archive.py` — `_run` gains a `stdin_text` parameter;
+  `_crossrefs_tree` helper + two `--cascade` tests (prompt yes / no).
+
+#### Actions taken
+- `_archive_one` factors out the single-doc archive (edit `Status` / `Updated`
+  / optional `Archived-reason`, write atomically, move into the dated dir) so
+  the main doc and every cascaded doc share one code path.
+- `_cascade_archive` walks the archived doc's `pairs-with` / `child-of`
+  relations (one hop only), prompts `also archive <target>? [y/N]` on stderr,
+  reads the answer from stdin, and archives each confirmed doc into the same
+  dated directory. Declined or failing docs are left in place.
+- The Phase 2 test plan listed a `--cascade` test that was never written;
+  Phase 7 adds it — two subprocess tests feeding `y\n` / `n\n` on stdin.
+
+#### Issues / decisions
+- A declined or unreadable related doc is skipped, not fatal — cascade is
+  best-effort, and the resulting drift is what `docs check` (M3) is for.
+- On EOF / empty stdin the prompt defaults to "no", so a non-interactive
+  `--cascade` invocation never blocks and never archives unconfirmed docs.
+
+#### Exit criteria
+- [x] `docs <verb> --help` works for all four verbs.
+- [x] Every CLI test green, including the two new `--cascade` tests.
+- [x] Full suite green: 112 passed. Tree-wide gates clean (ruff, mypy).
 
 ## Milestone-completion summary
 

@@ -1042,6 +1042,64 @@ def _cmd_new(args: argparse.Namespace) -> int:
     return 0
 
 
+# Relationship verbs that `archive --cascade` follows (one hop only).
+_CASCADE_VERBS = ("pairs-with", "child-of")
+
+
+def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: str | None) -> Path:
+    """Archive a single doc: edit metadata, then move it into the dated dir.
+
+    Sets `Status: archived`, bumps `Updated:` to `date_str`, and appends an
+    `Archived-reason:` line when `reason` is given. The edited text is written
+    back atomically *before* the move, so a failure leaves the original doc
+    untouched. Returns the doc's new path.
+
+    Raises:
+        MetadataError: the doc has no editable metadata block.
+        FileExistsError: the archive destination is already occupied.
+    """
+    new_text = set_metadata_field(path.read_text(), "Status", "archived")
+    new_text = set_metadata_field(new_text, "Updated", date_str)
+    if reason:
+        new_text = set_metadata_field(new_text, "Archived-reason", reason)
+    dest = root / config.archive_dir / date_str / path.name
+    if dest.exists():
+        raise FileExistsError(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write(path, new_text)
+    path.replace(dest)
+    return dest
+
+
+def _cascade_archive(doc: Doc, root: Path, config: Config, date_str: str, quiet: bool) -> None:
+    """Prompt to archive each one-hop `pairs-with` / `child-of` relation of `doc`.
+
+    Each related doc that still exists prompts for a y/N confirmation on stdin;
+    on `y` it is archived into the same dated directory. Declined docs — and
+    docs whose archive fails — are left in place (drift `docs check` surfaces).
+    The cascade is one hop only: the related docs' own relations are not
+    followed.
+    """
+    for verb, target in doc.related:
+        if verb not in _CASCADE_VERBS:
+            continue
+        candidate = root / target
+        if not candidate.is_file():
+            continue
+        print(f"docs: also archive {target}? [y/N] ", end="", file=sys.stderr, flush=True)
+        if sys.stdin.readline().strip().lower() not in ("y", "yes"):
+            if not quiet:
+                print(f"docs: left {target} in place", file=sys.stderr)
+            continue
+        try:
+            dest = _archive_one(candidate, root, config, date_str, None)
+        except (MetadataError, FileExistsError, OSError) as exc:
+            print(f"docs: could not archive {target}: {exc}", file=sys.stderr)
+            continue
+        if not quiet:
+            print(f"docs: archived {target} -> {dest}", file=sys.stderr)
+
+
 def _cmd_archive(args: argparse.Namespace) -> int:
     file_path = Path(args.file)
     if not file_path.is_file():
@@ -1066,19 +1124,9 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     date_str = archive_date.strftime(config.date_format)
 
     # Validate the doc has the required metadata before mutating anything.
-    text = file_path.read_text()
     try:
-        parse(text, file_path, root)
+        doc = parse(file_path.read_text(), file_path, root)
     except (MetadataError, VocabularyError) as exc:
-        print(f"docs: {exc}", file=sys.stderr)
-        return 1
-
-    try:
-        new_text = set_metadata_field(text, "Status", "archived")
-        new_text = set_metadata_field(new_text, "Updated", date_str)
-        if args.reason:
-            new_text = set_metadata_field(new_text, "Archived-reason", args.reason)
-    except MetadataError as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
 
@@ -1087,23 +1135,25 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     if args.dry_run:
         if not args.quiet:
             print(f"docs: would archive {file_path} -> {dest}", file=sys.stderr)
+            cascadable = [t for v, t in doc.related if v in _CASCADE_VERBS]
+            if args.cascade and cascadable:
+                print(f"docs: --cascade would prompt for: {', '.join(cascadable)}", file=sys.stderr)
         return 0
 
-    # --cascade (one-hop prompt over pairs-with / child-of) lands in Phase 7.
-
-    if dest.exists():
-        print(f"docs: archive destination already exists: {dest}", file=sys.stderr)
-        return 1
     try:
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest = _archive_one(file_path, root, config, date_str, args.reason)
+    except MetadataError as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 1
+    except FileExistsError as exc:
+        print(f"docs: archive destination already exists: {exc}", file=sys.stderr)
+        return 1
     except OSError as exc:
-        print(f"docs: could not create archive directory {dest.parent}: {exc}", file=sys.stderr)
+        print(f"docs: could not create archive directory: {exc}", file=sys.stderr)
         return 2
 
-    # Edit in place atomically, then move — the move runs only after the edit
-    # succeeds, so a failure leaves the original doc untouched.
-    atomic_write(file_path, new_text)
-    file_path.replace(dest)
+    if args.cascade:
+        _cascade_archive(doc, root, config, date_str, args.quiet)
 
     try:
         _refresh_index(root, config)
