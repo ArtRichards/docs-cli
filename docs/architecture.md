@@ -19,7 +19,7 @@ Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — t
 bin/docs (executable; Python 3.11+, stdlib only)
 ├── shebang + dunder version
 ├── config        — TOML load, Vocab merging, archive-dir resolution
-├── model         — Doc dataclass; metadata block parser; serializer
+├── model         — Doc dataclass; metadata block parser + editors
 ├── walker        — directory traversal, filter, archive detection
 ├── index         — INDEX.md render with marker-block preservation
 ├── archive       — atomic move + status edit (M2)
@@ -36,9 +36,9 @@ bin/docs (executable; Python 3.11+, stdlib only)
 
 ### `model`
 
-- `Doc` dataclass: `path`, `title`, `status`, `role`, `project`, `updated`, `related: list[(verb, path)]`, `extra: dict[str, str|list[str]]`, `body_offset` (where content starts).
-- `parse(text: str, path: Path) -> Doc` — H1 + metadata block parser.
-- Pure: no I/O, no global state. Round-trippable in principle (read → write back produces equivalent metadata block).
+- `Doc` dataclass (frozen): `path`, `title`, `status`, `role`, `project`, `updated`, `related: tuple[(verb, path), ...]`, `extra: Mapping[str, str | tuple[str, ...]]`, `body`, `archived`.
+- `parse(text: str, path: Path, root: Path) -> Doc` — H1 + metadata block parser, layered on `parse_metadata_block` / `_metadata_line_span`.
+- `parse` is pure (no I/O). M2 writes metadata back with surgical, minimal-diff line edits (`set_metadata_field`, `rewrite_related_refs`, `scaffold_doc`) rather than a full re-serializer — see the M2 milestone Decisions.
 
 ### `walker`
 
@@ -48,10 +48,10 @@ bin/docs (executable; Python 3.11+, stdlib only)
 
 ### `index`
 
-- `render(docs: list[Doc], config: Config, existing: str | None) -> str`.
-- If `existing` contains marker block, preserves everything outside the markers.
+- `render_index(docs: list[Doc], config: Config, existing: str | None, root: Path) -> str`.
+- If `existing` contains the marker block, preserves everything outside the markers.
 - If `existing` is None or has no markers, creates a minimal file with markers.
-- Groups by `Status` then `Role`. Archived docs in their own section.
+- Active docs are grouped by `Role`; archived docs go in their own section.
 - Deterministic: same inputs produce byte-identical output.
 
 **Display order within Status: active.** Roles are listed in the canonical
@@ -143,7 +143,7 @@ tmp.write_text(new_content)
 tmp.replace(path)   # POSIX-atomic on same filesystem
 ```
 
-For archive operations (M2): edit in-place first (atomic write), then move (`Path.rename` or `shutil.move` if cross-FS). The move happens last so failure mid-edit leaves the original untouched.
+For archive operations (M2): edit in-place first (atomic write), then move with `Path.replace` (atomic within the docs root's filesystem). The move happens after the edit, so a failure during the edit leaves the original untouched.
 
 ## What's deliberately not architected
 
@@ -185,6 +185,6 @@ The `.venv/` directory is gitignored. Recreate it from scratch in a fresh clone.
 .venv/bin/python -m pytest -q                  # run tests
 .venv/bin/ruff check .                         # lint
 .venv/bin/ruff format --check .                # format check
-.venv/bin/mypy bin/docs                        # type-check the executable
+.venv/bin/mypy                                 # type-check (tree-wide, per pyproject)
 ./bin/docs index docs/                         # dogfood smoke (post-M1)
 ```
