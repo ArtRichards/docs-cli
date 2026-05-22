@@ -3,7 +3,7 @@
 Status: active
 Role: reference
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-05-22
 
 Related:
 - pairs-with: charter.md
@@ -33,7 +33,7 @@ Gate-check before implementation begins. Implementation does not start until eve
 | Single-file Python grows past readable size before package-split discipline kicks in | Hard cap mental budget at ~500 lines for M1; revisit at M3 | art |
 | `Updated:` field rots when authors hand-edit without bumping | `docs check --stale N` surfaces it; `docs touch` makes the bump cheap | art |
 | Marker-block strategy breaks if user hand-edits markers themselves | Documented; `docs check` reports missing markers | art |
-| Cross-host portability of the script — paths embedded in skill files diverge from per-host install paths | Skill is M5 and not authored yet; postpone the concern until then | art |
+| Cross-host portability of the script — paths embedded in skill files diverge from per-host install paths | **Resolved (M5, 2026-05-22).** Per resolved OQ2, the M5 skill is authored host-agnostic at `skills/docs/SKILL.md` — it bakes in no absolute path; the host-specific path lives only in the documented copy/symlink into `~/.claude/skills/docs/` (see `architecture.md`'s Install section). Row left as historical record. | art |
 
 ## Go/no-go
 

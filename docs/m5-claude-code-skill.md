@@ -81,36 +81,38 @@ working in this very repo stops hand-editing `INDEX.md` and runs `docs index`.
 
 ### Deliverables
 
-- [ ] `skills/docs/SKILL.md` — the skill artifact: valid `name` /
+- [x] `skills/docs/SKILL.md` — the skill artifact: valid `name` /
       `description` frontmatter and an imperative, verb-redirecting body.
-- [ ] Any bundled reference file the body needs kept minimal (a verb
+- [x] Any bundled reference file the body needs kept minimal (a verb
       cheat-sheet at most); no `README`/`CHANGELOG`/auxiliary clutter in the
-      skill directory (per the skill-authoring guidance).
-- [ ] `tests/test_skill.py` — automated checks over the skill artifact: the
+      skill directory (per the skill-authoring guidance). _(No reference file
+      was needed — the body is 143 lines, well under the split threshold; the
+      directory holds only `SKILL.md`.)_
+- [x] `tests/test_skill.py` — automated checks over the skill artifact: the
       frontmatter parses and carries exactly `name` + `description`; the body
       stays within the size budget; every `docs` verb the body names is a real
       subcommand of `bin/docs`; every relative link the body makes resolves;
       no stray non-skill files in `skills/docs/`. (The structural half of the
       RED/GREEN cycle — see the OQ1 resolution in Decisions.)
-- [ ] A **trigger-scenario checklist** in this milestone's log — a fixed set
+- [x] A **trigger-scenario checklist** in this milestone's log — a fixed set
       of "agent is about to do X" scenarios, each with the verb the skill
       should redirect to and whether the `description` should trigger. This is
       the behavioural half of the RED/GREEN cycle: it is RED before the skill
       is written (no skill, no redirect) and GREEN once the dogfood pass walks
       it (see Phase 9).
-- [ ] `docs/cli.md` updated: the skill is no longer "deliberately not in v1"
+- [x] `docs/cli.md` updated: the skill is no longer "deliberately not in v1"
       framing is N/A (cli.md never listed it); instead cli.md gains a short
       "Using `docs` from a Claude Code skill" pointer, and
       `architecture.md` gains the skill artifact + install note.
-- [ ] Install path documented: how `skills/docs/` is linked/copied into a
+- [x] Install path documented: how `skills/docs/` is linked/copied into a
       host's `~/.claude/skills/` — in `architecture.md`'s install section,
       parallel to the `bin/docs` symlink instruction.
-- [ ] Dogfood: this repo's own `INDEX.md` is regenerated only with
+- [x] Dogfood: this repo's own `INDEX.md` is regenerated only with
       `docs index`; the skill is exercised against the trigger-scenario
       checklist; `docs check docs/` stays exit 0.
-- [ ] All quality gates green tree-wide: `ruff check .`, `ruff format --check
+- [x] All quality gates green tree-wide: `ruff check .`, `ruff format --check
       .`, `mypy`, `pytest -q` (the suite now includes `tests/test_skill.py`).
-- [ ] `docs/status.md` updated; M5 → Complete, project v1 complete (M5 is the
+- [x] `docs/status.md` updated; M5 → Complete, project v1 complete (M5 is the
       final milestone).
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-22)
@@ -334,16 +336,16 @@ Decision):
 
 ## Phase Checklist
 
-- [ ] Phase 1: Define Contract
-- [ ] Phase 2: Write Tests (RED)
-- [ ] Phase 3: Create Data/Fixtures
-- [ ] Phase 4: Run Tests (RED Baseline)
-- [ ] Phase 5: Update Base Interfaces
-- [ ] Phase 6: Implement Offline/Core Path
-- [ ] Phase 7: Update Tool/Wrapper Layer
-- [ ] Phase 8: Run Tests (GREEN)
-- [ ] Phase 9: Implement Online/Integration (dogfood pass)
-- [ ] Phase 10: Quality, Docs, Refactor
+- [x] Phase 1: Define Contract
+- [x] Phase 2: Write Tests (RED)
+- [x] Phase 3: Create Data/Fixtures
+- [x] Phase 4: Run Tests (RED Baseline)
+- [x] Phase 5: Update Base Interfaces
+- [x] Phase 6: Implement Offline/Core Path
+- [x] Phase 7: Update Tool/Wrapper Layer
+- [x] Phase 8: Run Tests (GREEN)
+- [x] Phase 9: Implement Online/Integration (dogfood pass)
+- [x] Phase 10: Quality, Docs, Refactor
 
 ## Decisions
 
@@ -489,29 +491,29 @@ edits `INDEX.md`.
 
 M5 is complete when:
 
-- [ ] All Phase Checklist items are checked.
-- [ ] `skills/docs/SKILL.md` exists with valid frontmatter (exactly `name` +
+- [x] All Phase Checklist items are checked.
+- [x] `skills/docs/SKILL.md` exists with valid frontmatter (exactly `name` +
       `description`) and an imperative, verb-redirecting body within the
       skill-authoring size budget.
-- [ ] The `description` triggers on the contexts [plan.md](plan.md) names
+- [x] The `description` triggers on the contexts [plan.md](plan.md) names
       (editing a `.md` under a `.docs.toml` root; archive/list/create-doc
       requests; about to hand-edit `INDEX.md`) and does not over-trigger —
       verified against the trigger-scenario checklist's negative rows.
-- [ ] The body redirects every covered trigger to a real `docs` verb and
+- [x] The body redirects every covered trigger to a real `docs` verb and
       re-teaches none of the convention (points at `convention.md` / `cli.md`).
-- [ ] `tests/test_skill.py` passes — frontmatter, size budget, real-verb,
+- [x] `tests/test_skill.py` passes — frontmatter, size budget, real-verb,
       link-resolution, and no-clutter checks all green — as part of the full
       suite.
-- [ ] The Phase 9 dogfood pass satisfies the whole trigger-scenario
+- [x] The Phase 9 dogfood pass satisfies the whole trigger-scenario
       checklist; this repo's `INDEX.md` is regenerated only via `docs index`;
       `docs check docs/` exits 0.
-- [ ] The skill's install path is documented in [architecture.md](architecture.md)
+- [x] The skill's install path is documented in [architecture.md](architecture.md)
       and the cross-host portability risk in
       [definition-of-ready.md](definition-of-ready.md) is addressed.
-- [ ] All Deliverables above are checked off.
-- [ ] [status.md](status.md) reflects M5 → Complete and the project as
+- [x] All Deliverables above are checked off.
+- [x] [status.md](status.md) reflects M5 → Complete and the project as
       v1-complete (all five milestones shipped).
-- [ ] [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) contains a
+- [x] [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) contains a
       milestone-completion summary.
 
 ## OPEN QUESTIONS — resolved
@@ -664,3 +666,60 @@ A collision is a host-install concern, mitigated by the documented install
 step (the installer/operator chooses the directory). Recommended: `docs`,
 consistent with `plan.md`. Operator to confirm — if a host collision is known,
 `docs-cli` is the fallback.
+
+## Milestone-completion summary
+
+**M5 — Claude Code skill shipped 2026-05-22**, across all ten TDD phases. It is
+the project's **final v1 milestone — v1 is complete** (M1-M5 all shipped).
+
+### What shipped
+
+- **`skills/docs/SKILL.md`** — the Claude Code skill, the milestone's sole
+  authored artifact. Valid frontmatter (`name: docs` + a single-physical-line,
+  trigger-scoped `description`) and a 143-line imperative body. The
+  `description` triggers on documentation work in a `docs`-managed tree
+  (creating a plan/spec/charter/milestone, archiving or renaming a doc, listing
+  docs, checking the tree, regenerating `INDEX.md`, adopting a foreign Markdown
+  directory) and is scoped so it does not over-trigger on Markdown outside such
+  a tree. The body redirects each trigger to the matching `docs` verb — one
+  prose sub-heading per verb (all eight: `new`, `index`, `archive`, `mv`,
+  `list`, `touch`, `check`, `migrate`) — anchored by a "never hand-edit
+  `INDEX.md` / `archive/` / a metadata block" guardrail and a host-agnostic
+  binary/root-location section. It re-teaches none of the convention: it points
+  at `convention.md` and `cli.md` as the source of truth.
+- **`tests/test_skill.py`** — eight structural checks (the automatable half of
+  the two-part oracle): frontmatter shape, body size budget + guardrail
+  language, every `docs` verb named is real and all eight are named, relative
+  links resolve, no clutter in `skills/docs/`. RED against the Phase-1 stub,
+  GREEN against the authored artifact.
+- **The 11-row trigger-scenario checklist** (the behavioural half) — walked at
+  Phase 9: 8 positive rows trigger and redirect correctly, 3 negative rows are
+  handled correctly (row 10 annotated per OQ-H).
+- **Doc wiring** — `cli.md` gained a "Using `docs` from a Claude Code skill"
+  pointer; `architecture.md` gained the sibling-artifact note and the
+  `~/.claude/skills/docs/` install step.
+
+### Methodology notes
+
+- M5 was an **artifact milestone, not a code milestone** — it added no Python.
+  The ten-phase TDD cycle was mapped, not abandoned (resolved OQ1): "tests" is a
+  two-part oracle, "RED→GREEN" is the artifact moving from stub to authored,
+  Phase 3 was a conscious "nothing to stage".
+- The four milestone-setup questions (OQ1-OQ4) and the Step-2 author-guidance
+  questions (OQ-A, OQ-B, OQ-C, OQ-E, OQ-F, OQ-G, OQ-H) were all resolved and
+  honoured in the authored artifact — see the Decisions section above and the
+  log's per-phase entries.
+
+### Closing state
+
+- Full quality gate green: `pytest tests/` → **244 passed** (236 M1-M4 + 8 M5);
+  `ruff check` / `ruff format --check` / `mypy` clean tree-wide; `docs check
+  docs/` exit 0; `docs index --root docs/` idempotent.
+- `definition-of-ready.md`'s parked cross-host-portability risk is **resolved**
+  (the artifact is host-agnostic; the host path is the documented install
+  step) — the risk row is annotated and left as historical record.
+- `plan.md` carries a v1-completion note; the parked `[vocabulary] add_fields`
+  extra-field allowlist question is unresolved and **carries to v1.1**. M5
+  opened no new plan-level open question (OQ3).
+- `status.md` marks M5 → Complete and the project **v1-complete** — all five
+  milestones shipped.

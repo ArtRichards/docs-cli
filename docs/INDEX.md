@@ -38,7 +38,7 @@ _Generated 2026-05-22. 20 docs active, 0 archived._
 
 - [m3-validation-and-query-log.md](m3-validation-and-query-log.md) — _log_ — - Project: docs - Milestone: M3 — Validation and query (`check`, `list`) - Started: 2026-05-22 - Progress: Complete —…. Updated 2026-05-22.
 - [m4-migration-helper-log.md](m4-migration-helper-log.md) — _log_ — - Project: docs - Milestone: M4 — Migration helper (`docs migrate`) - Started: 2026-05-22 - Completed: 2026-05-22 -…. Updated 2026-05-22.
-- [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: Milestone activated 2026-05-22 —…. Updated 2026-05-22.
+- [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: **M5 complete — shipped…. Updated 2026-05-22.
 - [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-05-21.
 - [m1-parser-and-index-log.md](m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Shipped: 2026-05-20 - Progress: Phase…. Updated 2026-05-20.
 
@@ -50,7 +50,7 @@ _Generated 2026-05-22. 20 docs active, 0 archived._
 ### Active — Reference
 
 - [architecture.md](architecture.md) — _reference_ — Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — the `docs/` documentation directory…. Updated 2026-05-22.
-- [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-20.
+- [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 - [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-05-20.
 
 ## Archived

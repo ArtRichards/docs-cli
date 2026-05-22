@@ -13,23 +13,24 @@ Related:
 
 ## Current milestone
 
-**M5 — Claude Code skill is in flight (activated 2026-05-22).** M1-M4 are
-shipped. M5 is the final v1 milestone: a Claude Code skill (a `SKILL.md`
-artifact at `skills/docs/`) that makes an agent reach for the `docs` verbs
-automatically when doing documentation work in a `docs`-managed tree. It adds
-no CLI surface — it is a markdown artifact whose `description` triggers on the
-right contexts and whose body redirects to the appropriate `docs` verb instead
-of hand-editing metadata or `INDEX.md`. The four milestone-setup OPEN QUESTIONS
-(OQ1-OQ4 — chiefly how the ten-phase TDD cycle maps onto a markdown artifact)
-are resolved (operator-confirmed 2026-05-22) and recorded as Decisions in the
-task plan. **Phases 1-4 (contract, RED tests, fixtures, RED baseline) are
-complete on `m5/phases-1-4`**: `skills/docs/SKILL.md` exists with a stub body,
-`tests/test_skill.py` carries the eight structural checks at the intended RED
-baseline, and the 11-row trigger-scenario checklist is written and RED. Phases
-5-10 (author the skill, ship) are next. See
-[m5-claude-code-skill.md](m5-claude-code-skill.md) for the per-phase task plan
-and the Decisions, and
-[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the log.
+**Project v1 is complete — all five milestones shipped.** M5 — Claude Code
+skill shipped 2026-05-22, closing the v1 roadmap.
+
+M5 — Claude Code skill shipped 2026-05-22 across ten TDD phases. It is the
+project's final v1 deliverable: a Claude Code skill — a `SKILL.md` artifact at
+`skills/docs/` — that makes an agent reach for the `docs` verbs automatically
+when doing documentation work in a `docs`-managed tree. It adds no CLI surface
+and changes no verb behaviour: it is a markdown artifact whose `description`
+triggers on the right contexts (creating a plan/spec/charter/milestone,
+archiving or renaming a doc, listing docs, checking the tree, regenerating
+`INDEX.md`, adopting a foreign Markdown directory) and whose body redirects to
+the appropriate `docs` verb instead of hand-editing metadata, `INDEX.md`, or
+`archive/`. The convention itself is not re-taught — the body points at
+`convention.md` and `cli.md`. The four milestone-setup OPEN QUESTIONS (OQ1-OQ4)
+were resolved and recorded as Decisions in the task plan. See
+[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the per-phase
+history and [m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone
+summary.
 
 M4 — Migration helper (`docs migrate`) shipped 2026-05-22 across ten TDD
 phases. It added one verb — `docs migrate <dir>` — that adopts a
@@ -66,9 +67,10 @@ for the milestone summary.
 | M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
 | M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
-| M5 — Claude Code skill | **In flight** (started 2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
+| M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 
-Per-milestone task plans are created when each milestone is activated, not all up front.
+All five milestones are shipped — **the project has reached v1**. Per-milestone
+task plans were created when each milestone was activated, not all up front.
 
 ## TDD phase order (used per milestone)
 
@@ -99,46 +101,35 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — five-milestone roadmap; M1–M4 are shipped, **M5 is in flight**. Read the M5 section and the Resolved / Open questions.
-4. `docs/m5-claude-code-skill.md` — the **active milestone's task plan**: the ten-phase plan and the Decisions (the four milestone-setup questions OQ1-OQ4 are resolved and recorded there)
-5. `docs/m5-claude-code-skill-log.md` — the M5 log and the trigger-scenario checklist
-6. `docs/cli.md` — the command spec; the full `docs` command surface the skill redirects to
-7. `docs/m4-migration-helper.md` — most recently shipped milestone; its **Milestone-completion summary** lists the full M1-M4 verb + code surface the skill drives
-8. `docs/convention.md`, `docs/architecture.md` — the specs the skill points at (and must not re-teach)
-9. `docs/charter.md` — what + why
-10. `docs/definition-of-ready.md` — the gate cleared before implementation; its risk register parks the cross-host-portability risk explicitly for M5
+3. `docs/plan.md` — five-milestone roadmap; **all five milestones are shipped — the project is v1-complete**. Read the v1-completion note and the Open questions (the parked extra-field allowlist carries to v1.1).
+4. `docs/cli.md` — the command spec; the full eight-verb `docs` surface.
+5. `docs/convention.md`, `docs/architecture.md` — the on-disk format and the module sketch.
+6. `docs/m5-claude-code-skill.md` — the most recently shipped milestone's task plan; its **Milestone-completion summary** describes the Claude Code skill.
+7. `skills/docs/SKILL.md` — the M5 deliverable: the Claude Code skill that drives the verbs.
+8. `docs/charter.md` — what + why.
+9. `docs/definition-of-ready.md` — the gate cleared before implementation.
 
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # 3 failed, 241 passed (see note)
+.venv/bin/python -m pytest tests/ -q          # 244 passed
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
 ./bin/docs check docs/                        # dogfood — exit 0
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
-On `m5/phases-1-4` the suite is **3 failed / 241 passed** — the three failures
-are the M5 **intended RED baseline**: `tests/test_skill.py`'s content-driven
-checks fail against the Phase-1 stub `SKILL.md` (they turn green once Phases
-5–6 author the skill). M1-M4's 236 tests stay green. If `.venv/` is missing
-(fresh clone):
+The suite is **244 passed** (236 M1-M4 + 8 M5 `tests/test_skill.py` structural
+checks). If `.venv/` is missing (fresh clone):
 ```sh
 python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: M5 — Claude Code skill, Phase 5 (Update Base Interfaces).**
-M1-M4 are complete; M5's phases 1-4 (contract, RED tests, fixtures, RED
-baseline) are complete on `m5/phases-1-4`. The next action is Phase 5: author
-the skill `frontmatter` — the `name` and the trigger-scoped `description` —
-then Phase 6 authors the body. The task plan and log
-([m5-claude-code-skill.md](m5-claude-code-skill.md),
-[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)) carry the per-phase
-detail and the four resolved milestone-setup OPEN QUESTIONS (OQ1-OQ4). The
-Phase-1 artifacts already exist — `skills/docs/SKILL.md` (valid frontmatter +
-stub body) and `tests/test_skill.py` (the eight structural checks); Phase 5
-finalises the `description`, Phase 6 the body.
+**Next action: none — v1 is complete.** All five milestones (M1-M5) are
+shipped. Further work is v1.1 scope: the parked `[vocabulary] add_fields`
+extra-field allowlist question (see `plan.md`'s Open questions) and the
+deferred `bin/docs` single-file vs package split.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.

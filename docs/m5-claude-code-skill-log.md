@@ -14,15 +14,14 @@ Related:
 - Project: docs
 - Milestone: M5 — Claude Code skill
 - Started: 2026-05-22
-- Progress: Milestone activated 2026-05-22 — task plan and this log created on
-  `m5/milestone-setup`. All four milestone-setup OPEN QUESTIONS (OQ1–OQ4) are
-  resolved (operator-confirmed 2026-05-22, see below) and recorded as Decisions
-  in the task plan. **Phases 1–4 (contract, RED tests, fixtures, RED baseline)
-  are complete on `m5/phases-1-4`** — `skills/docs/SKILL.md` exists with a stub
-  body, `tests/test_skill.py` carries the eight structural checks at the
-  intended RED baseline (3 content-driven checks RED, 5 shape checks
-  legitimately green), and the 11-row trigger-scenario checklist is written and
-  RED. Phases 5–10 (author the skill, ship) are the next action.
+- Progress: **M5 complete — shipped 2026-05-22 across all ten TDD phases.** The
+  milestone is the project's final v1 deliverable; **v1 is complete** (M1-M5 all
+  shipped). All four milestone-setup OPEN QUESTIONS (OQ1-OQ4) and the Step-2
+  author-guidance questions (OQ-A/-B/-C/-E/-F/-G/-H) are resolved and honoured
+  in the authored artifact. The Claude Code skill is authored at
+  `skills/docs/SKILL.md`; `tests/test_skill.py`'s eight structural checks are
+  GREEN and the 11-row trigger-scenario checklist is walked and satisfied. See
+  the Milestone-completion summary at the bottom of this log.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -82,7 +81,7 @@ this repo and runs `docs index`.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | No `references/` added — the 143-line body is well under the 250-line trigger. Verification pass: `architecture.md`'s skill/install note and `cli.md`'s skill subsection re-read and confirmed accurate against the authored body — no reconciliation needed. `skills/docs/` holds only `SKILL.md`; check #7 GREEN. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-22 | Full GREEN gate: `pytest tests/` → 244 passed (236 M1-M4 + 8 M5); `ruff check` / `ruff format --check` / `mypy` clean tree-wide; `docs check docs/` exit 0; `docs index --root docs/ --dry-run` idempotent, exit 0. |
 | 9. Implement Online/Integration | Complete | 2026-05-22 | Dogfood: all 11 trigger-checklist rows walked against the authored `SKILL.md` — 8 positive rows trigger and redirect to the right verb; 3 negative rows handled correctly (row 10 annotated per OQ-H). `docs index --root docs/` regenerated `INDEX.md` (no diff); `docs check docs/` exit 0. |
-| 10. Quality, Docs, Refactor | Pending | — | Close out: `status.md` → M5 Complete + project v1-complete; completion summaries; INDEX + snapshot regenerated. |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-22 | Closed out M5 and v1: `status.md` → M5 Complete + project v1-complete; `definition-of-ready.md` risk annotated resolved; `plan.md` v1-completion note; completion summaries appended; all Phase Checklist / Deliverables / Success Criteria boxes ticked; `INDEX.md` + snapshot regenerated; full gate green. |
 
 ## Current State Analysis (snapshot at milestone kickoff, 2026-05-22)
 
@@ -913,6 +912,164 @@ No row failed; no `SKILL.md` fix or re-run of Phase 8 was needed.
 - [x] `./bin/docs check docs/` exit 0.
 - [x] Ready for Phase 10 (close out M5 and v1).
 
+### Phase 10 — Quality, Docs, Refactor
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Close out M5 — and the project. Run the full quality gate, update `status.md`
+(M5 → Complete, project v1-complete), annotate `definition-of-ready.md`'s parked
+risk as resolved, add a one-line v1-completion note to `plan.md`, append the
+milestone-completion summaries, tick every checklist box, and regenerate
+`docs/INDEX.md` + the snapshot in lockstep.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/status.md` | Modify | "Current milestone" rewritten — M5 shipped, project v1-complete; milestone table row M5 → **Complete**; "Resuming this work" reading order / verify-environment / next-action refreshed for a v1-complete repo. |
+| `docs/definition-of-ready.md` | Modify | The cross-host-portability risk row annotated **Resolved (M5)** — left as historical record; `Updated:` bumped via `docs touch`. |
+| `docs/plan.md` | Modify | One-line v1-completion note under "Open questions" — all five milestones shipped; the parked extra-field allowlist question carries to v1.1; M5 opened no new plan-level question (OQ3). |
+| `docs/m5-claude-code-skill.md` | Modify | Every Phase Checklist, Deliverables, and Success Criteria box ticked; Milestone-completion summary appended. |
+| `docs/m5-claude-code-skill-log.md` | Modify | `Progress:` field updated to "M5 complete"; Phase 10 row → Complete; this entry; Milestone-completion summary appended. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep via `./bin/docs index --root docs/` after the spec/status/plan/log edits. |
+
+#### Actions taken
+
+1. **Full quality gate** re-run after every Phase-10 edit — all green (see the
+   captured output below).
+2. **`status.md`** — the "Current milestone" section now states v1 is complete
+   and summarises the shipped M5; the milestone table row M5 → **Complete
+   (2026-05-22)**; the "Resuming this work" section's reading order, verify-
+   environment block (244 passed), and next-action ("none — v1 is complete")
+   refreshed.
+3. **`definition-of-ready.md`** — the parked cross-host-portability risk row is
+   annotated **Resolved (M5, 2026-05-22)** against OQ2: the skill artifact is
+   host-agnostic, the host path is the documented install step. The risk table
+   itself is left intact as historical record (per the plan). The body edit
+   triggered an `Updated:` bump, applied via `./bin/docs touch`.
+4. **`plan.md`** — a one-line v1-completion note added under "Open questions":
+   v1 is complete, the `[vocabulary] add_fields` extra-field allowlist question
+   is unresolved and carries to v1.1, M5 opened no new plan-level question
+   (resolved OQ3). The allowlist question itself is **not** resolved.
+5. **Milestone-completion summaries** appended to both `m5-claude-code-skill.md`
+   and this log; every Phase Checklist, Deliverables, and Success Criteria box
+   in `m5-claude-code-skill.md` ticked.
+6. **`docs/INDEX.md`** regenerated via `./bin/docs index --root docs/` and the
+   dogfood snapshot `tests/fixtures/expected/docs-INDEX.md` re-synced in
+   lockstep; the snapshot test (`tests/test_dogfood*`) passes.
+7. **No code refactor** — M5 added no Python, so the `/simplify` step has no
+   target. The equivalent is a final concision read-through of `SKILL.md`: the
+   body holds at 112 non-blank lines, each verb section 4-6 tight lines, no
+   redundancy — no change made.
+
+#### Captured command output
+
+```
+$ .venv/bin/python -m pytest tests/ -q
+244 passed in ~3.4s
+
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+19 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 19 source files
+
+$ ./bin/docs check docs/
+docs: no violations found            # exit 0
+```
+
+#### Issues / decisions
+
+- **`/simplify` is a no-op for an artifact milestone.** M5 added no Python.
+  Phase 10's refactor step is satisfied by a concision read-through of the
+  authored `SKILL.md` (recorded above) — there is no code to simplify.
+- **The cross-host-portability risk row is left in place.** Per the plan, the
+  `definition-of-ready.md` risk table is historical record — the row is
+  annotated resolved rather than deleted.
+
+#### Exit criteria
+
+- [x] Full quality gate green — `pytest tests/` 244 passed; `ruff` /
+      `ruff format` / `mypy` clean tree-wide; `docs check docs/` exit 0.
+- [x] `status.md` reflects M5 → Complete and the project v1-complete.
+- [x] `definition-of-ready.md`'s parked risk annotated resolved.
+- [x] `plan.md` carries the one-line v1-completion note; the allowlist question
+      is left parked for v1.1.
+- [x] Milestone-completion summaries appended to both M5 docs; every Phase
+      Checklist / Deliverables / Success Criteria box ticked.
+- [x] `docs/INDEX.md` + the snapshot regenerated in lockstep; the suite passes.
+- [x] **M5 — and the v1 roadmap — is complete.**
+
 ## Milestone-completion summary
 
-_Appended at Phase 10 when M5 — and the v1 roadmap — is complete._
+**M5 — Claude Code skill shipped 2026-05-22**, across all ten TDD phases. M5 is
+the project's **final v1 milestone — v1 is complete**: M1-M5 are all shipped.
+
+### What M5 delivered
+
+M5 authored the project's last deliverable — a Claude Code skill at
+`skills/docs/SKILL.md` — that makes an agent reach for the `docs` verbs
+automatically when doing documentation work in a `docs`-managed tree. The skill
+adds **no CLI surface and no Python**: it is a markdown artifact whose
+`description` triggers on the right contexts and whose body redirects to the
+matching `docs` verb instead of hand-editing metadata, hand-curating
+`INDEX.md`, or hand-moving a doc into `archive/`.
+
+- **`skills/docs/SKILL.md`** — frontmatter (`name: docs` + a single-physical-
+  line trigger-scoped `description`) and a 143-line imperative body. The body
+  carries a never-hand-edit guardrail, host-agnostic binary/root-location
+  guidance, a prose verb-redirection section with one sub-heading per verb (all
+  eight `docs` verbs), an explicit prose-only-edit carve-out (OQ-H), and a
+  pointer to `convention.md` / `cli.md` as the convention's source of truth.
+- **`tests/test_skill.py`** — eight structural checks, the automatable half of
+  the two-part oracle (resolved OQ1). GREEN as part of the 244-test suite.
+- **The 11-row trigger-scenario checklist** — the behavioural half, walked at
+  Phase 9: 11/11 satisfied (8 positive trigger-and-redirect, 3 negative
+  handled; row 10 annotated per OQ-H).
+- **Doc wiring** — `cli.md`'s skill pointer and `architecture.md`'s
+  sibling-artifact + install note (both authored at Phase 1, verified at
+  Phase 7).
+
+### Phase-by-phase
+
+| Phase | Outcome |
+|---|---|
+| 1 Define Contract | `SKILL.md` stub + final-shaped frontmatter; `tests/test_skill.py` 8 check signatures; `cli.md` / `architecture.md` wiring. |
+| 2 Write Tests (RED) | 8 structural checks implemented; 11-row trigger checklist authored. RED: 3 content checks fail the stub. |
+| 3 Create Data/Fixtures | Conscious "nothing to stage" — an artifact milestone has no foreign data. |
+| 4 Run Tests (RED Baseline) | 3 RED / 5 GREEN — every RED a content `AssertionError`; fresh-eyes review strengthened the oracle. |
+| 5 Update Base Interfaces | `description` authored as one physical line (OQ-E). Checks #1/#2/#3/#8 GREEN. |
+| 6 Implement Offline/Core Path | Body authored — guardrail + 8-verb prose redirection + OQ-H carve-out. All 8 checks GREEN. |
+| 7 Update Tool/Wrapper Layer | No `references/` needed; `cli.md` / `architecture.md` verified accurate. |
+| 8 Run Tests (GREEN) | Full suite 244 passed; gates clean tree-wide. |
+| 9 Integrate (dogfood) | 11/11 trigger-checklist rows satisfied; `INDEX.md` regenerated only via `docs index`. |
+| 10 Quality, Docs, Refactor | v1 closed out — `status.md` / `plan.md` / `definition-of-ready.md` updated; summaries appended; gate green. |
+
+### Decisions of record
+
+- **OQ1** — the ten-phase TDD cycle maps onto an artifact milestone via a
+  two-part oracle (`tests/test_skill.py` + the trigger checklist).
+- **OQ2** — the skill is authored in-repo, installed by a documented manual
+  step; this resolves `definition-of-ready.md`'s cross-host-portability risk.
+- **OQ3** — M5 opened no new `plan.md` open question; the parked extra-field
+  allowlist question carries to v1.1.
+- **OQ4** — the skill `name` is `docs`.
+- **OQ-A/-B/-C/-E/-F/-G/-H** — Step-2 author-guidance decisions (no `TODO`
+  tokens; spec references as inline code not links; verbs as plain
+  `` `docs <verb>` `` spans; single-physical-line `description`; prose verb
+  list not a table; no further `cli.md` churn; an explicit prose-only-edit
+  carve-out in the body) — all honoured in the authored artifact.
+
+### Closing state
+
+- `pytest tests/` → **244 passed** (236 M1-M4 + 8 M5); `ruff` /
+  `ruff format --check` / `mypy` clean tree-wide; `./bin/docs check docs/` exit
+  0; `docs index --root docs/` idempotent.
+- M5's exit criterion is met: an agent working in this repo is redirected to
+  run `docs index` instead of hand-editing `INDEX.md`.
+- **The five-milestone v1 roadmap is complete.**
