@@ -81,7 +81,7 @@ this repo and runs `docs index`.
 | 6. Implement Offline/Core Path | Complete | 2026-05-22 | Body authored — H1 + orientation, the never-hand-edit guardrail, binary/root location, a prose verb-redirection list (one sub-heading per verb), the prose-only-edit carve-out (OQ-H), and the convention pointer. 112 non-blank lines. All 8 `test_skill.py` checks GREEN. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | No `references/` added — the 143-line body is well under the 250-line trigger. Verification pass: `architecture.md`'s skill/install note and `cli.md`'s skill subsection re-read and confirmed accurate against the authored body — no reconciliation needed. `skills/docs/` holds only `SKILL.md`; check #7 GREEN. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-22 | Full GREEN gate: `pytest tests/` → 244 passed (236 M1-M4 + 8 M5); `ruff check` / `ruff format --check` / `mypy` clean tree-wide; `docs check docs/` exit 0; `docs index --root docs/ --dry-run` idempotent, exit 0. |
-| 9. Implement Online/Integration | Pending | — | Dogfood: walk the trigger-scenario checklist against the authored skill; `INDEX.md` regenerated only via `docs index`; `docs check docs/` exit 0. |
+| 9. Implement Online/Integration | Complete | 2026-05-22 | Dogfood: all 11 trigger-checklist rows walked against the authored `SKILL.md` — 8 positive rows trigger and redirect to the right verb; 3 negative rows handled correctly (row 10 annotated per OQ-H). `docs index --root docs/` regenerated `INDEX.md` (no diff); `docs check docs/` exit 0. |
 | 10. Quality, Docs, Refactor | Pending | — | Close out: `status.md` → M5 Complete + project v1-complete; completion summaries; INDEX + snapshot regenerated. |
 
 ## Current State Analysis (snapshot at milestone kickoff, 2026-05-22)
@@ -153,7 +153,7 @@ negative rows that exercise the "must not over-trigger" scoping._
 | 7 | Agent wants to confirm the tree is convention-clean (e.g. before a commit, or in CI). | Yes | `docs check [DIR]` — reports violations with exit 0/1/2; read the exit code. |
 | 8 | Agent is asked to adopt a foreign / non-conforming directory of Markdown into the convention. | Yes | `docs migrate <dir>` — dry-run plan by default; `--apply` writes the metadata blocks. |
 | 9 | Agent edits a `README.md` in a repo that has **no `.docs.toml`** anywhere up the tree. | No | No trigger — the skill is scoped to `docs`-managed trees only. |
-| 10 | Agent makes a pure prose edit (wording, a typo fix) to a doc body with no metadata, INDEX, or lifecycle concern. | No | No trigger — no `docs` verb applies to a prose-only edit. |
+| 10 | Agent makes a pure prose edit (wording, a typo fix) to a doc body with no metadata, INDEX, or lifecycle concern. | No verb | The `description` may load the skill — the file is in a `.docs.toml`-marked tree and a `description` cannot discriminate edit-intent before loading (resolved OQ-H). The body then correctly redirects to **no `docs` verb**: its prose-only carve-out tells the agent a prose edit not touching metadata / `INDEX.md` / archiving / lifecycle needs no verb — proceed normally. The skill is harmless on this row, not triggering-and-misredirecting. |
 | 11 | Agent edits a code or config file (`.py`, `.toml`, `.json`) — not Markdown documentation. | No | No trigger — the skill governs documentation work, not code or config edits. |
 
 ## Phase logs
@@ -845,6 +845,73 @@ are now GREEN against the authored frontmatter and body.
 - [x] All 8 `tests/test_skill.py` checks GREEN — the structural oracle
       satisfied.
 - [x] Ready for Phase 9 (the dogfood / trigger-checklist walk).
+
+### Phase 9 — Implement Online/Integration (dogfood pass)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Exercise the skill — the behavioural half of GREEN. Walk all 11 rows of the
+trigger-scenario checklist against the authored `skills/docs/SKILL.md`: confirm
+the `description` triggers (or correctly does not) and the body redirects to the
+expected verb. Regenerate this repo's `INDEX.md` only via `docs index`; confirm
+`docs check docs/` exits 0.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m5-claude-code-skill-log.md` | Modify | Trigger-checklist row 10's expected-behavior cell annotated per resolved OQ-H; Phase 9 row → Complete; this log entry. |
+
+#### Trigger-scenario checklist — walked, per-row verdict
+
+The `description` (the always-in-context trigger surface) and the authored body
+were walked row by row. **Verdict: 11/11 satisfied.**
+
+| # | Type | Verdict | Why |
+|---|---|---|---|
+| 1 | positive | **PASS** | `description` names "creating a plan/spec/charter/milestone" → triggers. Body "Creating a doc — `docs new`": `docs new <role> <slug>`, `--project` / `--title`, scaffolds the metadata block, run `docs index` once filled. |
+| 2 | positive | **PASS** | `description` names "regenerating INDEX.md" and "hand-editing … INDEX.md" → triggers. Body guardrail + "Regenerating the index — `docs index`": rewrites the marker block, idempotent, `--root` / `--dry-run`. |
+| 3 | positive | **PASS** | `description` names "archiving … a doc" → triggers. Body "Archiving a doc — `docs archive`": sets `Status: archived`, moves into `archive/<date>/`, reindexes; `--reason` / `--date` / `--cascade`. |
+| 4 | positive | **PASS** | `description` names "renaming a doc" → triggers. Body "Renaming or moving a doc — `docs mv`": moves and rewrites every `Related:` reference tree-wide. |
+| 5 | positive | **PASS** | `description` names "listing docs" → triggers. Body "Listing docs — `docs list`": `--status` / `--role` / `--project` / `--stale N` / `--json`, AND-combined. |
+| 6 | positive | **PASS** | `description` covers documentation work in a docs-managed tree and "hand-editing metadata" (`Updated:` is metadata) → triggers. Body guardrail ("Do not hand-edit the `Updated:` date") + "Recording an edit date — `docs touch`": bumps `Updated:`, reindexes. |
+| 7 | positive | **PASS** | `description` names "checking the tree" → triggers. Body "Checking the tree — `docs check`": validates the tree, **read the exit code** — 0 clean / 1 warnings / 2 errors; `--json` / `--stale N`. |
+| 8 | positive | **PASS** | `description` names "adopting a foreign Markdown directory" → triggers. Body "Adopting a foreign directory — `docs migrate`": dry-run plan by default, `--apply` writes, `--json`; refuses an existing docs root. |
+| 9 | negative | **PASS** | A `README` in a repo with no `.docs.toml` up-tree: the `description`'s scoping — "a directory with a .docs.toml file" + the closing "Not for Markdown outside a docs-managed tree" — excludes it. No trigger. |
+| 10 | negative | **PASS (annotated)** | A pure prose edit inside a `.docs.toml`-marked tree. Per resolved OQ-H, a `description` cannot discriminate edit-intent before loading, so the skill **may** load (the tree matches). The body then correctly redirects to **no verb**: its prose-only carve-out tells the agent that an edit not touching metadata / `INDEX.md` / archiving / lifecycle needs no `docs` verb — proceed normally. Scored honestly as "skill may load; body correctly redirects to no verb"; checklist row 10's expected-behavior cell was annotated to reflect this rather than silently marked a plain "no trigger" pass. |
+| 11 | negative | **PASS** | A `.py` / `.toml` / `.json` edit: the `description` scopes to Markdown documentation work in a docs-managed tree; a code/config file is not Markdown documentation. No trigger. |
+
+No row failed; no `SKILL.md` fix or re-run of Phase 8 was needed.
+
+#### Exit-criterion behaviour confirmed
+
+- `./bin/docs index --root docs/` regenerated `docs/INDEX.md` — `docs index` is
+  the only thing that touched it; the regenerated file is byte-identical to the
+  committed one (no diff — the Phase 5-9 log edits did not change any indexed
+  doc's first paragraph or `Updated:` line).
+- `./bin/docs check docs/` → `no violations found`, exit 0.
+
+#### Issues / decisions
+
+- **Row 10 annotated, not silently passed (OQ-H).** The checklist's row 10
+  expected-behavior cell now states the honest outcome — the skill may load on
+  an ordinary prose edit, and that is acceptable because the body redirects to
+  no verb. The skill is *harmless* on this row, which is the design intent of
+  the OQ-H carve-out.
+- **The behavioural oracle is GREEN.** Together with the 8 GREEN structural
+  checks (Phase 8), both halves of M5's two-part oracle (resolved OQ1) are now
+  satisfied.
+
+#### Exit criteria
+
+- [x] All 11 trigger-checklist rows walked against the authored `SKILL.md`;
+      11/11 satisfied — 8 positive trigger-and-redirect, 3 negative handled.
+- [x] Row 10's expected-behavior cell annotated per resolved OQ-H.
+- [x] `docs/INDEX.md` regenerated only via `docs index` — no hand edit.
+- [x] `./bin/docs check docs/` exit 0.
+- [x] Ready for Phase 10 (close out M5 and v1).
 
 ## Milestone-completion summary
 
