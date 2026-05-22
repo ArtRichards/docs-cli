@@ -14,13 +14,13 @@ Related:
 ## Current milestone
 
 **M4 — Migration helper (`docs migrate`) is in flight.** Activated 2026-05-22;
-the task plan and log are authored, Phase 1 (Define Contract) is the next
-action. M4 adds one verb — `docs migrate <dir>` — that adopts a non-conforming
-directory into the convention: it walks a foreign tree, infers the required
-metadata per file, and produces a migration plan (dry-run by default; `--apply`
-writes). See [m4-migration-helper.md](m4-migration-helper.md) for the ten-phase
-plan and [m4-migration-helper-log.md](m4-migration-helper-log.md) for the
-per-phase log.
+the contract-and-RED phases (1-4) are underway. M4 adds one verb —
+`docs migrate <dir>` — that adopts a non-conforming directory into the
+convention: it walks a foreign tree, infers the required metadata per file, and
+produces a migration plan (dry-run by default; `--apply` writes). See
+[m4-migration-helper.md](m4-migration-helper.md) for the ten-phase plan and
+[m4-migration-helper-log.md](m4-migration-helper-log.md) for the per-phase log
+(its phase table is the detailed tracker).
 
 M3 — Validation and query (`check`, `list`) shipped 2026-05-22 across ten TDD
 phases. It added two read-only verbs — `docs check` (validate the tree, with

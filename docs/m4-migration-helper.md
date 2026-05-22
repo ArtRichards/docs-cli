@@ -37,10 +37,11 @@ them, the tool applies the decisions.
 
 ### Requirements
 
-- `docs migrate <dir> [--apply] [--json] [--quiet]` walks a *foreign*
-  directory (no `.docs.toml` assumed) and inspects every `.md` file's
-  structure. It is read-only by default — a dry-run plan; `--apply` performs
-  the edits.
+- `docs migrate <dir> [--apply] [--json] [--quiet] [--date YYYY-MM-DD]` walks
+  a *foreign* directory (no `.docs.toml` assumed) and inspects every `.md`
+  file's structure. It is read-only by default — a dry-run plan; `--apply`
+  performs the edits. `--date` sets the archive date for normalised moves
+  (default: today), parallel to `docs archive --date`.
 - For each file, infer the metadata the convention requires:
   - **Role** — from filename suffix / token patterns (`-spec`, `-status`,
     `-plan`, `-adr`, `-log`, …) and from any already-present metadata-shaped
@@ -82,7 +83,10 @@ them, the tool applies the decisions.
 - [ ] A `MigrationPlan` / `FileMigration` model carrying per-file decisions,
       confidence, and ambiguity notes; `plan_migration` builds it,
       `apply_migration` executes it.
-- [ ] `--json` plan schema pinned in [cli.md](cli.md), stable from M4 on.
+- [ ] `--json` plan schema pinned in [cli.md](cli.md), stable from M4 on. The
+      record is one flat object per file: `path`, `role`, `project`, `status`,
+      `updated` (ISO `YYYY-MM-DD`), `confidence`, `ambiguities`, `archive_move`
+      (path or null), `synthesized_h1`, `reconciled_metadata`.
 - [ ] `tests/test_migrate.py` (inference + planning units) and
       `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json`).
 - [ ] Fixture tree(s) of non-conforming docs under
@@ -341,6 +345,23 @@ and `dual-status-adr.md`):
   argument and does **not** accept the global `--root` flag — consistent with
   the refuse-on-`.docs.toml` guard above (a configured root is precisely the
   tree `migrate` declines to touch).
+- **The `--json` plan record schema is pinned at Phase 1, stable from M4 on.**
+  (Operator-confirmed, 2026-05-22.) One flat object per file — `path`, `role`,
+  `project`, `status`, `updated` (ISO `YYYY-MM-DD`), `confidence`,
+  `ambiguities`, `archive_move` (root-relative destination or null),
+  `synthesized_h1`, `reconciled_metadata` — pinned in [cli.md](cli.md) as a
+  table, mirroring M3's `doc_to_json` / `finding_to_json` flat-record style.
+  The `FileMigration` dataclass field names are reconciled to these keys: the
+  task plan's draft `has_h1` / `had_metadata` are the inverses of
+  `synthesized_h1` / `reconciled_metadata`; the latter orientation is used
+  consistently in both the dataclass and the JSON, so `migration_to_json` is a
+  straight field-to-key copy.
+- **`migrate` takes an optional `--date YYYY-MM-DD`.** (Operator-confirmed,
+  2026-05-22.) Archive-style subdirs are normalised into `archive/<date>/`; the
+  date is a single per-run value, defaulting to `date.today()`, set by an
+  optional `--date` flag parallel to `docs archive --date`. A single archive
+  date per run keeps the plan deterministic — every normalised move in one
+  `migrate` invocation lands under the same dated directory.
 - **Archive-subdir normalisation is in scope; active-tree restructuring is
   not.** (Operator-confirmed, 2026-05-22.) `detect_archive_layout` recognises
   common archive-style subdirs (`archive/`, `archived/`, `project-history/`,

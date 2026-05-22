@@ -28,7 +28,7 @@ bin/docs (executable; Python 3.11+, stdlib only)
 ├── touch         — Updated: bump (M2)
 ├── check         — validation rules + exit-code matrix (M3)
 ├── list          — query view, human + --json (M3)
-├── migrate       — foreign-tree import (M4)
+├── migrate       — foreign-tree inference + plan/apply (M4)
 └── cli           — argparse dispatch, exit codes, --root resolution
 ```
 
@@ -119,6 +119,46 @@ Preservation rule: everything outside the markers (preamble before
 is copied verbatim into the regenerated file. If the existing INDEX
 contains no markers, the renderer creates a minimal file containing only
 the marker block and the derived content.
+
+### `migrate`
+
+- `migrate` adopts a *non-conforming* foreign directory into the convention.
+  It is read-only by default (a dry-run plan); `--apply` performs the edits.
+- **Inference helpers** — pure functions, no I/O:
+  - `infer_role(filename, metadata) -> (role, confident)` — filename-suffix
+    token → built-in role, with an in-file `Role:` line overriding and a
+    `notes` fallback.
+  - `infer_project(filenames, dir_name) -> str` — the longest common
+    `-`/`_`-delimited filename prefix, or the directory name.
+  - `infer_status(metadata, in_archive) -> (status, confident)` — in-file
+    `Status:` line, else `archived` (in an archive subdir) or `active`.
+  - `infer_updated(metadata, mtime, date_format) -> (updated, confident)` —
+    in-file `Updated:` line, else the file mtime.
+  - `detect_archive_layout(rel_path, archive_date) -> str | None` — maps a
+    non-conformant archive-style path (`archived/`, `project-history/`, a
+    bare `archive/file.md`) to `archive/<date>/<basename>`; returns `None`
+    for an active-tree file or one already at `archive/<valid-date>/`.
+- **Block-insertion** — `insert_metadata_block(text, *, title, status, role,
+  project, updated, date_format)` places (or synthesises) the H1, inserts the
+  required metadata block beneath it, preserves the body verbatim, and
+  reconciles any pre-existing metadata-shaped lines into the block instead of
+  duplicating them. Distinct from `set_metadata_field` (edits an existing
+  block) and `scaffold_doc` (builds from nothing) — see the M4 Decisions.
+- **Plan / apply** — `plan_migration(root, archive_date) -> MigrationPlan`
+  walks the tree (via `_iter_doc_texts` with a default `Config`), runs the
+  inference helpers, and assembles one `FileMigration` per `.md` file with a
+  confidence and every ambiguity flagged. `apply_migration(plan)` executes it:
+  `insert_metadata_block` + `atomic_write` per file, plus the archive moves.
+  `migration_to_json(plan)` serialises the whole plan to the `--json` schema
+  pinned in [cli.md](cli.md).
+- **Models** — `FileMigration` (frozen) carries one per-file decision: the
+  inferred `role`/`project`/`status`/`updated`, `confidence`, `ambiguities`,
+  `synthesized_h1`, `reconciled_metadata`, and an optional `archive_move`
+  destination. `MigrationPlan` (frozen) holds the `root` and the tuple of
+  `FileMigration`s in root-relative path order.
+- **Scope boundary** — the active-tree directory layout is left untouched;
+  `--apply` adds metadata in place and only ever moves docs out of detected
+  archive-style subdirs. No role-bucket flattening or project re-foldering.
 
 ### `cli`
 

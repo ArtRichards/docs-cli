@@ -58,7 +58,7 @@ agent consumes to resolve ambiguities before applying.
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Not started | — | `FileMigration` / `MigrationPlan` models + inference/plan/apply helper stubs + `_cmd_migrate` stub + `migrate` subparser in `bin/docs`; `cli.md` migrate section + `--json` schema; `architecture.md` migrate module spec; M4 plan + log created. |
+| 1. Define Contract | Complete | 2026-05-22 | `FileMigration` / `MigrationPlan` models + inference/plan/apply helper stubs + `_cmd_migrate` stub + `migrate` subparser in `bin/docs`; `cli.md` migrate section + `--json` schema; `architecture.md` migrate module spec; M4 plan + log created. |
 | 2. Write Tests (RED) | Not started | — | `tests/test_migrate.py` (inference + planning units) and `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json`). |
 | 3. Create Data/Fixtures | Not started | — | `tests/fixtures/trees/foreign/` — non-conforming docs; archive-style subdir; refuse-guard tree. |
 | 4. Run Tests (RED Baseline) | Not started | — | `pytest tests/` — capture the RED baseline. **Session pauses here.** |
@@ -113,6 +113,76 @@ _Captured before Phase 1; historical._
 _Phase logs are appended here as each phase completes, following the M1–M3
 format: Objective, Files changed (table), Actions taken, Issues / decisions,
 Exit criteria._
+
+### Phase 1 — Define Contract
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Declare the full M4 surface in `bin/docs` — the `FileMigration` /
+`MigrationPlan` models, the inference / plan / apply helper signatures, the
+`_cmd_migrate` handler, the `migrate` subparser — with no business logic. Pin
+the `--json` plan schema in `cli.md` and the `migrate` module spec in
+`architecture.md`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | `__version__` → `0.4.0-m4`; module docstring refreshed; `Sequence` added to the `collections.abc` import. New `FileMigration` / `MigrationPlan` frozen dataclasses. New "Migration (M4)" section with stub signatures + docstrings for `infer_role`, `infer_project`, `infer_status`, `infer_updated`, `detect_archive_layout`, `insert_metadata_block`, `plan_migration`, `apply_migration`, `migration_to_json`. `_cmd_migrate` stub handler. `migrate` subparser in `_build_parser()`. `main()` dispatch + docstring extended. |
+| `docs/cli.md` | Modify | `docs migrate` subcommand section added (usage, inference rules, dry-run / `--apply` semantics, refuse-on-`.docs.toml` guard, exit codes); `--json` plan record schema pinned as a table; `migrate` dropped from "What's deliberately not in v1"; `m4-migration-helper.md` added to `Related:`. |
+| `docs/architecture.md` | Modify | One-line `migrate` bullet replaced with the inference + plan/apply responsibilities; new `migrate` module subsection paralleling `index`. |
+| `docs/status.md` | Modify | M4 in-flight paragraph refreshed — "phases 1-4 underway". |
+| `docs/m4-migration-helper-log.md` | Modify | Phase 1 row → Complete; this log entry. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep after the spec edits. |
+
+#### Actions taken
+
+- Added the `migrate` subparser directly (not via the `common` parent parser):
+  `migrate` is dry-run by default and takes `--apply` to opt *in* to writing —
+  the inverse of `common`'s `--dry-run`. It takes a positional `dir`, plus
+  `--apply` / `--json` / `--quiet` / `--date`; no `--root` (a foreign tree has
+  no `.docs.toml` for an up-walk to resolve).
+- Declared nine migration helpers with full docstrings; bodies raise
+  `NotImplementedError("… — Phase N")` naming the phase that implements them
+  (inference + `insert_metadata_block` → Phase 5; `plan_migration` → Phase 6;
+  `apply_migration` / `migration_to_json` → Phase 7).
+- `_cmd_migrate` raises `NotImplementedError` — Phase 6.
+- Pinned the `--json` plan schema in `cli.md` as the M4 stability contract.
+
+#### Issues / decisions
+
+- **Dataclass field names reconciled with the `--json` keys (resolved Q1).**
+  The plan's draft `has_h1` / `had_metadata` are the inverses of the pinned
+  JSON keys `synthesized_h1` / `reconciled_metadata`. The `synthesized_h1` /
+  `reconciled_metadata` orientation was chosen and used consistently in both
+  the `FileMigration` dataclass and the JSON schema, so the mapping is a
+  straight field-to-key copy.
+- **`--date` flag added to `migrate` (resolved Q3).** A single optional
+  `--date YYYY-MM-DD` per run, defaulting to today, keeps the plan
+  deterministic — parallel to `docs archive --date`.
+- **`FileMigration` enforces the confidence/ambiguities invariant.** Its
+  `__post_init__` rejects `confidence` outside `{high, low}` and requires
+  `ambiguities` non-empty iff `confidence == "low"` — the model cannot carry
+  an inconsistent decision.
+- **`architecture.md` had no `check` / `list` subsections.** The plan said to
+  add a `migrate` subsection "paralleling check/list", but M3 never added
+  those — `architecture.md` documents `model` / `walker` / `index` / `cli`.
+  The new `migrate` subsection parallels the existing `index` subsection's
+  style instead.
+
+#### Exit criteria
+
+- [x] `FileMigration` / `MigrationPlan` models + 9 helper stubs + `_cmd_migrate`
+      stub + `migrate` subparser in `bin/docs`; `main()` dispatch extended.
+- [x] `docs --help` lists all eight subcommands; `migrate` parses its args then
+      exits non-zero from the stub.
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+- [x] `cli.md` `--json` plan schema pinned; `architecture.md` `migrate` spec
+      added; `migrate` dropped from cli.md's "not in v1".
+- [x] `docs/INDEX.md` and the dogfood snapshot regenerated in lockstep.
+- [x] Ready for Phase 2 to write failing tests against the contract.
 
 ## Milestone-completion summary
 

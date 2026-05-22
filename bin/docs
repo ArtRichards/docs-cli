@@ -15,12 +15,13 @@ with the same name in the same parent).
 M1: parser, walker, renderer, `docs index`, config loading. M2 adds the
 mutating verbs `new`, `archive`, `mv`, and `touch`. M3 adds the
 validation and query verbs `check` and `list`, and regroups the INDEX
-by Project then Role.
+by Project then Role. M4 adds the migration verb `migrate`, which adopts
+a non-conforming foreign directory into the convention.
 """
 
 from __future__ import annotations
 
-__version__ = "0.3.0-m3"
+__version__ = "0.4.0-m4"
 
 import argparse
 import json
@@ -28,7 +29,7 @@ import os
 import re
 import sys
 import tomllib
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
@@ -206,6 +207,83 @@ class Finding:
     severity: str
     rule: str
     message: str
+
+
+@dataclass(frozen=True)
+class FileMigration:
+    """One per-file decision in a `MigrationPlan` produced by `docs migrate` (M4).
+
+    A `FileMigration` is the migration helper's complete decision for a single
+    foreign `.md` file: the metadata `migrate` will insert (`role`, `project`,
+    `status`, `updated`), how confident the inference was, every ambiguity it
+    surfaced, and whether the file needs an H1 synthesised or a planned
+    archive-normalising move.
+
+    Attributes:
+        path: Absolute path of the foreign file on disk.
+        rel: Root-relative POSIX path of the file (relative to the migration
+            root). The stable identifier used for display and `--json`.
+        role: Inferred `Role:` value. Always a built-in role (see
+            `BUILTIN_ROLES`) — inference never invents an out-of-vocab role.
+        project: Inferred `Project:` value.
+        status: Inferred `Status:` value. Always a built-in status (see
+            `BUILTIN_STATUSES`).
+        updated: Inferred `Updated:` date.
+        synthesized_h1: True iff the file has no H1 and `migrate` will
+            synthesise one from the filename (via `_slug_to_title`).
+        reconciled_metadata: True iff the file already carried
+            metadata-shaped lines that `migrate` will reconcile into the
+            inserted block rather than duplicate.
+        confidence: ``"high"`` or ``"low"``. ``"low"`` iff `ambiguities` is
+            non-empty; ``"high"`` iff it is empty — the two are kept in sync.
+        ambiguities: Human-readable notes, one per unresolved inference
+            question. Non-empty iff ``confidence == "low"``.
+        archive_move: The planned destination as a root-relative POSIX path
+            when the file lives in a non-conformant archive-style subdir and
+            will be relocated into ``archive/<date>/``; ``None`` when the file
+            stays where it is (the active-tree layout is left untouched, and a
+            file already under a conformant ``archive/<valid-date>/`` is not
+            moved — see `detect_archive_layout`).
+    """
+
+    path: Path
+    rel: str
+    role: str
+    project: str
+    status: str
+    updated: date
+    synthesized_h1: bool
+    reconciled_metadata: bool
+    confidence: str
+    ambiguities: tuple[str, ...]
+    archive_move: str | None
+
+    def __post_init__(self) -> None:
+        if self.confidence not in ("high", "low"):
+            raise ValueError(f"FileMigration.confidence must be high|low, got {self.confidence!r}")
+        if self.confidence == "low" and not self.ambiguities:
+            raise ValueError("FileMigration.confidence 'low' requires a non-empty ambiguities")
+        if self.confidence == "high" and self.ambiguities:
+            raise ValueError("FileMigration.confidence 'high' requires an empty ambiguities")
+
+
+@dataclass(frozen=True)
+class MigrationPlan:
+    """The complete plan `docs migrate` produces for a foreign directory (M4).
+
+    A `MigrationPlan` carries one `FileMigration` per `.md` file under the
+    migration root. It is the contract surface a dry-run emits and `--apply`
+    consumes: `plan_migration` builds it, `apply_migration` executes it, and
+    `migration_to_json` serialises it.
+
+    Attributes:
+        root: Absolute path of the foreign directory being migrated.
+        files: One `FileMigration` per `.md` file, ordered by root-relative
+            POSIX path (the same order `_iter_doc_texts` yields).
+    """
+
+    root: Path
+    files: tuple[FileMigration, ...]
 
 
 # ---------------------------------------------------------------------------
@@ -1168,6 +1246,237 @@ def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
+# Migration (M4 — implementations land in Phases 5-7)
+# ---------------------------------------------------------------------------
+#
+# `docs migrate` adopts a non-conforming foreign directory into the convention.
+# It walks the tree, infers the metadata each file needs (`Status`, `Role`,
+# `Project`, `Updated`) from filename patterns, in-file signals, and mtime,
+# and produces a `MigrationPlan` — one `FileMigration` decision per file, with
+# every ambiguity surfaced. The inference helpers below are pure; `plan_migration`
+# assembles the plan; `apply_migration` executes it. Dry-run by default.
+
+
+def infer_role(filename: str, metadata: Mapping[str, str | tuple[str, ...]]) -> tuple[str, bool]:
+    """Infer a doc's `Role:` from its filename and any in-file metadata.
+
+    Inference order:
+
+    1. An in-file ``Role:`` metadata line, when it carries a built-in role
+       (see `BUILTIN_ROLES`), wins outright — confident.
+    2. Otherwise the filename's trailing token (split on ``-`` / ``_``, with
+       the ``.md`` suffix dropped) is mapped to a role: ``-spec`` -> ``spec``,
+       ``-plan`` -> ``plan``, ``-adr`` -> ``decision``, ``-log`` -> ``log``,
+       ``-status`` -> ``status``, ``-charter`` -> ``charter``,
+       ``-guide`` -> ``guide``, ``-runbook`` -> ``runbook``,
+       ``-reference`` -> ``reference`` — confident.
+    3. Otherwise the role falls back to the ``notes`` built-in catch-all —
+       not confident.
+
+    Args:
+        filename: The file's basename (e.g. ``auth-spec.md``).
+        metadata: Metadata-shaped lines already present in the file, as
+            produced by `parse_metadata_block`.
+
+    Returns:
+        ``(role, confident)`` — ``role`` is always a member of
+        `BUILTIN_ROLES`; ``confident`` is True when a suffix or a valid
+        in-file ``Role:`` line determined it, False on the ``notes`` fallback.
+    """
+    raise NotImplementedError("infer_role — Phase 5")
+
+
+def infer_project(filenames: Sequence[str], dir_name: str) -> str:
+    """Infer a tree's `Project:` slug from its filenames, or the directory name.
+
+    Computes the longest common prefix across every basename in ``filenames``,
+    then trims it back to the last ``-`` or ``_`` separator. The trimmed prefix
+    is used only when it is at least 2 characters long *and* shared by every
+    file; otherwise inference falls back to ``dir_name``.
+
+    Args:
+        filenames: The basenames of every ``.md`` file in the tree.
+        dir_name: The migration directory's own name — the fallback project.
+
+    Returns:
+        The inferred project slug. Never empty.
+    """
+    raise NotImplementedError("infer_project — Phase 5")
+
+
+def infer_status(
+    metadata: Mapping[str, str | tuple[str, ...]], in_archive: bool
+) -> tuple[str, bool]:
+    """Infer a doc's `Status:` from in-file metadata or its archive membership.
+
+    An in-file ``Status:`` line wins when it carries a built-in status (see
+    `BUILTIN_STATUSES`) — confident. Otherwise the status defaults to
+    ``archived`` when ``in_archive`` is True, ``active`` when it is False — a
+    confident default for the archive case, a best-effort default for the
+    active case. An in-file ``Status:`` value outside the vocabulary is
+    rejected and the default is used instead.
+
+    Args:
+        metadata: Metadata-shaped lines already present in the file.
+        in_archive: True iff the file lives under a detected archive-style
+            subdirectory.
+
+    Returns:
+        ``(status, confident)`` — ``status`` is always a member of
+        `BUILTIN_STATUSES`.
+    """
+    raise NotImplementedError("infer_status — Phase 5")
+
+
+def infer_updated(
+    metadata: Mapping[str, str | tuple[str, ...]],
+    mtime: float,
+    date_format: str = "%Y-%m-%d",
+) -> tuple[date, bool]:
+    """Infer a doc's `Updated:` date from an in-file line or the file mtime.
+
+    An in-file ``Updated:`` line that parses cleanly in ``date_format`` wins —
+    confident. Otherwise — no line, or a malformed value — the date falls back
+    to the file's modification time, normalised to a calendar date.
+
+    Args:
+        metadata: Metadata-shaped lines already present in the file.
+        mtime: The file's POSIX modification time (seconds since the epoch).
+        date_format: The ``strptime`` format the in-file line must match.
+
+    Returns:
+        ``(updated, confident)`` — ``confident`` is True when a parseable
+        in-file ``Updated:`` line determined it, False on the mtime fallback.
+    """
+    raise NotImplementedError("infer_updated — Phase 5")
+
+
+def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
+    """Return the conformant archive destination for ``rel_path``, or ``None``.
+
+    Recognises common non-conformant archive-style layouts and maps a file
+    under one to the convention's ``archive/<archive_date>/<basename>``:
+
+    - ``archived/old.md`` -> ``archive/<archive_date>/old.md``
+    - ``project-history/x.md`` -> ``archive/<archive_date>/x.md``
+    - a bare ``archive/file.md`` (no dated subdir) -> ``archive/<date>/file.md``
+
+    A file that is *already* at ``archive/<valid-YYYY-MM-DD>/<basename>``
+    returns ``None`` — it is conformant and only needs ``Status: archived``
+    metadata, not a move. A file in the active tree (no archive-style
+    ancestor) also returns ``None``.
+
+    Args:
+        rel_path: The file's root-relative POSIX path.
+        archive_date: The migration run's archive date (``YYYY-MM-DD``).
+
+    Returns:
+        The root-relative POSIX destination path when the file must move, or
+        ``None`` when it stays where it is.
+    """
+    raise NotImplementedError("detect_archive_layout — Phase 5")
+
+
+def insert_metadata_block(
+    text: str,
+    *,
+    title: str,
+    status: str,
+    role: str,
+    project: str,
+    updated: date,
+    date_format: str = "%Y-%m-%d",
+) -> str:
+    """Return ``text`` with a convention-correct metadata block inserted.
+
+    The core foreign-doc edit: places a metadata block immediately under the
+    H1, preserving the existing body verbatim. Behaviour:
+
+    - When ``text`` has an H1, the block is inserted between it and the body.
+    - When ``text`` has no H1, ``# <title>`` is synthesised as the first line.
+    - When ``text`` already carries metadata-shaped lines under the H1, they
+      are reconciled into the new block rather than left as duplicates — the
+      inserted ``Status`` / ``Role`` / ``Project`` / ``Updated`` values are the
+      ones passed in.
+    - The file's trailing-newline state is preserved.
+
+    The result round-trips cleanly through `parse()` and is accepted by
+    `check_doc`.
+
+    Args:
+        text: The foreign file's full current text.
+        title: The H1 title to synthesise when the file has none.
+        status: The ``Status:`` value to write (a built-in status).
+        role: The ``Role:`` value to write (a built-in role).
+        project: The ``Project:`` value to write.
+        updated: The ``Updated:`` date to write.
+        date_format: The ``strftime`` format for the ``Updated:`` line.
+
+    Returns:
+        The full text of the doc with the metadata block inserted.
+    """
+    raise NotImplementedError("insert_metadata_block — Phase 5")
+
+
+def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan:
+    """Build the `MigrationPlan` for the foreign directory ``root``.
+
+    Recurses the whole tree via `_iter_doc_texts` (with a default `Config`),
+    inspects every ``.md`` file, and assembles a `FileMigration` per file:
+    runs `infer_role` / `infer_project` / `infer_status` / `infer_updated`,
+    flags every ambiguity, sets ``confidence``, and calls
+    `detect_archive_layout` to plan any archive-normalising move. The
+    active-tree directory layout is left untouched — only files under detected
+    archive-style subdirs carry an ``archive_move``.
+
+    Args:
+        root: The foreign directory to plan a migration for.
+        archive_date: The ``YYYY-MM-DD`` archive date for normalised moves;
+            defaults to today when ``None``.
+
+    Returns:
+        A `MigrationPlan` whose ``files`` are in root-relative path order.
+    """
+    raise NotImplementedError("plan_migration — Phase 6")
+
+
+def apply_migration(plan: MigrationPlan) -> None:
+    """Execute a `MigrationPlan`: insert metadata blocks and normalise archives.
+
+    For each `FileMigration` in ``plan``: inserts the decided metadata block
+    via `insert_metadata_block`, writes it back atomically (`atomic_write`),
+    and — when ``archive_move`` is set — moves the file to its conformant
+    ``archive/<date>/`` destination. The metadata edit happens before the
+    move, mirroring `_archive_one`, so a failure leaves the original
+    untouched.
+
+    Args:
+        plan: The plan produced by `plan_migration`.
+    """
+    raise NotImplementedError("apply_migration — Phase 7")
+
+
+def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
+    """Convert a `MigrationPlan` to its `docs migrate --json` records.
+
+    Produces one flat record per `FileMigration`, in plan order — the schema
+    cli.md pins, stable from M4 on:
+    ``{path, role, project, status, updated, confidence, ambiguities,
+    archive_move, synthesized_h1, reconciled_metadata}`` — ``path`` the
+    root-relative POSIX path, ``updated`` an ISO ``YYYY-MM-DD`` string,
+    ``ambiguities`` an array of strings, ``archive_move`` the destination
+    path string or ``null``.
+
+    Args:
+        plan: The plan produced by `plan_migration`.
+
+    Returns:
+        A list of JSON-serialisable record dicts.
+    """
+    raise NotImplementedError("migration_to_json — Phase 7")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1344,6 +1653,42 @@ def _build_parser() -> argparse.ArgumentParser:
         "--json",
         action="store_true",
         help="Emit an array of records instead of a human table.",
+    )
+
+    # M4 migration verb. It takes neither --root nor the `common` parent: a
+    # foreign tree has no `.docs.toml` for `--root` to resolve, and `migrate`
+    # inverts the mutating-verb polarity — it is dry-run by default and takes
+    # `--apply` to opt *in* to writing (vs `common`'s `--dry-run` to opt out).
+    migrate_p = subparsers.add_parser(
+        "migrate",
+        help="Adopt a non-conforming foreign directory into the convention.",
+        description=(
+            "Walk a foreign directory, infer the metadata the convention "
+            "requires for every .md file, and produce a migration plan — one "
+            "decision per file, every ambiguity flagged. Dry-run by default; "
+            "--apply inserts the metadata blocks and normalises archive-style "
+            "subdirectories. Refuses a directory that is already a docs root."
+        ),
+    )
+    migrate_p.add_argument("dir", help="The foreign directory to migrate.")
+    migrate_p.add_argument(
+        "--apply",
+        action="store_true",
+        help="Write the inferred metadata blocks and perform archive moves.",
+    )
+    migrate_p.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the migration plan as a JSON array instead of human output.",
+    )
+    migrate_p.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress success messages on stderr.",
+    )
+    migrate_p.add_argument(
+        "--date",
+        help="Archive date YYYY-MM-DD for normalised moves (default: today).",
     )
 
     return parser
@@ -1752,13 +2097,18 @@ def _cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_migrate(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_migrate — Phase 6")
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code.
 
     Subcommands:
         index — regenerate INDEX.md from metadata in the docs root (M1).
         new, archive, mv, touch — mutating verbs (M2).
-        check, list — validation and query verbs (M3, in progress).
+        check, list — validation and query verbs (M3).
+        migrate — adopt a non-conforming foreign directory (M4, in progress).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).
@@ -1782,6 +2132,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_check(args)
     if args.command == "list":
         return _cmd_list(args)
+    if args.command == "migrate":
+        return _cmd_migrate(args)
     return 2
 
 

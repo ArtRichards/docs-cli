@@ -9,6 +9,7 @@ Related:
 - implements: charter.md
 - pairs-with: convention.md
 - pairs-with: plan.md
+- pairs-with: m4-migration-helper.md
 
 ## Scope
 
@@ -132,6 +133,84 @@ Exit codes:
 
 Bump `Updated:` to today in `<file>`. No other changes. INDEX regenerated.
 
+### `docs migrate <dir> [--apply] [--json] [--quiet] [--date YYYY-MM-DD]`
+
+Adopt a non-conforming foreign directory into the convention.
+
+`migrate` walks `<dir>` recursively, inspects every `.md` file, infers the
+metadata the convention requires, and produces a **migration plan** — one
+decision per file, every ambiguity flagged. It is **dry-run by default**: it
+only reports unless `--apply` is given. (This inverts the polarity of the other
+mutating verbs, which write by default and take `--dry-run` to opt out — a bulk
+inference-driven rewrite of a foreign tree is exactly the operation a user must
+see before it runs.)
+
+- `<dir>` is a required **positional** argument — the foreign directory to
+  migrate. `migrate` takes **no `--root`**: a foreign tree carries no
+  `.docs.toml` for an up-walk to resolve against.
+- `migrate` **refuses a directory that is already a docs root** — one with a
+  `.docs.toml` present. That tree is for `index` / `check` / `list`;
+  re-inserting blocks could duplicate metadata. The refusal is a non-zero exit
+  with a clear message.
+- Without `--apply`, `migrate` writes nothing — it prints the plan (human, or
+  `--json`) and exits.
+- With `--apply`, `migrate` inserts the inferred metadata block into each file
+  atomically and performs any archive-normalising moves. The result is a tree
+  `docs check` accepts.
+- `--date YYYY-MM-DD` sets the archive date used when normalising
+  archive-style subdirectories into `archive/<date>/`; defaults to today.
+  Parallel to `docs archive --date`. A single archive date per run keeps the
+  plan deterministic.
+
+**Inference rules.** For each file `migrate` infers the four required fields:
+
+- **Role** — from the filename's trailing token (split on `-` / `_`):
+  `-spec` → `spec`, `-plan` → `plan`, `-adr` → `decision`, `-log` → `log`,
+  `-status` → `status`, `-charter` → `charter`, `-guide` → `guide`,
+  `-runbook` → `runbook`, `-reference` → `reference`. An in-file `Role:` line
+  carrying a built-in role wins over the suffix. When nothing matches, Role
+  falls back to the `notes` catch-all and the file is flagged low-confidence.
+- **Project** — the longest common prefix shared by every `.md` basename,
+  trimmed back to the last `-`/`_` separator; used only when it is ≥ 2
+  characters after trimming **and** shared by every file. Otherwise Project
+  falls back to the directory name.
+- **Status** — from an in-file `Status:` line carrying a built-in status,
+  else a default: `archived` for a file under a detected archive-style
+  subdirectory, `active` otherwise. An out-of-vocabulary in-file value is
+  rejected (the default is used) and the file is flagged low-confidence.
+- **Updated** — from an in-file `Updated:` line that parses in the configured
+  date format, else the file's mtime, normalised to `YYYY-MM-DD`.
+
+`migrate` inserts the metadata block immediately under the H1, preserving the
+body verbatim. If the file has no H1, one is synthesised from the filename.
+Pre-existing metadata-shaped lines are reconciled into the block, not
+duplicated. `Status`/`Role` are always written from the built-in vocabulary,
+so an applied tree passes `docs check` by construction.
+
+Every per-file decision records a **confidence** (`high` or `low`) and, when
+the inference is not unambiguous, one or more **ambiguity** notes — so the plan
+is *complete*: every file has either a confident decision or a flagged
+question.
+
+`--json` emits the plan as an array of records, one per file. Schema —
+**stable from M4 onward**:
+
+| Field | Type | Notes |
+|---|---|---|
+| `path` | string | Root-relative POSIX path of the file. |
+| `role` | string | Inferred `Role:` — always a built-in role. |
+| `project` | string | Inferred `Project:`. |
+| `status` | string | Inferred `Status:` — always a built-in status. |
+| `updated` | string | Inferred `Updated:` date as ISO `YYYY-MM-DD`. |
+| `confidence` | string | `high` or `low`. `low` iff `ambiguities` is non-empty. |
+| `ambiguities` | array | Human-readable note strings; empty when `confidence` is `high`. |
+| `archive_move` | string \| null | Root-relative destination when the file is moved into `archive/<date>/`, else null. |
+| `synthesized_h1` | boolean | True when the file had no H1 and one is synthesised. |
+| `reconciled_metadata` | boolean | True when pre-existing metadata-shaped lines are reconciled into the block. |
+
+Exits 2 when `<dir>` is already a docs root (`.docs.toml` present) or does not
+exist; 0 on a successful dry-run or `--apply`.
+
 ## Output conventions
 
 - Human output goes to stdout; errors and progress to stderr.
@@ -151,7 +230,6 @@ CI integration: `docs check` returning 2 should fail the build.
 
 ## What's deliberately not in v1
 
-- `docs migrate <foreign-dir>` — import an existing non-conforming directory. Deferred to a later milestone; see `plan.md`.
 - `docs graph` — traverse `Related:` edges. Out of scope.
 - Watch mode / file-system observers. Run on demand.
 - Templates beyond `docs new` defaults. If users want richer scaffolds, they hand-edit after creation.
