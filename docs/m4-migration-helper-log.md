@@ -14,12 +14,12 @@ Related:
 - Project: docs
 - Milestone: M4 — Migration helper (`docs migrate`)
 - Started: 2026-05-22
-- Progress: Phases 1-4 complete (2026-05-22) — contract defined, RED tests and
-  the `foreign/` fixture tree written, RED baseline captured (48 failed, 165
-  passed; every M4 failure is `NotImplementedError` from a stub). The session
-  pauses here by request; Phase 5 (Update Base Interfaces) is the next action.
-  All four milestone-setup open questions plus the seven task-plan questions
-  were resolved (operator-confirmed 2026-05-22).
+- Completed: 2026-05-22
+- Progress: All ten TDD phases complete (2026-05-22). Phases 1-4 (contract, RED
+  tests, the `foreign/` fixture tree, RED baseline) landed on `m4/phases-1-4`;
+  phases 5-10 (implement + ship) landed on `m4/phases-5-10`. Full suite: 219
+  passed, 0 failed; `ruff` / `mypy` clean tree-wide. All milestone-setup and
+  task-plan questions resolved (operator-confirmed 2026-05-22). M4 is complete.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -69,7 +69,7 @@ agent consumes to resolve ambiguities before applying.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | `apply_migration` + `migration_to_json` implemented; the `--apply` / `--json` `_cmd_migrate` branches were wired at Phase 6 and now resolve; all 9 `test_cli_migrate.py` tests green. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-22 | `pytest tests/` — 219 passed, 0 failed; `ruff check` / `ruff format --check` / `mypy` all green tree-wide. |
 | 9. Implement Online/Integration | Complete | 2026-05-22 | Dogfood: `migrate` dry-run on `foreign/` (exit 0, 9 files, all ambiguities flagged); `--json` 10-key schema verified; `--apply` on a copy → `docs check` exit 0, `docs index` clean; `docs check docs/` exit 0. |
-| 10. Quality, Docs, Refactor | Not started | — | `status.md` / `plan.md` / milestone doc + this log updated; M4 → Complete. |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-22 | Full quality gate green; `status.md` / milestone doc + this log updated; M4 → Complete, M5 → next; `INDEX.md` + snapshot regenerated; single-file split deferred to v1.1. |
 
 ## Current State Analysis (snapshot at milestone kickoff, 2026-05-22)
 
@@ -573,6 +573,96 @@ dogfooding pass.
       and `docs index` renders cleanly.
 - [x] `docs check docs/` exit 0.
 
+### Phase 10 — Quality, Docs, Refactor
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Close out M4: full quality gate, update `status.md` / the milestone doc / this
+log, regenerate `INDEX.md` and its dogfood snapshot, verify `cli.md` /
+`architecture.md` / `plan.md` read as shipped, and make the conscious
+single-file-vs-package-split call.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m4-migration-helper.md` | Modify | Phase Checklist, Deliverables, Success Criteria all checked; Milestone-completion summary filled. |
+| `docs/m4-migration-helper-log.md` | Modify | Phases 5-10 entries appended; TDD table + Progress line updated; this completion summary filled. |
+| `docs/status.md` | Modify | M4 → Complete; milestone-progress table row; "Current milestone" prose; "Next action" → M5; "Resuming this work" verify-env block refreshed (test count → 219); `Updated:` bumped. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep after the doc `Updated:` bumps. |
+
+#### Actions taken
+
+- Ran the full quality gate: `pytest tests/` → 219 passed; `ruff check` /
+  `ruff format --check` / `mypy` → clean tree-wide.
+- Updated `status.md`: M4 → Complete in the milestone-progress table and the
+  "Current milestone" prose; "Next action" now points at M5 (Claude Code
+  skill); the "Resuming this work" verify-env block's expected test count
+  updated from the RED baseline to 219 passed.
+- Verified `cli.md`'s `docs migrate` section and `--json` schema table match
+  shipped behaviour (the role-inference rule note about a built-in-role
+  trailing token was added at Phase 6).
+- Verified `architecture.md`'s `migrate` module subsection matches shipped
+  behaviour — no change needed.
+- Verified `plan.md`'s M4 section reads as shipped; M4 opens no `plan.md` open
+  question (operator-confirmed); the parked extra-field allowlist question is
+  left untouched. `plan.md` body unchanged, so its `Updated:` is not bumped.
+- Regenerated `docs/INDEX.md` via `./bin/docs index --root docs/` and copied
+  it onto `tests/fixtures/expected/docs-INDEX.md` in lockstep.
+
+#### Issues / decisions
+
+- **`bin/docs` single-file vs package split — deferred to v1.1.** After M4 the
+  file is ~2,200 lines. It is large but still cleanly sectioned with header
+  comments (`Shared utilities`, `Core API`, `Validation and query`,
+  `Migration (M4)`, `CLI`) and clean under `ruff` / `mypy`. M4 added one verb
+  plus a self-contained cluster of inference helpers — the sectioning still
+  carries the file. Per the M2/M3 precedent the split is the default-deferred
+  choice; it is re-evaluated at v1.1 if the file outgrows its sectioning.
+- **`/simplify` — light-touch only.** A dedicated Step 3 `/simplify` pass
+  follows this implementation step, so Phase 10 made no structural refactor.
+  The Phase 5-7 code is already linear and obvious (the inference helpers are
+  short pure functions; `plan_migration` is one straight loop). Nothing was
+  found that warranted a pre-emptive refactor here.
+
+#### Exit criteria
+
+- [x] Full quality gate green — 219 passed; `ruff` / `mypy` clean tree-wide.
+- [x] `status.md` updated — M4 → Complete, M5 → next.
+- [x] Milestone doc + this log updated; completion summaries filled.
+- [x] `INDEX.md` + dogfood snapshot regenerated in lockstep.
+- [x] `cli.md` / `architecture.md` / `plan.md` verified to read as shipped.
+- [x] Single-file-vs-package-split call recorded (deferred to v1.1).
+
 ## Milestone-completion summary
 
-_Filled in at Phase 10 when M4 ships._
+**M4 — Migration helper (`docs migrate`) shipped 2026-05-22** across the ten
+TDD phases. Phases 1-4 (contract, RED tests, the `foreign/` fixture tree, RED
+baseline) landed on `m4/phases-1-4`; phases 5-10 (implement + ship) on
+`m4/phases-5-10`.
+
+`docs migrate <dir>` adopts a non-conforming foreign directory into the
+convention: it walks the tree, infers the four required fields per file
+(`Role` from filename suffixes + in-file signals, `Project` from a shared
+filename prefix, `Status` from in-file signals or archive membership,
+`Updated` from an in-file line or mtime), and produces a complete migration
+plan — a decision and a confidence for every file, with every ambiguity
+surfaced. Dry-run by default; `--apply` inserts the metadata blocks atomically
+and normalises archive-style subdirectories into `archive/YYYY-MM-DD/`. It
+refuses a directory that is already a docs root.
+
+The implementation added the `FileMigration` / `MigrationPlan` models, five
+pure inference helpers, `insert_metadata_block`, `plan_migration` /
+`apply_migration` / `migration_to_json`, and the `migrate` verb wiring to
+`bin/docs`. 54 M4 tests across `tests/test_migrate.py` and
+`tests/test_cli_migrate.py`; the full suite stands at **219 passed, 0 failed**
+with `ruff` / `mypy` clean tree-wide.
+
+The active-tree directory layout is left untouched — `--apply` adds metadata
+in place; the only directory moves are archive-style subdirs normalised to the
+convention's layout. The `bin/docs` single-file-vs-package split was
+re-evaluated and **deferred to v1.1** — the file's sectioning still carries it.
+
+Next: M5 — Claude Code skill.

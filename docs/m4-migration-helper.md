@@ -72,31 +72,33 @@ them, the tool applies the decisions.
 
 ### Deliverables
 
-- [ ] One subcommand functional on `bin/docs`: `migrate`, taking a positional
+- [x] One subcommand functional on `bin/docs`: `migrate`, taking a positional
       `<dir>` (no `--root`), dry-run by default, `--apply` to write.
-- [ ] Inference helpers — `infer_role`, `infer_project`, `infer_status`,
+- [x] Inference helpers — `infer_role`, `infer_project`, `infer_status`,
       `infer_updated`, `detect_archive_layout` — pure and unit-tested.
-- [ ] Scope boundary held: the **active-tree directory layout is left
+- [x] Scope boundary held: the **active-tree directory layout is left
       untouched** — `--apply` adds metadata in place and only ever moves docs
       out of detected archive-style subdirs into `archive/YYYY-MM-DD/`. No
       role-bucket flattening or project/role re-foldering of the active tree.
-- [ ] A `MigrationPlan` / `FileMigration` model carrying per-file decisions,
+- [x] A `MigrationPlan` / `FileMigration` model carrying per-file decisions,
       confidence, and ambiguity notes; `plan_migration` builds it,
       `apply_migration` executes it.
-- [ ] `--json` plan schema pinned in [cli.md](cli.md), stable from M4 on. The
+- [x] `--json` plan schema pinned in [cli.md](cli.md), stable from M4 on. The
       record is one flat object per file: `path`, `role`, `project`, `status`,
       `updated` (ISO `YYYY-MM-DD`), `confidence`, `ambiguities`, `archive_move`
       (path or null), `synthesized_h1`, `reconciled_metadata`.
-- [ ] `tests/test_migrate.py` (inference + planning units) and
+- [x] `tests/test_migrate.py` (inference + planning units) and
       `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json`).
-- [ ] Fixture tree(s) of non-conforming docs under
+- [x] Fixture tree(s) of non-conforming docs under
       `tests/fixtures/trees/foreign/` (per [test-strategy.md](test-strategy.md)).
-- [ ] Dogfood: a dry-run against a foreign example directory produces a
+- [x] Dogfood: a dry-run against a foreign example directory produces a
       complete plan — an explicit decision for every file, every ambiguity
       flagged; `--apply` on a copy yields a tree `docs check` accepts.
-- [ ] All quality gates green tree-wide: `ruff check .`, `ruff format --check
+- [x] All quality gates green tree-wide: `ruff check .`, `ruff format --check
       .`, `mypy`, `pytest -q`.
-- [ ] `docs/status.md` and `docs/plan.md` updated; M4 → Complete, M5 → next.
+- [x] `docs/status.md` updated; M4 → Complete, M5 → next. (`docs/plan.md`
+      opens no M4 question — operator-confirmed; its M4 section reads as
+      shipped.)
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-22)
 
@@ -282,12 +284,12 @@ implementation**; phases 5–10 implement and ship.
 - [x] Phase 2: Write Tests (RED)
 - [x] Phase 3: Create Data/Fixtures
 - [x] Phase 4: Run Tests (RED Baseline)
-- [ ] Phase 5: Update Base Interfaces
-- [ ] Phase 6: Implement Offline/Core Path
-- [ ] Phase 7: Update Tool/Wrapper Layer
-- [ ] Phase 8: Run Tests (GREEN)
-- [ ] Phase 9: Implement Online/Integration (dogfood pass)
-- [ ] Phase 10: Quality, Docs, Refactor
+- [x] Phase 5: Update Base Interfaces
+- [x] Phase 6: Implement Offline/Core Path
+- [x] Phase 7: Update Tool/Wrapper Layer
+- [x] Phase 8: Run Tests (GREEN)
+- [x] Phase 9: Implement Online/Integration (dogfood pass)
+- [x] Phase 10: Quality, Docs, Refactor
 
 ## Decisions
 
@@ -404,25 +406,91 @@ copy passes `docs check`.
 
 M4 is complete when:
 
-- [ ] All Phase Checklist items are checked.
-- [ ] `docs migrate` works per [cli.md](cli.md): dry-run by default, `--apply`
+- [x] All Phase Checklist items are checked.
+- [x] `docs migrate` works per [cli.md](cli.md): dry-run by default, `--apply`
       to write, `--json` plan output, the documented exit codes.
-- [ ] A dry-run against a foreign example directory produces a **complete**
+- [x] A dry-run against a foreign example directory produces a **complete**
       migration plan — an explicit decision for every `.md` file, every
       ambiguous case flagged (the [plan.md](plan.md) M4 exit criterion).
-- [ ] `docs migrate --apply` on a copy of that directory yields a tree that
+- [x] `docs migrate --apply` on a copy of that directory yields a tree that
       `docs check` accepts (exit 0) **with the active-tree directory layout
       unchanged** — the only directory moves are archive-style subdirs
       normalised to `archive/YYYY-MM-DD/`.
-- [ ] `docs migrate --json` output validates against the schema pinned in
+- [x] `docs migrate --json` output validates against the schema pinned in
       cli.md.
-- [ ] All Deliverables above are checked off.
-- [ ] [status.md](status.md) reflects M4 → Complete, M5 → next; [cli.md](cli.md)
+- [x] All Deliverables above are checked off.
+- [x] [status.md](status.md) reflects M4 → Complete, M5 → next; [cli.md](cli.md)
       no longer lists `docs migrate` under "not in v1" (removed at Phase 1).
       No M4 open question is opened in [plan.md](plan.md) (operator-confirmed).
-- [ ] [m4-migration-helper-log.md](m4-migration-helper-log.md) contains a
+- [x] [m4-migration-helper-log.md](m4-migration-helper-log.md) contains a
       milestone-completion summary.
 
 ## Milestone-completion summary
 
-_Filled in at Phase 10 when M4 ships._
+**M4 — Migration helper (`docs migrate`) shipped 2026-05-22** across the ten
+TDD phases. Phases 1-4 (contract, RED tests, the `foreign/` fixture tree, RED
+baseline) landed on `m4/phases-1-4`; phases 5-10 (implement + ship) landed on
+`m4/phases-5-10`.
+
+**What shipped.** One new verb — `docs migrate <dir> [--apply] [--json]
+[--quiet] [--date YYYY-MM-DD]` — that adopts a non-conforming foreign
+directory into the convention. It walks the tree, infers the four required
+fields per file, and produces a complete migration plan: a decision and a
+confidence for every file, with every ambiguity surfaced. Dry-run by default;
+`--apply` inserts the metadata blocks atomically and normalises archive-style
+subdirectories. It refuses a directory that is already a docs root.
+
+**Code surface added to `bin/docs`** (the surface M5 and any future work
+reuse):
+
+- `FileMigration` / `MigrationPlan` frozen dataclasses — the per-file decision
+  and the whole plan; `FileMigration.__post_init__` enforces the
+  confidence/ambiguities invariant.
+- Five pure inference helpers — `infer_role` (filename suffix + in-file
+  `Role:`, `notes` fallback), `infer_project` (longest common prefix, trimmed,
+  else dir name), `infer_status` (in-file `Status:` else archive-membership
+  default), `infer_updated` (in-file `Updated:` else mtime),
+  `detect_archive_layout` (archive-style subdir → `archive/<ISO-date>/`).
+- `insert_metadata_block` — inserts (or synthesises) the H1 and writes a
+  convention-correct block, reconciling pre-existing metadata lines and
+  preserving the body verbatim.
+- `plan_migration` (assembles the plan, applies the resolved
+  ambiguity-flagging rule), `apply_migration` (edit-then-move per file),
+  `migration_to_json` (the pinned 10-key flat record).
+- `_cmd_migrate` + the `migrate` subparser; module-level `_ROLE_SUFFIXES`,
+  `_ARCHIVE_SUBDIR_NAMES`, and the `_in_archive_subdir` / `_print_migration_plan`
+  helpers.
+
+**Tests.** 54 M4 tests — `tests/test_migrate.py` (45 inference + planning
+units) and `tests/test_cli_migrate.py` (9 CLI tests). The full suite stands at
+**219 passed, 0 failed**; `ruff check` / `ruff format --check` / `mypy` clean
+tree-wide.
+
+**Resolved questions (operator-confirmed 2026-05-22), all binding:**
+
+- **Q1 — ambiguity-flagging rule.** `plan_migration` flags an ambiguity for
+  exactly three sources: a `notes` role fallback, a synthesised H1, and an
+  out-of-vocab in-file `Status:` substituted with a built-in. The plain
+  active-tree status default and the mtime-derived `Updated:` fallback are
+  expected best-effort defaults and are not flagged.
+- **Q2 — archive-date validation.** The dated archive segment is validated
+  against a fixed ISO `%Y-%m-%d`, and `migrate` always emits
+  `archive/YYYY-MM-DD/` regardless of any `Config.date_format` — matching
+  `convention.md`'s hard-coded archive layout. The `--date` flag is validated
+  as ISO too.
+- **Q3 — mtime fallback non-determinism.** Accepted as-is: mtime is a
+  legitimate best-effort signal. A future `migrate --apply` snapshot test must
+  pin `--date` and must not assert an mtime-derived `Updated:` value.
+- **Q4 — `--apply` + `--json`.** `--json` is a pure output-format switch,
+  orthogonal to `--apply` (consistent with `check` / `list`).
+- **Q5 — benign nested subdir.** Confirmed in scope; `infer_role` is called
+  with the basename so the suffix split works for nested files.
+
+**`bin/docs` single-file vs package split — deferred to v1.1** (see Phase 10
+log). After M4 the file is ~2,200 lines: large but still cleanly sectioned
+with header comments and clean under `ruff` / `mypy`. The split did not earn
+its keep at M4; it is re-evaluated at v1.1.
+
+**Scope held.** The active-tree directory layout is left untouched — `--apply`
+adds metadata in place and the only directory moves are archive-style subdirs
+normalised to `archive/YYYY-MM-DD/`. No M4 `plan.md` open question was opened.
