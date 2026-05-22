@@ -68,7 +68,7 @@ agent consumes to resolve ambiguities before applying.
 | 6. Implement Offline/Core Path | Complete | 2026-05-22 | `plan_migration` + `_in_archive_subdir` + `_cmd_migrate` dry-run human output (+ refuse-guard); all 14 plan-migration units and the dry-run CLI tests green. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | `apply_migration` + `migration_to_json` implemented; the `--apply` / `--json` `_cmd_migrate` branches were wired at Phase 6 and now resolve; all 9 `test_cli_migrate.py` tests green. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-22 | `pytest tests/` — 219 passed, 0 failed; `ruff check` / `ruff format --check` / `mypy` all green tree-wide. |
-| 9. Implement Online/Integration | Not started | — | Dogfood: `migrate` dry-run plan + `--apply` on a copy → `docs check` clean. |
+| 9. Implement Online/Integration | Complete | 2026-05-22 | Dogfood: `migrate` dry-run on `foreign/` (exit 0, 9 files, all ambiguities flagged); `--json` 10-key schema verified; `--apply` on a copy → `docs check` exit 0, `docs index` clean; `docs check docs/` exit 0. |
 | 10. Quality, Docs, Refactor | Not started | — | `status.md` / `plan.md` / milestone doc + this log updated; M4 → Complete. |
 
 ## Current State Analysis (snapshot at milestone kickoff, 2026-05-22)
@@ -521,6 +521,57 @@ helpers they call.
 - [x] Full suite green — 219 passed, 0 failed (165 baseline + 54 M4 tests now
       all GREEN for the right reason; no test relaxed or rewritten).
 - [x] `ruff check` / `ruff format --check` / `mypy` all green tree-wide.
+
+### Phase 9 — Implement Online/Integration (dogfood pass)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Exercise `migrate` against the real `foreign/` fixture tree end-to-end —
+dry-run plan completeness, `--json` schema, and an `--apply` on a *copy* that
+`docs check` and `docs index` accept. No network surface; this is the
+dogfooding pass.
+
+#### Actions taken
+
+- `./bin/docs migrate tests/fixtures/trees/foreign` → exit 0; the plan covers
+  all 9 `.md` files; every low-confidence file lists ≥ 1 ambiguity and every
+  high-confidence file lists none.
+- `./bin/docs migrate tests/fixtures/trees/foreign --json` → exit 0; each of
+  the 9 records carries exactly the pinned 10 keys.
+- Copied `foreign/` to a scratch dir, `migrate --apply --date 2026-05-22` →
+  exit 0; the `archived/` doc moved to `archive/2026-05-22/` with
+  `Status: archived`, the no-H1 file got a synthesised `# Proj No H1`, the
+  reconciled file's pre-existing `Status:`/`Updated:` lines folded into one
+  block. `docs check <copy>` → exit 0; `docs index <copy>` → exit 0.
+- `./bin/docs check docs/` → exit 0 (repo docs still clean).
+
+#### Issues / decisions
+
+- **`topics/proj-deep-notes.md` is `notes` role at `high` confidence.** Its
+  filename's trailing token is literally `notes`, a built-in role, so
+  `infer_role` resolves it confidently via the direct-builtin-suffix path —
+  not the `notes` *fallback*. Only an unconfident `notes` fallback flags an
+  ambiguity, so this file is correctly `high`. This is consistent behaviour,
+  not a gap.
+- **mtime-derived `Updated:` (resolved Q3).** Files with no in-file
+  `Updated:` line show today's date in the dogfood run because the freshly
+  `cp`-ed scratch copy carries a current mtime. A future `migrate --apply`
+  snapshot test must pin `--date` and must not assert mtime-derived
+  `Updated:` values.
+- The empty `archived/` directory is left behind after the archive move
+  (the file is `Path.replace`-d out, the now-empty dir is harmless and
+  invisible to `_iter_doc_texts` / `walk`). No cleanup is in M4 scope.
+
+#### Exit criteria
+
+- [x] The `migrate` dry-run produces a complete plan — a decision for every
+      file, every ambiguity flagged.
+- [x] `--json` validates against the pinned 10-key schema.
+- [x] `migrate --apply` on a copy yields a tree `docs check` accepts (exit 0)
+      and `docs index` renders cleanly.
+- [x] `docs check docs/` exit 0.
 
 ## Milestone-completion summary
 
