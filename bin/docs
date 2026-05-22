@@ -891,6 +891,18 @@ def _resolved_project(doc: Doc, config: Config) -> str:
     return doc.project if doc.project is not None else config.project
 
 
+def _root_relative(path: Path, root: Path) -> str:
+    """Return ``path`` as a root-relative POSIX string, for display and JSON.
+
+    Falls back to the bare filename if ``path`` is not under ``root`` — only
+    reachable for the synthetic paths in unit tests, never for a real walk.
+    """
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.name
+
+
 def check_doc(
     path: Path,
     text: str,
@@ -1048,7 +1060,10 @@ def check_tree(root: Path, config: Config, stale: int | None, today: date) -> li
     concatenates the results in root-relative POSIX path order. Within a doc,
     findings keep `check_doc`'s order (errors before warnings).
     """
-    raise NotImplementedError("check_tree() — Phase 6")
+    findings: list[Finding] = []
+    for path, text in _iter_doc_texts(root, config):
+        findings.extend(check_doc(path, text, root, config, stale, today))
+    return findings
 
 
 def exit_code_for(findings: list[Finding]) -> int:
@@ -1085,7 +1100,31 @@ def query_docs(
     Sorted to match the human table — by Status, then Role, then ``Updated``
     descending.
     """
-    raise NotImplementedError("query_docs() — Phase 6")
+    docs: list[Doc] = []
+    for path, text in _iter_doc_texts(root, config):
+        try:
+            doc = parse(text, path, root)
+        except (MetadataError, VocabularyError):
+            # A doc `parse()` rejects surfaces under `docs check`, not here —
+            # `list` stays lenient so it can still exit 0 on a messy tree.
+            continue
+        rel = path.relative_to(root).as_posix()
+        if rel == config.archive_dir or rel.startswith(config.archive_dir + "/"):
+            # `parse()` hardcodes archived=False; recompute it as `walk()` does.
+            doc = replace(doc, archived=True)
+        docs.append(doc)
+
+    if status is not None:
+        docs = [d for d in docs if d.status == status]
+    if role is not None:
+        docs = [d for d in docs if d.role == role]
+    if project is not None:
+        docs = [d for d in docs if _resolved_project(d, config) == project]
+    if stale is not None:
+        docs = [d for d in docs if (today - d.updated).days > stale]
+
+    docs.sort(key=lambda d: (d.status, d.role, -d.updated.toordinal()))
+    return docs
 
 
 def finding_to_json(finding: Finding, root: Path) -> dict[str, object]:
@@ -1617,11 +1656,82 @@ def _cmd_touch(args: argparse.Namespace) -> int:
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_check() — Phase 6")
+    if args.root:
+        root = Path(args.root)
+    elif args.dir:
+        root = Path(args.dir)
+    else:
+        root = find_root(Path.cwd())
+
+    if not root.exists() or not root.is_dir():
+        print(f"docs: root not found: {root}", file=sys.stderr)
+        return 1
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    findings = check_tree(root, config, args.stale, date.today())
+
+    if args.json:
+        raise NotImplementedError("docs check --json — Phase 7")
+    if not findings:
+        print("docs: no violations found")
+    else:
+        current: str | None = None
+        for finding in findings:
+            rel = _root_relative(finding.path, root)
+            if rel != current:
+                if current is not None:
+                    print()
+                print(rel)
+                current = rel
+            print(f"  {finding.severity}: [{finding.rule}] {finding.message}")
+
+    return exit_code_for(findings)
 
 
 def _cmd_list(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_list() — Phase 6")
+    root = Path(args.root) if args.root else find_root(Path.cwd())
+
+    if not root.exists() or not root.is_dir():
+        print(f"docs: root not found: {root}", file=sys.stderr)
+        return 1
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    docs = query_docs(
+        root,
+        config,
+        status=args.status,
+        role=args.role,
+        project=args.project,
+        stale=args.stale,
+        today=date.today(),
+    )
+
+    if args.json:
+        raise NotImplementedError("docs list --json — Phase 7")
+    if not docs:
+        print("docs: no docs match")
+    else:
+        current: tuple[str, str] | None = None
+        for doc in docs:
+            group = (doc.status, doc.role)
+            if group != current:
+                print(f"\n{doc.status} — {doc.role}")
+                current = group
+            rel = _root_relative(doc.path, root)
+            updated = doc.updated.strftime(config.date_format)
+            print(f"  {rel}  {updated}  {doc.title}")
+
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
