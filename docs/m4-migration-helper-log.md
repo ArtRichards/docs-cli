@@ -61,9 +61,9 @@ agent consumes to resolve ambiguities before applying.
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-22 | `FileMigration` / `MigrationPlan` models + inference/plan/apply helper stubs + `_cmd_migrate` stub + `migrate` subparser in `bin/docs`; `cli.md` migrate section + `--json` schema; `architecture.md` migrate module spec; M4 plan + log created. |
-| 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_migrate.py` (40 inference + planning units) and `tests/test_cli_migrate.py` (9 CLI dry-run / `--apply` / `--json` tests). |
+| 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_migrate.py` (inference + planning units) and `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json` tests); a post-review follow-up strengthened coverage to 46 + 9 = 55 M4 tests total. |
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | `tests/fixtures/trees/foreign/` — 9 non-conforming docs incl. an archive-style subdir and a benign nested subdir; refuse-guard reuses `minimal/`. |
-| 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 48 failed, 165 passed; every M4 failure is `NotImplementedError` from a stub. **Session pauses here.** |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 48 failed, 165 passed at the baseline snapshot; a post-review follow-up commit added 6 tests, moving the baseline to 54 failed / 165 passed (219 collected) before Phase 5. Every M4 failure is `NotImplementedError` from a stub. |
 | 5. Update Base Interfaces | Complete | 2026-05-22 | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block` implemented; 30 inference + block-insertion units green. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-22 | `plan_migration` + `_in_archive_subdir` + `_cmd_migrate` dry-run human output (+ refuse-guard); all 14 plan-migration units and the dry-run CLI tests green. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | `apply_migration` + `migration_to_json` implemented; the `--apply` / `--json` `_cmd_migrate` branches were wired at Phase 6 and now resolve; all 9 `test_cli_migrate.py` tests green. |
@@ -200,10 +200,11 @@ implementation.
 
 | File | Action | Tests |
 |---|---|---|
-| `tests/test_migrate.py` | Create | 40 — `infer_role` per suffix (spec/plan/adr→decision/log/status/charter/guide/runbook/reference), `notes` fallback, in-file override, always-built-in; `infer_project` common-prefix / dir-name fallback / single-file; `infer_status` in-file-wins / archive default / active default / out-of-vocab rejection / always-built-in; `infer_updated` in-file / mtime fallback / malformed fallback; `detect_archive_layout` per archive style + already-conformant no-move + active-tree; `insert_metadata_block` H1-present, no-H1 synthesis, reconcile-not-duplicate, trailing-newline, parse round-trip, `check_doc`-clean; `plan_migration` shape, per-file count, path order, confidence/ambiguities consistency, no-H1 flag, archive-move presence/absence. |
+| `tests/test_migrate.py` | Create | 46 — `infer_role` per suffix (spec/plan/adr→decision/log/status/charter/guide/runbook/reference), `notes` fallback, in-file override, always-built-in; `infer_project` common-prefix / dir-name fallback / single-file; `infer_status` in-file-wins / archive default / active default / out-of-vocab rejection / always-built-in; `infer_updated` in-file / mtime fallback / malformed fallback / non-default date_format; `detect_archive_layout` per archive style + already-conformant no-move + active-tree; `insert_metadata_block` H1-present, no-H1 synthesis, reconcile-not-duplicate, trailing-newline, parse round-trip, `check_doc`-clean; `plan_migration` shape, per-file count, path order, confidence/ambiguities consistency, the pinned high/low fixture files, inferred values, reconciled-metadata, no-H1 flag, archive-move presence/absence. |
 | `tests/test_cli_migrate.py` | Create | 9 — `--help`, dry-run-is-default-writes-nothing, dry-run-reports-every-file, the pinned `--json` schema, `--apply` writes blocks, `--apply` normalises archives, `--apply` leaves the active layout unchanged, the refuse-on-`.docs.toml` guard, applied-tree-passes-`check`. |
 
-Total: 49 new M4 tests; 213 in the suite.
+Total: 55 new M4 tests (46 + 9); 219 in the suite. (A post-Phase-4 review
+follow-up strengthened the initial 49 to 55.)
 
 #### Actions taken
 
@@ -293,12 +294,20 @@ this session by request; Phase 5 resumes implementation.**
 =========================== 48 failed, 165 passed in ~3.4s ===========================
 ```
 
-213 tests collected; no collection / import / fixture-path errors.
+213 tests collected at the baseline snapshot; no collection / import /
+fixture-path errors.
+
+**Post-Phase-4 follow-up:** a review of the Phase 1-4 work strengthened the
+plan-level test coverage with 6 additional `test_migrate.py` units (committed
+on `m4/phases-1-4`), moving the RED baseline to **54 failed / 165 passed (219
+collected)**. That is the baseline Phase 5 resumed from; the failure
+attribution below is the original 48-failure snapshot.
 
 #### Failure attribution
 
-Every one of the 48 failures traces to a `NotImplementedError` raised by a
-Phase-1 stub:
+Every one of the 48 baseline failures traces to a `NotImplementedError` raised
+by a Phase-1 stub (the 6 added units distribute across `infer_*` /
+`insert_metadata_block` / `plan_migration` the same way):
 
 | Stub | Failures | Implements in |
 |---|---|---|
@@ -518,7 +527,7 @@ helpers they call.
 
 #### Exit criteria
 
-- [x] Full suite green — 219 passed, 0 failed (165 baseline + 54 M4 tests now
+- [x] Full suite green — 219 passed, 0 failed (164 M1-M3 tests + 55 M4 tests,
       all GREEN for the right reason; no test relaxed or rewritten).
 - [x] `ruff check` / `ruff format --check` / `mypy` all green tree-wide.
 
@@ -656,7 +665,7 @@ refuses a directory that is already a docs root.
 The implementation added the `FileMigration` / `MigrationPlan` models, five
 pure inference helpers, `insert_metadata_block`, `plan_migration` /
 `apply_migration` / `migration_to_json`, and the `migrate` verb wiring to
-`bin/docs`. 54 M4 tests across `tests/test_migrate.py` and
+`bin/docs`. 55 M4 tests across `tests/test_migrate.py` and
 `tests/test_cli_migrate.py`; the full suite stands at **219 passed, 0 failed**
 with `ruff` / `mypy` clean tree-wide.
 

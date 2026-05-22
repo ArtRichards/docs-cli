@@ -461,7 +461,7 @@ reuse):
   `_ARCHIVE_SUBDIR_NAMES`, and the `_in_archive_subdir` / `_print_migration_plan`
   helpers.
 
-**Tests.** 54 M4 tests — `tests/test_migrate.py` (45 inference + planning
+**Tests.** 55 M4 tests — `tests/test_migrate.py` (46 inference + planning
 units) and `tests/test_cli_migrate.py` (9 CLI tests). The full suite stands at
 **219 passed, 0 failed**; `ruff check` / `ruff format --check` / `mypy` clean
 tree-wide.
