@@ -109,6 +109,7 @@ per-phase history. M3's exit criteria: `docs check` returns 0 on this repo's
 own `docs/`, and `docs list --json` matches the schema pinned in `cli.md`.
 
 **Watch out for** (durable gotchas, still current):
+- **M3 is mid-flight (paused after Phase 4).** The test suite intentionally shows ~55 failures — that is the M3 RED baseline (phases 1–4), not a regression. They turn green as phases 5–8 implement the verbs; do not "repair" them by reverting. Phase 5's `render_index` rework also requires regenerating `docs/INDEX.md` and the dogfood snapshot into the two-level `Project → Role` layout, in lockstep.
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
 - Quality gates run **tree-wide**: `ruff check .`, `ruff format --check .`, and `mypy` (no args — `pyproject.toml` scopes it to `bin/docs` + `tests/`). Commit once per TDD phase on `main`.
 - The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is spec-compliant, not hand-authored. If you change a `docs/*.md` body so its first paragraph or `Updated:` line changes, regenerate `docs/INDEX.md` and the snapshot in lockstep (`./bin/docs index --root docs`, then copy `docs/INDEX.md` onto the fixture). Editing a doc means bumping that doc's own `Updated:` per the convention.

@@ -283,3 +283,28 @@ The exit-1 test that could have *false*-passed against a stub exiting 1
 - [x] M1/M2's tests green except the 5 renderer tests reworked in Phase 2.
 - [x] No code implemented beyond the Phase 1 contract stubs.
 - [x] Ready for Phase 5: implement the helpers and the renderer rework.
+
+## Post-baseline notes
+
+After the Phase 4 commit the session continued with documentation-only work —
+no implementation; the RED baseline (55 failed / 109 passed) is unchanged:
+
+- **Extra-field validation scoped as future work.** `cli.md`'s exit-1 line had
+  named "unknown extra fields", but the convention defines no known-field
+  registry, so M3 leaves extra fields unflagged. A possible future change — an
+  opt-in `[vocabulary] add_fields` allowlist driving an `unknown-field`
+  warning — is recorded in [plan.md](plan.md)'s Open questions and
+  cross-referenced from this milestone's Decisions.
+- **Consistency sweep.** Audited the phase 1–4 artifacts: corrected this log's
+  M1+M2 test-file count (10, not 11); recorded the single-file-vs-package
+  split decision in the milestone doc (`bin/docs` stays single-file);
+  strengthened `test_query_sorted_within_group_by_updated_descending` by
+  adding a 9th `multi-project/` fixture doc (`alpha-spec.md`) so an
+  active/spec group has two members. Everything else verified consistent —
+  contract / tests / fixtures / specs aligned, `docs/INDEX.md` in sync with
+  the dogfood snapshot, and the repo's own `docs/` has zero broken `Related:`
+  references (dogfood-ready for the eventual `docs check docs/`).
+
+**Resume at Phase 5.** See this milestone's [task plan](m3-validation-and-query.md)
+(the TDD Implementation Plan) and [status.md](status.md)'s "Resuming this work"
+section.
