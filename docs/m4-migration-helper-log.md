@@ -60,7 +60,7 @@ agent consumes to resolve ambiguities before applying.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-22 | `FileMigration` / `MigrationPlan` models + inference/plan/apply helper stubs + `_cmd_migrate` stub + `migrate` subparser in `bin/docs`; `cli.md` migrate section + `--json` schema; `architecture.md` migrate module spec; M4 plan + log created. |
 | 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_migrate.py` (40 inference + planning units) and `tests/test_cli_migrate.py` (9 CLI dry-run / `--apply` / `--json` tests). |
-| 3. Create Data/Fixtures | Not started | — | `tests/fixtures/trees/foreign/` — non-conforming docs; archive-style subdir; refuse-guard tree. |
+| 3. Create Data/Fixtures | Complete | 2026-05-22 | `tests/fixtures/trees/foreign/` — 9 non-conforming docs incl. an archive-style subdir and a benign nested subdir; refuse-guard reuses `minimal/`. |
 | 4. Run Tests (RED Baseline) | Not started | — | `pytest tests/` — capture the RED baseline. **Session pauses here.** |
 | 5. Update Base Interfaces | Not started | — | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block`. |
 | 6. Implement Offline/Core Path | Not started | — | `plan_migration` + `_cmd_migrate` dry-run human output. |
@@ -238,6 +238,41 @@ Total: 49 new M4 tests; 213 in the suite.
 - [x] `migrate --help` passes (the contract test).
 - [x] `ruff` / `mypy` clean tree-wide.
 - [x] Ready for Phase 3 (fixtures) → Phase 4 (RED baseline).
+
+### Phase 3 — Create Data/Fixtures
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Build the `foreign/` fixture tree the Phase 2 tests reference, so the only
+cause of failure at Phase 4 is missing implementation.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/fixtures/trees/foreign/` | Create | A non-conforming foreign tree — **no `.docs.toml`**. Nine `.md` files of genuine prose, every basename sharing the `proj-` prefix (so `infer_project` yields `proj`): `proj-auth-spec.md` (`-spec`, no metadata block), `proj-release-plan.md` (`-plan`), `proj-db-adr.md` (`-adr` → decision), `proj-deploy-log.md` (`-log`), `proj-overview.md` (no inferable suffix → `notes` fallback), `proj-no-h1.md` (no H1 — first line is body), `proj-has-metadata.md` (partial `Status:`/`Updated:`-shaped lines under the H1, `Status: wip` out-of-vocab — to reconcile), `archived/proj-old-decision.md` (an archive-style subdir → `detect_archive_layout` + `Status: archived`), and `topics/proj-deep-notes.md` (a benign nested non-archive subdir, exercising recurse-and-migrate-in-place per resolved Q6). |
+
+The refuse-on-`.docs.toml` guard test reuses the existing `minimal/` fixture
+(it carries a `.docs.toml`) — no new fixture needed.
+
+#### Issues / decisions
+
+- **`foreign/` must stay non-conforming.** `docs check tests/fixtures/trees/
+  foreign` exits 2 with `missing-field` / `malformed` / `bad-vocab` violations
+  across all nine files — that is the point of the fixture. No M1-M3 test
+  walks it, so its broken docs harm nothing.
+- **One shared `proj-` prefix.** Every basename — nested file included —
+  starts `proj-`, so `infer_project`'s longest-common-prefix rule trims to
+  `proj` and the project-inference test has a deterministic target.
+
+#### Exit criteria
+
+- [x] Every fixture path a Phase 2 test references exists.
+- [x] `docs check tests/fixtures/trees/foreign` reports violations (exit 2).
+- [x] `infer_project` over the basenames would yield `proj`.
+- [x] Ready for Phase 4: run pytest and capture the RED baseline.
 
 ## Milestone-completion summary
 
