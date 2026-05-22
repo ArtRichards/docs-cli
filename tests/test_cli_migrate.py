@@ -203,3 +203,95 @@ def test_migrate_apply_yields_a_tree_check_accepts(docs_script, fixtures_dir, tm
     # An applied tree is a conforming tree — `docs check` must accept it.
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, (check.stdout, check.stderr)
+
+
+# --- --quiet ---------------------------------------------------------------
+
+
+def test_migrate_apply_quiet_suppresses_the_summary_line(docs_script, fixtures_dir, tmp_path):
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    loud = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert "migrated" in loud.stderr, "non-quiet --apply prints a summary to stderr"
+
+    root2 = tmp_path / "foreign2"
+    shutil.copytree(fixtures_dir / "trees" / "foreign", root2)
+    quiet = _run(docs_script, "migrate", str(root2), "--apply", "--quiet", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (quiet.stdout + quiet.stderr)
+    assert quiet.returncode == 0, (quiet.stdout, quiet.stderr)
+    assert "migrated" not in quiet.stderr, "--quiet must suppress the summary line"
+
+
+# --- --date validation -----------------------------------------------------
+
+
+def test_migrate_rejects_a_malformed_date_with_a_date_label(docs_script, fixtures_dir, tmp_path):
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    proc = _run(docs_script, "migrate", str(root), "--date", "not-a-date")
+    assert proc.returncode == 2
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    # The error names the --date flag the user actually supplied — matching
+    # `docs archive --date` (review finding #2).
+    assert "docs: --date:" in proc.stderr
+
+
+# --- extra-metadata preservation (review finding #3) -----------------------
+
+
+def test_migrate_apply_preserves_extra_metadata_in_a_section(docs_script, fixtures_dir, tmp_path):
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    extra = root / "proj-extra-metadata.md"
+    assert extra.is_file(), "fixture must carry a file with extra metadata"
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    migrated = extra.read_text()
+    # The non-required fields are preserved under `## Migrated metadata`.
+    assert "## Migrated metadata" in migrated
+    assert "Migrated-Owner: alice" in migrated
+    assert "Migrated-Tags:" in migrated
+    assert "Migrated-Related:" in migrated
+    # The applied file still parses and carries the four required fields.
+    doc = parse(migrated, extra, root)
+    assert doc.status and doc.role and doc.project and doc.updated is not None
+    # The applied tree still passes `docs check`.
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)
+
+
+def test_migrate_dry_run_reports_preserved_extra_fields(docs_script, fixtures_dir, tmp_path):
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    proc = _run(docs_script, "migrate", str(root))
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The dry-run human plan notes how many extra fields are preserved.
+    assert "extra field(s) preserved" in proc.stdout
+
+
+# --- archive-move collision (review finding #1) ----------------------------
+
+
+def test_migrate_flags_archive_move_collision_in_dry_run(docs_script, tmp_path):
+    # Two foreign files with the same basename in different archive-style
+    # subdirs both normalise to one archive/<date>/ destination.
+    root = tmp_path / "collide"
+    (root / "archived").mkdir(parents=True)
+    (root / "project-history").mkdir(parents=True)
+    (root / "archived" / "dup.md").write_text("# One\n\nFirst.\n")
+    (root / "project-history" / "dup.md").write_text("# Two\n\nSecond.\n")
+    proc = _run(docs_script, "migrate", str(root), "--date", "2026-05-22")
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The dry-run plan surfaces the collision as an ambiguity.
+    assert "collision" in proc.stdout
+
+
+def test_migrate_apply_refuses_an_archive_move_collision(docs_script, tmp_path):
+    root = tmp_path / "collide"
+    (root / "archived").mkdir(parents=True)
+    (root / "project-history").mkdir(parents=True)
+    (root / "archived" / "dup.md").write_text("# One\n\nFirst.\n")
+    (root / "project-history" / "dup.md").write_text("# Two\n\nSecond.\n")
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    # A colliding --apply must fail (exit 2) rather than silently overwrite.
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)

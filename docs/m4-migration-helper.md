@@ -55,8 +55,11 @@ them, the tool applies the decisions.
     file's mtime, normalised to `YYYY-MM-DD`.
 - Insert a convention-correct metadata block immediately under the H1. If the
   file has no H1, synthesise one from the filename (reusing `_slug_to_title`).
-  If the file already carries metadata-shaped lines, reconcile them into the
-  block rather than duplicating.
+  If the file already carries metadata-shaped lines, reconcile the four
+  required fields into the block; preserve any *other* metadata-shaped field
+  (`Owner:`, `Tags:`, `Related:`, …) into a `## Migrated metadata` body
+  section under a `Migrated-` prefix rather than dropping it (branch-review
+  decision — see Decisions).
 - Detect existing archive-style subdirectories (`archived/`,
   `project-history/`, `archive/YYYY-MM-DD/`, …) and normalise them to the
   convention's `archive/YYYY-MM-DD/` layout with `Status: archived`.
@@ -90,7 +93,9 @@ them, the tool applies the decisions.
 - [x] `tests/test_migrate.py` (inference + planning units) and
       `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json`).
 - [x] Fixture tree(s) of non-conforming docs under
-      `tests/fixtures/trees/foreign/` (per [test-strategy.md](test-strategy.md)).
+      `tests/fixtures/trees/foreign/` (per [test-strategy.md](test-strategy.md))
+      — including `proj-extra-metadata.md`, which carries non-required
+      metadata fields to exercise the extra-field preservation path.
 - [x] Dogfood: a dry-run against a foreign example directory produces a
       complete plan — an explicit decision for every file, every ambiguity
       flagged; `--apply` on a copy yields a tree `docs check` accepts.
@@ -375,6 +380,35 @@ and `dual-status-adr.md`):
   `convention.md`'s "Subdirectories"), so a flat or arbitrarily-nested
   foreign active tree is left exactly as-is on disk; M4 adds metadata only.
   Only archive-style subdirs are normalised as a directory move.
+- **Foreign extra metadata is preserved, not dropped.** (Operator-decided,
+  branch review 2026-05-22.) A foreign doc may carry metadata-shaped lines
+  beyond the four the convention requires (`Owner:`, `Tags:`, a `Related:`
+  block, any other `Label: value` line). The four required fields
+  (`Status`/`Role`/`Project`/`Updated`) are superseded by inferred values as
+  before; every *other* field is now **preserved** into a `## Migrated
+  metadata` body section, placed immediately below the canonical metadata
+  block and above the rest of the body, with each label renamed under a
+  `Migrated-` prefix (`Owner:` → `Migrated-Owner:`; a `Related:` block →
+  `Migrated-Related:` with its bullet sub-items kept verbatim). A foreign doc
+  with no extra fields gets no section. Because the preserved fields live in
+  the body — under a `## ` heading, outside the metadata span
+  `parse_metadata_block` anchors to the H1 — `docs check` does not validate
+  them: this keeps the "applied tree passes `docs check`" Success Criterion
+  intact and is precisely why a stale foreign `Related:` path can now be
+  preserved safely. The operator chose "Section under front matter" and
+  "rename"; the **`Migrated-` prefix is the conductor's default choice** for
+  the rename rule (it was not specified by the operator and matches the
+  preview the operator selected) — recorded here explicitly so the operator
+  can adjust it on branch review. The preservation is deterministic and
+  lossless, so it adds no plan ambiguity; the dry-run reports a preserved-
+  field count per file.
+- **Archive-move destination collisions are detected.** (Branch review
+  2026-05-22.) Two foreign files with the same basename in different
+  archive-style subdirs both normalise to one `archive/<date>/<basename>`
+  destination. `plan_migration` now flags every colliding file as a
+  low-confidence ambiguity so the dry-run surfaces it before `--apply`, and
+  `apply_migration` raises `FileExistsError` (exit 2) rather than silently
+  overwriting — mirroring the `_archive_one` guard.
 - **`bin/docs` single-file vs package split — revisited at M4.** M2 and M3's
   Decisions both flagged a possible package split "at M3 / M4". After M3 the
   file is ~1,790 lines — large but sectioned with header comments and clean
@@ -452,19 +486,37 @@ reuse):
   default), `infer_updated` (in-file `Updated:` else mtime),
   `detect_archive_layout` (archive-style subdir → `archive/<ISO-date>/`).
 - `insert_metadata_block` — inserts (or synthesises) the H1 and writes a
-  convention-correct block, reconciling pre-existing metadata lines and
-  preserving the body verbatim.
+  convention-correct block, reconciling the four required pre-existing
+  metadata fields and preserving any other field into a `## Migrated metadata`
+  body section (`Migrated-` prefix); preserves the body verbatim. Supported by
+  `_extra_metadata_fields` and `_render_migrated_metadata_section`.
 - `plan_migration` (assembles the plan, applies the resolved
-  ambiguity-flagging rule), `apply_migration` (edit-then-move per file),
+  ambiguity-flagging rule, and a cross-file pass flagging archive-move
+  destination collisions), `apply_migration` (edit-then-move per file, with a
+  `FileExistsError` guard against archive-move collisions),
   `migration_to_json` (the pinned 10-key flat record).
 - `_cmd_migrate` + the `migrate` subparser; module-level `_ROLE_SUFFIXES`,
-  `_ARCHIVE_SUBDIR_NAMES`, and the `_in_archive_subdir` / `_print_migration_plan`
-  helpers.
+  `_ARCHIVE_SUBDIR_NAMES`, `_REQUIRED_METADATA_FIELDS`,
+  `_MIGRATED_METADATA_HEADING`, and the `_in_archive_subdir` /
+  `_print_migration_plan` / `_count_preserved_fields` helpers.
 
-**Tests.** 55 M4 tests — `tests/test_migrate.py` (46 inference + planning
-units) and `tests/test_cli_migrate.py` (9 CLI tests). The full suite stands at
-**219 passed, 0 failed**; `ruff check` / `ruff format --check` / `mypy` clean
-tree-wide.
+**Branch-review behaviour changes (2026-05-22).** A fresh-eyes review of
+phases 5-10 drove three fixes, all on `m4/phases-5-10`: (1) `apply_migration`
++ `plan_migration` now detect archive-move destination collisions — a silent
+data-loss hazard when two foreign files share a basename across archive-style
+subdirs; (2) the `docs migrate --date` error now names the `--date` flag
+rather than leaking an `Updated:` field label; (3) the operator-decided
+extra-metadata-preservation behaviour — non-required foreign metadata fields
+are preserved into a `## Migrated metadata` body section rather than dropped
+(see Decisions). A new fixture `proj-extra-metadata.md` and 17 further tests
+cover the changes.
+
+**Tests.** 72 M4 tests — `tests/test_migrate.py` (57 inference + planning
+units) and `tests/test_cli_migrate.py` (15 CLI tests). The full suite stands at
+**236 passed, 0 failed**; `ruff check` / `ruff format --check` / `mypy` clean
+tree-wide. (The original implementation shipped 55 M4 tests / 219 total; the
+branch review added the extra-metadata-preservation and archive-collision
+behaviours with 17 further tests.)
 
 **Resolved questions (operator-confirmed 2026-05-22), all binding:**
 

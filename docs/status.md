@@ -96,14 +96,14 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # 219 passed (M1-M4 all green)
+.venv/bin/python -m pytest tests/ -q          # 236 passed (M1-M4 all green)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
 ./bin/docs check docs/                        # dogfood — exit 0
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
-All 219 tests pass — M1-M4 are shipped. If `.venv/` is missing (fresh clone):
+All 236 tests pass — M1-M4 are shipped. If `.venv/` is missing (fresh clone):
 ```sh
 python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install pytest ruff mypy

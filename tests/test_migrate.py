@@ -21,6 +21,7 @@ from docs import (
     BUILTIN_STATUSES,
     FileMigration,
     MigrationPlan,
+    apply_migration,
     check_doc,
     detect_archive_layout,
     infer_project,
@@ -106,6 +107,15 @@ def test_infer_role_in_file_role_wins_over_suffix():
     # The filename suffix says spec; the in-file Role says guide — Role wins.
     role, confident = infer_role("auth-spec.md", {"Role": "guide"})
     assert role == "guide"
+    assert confident is True
+
+
+def test_infer_role_trailing_token_that_is_a_builtin_role_resolves_directly():
+    # A trailing token that is itself a built-in role (no _ROLE_SUFFIXES
+    # entry needed) resolves to that role — `-milestone` branch of the
+    # documented extension (cli.md), previously without coverage.
+    role, confident = infer_role("m5-skill-milestone.md", {})
+    assert role == "milestone"
     assert confident is True
 
 
@@ -325,6 +335,89 @@ def test_insert_metadata_block_result_passes_check_doc():
     assert [f for f in findings if f.severity == "error"] == []
 
 
+# --- insert_metadata_block: extra-field preservation (review finding #3) ----
+
+
+_INSERT_KW = dict(
+    title="Doc",
+    status="active",
+    role="notes",
+    project="proj",
+    updated=date(2026, 5, 22),
+)
+
+
+def test_insert_metadata_block_preserves_extra_fields_in_a_migrated_section():
+    # Owner: / Tags: are non-required metadata — they must be preserved into a
+    # `## Migrated metadata` body section, not silently dropped.
+    text = "# Doc\n\nStatus: wip\nOwner: alice\nTags: infra, urgent\nUpdated: 2020-01-01\n\nBody.\n"
+    result = insert_metadata_block(text, **_INSERT_KW)
+    assert "## Migrated metadata" in result
+    assert "Migrated-Owner: alice" in result
+    assert "Migrated-Tags: infra, urgent" in result
+    # The required fields are NOT echoed under the Migrated- prefix.
+    assert "Migrated-Status" not in result
+    assert "Migrated-Updated" not in result
+
+
+def test_insert_metadata_block_migrated_section_sits_below_block_above_body():
+    text = "# Doc\n\nStatus: wip\nOwner: alice\nUpdated: 2020-01-01\n\nThe real body.\n"
+    result = insert_metadata_block(text, **_INSERT_KW)
+    block_end = result.index("Updated: 2026-05-22")
+    migrated = result.index("## Migrated metadata")
+    body = result.index("The real body.")
+    # Order: canonical block, then `## Migrated metadata`, then the body.
+    assert block_end < migrated < body
+
+
+def test_insert_metadata_block_preserves_a_related_block():
+    # A foreign `Related:` block (bare label + bullet sub-items) is preserved
+    # verbatim under the `Migrated-Related:` label.
+    text = (
+        "# Doc\n\nStatus: wip\nUpdated: 2020-01-01\n"
+        "Related:\n- pairs-with: other.md\n- see-also: ext.md\n\nBody.\n"
+    )
+    result = insert_metadata_block(text, **_INSERT_KW)
+    assert "## Migrated metadata" in result
+    assert "Migrated-Related:" in result
+    assert "- pairs-with: other.md" in result
+    assert "- see-also: ext.md" in result
+
+
+def test_insert_metadata_block_no_extra_fields_emits_no_section():
+    # A foreign doc whose only metadata is required fields gets NO section.
+    text = "# Doc\n\nStatus: wip\nUpdated: 2020-01-01\n\nBody.\n"
+    result = insert_metadata_block(text, **_INSERT_KW)
+    assert "## Migrated metadata" not in result
+
+
+def test_insert_metadata_block_with_extras_round_trips_through_parse():
+    # The preserved fields live in the BODY — the real metadata block must
+    # still carry exactly the four required fields and nothing else.
+    text = "# Doc\n\nStatus: wip\nOwner: alice\nTags: x\nUpdated: 2020-01-01\n\nBody.\n"
+    result = insert_metadata_block(text, **_INSERT_KW)
+    doc = parse(result, Path("/r/doc.md"), Path("/r"))
+    assert doc.status == "active"
+    assert doc.role == "notes"
+    assert doc.updated == date(2026, 5, 22)
+    # parse_metadata_block must not re-harvest the Migrated- lines into the
+    # block — they sit under a `## ` heading in the body.
+    _title, metadata, _body = parse_metadata_block(result)
+    assert set(metadata) == {"Status", "Role", "Project", "Updated"}
+    # The Migrated- lines are not convention fields, so `Doc.extra` is empty.
+    assert doc.extra == {}
+
+
+def test_insert_metadata_block_with_extras_passes_check_doc():
+    text = "# Doc\n\nStatus: wip\nOwner: alice\nUpdated: 2020-01-01\n\nBody.\n"
+    result = insert_metadata_block(text, **_INSERT_KW)
+    config = load_config(Path("/nonexistent"))
+    findings = check_doc(
+        Path("/r/doc.md"), result, Path("/r"), config, stale=None, today=date(2026, 5, 22)
+    )
+    assert [f for f in findings if f.severity == "error"] == []
+
+
 # --- plan_migration --------------------------------------------------------
 
 
@@ -414,15 +507,22 @@ def test_plan_migration_pins_inferred_values_for_known_files(fixtures_dir):
     assert old_decision.status == "archived"
 
 
+# The foreign fixture files that carry pre-existing metadata-shaped lines.
+_FIXTURES_WITH_METADATA = frozenset({"proj-has-metadata.md", "proj-extra-metadata.md"})
+
+
 def test_plan_migration_marks_reconciled_metadata(fixtures_dir):
     plan = plan_migration(_foreign(fixtures_dir))
     # proj-has-metadata.md carries pre-existing Status:/Updated: lines —
     # migrate reconciles them into the block.
     has_metadata = _by_name(plan, "proj-has-metadata.md")
     assert has_metadata.reconciled_metadata is True
+    # proj-extra-metadata.md additionally carries non-required fields.
+    extra_metadata = _by_name(plan, "proj-extra-metadata.md")
+    assert extra_metadata.reconciled_metadata is True
     # Every other fixture file has no pre-existing metadata-shaped lines.
     for fm in plan.files:
-        if not fm.rel.endswith("proj-has-metadata.md"):
+        if not any(fm.rel.endswith(name) for name in _FIXTURES_WITH_METADATA):
             assert fm.reconciled_metadata is False
 
 
@@ -457,3 +557,57 @@ def test_plan_migration_active_tree_files_have_no_archive_move(fixtures_dir):
     assert active, "fixture must contain active-tree files"
     for fm in active:
         assert fm.archive_move is None
+
+
+def test_plan_migration_preserves_extra_metadata_fixture(fixtures_dir):
+    # proj-extra-metadata.md carries Owner: / Tags: / Related: beyond the
+    # required fields — plan_migration must mark it reconciled, and an apply
+    # must park those extras in a `## Migrated metadata` section.
+    plan = plan_migration(_foreign(fixtures_dir))
+    extra = _by_name(plan, "proj-extra-metadata.md")
+    assert extra.reconciled_metadata is True
+
+
+# --- archive-move collision detection (review finding #1) ------------------
+
+
+def _write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+def test_plan_migration_flags_archive_move_destination_collision(tmp_path):
+    # Two foreign files with the same basename in different archive-style
+    # subdirs both normalise to archive/<date>/dup.md — a silent-overwrite
+    # hazard the plan must surface as an ambiguity before --apply.
+    _write(tmp_path / "archived" / "dup.md", "# One\n\nFirst body.\n")
+    _write(tmp_path / "project-history" / "dup.md", "# Two\n\nSecond body.\n")
+    plan = plan_migration(tmp_path, archive_date="2026-05-22")
+    colliding = [f for f in plan.files if f.rel.endswith("dup.md")]
+    assert len(colliding) == 2
+    for fm in colliding:
+        assert fm.archive_move == "archive/2026-05-22/dup.md"
+        assert fm.confidence == "low"
+        assert any("collision" in note for note in fm.ambiguities)
+
+
+def test_plan_migration_no_collision_for_distinct_archive_basenames(tmp_path):
+    _write(tmp_path / "archived" / "a.md", "# A\n\nBody.\n")
+    _write(tmp_path / "project-history" / "b.md", "# B\n\nBody.\n")
+    plan = plan_migration(tmp_path, archive_date="2026-05-22")
+    for fm in plan.files:
+        assert not any("collision" in note for note in fm.ambiguities)
+
+
+def test_apply_migration_raises_on_archive_move_collision(tmp_path):
+    # apply_migration must refuse to silently overwrite a colliding archive
+    # destination — mirroring the _archive_one FileExistsError guard.
+    _write(tmp_path / "archived" / "dup.md", "# One\n\nFirst body.\n")
+    _write(tmp_path / "project-history" / "dup.md", "# Two\n\nSecond body.\n")
+    plan = plan_migration(tmp_path, archive_date="2026-05-22")
+    try:
+        apply_migration(plan)
+    except FileExistsError:
+        pass
+    else:
+        raise AssertionError("apply_migration must raise FileExistsError on a collision")

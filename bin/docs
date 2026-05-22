@@ -1445,6 +1445,68 @@ def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
     return None
 
 
+# The four metadata fields the convention requires. `migrate` always writes
+# these from inferred values; any *other* metadata-shaped line a foreign doc
+# carries is "extra" and is preserved (see `_extra_metadata_fields`).
+_REQUIRED_METADATA_FIELDS: frozenset[str] = frozenset({"Status", "Role", "Project", "Updated"})
+
+# Heading of the body section `insert_metadata_block` parks preserved foreign
+# metadata under. Exact string — pinned by the milestone Decisions.
+_MIGRATED_METADATA_HEADING = "## Migrated metadata"
+
+
+def _extra_metadata_fields(
+    metadata: Mapping[str, str | tuple[str, ...]],
+) -> list[tuple[str, str | tuple[str, ...]]]:
+    """Return a foreign doc's non-required metadata fields, in file order.
+
+    The four required convention fields (``Status`` / ``Role`` / ``Project`` /
+    ``Updated``) are dropped — `migrate` supersedes them with inferred values.
+    Every *other* metadata-shaped line (``Owner:``, ``Tags:``, a ``Related:``
+    bullet block, any ``Label: value`` line) is "extra" and is returned so
+    `insert_metadata_block` can preserve it.
+
+    Args:
+        metadata: The metadata dict from `parse_metadata_block` — values are
+            ``str`` for inline ``Label: value`` lines and ``tuple[str, ...]``
+            for bare-label-with-bullet groups.
+
+    Returns:
+        A list of ``(label, value)`` pairs for every non-required field, in
+        the order they appeared in the file.
+    """
+    return [(k, v) for k, v in metadata.items() if k not in _REQUIRED_METADATA_FIELDS]
+
+
+def _render_migrated_metadata_section(
+    extra: list[tuple[str, str | tuple[str, ...]]],
+) -> str:
+    """Render the `## Migrated metadata` body section for preserved fields.
+
+    Each preserved field's label is prefixed with ``Migrated-`` so the line is
+    no longer a convention field name (and, living under a ``## `` heading in
+    the body, is not re-harvested by `parse_metadata_block`). Inline values
+    render as ``Migrated-<Label>: <value>``; a bare-label bullet group (e.g.
+    ``Related:``) renders as ``Migrated-<Label>:`` followed by its ``- ``
+    bullets verbatim.
+
+    Args:
+        extra: The non-required fields from `_extra_metadata_fields`. Must be
+            non-empty — callers skip the section entirely when there are none.
+
+    Returns:
+        The section text, ending with a single trailing newline.
+    """
+    lines = [_MIGRATED_METADATA_HEADING, ""]
+    for label, value in extra:
+        if isinstance(value, str):
+            lines.append(f"Migrated-{label}: {value}")
+        else:
+            lines.append(f"Migrated-{label}:")
+            lines.extend(f"- {item}" for item in value)
+    return "\n".join(lines) + "\n"
+
+
 def insert_metadata_block(
     text: str,
     *,
@@ -1462,14 +1524,19 @@ def insert_metadata_block(
 
     - When ``text`` has an H1, the block is inserted between it and the body.
     - When ``text`` has no H1, ``# <title>`` is synthesised as the first line.
-    - When ``text`` already carries metadata-shaped lines under the H1, they
-      are reconciled into the new block rather than left as duplicates — the
-      inserted ``Status`` / ``Role`` / ``Project`` / ``Updated`` values are the
-      ones passed in.
+    - When ``text`` already carries metadata-shaped lines under the H1, the
+      four required fields (``Status`` / ``Role`` / ``Project`` / ``Updated``)
+      are superseded by the inserted values. Any *other* metadata-shaped line
+      (``Owner:``, ``Tags:``, a ``Related:`` block, …) is preserved into a
+      ``## Migrated metadata`` body section, placed immediately below the
+      canonical block and above the rest of the body; each preserved label is
+      renamed with a ``Migrated-`` prefix. A foreign doc with no extra fields
+      gets no such section.
     - The file's trailing-newline state is preserved.
 
     The result round-trips cleanly through `parse()` and is accepted by
-    `check_doc`.
+    `check_doc` — the preserved fields live in the body, not the metadata
+    block, so `docs check` does not validate them.
 
     Args:
         text: The foreign file's full current text.
@@ -1483,9 +1550,11 @@ def insert_metadata_block(
     Returns:
         The full text of the doc with the metadata block inserted.
     """
+    extra: list[tuple[str, str | tuple[str, ...]]] = []
     try:
-        old_title, _old_metadata, body = parse_metadata_block(text)
+        old_title, old_metadata, body = parse_metadata_block(text)
         h1_title = old_title
+        extra = _extra_metadata_fields(old_metadata)
     except MetadataError:
         # No H1 — the whole text is body; synthesise an H1 from `title`.
         body = text
@@ -1499,7 +1568,12 @@ def insert_metadata_block(
         f"Project: {project}\n"
         f"Updated: {updated.strftime(date_format)}\n"
     )
-    result = f"{block}\n{body}" if body else block.rstrip("\n")
+    # Preserved foreign metadata is parked in a body section immediately below
+    # the canonical block and above the rest of the body.
+    migrated = _render_migrated_metadata_section(extra) if extra else ""
+    body_part = f"{migrated}\n{body}" if (migrated and body) else (migrated or body)
+
+    result = f"{block}\n{body_part}" if body_part else block.rstrip("\n")
     # Preserve the original file's trailing-newline state.
     if text.endswith("\n"):
         if not result.endswith("\n"):
@@ -1545,6 +1619,7 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
     pairs = list(_iter_doc_texts(root, config))
     project = infer_project([p.name for p, _ in pairs], root.resolve().name)
 
+    # First pass: per-file inference, building one `FileMigration` per file.
     migrations: list[FileMigration] = []
     for path, text in pairs:
         rel = path.relative_to(root).as_posix()
@@ -1568,6 +1643,9 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
         # out-of-vocab in-file `Status:` that had to be substituted. The
         # plain active-tree status default and the mtime-derived `Updated:`
         # fallback are expected best-effort defaults and are NOT flagged.
+        # Preserving extra metadata fields is deterministic and lossless, so
+        # it is NOT an ambiguity; an archive-move collision IS — that
+        # cross-file check is the second pass below.
         ambiguities: list[str] = []
         if not role_conf:
             ambiguities.append(
@@ -1600,6 +1678,33 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
             )
         )
 
+    # Second pass (resolved review finding): two foreign files in different
+    # archive-style subdirs can normalise to the same `archive/<date>/<name>`
+    # destination — applying the plan would silently overwrite the first.
+    # Flag every file sharing a destination as an ambiguity so the dry-run
+    # surfaces the collision before `--apply`.
+    dest_counts: dict[str, int] = {}
+    for fm in migrations:
+        if fm.archive_move is not None:
+            dest_counts[fm.archive_move] = dest_counts.get(fm.archive_move, 0) + 1
+    colliding = {dest for dest, n in dest_counts.items() if n > 1}
+    if colliding:
+        migrations = [
+            replace(
+                fm,
+                confidence="low",
+                ambiguities=fm.ambiguities
+                + (
+                    f"Archive-move destination collision — {dest_counts[fm.archive_move]} "
+                    f"files normalise to {fm.archive_move!r}; resolve before --apply or "
+                    f"files would be overwritten.",
+                ),
+            )
+            if fm.archive_move in colliding
+            else fm
+            for fm in migrations
+        ]
+
     return MigrationPlan(root=root, files=tuple(migrations))
 
 
@@ -1613,8 +1718,16 @@ def apply_migration(plan: MigrationPlan) -> None:
     move, mirroring `_archive_one`, so a failure leaves the original
     untouched.
 
+    An archive-move whose destination is already occupied raises
+    `FileExistsError` rather than silently overwriting it — mirroring the
+    `_archive_one` guard. `plan_migration` flags such collisions as an
+    ambiguity in the dry-run plan; this guard is the apply-time backstop.
+
     Args:
         plan: The plan produced by `plan_migration`.
+
+    Raises:
+        FileExistsError: an archive-move destination is already occupied.
     """
     for fm in plan.files:
         text = fm.path.read_text()
@@ -1630,6 +1743,8 @@ def apply_migration(plan: MigrationPlan) -> None:
         atomic_write(fm.path, new_text)
         if fm.archive_move is not None:
             dest = plan.root / fm.archive_move
+            if dest.exists():
+                raise FileExistsError(dest)
             dest.parent.mkdir(parents=True, exist_ok=True)
             fm.path.replace(dest)
 
@@ -2289,12 +2404,29 @@ def _cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def _count_preserved_fields(fm: FileMigration) -> int:
+    """Return how many non-required metadata fields `migrate` will preserve.
+
+    Re-reads the file and counts the metadata-shaped lines `apply_migration`
+    would park in the file's ``## Migrated metadata`` section (see
+    `_extra_metadata_fields`). Used only for the dry-run human report; 0 when
+    the file carries no extra fields or has no parseable metadata block.
+    """
+    try:
+        _t, metadata, _b = parse_metadata_block(fm.path.read_text())
+    except (MetadataError, OSError):
+        return 0
+    return len(_extra_metadata_fields(metadata))
+
+
 def _print_migration_plan(plan: MigrationPlan) -> None:
     """Print a human-readable dry-run migration plan to stdout.
 
     One block per `FileMigration`: the root-relative path, the inferred
     metadata, the confidence, and — conditionally — the archive move, the
-    synthesised-H1 flag, the reconciled-metadata flag, and every ambiguity.
+    synthesised-H1 flag, the reconciled-metadata flag (with a count of any
+    non-required fields preserved into a ``## Migrated metadata`` section),
+    and every ambiguity.
     """
     for fm in plan.files:
         print(fm.rel)
@@ -2305,7 +2437,14 @@ def _print_migration_plan(plan: MigrationPlan) -> None:
         if fm.synthesized_h1:
             print("  synthesized H1: yes (title from filename)")
         if fm.reconciled_metadata:
-            print("  reconciled metadata: yes (pre-existing lines folded in)")
+            preserved = _count_preserved_fields(fm)
+            if preserved:
+                print(
+                    f"  reconciled metadata: yes (pre-existing lines folded in; "
+                    f"{preserved} extra field(s) preserved under '## Migrated metadata')"
+                )
+            else:
+                print("  reconciled metadata: yes (pre-existing lines folded in)")
         for note in fm.ambiguities:
             print(f"  ambiguity: {note}")
         print()
@@ -2332,7 +2471,7 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         try:
             parse_date(args.date, "%Y-%m-%d")
         except MetadataError as exc:
-            print(f"docs: {exc}", file=sys.stderr)
+            print(f"docs: --date: {exc}", file=sys.stderr)
             return 2
     date_str = args.date or date.today().strftime("%Y-%m-%d")
 
@@ -2365,7 +2504,7 @@ def main(argv: list[str] | None = None) -> int:
         index — regenerate INDEX.md from metadata in the docs root (M1).
         new, archive, mv, touch — mutating verbs (M2).
         check, list — validation and query verbs (M3).
-        migrate — adopt a non-conforming foreign directory (M4, in progress).
+        migrate — adopt a non-conforming foreign directory (M4).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).

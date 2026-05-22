@@ -17,9 +17,12 @@ Related:
 - Completed: 2026-05-22
 - Progress: All ten TDD phases complete (2026-05-22). Phases 1-4 (contract, RED
   tests, the `foreign/` fixture tree, RED baseline) landed on `m4/phases-1-4`;
-  phases 5-10 (implement + ship) landed on `m4/phases-5-10`. Full suite: 219
-  passed, 0 failed; `ruff` / `mypy` clean tree-wide. All milestone-setup and
-  task-plan questions resolved (operator-confirmed 2026-05-22). M4 is complete.
+  phases 5-10 (implement + ship) landed on `m4/phases-5-10`. A fresh-eyes
+  branch review of phases 5-10 added the extra-metadata-preservation and
+  archive-collision behaviours (see the "Branch review" section below). Full
+  suite: 236 passed, 0 failed; `ruff` / `mypy` clean tree-wide. All
+  milestone-setup and task-plan questions resolved (operator-confirmed
+  2026-05-22). M4 is complete.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -645,6 +648,71 @@ single-file-vs-package-split call.
 - [x] `cli.md` / `architecture.md` / `plan.md` verified to read as shipped.
 - [x] Single-file-vs-package-split call recorded (deferred to v1.1).
 
+## Branch review — phases 5-10 fresh-eyes pass (2026-05-22)
+
+A fresh-eyes review of the Step 2 implementation (M4 phases 5-10) on
+`m4/phases-5-10` returned three should-fix findings and five nits. All
+should-fixes and the operator-decided finding were addressed on this branch;
+the documented-choice nits were left as-is per the reviewer.
+
+#### Should-fix 1 — archive-move destination collision (silent data loss)
+
+Two foreign files with the same basename in different archive-style subdirs
+(e.g. `archived/dup.md` and `project-history/dup.md`) both normalise to one
+`archive/<date>/dup.md` — `apply_migration`'s `path.replace(dest)` would
+silently overwrite the first. Fixed: `apply_migration` now guards each move
+with `if dest.exists(): raise FileExistsError(dest)` (mirroring
+`_archive_one`), and `plan_migration` gained a cross-file second pass that
+flags every file sharing a destination as a low-confidence ambiguity, so the
+dry-run surfaces the collision before `--apply`. `_cmd_migrate`'s existing
+`OSError` handler maps the apply-time `FileExistsError` to exit 2.
+
+#### Should-fix 2 — `--date` error leaked the wrong field label
+
+An invalid `docs migrate --date` reported `docs: Updated: malformed date …`
+because `parse_date`'s `MetadataError` hard-codes the `Updated:` prefix.
+Fixed to match `docs archive --date`: `_cmd_migrate` now prints
+`docs: --date: {exc}`, naming the flag the user actually supplied.
+
+#### Should-fix 3 (operator-decided) — preserve foreign extra metadata
+
+`insert_metadata_block` previously dropped any metadata-shaped line that was
+not one of the four required fields. Per the operator's binding decision,
+non-required fields (`Owner:`, `Tags:`, `Related:` blocks, any other
+`Label: value` line) are now **preserved** into a `## Migrated metadata` body
+section placed immediately below the canonical block, each label renamed under
+a `Migrated-` prefix (`Related:` keeps its bullet sub-items verbatim). A
+foreign doc with no extra fields gets no section. The preserved fields live in
+the body under a `## ` heading, so `parse_metadata_block` does not re-harvest
+them and `docs check` does not validate them — the applied tree still passes
+`docs check` and round-trips through `parse()` with exactly the four required
+fields in the real block (verified). The `Migrated-` rename rule was not
+specified by the operator; the prefix is the **conductor's default choice**,
+recorded in the milestone Decisions for operator review. New fixture
+`tests/fixtures/trees/foreign/proj-extra-metadata.md` carries `Owner:` /
+`Tags:` / a `Related:` block to exercise the path; the dry-run human plan
+reports a preserved-field count per file.
+
+#### Nits
+
+- Nit 4 — stale `(M4, in progress)` in `main()`'s docstring corrected to
+  `(M4)`. (The pre-existing stale M2 comment elsewhere is out of M4 scope and
+  left untouched.)
+- Nit 5 — added a unit test for the `-milestone` branch of `infer_role`'s
+  built-in-role trailing-token extension (previously uncovered); the
+  extension itself is sound and unchanged.
+- Nit 7 — added a `--quiet` CLI test.
+- Nits 6 and 8 — documented-choice edge cases (`detect_archive_layout`
+  edges; `apply_migration` non-transactionality); left as-is per the
+  reviewer.
+
+#### Result
+
+Full suite **236 passed, 0 failed** (72 M4 tests, +17 over the original 55);
+`ruff check` / `ruff format --check` / `mypy` clean tree-wide;
+`./bin/docs check docs/` exit 0. `INDEX.md` and the dogfood snapshot
+regenerated in lockstep with the doc-body changes.
+
 ## Milestone-completion summary
 
 **M4 — Migration helper (`docs migrate`) shipped 2026-05-22** across the ten
@@ -665,8 +733,11 @@ refuses a directory that is already a docs root.
 The implementation added the `FileMigration` / `MigrationPlan` models, five
 pure inference helpers, `insert_metadata_block`, `plan_migration` /
 `apply_migration` / `migration_to_json`, and the `migrate` verb wiring to
-`bin/docs`. 55 M4 tests across `tests/test_migrate.py` and
-`tests/test_cli_migrate.py`; the full suite stands at **219 passed, 0 failed**
+`bin/docs`. A subsequent fresh-eyes branch review of phases 5-10 added two
+should-fixes (archive-move collision detection; the `--date` error label) and
+the operator-decided extra-metadata-preservation behaviour — see the "Branch
+review" section above. 72 M4 tests across `tests/test_migrate.py` and
+`tests/test_cli_migrate.py`; the full suite stands at **236 passed, 0 failed**
 with `ruff` / `mypy` clean tree-wide.
 
 The active-tree directory layout is left untouched — `--apply` adds metadata

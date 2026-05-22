@@ -189,6 +189,28 @@ Pre-existing metadata-shaped lines are reconciled into the block, not
 duplicated. `Status`/`Role` are always written from the built-in vocabulary,
 so an applied tree passes `docs check` by construction.
 
+**Preserving extra metadata.** A foreign doc may carry metadata-shaped lines
+beyond the four the convention requires — an `Owner:`, a `Tags:`, a `Related:`
+block, any other `Label: value` line. The four required fields
+(`Status`/`Role`/`Project`/`Updated`) are superseded by the inferred values,
+but every *other* field is **preserved**, never dropped. `migrate` parks the
+preserved fields in a `## Migrated metadata` body section, placed immediately
+below the canonical metadata block and above the rest of the body, and renames
+each label with a `Migrated-` prefix (`Owner:` → `Migrated-Owner:`, `Related:`
+→ `Migrated-Related:`, keeping any bullet sub-items beneath it unchanged). A
+foreign doc with no extra fields gets no such section. Because the preserved
+fields live in the body — under a `## ` heading — `docs check` does not
+validate them, so a stale foreign `Related:` path cannot fail the applied
+tree's check. The dry-run plan reports how many extra fields each file
+preserves.
+
+**Archive-move collisions.** When two foreign files with the same basename
+live in different archive-style subdirectories, both normalise to the same
+`archive/<date>/<basename>` destination. `migrate` flags every such file as a
+low-confidence ambiguity in the dry-run plan, and `--apply` refuses the run
+(exit 2) rather than silently overwriting — resolve the collision before
+re-running.
+
 Every per-file decision records a **confidence** (`high` or `low`) and, when
 the inference is not unambiguous, one or more **ambiguity** notes — so the plan
 is *complete*: every file has either a confident decision or a flagged
