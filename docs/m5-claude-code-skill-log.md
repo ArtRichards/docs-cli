@@ -80,7 +80,7 @@ this repo and runs `docs index`.
 | 5. Update Base Interfaces | Complete | 2026-05-22 | `description:` authored as one physical line (OQ-E): names the action, the positive triggers, and the scoping limiter. Checks #1/#2/#3/#8 GREEN; #4/#5 still RED (body untouched). |
 | 6. Implement Offline/Core Path | Complete | 2026-05-22 | Body authored — H1 + orientation, the never-hand-edit guardrail, binary/root location, a prose verb-redirection list (one sub-heading per verb), the prose-only-edit carve-out (OQ-H), and the convention pointer. 112 non-blank lines. All 8 `test_skill.py` checks GREEN. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | No `references/` added — the 143-line body is well under the 250-line trigger. Verification pass: `architecture.md`'s skill/install note and `cli.md`'s skill subsection re-read and confirmed accurate against the authored body — no reconciliation needed. `skills/docs/` holds only `SKILL.md`; check #7 GREEN. |
-| 8. Run Tests (GREEN) | Pending | — | Full suite green incl. `test_skill.py`; `ruff` / `mypy` clean tree-wide. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-22 | Full GREEN gate: `pytest tests/` → 244 passed (236 M1-M4 + 8 M5); `ruff check` / `ruff format --check` / `mypy` clean tree-wide; `docs check docs/` exit 0; `docs index --root docs/ --dry-run` idempotent, exit 0. |
 | 9. Implement Online/Integration | Pending | — | Dogfood: walk the trigger-scenario checklist against the authored skill; `INDEX.md` regenerated only via `docs index`; `docs check docs/` exit 0. |
 | 10. Quality, Docs, Refactor | Pending | — | Close out: `status.md` → M5 Complete + project v1-complete; completion summaries; INDEX + snapshot regenerated. |
 
@@ -784,6 +784,67 @@ authored body, and confirm the no-clutter check.
 - [x] All 8 `tests/test_skill.py` checks GREEN; `ruff` / `ruff format` / `mypy`
       clean tree-wide.
 - [x] Ready for Phase 8 (the GREEN gate run).
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Run the full quality gate and confirm the suite is fully GREEN — the structural
+half of M5's oracle satisfied, M1-M4 unbroken.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 8 row → Complete; this log entry. **No other file changed.** |
+
+#### Captured command output
+
+```
+$ .venv/bin/python -m pytest tests/ -q
+............................................................ [ ... ]
+244 passed in ~3.4s
+
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+19 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 19 source files
+
+$ ./bin/docs check docs/
+docs: no violations found            # exit 0
+
+$ ./bin/docs index --root docs/ --dry-run
+# docs — Documentation
+... <!-- docs:generated start --> ... <!-- docs:generated end -->
+                                     # exit 0 — idempotent
+```
+
+**244 passed** — exactly the expected count: 236 M1-M4 tests + 8 M5
+`tests/test_skill.py` structural checks. All eight M5 checks GREEN. No M1-M4
+regression. The three Phase-4 RED checks (#3 `description`, #4 body, #5 verbs)
+are now GREEN against the authored frontmatter and body.
+
+#### Issues / decisions
+
+- **No artifact defect.** Every M5 check passed on the first Phase-8 run — the
+  Phase-5/6 authoring satisfied the frozen oracle directly; no `SKILL.md` fix
+  was needed and no test was touched.
+
+#### Exit criteria
+
+- [x] `pytest tests/` → 244 passed (236 M1-M4 + 8 M5).
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+- [x] `./bin/docs check docs/` exit 0; `docs index --root docs/ --dry-run`
+      idempotent, exit 0.
+- [x] All 8 `tests/test_skill.py` checks GREEN — the structural oracle
+      satisfied.
+- [x] Ready for Phase 9 (the dogfood / trigger-checklist walk).
 
 ## Milestone-completion summary
 
