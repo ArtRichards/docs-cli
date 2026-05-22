@@ -64,7 +64,7 @@ agent consumes to resolve ambiguities before applying.
 | 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_migrate.py` (40 inference + planning units) and `tests/test_cli_migrate.py` (9 CLI dry-run / `--apply` / `--json` tests). |
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | `tests/fixtures/trees/foreign/` — 9 non-conforming docs incl. an archive-style subdir and a benign nested subdir; refuse-guard reuses `minimal/`. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 48 failed, 165 passed; every M4 failure is `NotImplementedError` from a stub. **Session pauses here.** |
-| 5. Update Base Interfaces | Not started | — | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block`. |
+| 5. Update Base Interfaces | Complete | 2026-05-22 | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block` implemented; 30 inference + block-insertion units green. |
 | 6. Implement Offline/Core Path | Not started | — | `plan_migration` + `_cmd_migrate` dry-run human output. |
 | 7. Update Tool/Wrapper Layer | Not started | — | `apply_migration`, `migration_to_json`, the `--apply` / `--json` branches; refuse-on-`.docs.toml` guard. |
 | 8. Run Tests (GREEN) | Not started | — | Full suite + quality gates green tree-wide. |
@@ -339,6 +339,60 @@ contract-test pass, total 165 passed.
 - [x] `ruff` / `mypy` clean tree-wide.
 - [x] RED baseline captured. **Session pauses here — Phase 5 resumes
       implementation.**
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Implement the five pure inference helpers (`infer_role`, `infer_project`,
+`infer_status`, `infer_updated`, `detect_archive_layout`) and the
+block-insertion helper `insert_metadata_block` — the base layer
+`plan_migration` and `apply_migration` build on.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | Added module-level `_ROLE_SUFFIXES` (filename token → built-in role) and `_ARCHIVE_SUBDIR_NAMES`. Filled in the six Phase-5 helper bodies. |
+
+#### Actions taken
+
+- `infer_role`: in-file `Role:` carrying a built-in role wins; else the
+  filename's trailing token (split on `[-_]`, `.md` dropped) maps via
+  `_ROLE_SUFFIXES`; else `("notes", False)`.
+- `infer_project`: `os.path.commonprefix` of the stems, trimmed to the last
+  `-`/`_`; the trimmed prefix is used only when ≥ 2 chars, else `dir_name`.
+- `infer_status`: in-file built-in `Status:` wins; else `archived` (confident)
+  when in-archive, `active` (best-effort) otherwise.
+- `infer_updated`: in-file `Updated:` parsed via `parse_date` (reused for
+  consistency, honours `date_format`); on `MetadataError` or no line, falls
+  back to `date.fromtimestamp(mtime)`.
+- `detect_archive_layout`: validates the dated archive segment against a fixed
+  ISO `%Y-%m-%d` (resolved Q2) and always emits `archive/<ISO-date>/`. A
+  conformant `archive/<ISO-date>/<file>` returns `None`; `archived/`,
+  `project-history/`, a bare `archive/file.md`, and a non-date
+  `archive/<seg>/file.md` are all normalised.
+- `insert_metadata_block`: parses the block leniently — when an H1 exists, the
+  *parsed* old title is re-emitted (the `title` kwarg is only for the
+  synthesised-H1 case); the canonical block follows `scaffold_doc`'s field
+  order with `Project:` always written; pre-existing metadata lines are
+  discarded (`parse_metadata_block` already excludes them from the body, so no
+  duplication); the result's trailing newline mirrors the original text's.
+
+#### Issues / decisions
+
+- `infer_updated` reuses `parse_date` rather than a bare `strptime` so the
+  one date parser stays the single source of truth; it still honours the
+  `date_format` parameter, verified by
+  `test_infer_updated_honours_a_non_default_date_format`.
+
+#### Exit criteria
+
+- [x] All 30 inference + `insert_metadata_block` unit tests green.
+- [x] `plan_migration` tests still RED (Phase 6).
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
 
 ## Milestone-completion summary
 

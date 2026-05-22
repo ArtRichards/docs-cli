@@ -1256,6 +1256,24 @@ def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
 # every ambiguity surfaced. The inference helpers below are pure; `plan_migration`
 # assembles the plan; `apply_migration` executes it. Dry-run by default.
 
+# Filename trailing-token → built-in role. `-adr` maps to the `decision` role
+# (ADR is the common spelling of an architecture decision record).
+_ROLE_SUFFIXES: dict[str, str] = {
+    "spec": "spec",
+    "plan": "plan",
+    "adr": "decision",
+    "log": "log",
+    "status": "status",
+    "charter": "charter",
+    "guide": "guide",
+    "runbook": "runbook",
+    "reference": "reference",
+}
+
+# Archive-style directory names `detect_archive_layout` recognises as the first
+# path segment of a non-conformant archive layout.
+_ARCHIVE_SUBDIR_NAMES: frozenset[str] = frozenset({"archive", "archived", "project-history"})
+
 
 def infer_role(filename: str, metadata: Mapping[str, str | tuple[str, ...]]) -> tuple[str, bool]:
     """Infer a doc's `Role:` from its filename and any in-file metadata.
@@ -1283,7 +1301,17 @@ def infer_role(filename: str, metadata: Mapping[str, str | tuple[str, ...]]) -> 
         `BUILTIN_ROLES`; ``confident`` is True when a suffix or a valid
         in-file ``Role:`` line determined it, False on the ``notes`` fallback.
     """
-    raise NotImplementedError("infer_role — Phase 5")
+    in_file = metadata.get("Role")
+    if isinstance(in_file, str) and in_file.strip() in BUILTIN_ROLES:
+        return in_file.strip(), True
+
+    stem = filename[:-3] if filename.endswith(".md") else filename
+    tokens = re.split(r"[-_]", stem)
+    suffix = tokens[-1].lower() if tokens else ""
+    if suffix in _ROLE_SUFFIXES:
+        return _ROLE_SUFFIXES[suffix], True
+
+    return "notes", False
 
 
 def infer_project(filenames: Sequence[str], dir_name: str) -> str:
@@ -1301,7 +1329,14 @@ def infer_project(filenames: Sequence[str], dir_name: str) -> str:
     Returns:
         The inferred project slug. Never empty.
     """
-    raise NotImplementedError("infer_project — Phase 5")
+    stems = [n[:-3] if n.endswith(".md") else n for n in filenames]
+    prefix = os.path.commonprefix(stems)
+    idx = max(prefix.rfind("-"), prefix.rfind("_"))
+    if idx >= 0:
+        prefix = prefix[:idx]
+    if len(prefix) >= 2:
+        return prefix
+    return dir_name
 
 
 def infer_status(
@@ -1325,7 +1360,10 @@ def infer_status(
         ``(status, confident)`` — ``status`` is always a member of
         `BUILTIN_STATUSES`.
     """
-    raise NotImplementedError("infer_status — Phase 5")
+    in_file = metadata.get("Status")
+    if isinstance(in_file, str) and in_file.strip() in BUILTIN_STATUSES:
+        return in_file.strip(), True
+    return ("archived", True) if in_archive else ("active", False)
 
 
 def infer_updated(
@@ -1348,7 +1386,13 @@ def infer_updated(
         ``(updated, confident)`` — ``confident`` is True when a parseable
         in-file ``Updated:`` line determined it, False on the mtime fallback.
     """
-    raise NotImplementedError("infer_updated — Phase 5")
+    in_file = metadata.get("Updated")
+    if isinstance(in_file, str):
+        try:
+            return parse_date(in_file, date_format), True
+        except MetadataError:
+            pass
+    return date.fromtimestamp(mtime), False
 
 
 def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
@@ -1374,7 +1418,25 @@ def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
         The root-relative POSIX destination path when the file must move, or
         ``None`` when it stays where it is.
     """
-    raise NotImplementedError("detect_archive_layout — Phase 5")
+    parts = rel_path.split("/")
+    first = parts[0]
+    basename = parts[-1]
+
+    if first in ("archived", "project-history"):
+        return f"archive/{archive_date}/{basename}"
+
+    if first == "archive":
+        # A conformant `archive/<ISO-date>/<basename>` needs no move; any other
+        # `archive/...` shape (bare file, non-date subdir) is normalised.
+        if len(parts) == 3:
+            try:
+                datetime.strptime(parts[1], "%Y-%m-%d")
+            except ValueError:
+                return f"archive/{archive_date}/{basename}"
+            return None
+        return f"archive/{archive_date}/{basename}"
+
+    return None
 
 
 def insert_metadata_block(
@@ -1415,7 +1477,30 @@ def insert_metadata_block(
     Returns:
         The full text of the doc with the metadata block inserted.
     """
-    raise NotImplementedError("insert_metadata_block — Phase 5")
+    try:
+        old_title, _old_metadata, body = parse_metadata_block(text)
+        h1_title = old_title
+    except MetadataError:
+        # No H1 — the whole text is body; synthesise an H1 from `title`.
+        body = text
+        h1_title = title
+
+    block = (
+        f"# {h1_title}\n"
+        "\n"
+        f"Status: {status}\n"
+        f"Role: {role}\n"
+        f"Project: {project}\n"
+        f"Updated: {updated.strftime(date_format)}\n"
+    )
+    result = f"{block}\n{body}" if body else block.rstrip("\n")
+    # Preserve the original file's trailing-newline state.
+    if text.endswith("\n"):
+        if not result.endswith("\n"):
+            result += "\n"
+    else:
+        result = result.rstrip("\n")
+    return result
 
 
 def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan:
