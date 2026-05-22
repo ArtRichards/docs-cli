@@ -521,9 +521,12 @@ def render_index(
 
     Format details (see architecture.md "INDEX renderer format"):
         - Summary line: `_Generated YYYY-MM-DD. N docs active, M archived._`
-        - Section headings: `## Active — <Role-titlecased>` and `## Archived`.
-        - Role groups follow CANONICAL_ROLE_ORDER, with `status` pinned
-          to the top of the Active groups.
+        - Active docs group two levels deep: `## Project — <name>` then
+          `### Active — <Role-titlecased>`. A single `## Archived` heading
+          trails, flat (not project-grouped).
+        - Projects: the docs-root project first, then the rest in
+          ascending order. Within a project, role groups follow
+          CANONICAL_ROLE_ORDER, with `status` pinned to the top.
         - Within each group: Updated descending, then path ascending.
         - Entry format: `- [path](path) — _role_ — <desc>. Updated YYYY-MM-DD.`
           where `path` is the doc's `root`-relative POSIX path, so docs in
@@ -538,27 +541,35 @@ def render_index(
     today = date.today().strftime(config.date_format)
     summary = f"_Generated {today}. {len(active)} docs active, {len(archived)} archived._"
 
-    role_groups: dict[str, list[Doc]] = {}
-    for d in active:
-        role_groups.setdefault(d.role, []).append(d)
-
     role_order = ["status"] + [r for r in CANONICAL_ROLE_ORDER if r != "status"]
     sort_key = lambda d: (  # noqa: E731
         -d.updated.toordinal(),
         d.path.relative_to(root).as_posix(),
     )
 
+    # Active docs group two levels deep: Project, then Role. The docs-root
+    # project leads; the rest follow in ascending order.
+    by_project: dict[str, dict[str, list[Doc]]] = {}
+    for d in active:
+        by_project.setdefault(_resolved_project(d, config), {}).setdefault(d.role, []).append(d)
+    others = sorted(p for p in by_project if p != config.project)
+    project_order = ([config.project] if config.project in by_project else []) + others
+
     lines: list[str] = [summary, ""]
-    for role in role_order:
-        group = role_groups.get(role)
-        if not group:
-            continue
-        group.sort(key=sort_key)
-        lines.append(f"## Active — {role.title()}")
+    for project in project_order:
+        lines.append(f"## Project — {project}")
         lines.append("")
-        for d in group:
-            lines.append(_format_entry(d, config, root))
-        lines.append("")
+        role_groups = by_project[project]
+        for role in role_order:
+            group = role_groups.get(role)
+            if not group:
+                continue
+            group.sort(key=sort_key)
+            lines.append(f"### Active — {role.title()}")
+            lines.append("")
+            for d in group:
+                lines.append(_format_entry(d, config, root))
+            lines.append("")
 
     lines.append("## Archived")
     lines.append("")
@@ -852,7 +863,22 @@ def _iter_doc_texts(root: Path, config: Config) -> Iterator[tuple[Path, str]]:
     ``INDEX.md``, and dotfiles / dotdirectories are skipped. Yields in
     root-relative POSIX path order, matching `walk()`.
     """
-    raise NotImplementedError("_iter_doc_texts() — Phase 5")
+    collected: list[tuple[str, Path]] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fname in filenames:
+            if fname.startswith("."):
+                continue
+            if not fname.endswith(".md"):
+                continue
+            file_path = Path(dirpath) / fname
+            rel = file_path.relative_to(root).as_posix()
+            if rel == INDEX_FILENAME:
+                continue
+            collected.append((rel, file_path))
+    collected.sort(key=lambda pair: pair[0])
+    for _rel, file_path in collected:
+        yield file_path, file_path.read_text()
 
 
 def _resolved_project(doc: Doc, config: Config) -> str:
@@ -862,7 +888,7 @@ def _resolved_project(doc: Doc, config: Config) -> str:
     the INDEX renderer and `docs list` group and report by the resolved value,
     never None.
     """
-    raise NotImplementedError("_resolved_project() — Phase 5")
+    return doc.project if doc.project is not None else config.project
 
 
 def check_doc(
@@ -896,8 +922,123 @@ def check_doc(
     fields, vocabulary, nor the date format) plus `validate_status`,
     `validate_role`, and `parse_date`, each guarded so a rejection becomes a
     `Finding` rather than an exception.
+
+    Note: `parse_metadata_block` terminates the metadata block at the first
+    non-label line rather than raising, so the only structural breakage it
+    surfaces — and thus the only `malformed` finding — is a missing H1.
     """
-    raise NotImplementedError("check_doc() — Phase 5")
+    findings: list[Finding] = []
+
+    # --- structural parse: a missing H1 is `malformed`, nothing else to do ---
+    try:
+        _title, metadata, _body = parse_metadata_block(text)
+    except MetadataError as exc:
+        findings.append(Finding(path, "error", "malformed", str(exc)))
+        return findings
+
+    def _is_empty(value: str | tuple[str, ...] | None) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return not value.strip()
+        return len(value) == 0
+
+    # --- missing or empty required fields ---
+    for field in ("Status", "Role", "Updated"):
+        if _is_empty(metadata.get(field)):
+            findings.append(
+                Finding(path, "error", "missing-field", f"missing or empty required field: {field}")
+            )
+
+    status = metadata.get("Status")
+    role = metadata.get("Role")
+    updated_raw = metadata.get("Updated")
+
+    # --- vocabulary ---
+    if isinstance(status, str) and status.strip():
+        try:
+            validate_status(status.strip(), config.statuses)
+        except VocabularyError as exc:
+            findings.append(Finding(path, "error", "bad-vocab", str(exc)))
+    if isinstance(role, str) and role.strip():
+        try:
+            validate_role(role.strip(), config.roles)
+        except VocabularyError as exc:
+            findings.append(Finding(path, "error", "bad-vocab", str(exc)))
+
+    # --- date ---
+    updated: date | None = None
+    if isinstance(updated_raw, str) and updated_raw.strip():
+        try:
+            updated = parse_date(updated_raw, config.date_format)
+        except MetadataError as exc:
+            findings.append(Finding(path, "error", "bad-date", str(exc)))
+
+    # --- status / location drift ---
+    if isinstance(status, str) and status.strip():
+        try:
+            rel = path.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            rel = path.name
+        in_archive = rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
+        status_value = status.strip()
+        if status_value == "archived" and not in_archive:
+            findings.append(
+                Finding(
+                    path,
+                    "error",
+                    "status-drift",
+                    "Status: archived but the file is outside the archive subtree",
+                )
+            )
+        elif status_value != "archived" and in_archive:
+            findings.append(
+                Finding(
+                    path,
+                    "error",
+                    "status-drift",
+                    f"Status: {status_value!r} but the file is inside the archive subtree",
+                )
+            )
+
+    # --- broken Related: refs ---
+    raw_related = metadata.get("Related")
+    if raw_related is not None:
+        entries = raw_related if isinstance(raw_related, tuple) else (raw_related,)
+        for entry in entries:
+            _verb, sep, target = entry.partition(":")
+            target = target.strip()
+            if not sep or not target:
+                continue
+            if not (root / target).is_file():
+                findings.append(
+                    Finding(
+                        path,
+                        "error",
+                        "broken-ref",
+                        f"Related: target does not resolve to a file: {target}",
+                    )
+                )
+
+    # --- stale (warning; only with --stale, only Status: active) ---
+    if (
+        stale is not None
+        and isinstance(status, str)
+        and status.strip() == "active"
+        and updated is not None
+        and (today - updated).days > stale
+    ):
+        findings.append(
+            Finding(
+                path,
+                "warning",
+                "stale",
+                f"Status: active but not updated in {(today - updated).days} days "
+                f"(stale threshold {stale})",
+            )
+        )
+
+    return findings
 
 
 def check_tree(root: Path, config: Config, stale: int | None, today: date) -> list[Finding]:
@@ -917,7 +1058,11 @@ def exit_code_for(findings: list[Finding]) -> int:
     error, and 0 when ``findings`` is empty — the matrix cli.md pins so CI
     hooks can branch on it.
     """
-    raise NotImplementedError("exit_code_for() — Phase 5")
+    if any(f.severity == "error" for f in findings):
+        return 2
+    if any(f.severity == "warning" for f in findings):
+        return 1
+    return 0
 
 
 def query_docs(
