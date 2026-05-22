@@ -13,16 +13,17 @@ Related:
 
 ## Current milestone
 
-**M3 — Validation and query (`check`, `list`) is in flight.** Started 2026-05-22.
+**No milestone in flight.** M3 — Validation and query (`check`, `list`)
+shipped 2026-05-22 across ten TDD phases. **M4 — Migration helper
+(`docs migrate`) is next** — its task plan is authored when the milestone is
+activated, not yet.
 
-- Task plan: [m3-validation-and-query.md](m3-validation-and-query.md)
-- Implementation log: [m3-validation-and-query-log.md](m3-validation-and-query-log.md)
-
-M3 adds two read-only verbs — `docs check` (validate the tree, with CI-usable
+M3 added two read-only verbs — `docs check` (validate the tree, with CI-usable
 exit codes) and `docs list` (filterable query view with a stable JSON schema) —
-and regroups `INDEX.md` by `Project` then `Role`. Phases 1–4 (contract, RED
-tests, fixtures, RED baseline) run first; the session **pauses at the RED
-baseline**, and phases 5–10 resume implementation.
+and regrouped `INDEX.md` by `Project` then `Role`. See
+[m3-validation-and-query-log.md](m3-validation-and-query-log.md) for the
+per-phase history and [m3-validation-and-query.md](m3-validation-and-query.md)
+for the milestone summary.
 
 M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) shipped 2026-05-21
 across ten TDD phases. See [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md)
@@ -40,7 +41,7 @@ for the milestone summary.
 |---|---|---|---|
 | M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](m1-parser-and-index.md) | [Log](m1-parser-and-index-log.md) |
 | M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
-| M3 — Validation and query (`check`, `list`) | **In flight** (started 2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
+| M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | Pending | _not yet created_ | _not yet created_ |
 | M5 — Claude Code skill | Pending | _not yet created_ | _not yet created_ |
 
@@ -75,21 +76,22 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — five-milestone roadmap; M1 and M2 are shipped, **M3 is in flight**. Read the M3 section and the Resolved / Open questions.
-4. `docs/cli.md` — the command spec; the `docs check` and `docs list` subsections are the M3 contract
-5. `docs/m2-mutating-verbs.md` — most recently shipped milestone; the **Milestone-completion summary** lists the M2 code surface (four verbs + shared helpers)
-6. `docs/m2-mutating-verbs-log.md` — M2 per-phase history, for implementation detail
-7. `docs/m1-parser-and-index.md` — M1 summary: the parser / walker / renderer / config surface M3 builds on
+3. `docs/plan.md` — five-milestone roadmap; M1–M3 are shipped, **M4 is next**. Read the M4 section and the Resolved / Open questions.
+4. `docs/cli.md` — the command spec; the full seven-verb `docs` command surface
+5. `docs/m3-validation-and-query.md` — most recently shipped milestone; the **Milestone-completion summary** lists the M3 code surface (`check` / `list` + the validation/query helpers)
+6. `docs/m3-validation-and-query-log.md` — M3 per-phase history, for implementation detail
+7. `docs/m1-parser-and-index.md`, `docs/m2-mutating-verbs.md` — the parser / walker / renderer / config / mutating-verb surface M4 builds on
 8. `docs/convention.md`, `docs/architecture.md` — the specs the implementation must satisfy
-9. `docs/definition-of-ready.md` — the gate to clear before M3 implementation starts
+9. `docs/definition-of-ready.md` — the gate to clear before a milestone's implementation starts
 
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # M3 in flight: M1/M2 green; M3 + reworked INDEX tests RED at the Phase 4 baseline
+.venv/bin/python -m pytest tests/ -q          # all green (164 passed)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
+./bin/docs check docs/                        # dogfood — exit 0
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
 If `.venv/` is missing (fresh clone):
@@ -98,22 +100,17 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: resume M3 at Phase 5 — Update Base Interfaces.** Phases 1–4
-(contract, RED tests, fixtures, RED baseline) are complete; the session paused
-at the RED baseline by request. Phase 5 implements the shared helpers
-(`_iter_doc_texts`, `check_doc`, `exit_code_for`, `_resolved_project`) and the
-INDEX Project→Role renderer rework; phases 6–10 finish the verbs and ship. See
-[m3-validation-and-query.md](m3-validation-and-query.md) for the full phase plan
-and [m3-validation-and-query-log.md](m3-validation-and-query-log.md) for
-per-phase history. M3's exit criteria: `docs check` returns 0 on this repo's
-own `docs/`, and `docs list --json` matches the schema pinned in `cli.md`.
+**Next action: start M4 — Migration helper (`docs migrate`).** M1–M3 are
+shipped. M4's task plan and log do not exist yet; author `m4-*.md` and its log
+first (per-milestone plans are created when the milestone is activated), then
+run the ten TDD phases. See [plan.md](plan.md)'s M4 section for the scope.
 
 **Watch out for** (durable gotchas, still current):
-- **M3 is mid-flight (paused after Phase 4).** The test suite intentionally shows ~55 failures — that is the M3 RED baseline (phases 1–4), not a regression. They turn green as phases 5–8 implement the verbs; do not "repair" them by reverting. Phase 5's `render_index` rework also requires regenerating `docs/INDEX.md` and the dogfood snapshot into the two-level `Project → Role` layout, in lockstep.
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
 - Quality gates run **tree-wide**: `ruff check .`, `ruff format --check .`, and `mypy` (no args — `pyproject.toml` scopes it to `bin/docs` + `tests/`). Commit once per TDD phase on `main`.
 - The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is spec-compliant, not hand-authored. If you change a `docs/*.md` body so its first paragraph or `Updated:` line changes, regenerate `docs/INDEX.md` and the snapshot in lockstep (`./bin/docs index --root docs`, then copy `docs/INDEX.md` onto the fixture). Editing a doc means bumping that doc's own `Updated:` per the convention.
-- `docs mv` rewrites `Related:` metadata bullets only — prose markdown links in bodies are deliberately left alone (see the M2 Phase 9 log). Relevant to M3: `docs check` validates `Related:` paths, not prose links.
+- `docs mv` rewrites `Related:` metadata bullets only — prose markdown links in bodies are deliberately left alone (see the M2 Phase 9 log). `docs check` likewise validates `Related:` paths, not prose links.
+- `docs check`'s `malformed` rule covers a **missing H1 only** — `parse_metadata_block` ends the metadata block at the first non-label line rather than raising, so a malformed in-block line is not separately detectable (M3 Phase 5 decision).
 - INDEX markers quoted in a doc's preamble must be backtick-styled inline code, so the line-anchored detector (`_find_marker_lines`) does not false-match them.
 - The metadata block may contain one blank line between the inline `Label: value` run and a trailing bare-label group (`Related:` + bullets). `_metadata_line_span` in `bin/docs` is the single source of that block-boundary rule.
 - Git author email for this repo is `art@bitholdersinc.com` (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`.

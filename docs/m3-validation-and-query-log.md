@@ -14,9 +14,8 @@ Related:
 - Project: docs
 - Milestone: M3 — Validation and query (`check`, `list`)
 - Started: 2026-05-22
-- Progress: Phases 1–4 complete — contract, RED tests, fixtures, and the RED
-  baseline (55 failed / 109 passed) are in place. **The session paused at the
-  RED baseline by request;** phases 5–10 resume implementation.
+- Progress: Complete — all ten TDD phases shipped 2026-05-22. Full suite green
+  (164 passed); `docs check docs/` exits 0.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -37,12 +36,12 @@ malformed tree is reported, not crashed on.
 | 2. Write Tests (RED) | Complete | 2026-05-22 | 52 M3 tests across 4 new files; `test_index.py` reworked for two-level grouping (5 updated, 3 added). 164 tests collect cleanly. |
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | Three fixture trees: `drift/` (4 docs), `invalid/` (7 docs), `multi-project/` (9 docs). |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | 55 failed / 109 passed. Every M3 failure traces to `NotImplementedError`, a stub exit code, or the un-reworked renderer. **Session paused here by request.** |
-| 5. Update Base Interfaces | Pending | — | `_iter_doc_texts`, `check_doc`, `exit_code_for`, `_resolved_project`; INDEX renderer rework. |
-| 6. Implement Offline/Core Path | Pending | — | `check_tree`, `query_docs`, verb cores. |
-| 7. Update Tool/Wrapper Layer | Pending | — | `--json` output, exit-code mapping. |
-| 8. Run Tests (GREEN) | Pending | — | |
-| 9. Implement Online/Integration | Pending | — | Dogfood `check` / `list` on `docs/`. |
-| 10. Quality, Docs, Refactor | Pending | — | |
+| 5. Update Base Interfaces | Complete | 2026-05-22 | `_iter_doc_texts`, `_resolved_project`, `check_doc`, `exit_code_for`; `render_index` reworked two-level; `docs/INDEX.md` + snapshot regenerated. 55 → 28 failing. |
+| 6. Implement Offline/Core Path | Complete | 2026-05-22 | `check_tree`, `query_docs`, `_cmd_check` / `_cmd_list` human output. 28 → 7 failing (all `--json`). |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | `finding_to_json`, `doc_to_json`, the `--json` branches. Full suite GREEN — 164 passed. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-22 | 164 passed; `ruff` / `mypy` clean tree-wide. Verification-only — no commit. |
+| 9. Implement Online/Integration | Complete | 2026-05-22 | Dogfood: `check docs/` exit 0, `list` / `list --json` correct on `docs/`. No doc defects. |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-22 | `status.md` / `plan.md` / milestone doc + this log updated; M3 → Complete. |
 
 ## Current State Analysis (snapshot at milestone kickoff, 2026-05-22)
 
@@ -308,3 +307,160 @@ no implementation; the RED baseline (55 failed / 109 passed) is unchanged:
 **Resume at Phase 5.** See this milestone's [task plan](m3-validation-and-query.md)
 (the TDD Implementation Plan) and [status.md](status.md)'s "Resuming this work"
 section.
+
+## Phase logs — implementation (phases 5–10)
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-22
+
+#### Objective
+Implement the shared pure helpers and rework the INDEX renderer, greening the
+per-doc `check` tests and the two-level renderer tests.
+
+#### Actions taken
+- Implemented `_iter_doc_texts` (lenient traversal — mirrors `walk()`'s skip
+  rules but yields raw `(path, text)`), `_resolved_project`, `exit_code_for`,
+  and `check_doc` (the seven validation rules, each guarded so a rejection
+  becomes a `Finding`).
+- Reworked `render_index` to the two-level `## Project — <name>` /
+  `### Active — <Role>` layout; docs-root project first then alphabetical;
+  `## Archived` unchanged. `_format_entry` and the marker-splice logic
+  untouched.
+- Regenerated `docs/INDEX.md` via `./bin/docs index docs/` and copied it onto
+  `tests/fixtures/expected/docs-INDEX.md` — the renderer change would
+  otherwise break `test_index_output_matches_frozen_snapshot`.
+
+#### Issues / decisions
+- **`malformed` = missing H1 only.** `parse_metadata_block` ends the metadata
+  block at the first non-label line rather than raising, so a malformed
+  in-block line is not separately detectable. `check_doc`'s `malformed` rule
+  therefore fires only on a missing H1 — the one structural breakage the
+  parser surfaces. No fixture exercises any other case; recorded as a durable
+  gotcha in [status.md](status.md).
+- Deferred `import json` to Phase 7 (its first use) to keep Phase 5 clean
+  under `ruff`.
+
+#### Exit criteria
+- [x] `test_check.py` per-doc rules + `exit_code_for` green; `test_index.py`
+      green; `test_cli_index.py` frozen-snapshot still green.
+- [x] `ruff` / `mypy` clean. RED baseline 55 → 28 failing.
+
+### Phase 6 — Implement Offline/Core Path
+
+**Completed:** 2026-05-22
+
+#### Objective
+`check_tree`, `query_docs`, and the two verb cores with human output.
+
+#### Actions taken
+- `check_tree` — aggregates `check_doc` across `_iter_doc_texts`; findings
+  emerge in root-relative path order with per-doc rule order intact, so no
+  explicit re-sort is needed.
+- `query_docs` — parses each doc from `_iter_doc_texts`, **skipping**
+  `MetadataError` / `VocabularyError` so `list` stays lenient; recomputes the
+  archived flag `walk()`-style (`parse()` hardcodes `archived=False`); applies
+  AND-combined `status` / `role` / `project` / `stale` filters; sorts by
+  Status, Role, Updated descending.
+- `_cmd_check` / `_cmd_list` — root resolution, `load_config`, human output
+  (findings grouped by file; docs grouped by Status then Role). `_cmd_list`
+  always exits 0; `_cmd_check` returns `exit_code_for(...)`. Added the shared
+  `_root_relative` path helper.
+- The `--json` branch of each verb is stubbed `NotImplementedError("… —
+  Phase 7")`, matching the codebase's phase-stub idiom.
+
+#### Exit criteria
+- [x] `test_check.py`, `test_query.py`, and the non-`--json` CLI tests green.
+- [x] `ruff` / `mypy` clean. 28 → 7 failing (all `--json` tests).
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+**Completed:** 2026-05-22
+
+#### Objective
+Finalize the CLI — `--json` output for both verbs.
+
+#### Actions taken
+- `finding_to_json` → `{path, severity, rule, message}`; `doc_to_json` → the
+  schema pinned in [cli.md](cli.md) (`path` root-relative, `project`
+  resolved, `updated` an ISO `YYYY-MM-DD` string regardless of
+  `date_format`, `related` an array of `{verb, target}`, `extra_fields` an
+  object with tuple values rendered as JSON arrays).
+- Added `import json`; replaced the two stubbed `--json` branches with
+  `json.dumps([...], indent=2)` to stdout.
+
+#### Exit criteria
+- [x] Every CLI test green, including the `--json` schema tests.
+- [x] Full suite GREEN — 164 passed; `ruff` / `mypy` clean.
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-22
+
+Full quality gate: `pytest -q` → 164 passed; `ruff check .` → all checks
+passed; `ruff format --check .` → all files formatted; `mypy` → success
+tree-wide. Verification-only — nothing to fix, no commit.
+
+### Phase 9 — Implement Online/Integration (dogfood pass)
+
+**Completed:** 2026-05-22
+
+#### Objective
+Exercise `check` and `list` against this repo's own `docs/`.
+
+#### Actions taken
+- `docs check docs/` → exit 0 (`docs: no violations found`); `docs check
+  docs/ --stale 365` → exit 0 (no doc is that stale).
+- `docs list --root docs/` → exit 0, table grouped by Status then Role;
+  `docs list --root docs/ --json` → 16 records, every record matching the
+  pinned schema, 16 carrying `related` arrays of `{verb, target}` objects.
+- `docs check tests/fixtures/trees/invalid --json` → exit 2, seven findings
+  across five rules.
+- `docs/INDEX.md` was already regenerated in Phase 5; no doc defect surfaced,
+  so no doc was changed here.
+
+#### Exit criteria
+- [x] `check docs/` returns exit 0; `list --json` validates against the schema.
+
+### Phase 10 — Quality, Docs, Refactor
+
+**Completed:** 2026-05-22
+
+#### Objective
+Close out M3.
+
+#### Actions taken
+- Re-ran the full quality gate — all green.
+- [status.md](status.md): M3 → Complete, M4 flagged next, progress table and
+  "Resuming this work" section updated, the M3 RED-baseline gotcha removed and
+  the `malformed`-rule gotcha added.
+- [plan.md](plan.md): the INDEX-grouping open question moved to Resolved
+  questions (resolved by `Project`); the extra-field allowlist question stays
+  parked.
+- Appended the Milestone-completion summary to
+  [m3-validation-and-query.md](m3-validation-and-query.md) and this log;
+  filled the phase table; ticked the Phase Checklist, Deliverables, and
+  Success Criteria.
+- Regenerated `docs/INDEX.md` and the frozen snapshot in lockstep (this
+  log's first-paragraph `Progress:` line changed, so its INDEX description
+  did too).
+
+#### Exit criteria
+- [x] Quality gate green; all milestone docs updated; M3 ready to close.
+
+## Milestone-completion summary
+
+**M3 — Validation and query (`check`, `list`) shipped 2026-05-22**, all ten
+TDD phases complete.
+
+- **Result:** two read-only verbs (`docs check`, `docs list`) and a two-level
+  `Project` → `Role` INDEX renderer. Full suite green — 164 passed (52 new M3
+  tests); `ruff` / `mypy` clean tree-wide; `docs check docs/` exits 0.
+- **RED → GREEN:** Phase 4 baseline 55 failed / 109 passed → Phase 5 28
+  failed → Phase 6 7 failed → Phase 7 0 failed.
+- **Commits:** one per implementing phase on `main` (phases 5, 6, 7, 10;
+  phases 8–9 were verification-only with no changes to commit).
+- **Accepted spec gap:** the `malformed` rule covers a missing H1 only — see
+  the Phase 5 log and [status.md](status.md)'s durable gotchas.
+- **Next:** M4 — Migration helper (`docs migrate`); its task plan is authored
+  when the milestone is activated.

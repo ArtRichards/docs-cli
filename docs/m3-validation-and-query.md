@@ -20,7 +20,7 @@ Related:
 - Title: Validation and query (`check`, `list`)
 - Surface: two new read-only CLI subcommands on the `docs` executable, plus a
   rework of the INDEX renderer.
-- Status: ACTIVE (started 2026-05-22)
+- Status: COMPLETE (shipped 2026-05-22)
 
 ### Goal
 
@@ -52,19 +52,19 @@ tree navigates by project.
 
 ### Deliverables
 
-- [ ] Two subcommands functional on `bin/docs`: `check`, `list`.
-- [ ] `Finding` model + shared validators; the lenient traversal
+- [x] Two subcommands functional on `bin/docs`: `check`, `list`.
+- [x] `Finding` model + shared validators; the lenient traversal
       `_iter_doc_texts` reused by both verbs.
-- [ ] INDEX renderer reworked to two-level `Project` → `Role` grouping.
-- [ ] `tests/test_check.py`, `tests/test_query.py`, `tests/test_cli_check.py`,
+- [x] INDEX renderer reworked to two-level `Project` → `Role` grouping.
+- [x] `tests/test_check.py`, `tests/test_query.py`, `tests/test_cli_check.py`,
       `tests/test_cli_list.py`; `tests/test_index.py` updated for the new layout.
-- [ ] Fixture trees for validation (`drift/`, `invalid/`) and query
+- [x] Fixture trees for validation (`drift/`, `invalid/`) and query
       (`multi-project/`).
-- [ ] Dogfood: `docs check docs/` returns exit 0 on this repo; `docs list
+- [x] Dogfood: `docs check docs/` returns exit 0 on this repo; `docs list
       --json` validates against the documented schema.
-- [ ] All quality gates green tree-wide: `ruff check .`, `ruff format --check
+- [x] All quality gates green tree-wide: `ruff check .`, `ruff format --check
       .`, `mypy`, `pytest -q`.
-- [ ] `docs/status.md` and `docs/plan.md` updated; M3 → Complete.
+- [x] `docs/status.md` and `docs/plan.md` updated; M3 → Complete.
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-22)
 
@@ -92,8 +92,8 @@ Milestone-completion summary at the bottom of this file._
 
 The ten phases follow the fixed methodology in [status.md](status.md). Phases
 1–4 establish the contract, tests, fixtures, and RED baseline with **no verb
-implementation**; phases 5–10 implement and ship. **This session executes
-phases 1–4 and pauses at the RED baseline.**
+implementation**; phases 5–10 implement and ship. **All ten phases are
+complete — see the Milestone-completion summary at the end of this file.**
 
 ### Phase 1: Define Contract
 
@@ -207,12 +207,12 @@ phases 1–4 and pauses at the RED baseline.**
 - [x] Phase 2: Write Tests (RED)
 - [x] Phase 3: Create Data/Fixtures
 - [x] Phase 4: Run Tests (RED Baseline)
-- [ ] Phase 5: Update Base Interfaces
-- [ ] Phase 6: Implement Offline/Core Path
-- [ ] Phase 7: Update Tool/Wrapper Layer
-- [ ] Phase 8: Run Tests (GREEN)
-- [ ] Phase 9: Implement Online/Integration (dogfood pass)
-- [ ] Phase 10: Quality, Docs, Refactor
+- [x] Phase 5: Update Base Interfaces
+- [x] Phase 6: Implement Offline/Core Path
+- [x] Phase 7: Update Tool/Wrapper Layer
+- [x] Phase 8: Run Tests (GREEN)
+- [x] Phase 9: Implement Online/Integration (dogfood pass)
+- [x] Phase 10: Quality, Docs, Refactor
 
 ## Decisions
 
@@ -277,14 +277,61 @@ all commands green; `docs check docs/` exits 0.
 
 M3 is complete when:
 
-- [ ] All Phase Checklist items are checked.
-- [ ] `docs check` and `docs list` work per [cli.md](cli.md), including
+- [x] All Phase Checklist items are checked.
+- [x] `docs check` and `docs list` work per [cli.md](cli.md), including
       `--json` and the documented exit codes.
-- [ ] `docs check docs/` returns exit 0 on this repo's own docs tree.
-- [ ] `docs list --json` output validates against the schema pinned in cli.md.
-- [ ] The INDEX renders the two-level `Project` → `Role` layout.
-- [ ] All Deliverables above are checked off.
-- [ ] [status.md](status.md) reflects M3 → Complete and [plan.md](plan.md)'s
+- [x] `docs check docs/` returns exit 0 on this repo's own docs tree.
+- [x] `docs list --json` output validates against the schema pinned in cli.md.
+- [x] The INDEX renders the two-level `Project` → `Role` layout.
+- [x] All Deliverables above are checked off.
+- [x] [status.md](status.md) reflects M3 → Complete and [plan.md](plan.md)'s
       INDEX-grouping open question is resolved.
-- [ ] [m3-validation-and-query-log.md](m3-validation-and-query-log.md) contains
+- [x] [m3-validation-and-query-log.md](m3-validation-and-query-log.md) contains
       a milestone-completion summary.
+
+## Milestone-completion summary
+
+**Shipped 2026-05-22**, all ten TDD phases complete. Full suite green —
+164 passed; `ruff check` / `ruff format --check` / `mypy` clean tree-wide;
+`docs check docs/` exits 0.
+
+### Code surface added to `bin/docs`
+
+- **`docs check [DIR] [--root R] [--stale N] [--json]`** — validates a tree
+  and returns CI-usable exit codes (0 clean / 1 warnings only / 2 errors).
+  Reports seven rules: `missing-field`, `bad-vocab`, `bad-date`, `malformed`,
+  `status-drift`, `broken-ref`, and (with `--stale N`) `stale`.
+- **`docs list [--root R] [--status S] [--role R] [--project P] [--stale N]
+  [--json]`** — filters the tree (filters AND-combined), prints a table
+  grouped by Status then Role, or a JSON array; always exits 0.
+- **`Finding`** frozen dataclass — `path`, `severity`, `rule`, `message`.
+- **`_iter_doc_texts`** — lenient traversal: mirrors `walk()`'s skip rules
+  but yields raw `(path, text)` without parsing, so `check` / `list` cope
+  with docs `parse()` would reject.
+- **`check_doc` / `check_tree` / `exit_code_for`** — per-doc validation, tree
+  aggregation, and the exit-code mapping.
+- **`query_docs`** — lenient parse + AND-combined filtering + Status/Role/
+  Updated-descending sort.
+- **`_resolved_project`** — `Doc.project` or the config default, never None.
+- **`finding_to_json` / `doc_to_json`** — the `--json` record builders for
+  the schemas pinned in [cli.md](cli.md).
+- **`render_index`** — reworked to the two-level `## Project — <name>` /
+  `### Active — <Role>` layout; `_format_entry` and the marker-splice logic
+  unchanged.
+
+### Decisions realised
+
+All six milestone Decisions held through implementation. One spec gap was
+accepted in Phase 5: the `malformed` rule covers a **missing H1 only** —
+`parse_metadata_block` ends the metadata block at the first non-label line
+rather than raising, so a malformed in-block line is not separately
+detectable. No fixture exercises it; recorded in the log and in
+[status.md](status.md)'s durable gotchas.
+
+### Verification
+
+`docs check docs/` → exit 0; `docs list --root docs/ --json` → 16 records
+matching the pinned schema; `docs check tests/fixtures/trees/invalid --json`
+→ exit 2 with five rules reported. `docs/INDEX.md` and the frozen snapshot
+`tests/fixtures/expected/docs-INDEX.md` were regenerated in lockstep with the
+renderer rework.
