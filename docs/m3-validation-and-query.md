@@ -249,6 +249,12 @@ and `dual-status-adr.md`):
 - **`check` / `list` take no `--dry-run`.** They are read-only, so they do not
   use the `common` parent parser (which carries `--dry-run`). `check` takes a
   positional `[DIR]` like `index`; `list` is `--root`-only, matching cli.md.
+- **`bin/docs` stays a single file.** [definition-of-ready.md](definition-of-ready.md)'s
+  risk log and M2's Decisions both flagged a possible package split "at M3".
+  After the Phase 1 contract `bin/docs` is ~1,520 lines — large, but sectioned
+  with header comments and clean under `ruff` / `mypy`. M3 adds two verbs and a
+  renderer rework within that structure; the file is not "unworkable", so the
+  split stays deferred — revisit at M4/M5 or v1.1.
 
 ## Testing / Quality Gate
 

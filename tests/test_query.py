@@ -32,8 +32,8 @@ def _q(fixtures_dir: Path, **kw):
 
 def test_query_no_filters_returns_all_docs(fixtures_dir):
     docs = _q(fixtures_dir)
-    # multi-project has 8 docs: 7 in the active tree + 1 archived.
-    assert len(docs) == 8
+    # multi-project has 9 docs: 8 in the active tree + 1 archived.
+    assert len(docs) == 9
 
 
 def test_query_filter_by_status(fixtures_dir):

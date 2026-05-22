@@ -35,7 +35,7 @@ malformed tree is reported, not crashed on.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-22 | `Finding` + 8 helper stubs + 2 `_cmd_*` stubs + `check`/`list` subparsers in `bin/docs`; `cli.md` JSON schemas pinned; `architecture.md` INDEX format reworked; M3 plan + log created. |
 | 2. Write Tests (RED) | Complete | 2026-05-22 | 52 M3 tests across 4 new files; `test_index.py` reworked for two-level grouping (5 updated, 3 added). 164 tests collect cleanly. |
-| 3. Create Data/Fixtures | Complete | 2026-05-22 | Three fixture trees: `drift/` (4 docs), `invalid/` (7 docs), `multi-project/` (8 docs). |
+| 3. Create Data/Fixtures | Complete | 2026-05-22 | Three fixture trees: `drift/` (4 docs), `invalid/` (7 docs), `multi-project/` (9 docs). |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | 55 failed / 109 passed. Every M3 failure traces to `NotImplementedError`, a stub exit code, or the un-reworked renderer. **Session paused here by request.** |
 | 5. Update Base Interfaces | Pending | — | `_iter_doc_texts`, `check_doc`, `exit_code_for`, `_resolved_project`; INDEX renderer rework. |
 | 6. Implement Offline/Core Path | Pending | — | `check_tree`, `query_docs`, verb cores. |
@@ -50,7 +50,7 @@ _Captured before Phase 1; historical._
 
 - **Codebase:** `bin/docs` shipped at M1+M2 — parser, walker, renderer, five
   verbs, config loading, surgical metadata editors. 112 passing tests across
-  11 files.
+  10 files.
 - **Reuse available:** `parse`, `parse_metadata_block`, `_metadata_line_span`,
   `walk`, `validate_status`, `validate_role`, `parse_date`, `load_config`,
   `find_root`, `render_index`, `_format_entry`, `atomic_write`,
@@ -207,7 +207,7 @@ failure at Phase 4 is missing implementation.
 |---|---|---|
 | `tests/fixtures/trees/drift/` | Create | `.docs.toml` + 4 docs: `wrongly-archived.md` (archived status in the active tree), `archive/2026-01-01/wrongly-active.md` (active status in the archive subtree), plus `clean.md` and `archive/2026-01-01/properly-archived.md` as negative controls. |
 | `tests/fixtures/trees/invalid/` | Create | `.docs.toml` + 7 docs, one per non-drift rule: missing `Status`, empty `Role`, unknown status, unknown role, unparseable `Updated`, a broken `Related:` ref, and a doc with no H1. |
-| `tests/fixtures/trees/multi-project/` | Create | `.docs.toml` + 8 docs across projects `alpha` / `beta` / (root default), spanning every status and several roles, with varied `Updated:` dates, one `Related:` block, one extra field, a subdirectory, and an archived doc. |
+| `tests/fixtures/trees/multi-project/` | Create | `.docs.toml` + 9 docs across projects `alpha` / `beta` / (root default), spanning every status and several roles, with varied `Updated:` dates, one `Related:` block, one extra field, a subdirectory, and an archived doc. Two `alpha` specs share a Status/Role group so the within-group sort is exercised. |
 
 Existing `trees/minimal/` is reused for the clean-tree `check` test.
 
