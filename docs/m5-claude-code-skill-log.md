@@ -70,7 +70,7 @@ this repo and runs `docs index`.
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-22 | `skills/docs/SKILL.md` created with valid frontmatter + stub body; `tests/test_skill.py` created with 8 check signatures; `cli.md` skill pointer + `architecture.md` skill/install note; `status.md` refreshed. |
-| 2. Write Tests (RED) | Pending | — | `tests/test_skill.py` structural checks implemented; the trigger-scenario checklist written into this log. |
+| 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_skill.py` — the 8 structural checks implemented; the 11-row trigger-scenario checklist written into this log. RED: 3 content-driven checks fail on the stub body / TODO tokens; 5 shape/clutter checks legitimately pass. |
 | 3. Create Data/Fixtures | Pending | — | No new fixture tree — structural checks read the real artifact + `bin/docs`; the dogfood reads this repo's `docs/`. A conscious "nothing to stage" outcome. |
 | 4. Run Tests (RED Baseline) | Pending | — | `pytest tests/` — every `test_skill.py` check RED against the stub body; M1–M4's 236 tests green; the trigger checklist fully unsatisfied. Session pauses here. |
 | 5. Update Base Interfaces | Pending | — | Author the skill frontmatter — `name` + the trigger-scoped `description`. |
@@ -131,14 +131,26 @@ Milestone-completion summary at the bottom of this log._
 ## Trigger-scenario checklist
 
 _Authored at Phase 2; the behavioural half of the RED/GREEN oracle (see the
-milestone Decisions and OQ1). RED until the skill body is authored; walked at
-the Phase 9 dogfood pass. Each row: a scenario, whether the skill's
-`description` should trigger, and the `docs` verb the body should redirect to.
-The table below is the Phase-1 placeholder — Phase 2 fills and finalises it._
+milestone Decisions and OQ1). It is **RED now** — no skill body satisfies it
+yet; it is walked at the Phase 9 dogfood pass against the authored
+`skills/docs/SKILL.md`. Each row: a scenario, whether the skill's
+`description` should trigger, and the `docs` verb (or "no trigger") the body
+should redirect to. Eight positive rows — one per `docs` verb — and three
+negative rows that exercise the "must not over-trigger" scoping._
 
 | # | Scenario | Should trigger? | Expected redirect |
 |---|---|---|---|
-| _Phase 2 fills this table._ | | | |
+| 1 | Agent is asked to create a new plan / spec / charter / milestone doc in a `docs`-managed tree. | Yes | `docs new <role> <slug>` — scaffold with a correct metadata block; do not hand-write the block. |
+| 2 | Agent is about to append a bullet to a hand-curated `INDEX.md`, or has edited a doc body and the INDEX is stale. | Yes | `docs index` — regenerate the marker block; never hand-edit `INDEX.md`. |
+| 3 | Agent is asked to archive a finished milestone / completed plan doc. | Yes | `docs archive <file>` — sets `Status: archived`, moves into `archive/<date>/`, reindexes; never hand-move into `archive/`. |
+| 4 | Agent is asked to rename or relocate a doc within the tree. | Yes | `docs mv <old> <new>` — moves and rewrites every `Related:` reference tree-wide; do not hand-edit references. |
+| 5 | Agent is asked which docs exist, or to list docs by status / role / project / staleness. | Yes | `docs list [--status …] [--role …] [--project …] [--stale N] [--json]`. |
+| 6 | Agent has edited a doc's body and needs to record the change date. | Yes | `docs touch <file>` — bumps `Updated:` to today and reindexes; do not hand-edit the date. |
+| 7 | Agent wants to confirm the tree is convention-clean (e.g. before a commit, or in CI). | Yes | `docs check [DIR]` — reports violations with exit 0/1/2; read the exit code. |
+| 8 | Agent is asked to adopt a foreign / non-conforming directory of Markdown into the convention. | Yes | `docs migrate <dir>` — dry-run plan by default; `--apply` writes the metadata blocks. |
+| 9 | Agent edits a `README.md` in a repo that has **no `.docs.toml`** anywhere up the tree. | No | No trigger — the skill is scoped to `docs`-managed trees only. |
+| 10 | Agent makes a pure prose edit (wording, a typo fix) to a doc body with no metadata, INDEX, or lifecycle concern. | No | No trigger — no `docs` verb applies to a prose-only edit. |
+| 11 | Agent edits a code or config file (`.py`, `.toml`, `.json`) — not Markdown documentation. | No | No trigger — the skill governs documentation work, not code or config edits. |
 
 ## Phase logs
 
@@ -221,6 +233,124 @@ check signatures so the file collects; wire the skill into `cli.md` /
 - [x] `docs/INDEX.md` and the dogfood snapshot regenerated in lockstep.
 - [x] `./bin/docs check docs/` exit 0.
 - [x] Ready for Phase 2 to implement the eight structural checks.
+
+### Phase 2 — Write Tests (RED)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Express every M5 requirement as a failing check — both the automatable
+structural half (`tests/test_skill.py`) and the behavioural half (the
+trigger-scenario checklist). No skill body authored: the checks must fail on
+*content* (the stub body, the `TODO` tokens, zero verbs named), never on an
+`ImportError` or a `FileNotFoundError`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_skill.py` | Modify | The eight `pytest.fail(... Phase 2)` placeholders replaced with real check bodies. Module helpers added: `_read_skill()`, `_split_frontmatter()` (enforces the `---` fence), `_parse_frontmatter()` (the flat `key: value` splitter). |
+| `docs/m5-claude-code-skill-log.md` | Modify | Trigger-scenario checklist placeholder replaced with the real 11-row table (8 positive + 3 negative); Phase 2 row → Complete; this log entry. |
+
+#### The eight structural checks
+
+1. `test_skill_md_exists_and_has_frontmatter` — `SKILL.md` exists, starts with
+   a `---\n` fence, and has a closing `---` line.
+2. `test_frontmatter_has_exactly_name_and_description` — the parsed key set is
+   exactly `{name, description}`, in that order.
+3. `test_name_and_description_values_are_sane` — `name == "docs"`;
+   `description` is a non-empty string, carries no `TODO`, and is 20..1024
+   characters.
+4. `test_body_is_present_and_within_size_budget` — the body is non-empty,
+   ≤ 500 lines, and carries no `TODO`.
+5. `test_every_named_verb_is_a_real_subcommand` — derives the real verb set
+   from `_build_parser()` (the `argparse._SubParsersAction` with
+   `dest == "command"`), extracts verb candidates from `` `docs <verb>` ``
+   inline-code spans, asserts every one is real and that ≥ 5 distinct real
+   verbs are named.
+6. `test_every_relative_link_resolves` — every `](target)` markdown link that
+   is repo-relative (not `http`/`https`/`mailto`/absolute) resolves to a file
+   under `skills/docs/`.
+7. `test_skill_dir_has_no_clutter` — an ALLOWLIST: `skills/docs/` may contain
+   only `SKILL.md` and an optional `references/` directory.
+8. `test_frontmatter_parser_rejects_extra_keys` — feeds the parse helpers a
+   fence-less string and a three-key frontmatter and asserts both are
+   rejected, so checks #1/#2 are provably non-vacuous.
+
+#### Issues / decisions
+
+- **No `pyyaml` — a hand-rolled splitter.** The repo is stdlib-only
+  (`pyproject.toml` declares no runtime dependencies). The skill frontmatter
+  is exactly two flat `key: value` lines, so `_split_frontmatter`
+  (fence-enforcing) + `_parse_frontmatter` (a first-`:` splitter) are enough.
+  Adding a YAML dependency for two lines would violate the project's
+  stdlib-only stance.
+- **Decision record — OQ-A (`TODO` token as the RED driver).** Checks #3 and
+  #4 assert `"TODO" not in ...` for the `description` and the body. The
+  Phase-1 stub deliberately carries the `TODO` token in both, so these two
+  checks have a genuine RED→GREEN arc: RED now, GREEN once Phases 5/6 author
+  the real text. This is the operator-binding OQ-A decision.
+- **OQ-B — link check governs only repo-internal links.** The skill body
+  (authored at Phase 6) references cross-tree specs (`convention.md`,
+  `cli.md`, …) **by name as inline code, not as markdown links**, because the
+  committed artifact must be host-agnostic with no host-specific path
+  (resolved OQ2). So `test_every_relative_link_resolves` governs only
+  genuinely repo-internal links — likely none, or a link into a bundled
+  `skills/docs/references/`. **The Step 2 Phase-6 author must honour this:
+  write spec references as plain inline code, never as `](…)` links.**
+- **OQ-C — verb-extraction regex contract.** `test_every_named_verb_is_a_real_
+  subcommand` extracts verb candidates **only** from backtick-delimited inline
+  code spans matching `` `docs <verb>` `` (verb = `[a-z-]+`); bare prose
+  mentions of a verb are ignored. **The Step 2 Phase-6 author must write every
+  `docs` verb the body names as inline code** (e.g. `` `docs index` ``), or
+  the ≥ 5-real-verbs non-emptiness guard will not be satisfied.
+- **`_build_parser` introspection.** The real verb set is read from the
+  `argparse._SubParsersAction` in `parser._actions` whose `dest` is
+  `"command"`, then `.choices.keys()`. This couples the test to the one
+  source of truth — if `bin/docs` adds, renames, or removes a verb, the check
+  catches a skill that has drifted out of sync.
+
+#### RED baseline (captured here; re-run and fully attributed at Phase 4)
+
+`pytest tests/test_skill.py -v` → **3 failed, 5 passed**. Every failure is a
+CONTENT failure against the Phase-1 stub:
+
+| Check | State | Reason |
+|---|---|---|
+| 1 `..._exists_and_has_frontmatter` | PASS | Frontmatter final-shaped at Phase 1 — a legitimate pass. |
+| 2 `..._has_exactly_name_and_description` | PASS | Exactly `name` + `description`, in order — legitimate. |
+| 3 `..._values_are_sane` | **FAIL** | `description still carries the Phase-1 TODO placeholder`. |
+| 4 `..._within_size_budget` | **FAIL** | `skill body still carries the Phase-1 TODO stub`. |
+| 5 `..._is_a_real_subcommand` | **FAIL** | `skill body names only 0 real verbs (expected >= 5)`. |
+| 6 `..._relative_link_resolves` | PASS | The stub body has no relative links — vacuously legitimate. |
+| 7 `..._has_no_clutter` | PASS | `skills/docs/` holds only `SKILL.md` — legitimate. |
+| 8 `..._parser_rejects_extra_keys` | PASS | Tests the parser against inline strings — independent of the stub. |
+
+The five passes are **honest** — the frontmatter is final-shaped and the
+directory is clean from Phase 1 by design. The three failures are the content
+half of the oracle and turn GREEN once Phases 5/6 author the real
+`description` and body. No failure is an `ImportError` or path error.
+
+#### Trigger-scenario checklist — RED
+
+The 11-row checklist above is the behavioural half of the oracle. It is **RED
+now**: no skill body exists to satisfy any row. It is walked at the Phase 9
+dogfood pass. Eight positive rows map one-to-one onto the eight `docs` verbs
+(`new`, `index`, `archive`, `mv`, `list`, `touch`, `check`, `migrate`); three
+negative rows exercise the "must not over-trigger" scoping — a `README` in a
+non-`docs` repo, a prose-only body edit, and a code/config file edit.
+
+#### Exit criteria
+
+- [x] `tests/test_skill.py` — the eight checks implemented; the content-driven
+      checks (#3, #4, #5) FAIL for the right reason (stub body / `TODO` /
+      zero verbs), not `ImportError` / `FileNotFoundError`.
+- [x] The shape and clutter checks (#1, #2, #6, #7, #8) legitimately PASS —
+      documented above so the baseline is honest.
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+- [x] The 11-row trigger-scenario checklist written into this log and RED.
+- [x] Ready for Phase 3 (verify Phase-2 inputs) → Phase 4 (RED baseline).
 
 ## Milestone-completion summary
 

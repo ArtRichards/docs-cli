@@ -1,4 +1,4 @@
-"""Structural checks over the M5 Claude Code skill artifact (Phase 1 — signatures).
+"""Structural checks over the M5 Claude Code skill artifact.
 
 M5 ships a `SKILL.md` markdown artifact, not a Python code surface. Its
 correctness is verified by a **two-part oracle** (resolved OQ1):
@@ -16,12 +16,16 @@ correctness is verified by a **two-part oracle** (resolved OQ1):
    "agent about to do X -> expected verb (or no trigger)" rows, walked by a
    human/agent at the Phase 9 dogfood pass.
 
-These are the test *signatures* only: each body is a `pytest.fail(... Phase 2)`
-placeholder so the file collects. Phase 2 implements the checks.
+The frontmatter is parsed by hand: this repo is stdlib-only (no `pyyaml`), and
+the skill frontmatter is exactly two flat `key: value` lines, so a tiny
+splitter is enough. `_split_frontmatter` enforces the `---` fence;
+`_parse_frontmatter` splits the fenced lines into a dict.
 """
 
 from __future__ import annotations
 
+import argparse
+import re
 from pathlib import Path
 
 import pytest
@@ -33,36 +37,193 @@ SKILL_DIR = REPO_ROOT / "skills" / "docs"
 SKILL_MD = SKILL_DIR / "SKILL.md"
 
 
+# --- helpers ---------------------------------------------------------------
+
+
+def _read_skill() -> str:
+    """Return the raw text of skills/docs/SKILL.md."""
+    return SKILL_MD.read_text(encoding="utf-8")
+
+
+def _split_frontmatter(text: str) -> tuple[str, str]:
+    """Split a SKILL.md into (frontmatter, body).
+
+    The artifact must open with a `---` fence on its own first line and carry
+    a matching closing `---` line; the text between the fences is the
+    frontmatter, everything after the closing fence is the body. Raises
+    AssertionError if the opening or closing fence is missing — a malformed
+    artifact is a hard failure, not a silent empty parse.
+    """
+    lines = text.split("\n")
+    assert lines and lines[0] == "---", "SKILL.md must open with a --- fence line"
+    closing: int | None = None
+    for i in range(1, len(lines)):
+        if lines[i] == "---":
+            closing = i
+            break
+    assert closing is not None, "SKILL.md frontmatter has no closing --- fence"
+    frontmatter = "\n".join(lines[1:closing])
+    body = "\n".join(lines[closing + 1 :])
+    return frontmatter, body
+
+
+def _parse_frontmatter(frontmatter: str) -> dict[str, str]:
+    """Split fenced frontmatter into an ordered key -> value dict.
+
+    Each non-blank line must be a flat `key: value` pair (split on the first
+    `:`); both sides are stripped. Raises AssertionError on a line with no
+    colon. dict preserves insertion order, so callers can check key order.
+    """
+    parsed: dict[str, str] = {}
+    for line in frontmatter.split("\n"):
+        if not line.strip():
+            continue
+        assert ":" in line, f"frontmatter line is not key: value -> {line!r}"
+        key, _, value = line.partition(":")
+        parsed[key.strip()] = value.strip()
+    return parsed
+
+
+# --- check 1: artifact exists and is frontmatter-fenced --------------------
+
+
 def test_skill_md_exists_and_has_frontmatter() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    assert SKILL_MD.exists(), f"{SKILL_MD} does not exist"
+    text = _read_skill()
+    assert text.startswith("---\n"), "SKILL.md must start with a --- fence line"
+    # A closing fence must exist — _split_frontmatter raises otherwise.
+    _split_frontmatter(text)
+
+
+# --- check 2: exactly name + description -----------------------------------
 
 
 def test_frontmatter_has_exactly_name_and_description() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    frontmatter, _ = _split_frontmatter(_read_skill())
+    parsed = _parse_frontmatter(frontmatter)
+    assert set(parsed) == {"name", "description"}, (
+        f"frontmatter must carry exactly name + description, got {sorted(parsed)}"
+    )
+    # name must be the first key, description the second (Claude Code reads
+    # both, but the canonical authoring order is name then description).
+    assert list(parsed) == ["name", "description"], (
+        f"frontmatter keys must be in order [name, description], got {list(parsed)}"
+    )
+
+
+# --- check 3: name + description values are sane ---------------------------
 
 
 def test_name_and_description_values_are_sane() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    frontmatter, _ = _split_frontmatter(_read_skill())
+    parsed = _parse_frontmatter(frontmatter)
+    assert parsed["name"] == "docs", f"skill name must be 'docs', got {parsed['name']!r}"
+    description = parsed["description"]
+    assert isinstance(description, str) and description.strip(), (
+        "description must be a non-empty string"
+    )
+    assert "TODO" not in description, "description still carries the Phase-1 TODO placeholder"
+    assert 20 <= len(description) <= 1024, (
+        f"description length {len(description)} outside the sane 20..1024 window"
+    )
+
+
+# --- check 4: body present and within the size budget ----------------------
 
 
 def test_body_is_present_and_within_size_budget() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    _, body = _split_frontmatter(_read_skill())
+    assert body.strip(), "skill body is empty"
+    line_count = len(body.split("\n"))
+    assert line_count <= 500, (
+        f"skill body is {line_count} lines — over the ~500-line authoring budget"
+    )
+    assert "TODO" not in body, "skill body still carries the Phase-1 TODO stub"
+
+
+# --- check 5: every named verb is a real subcommand ------------------------
 
 
 def test_every_named_verb_is_a_real_subcommand() -> None:
-    # _build_parser is imported here at Phase 1 to pin the conftest module-load
-    # contract; Phase 2 uses it to derive the real verb set.
-    assert _build_parser is not None
-    pytest.fail("Not implemented — Phase 2")
+    parser = _build_parser()
+    # The subparsers action carries dest="command"; its .choices maps every
+    # registered verb name to its sub-parser.
+    sub = next(
+        a
+        for a in parser._actions
+        if isinstance(a, argparse._SubParsersAction) and a.dest == "command"
+    )
+    real_verbs = set(sub.choices.keys())
+    assert real_verbs, "could not derive the real verb set from _build_parser()"
+
+    _, body = _split_frontmatter(_read_skill())
+    # Verb candidates come ONLY from backtick-delimited inline code spans of
+    # the form `docs <verb>` (resolved OQ-C). Bare prose mentions are ignored.
+    named: set[str] = set()
+    for span in re.findall(r"`([^`]+)`", body):
+        m = re.match(r"docs ([a-z-]+)", span.strip())
+        if m:
+            named.add(m.group(1))
+
+    unknown = named - real_verbs
+    assert not unknown, f"skill body names non-existent docs verbs: {sorted(unknown)}"
+    # Non-emptiness guard: the body must actually redirect to verbs.
+    assert len(named & real_verbs) >= 5, (
+        f"skill body names only {len(named & real_verbs)} real verbs (expected >= 5)"
+    )
+
+
+# --- check 6: every relative link resolves ---------------------------------
 
 
 def test_every_relative_link_resolves() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    _, body = _split_frontmatter(_read_skill())
+    # Markdown link targets: ](target). Cross-tree spec references are authored
+    # as plain inline code (resolved OQ-B), so this governs only genuine
+    # repo-internal links — likely none, or a link into a bundled references/.
+    for target in re.findall(r"\]\(([^)]+)\)", body):
+        if target.startswith(("http://", "https://", "mailto:", "/")):
+            continue
+        local = target.split("#", 1)[0]
+        if not local:  # a pure #anchor
+            continue
+        resolved = (SKILL_DIR / local).resolve()
+        assert resolved.exists(), f"relative link {target!r} does not resolve to a file"
+
+
+# --- check 7: no clutter in the skill directory ----------------------------
 
 
 def test_skill_dir_has_no_clutter() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    # ALLOWLIST (resolved OQ-D): the only permitted entries in skills/docs/ are
+    # SKILL.md and an optional references/ directory.
+    for entry in sorted(SKILL_DIR.iterdir()):
+        if entry.name == "SKILL.md" and entry.is_file():
+            continue
+        if entry.name == "references" and entry.is_dir():
+            continue
+        pytest.fail(f"unexpected entry in skills/docs/: {entry.name}")
+
+
+# --- check 8: the frontmatter parser is non-vacuous ------------------------
 
 
 def test_frontmatter_parser_rejects_extra_keys() -> None:
-    pytest.fail("Not implemented — Phase 2")
+    """Prove the shape checks (#1, #2) are real — bad input is rejected.
+
+    Two failure modes are exercised: a frontmatter with no `---` fence (the
+    `_split_frontmatter` contract), and a three-key frontmatter (which check #2
+    rejects via its exactly-two-keys assertion).
+    """
+    # (a) Missing fence -> _split_frontmatter raises.
+    with pytest.raises(AssertionError):
+        _split_frontmatter("name: docs\ndescription: nope\n")
+
+    # (b) A three-key frontmatter does NOT satisfy the exactly-name+description
+    #     key set — so check #2's assertion is discriminating, not vacuous.
+    three_key = "---\nname: docs\ndescription: x\nextra: y\n---\nbody\n"
+    frontmatter, _ = _split_frontmatter(three_key)
+    parsed = _parse_frontmatter(frontmatter)
+    assert set(parsed) != {"name", "description"}, (
+        "a three-key frontmatter must not pass the exactly-name+description check"
+    )
