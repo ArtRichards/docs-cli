@@ -36,7 +36,7 @@ _Generated 2026-05-22. 18 docs active, 0 archived._
 ### Active — Log
 
 - [m3-validation-and-query-log.md](m3-validation-and-query-log.md) — _log_ — - Project: docs - Milestone: M3 — Validation and query (`check`, `list`) - Started: 2026-05-22 - Progress: Complete —…. Updated 2026-05-22.
-- [m4-migration-helper-log.md](m4-migration-helper-log.md) — _log_ — - Project: docs - Milestone: M4 — Migration helper (`docs migrate`) - Started: 2026-05-22 - Progress: Not started —…. Updated 2026-05-22.
+- [m4-migration-helper-log.md](m4-migration-helper-log.md) — _log_ — - Project: docs - Milestone: M4 — Migration helper (`docs migrate`) - Started: 2026-05-22 - Progress: Phases 1-4…. Updated 2026-05-22.
 - [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-05-21.
 - [m1-parser-and-index-log.md](m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Shipped: 2026-05-20 - Progress: Phase…. Updated 2026-05-20.
 

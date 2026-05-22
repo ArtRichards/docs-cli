@@ -14,10 +14,12 @@ Related:
 - Project: docs
 - Milestone: M4 — Migration helper (`docs migrate`)
 - Started: 2026-05-22
-- Progress: Not started — milestone activated, task plan and this log
-  authored, and all four milestone-setup open questions resolved
-  (operator-confirmed 2026-05-22, see below). Phase 1 (Define Contract) is the
-  next action.
+- Progress: Phases 1-4 complete (2026-05-22) — contract defined, RED tests and
+  the `foreign/` fixture tree written, RED baseline captured (48 failed, 165
+  passed; every M4 failure is `NotImplementedError` from a stub). The session
+  pauses here by request; Phase 5 (Update Base Interfaces) is the next action.
+  All four milestone-setup open questions plus the seven task-plan questions
+  were resolved (operator-confirmed 2026-05-22).
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
@@ -61,7 +63,7 @@ agent consumes to resolve ambiguities before applying.
 | 1. Define Contract | Complete | 2026-05-22 | `FileMigration` / `MigrationPlan` models + inference/plan/apply helper stubs + `_cmd_migrate` stub + `migrate` subparser in `bin/docs`; `cli.md` migrate section + `--json` schema; `architecture.md` migrate module spec; M4 plan + log created. |
 | 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_migrate.py` (40 inference + planning units) and `tests/test_cli_migrate.py` (9 CLI dry-run / `--apply` / `--json` tests). |
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | `tests/fixtures/trees/foreign/` — 9 non-conforming docs incl. an archive-style subdir and a benign nested subdir; refuse-guard reuses `minimal/`. |
-| 4. Run Tests (RED Baseline) | Not started | — | `pytest tests/` — capture the RED baseline. **Session pauses here.** |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 48 failed, 165 passed; every M4 failure is `NotImplementedError` from a stub. **Session pauses here.** |
 | 5. Update Base Interfaces | Not started | — | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block`. |
 | 6. Implement Offline/Core Path | Not started | — | `plan_migration` + `_cmd_migrate` dry-run human output. |
 | 7. Update Tool/Wrapper Layer | Not started | — | `apply_migration`, `migration_to_json`, the `--apply` / `--json` branches; refuse-on-`.docs.toml` guard. |
@@ -273,6 +275,70 @@ The refuse-on-`.docs.toml` guard test reuses the existing `minimal/` fixture
 - [x] `docs check tests/fixtures/trees/foreign` reports violations (exit 2).
 - [x] `infer_project` over the basenames would yield `proj`.
 - [x] Ready for Phase 4: run pytest and capture the RED baseline.
+
+### Phase 4 — Run Tests (RED Baseline)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Confirm every M4 test fails for the right reason — missing implementation, not
+misconfiguration. Log-only; no implementation. **The milestone pauses here for
+this session by request; Phase 5 resumes implementation.**
+
+#### Command + summary
+
+```
+.venv/bin/python -m pytest tests/ -q
+=========================== 48 failed, 165 passed in ~3.4s ===========================
+```
+
+213 tests collected; no collection / import / fixture-path errors.
+
+#### Failure attribution
+
+Every one of the 48 failures traces to a `NotImplementedError` raised by a
+Phase-1 stub:
+
+| Stub | Failures | Implements in |
+|---|---|---|
+| `infer_role` | 12 | Phase 5 |
+| `infer_status` | 5 | Phase 5 |
+| `infer_updated` | 3 | Phase 5 |
+| `infer_project` | 3 | Phase 5 |
+| `detect_archive_layout` | 4 | Phase 5 |
+| `insert_metadata_block` | 6 | Phase 5 |
+| `plan_migration` | 7 | Phase 6 |
+| `_cmd_migrate` | 8 | Phase 6 |
+
+The 8 `_cmd_migrate` failures are the CLI tests: the stub raises
+`NotImplementedError`, the process exits 1, and the exit-code / output
+assertions fail honestly — the `"NotImplementedError" not in (stdout +
+stderr)` false-pass guard fires on each, so no stub can accidentally satisfy
+an assertion (including the refuse-guard test, which asserts a non-zero exit).
+
+No failure traces to an `ImportError`, a fixture-path error, or a misconfigured
+test. M1/M2/M3's 164 tests stay green; `migrate --help` passes — the
+contract-test pass, total 165 passed.
+
+#### Quality gates
+
+```
+.venv/bin/ruff check .          → All checks passed!
+.venv/bin/ruff format --check . → 18 files already formatted
+.venv/bin/mypy                  → Success: no issues found in 18 source files
+```
+
+#### Exit criteria
+
+- [x] M1/M2/M3's 164 tests stay green.
+- [x] Every new M4 test fails for the right reason — `NotImplementedError`
+      from a stub, verified by the false-pass guard.
+- [x] No `ImportError`, no fixture-path error.
+- [x] `migrate --help` passes.
+- [x] `ruff` / `mypy` clean tree-wide.
+- [x] RED baseline captured. **Session pauses here — Phase 5 resumes
+      implementation.**
 
 ## Milestone-completion summary
 
