@@ -71,7 +71,7 @@ this repo and runs `docs index`.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-22 | `skills/docs/SKILL.md` created with valid frontmatter + stub body; `tests/test_skill.py` created with 8 check signatures; `cli.md` skill pointer + `architecture.md` skill/install note; `status.md` refreshed. |
 | 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_skill.py` — the 8 structural checks implemented; the 11-row trigger-scenario checklist written into this log. RED: 3 content-driven checks fail on the stub body / TODO tokens; 5 shape/clutter checks legitimately pass. |
-| 3. Create Data/Fixtures | Pending | — | No new fixture tree — structural checks read the real artifact + `bin/docs`; the dogfood reads this repo's `docs/`. A conscious "nothing to stage" outcome. |
+| 3. Create Data/Fixtures | Complete | 2026-05-22 | No new fixture tree — a conscious "nothing to stage". Structural checks read the real `SKILL.md` + `bin/docs`; the malformed-frontmatter samples are inline strings in `test_skill.py`. Every Phase-2 input verified to resolve. |
 | 4. Run Tests (RED Baseline) | Pending | — | `pytest tests/` — every `test_skill.py` check RED against the stub body; M1–M4's 236 tests green; the trigger checklist fully unsatisfied. Session pauses here. |
 | 5. Update Base Interfaces | Pending | — | Author the skill frontmatter — `name` + the trigger-scoped `description`. |
 | 6. Implement Offline/Core Path | Pending | — | Author the skill body — per-trigger verb redirection, the no-hand-edit guardrail, binary/root-location guidance. |
@@ -351,6 +351,66 @@ non-`docs` repo, a prose-only body edit, and a code/config file edit.
 - [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
 - [x] The 11-row trigger-scenario checklist written into this log and RED.
 - [x] Ready for Phase 3 (verify Phase-2 inputs) → Phase 4 (RED baseline).
+
+### Phase 3 — Create Data/Fixtures
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Provide whatever fixture the structural checks need — and, for an artifact
+milestone, consciously record that there is nothing to stage (resolved OQ1).
+**No file changes except this log entry.**
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 3 row → Complete; this log entry. **No other file changed.** |
+
+#### Why there is nothing to stage
+
+M1–M4 each staged a synthetic `tests/fixtures/trees/` directory because each
+milestone's tests walked a sample docs tree. M5's structural checks have no
+such input:
+
+- **The artifact under test is real.** `tests/test_skill.py` reads the real
+  `skills/docs/SKILL.md` — the very file the milestone authors. There is no
+  synthetic copy to stage.
+- **The verb set is real.** Check #5 derives the real verb list from
+  `_build_parser()` in `bin/docs` via `conftest.py`'s module registration —
+  no fixture parser.
+- **The malformed-frontmatter samples are inline.** Check #8 proves the
+  parser is non-vacuous by feeding it a fence-less string and a three-key
+  frontmatter — both are tiny inline string literals in `test_skill.py`, not
+  files. A `tests/fixtures/` directory for two short strings would be
+  overkill (recorded in the milestone Decisions as "No new
+  `tests/fixtures/trees/` directory").
+- **The dogfood input is this repo's own `docs/`.** The Phase 9 dogfood walks
+  the live `docs/` tree — already present, not a fixture.
+
+#### Verification — every Phase-2 input resolves
+
+- `skills/docs/SKILL.md` exists (created at Phase 1).
+- `from docs import _build_parser` succeeds via `conftest.py`'s `importlib`
+  module load — confirmed importable.
+- `skills/docs/` contains only `SKILL.md` — the no-clutter check's allowlist
+  input is in the expected state.
+- No `tests/fixtures/` addition is required or made.
+
+#### Issues / decisions
+
+- **Phase 3 is a conscious "nothing to stage", not a skipped phase.** Per the
+  resolved OQ1 mapping, no M5 phase is marked N/A. Phase 3 genuinely shrinks
+  for an artifact milestone — there is no foreign data to stage — and that
+  outcome is recorded deliberately here rather than silently omitted.
+
+#### Exit criteria
+
+- [x] Every input a Phase-2 check references is available and resolves.
+- [x] No new fixture tree was needed — recorded as a deliberate, documented
+      difference from M1–M4.
+- [x] Ready for Phase 4: run the suite and capture the RED baseline.
 
 ## Milestone-completion summary
 
