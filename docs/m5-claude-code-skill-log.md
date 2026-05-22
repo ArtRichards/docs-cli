@@ -79,7 +79,7 @@ this repo and runs `docs index`.
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 3 failed / 241 passed (244 collected). The 3 content-driven `test_skill.py` checks RED against the stub body; M1–M4's 236 tests green; ruff/format/mypy clean; `docs check docs/` exit 0. Session pauses here. |
 | 5. Update Base Interfaces | Complete | 2026-05-22 | `description:` authored as one physical line (OQ-E): names the action, the positive triggers, and the scoping limiter. Checks #1/#2/#3/#8 GREEN; #4/#5 still RED (body untouched). |
 | 6. Implement Offline/Core Path | Complete | 2026-05-22 | Body authored — H1 + orientation, the never-hand-edit guardrail, binary/root location, a prose verb-redirection list (one sub-heading per verb), the prose-only-edit carve-out (OQ-H), and the convention pointer. 112 non-blank lines. All 8 `test_skill.py` checks GREEN. |
-| 7. Update Tool/Wrapper Layer | Pending | — | Any minimal bundled reference file; finalise the `architecture.md` install note and the `cli.md` skill pointer; no-clutter check. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | No `references/` added — the 143-line body is well under the 250-line trigger. Verification pass: `architecture.md`'s skill/install note and `cli.md`'s skill subsection re-read and confirmed accurate against the authored body — no reconciliation needed. `skills/docs/` holds only `SKILL.md`; check #7 GREEN. |
 | 8. Run Tests (GREEN) | Pending | — | Full suite green incl. `test_skill.py`; `ruff` / `mypy` clean tree-wide. |
 | 9. Implement Online/Integration | Pending | — | Dogfood: walk the trigger-scenario checklist against the authored skill; `INDEX.md` regenerated only via `docs index`; `docs check docs/` exit 0. |
 | 10. Quality, Docs, Refactor | Pending | — | Close out: `status.md` → M5 Complete + project v1-complete; completion summaries; INDEX + snapshot regenerated. |
@@ -727,6 +727,63 @@ per-verb redirection section, and a pointer to the convention. Drive all eight
 - [x] Full suite 244 passed; `ruff` / `ruff format` / `mypy` clean tree-wide;
       `./bin/docs check docs/` exit 0.
 - [x] Ready for Phase 7 (verification pass).
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Finalise the artifact's edges: decide on a bundled `references/` file, verify
+the install/doc wiring (`architecture.md`, `cli.md`) is accurate against the
+authored body, and confirm the no-clutter check.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 7 row → Complete; this log entry. **No other file changed — a clean verification pass.** |
+
+#### Actions taken
+
+- **No `references/` cheat-sheet added.** The Phase-6 body is 143 lines total
+  (112 non-blank) — well under the ~250-line threshold the plan set for
+  splitting per-verb detail into `skills/docs/references/verbs.md`. A
+  `references/verbs.md` would duplicate `cli.md` (skill-creator guidance:
+  information lives in `SKILL.md` *or* references, not both). Phase 7 is
+  therefore a verification pass, not an authoring pass.
+- **`architecture.md` re-read** — the "Sibling artifact: the Claude Code skill"
+  note and the "Install (end users)" `ln -s …/skills/docs ~/.claude/skills/docs`
+  step (both authored at Phase 1). Confirmed accurate: the authored body is a
+  standalone markdown artifact that drives the verbs, host-agnostic, installed
+  by the documented symlink. No edit needed.
+- **`cli.md` re-read** — the "Using `docs` from a Claude Code skill" subsection
+  (authored at Phase 1). Confirmed accurate: it describes a markdown artifact
+  whose body redirects an agent to the `docs` verbs specified in `cli.md`,
+  adding no command surface. Matches the authored body. Per resolved OQ-G, no
+  further `cli.md` content edit is owed. No edit needed.
+- **No-clutter check** — `skills/docs/` holds only `SKILL.md`; check #7 GREEN.
+
+#### Issues / decisions
+
+- **No `references/` directory (plan-conditional decision taken).** The plan
+  made `references/` conditional on the body overrunning ~250 lines. It did
+  not — so none is added, and `test_every_relative_link_resolves` stays
+  vacuously green (a defensible consequence of resolved OQ-B, disclosed at
+  Phase 4).
+- **No reconciliation owed (OQ-G).** The Phase-1 `cli.md` / `architecture.md`
+  skill wiring is accurate against the authored body; Phase 7 verifies, it does
+  not churn.
+
+#### Exit criteria
+
+- [x] No `references/` added — body well under the 250-line trigger.
+- [x] `architecture.md` install note and `cli.md` skill subsection verified
+      accurate; no reconciliation needed.
+- [x] `skills/docs/` holds only `SKILL.md`; check #7 GREEN.
+- [x] All 8 `tests/test_skill.py` checks GREEN; `ruff` / `ruff format` / `mypy`
+      clean tree-wide.
+- [x] Ready for Phase 8 (the GREEN gate run).
 
 ## Milestone-completion summary
 
