@@ -77,7 +77,7 @@ this repo and runs `docs index`.
 | 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_skill.py` — the 8 structural checks implemented; the 11-row trigger-scenario checklist written into this log. RED: 3 content-driven checks fail on the stub body / TODO tokens; 5 shape/clutter checks legitimately pass. |
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | No new fixture tree — a conscious "nothing to stage". Structural checks read the real `SKILL.md` + `bin/docs`; the malformed-frontmatter samples are inline strings in `test_skill.py`. Every Phase-2 input verified to resolve. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 3 failed / 241 passed (244 collected). The 3 content-driven `test_skill.py` checks RED against the stub body; M1–M4's 236 tests green; ruff/format/mypy clean; `docs check docs/` exit 0. Session pauses here. |
-| 5. Update Base Interfaces | Pending | — | Author the skill frontmatter — `name` + the trigger-scoped `description`. |
+| 5. Update Base Interfaces | Complete | 2026-05-22 | `description:` authored as one physical line (OQ-E): names the action, the positive triggers, and the scoping limiter. Checks #1/#2/#3/#8 GREEN; #4/#5 still RED (body untouched). |
 | 6. Implement Offline/Core Path | Pending | — | Author the skill body — per-trigger verb redirection, the no-hand-edit guardrail, binary/root-location guidance. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Any minimal bundled reference file; finalise the `architecture.md` install note and the `cli.md` skill pointer; no-clutter check. |
 | 8. Run Tests (GREEN) | Pending | — | Full suite green incl. `test_skill.py`; `ruff` / `mypy` clean tree-wide. |
@@ -607,6 +607,56 @@ The operator also confirmed `status.md`'s "Commit once per TDD phase on
 - [x] The trigger-scenario checklist stands fully RED.
 - [x] **Step 1 (phases 1–4) complete. The session pauses here — no skill body
       authored; no Phase 5+ work.**
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Author the skill's *frontmatter* — the trigger surface. Replace the Phase-1
+`TODO` placeholder `description:` line with the finalised, trigger-scoped
+description. `name: docs` and the `---` fences are left as Phase 1 shaped them;
+the body stub is left for Phase 6.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `skills/docs/SKILL.md` | Modify | The `description:` line only — Phase-1 `TODO` placeholder replaced with the finalised description. `name: docs`, the `---` fences, and the body stub untouched. |
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 5 row → Complete; this log entry. |
+
+#### Actions taken
+
+- Authored the `description` as **exactly one physical line** (resolved OQ-E —
+  the hand-rolled `_parse_frontmatter` cannot parse a YAML-folded or wrapped
+  value). The line names: the **action** (use the `docs` CLI / run the verb
+  instead of hand-editing); the **positive triggers** (creating a
+  plan/spec/charter/milestone, archiving or renaming a doc, listing docs,
+  checking the tree, regenerating `INDEX.md`, adopting a foreign Markdown
+  directory; never hand-editing metadata, `INDEX.md`, or `archive/`); and the
+  **scoping limiter** — "a docs-managed tree (a directory with a `.docs.toml`
+  file)" with the closing clause "Not for Markdown outside a docs-managed
+  tree". The limiter keeps the skill from over-triggering on unrelated
+  Markdown (the trigger checklist's negative rows 9 and 11).
+- ~330 characters, well inside the 20..1024 sane window check #3 enforces.
+
+#### Issues / decisions
+
+- **OQ-E honoured.** The `description` is one physical line — no `>-` / `|`
+  folding, no continuation lines — so the stdlib-only `_parse_frontmatter`
+  parses it as a single `key: value` pair.
+- **Body stub left intact.** Phase 5 is scoped to the frontmatter only. The
+  body's `TODO` token remains; checks #4/#5 stay RED until Phase 6.
+
+#### Exit criteria
+
+- [x] `description:` is one physical line, no `TODO`, names the action +
+      triggers + scoping limiter.
+- [x] Checks #1/#2/#3/#8 GREEN; #4/#5 still RED (body untouched).
+- [x] `pytest tests/test_skill.py` → 2 failed / 6 passed — the two failures
+      are the body-driven checks #4/#5.
+- [x] Ready for Phase 6 to author the body.
 
 ## Milestone-completion summary
 

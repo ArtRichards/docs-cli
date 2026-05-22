@@ -1,6 +1,6 @@
 ---
 name: docs
-description: TODO Phase 5 — finalised trigger-scoped description naming what the skill does and the precise contexts that should invoke it.
+description: Use the docs CLI for documentation work in a docs-managed tree (a directory with a .docs.toml file) — creating a plan/spec/charter/milestone, archiving or renaming a doc, listing docs, checking the tree, regenerating INDEX.md, or adopting a foreign Markdown directory. Run the docs verb instead of hand-editing metadata, INDEX.md, or archive/. Not for Markdown outside a docs-managed tree.
 ---
 
 TODO Phase 6 — author the verb-redirecting skill body: per documentation-work
