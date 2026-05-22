@@ -69,7 +69,7 @@ this repo and runs `docs index`.
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | `skills/docs/SKILL.md` created with valid frontmatter + stub body; `tests/test_skill.py` created with check signatures; `cli.md` skill pointer + `architecture.md` skill/install note; M5 plan + log created. |
+| 1. Define Contract | Complete | 2026-05-22 | `skills/docs/SKILL.md` created with valid frontmatter + stub body; `tests/test_skill.py` created with 8 check signatures; `cli.md` skill pointer + `architecture.md` skill/install note; `status.md` refreshed. |
 | 2. Write Tests (RED) | Pending | — | `tests/test_skill.py` structural checks implemented; the trigger-scenario checklist written into this log. |
 | 3. Create Data/Fixtures | Pending | — | No new fixture tree — structural checks read the real artifact + `bin/docs`; the dogfood reads this repo's `docs/`. A conscious "nothing to stage" outcome. |
 | 4. Run Tests (RED Baseline) | Pending | — | `pytest tests/` — every `test_skill.py` check RED against the stub body; M1–M4's 236 tests green; the trigger checklist fully unsatisfied. Session pauses here. |
@@ -145,6 +145,82 @@ The table below is the Phase-1 placeholder — Phase 2 fills and finalises it._
 _Phase logs are appended here as each phase completes — one `### Phase N`
 section per phase, following the M1–M4 log format (Objective, Files changed,
 Actions taken, Issues / decisions, Exit criteria)._
+
+### Phase 1 — Define Contract
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Declare the M5 surface — the skill artifact's *shape* — with no skill body
+written. Create `skills/docs/SKILL.md` with valid, final-shaped frontmatter and
+a deliberate stub body; create `tests/test_skill.py` with the eight structural
+check signatures so the file collects; wire the skill into `cli.md` /
+`architecture.md` and refresh `status.md`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `skills/docs/SKILL.md` | Create | New `skills/docs/` directory with one file. Frontmatter final-shaped now — exactly two keys, `name` then `description`, in that order, `---`-fenced so Phase 2 tests fail on content not parse errors. `name: docs`; `description` is a placeholder carrying the literal token `TODO` (resolved OQ-A). Body is a deliberate TODO stub. |
+| `tests/test_skill.py` | Create | The eight structural check signatures (bodies are `pytest.fail("Not implemented — Phase 2")` placeholders) plus a header docstring explaining the two-part oracle. Module constants `REPO_ROOT` / `SKILL_DIR` / `SKILL_MD`; `from docs import _build_parser` via conftest's module registration. |
+| `docs/cli.md` | Modify | New `## Using docs from a Claude Code skill` subsection before "What's deliberately not in v1", pointing at `skills/docs/SKILL.md`; `m5-claude-code-skill.md` added to `Related:`. |
+| `docs/architecture.md` | Modify | "Sibling artifact" note after the module tree (the skill is **not** a `bin/docs` module); install note in "Install (end users)" — `skills/docs/` symlinked into `~/.claude/skills/docs/` parallel to the `bin/docs` symlink; `m5-claude-code-skill.md` added to `Related:`. |
+| `docs/status.md` | Modify | "M5 in flight" paragraph refreshed — phases 1-4 underway on `m5/phases-1-4`. |
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 1 row → Complete; this log entry. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep via `./bin/docs index --root docs/` after the spec edits. |
+
+#### Actions taken
+
+- Created `skills/docs/SKILL.md`. The frontmatter is **final-shaped at Phase 1**
+  — exactly `name` then `description`, `---`-fenced — so the Phase 2
+  shape-checks fail (or pass) on *content*, never on a parse error. The
+  `description` value carries the literal token `TODO`, and the body opens with
+  `TODO`, by design (resolved OQ-A): the `"TODO" not in ...` content checks are
+  the RED driver and give both the frontmatter and the body a genuine
+  RED→GREEN arc — RED at Phase 4, GREEN once Phases 5/6 author the real text.
+- Created `tests/test_skill.py` with eight check signatures collecting cleanly
+  (mirrors the M4 Phase 1 `pytest.fail(... Phase 2)` pattern). The eighth,
+  `test_frontmatter_parser_rejects_extra_keys`, exists so Phase 2's parser
+  check is provably non-vacuous.
+- `cli.md` gained the skill-pointer subsection; `architecture.md` gained the
+  sibling-artifact note and the install step; `status.md`'s M5 paragraph now
+  states phases 1-4 are underway.
+- Regenerated `docs/INDEX.md` with `./bin/docs index --root docs/` and copied
+  it onto `tests/fixtures/expected/docs-INDEX.md`. `skills/` is outside the
+  `docs/` root, so the skill files never enter `INDEX.md` — only the `cli.md` /
+  `architecture.md` / `status.md` body edits are reflected.
+
+#### Issues / decisions
+
+- **Decision (OQ-A) — the stub `description` and body carry the literal token
+  `TODO`.** Operator-binding. Rather than a body that is merely short, the
+  Phase-1 stub *names itself* a stub with the `TODO` token, and Phase 2's
+  `test_name_and_description_values_are_sane` / `test_body_is_present_and_
+  within_size_budget` assert `"TODO" not in ...`. This gives the content half
+  of the oracle a real RED→GREEN transition instead of a vacuous pass.
+- **`_build_parser` import kept clean under `ruff`.** The plan specifies
+  `from docs import _build_parser` as a Phase-1 module-level import (Phase 2
+  derives the real verb set from it). At Phase 1 nothing uses it yet, so a
+  bare import trips `ruff` F401. The import is kept and pinned with an
+  `assert _build_parser is not None` inside the still-stubbed
+  `test_every_named_verb_is_a_real_subcommand` body — the conftest module-load
+  contract is exercised at Phase 1 and `ruff` stays clean. Phase 2 replaces
+  the assert with the real verb-extraction logic.
+- **`Updated:` fields not bumped past 2026-05-22.** `cli.md`,
+  `architecture.md`, and `status.md` already carried `Updated: 2026-05-22`
+  (today) from the milestone-setup commit, so the Phase-1 body edits need no
+  date bump — the convention is already satisfied.
+
+#### Exit criteria
+
+- [x] `skills/docs/SKILL.md` exists with parseable `---`-fenced frontmatter and
+      a deliberate stub body.
+- [x] `tests/test_skill.py` collects — 8 tests, no `ImportError`.
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+- [x] `docs/INDEX.md` and the dogfood snapshot regenerated in lockstep.
+- [x] `./bin/docs check docs/` exit 0.
+- [x] Ready for Phase 2 to implement the eight structural checks.
 
 ## Milestone-completion summary
 

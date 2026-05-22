@@ -10,6 +10,7 @@ Related:
 - pairs-with: convention.md
 - pairs-with: cli.md
 - pairs-with: test-strategy.md
+- pairs-with: m5-claude-code-skill.md
 
 ## Shape
 
@@ -31,6 +32,14 @@ bin/docs (executable; Python 3.11+, stdlib only)
 ├── migrate       — foreign-tree inference + plan/apply (M4)
 └── cli           — argparse dispatch, exit codes, --root resolution
 ```
+
+**Sibling artifact: the Claude Code skill.** Alongside `bin/docs`, the repo
+ships a Claude Code skill at `skills/docs/SKILL.md` (M5). It is **not** a
+`bin/docs` module and adds no Python — it is a standalone markdown artifact
+that *drives* the verbs above: its `description` triggers an agent doing
+documentation work in a `docs`-managed tree, and its body redirects to the
+right `docs` verb. It is authored and version-controlled here; installation
+onto a host is the documented step below.
 
 ## Module responsibilities
 
@@ -214,10 +223,14 @@ For archive operations (M2): edit in-place first (atomic write), then move with 
 
 ```sh
 git clone https://github.com/<you>/docs.git ~/opt/docs
-ln -s $PWD/bin/docs ~/bin/docs   # or wherever your $PATH wants it
+ln -s $PWD/bin/docs ~/bin/docs              # or wherever your $PATH wants it
+ln -s $PWD/skills/docs ~/.claude/skills/docs   # install the Claude Code skill
 ```
 
 The script is self-contained; no `pip install` step needed for runtime use.
+The skill at `skills/docs/` is copied or symlinked into `~/.claude/skills/docs/`
+— parallel to the `bin/docs` symlink onto `$PATH`. The committed skill artifact
+is host-agnostic; the host-specific path lives only in this install step.
 
 ## Development setup
 

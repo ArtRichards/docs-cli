@@ -19,13 +19,14 @@ artifact at `skills/docs/`) that makes an agent reach for the `docs` verbs
 automatically when doing documentation work in a `docs`-managed tree. It adds
 no CLI surface — it is a markdown artifact whose `description` triggers on the
 right contexts and whose body redirects to the appropriate `docs` verb instead
-of hand-editing metadata or `INDEX.md`. The task plan and log were created on
-`m5/milestone-setup`; the four milestone-setup OPEN QUESTIONS (OQ1-OQ4 —
-chiefly how the ten-phase TDD cycle maps onto a markdown artifact) are resolved
-(operator-confirmed 2026-05-22) and recorded as Decisions in the task plan. The
-ten TDD phases have not yet started; Phase 1 (Define Contract) is the next
-action. See [m5-claude-code-skill.md](m5-claude-code-skill.md) for the
-per-phase task plan and the Decisions, and
+of hand-editing metadata or `INDEX.md`. The four milestone-setup OPEN QUESTIONS
+(OQ1-OQ4 — chiefly how the ten-phase TDD cycle maps onto a markdown artifact)
+are resolved (operator-confirmed 2026-05-22) and recorded as Decisions in the
+task plan. **Phases 1-4 (contract, RED tests, fixtures, RED baseline) are
+underway on `m5/phases-1-4`**: `skills/docs/SKILL.md` exists with a stub body
+and `tests/test_skill.py` carries the structural checks. See
+[m5-claude-code-skill.md](m5-claude-code-skill.md) for the per-phase task plan
+and the Decisions, and
 [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the log.
 
 M4 — Migration helper (`docs migrate`) shipped 2026-05-22 across ten TDD

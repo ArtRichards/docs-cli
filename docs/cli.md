@@ -10,6 +10,7 @@ Related:
 - pairs-with: convention.md
 - pairs-with: plan.md
 - pairs-with: m4-migration-helper.md
+- pairs-with: m5-claude-code-skill.md
 
 ## Scope
 
@@ -251,6 +252,18 @@ exist; 0 on a successful dry-run or `--apply`.
 | 2 | Hard error (invalid vocab, atomic operation failure, validation errors) |
 
 CI integration: `docs check` returning 2 should fail the build.
+
+## Using `docs` from a Claude Code skill
+
+This repo ships a Claude Code **skill** at `skills/docs/SKILL.md` that makes an
+agent reach for the verbs above automatically when doing documentation work in
+a `docs`-managed tree — instead of hand-editing metadata, hand-curating
+`INDEX.md`, or hand-moving a finished doc into `archive/`. The skill adds no
+command surface: it is a markdown artifact whose body redirects an agent to the
+`docs` verb specified in this file. Its install path (a copy/symlink into
+`~/.claude/skills/docs/`, parallel to the `bin/docs` symlink) is documented in
+`architecture.md`. See `skills/docs/SKILL.md` and the M5 milestone
+([m5-claude-code-skill.md](m5-claude-code-skill.md)).
 
 ## What's deliberately not in v1
 
