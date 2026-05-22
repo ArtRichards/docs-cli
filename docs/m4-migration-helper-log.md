@@ -713,6 +713,32 @@ Full suite **236 passed, 0 failed** (72 M4 tests, +17 over the original 55);
 `./bin/docs check docs/` exit 0. `INDEX.md` and the dogfood snapshot
 regenerated in lockstep with the doc-body changes.
 
+## Simplify pass — phases 5-10 (2026-05-22)
+
+A `/simplify` pass over the M4 migration code (the inference helpers, models,
+`plan_migration` / `apply_migration` / `migration_to_json`, and the `migrate`
+CLI wiring) on `m4/simplify`. The inference helpers are already short pure
+functions and `plan_migration` is one straight loop plus the reviewed
+collision pass — the only genuine simplification found was in
+`detect_archive_layout`.
+
+- **`detect_archive_layout` — collapsed a duplicated return and an inverted
+  try/except.** The function spelled the archive-style name set three ways
+  (`("archived", "project-history")` tuple, a separate `first == "archive"`
+  check, and the unused module constant `_ARCHIVE_SUBDIR_NAMES`) and wrote the
+  `archive/<date>/<basename>` destination string in three places, once inside
+  a try-block whose `except` returned the *normalise* result. Rewritten to an
+  early `if first not in _ARCHIVE_SUBDIR_NAMES: return None` guard, a single
+  conformant-`archive/<ISO-date>/` exception, and one trailing
+  `return f"archive/{archive_date}/{parts[-1]}"`. Same behaviour for all five
+  input shapes (verified by the unchanged `detect_archive_layout` tests);
+  the archive-name set is now spelled once, in `_ARCHIVE_SUBDIR_NAMES`.
+
+Nothing else changed — the rest of the M4 code is already minimal. Full suite
+**236 passed, 0 failed**; `ruff check` / `ruff format --check` / `mypy` clean
+tree-wide. No doc-body change, so `INDEX.md` and the dogfood snapshot were not
+regenerated.
+
 ## Milestone-completion summary
 
 **M4 — Migration helper (`docs migrate`) shipped 2026-05-22** across the ten

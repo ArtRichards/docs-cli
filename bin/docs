@@ -1426,23 +1426,20 @@ def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
     """
     parts = rel_path.split("/")
     first = parts[0]
-    basename = parts[-1]
+    if first not in _ARCHIVE_SUBDIR_NAMES:
+        return None
 
-    if first in ("archived", "project-history"):
-        return f"archive/{archive_date}/{basename}"
-
-    if first == "archive":
-        # A conformant `archive/<ISO-date>/<basename>` needs no move; any other
-        # `archive/...` shape (bare file, non-date subdir) is normalised.
-        if len(parts) == 3:
-            try:
-                datetime.strptime(parts[1], "%Y-%m-%d")
-            except ValueError:
-                return f"archive/{archive_date}/{basename}"
+    # A file already at the conformant `archive/<ISO-date>/<basename>` needs no
+    # move; every other archive-style shape (bare `archive/file.md`, a non-date
+    # subdir, `archived/`, `project-history/`) normalises to `archive/<date>/`.
+    if first == "archive" and len(parts) == 3:
+        try:
+            datetime.strptime(parts[1], "%Y-%m-%d")
             return None
-        return f"archive/{archive_date}/{basename}"
+        except ValueError:
+            pass
 
-    return None
+    return f"archive/{archive_date}/{parts[-1]}"
 
 
 # The four metadata fields the convention requires. `migrate` always writes
