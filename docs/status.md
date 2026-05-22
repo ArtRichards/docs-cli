@@ -23,8 +23,10 @@ of hand-editing metadata or `INDEX.md`. The four milestone-setup OPEN QUESTIONS
 (OQ1-OQ4 — chiefly how the ten-phase TDD cycle maps onto a markdown artifact)
 are resolved (operator-confirmed 2026-05-22) and recorded as Decisions in the
 task plan. **Phases 1-4 (contract, RED tests, fixtures, RED baseline) are
-underway on `m5/phases-1-4`**: `skills/docs/SKILL.md` exists with a stub body
-and `tests/test_skill.py` carries the structural checks. See
+complete on `m5/phases-1-4`**: `skills/docs/SKILL.md` exists with a stub body,
+`tests/test_skill.py` carries the eight structural checks at the intended RED
+baseline, and the 11-row trigger-scenario checklist is written and RED. Phases
+5-10 (author the skill, ship) are next. See
 [m5-claude-code-skill.md](m5-claude-code-skill.md) for the per-phase task plan
 and the Decisions, and
 [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the log.
@@ -109,28 +111,34 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # 236 passed (M1-M4 all green)
+.venv/bin/python -m pytest tests/ -q          # 3 failed, 241 passed (see note)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
 ./bin/docs check docs/                        # dogfood — exit 0
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
-All 236 tests pass — M1-M4 are shipped. If `.venv/` is missing (fresh clone):
+On `m5/phases-1-4` the suite is **3 failed / 241 passed** — the three failures
+are the M5 **intended RED baseline**: `tests/test_skill.py`'s content-driven
+checks fail against the Phase-1 stub `SKILL.md` (they turn green once Phases
+5–6 author the skill). M1-M4's 236 tests stay green. If `.venv/` is missing
+(fresh clone):
 ```sh
 python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: M5 — Claude Code skill is in flight; begin Phase 1.** M1-M4 are
-complete. M5 is the final milestone — a Claude Code skill (`SKILL.md` artifact)
-that drives the `docs` CLI. The task plan and log exist
+**Next action: M5 — Claude Code skill, Phase 5 (Update Base Interfaces).**
+M1-M4 are complete; M5's phases 1-4 (contract, RED tests, fixtures, RED
+baseline) are complete on `m5/phases-1-4`. The next action is Phase 5: author
+the skill `frontmatter` — the `name` and the trigger-scoped `description` —
+then Phase 6 authors the body. The task plan and log
 ([m5-claude-code-skill.md](m5-claude-code-skill.md),
-[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)) and the four
-milestone-setup OPEN QUESTIONS (OQ1-OQ4) are resolved and recorded as Decisions
-in the task plan. The next action is Phase 1 (Define Contract): create
-`skills/docs/SKILL.md` with valid frontmatter and a stub body, and
-`tests/test_skill.py` with check signatures.
+[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)) carry the per-phase
+detail and the four resolved milestone-setup OPEN QUESTIONS (OQ1-OQ4). The
+Phase-1 artifacts already exist — `skills/docs/SKILL.md` (valid frontmatter +
+stub body) and `tests/test_skill.py` (the eight structural checks); Phase 5
+finalises the `description`, Phase 6 the body.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.

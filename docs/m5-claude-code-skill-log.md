@@ -17,8 +17,12 @@ Related:
 - Progress: Milestone activated 2026-05-22 — task plan and this log created on
   `m5/milestone-setup`. All four milestone-setup OPEN QUESTIONS (OQ1–OQ4) are
   resolved (operator-confirmed 2026-05-22, see below) and recorded as Decisions
-  in the task plan. Phases 1–10 not yet started; Phase 1 (Define Contract) is
-  the next action.
+  in the task plan. **Phases 1–4 (contract, RED tests, fixtures, RED baseline)
+  are complete on `m5/phases-1-4`** — `skills/docs/SKILL.md` exists with a stub
+  body, `tests/test_skill.py` carries the eight structural checks at the
+  intended RED baseline (3 content-driven checks RED, 5 shape checks
+  legitimately green), and the 11-row trigger-scenario checklist is written and
+  RED. Phases 5–10 (author the skill, ship) are the next action.
 
 (Note: doc-lifecycle status is in the front-matter `Status:` field above. This
 section tracks milestone progress, which is distinct.)
