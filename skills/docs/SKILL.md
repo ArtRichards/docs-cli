@@ -82,8 +82,9 @@ writing it.
 
 When a doc is finished or superseded (a completed milestone, a closed plan),
 run `docs archive <file>`. It sets `Status: archived`, bumps `Updated:`, moves
-the file into `archive/<date>/`, and regenerates `INDEX.md` — atomically, in
-that order. Never hand-move a doc into `archive/`. Use `--reason "…"` to record
+the file into `archive/<date>/`, and regenerates `INDEX.md` — in that order;
+the metadata edit itself is atomic, so a failed run leaves the original file
+untouched. Never hand-move a doc into `archive/`. Use `--reason "…"` to record
 why, `--date YYYY-MM-DD` to override the archive date, and `--cascade` to also
 archive one-hop `pairs-with` / `child-of` relations (it prompts per file).
 

@@ -86,8 +86,8 @@ working in this very repo stops hand-editing `INDEX.md` and runs `docs index`.
 - [x] Any bundled reference file the body needs kept minimal (a verb
       cheat-sheet at most); no `README`/`CHANGELOG`/auxiliary clutter in the
       skill directory (per the skill-authoring guidance). _(No reference file
-      was needed — the body is 143 lines, well under the split threshold; the
-      directory holds only `SKILL.md`.)_
+      was needed — the body is 143 lines total / 112 non-blank, well under the
+      split threshold; the directory holds only `SKILL.md`.)_
 - [x] `tests/test_skill.py` — automated checks over the skill artifact: the
       frontmatter parses and carries exactly `name` + `description`; the body
       stays within the size budget; every `docs` verb the body names is a real
@@ -676,7 +676,8 @@ the project's **final v1 milestone — v1 is complete** (M1-M5 all shipped).
 
 - **`skills/docs/SKILL.md`** — the Claude Code skill, the milestone's sole
   authored artifact. Valid frontmatter (`name: docs` + a single-physical-line,
-  trigger-scoped `description`) and a 143-line imperative body. The
+  trigger-scoped `description`) and a 143-line-total / 112-non-blank imperative
+  body. The
   `description` triggers on documentation work in a `docs`-managed tree
   (creating a plan/spec/charter/milestone, archiving or renaming a doc, listing
   docs, checking the tree, regenerating `INDEX.md`, adopting a foreign Markdown
