@@ -41,13 +41,14 @@ def _doc(
     updated: date = date(2026, 5, 20),
     body: str = "Body paragraph one.\n\nBody paragraph two.",
     archived: bool = False,
+    project: str | None = "test",
 ) -> Doc:
     return Doc(
         path=Path(f"/fake/{name}"),
         title=name.replace(".md", "").replace("-", " ").title(),
         status=status,
         role=role,
-        project="test",
+        project=project,
         updated=updated,
         related=(),
         extra={},
@@ -138,9 +139,9 @@ def test_render_status_role_pinned_to_top():
     ]
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
-    status_pos = body.find("## Active — Status")
-    charter_pos = body.find("## Active — Charter")
-    plan_pos = body.find("## Active — Plan")
+    status_pos = body.find("### Active — Status")
+    charter_pos = body.find("### Active — Charter")
+    plan_pos = body.find("### Active — Plan")
     assert 0 <= status_pos < charter_pos < plan_pos
 
 
@@ -155,10 +156,10 @@ def test_render_role_order_after_status_is_canonical():
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
     positions = [
-        body.find("## Active — Charter"),
-        body.find("## Active — Plan"),
-        body.find("## Active — Spec"),
-        body.find("## Active — Milestone"),
+        body.find("### Active — Charter"),
+        body.find("### Active — Plan"),
+        body.find("### Active — Spec"),
+        body.find("### Active — Milestone"),
     ]
     assert positions == sorted(positions)
     assert all(p >= 0 for p in positions)
@@ -170,9 +171,9 @@ def test_render_empty_role_sections_omitted():
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
     # Only Charter section should appear.
-    assert "## Active — Charter" in body
-    assert "## Active — Plan" not in body
-    assert "## Active — Spec" not in body
+    assert "### Active — Charter" in body
+    assert "### Active — Plan" not in body
+    assert "### Active — Spec" not in body
 
 
 def test_render_within_section_sorts_by_updated_desc_then_path_asc():
@@ -185,7 +186,8 @@ def test_render_within_section_sorts_by_updated_desc_then_path_asc():
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
     # Section contains entries in order: mid (newer), aaa, zzz (alpha tiebreaker).
-    spec_section = body.split("## Active — Spec", 1)[1]
+    assert "### Active — Spec" in body
+    spec_section = body.split("### Active — Spec", 1)[1]
     mid_pos = spec_section.find("mid.md")
     aaa_pos = spec_section.find("aaa.md")
     zzz_pos = spec_section.find("zzz.md")
@@ -200,7 +202,7 @@ def test_render_archived_section_appears_last_with_archived_heading():
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
     archived_pos = body.find("## Archived")
-    active_spec_pos = body.find("## Active — Spec")
+    active_spec_pos = body.find("### Active — Spec")
     assert active_spec_pos >= 0
     assert archived_pos > active_spec_pos
 
@@ -231,3 +233,42 @@ def test_render_long_description_truncated():
     assert long_para.strip() not in out
     # An ellipsis character or "..." should appear somewhere in the entry line.
     assert "…" in out or "..." in out
+
+
+# --- M3: two-level Project → Role grouping --------------------------------
+
+
+def test_render_groups_active_docs_by_project():
+    """Active docs are grouped under `## Project — <name>` sections."""
+    docs = [
+        _doc("a.md", role="spec", project="test"),
+        _doc("b.md", role="spec", project="alpha"),
+    ]
+    out = render_index(docs, _config(), existing=None, root=_ROOT)
+    body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
+    assert "## Project — test" in body
+    assert "## Project — alpha" in body
+
+
+def test_render_home_project_first_then_alphabetical():
+    """The docs-root project leads; remaining projects follow alphabetically."""
+    docs = [
+        _doc("z.md", role="spec", project="zebra"),
+        _doc("a.md", role="spec", project="alpha"),
+        _doc("t.md", role="spec", project="test"),
+    ]
+    out = render_index(docs, _config(), existing=None, root=_ROOT)
+    body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
+    test_pos = body.find("## Project — test")
+    alpha_pos = body.find("## Project — alpha")
+    zebra_pos = body.find("## Project — zebra")
+    assert 0 <= test_pos < alpha_pos < zebra_pos
+
+
+def test_render_project_less_doc_falls_back_to_config_project():
+    """A Doc with project=None is bucketed under the config's project."""
+    docs = [_doc("orphan.md", role="spec", project=None)]
+    out = render_index(docs, _config(), existing=None, root=_ROOT)
+    body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
+    assert "## Project — test" in body
+    assert "orphan.md" in body

@@ -3,7 +3,7 @@
 Status: active
 Role: status
 Project: docs
-Updated: 2026-05-21
+Updated: 2026-05-22
 
 Related:
 - pairs-with: plan.md
@@ -13,11 +13,16 @@ Related:
 
 ## Current milestone
 
-_No milestone is in flight._ **M2 shipped 2026-05-21**; M3 has not been planned yet.
+**M3 — Validation and query (`check`, `list`) is in flight.** Started 2026-05-22.
 
-**Next:** M3 — Validation and query (`check`, `list`). Scaffold
-`m3-validation-and-query.md` with the milestone-planning workflow before
-implementation begins.
+- Task plan: [m3-validation-and-query.md](m3-validation-and-query.md)
+- Implementation log: [m3-validation-and-query-log.md](m3-validation-and-query-log.md)
+
+M3 adds two read-only verbs — `docs check` (validate the tree, with CI-usable
+exit codes) and `docs list` (filterable query view with a stable JSON schema) —
+and regroups `INDEX.md` by `Project` then `Role`. Phases 1–4 (contract, RED
+tests, fixtures, RED baseline) run first; the session **pauses at the RED
+baseline**, and phases 5–10 resume implementation.
 
 M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) shipped 2026-05-21
 across ten TDD phases. See [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md)
@@ -35,7 +40,7 @@ for the milestone summary.
 |---|---|---|---|
 | M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](m1-parser-and-index.md) | [Log](m1-parser-and-index-log.md) |
 | M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
-| M3 — Validation and query (`check`, `list`) | **Next** | _not yet created_ | _not yet created_ |
+| M3 — Validation and query (`check`, `list`) | **In flight** (started 2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | Pending | _not yet created_ | _not yet created_ |
 | M5 — Claude Code skill | Pending | _not yet created_ | _not yet created_ |
 
@@ -70,7 +75,7 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — five-milestone roadmap; M1 and M2 are shipped, **M3 is next**. Read the M3 section and the Resolved / Open questions.
+3. `docs/plan.md` — five-milestone roadmap; M1 and M2 are shipped, **M3 is in flight**. Read the M3 section and the Resolved / Open questions.
 4. `docs/cli.md` — the command spec; the `docs check` and `docs list` subsections are the M3 contract
 5. `docs/m2-mutating-verbs.md` — most recently shipped milestone; the **Milestone-completion summary** lists the M2 code surface (four verbs + shared helpers)
 6. `docs/m2-mutating-verbs-log.md` — M2 per-phase history, for implementation detail
@@ -81,7 +86,7 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # expect: 112 passed
+.venv/bin/python -m pytest tests/ -q          # M3 in flight: M1/M2 green; M3 + reworked INDEX tests RED at the Phase 4 baseline
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
@@ -93,14 +98,15 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: plan M3 — Validation and query (`check`, `list`).** M1 and M2
-are shipped; M3 has no milestone task plan yet. Create
-`docs/m3-validation-and-query.md` and its `-log.md` with the milestone-planning
-workflow, following the shape of `m2-mutating-verbs.md`, then run the ten TDD
-phases. M3's surface is already specified in `cli.md` (`docs check`,
-`docs list`); the exit criterion is `docs check` returning 0 on this repo's
-own `docs/` and `docs list --json` matching the documented schema. Do not
-start implementation before the M3 plan clears `definition-of-ready.md`.
+**Next action: resume M3 at Phase 5 — Update Base Interfaces.** Phases 1–4
+(contract, RED tests, fixtures, RED baseline) are complete; the session paused
+at the RED baseline by request. Phase 5 implements the shared helpers
+(`_iter_doc_texts`, `check_doc`, `exit_code_for`, `_resolved_project`) and the
+INDEX Project→Role renderer rework; phases 6–10 finish the verbs and ship. See
+[m3-validation-and-query.md](m3-validation-and-query.md) for the full phase plan
+and [m3-validation-and-query-log.md](m3-validation-and-query-log.md) for
+per-phase history. M3's exit criteria: `docs check` returns 0 on this repo's
+own `docs/`, and `docs list --json` matches the schema pinned in `cli.md`.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.

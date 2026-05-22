@@ -1,0 +1,10 @@
+[project]
+name = "invalid"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"
+
+[vocabulary]
+add_statuses = []
+add_roles = []

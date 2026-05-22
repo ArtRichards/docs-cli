@@ -3,7 +3,7 @@
 Status: active
 Role: spec
 Project: docs
-Updated: 2026-05-21
+Updated: 2026-05-22
 
 Related:
 - implements: charter.md
@@ -85,29 +85,48 @@ Exits 1 on collision (`<new>` exists).
 
 Query view.
 
-- Filters: `--status` (e.g., `active`), `--role` (e.g., `spec`), `--project` (slug), `--stale N` (Updated more than N days ago).
+- Filters: `--status` (e.g., `active`), `--role` (e.g., `spec`), `--project` (slug), `--stale N` (Updated more than N days ago). Filters are AND-combined.
 - Default human output: a table grouped by Status, then Role, sorted by Updated descending.
-- `--json` emits an array of records: `{path, title, status, role, project, updated, related, extra_fields}`.
+- `--json` emits an array of records, one per doc. Schema — **stable from M3 onward**:
+
+  | Field | Type | Notes |
+  |---|---|---|
+  | `path` | string | Root-relative POSIX path of the doc. |
+  | `title` | string | The H1 title. |
+  | `status` | string | The `Status:` value. |
+  | `role` | string | The `Role:` value. |
+  | `project` | string | The resolved project — the doc's `Project:` value, or the docs root's configured default when the doc has no `Project:` line. Never null. |
+  | `updated` | string | The `Updated:` date as ISO `YYYY-MM-DD`, regardless of the configured `date_format`. |
+  | `related` | array | Each entry an object `{verb, target}`; `target` is a root-relative path. Empty array when the doc has no `Related:` block. |
+  | `extra_fields` | object | Maps each non-standard metadata label to its value: a string, or an array of strings for a bullet-list field. Empty object when there are none. |
 
 Exits 0.
 
-### `docs check [DIR] [--stale N]`
+### `docs check [DIR] [--stale N] [--json]`
 
 Validate the tree. Reports (and exits nonzero on) any of:
 
 - Missing or empty required metadata fields (`Status`, `Role`, `Updated`).
 - `Status` or `Role` not in the (built-in ∪ configured) vocab.
 - `Updated:` not parseable as `YYYY-MM-DD`.
+- Structural breakage: no H1, or a malformed metadata line.
 - Status/location mismatch (`Status: archived` outside archive subtree, or any other status inside).
 - `Related:` paths that don't resolve to a file under the docs root.
 - (With `--stale N`) `Status: active` docs with `Updated:` more than N days ago.
 
-Output is grouped by file; one line per finding. `--json` emits a structured array.
+Output is grouped by file; one line per finding. `--json` emits an array of records, one per finding. Schema — **stable from M3 onward**:
+
+| Field | Type | Notes |
+|---|---|---|
+| `path` | string | Root-relative POSIX path of the doc. |
+| `severity` | string | `error` or `warning`. |
+| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, or `stale`. |
+| `message` | string | Human-readable description of the finding. |
 
 Exit codes:
 - 0 — clean.
-- 1 — warnings only (stale, unknown extra fields).
-- 2 — errors (missing required fields, invalid vocab, status drift, broken refs).
+- 1 — warnings only (stale docs).
+- 2 — errors (missing required fields, invalid vocab, malformed structure, status drift, broken refs).
 
 ### `docs touch <file>`
 

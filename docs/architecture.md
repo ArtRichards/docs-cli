@@ -3,7 +3,7 @@
 Status: active
 Role: reference
 Project: docs
-Updated: 2026-05-21
+Updated: 2026-05-22
 
 Related:
 - implements: charter.md
@@ -51,15 +51,18 @@ bin/docs (executable; Python 3.11+, stdlib only)
 - `render_index(docs: list[Doc], config: Config, existing: str | None, root: Path) -> str`.
 - If `existing` contains the marker block, preserves everything outside the markers.
 - If `existing` is None or has no markers, creates a minimal file with markers.
-- Active docs are grouped by `Role`; archived docs go in their own section.
+- Active docs are grouped by `Project`, then by `Role` within each project;
+  archived docs share one section.
 - Deterministic: same inputs produce byte-identical output.
 
-**Display order within Status: active.** Roles are listed in the canonical
-convention order (charter, plan, spec, milestone, log, status, decision,
-guide, runbook, reference, postmortem, idea, notes), **except `status` is
-pinned to the top** — it's the "you are here" pin and the entry point for
-most navigation. Within each Role section, entries are sorted by `Updated:`
-descending, then by path ascending as a deterministic tiebreaker.
+**Display order within Status: active.** The top level is one section per
+`Project` — the docs root's own project first, then the rest in ascending
+lexicographic order. Within a project, Roles follow the canonical convention
+order (charter, plan, spec, milestone, log, status, decision, guide, runbook,
+reference, postmortem, idea, notes), **except `status` is pinned to the top**
+— it's the "you are here" pin and the entry point for most navigation. Within
+each Role section, entries are sorted by `Updated:` descending, then by path
+ascending as a deterministic tiebreaker.
 
 **INDEX.md is excluded from walking** by name. The file is read once for
 marker-block preservation, then ignored as a traversal target. The exclusion
@@ -75,16 +78,24 @@ The renderer's output between the markers has a fixed shape so that
   ```
   _Generated YYYY-MM-DD. N docs active, M archived._
   ```
-- **Section headings.** One heading per Role group:
+- **Section headings.** Active docs are grouped two levels deep — a
+  level-2 heading per `Project`, then a level-3 heading per Role group:
   ```
-  ## Active — <Role-titlecased>
+  ## Project — <name>
+
+  ### Active — <Role-titlecased>
   ```
-  Archived docs share one heading: `## Archived`.
-- **Role group order.** `status` is pinned to the top of the Active
-  sections. The remaining Roles follow `CANONICAL_ROLE_ORDER` (defined
-  in `bin/docs`) — charter, plan, spec, milestone, log, decision, guide,
+  A doc with no `Project:` line is bucketed under the docs root's
+  configured default project. Archived docs share one level-2 heading,
+  `## Archived` — flat, not project-grouped.
+- **Project group order.** The docs root's own project (the configured
+  `project`) comes first; the remaining projects follow in ascending
+  lexicographic order. Projects with zero active docs are omitted.
+- **Role group order.** Within each project, `status` is pinned to the
+  top. The remaining Roles follow `CANONICAL_ROLE_ORDER` (defined in
+  `bin/docs`) — charter, plan, spec, milestone, log, decision, guide,
   runbook, reference, postmortem, idea, notes. Role groups with zero
-  entries are omitted. `## Archived` appears last.
+  entries are omitted. `## Archived` appears last, after every project.
 - **Within-section sort.** Primary key: `Updated:` descending. Tiebreaker:
   path ascending (lexicographic on the root-relative path).
 - **Entry format.** One bullet per doc:

@@ -12,14 +12,15 @@ shares the project name; the executable lives in `bin/` to avoid the
 filename-vs-directory collision (POSIX disallows a file and directory
 with the same name in the same parent).
 
-M1 surface: parser, walker, renderer, `docs index` subcommand, config
-loading. M2 (in progress) adds the mutating verbs `new`, `archive`,
-`mv`, and `touch`. `check` and `list` land in M3.
+M1: parser, walker, renderer, `docs index`, config loading. M2 adds the
+mutating verbs `new`, `archive`, `mv`, and `touch`. M3 (in progress)
+adds the validation and query verbs `check` and `list`, and regroups
+the INDEX by Project then Role.
 """
 
 from __future__ import annotations
 
-__version__ = "0.2.0-m2"
+__version__ = "0.3.0-m3"
 
 import argparse
 import os
@@ -183,6 +184,27 @@ class Config:
         if not self.roles >= BUILTIN_ROLES:
             missing = BUILTIN_ROLES - self.roles
             raise ValueError(f"Config.roles missing built-ins: {sorted(missing)}")
+
+
+@dataclass(frozen=True)
+class Finding:
+    """A single validation finding produced by `docs check` (M3).
+
+    Attributes:
+        path: Absolute path of the doc the finding is about.
+        severity: ``"error"`` or ``"warning"``. An error drives exit
+            code 2; a warning with no error present drives exit code 1.
+        rule: Stable machine-readable rule id — one of ``missing-field``,
+            ``bad-vocab``, ``bad-date``, ``status-drift``, ``broken-ref``,
+            ``stale``, ``malformed``. Emitted in ``--json`` output so CI
+            hooks can filter on it.
+        message: Human-readable one-line description of the problem.
+    """
+
+    path: Path
+    severity: str
+    rule: str
+    message: str
 
 
 # ---------------------------------------------------------------------------
@@ -811,6 +833,139 @@ def scaffold_doc(
 
 
 # ---------------------------------------------------------------------------
+# Validation and query (M3 — implementations land in Phases 5–7)
+# ---------------------------------------------------------------------------
+#
+# `docs check` validates a tree; `docs list` queries it. Both must cope with
+# docs that `parse()` / `walk()` would reject — `check` exists precisely to
+# report malformed docs, and `list` must still exit 0 per cli.md. They share
+# `_iter_doc_texts`, a lenient traversal that reads raw text without parsing,
+# applying the same skip rules as `walk()`.
+
+
+def _iter_doc_texts(root: Path, config: Config) -> Iterator[tuple[Path, str]]:
+    """Yield ``(path, text)`` for every managed Markdown doc under ``root``.
+
+    Lenient counterpart to `walk()`: reads each file's raw text but does not
+    parse it, so callers can inspect docs that `parse()` would reject. Applies
+    `walk()`'s skip rules exactly — non-``.md`` files, the root-level
+    ``INDEX.md``, and dotfiles / dotdirectories are skipped. Yields in
+    root-relative POSIX path order, matching `walk()`.
+    """
+    raise NotImplementedError("_iter_doc_texts() — Phase 5")
+
+
+def _resolved_project(doc: Doc, config: Config) -> str:
+    """Return ``doc``'s project, falling back to the config default.
+
+    `parse()` leaves `Doc.project` None when the doc has no ``Project:`` line;
+    the INDEX renderer and `docs list` group and report by the resolved value,
+    never None.
+    """
+    raise NotImplementedError("_resolved_project() — Phase 5")
+
+
+def check_doc(
+    path: Path,
+    text: str,
+    root: Path,
+    config: Config,
+    stale: int | None,
+    today: date,
+) -> list[Finding]:
+    """Validate a single doc's raw ``text``; return every finding, never raise.
+
+    Runs the rules cli.md pins for `docs check`:
+
+    - missing or empty required field (``Status``, ``Role``, ``Updated``) —
+      error, rule ``missing-field``.
+    - ``Status`` / ``Role`` not in the configured vocabulary — error,
+      rule ``bad-vocab``.
+    - ``Updated:`` not parseable in the configured date format — error,
+      rule ``bad-date``.
+    - structural breakage (no H1, malformed metadata line) — error,
+      rule ``malformed``.
+    - status / location mismatch (``Status: archived`` outside the archive
+      subtree, or any other status inside it) — error, rule ``status-drift``.
+    - a ``Related:`` target that does not resolve to a file under ``root`` —
+      error, rule ``broken-ref``.
+    - with ``stale`` set, a ``Status: active`` doc whose ``Updated:`` is more
+      than ``stale`` days before ``today`` — warning, rule ``stale``.
+
+    Built on `parse_metadata_block` (lenient — it enforces neither required
+    fields, vocabulary, nor the date format) plus `validate_status`,
+    `validate_role`, and `parse_date`, each guarded so a rejection becomes a
+    `Finding` rather than an exception.
+    """
+    raise NotImplementedError("check_doc() — Phase 5")
+
+
+def check_tree(root: Path, config: Config, stale: int | None, today: date) -> list[Finding]:
+    """Validate every doc under ``root``; return all findings.
+
+    Iterates `_iter_doc_texts`, applies `check_doc` to each doc, and
+    concatenates the results in root-relative POSIX path order. Within a doc,
+    findings keep `check_doc`'s order (errors before warnings).
+    """
+    raise NotImplementedError("check_tree() — Phase 6")
+
+
+def exit_code_for(findings: list[Finding]) -> int:
+    """Map ``findings`` to a `docs check` exit code.
+
+    Returns 2 when any finding is an error, 1 when there are warnings but no
+    error, and 0 when ``findings`` is empty — the matrix cli.md pins so CI
+    hooks can branch on it.
+    """
+    raise NotImplementedError("exit_code_for() — Phase 5")
+
+
+def query_docs(
+    root: Path,
+    config: Config,
+    *,
+    status: str | None,
+    role: str | None,
+    project: str | None,
+    stale: int | None,
+    today: date,
+) -> list[Doc]:
+    """Return the docs under ``root`` matching the filters, sorted.
+
+    Parses each doc from `_iter_doc_texts` leniently — a doc that cannot be
+    parsed into a `Doc` at all is omitted (it surfaces under `docs check`, so
+    `list` can still exit 0). Filters are AND-combined: ``status`` and ``role``
+    match exactly; ``project`` matches the resolved project; ``stale`` keeps
+    only docs whose ``Updated:`` is more than that many days before ``today``.
+    Sorted to match the human table — by Status, then Role, then ``Updated``
+    descending.
+    """
+    raise NotImplementedError("query_docs() — Phase 6")
+
+
+def finding_to_json(finding: Finding, root: Path) -> dict[str, object]:
+    """Convert ``finding`` to its `docs check --json` record.
+
+    Produces ``{path, severity, rule, message}``, with ``path`` rendered as
+    the doc's root-relative POSIX path.
+    """
+    raise NotImplementedError("finding_to_json() — Phase 7")
+
+
+def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
+    """Convert ``doc`` to its `docs list --json` record.
+
+    Produces the schema cli.md pins, stable from M3 on:
+    ``{path, title, status, role, project, updated, related, extra_fields}``
+    — ``path`` the root-relative POSIX path, ``project`` the resolved project,
+    ``updated`` an ISO ``YYYY-MM-DD`` string, ``related`` an array of
+    ``{verb, target}`` objects, and ``extra_fields`` an object mapping each
+    extra label to its string or list-of-strings value.
+    """
+    raise NotImplementedError("doc_to_json() — Phase 7")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -926,6 +1081,68 @@ def _build_parser() -> argparse.ArgumentParser:
         description=("Set Updated: to today in <file>. No other change. Regenerates INDEX.md."),
     )
     touch_p.add_argument("file", help="Path to the doc to touch.")
+
+    # M3 read-only verbs. They take neither --dry-run nor the `common` parent
+    # (it carries --dry-run, meaningless when nothing is mutated).
+    check_p = subparsers.add_parser(
+        "check",
+        help="Validate the docs tree; report violations with CI-usable exit codes.",
+        description=(
+            "Walk the docs root and report convention violations: missing or "
+            "malformed metadata, unknown vocabulary, status/location drift, "
+            "and broken Related: references. Exit 0 clean, 1 warnings only, "
+            "2 errors."
+        ),
+    )
+    check_p.add_argument(
+        "dir",
+        nargs="?",
+        default=None,
+        help="Docs root (positional alternative to --root).",
+    )
+    check_p.add_argument(
+        "--root",
+        help="Explicit docs root; overrides positional DIR.",
+    )
+    check_p.add_argument(
+        "--stale",
+        type=int,
+        metavar="N",
+        help="Also warn on Status: active docs not updated in more than N days.",
+    )
+    check_p.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit findings as a JSON array instead of grouped human output.",
+    )
+
+    list_p = subparsers.add_parser(
+        "list",
+        help="Query the docs tree with filters; human table or JSON output.",
+        description=(
+            "List docs in the tree, optionally filtered by status, role, "
+            "project, or staleness. Default output is a table grouped by "
+            "Status then Role; --json emits an array of records."
+        ),
+    )
+    list_p.add_argument(
+        "--root",
+        help="Explicit docs root; overrides the upward .docs.toml search.",
+    )
+    list_p.add_argument("--status", help="Keep only docs with this Status.")
+    list_p.add_argument("--role", help="Keep only docs with this Role.")
+    list_p.add_argument("--project", help="Keep only docs with this Project.")
+    list_p.add_argument(
+        "--stale",
+        type=int,
+        metavar="N",
+        help="Keep only docs not updated in more than N days.",
+    )
+    list_p.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit an array of records instead of a human table.",
+    )
 
     return parser
 
@@ -1254,12 +1471,21 @@ def _cmd_touch(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_check(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_check() — Phase 6")
+
+
+def _cmd_list(args: argparse.Namespace) -> int:
+    raise NotImplementedError("_cmd_list() — Phase 6")
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code.
 
     Subcommands:
         index — regenerate INDEX.md from metadata in the docs root (M1).
-        new, archive, mv, touch — mutating verbs (M2, in progress).
+        new, archive, mv, touch — mutating verbs (M2).
+        check, list — validation and query verbs (M3, in progress).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).
@@ -1279,6 +1505,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_mv(args)
     if args.command == "touch":
         return _cmd_touch(args)
+    if args.command == "check":
+        return _cmd_check(args)
+    if args.command == "list":
+        return _cmd_list(args)
     return 2
 
 
