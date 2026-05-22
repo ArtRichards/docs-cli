@@ -13,6 +13,7 @@ ensures a stub cannot accidentally satisfy an assertion.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -107,6 +108,17 @@ def test_migrate_json_emits_pinned_record_schema(docs_script, fixtures_dir, tmp_
     }
     for rec in data:
         assert set(rec) == expected_keys
+        # path is a root-relative POSIX string — never absolute.
+        assert isinstance(rec["path"], str)
+        assert not rec["path"].startswith("/"), f"path must be root-relative: {rec['path']!r}"
+        assert rec["role"] and isinstance(rec["role"], str)
+        assert rec["project"] and isinstance(rec["project"], str)
+        assert rec["status"] and isinstance(rec["status"], str)
+        # updated is an ISO YYYY-MM-DD string.
+        assert isinstance(rec["updated"], str)
+        assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", rec["updated"]), (
+            f"updated must be ISO YYYY-MM-DD: {rec['updated']!r}"
+        )
         assert rec["confidence"] in ("high", "low")
         assert isinstance(rec["ambiguities"], list)
         assert isinstance(rec["synthesized_h1"], bool)
@@ -173,9 +185,9 @@ def test_migrate_refuses_a_docs_root(docs_script, fixtures_dir, tmp_path):
     shutil.copytree(fixtures_dir / "trees" / "minimal", managed)
     before = _snapshot(managed)
     proc = _run(docs_script, "migrate", str(managed))
-    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
     # cli.md pins exit 2 for a directory that is already a docs root.
     assert proc.returncode == 2
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
     assert ".docs.toml" in (proc.stdout + proc.stderr) or "docs root" in (proc.stdout + proc.stderr)
     assert _snapshot(managed) == before, "a refused migrate must not touch the tree"
 

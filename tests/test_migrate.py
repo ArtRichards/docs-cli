@@ -191,6 +191,12 @@ def test_infer_updated_malformed_in_file_value_falls_back_to_mtime():
     assert confident is False
 
 
+def test_infer_updated_honours_a_non_default_date_format():
+    updated, confident = infer_updated({"Updated": "04/03/2025"}, mtime=0.0, date_format="%d/%m/%Y")
+    assert updated == date(2025, 3, 4)
+    assert confident is True
+
+
 # --- detect_archive_layout -------------------------------------------------
 
 
@@ -349,6 +355,83 @@ def test_plan_migration_confidence_and_ambiguities_are_consistent(fixtures_dir):
         else:
             assert fm.confidence == "low"
             assert fm.ambiguities
+
+
+def _by_name(plan: MigrationPlan, name: str) -> FileMigration:
+    matches = [f for f in plan.files if f.rel.endswith(name)]
+    assert len(matches) == 1, f"expected exactly one {name}, got {len(matches)}"
+    return matches[0]
+
+
+def test_plan_migration_pins_low_confidence_fixture_files(fixtures_dir):
+    plan = plan_migration(_foreign(fixtures_dir))
+
+    # proj-has-metadata.md carries an out-of-vocab `Status: wip` — inference
+    # must force a built-in substitution and flag it.
+    has_metadata = _by_name(plan, "proj-has-metadata.md")
+    assert has_metadata.confidence == "low"
+    assert has_metadata.ambiguities
+
+    # proj-no-h1.md has no H1 — a synthesised title is an ambiguity.
+    no_h1 = _by_name(plan, "proj-no-h1.md")
+    assert no_h1.confidence == "low"
+    assert no_h1.ambiguities
+
+    # proj-overview.md has no role suffix — Role falls back to `notes`,
+    # which is a flagged, low-confidence inference.
+    overview = _by_name(plan, "proj-overview.md")
+    assert overview.confidence == "low"
+    assert overview.ambiguities
+
+
+def test_plan_migration_pins_a_high_confidence_fixture_file(fixtures_dir):
+    plan = plan_migration(_foreign(fixtures_dir))
+    # proj-auth-spec.md has a clean `-spec` suffix, an H1, and no
+    # pre-existing metadata — every field infers unambiguously.
+    auth_spec = _by_name(plan, "proj-auth-spec.md")
+    assert auth_spec.confidence == "high"
+    assert auth_spec.ambiguities == ()
+
+
+def test_plan_migration_pins_inferred_values_for_known_files(fixtures_dir):
+    plan = plan_migration(_foreign(fixtures_dir))
+
+    auth_spec = _by_name(plan, "proj-auth-spec.md")
+    assert auth_spec.role == "spec"
+    assert auth_spec.project == "proj"
+    assert auth_spec.status == "active"
+
+    deploy_log = _by_name(plan, "proj-deploy-log.md")
+    assert deploy_log.role == "log"
+    assert deploy_log.project == "proj"
+
+    db_adr = _by_name(plan, "proj-db-adr.md")
+    assert db_adr.role == "decision"
+    assert db_adr.project == "proj"
+
+    old_decision = _by_name(plan, "proj-old-decision.md")
+    assert old_decision.role == "decision"
+    assert old_decision.status == "archived"
+
+
+def test_plan_migration_marks_reconciled_metadata(fixtures_dir):
+    plan = plan_migration(_foreign(fixtures_dir))
+    # proj-has-metadata.md carries pre-existing Status:/Updated: lines —
+    # migrate reconciles them into the block.
+    has_metadata = _by_name(plan, "proj-has-metadata.md")
+    assert has_metadata.reconciled_metadata is True
+    # Every other fixture file has no pre-existing metadata-shaped lines.
+    for fm in plan.files:
+        if not fm.rel.endswith("proj-has-metadata.md"):
+            assert fm.reconciled_metadata is False
+
+
+def test_plan_migration_synthesized_h1_is_false_for_files_with_an_h1(fixtures_dir):
+    plan = plan_migration(_foreign(fixtures_dir))
+    # Only proj-no-h1.md lacks an H1; every other fixture file has one.
+    for fm in plan.files:
+        if not fm.rel.endswith("proj-no-h1.md"):
+            assert fm.synthesized_h1 is False, f"{fm.rel} has an H1"
 
 
 def test_plan_migration_flags_the_no_h1_file(fixtures_dir):
