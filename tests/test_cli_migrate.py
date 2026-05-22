@@ -174,7 +174,8 @@ def test_migrate_refuses_a_docs_root(docs_script, fixtures_dir, tmp_path):
     before = _snapshot(managed)
     proc = _run(docs_script, "migrate", str(managed))
     assert "NotImplementedError" not in (proc.stdout + proc.stderr)
-    assert proc.returncode != 0
+    # cli.md pins exit 2 for a directory that is already a docs root.
+    assert proc.returncode == 2
     assert ".docs.toml" in (proc.stdout + proc.stderr) or "docs root" in (proc.stdout + proc.stderr)
     assert _snapshot(managed) == before, "a refused migrate must not touch the tree"
 

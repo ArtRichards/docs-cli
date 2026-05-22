@@ -93,25 +93,29 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # all green (164 passed)
+.venv/bin/python -m pytest tests/ -q          # M4 phases 1-4: 48 failed, 165 passed (intended RED)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
 ./bin/docs check docs/                        # dogfood — exit 0
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
-If `.venv/` is missing (fresh clone):
+The 48 failures are M4's RED baseline — every one is a `NotImplementedError`
+from a Phase-1 stub that Phases 5-7 implement. M1/M2/M3's 164 tests plus
+`migrate --help` are green. If `.venv/` is missing (fresh clone):
 ```sh
 python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: run M4 — Migration helper (`docs migrate`) through the ten TDD
-phases.** M1–M3 are shipped; M4 is activated — its task plan
-([m4-migration-helper.md](m4-migration-helper.md)) and log
-([m4-migration-helper-log.md](m4-migration-helper-log.md)) exist. Start at
-Phase 1 (Define Contract); the M4 log's phase table tracks progress. See the
-M4 task plan's TDD Implementation Plan for each phase's scope.
+**Next action: resume M4 — Migration helper (`docs migrate`) at Phase 5
+(Update Base Interfaces).** Phases 1-4 are complete on branch `m4/phases-1-4`
+— the contract is defined, the RED tests and `foreign/` fixture tree are
+written, and the RED baseline is captured. Phase 5 implements the pure
+inference helpers (`infer_role`, `infer_project`, `infer_status`,
+`infer_updated`, `detect_archive_layout`) and `insert_metadata_block`. The M4
+log's phase table tracks progress; see the M4 task plan's TDD Implementation
+Plan for each phase's scope.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
