@@ -239,7 +239,8 @@ and `dual-status-adr.md`):
   but the convention defines no registry of "known" extra fields and treats
   extra `Label: value` lines as a designed feature. There is nothing
   implementable to warn about; Phase 1 removed the phrase from cli.md. Exit 1
-  is stale docs only.
+  is stale docs only. A possible future opt-in extra-field allowlist is scoped
+  as an open question in [plan.md](plan.md).
 - **`Finding` carries a stable `rule` id.** Beyond `severity` and `message`,
   each finding has a machine-readable `rule` (`missing-field`, `bad-vocab`,
   `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`). It is

@@ -3,7 +3,7 @@
 Status: active
 Role: plan
 Project: docs
-Updated: 2026-05-21
+Updated: 2026-05-22
 
 Related:
 - implements: charter.md
@@ -99,3 +99,4 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 ## Open questions
 
 - Should the INDEX be grouped by directory or `Project` instead of (or alongside) `Role`? M2's renderer fix made nested-doc links correct, but a large tree navigates better grouped by location. Deferred to M3 together with `docs list --project` — both are query/view concerns, not mutating-verb concerns.
+- Should `docs check` validate **extra metadata fields**? The convention harvests every non-standard `Label: value` line into `Doc.extra` (`Owner:`, `Tags:`, `Archived-reason:`, …) but defines no notion of a *known* extra field, so `check` leaves them all unflagged (decided in M3, 2026-05-22 — `cli.md`'s earlier "unknown extra fields" warning was unimplementable as written and was removed). A future change could add an opt-in allowlist: a `[vocabulary] add_fields = [...]` key in `.docs.toml`, merged into a new `Config.fields` set exactly as `add_statuses` / `add_roles` already extend the vocabulary; `check_doc` would then emit an `unknown-field` **warning** (exit 1 — never an error) for any extra label outside that set. Scope is small — one rule in `check_doc`, one `Config` field, one `load_config` branch, one `cli.md` schema note — but it is not tied to a milestone. Revisit post-v1 if real trees accumulate typo'd field labels worth catching.
