@@ -59,7 +59,7 @@ agent consumes to resolve ambiguities before applying.
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-22 | `FileMigration` / `MigrationPlan` models + inference/plan/apply helper stubs + `_cmd_migrate` stub + `migrate` subparser in `bin/docs`; `cli.md` migrate section + `--json` schema; `architecture.md` migrate module spec; M4 plan + log created. |
-| 2. Write Tests (RED) | Not started | — | `tests/test_migrate.py` (inference + planning units) and `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json`). |
+| 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_migrate.py` (40 inference + planning units) and `tests/test_cli_migrate.py` (9 CLI dry-run / `--apply` / `--json` tests). |
 | 3. Create Data/Fixtures | Not started | — | `tests/fixtures/trees/foreign/` — non-conforming docs; archive-style subdir; refuse-guard tree. |
 | 4. Run Tests (RED Baseline) | Not started | — | `pytest tests/` — capture the RED baseline. **Session pauses here.** |
 | 5. Update Base Interfaces | Not started | — | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block`. |
@@ -183,6 +183,61 @@ the `--json` plan schema in `cli.md` and the `migrate` module spec in
       added; `migrate` dropped from cli.md's "not in v1".
 - [x] `docs/INDEX.md` and the dogfood snapshot regenerated in lockstep.
 - [x] Ready for Phase 2 to write failing tests against the contract.
+
+### Phase 2 — Write Tests (RED)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Express every M4 behaviour — each inference helper, `insert_metadata_block`,
+`plan_migration`, and the `migrate` CLI surface — as a failing test before any
+implementation.
+
+#### Files changed
+
+| File | Action | Tests |
+|---|---|---|
+| `tests/test_migrate.py` | Create | 40 — `infer_role` per suffix (spec/plan/adr→decision/log/status/charter/guide/runbook/reference), `notes` fallback, in-file override, always-built-in; `infer_project` common-prefix / dir-name fallback / single-file; `infer_status` in-file-wins / archive default / active default / out-of-vocab rejection / always-built-in; `infer_updated` in-file / mtime fallback / malformed fallback; `detect_archive_layout` per archive style + already-conformant no-move + active-tree; `insert_metadata_block` H1-present, no-H1 synthesis, reconcile-not-duplicate, trailing-newline, parse round-trip, `check_doc`-clean; `plan_migration` shape, per-file count, path order, confidence/ambiguities consistency, no-H1 flag, archive-move presence/absence. |
+| `tests/test_cli_migrate.py` | Create | 9 — `--help`, dry-run-is-default-writes-nothing, dry-run-reports-every-file, the pinned `--json` schema, `--apply` writes blocks, `--apply` normalises archives, `--apply` leaves the active layout unchanged, the refuse-on-`.docs.toml` guard, applied-tree-passes-`check`. |
+
+Total: 49 new M4 tests; 213 in the suite.
+
+#### Actions taken
+
+- Unit tests import `from docs import …` — `conftest.py` registers `bin/docs`
+  as the `docs` module, so the natural import works.
+- `plan_migration` and the CLI tests run against the `foreign/` fixture tree
+  (built in Phase 3); the pure-inference tests use inline data.
+- CLI tests follow the M1-M3 idiom — a local `_run()` subprocess helper with a
+  `cwd` parameter; `--apply` tests `shutil.copytree` the fixture into
+  `tmp_path` so the committed fixtures are never mutated, and snapshot the tree
+  before/after to assert dry-run writes nothing.
+
+#### Issues / decisions
+
+- **False-pass guard.** A stub's `NotImplementedError` exits the process with
+  code 1. The exit-0 `migrate` tests fail honestly against that; the
+  refuse-guard test asserts a non-zero exit *and* a real-message substring.
+  Every non-`--help` CLI test additionally asserts
+  `"NotImplementedError" not in (stdout + stderr)`, so a stub cannot
+  false-pass.
+- **`migrate --help` passes at the RED baseline.** Phase 1 declared the CLI
+  surface, so `docs migrate --help` works — a legitimate contract-test pass.
+- **`insert_metadata_block` body-verbatim is asserted via `parse`.** The
+  block-insertion tests round-trip the result through `parse` /
+  `parse_metadata_block` and run `check_doc`, so the implementation has a
+  precise, convention-anchored target rather than a brittle string match.
+
+#### Exit criteria
+
+- [x] Both new test files collect with no `ImportError`.
+- [x] Every new M4 test fails for the right reason — `NotImplementedError`
+      from a stub (or, once the fixture lands, a wrong stub exit code caught by
+      the false-pass guard).
+- [x] `migrate --help` passes (the contract test).
+- [x] `ruff` / `mypy` clean tree-wide.
+- [x] Ready for Phase 3 (fixtures) → Phase 4 (RED baseline).
 
 ## Milestone-completion summary
 
