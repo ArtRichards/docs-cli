@@ -66,8 +66,8 @@ agent consumes to resolve ambiguities before applying.
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 48 failed, 165 passed; every M4 failure is `NotImplementedError` from a stub. **Session pauses here.** |
 | 5. Update Base Interfaces | Complete | 2026-05-22 | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block` implemented; 30 inference + block-insertion units green. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-22 | `plan_migration` + `_in_archive_subdir` + `_cmd_migrate` dry-run human output (+ refuse-guard); all 14 plan-migration units and the dry-run CLI tests green. |
-| 7. Update Tool/Wrapper Layer | Not started | — | `apply_migration`, `migration_to_json`, the `--apply` / `--json` branches; refuse-on-`.docs.toml` guard. |
-| 8. Run Tests (GREEN) | Not started | — | Full suite + quality gates green tree-wide. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-22 | `apply_migration` + `migration_to_json` implemented; the `--apply` / `--json` `_cmd_migrate` branches were wired at Phase 6 and now resolve; all 9 `test_cli_migrate.py` tests green. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-22 | `pytest tests/` — 219 passed, 0 failed; `ruff check` / `ruff format --check` / `mypy` all green tree-wide. |
 | 9. Implement Online/Integration | Not started | — | Dogfood: `migrate` dry-run plan + `--apply` on a copy → `docs check` clean. |
 | 10. Quality, Docs, Refactor | Not started | — | `status.md` / `plan.md` / milestone doc + this log updated; M4 → Complete. |
 
@@ -453,6 +453,74 @@ validation, human plan output).
 - [x] `test_migrate_dry_run_is_default_and_writes_nothing` +
       `test_migrate_dry_run_reports_every_file` green; refuse-guard green.
 - [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Implement `apply_migration` (atomic in-place metadata writes + archive moves)
+and `migration_to_json` (the pinned 10-key flat record). The `--apply` /
+`--json` branches of `_cmd_migrate` were wired at Phase 6; this phase fills the
+helpers they call.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | Implemented `apply_migration` and `migration_to_json`. |
+
+#### Actions taken
+
+- `apply_migration`: per `FileMigration`, edits in place first (mirroring
+  `_archive_one`'s edit-then-move ordering) — `insert_metadata_block` with the
+  decided metadata and a `_slug_to_title` title, written via `atomic_write` —
+  then, when `archive_move` is set, `mkdir -p` the destination parent and
+  `Path.replace` the file into `archive/<date>/`.
+- `migration_to_json`: one flat dict per `FileMigration` in plan order, the
+  exact 10 keys `cli.md` pins (`path`, `role`, `project`, `status`, `updated`
+  as ISO, `confidence`, `ambiguities` as a list, `archive_move`,
+  `synthesized_h1`, `reconciled_metadata`).
+
+#### Issues / decisions
+
+- **`--json` is orthogonal to `--apply` (resolved Q4).** `--json` is a pure
+  output-format switch: `--json` alone prints the dry-run plan as JSON;
+  `--apply --json` performs the apply *and* prints the plan as JSON —
+  consistent with `check` / `list`. `_cmd_migrate` calls `apply_migration`
+  inside the same `try` that builds the plan, then chooses JSON-or-human
+  output independently.
+- `plan_migration` / `apply_migration` are wrapped in
+  `except (MetadataError, VocabularyError, OSError)` → stderr, exit 2.
+
+#### Exit criteria
+
+- [x] All 9 `tests/test_cli_migrate.py` tests green.
+- [x] Exit codes match `cli.md` (0 success, 2 already-a-docs-root /
+      nonexistent dir).
+- [x] `ruff` / `mypy` clean tree-wide.
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-22
+
+#### Command + summary
+
+```
+.venv/bin/python -m pytest tests/ -q
+=========================== 219 passed in ~3.1s ===========================
+
+.venv/bin/ruff check .          → All checks passed!
+.venv/bin/ruff format --check . → 18 files already formatted
+.venv/bin/mypy                  → Success: no issues found in 18 source files
+```
+
+#### Exit criteria
+
+- [x] Full suite green — 219 passed, 0 failed (165 baseline + 54 M4 tests now
+      all GREEN for the right reason; no test relaxed or rewritten).
+- [x] `ruff check` / `ruff format --check` / `mypy` all green tree-wide.
 
 ## Milestone-completion summary
 

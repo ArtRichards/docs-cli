@@ -1616,7 +1616,22 @@ def apply_migration(plan: MigrationPlan) -> None:
     Args:
         plan: The plan produced by `plan_migration`.
     """
-    raise NotImplementedError("apply_migration — Phase 7")
+    for fm in plan.files:
+        text = fm.path.read_text()
+        new_text = insert_metadata_block(
+            text,
+            title=_slug_to_title(fm.path.stem),
+            status=fm.status,
+            role=fm.role,
+            project=fm.project,
+            updated=fm.updated,
+            date_format="%Y-%m-%d",
+        )
+        atomic_write(fm.path, new_text)
+        if fm.archive_move is not None:
+            dest = plan.root / fm.archive_move
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            fm.path.replace(dest)
 
 
 def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
@@ -1636,7 +1651,21 @@ def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
     Returns:
         A list of JSON-serialisable record dicts.
     """
-    raise NotImplementedError("migration_to_json — Phase 7")
+    return [
+        {
+            "path": fm.rel,
+            "role": fm.role,
+            "project": fm.project,
+            "status": fm.status,
+            "updated": fm.updated.isoformat(),
+            "confidence": fm.confidence,
+            "ambiguities": list(fm.ambiguities),
+            "archive_move": fm.archive_move,
+            "synthesized_h1": fm.synthesized_h1,
+            "reconciled_metadata": fm.reconciled_metadata,
+        }
+        for fm in plan.files
+    ]
 
 
 # ---------------------------------------------------------------------------
