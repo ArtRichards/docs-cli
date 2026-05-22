@@ -13,9 +13,9 @@ filename-vs-directory collision (POSIX disallows a file and directory
 with the same name in the same parent).
 
 M1: parser, walker, renderer, `docs index`, config loading. M2 adds the
-mutating verbs `new`, `archive`, `mv`, and `touch`. M3 (in progress)
-adds the validation and query verbs `check` and `list`, and regroups
-the INDEX by Project then Role.
+mutating verbs `new`, `archive`, `mv`, and `touch`. M3 adds the
+validation and query verbs `check` and `list`, and regroups the INDEX
+by Project then Role.
 """
 
 from __future__ import annotations
@@ -922,8 +922,7 @@ def check_doc(
       rule ``bad-vocab``.
     - ``Updated:`` not parseable in the configured date format — error,
       rule ``bad-date``.
-    - structural breakage (no H1, malformed metadata line) — error,
-      rule ``malformed``.
+    - structural breakage — a missing H1 — error, rule ``malformed``.
     - status / location mismatch (``Status: archived`` outside the archive
       subtree, or any other status inside it) — error, rule ``status-drift``.
     - a ``Related:`` target that does not resolve to a file under ``root`` —

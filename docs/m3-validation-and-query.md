@@ -1,6 +1,6 @@
 # M3 — Validation and query (`check`, `list`)
 
-Status: active
+Status: done
 Role: milestone
 Project: docs
 Updated: 2026-05-22

@@ -1,6 +1,6 @@
 # M3 — Implementation Log
 
-Status: active
+Status: done
 Role: log
 Project: docs
 Updated: 2026-05-22
@@ -70,8 +70,8 @@ _Captured before Phase 1; historical._
 | `docs/architecture.md` | Modify | 1 | INDEX renderer-format subspec → two-level grouping; `Updated` bumped. |
 | `docs/status.md` | Modify | 1, …, 10 | M3 phase tracking; M3 → Complete at Phase 10. |
 | `docs/plan.md` | Modify | 10 | Resolve the INDEX-grouping open question. |
-| `docs/INDEX.md` | Regenerate | 1, 5, 9 | Picks up the two new M3 docs (P1, still flat); two-level layout (P5). |
-| `tests/fixtures/expected/docs-INDEX.md` | Modify | 1, 5 | Re-synced with `docs/INDEX.md` in lockstep. |
+| `docs/INDEX.md` | Regenerate | 1, 5, 10 | Picks up the two new M3 docs (P1, still flat); two-level layout (P5); the log's description bump (P10). |
+| `tests/fixtures/expected/docs-INDEX.md` | Modify | 1, 5, 10 | Re-synced with `docs/INDEX.md` in lockstep. |
 | `tests/test_check.py` | Create | 2 | `check_doc` / `check_tree` / `exit_code_for` unit tests. |
 | `tests/test_query.py` | Create | 2 | `query_docs` filter / sort unit tests. |
 | `tests/test_cli_check.py` | Create | 2 | `docs check` CLI tests. |

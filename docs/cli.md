@@ -109,7 +109,7 @@ Validate the tree. Reports (and exits nonzero on) any of:
 - Missing or empty required metadata fields (`Status`, `Role`, `Updated`).
 - `Status` or `Role` not in the (built-in ∪ configured) vocab.
 - `Updated:` not parseable as `YYYY-MM-DD`.
-- Structural breakage: no H1, or a malformed metadata line.
+- Structural breakage: a missing H1. (A malformed line inside the metadata block ends the block early rather than raising; its effect surfaces as a missing required field, not as a separate finding.)
 - Status/location mismatch (`Status: archived` outside archive subtree, or any other status inside).
 - `Related:` paths that don't resolve to a file under the docs root.
 - (With `--stale N`) `Status: active` docs with `Updated:` more than N days ago.
