@@ -13,14 +13,19 @@ Related:
 
 ## Current milestone
 
-**No milestone in flight.** M3 — Validation and query (`check`, `list`)
-shipped 2026-05-22 across ten TDD phases. **M4 — Migration helper
-(`docs migrate`) is next** — its task plan is authored when the milestone is
-activated, not yet.
+**M4 — Migration helper (`docs migrate`) is in flight.** Activated 2026-05-22;
+the task plan and log are authored, Phase 1 (Define Contract) is the next
+action. M4 adds one verb — `docs migrate <dir>` — that adopts a non-conforming
+directory into the convention: it walks a foreign tree, infers the required
+metadata per file, and produces a migration plan (dry-run by default; `--apply`
+writes). See [m4-migration-helper.md](m4-migration-helper.md) for the ten-phase
+plan and [m4-migration-helper-log.md](m4-migration-helper-log.md) for the
+per-phase log.
 
-M3 added two read-only verbs — `docs check` (validate the tree, with CI-usable
-exit codes) and `docs list` (filterable query view with a stable JSON schema) —
-and regrouped `INDEX.md` by `Project` then `Role`. See
+M3 — Validation and query (`check`, `list`) shipped 2026-05-22 across ten TDD
+phases. It added two read-only verbs — `docs check` (validate the tree, with
+CI-usable exit codes) and `docs list` (filterable query view with a stable
+JSON schema) — and regrouped `INDEX.md` by `Project` then `Role`. See
 [m3-validation-and-query-log.md](m3-validation-and-query-log.md) for the
 per-phase history and [m3-validation-and-query.md](m3-validation-and-query.md)
 for the milestone summary.
@@ -42,7 +47,7 @@ for the milestone summary.
 | M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](m1-parser-and-index.md) | [Log](m1-parser-and-index-log.md) |
 | M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
 | M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
-| M4 — Migration helper (`docs migrate`) | Pending | _not yet created_ | _not yet created_ |
+| M4 — Migration helper (`docs migrate`) | **In flight** (started 2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | Pending | _not yet created_ | _not yet created_ |
 
 Per-milestone task plans are created when each milestone is activated, not all up front.
@@ -76,13 +81,14 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — five-milestone roadmap; M1–M3 are shipped, **M4 is next**. Read the M4 section and the Resolved / Open questions.
-4. `docs/cli.md` — the command spec; the full seven-verb `docs` command surface
-5. `docs/m3-validation-and-query.md` — most recently shipped milestone; the **Milestone-completion summary** lists the M3 code surface (`check` / `list` + the validation/query helpers)
-6. `docs/m3-validation-and-query-log.md` — M3 per-phase history, for implementation detail
-7. `docs/m1-parser-and-index.md`, `docs/m2-mutating-verbs.md` — the parser / walker / renderer / config / mutating-verb surface M4 builds on
-8. `docs/convention.md`, `docs/architecture.md` — the specs the implementation must satisfy
-9. `docs/definition-of-ready.md` — the gate to clear before a milestone's implementation starts
+3. `docs/m4-migration-helper.md` — the **in-flight** milestone's task plan: the ten-phase TDD plan, Decisions, and Success Criteria for `docs migrate`
+4. `docs/m4-migration-helper-log.md` — M4's per-phase log; check the phase table for where work stands
+5. `docs/plan.md` — five-milestone roadmap; M1–M3 are shipped, **M4 is in flight**. Read the M4 section and the Resolved / Open questions.
+6. `docs/cli.md` — the command spec; the full `docs` command surface
+7. `docs/m3-validation-and-query.md` — most recently shipped milestone; its **Milestone-completion summary** lists the M3 code surface (`check` / `list` + the validation/query helpers M4 reuses)
+8. `docs/m1-parser-and-index.md`, `docs/m2-mutating-verbs.md` — the parser / walker / renderer / config / mutating-verb surface M4 builds on
+9. `docs/convention.md`, `docs/architecture.md` — the specs the implementation must satisfy
+10. `docs/definition-of-ready.md` — the gate to clear before a milestone's implementation starts
 
 **Verify environment** before doing any work:
 ```sh
@@ -100,10 +106,12 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: start M4 — Migration helper (`docs migrate`).** M1–M3 are
-shipped. M4's task plan and log do not exist yet; author `m4-*.md` and its log
-first (per-milestone plans are created when the milestone is activated), then
-run the ten TDD phases. See [plan.md](plan.md)'s M4 section for the scope.
+**Next action: run M4 — Migration helper (`docs migrate`) through the ten TDD
+phases.** M1–M3 are shipped; M4 is activated — its task plan
+([m4-migration-helper.md](m4-migration-helper.md)) and log
+([m4-migration-helper-log.md](m4-migration-helper-log.md)) exist. Start at
+Phase 1 (Define Contract); the M4 log's phase table tracks progress. See the
+M4 task plan's TDD Implementation Plan for each phase's scope.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
