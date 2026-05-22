@@ -23,6 +23,7 @@ from __future__ import annotations
 __version__ = "0.3.0-m3"
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -1133,7 +1134,12 @@ def finding_to_json(finding: Finding, root: Path) -> dict[str, object]:
     Produces ``{path, severity, rule, message}``, with ``path`` rendered as
     the doc's root-relative POSIX path.
     """
-    raise NotImplementedError("finding_to_json() — Phase 7")
+    return {
+        "path": _root_relative(finding.path, root),
+        "severity": finding.severity,
+        "rule": finding.rule,
+        "message": finding.message,
+    }
 
 
 def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
@@ -1146,7 +1152,20 @@ def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
     ``{verb, target}`` objects, and ``extra_fields`` an object mapping each
     extra label to its string or list-of-strings value.
     """
-    raise NotImplementedError("doc_to_json() — Phase 7")
+    extra_fields: dict[str, object] = {
+        label: list(value) if isinstance(value, tuple) else value
+        for label, value in doc.extra.items()
+    }
+    return {
+        "path": _root_relative(doc.path, root),
+        "title": doc.title,
+        "status": doc.status,
+        "role": doc.role,
+        "project": _resolved_project(doc, config),
+        "updated": doc.updated.isoformat(),
+        "related": [{"verb": verb, "target": target} for verb, target in doc.related],
+        "extra_fields": extra_fields,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1676,8 +1695,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
     findings = check_tree(root, config, args.stale, date.today())
 
     if args.json:
-        raise NotImplementedError("docs check --json — Phase 7")
-    if not findings:
+        print(json.dumps([finding_to_json(f, root) for f in findings], indent=2))
+    elif not findings:
         print("docs: no violations found")
     else:
         current: str | None = None
@@ -1717,8 +1736,8 @@ def _cmd_list(args: argparse.Namespace) -> int:
     )
 
     if args.json:
-        raise NotImplementedError("docs list --json — Phase 7")
-    if not docs:
+        print(json.dumps([doc_to_json(d, config, root) for d in docs], indent=2))
+    elif not docs:
         print("docs: no docs match")
     else:
         current: tuple[str, str] | None = None
