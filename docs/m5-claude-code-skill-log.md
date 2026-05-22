@@ -72,7 +72,7 @@ this repo and runs `docs index`.
 | 1. Define Contract | Complete | 2026-05-22 | `skills/docs/SKILL.md` created with valid frontmatter + stub body; `tests/test_skill.py` created with 8 check signatures; `cli.md` skill pointer + `architecture.md` skill/install note; `status.md` refreshed. |
 | 2. Write Tests (RED) | Complete | 2026-05-22 | `tests/test_skill.py` — the 8 structural checks implemented; the 11-row trigger-scenario checklist written into this log. RED: 3 content-driven checks fail on the stub body / TODO tokens; 5 shape/clutter checks legitimately pass. |
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | No new fixture tree — a conscious "nothing to stage". Structural checks read the real `SKILL.md` + `bin/docs`; the malformed-frontmatter samples are inline strings in `test_skill.py`. Every Phase-2 input verified to resolve. |
-| 4. Run Tests (RED Baseline) | Pending | — | `pytest tests/` — every `test_skill.py` check RED against the stub body; M1–M4's 236 tests green; the trigger checklist fully unsatisfied. Session pauses here. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 3 failed / 241 passed (244 collected). The 3 content-driven `test_skill.py` checks RED against the stub body; M1–M4's 236 tests green; ruff/format/mypy clean; `docs check docs/` exit 0. Session pauses here. |
 | 5. Update Base Interfaces | Pending | — | Author the skill frontmatter — `name` + the trigger-scoped `description`. |
 | 6. Implement Offline/Core Path | Pending | — | Author the skill body — per-trigger verb redirection, the no-hand-edit guardrail, binary/root-location guidance. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Any minimal bundled reference file; finalise the `architecture.md` install note and the `cli.md` skill pointer; no-clutter check. |
@@ -411,6 +411,122 @@ such input:
 - [x] No new fixture tree was needed — recorded as a deliberate, documented
       difference from M1–M4.
 - [x] Ready for Phase 4: run the suite and capture the RED baseline.
+
+### Phase 4 — Run Tests (RED Baseline)
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Run the full quality gate and confirm every `tests/test_skill.py` failure
+traces to the *unwritten skill body* — not to an `ImportError`, a missing
+file, or a misconfiguration. Log-only; no skill body authored. **This session
+(Step 1, phases 1–4) pauses here.**
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 4 row → Complete; this log entry. **No other file changed.** |
+
+#### Captured command output
+
+```
+$ .venv/bin/python -m pytest tests/ -q
+...
+FAILED tests/test_skill.py::test_name_and_description_values_are_sane
+FAILED tests/test_skill.py::test_body_is_present_and_within_size_budget
+FAILED tests/test_skill.py::test_every_named_verb_is_a_real_subcommand
+3 failed, 241 passed in ~3.5s
+
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+19 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 19 source files
+
+$ ./bin/docs check docs/
+docs: no violations found          # exit 0
+```
+
+244 tests collected (236 M1–M4 + 8 new M5 structural checks); no collection /
+import / fixture-path errors. Run in isolation, M1–M4's suite is **236
+passed** — confirming the new file adds 8 and breaks none.
+
+#### Per-check RED / GREEN breakdown
+
+The plan calls for an honest baseline: an artifact-shape milestone has some
+checks that are *already* green at Phase 4 by design (the frontmatter was
+authored final-shaped at Phase 1; `skills/docs/` has only `SKILL.md`). Each
+of the eight checks, with its Phase-4 state and why:
+
+| # | Check | State | Why |
+|---|---|---|---|
+| 1 | `test_skill_md_exists_and_has_frontmatter` | **GREEN** | The Phase-1 stub has a valid `---`-fenced frontmatter — final-shaped on purpose so Phase 2 fails on content, not parse errors. A legitimate, intended pass. |
+| 2 | `test_frontmatter_has_exactly_name_and_description` | **GREEN** | The stub frontmatter carries exactly `name` then `description` — the final shape. Legitimate pass. |
+| 3 | `test_name_and_description_values_are_sane` | **RED** | `AssertionError: description still carries the Phase-1 TODO placeholder` — the stub `description` carries the `TODO` token by design (OQ-A). Turns GREEN at Phase 5. |
+| 4 | `test_body_is_present_and_within_size_budget` | **RED** | `AssertionError: skill body still carries the Phase-1 TODO stub` — the stub body carries the `TODO` token by design (OQ-A). Turns GREEN at Phase 6. |
+| 5 | `test_every_named_verb_is_a_real_subcommand` | **RED** | `AssertionError: skill body names only 0 real verbs (expected >= 5)` — the stub body names no `docs` verbs. Turns GREEN at Phase 6. |
+| 6 | `test_every_relative_link_resolves` | **GREEN** | The stub body has no markdown links — the check is vacuously satisfied. It is a *guard* that only bites once a body with links exists; honest to report it green now. |
+| 7 | `test_skill_dir_has_no_clutter` | **GREEN** | `skills/docs/` holds only `SKILL.md` (Phase 1 created nothing else). Legitimate pass; bites only if Phase 7 adds a stray file. |
+| 8 | `test_frontmatter_parser_rejects_extra_keys` | **GREEN** | Tests the parse helpers against inline strings, independent of the artifact. Proves checks #1/#2 are non-vacuous; correctly green from the moment the helpers exist. |
+
+**RED: 3 checks (#3, #4, #5)** — every one a *content* `AssertionError`
+against the stub body / the `TODO` tokens. **GREEN: 5 checks (#1, #2, #6, #7,
+#8)** — every one a legitimate, intended pass, not a false pass. This is the
+honest baseline: the milestone deliberately authored the frontmatter shape
+and the clean directory at Phase 1, so the structural-shape half of the oracle
+is green from the start; the *content* half (real `description`, real body,
+real verbs) is the RED→GREEN arc Phases 5–6 will drive.
+
+#### Failure attribution
+
+No failure is an `ImportError`, a `FileNotFoundError`, or a path/collection
+error. All three are `AssertionError`s raised inside the check bodies:
+
+| Check | Failure | Turns GREEN in |
+|---|---|---|
+| `test_name_and_description_values_are_sane` | `description still carries the Phase-1 TODO placeholder` | Phase 5 (author the `description`). |
+| `test_body_is_present_and_within_size_budget` | `skill body still carries the Phase-1 TODO stub` | Phase 6 (author the body). |
+| `test_every_named_verb_is_a_real_subcommand` | `skill body names only 0 real verbs (expected >= 5)` | Phase 6 (the body names ≥ 5 verbs as inline code). |
+
+#### Trigger-scenario checklist — still RED
+
+The 11-row behavioural checklist stands fully unsatisfied: no skill body
+exists, so no row's redirect can be confirmed. It is walked at the Phase 9
+dogfood pass.
+
+#### Issues / decisions
+
+- **Five checks are legitimately GREEN at the RED baseline — and that is
+  correct.** Unlike an M1–M4 code milestone (where every new test fails
+  against a `NotImplementedError` stub), an artifact-shape milestone authors
+  the artifact's *shape* at Phase 1. The frontmatter is final-shaped and the
+  directory is clean from Phase 1, so the shape/clutter checks pass
+  immediately. The plan explicitly anticipates this ("frontmatter-shape and
+  no-clutter checks may legitimately PASS … document which checks are RED vs
+  already-GREEN explicitly so the baseline is honest"). The RED→GREEN arc
+  lives in the three *content* checks.
+- **Every RED failure is a content `AssertionError`.** The deliberate `TODO`
+  tokens (OQ-A) and the verb-free stub body are what fail checks #3/#4/#5 —
+  exactly the intended drivers. Nothing fails for a structural/import reason.
+
+#### Exit criteria
+
+- [x] `pytest tests/` — 3 failed / 241 passed (244 collected); the 3 failures
+      are the content-driven `test_skill.py` checks.
+- [x] Every failure is a CONTENT `AssertionError` against the stub body —
+      no `ImportError`, no `FileNotFoundError`, no collection error.
+- [x] M1–M4's 236 tests stay green (verified in isolation).
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+- [x] `./bin/docs check docs/` exit 0.
+- [x] Per-check RED/GREEN breakdown recorded — the baseline is honest.
+- [x] The trigger-scenario checklist stands fully RED.
+- [x] **Step 1 (phases 1–4) complete. The session pauses here — no skill body
+      authored; no Phase 5+ work.**
 
 ## Milestone-completion summary
 
