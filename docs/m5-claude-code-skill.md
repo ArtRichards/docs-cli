@@ -443,6 +443,17 @@ QUESTIONS — resolved" below):
   frontmatter check is real. The absence of a fixture tree is a deliberate,
   documented consequence of an artifact milestone — recorded so Phase 3 is a
   conscious "nothing to stage" rather than an omission.
+- **OQ-E — the SKILL.md frontmatter `description` is a single physical line
+  (RESOLVED, fresh-eyes review 2026-05-22; operator-binding).** `test_skill.py`'s
+  hand-rolled frontmatter parser (`_parse_frontmatter`) splits on physical
+  newlines and treats every non-blank line as its own `key: value` pair — it
+  cannot handle a YAML-folded (`>-` / `|`) or wrapped multi-line `description`.
+  The resolution is **not** to harden the parser but to constrain the artifact:
+  the `description` MUST be authored as a single physical line — no YAML
+  folding, no wrapped continuation lines. This is behaviour-neutral (a long
+  description on one physical line is valid YAML and valid for Claude Code) and
+  is the same author-guidance shape as OQ-B/OQ-C. **The Step 2 Phase-5 author
+  must honour this: write `description:` as exactly one physical line.**
 - **`bin/docs` single-file vs package split — not in scope for M5.** M2–M4's
   Decisions tracked a possible package split; M4 deferred it to v1.1. M5 adds
   **no Python**, so the question is untouched here and remains deferred to

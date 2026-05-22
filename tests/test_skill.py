@@ -5,12 +5,13 @@ correctness is verified by a **two-part oracle** (resolved OQ1):
 
 1. This file — `tests/test_skill.py` — the *structural, automatable* half.
    It asserts the deterministic properties of the artifact: valid frontmatter
-   carrying exactly `name` + `description`, a non-empty body within the
-   skill-authoring size budget, every `docs` verb the body names is a real
-   subcommand of `bin/docs`, every relative link resolves, and the skill
-   directory carries no auxiliary clutter. It runs RED -> GREEN in CI with the
-   rest of the suite: RED at Phase 4 against the Phase-1 stub body, GREEN at
-   Phase 8 against the authored one.
+   carrying exactly `name` + `description`, a body within the skill-authoring
+   size budget (a minimum non-blank-line floor and a maximum) that carries the
+   never-hand-edit guardrail language, every one of `bin/docs`'s real verbs
+   named as a `docs <verb>` inline-code span, every relative link resolves, and
+   the skill directory carries no auxiliary clutter. It runs RED -> GREEN in CI
+   with the rest of the suite: RED at Phase 4 against the Phase-1 stub body,
+   GREEN at Phase 8 against the authored one.
 2. The behavioural **trigger-scenario checklist** in
    `docs/m5-claude-code-skill-log.md` — the judgement half — a fixed table of
    "agent about to do X -> expected verb (or no trigger)" rows, walked by a
@@ -139,6 +140,20 @@ def test_body_is_present_and_within_size_budget() -> None:
         f"skill body is {line_count} lines — over the ~500-line authoring budget"
     )
     assert "TODO" not in body, "skill body still carries the Phase-1 TODO stub"
+    # Lower bound: a real verb-redirecting body covering eight verbs, the
+    # guardrail, and binary/root guidance cannot be a one-liner. Require a
+    # genuine floor of non-blank lines so a stub body cannot pass.
+    non_blank = [line for line in body.split("\n") if line.strip()]
+    assert len(non_blank) >= 40, (
+        f"skill body has only {len(non_blank)} non-blank lines — too thin to be "
+        "the verb-redirecting body M5 requires (expected >= 40)"
+    )
+    # The never-hand-edit guardrail is M5's central instruction — the body must
+    # carry it explicitly. Match a "hand-edit" / "hand edit" phrase, case-insensitively.
+    assert re.search(r"hand[ -]edit", body, re.IGNORECASE), (
+        "skill body is missing the never-hand-edit guardrail language "
+        "(expected a 'hand-edit' / 'hand edit' phrase)"
+    )
 
 
 # --- check 5: every named verb is a real subcommand ------------------------
@@ -159,17 +174,25 @@ def test_every_named_verb_is_a_real_subcommand() -> None:
     _, body = _split_frontmatter(_read_skill())
     # Verb candidates come ONLY from backtick-delimited inline code spans of
     # the form `docs <verb>` (resolved OQ-C). Bare prose mentions are ignored.
+    # The verb class is `[a-z]+` (no hyphen): all eight real verbs are plain
+    # lowercase, and excluding `-` stops a span like `docs --root <dir> index`
+    # from capturing `--root` as a bogus verb (resolved OQ-C author guidance).
     named: set[str] = set()
     for span in re.findall(r"`([^`]+)`", body):
-        m = re.match(r"docs ([a-z-]+)", span.strip())
+        m = re.match(r"docs ([a-z]+)", span.strip())
         if m:
             named.add(m.group(1))
 
     unknown = named - real_verbs
     assert not unknown, f"skill body names non-existent docs verbs: {sorted(unknown)}"
-    # Non-emptiness guard: the body must actually redirect to verbs.
-    assert len(named & real_verbs) >= 5, (
-        f"skill body names only {len(named & real_verbs)} real verbs (expected >= 5)"
+    # Completeness guard: the milestone requires the body to redirect EVERY
+    # real verb (the trigger checklist has one positive row per verb, and the
+    # Deliverables demand all eight). Assert the full real-verb set is a subset
+    # of the verbs named in the body.
+    missing = real_verbs - named
+    assert not missing, (
+        f"skill body fails to name every real docs verb — missing {sorted(missing)} "
+        f"(named {sorted(named & real_verbs)})"
     )
 
 

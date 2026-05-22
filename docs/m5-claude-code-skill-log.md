@@ -267,12 +267,18 @@ trigger-scenario checklist). No skill body authored: the checks must fail on
    `description` is a non-empty string, carries no `TODO`, and is 20..1024
    characters.
 4. `test_body_is_present_and_within_size_budget` — the body is non-empty,
-   ≤ 500 lines, and carries no `TODO`.
+   ≤ 500 lines, carries no `TODO`, has **≥ 40 non-blank lines** (a genuine
+   lower bound so a one-line stub cannot pass), and contains the
+   **never-hand-edit guardrail language** (a case-insensitive `hand-edit` /
+   `hand edit` phrase — M5's central instruction). _(Lower-bound and guardrail
+   assertions added by the fresh-eyes review, 2026-05-22 — see finding 1.)_
 5. `test_every_named_verb_is_a_real_subcommand` — derives the real verb set
    from `_build_parser()` (the `argparse._SubParsersAction` with
    `dest == "command"`), extracts verb candidates from `` `docs <verb>` ``
-   inline-code spans, asserts every one is real and that ≥ 5 distinct real
-   verbs are named.
+   inline-code spans, asserts every named verb is real **and that every one of
+   the eight real verbs is named** (`real_verbs ⊆ named` — not merely "≥ 5
+   distinct"). _(Completeness guard strengthened from "≥ 5" to "all eight" by
+   the fresh-eyes review, 2026-05-22 — see finding 2.)_
 6. `test_every_relative_link_resolves` — every `](target)` markdown link that
    is repo-relative (not `http`/`https`/`mailto`/absolute) resolves to a file
    under `skills/docs/`.
@@ -305,10 +311,28 @@ trigger-scenario checklist). No skill body authored: the checks must fail on
   write spec references as plain inline code, never as `](…)` links.**
 - **OQ-C — verb-extraction regex contract.** `test_every_named_verb_is_a_real_
   subcommand` extracts verb candidates **only** from backtick-delimited inline
-  code spans matching `` `docs <verb>` `` (verb = `[a-z-]+`); bare prose
+  code spans matching `` `docs <verb>` `` (verb = `[a-z]+`); bare prose
   mentions of a verb are ignored. **The Step 2 Phase-6 author must write every
-  `docs` verb the body names as inline code** (e.g. `` `docs index` ``), or
-  the ≥ 5-real-verbs non-emptiness guard will not be satisfied.
+  `docs` verb the body names as inline code** (e.g. `` `docs index` ``), and
+  **each verb must appear at least once as a PLAIN `` `docs <verb>` `` span
+  with no global flag before the verb** — a span like `` `docs --root <dir>
+  index` `` does not register `index` as named, because the regex anchors the
+  verb immediately after `docs `. The completeness guard (`real_verbs ⊆
+  named`) will not be satisfied otherwise. _(Fresh-eyes review, 2026-05-22 —
+  finding 4: the verb class was tightened from `[a-z-]+` to `[a-z]+` so a
+  span's `--root` flag can no longer be captured as a bogus verb; all eight
+  real verbs are plain lowercase with no hyphen.)_
+- **OQ-E — the frontmatter `description` is a single physical line.** The
+  hand-rolled `_parse_frontmatter` splits the fenced frontmatter on physical
+  newlines and treats each non-blank line as its own `key: value` pair: it
+  cannot parse a YAML-folded (`>-` / `|`) or wrapped multi-line `description`.
+  Resolution (fresh-eyes review, 2026-05-22 — finding 3; operator-binding):
+  do **not** harden the parser — instead constrain the artifact. **The Step 2
+  Phase-5 author must write `description:` as exactly one physical line — no
+  YAML folding, no continuation lines.** This is behaviour-neutral (a long
+  one-physical-line description is valid YAML and valid for Claude Code) and is
+  the same author-guidance shape as OQ-B/OQ-C. Recorded as a Decision in
+  [m5-claude-code-skill.md](m5-claude-code-skill.md).
 - **`_build_parser` introspection.** The real verb set is read from the
   `argparse._SubParsersAction` in `parser._actions` whose `dest` is
   `"command"`, then `.choices.keys()`. This couples the test to the one
@@ -325,11 +349,22 @@ CONTENT failure against the Phase-1 stub:
 | 1 `..._exists_and_has_frontmatter` | PASS | Frontmatter final-shaped at Phase 1 — a legitimate pass. |
 | 2 `..._has_exactly_name_and_description` | PASS | Exactly `name` + `description`, in order — legitimate. |
 | 3 `..._values_are_sane` | **FAIL** | `description still carries the Phase-1 TODO placeholder`. |
-| 4 `..._within_size_budget` | **FAIL** | `skill body still carries the Phase-1 TODO stub`. |
-| 5 `..._is_a_real_subcommand` | **FAIL** | `skill body names only 0 real verbs (expected >= 5)`. |
+| 4 `..._within_size_budget` | **FAIL** | `skill body still carries the Phase-1 TODO stub` (the `TODO` check is first; the new ≥ 40 non-blank-line floor would also fail — the 3-line stub is far under it). |
+| 5 `..._is_a_real_subcommand` | **FAIL** | `skill body fails to name every real docs verb — missing all eight` (the stub names zero verbs). |
 | 6 `..._relative_link_resolves` | PASS | The stub body has no relative links — vacuously legitimate. |
 | 7 `..._has_no_clutter` | PASS | `skills/docs/` holds only `SKILL.md` — legitimate. |
 | 8 `..._parser_rejects_extra_keys` | PASS | Tests the parser against inline strings — independent of the stub. |
+
+_Note (fresh-eyes review, 2026-05-22): checks #4 and #5 were strengthened
+after this table was first written. #4 gained a ≥ 40 non-blank-line floor and
+a never-hand-edit guardrail-phrase assertion (findings 1a/1b); #5's
+completeness guard moved from "≥ 5 distinct verbs" to "all eight real verbs
+named" (finding 2). The strengthened assertions live inside the already-RED
+checks #4 and #5 — the 3-RED/5-GREEN split is unchanged, and the failures
+remain content `AssertionError`s against the stub. (The guardrail-phrase
+assertion happens to be satisfied by the stub, whose TODO text mentions "the
+never-hand-edit guardrail" — #4 still fails RED via the `TODO` check and the
+line floor; the guardrail assertion is a contract pin for the GREEN side.)_
 
 The five passes are **honest** — the frontmatter is final-shaped and the
 directory is clean from Phase 1 by design. The three failures are the content
@@ -435,6 +470,10 @@ file, or a misconfiguration. Log-only; no skill body authored. **This session
 
 #### Captured command output
 
+_Re-captured 2026-05-22 after the fresh-eyes review strengthened checks #4 and
+#5 (see "Fresh-eyes review" below); the baseline is unchanged — still
+3-RED / 5-GREEN._
+
 ```
 $ .venv/bin/python -m pytest tests/ -q
 ...
@@ -472,8 +511,8 @@ of the eight checks, with its Phase-4 state and why:
 | 1 | `test_skill_md_exists_and_has_frontmatter` | **GREEN** | The Phase-1 stub has a valid `---`-fenced frontmatter — final-shaped on purpose so Phase 2 fails on content, not parse errors. A legitimate, intended pass. |
 | 2 | `test_frontmatter_has_exactly_name_and_description` | **GREEN** | The stub frontmatter carries exactly `name` then `description` — the final shape. Legitimate pass. |
 | 3 | `test_name_and_description_values_are_sane` | **RED** | `AssertionError: description still carries the Phase-1 TODO placeholder` — the stub `description` carries the `TODO` token by design (OQ-A). Turns GREEN at Phase 5. |
-| 4 | `test_body_is_present_and_within_size_budget` | **RED** | `AssertionError: skill body still carries the Phase-1 TODO stub` — the stub body carries the `TODO` token by design (OQ-A). Turns GREEN at Phase 6. |
-| 5 | `test_every_named_verb_is_a_real_subcommand` | **RED** | `AssertionError: skill body names only 0 real verbs (expected >= 5)` — the stub body names no `docs` verbs. Turns GREEN at Phase 6. |
+| 4 | `test_body_is_present_and_within_size_budget` | **RED** | `AssertionError: skill body still carries the Phase-1 TODO stub` — the stub body carries the `TODO` token by design (OQ-A); the strengthened ≥ 40 non-blank-line floor (finding 1a) would also fail (the stub has 3 non-blank lines). Turns GREEN at Phase 6. |
+| 5 | `test_every_named_verb_is_a_real_subcommand` | **RED** | `AssertionError: skill body fails to name every real docs verb — missing ['archive', 'check', 'index', 'list', 'migrate', 'mv', 'new', 'touch']` — the stub body names no `docs` verbs; the strengthened guard (finding 2) now requires all eight real verbs to be named. Turns GREEN at Phase 6. |
 | 6 | `test_every_relative_link_resolves` | **GREEN** | The stub body has no markdown links — the check is vacuously satisfied. It is a *guard* that only bites once a body with links exists; honest to report it green now. |
 | 7 | `test_skill_dir_has_no_clutter` | **GREEN** | `skills/docs/` holds only `SKILL.md` (Phase 1 created nothing else). Legitimate pass; bites only if Phase 7 adds a stray file. |
 | 8 | `test_frontmatter_parser_rejects_extra_keys` | **GREEN** | Tests the parse helpers against inline strings, independent of the artifact. Proves checks #1/#2 are non-vacuous; correctly green from the moment the helpers exist. |
@@ -494,8 +533,8 @@ error. All three are `AssertionError`s raised inside the check bodies:
 | Check | Failure | Turns GREEN in |
 |---|---|---|
 | `test_name_and_description_values_are_sane` | `description still carries the Phase-1 TODO placeholder` | Phase 5 (author the `description`). |
-| `test_body_is_present_and_within_size_budget` | `skill body still carries the Phase-1 TODO stub` | Phase 6 (author the body). |
-| `test_every_named_verb_is_a_real_subcommand` | `skill body names only 0 real verbs (expected >= 5)` | Phase 6 (the body names ≥ 5 verbs as inline code). |
+| `test_body_is_present_and_within_size_budget` | `skill body still carries the Phase-1 TODO stub` (and the strengthened ≥ 40 non-blank-line floor) | Phase 6 (author the body). |
+| `test_every_named_verb_is_a_real_subcommand` | `skill body fails to name every real docs verb — missing all eight` | Phase 6 (the body names all eight verbs as plain `docs <verb>` inline code). |
 
 #### Trigger-scenario checklist — still RED
 
@@ -517,6 +556,43 @@ dogfood pass.
 - **Every RED failure is a content `AssertionError`.** The deliberate `TODO`
   tokens (OQ-A) and the verb-free stub body are what fail checks #3/#4/#5 —
   exactly the intended drivers. Nothing fails for a structural/import reason.
+
+#### Fresh-eyes review (2026-05-22) — structural oracle strengthened
+
+A fresh-eyes review of Step 1 (phases 1–4) returned five findings; four were
+applied to `tests/test_skill.py` before this step was finalised. The phase-2
+tests are not yet frozen by a GREEN run, so strengthening them now is correct —
+Step 2 authors the skill body against these tests, so they must genuinely pin
+the contract. The strengthened assertions live **inside the already-RED checks
+#4 and #5** — the baseline remains 3-RED / 5-GREEN and was re-run and
+re-verified honest (every failure a content `AssertionError`, no `ImportError`
+/ `FileNotFoundError`):
+
+- **Finding 1 (check #4) — body lower bound + guardrail.** Added a ≥ 40
+  non-blank-line floor (a one-line body can no longer pass) and an assertion
+  that the never-hand-edit guardrail language is present (case-insensitive
+  `hand-edit` / `hand edit`). The 3-line stub fails the floor; #4 stays RED.
+- **Finding 2 (check #5) — all eight verbs.** The completeness guard moved
+  from "≥ 5 distinct real verbs" to `real_verbs ⊆ named` — every one of the
+  eight real verbs must be named in the body. The verb-free stub names zero,
+  so #5 stays RED with a clearer "missing all eight" message.
+- **Finding 3 — single-physical-line `description` (OQ-E).** The hand-rolled
+  `_parse_frontmatter` cannot handle a YAML-folded / wrapped `description`.
+  Resolution: do not harden the parser; record OQ-E (the `description` must be
+  one physical line) as a binding author-guidance Decision in the milestone
+  doc and this log's Phase-2 entry. Behaviour-neutral; no code change.
+- **Finding 4 (check #5) — verb-extraction regex.** The verb class was
+  tightened from `[a-z-]+` to `[a-z]+`, eliminating a false capture of a
+  `--root` flag in a span like `` `docs --root <dir> index` ``. The OQ-C
+  author-guidance note (Phase-2 log) was extended: each verb must appear at
+  least once as a plain `` `docs <verb>` `` span with no global flag first.
+- **Finding 5 — `test_every_relative_link_resolves` is vacuous.** No change
+  (conductor decision): a defensible consequence of resolved OQ-B; the check
+  regains teeth if a `references/` file is added in Step 2. Disclosed honestly
+  in the Phase-4 per-check table above.
+
+The operator also confirmed `status.md`'s "Commit once per TDD phase on
+`main`" line is left unchanged — it predates M5 and is out of M5's scope.
 
 #### Exit criteria
 
