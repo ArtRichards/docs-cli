@@ -78,7 +78,7 @@ this repo and runs `docs index`.
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | No new fixture tree — a conscious "nothing to stage". Structural checks read the real `SKILL.md` + `bin/docs`; the malformed-frontmatter samples are inline strings in `test_skill.py`. Every Phase-2 input verified to resolve. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 3 failed / 241 passed (244 collected). The 3 content-driven `test_skill.py` checks RED against the stub body; M1–M4's 236 tests green; ruff/format/mypy clean; `docs check docs/` exit 0. Session pauses here. |
 | 5. Update Base Interfaces | Complete | 2026-05-22 | `description:` authored as one physical line (OQ-E): names the action, the positive triggers, and the scoping limiter. Checks #1/#2/#3/#8 GREEN; #4/#5 still RED (body untouched). |
-| 6. Implement Offline/Core Path | Pending | — | Author the skill body — per-trigger verb redirection, the no-hand-edit guardrail, binary/root-location guidance. |
+| 6. Implement Offline/Core Path | Complete | 2026-05-22 | Body authored — H1 + orientation, the never-hand-edit guardrail, binary/root location, a prose verb-redirection list (one sub-heading per verb), the prose-only-edit carve-out (OQ-H), and the convention pointer. 112 non-blank lines. All 8 `test_skill.py` checks GREEN. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Any minimal bundled reference file; finalise the `architecture.md` install note and the `cli.md` skill pointer; no-clutter check. |
 | 8. Run Tests (GREEN) | Pending | — | Full suite green incl. `test_skill.py`; `ruff` / `mypy` clean tree-wide. |
 | 9. Implement Online/Integration | Pending | — | Dogfood: walk the trigger-scenario checklist against the authored skill; `INDEX.md` regenerated only via `docs index`; `docs check docs/` exit 0. |
@@ -657,6 +657,76 @@ the body stub is left for Phase 6.
 - [x] `pytest tests/test_skill.py` → 2 failed / 6 passed — the two failures
       are the body-driven checks #4/#5.
 - [x] Ready for Phase 6 to author the body.
+
+### Phase 6 — Implement Offline/Core Path
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Author the skill *body* — the verb-redirecting instructions. Replace the
+Phase-1 three-line `TODO` stub (everything after the closing `---`) with the
+real body: the never-hand-edit guardrail, binary/root location guidance, a
+per-verb redirection section, and a pointer to the convention. Drive all eight
+`test_skill.py` checks GREEN.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `skills/docs/SKILL.md` | Modify | The body — everything after the closing `---` — replaced with the authored verb-redirecting body (143 total lines, 112 non-blank). |
+| `docs/m5-claude-code-skill-log.md` | Modify | Phase 6 row → Complete; this log entry. |
+
+#### Body structure
+
+1. **H1 + orientation paragraph** — defines a `docs`-managed tree and states the
+   central guardrail up front: run the verb, do not hand-edit the
+   machine-maintained parts.
+2. **"Never hand-edit these — run the verb"** — the prominent guardrail section.
+   Lists the three never-hand-edit things — `INDEX.md` (run `docs index`), a
+   doc's location relative to `archive/` and its `Status:` line (run
+   `docs archive`), a metadata block (run `docs new` to scaffold,
+   `docs touch` to bump the date). Ends with the **OQ-H carve-out**: a
+   prose-only edit that does not touch metadata / `INDEX.md` / archiving /
+   lifecycle needs no verb — proceed normally.
+3. **"Finding the binary and the root"** — host-agnostic: prefer an installed
+   `docs` on `$PATH`, else `bin/docs` from the repo root; no absolute path is
+   baked in. `docs` walks up for `.docs.toml`; `--root DIR` is explicit; no
+   `.docs.toml` up-tree ⇒ not a docs-managed tree, the skill does not apply.
+4. **"Which verb for which task"** — a **prose list with one sub-heading per
+   verb** (resolved OQ-F — not a table). One `### ` entry per verb covering the
+   trigger, the command, the flags that matter, and how to read the output. All
+   eight verbs: `docs new`, `docs index`, `docs archive`, `docs mv`,
+   `docs list`, `docs touch`, `docs check` (with the 0/1/2 exit-code reading),
+   `docs migrate` (dry-run default, `--apply`). Each verb's first mention is a
+   bare `` `docs <verb>` `` span — no flag before the verb (resolved OQ-C).
+5. **"Where the convention itself lives"** — points at `convention.md` and
+   `cli.md` **as inline code, never as markdown links** (resolved OQ-B);
+   restates none of the convention grammar or vocabulary.
+
+#### Issues / decisions
+
+- **OQ-F honoured** — the verb-redirection section is a prose list, one `### `
+  sub-heading per verb, not a markdown table.
+- **OQ-C honoured** — every verb appears as a plain `` `docs <verb>` `` span
+  with no global flag between `docs` and the verb; flag examples put the flag
+  after the verb (`docs index --root DIR`). The verb-extraction check captures
+  exactly the eight real verbs and no non-verb.
+- **OQ-B honoured** — `convention.md` and `cli.md` are referenced as inline
+  code, not links; `test_every_relative_link_resolves` stays vacuously green.
+- **OQ-H honoured** — the body explicitly tells the agent that a prose-only
+  edit (typo, rewording, adding a paragraph) needs no `docs` verb — proceed
+  normally — so the skill is harmless when it loads on an ordinary `.md` edit.
+- **OQ-A honoured** — zero literal `TODO` tokens anywhere in the artifact.
+
+#### Exit criteria
+
+- [x] The body replaces the Phase-1 stub; 112 non-blank lines (over the 40
+      floor, well under the 500 cap; inside the ~90-140 target).
+- [x] All 8 `tests/test_skill.py` checks GREEN.
+- [x] Full suite 244 passed; `ruff` / `ruff format` / `mypy` clean tree-wide;
+      `./bin/docs check docs/` exit 0.
+- [x] Ready for Phase 7 (verification pass).
 
 ## Milestone-completion summary
 
