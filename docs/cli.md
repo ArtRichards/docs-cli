@@ -167,9 +167,11 @@ see before it runs.)
 - **Role** — from the filename's trailing token (split on `-` / `_`):
   `-spec` → `spec`, `-plan` → `plan`, `-adr` → `decision`, `-log` → `log`,
   `-status` → `status`, `-charter` → `charter`, `-guide` → `guide`,
-  `-runbook` → `runbook`, `-reference` → `reference`. An in-file `Role:` line
-  carrying a built-in role wins over the suffix. When nothing matches, Role
-  falls back to the `notes` catch-all and the file is flagged low-confidence.
+  `-runbook` → `runbook`, `-reference` → `reference`. A trailing token that is
+  itself a built-in role (`-decision`, `-milestone`, …) resolves to that role
+  directly. An in-file `Role:` line carrying a built-in role wins over the
+  suffix. When nothing matches, Role falls back to the `notes` catch-all and
+  the file is flagged low-confidence.
 - **Project** — the longest common prefix shared by every `.md` basename,
   trimmed back to the last `-`/`_` separator; used only when it is ≥ 2
   characters after trimming **and** shared by every file. Otherwise Project

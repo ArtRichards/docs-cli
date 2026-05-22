@@ -1287,7 +1287,9 @@ def infer_role(filename: str, metadata: Mapping[str, str | tuple[str, ...]]) -> 
        ``-plan`` -> ``plan``, ``-adr`` -> ``decision``, ``-log`` -> ``log``,
        ``-status`` -> ``status``, ``-charter`` -> ``charter``,
        ``-guide`` -> ``guide``, ``-runbook`` -> ``runbook``,
-       ``-reference`` -> ``reference`` — confident.
+       ``-reference`` -> ``reference`` — confident. A trailing token that is
+       itself a built-in role (e.g. ``-decision``, ``-milestone``) resolves to
+       that role directly.
     3. Otherwise the role falls back to the ``notes`` built-in catch-all —
        not confident.
 
@@ -1310,6 +1312,10 @@ def infer_role(filename: str, metadata: Mapping[str, str | tuple[str, ...]]) -> 
     suffix = tokens[-1].lower() if tokens else ""
     if suffix in _ROLE_SUFFIXES:
         return _ROLE_SUFFIXES[suffix], True
+    # A trailing token that is itself a built-in role resolves to itself
+    # (e.g. `…-decision.md` → `decision`, `…-milestone.md` → `milestone`).
+    if suffix in BUILTIN_ROLES:
+        return suffix, True
 
     return "notes", False
 
@@ -1503,6 +1509,16 @@ def insert_metadata_block(
     return result
 
 
+def _in_archive_subdir(rel_path: str) -> bool:
+    """True iff ``rel_path``'s first segment is an archive-style directory.
+
+    Recognises ``archive`` / ``archived`` / ``project-history`` — the same set
+    `detect_archive_layout` normalises. Used by `plan_migration` to decide the
+    default `Status:` for a file with no in-file status line.
+    """
+    return rel_path.split("/")[0] in _ARCHIVE_SUBDIR_NAMES
+
+
 def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan:
     """Build the `MigrationPlan` for the foreign directory ``root``.
 
@@ -1522,7 +1538,69 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
     Returns:
         A `MigrationPlan` whose ``files`` are in root-relative path order.
     """
-    raise NotImplementedError("plan_migration — Phase 6")
+    if archive_date is None:
+        archive_date = date.today().strftime("%Y-%m-%d")
+
+    config = load_config(root)
+    pairs = list(_iter_doc_texts(root, config))
+    project = infer_project([p.name for p, _ in pairs], root.resolve().name)
+
+    migrations: list[FileMigration] = []
+    for path, text in pairs:
+        rel = path.relative_to(root).as_posix()
+        in_archive = _in_archive_subdir(rel)
+
+        try:
+            _t, metadata, _b = parse_metadata_block(text)
+            synthesized_h1 = False
+        except MetadataError:
+            metadata = {}
+            synthesized_h1 = True
+        reconciled_metadata = bool(metadata)
+
+        role, role_conf = infer_role(path.name, metadata)
+        status, _status_conf = infer_status(metadata, in_archive)
+        updated, _updated_conf = infer_updated(metadata, path.stat().st_mtime, config.date_format)
+        archive_move = detect_archive_layout(rel, archive_date)
+
+        # Ambiguity-flagging rule (resolved Q1): flag for exactly three
+        # sources — a `notes` role fallback, a synthesised H1, and an
+        # out-of-vocab in-file `Status:` that had to be substituted. The
+        # plain active-tree status default and the mtime-derived `Updated:`
+        # fallback are expected best-effort defaults and are NOT flagged.
+        ambiguities: list[str] = []
+        if not role_conf:
+            ambiguities.append(
+                f"Role inferred as 'notes' fallback — no filename suffix or "
+                f"in-file Role: matched ({path.name})."
+            )
+        if synthesized_h1:
+            ambiguities.append("No H1 in the file — a title was synthesised from the filename.")
+        in_file_status = metadata.get("Status")
+        if isinstance(in_file_status, str) and in_file_status.strip() not in BUILTIN_STATUSES:
+            ambiguities.append(
+                f"In-file Status: {in_file_status.strip()!r} is out of vocabulary "
+                f"— substituted with built-in {status!r}."
+            )
+
+        confidence = "low" if ambiguities else "high"
+        migrations.append(
+            FileMigration(
+                path=path,
+                rel=rel,
+                role=role,
+                project=project,
+                status=status,
+                updated=updated,
+                synthesized_h1=synthesized_h1,
+                reconciled_metadata=reconciled_metadata,
+                confidence=confidence,
+                ambiguities=tuple(ambiguities),
+                archive_move=archive_move,
+            )
+        )
+
+    return MigrationPlan(root=root, files=tuple(migrations))
 
 
 def apply_migration(plan: MigrationPlan) -> None:
@@ -2182,8 +2260,73 @@ def _cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_migration_plan(plan: MigrationPlan) -> None:
+    """Print a human-readable dry-run migration plan to stdout.
+
+    One block per `FileMigration`: the root-relative path, the inferred
+    metadata, the confidence, and — conditionally — the archive move, the
+    synthesised-H1 flag, the reconciled-metadata flag, and every ambiguity.
+    """
+    for fm in plan.files:
+        print(fm.rel)
+        print(f"  role: {fm.role}    project: {fm.project}    status: {fm.status}")
+        print(f"  updated: {fm.updated.isoformat()}    confidence: {fm.confidence}")
+        if fm.archive_move is not None:
+            print(f"  archive move: -> {fm.archive_move}")
+        if fm.synthesized_h1:
+            print("  synthesized H1: yes (title from filename)")
+        if fm.reconciled_metadata:
+            print("  reconciled metadata: yes (pre-existing lines folded in)")
+        for note in fm.ambiguities:
+            print(f"  ambiguity: {note}")
+        print()
+
+
 def _cmd_migrate(args: argparse.Namespace) -> int:
-    raise NotImplementedError("_cmd_migrate — Phase 6")
+    target = Path(args.dir)
+    if not target.is_dir():
+        print(f"docs: directory not found: {target}", file=sys.stderr)
+        return 2
+
+    # `migrate` refuses a directory that is already a managed docs root — that
+    # tree is for index / check / list, and re-inserting blocks could
+    # duplicate metadata.
+    if (target / ".docs.toml").is_file():
+        print(
+            f"docs: {target} is already a docs root (.docs.toml present) — "
+            "migrate is for foreign trees; use index / check / list instead.",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.date:
+        try:
+            parse_date(args.date, "%Y-%m-%d")
+        except MetadataError as exc:
+            print(f"docs: {exc}", file=sys.stderr)
+            return 2
+    date_str = args.date or date.today().strftime("%Y-%m-%d")
+
+    try:
+        plan = plan_migration(target, date_str)
+        if args.apply:
+            apply_migration(plan)
+    except (MetadataError, VocabularyError, OSError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 2
+
+    if args.json:
+        print(json.dumps(migration_to_json(plan), indent=2))
+    else:
+        _print_migration_plan(plan)
+
+    if args.apply and not args.quiet:
+        moves = sum(1 for fm in plan.files if fm.archive_move is not None)
+        print(
+            f"docs: migrated {len(plan.files)} file(s) under {target} ({moves} archive move(s))",
+            file=sys.stderr,
+        )
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

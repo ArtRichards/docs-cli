@@ -65,7 +65,7 @@ agent consumes to resolve ambiguities before applying.
 | 3. Create Data/Fixtures | Complete | 2026-05-22 | `tests/fixtures/trees/foreign/` — 9 non-conforming docs incl. an archive-style subdir and a benign nested subdir; refuse-guard reuses `minimal/`. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-22 | `pytest tests/` — 48 failed, 165 passed; every M4 failure is `NotImplementedError` from a stub. **Session pauses here.** |
 | 5. Update Base Interfaces | Complete | 2026-05-22 | `infer_role` / `infer_project` / `infer_status` / `infer_updated` / `detect_archive_layout` / `insert_metadata_block` implemented; 30 inference + block-insertion units green. |
-| 6. Implement Offline/Core Path | Not started | — | `plan_migration` + `_cmd_migrate` dry-run human output. |
+| 6. Implement Offline/Core Path | Complete | 2026-05-22 | `plan_migration` + `_in_archive_subdir` + `_cmd_migrate` dry-run human output (+ refuse-guard); all 14 plan-migration units and the dry-run CLI tests green. |
 | 7. Update Tool/Wrapper Layer | Not started | — | `apply_migration`, `migration_to_json`, the `--apply` / `--json` branches; refuse-on-`.docs.toml` guard. |
 | 8. Run Tests (GREEN) | Not started | — | Full suite + quality gates green tree-wide. |
 | 9. Implement Online/Integration | Not started | — | Dogfood: `migrate` dry-run plan + `--apply` on a copy → `docs check` clean. |
@@ -392,6 +392,66 @@ block-insertion helper `insert_metadata_block` — the base layer
 
 - [x] All 30 inference + `insert_metadata_block` unit tests green.
 - [x] `plan_migration` tests still RED (Phase 6).
+- [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
+
+### Phase 6 — Implement Offline/Core Path
+
+**Completed:** 2026-05-22
+
+#### Objective
+
+Implement `plan_migration` — assemble a `FileMigration` per file, set
+confidence, flag ambiguities, plan archive moves — and the `_cmd_migrate`
+dry-run path (directory-not-found guard, refuse-on-`.docs.toml` guard, `--date`
+validation, human plan output).
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` | Modify | Added `_in_archive_subdir`; implemented `plan_migration` and `_print_migration_plan`; implemented `_cmd_migrate` (dry-run + guards; `--apply`/`--json` branches call the Phase-7 helpers). |
+| `docs/cli.md` | Modify | Role-inference rule note: a trailing token that is itself a built-in role resolves to that role directly. |
+
+#### Actions taken
+
+- `plan_migration`: defaults `archive_date` to today; loads a (default-on-a-
+  foreign-tree) `Config`; walks via `_iter_doc_texts` (already path-sorted);
+  infers a tree-wide `Project:` once; per file runs the four inference
+  helpers, parses metadata leniently, computes `synthesized_h1` /
+  `reconciled_metadata`, plans the archive move, flags ambiguities, sets
+  confidence, and builds the `FileMigration`.
+- `_cmd_migrate`: `Path(args.dir)` not-a-dir → stderr, exit 2;
+  `.docs.toml`-present refuse-guard → stderr (message names `.docs.toml`),
+  exit 2; `--date` validated as ISO via `parse_date`; dry-run prints the
+  human plan; the `--apply`/`--json` branches are wired (Phase 7 fills the
+  helpers they call).
+
+#### Issues / decisions
+
+- **Ambiguity-flagging rule (resolved Q1) — recorded.** `plan_migration`
+  flags an ambiguity for exactly three sources: (a) a `notes` role fallback,
+  (b) a synthesised H1, (c) an out-of-vocab in-file `Status:` substituted with
+  a built-in. It does NOT flag the plain active-tree status default nor the
+  mtime-derived `Updated:` fallback — those are expected best-effort defaults.
+  This is the only rule consistent with all 14 plan-migration tests (notably
+  `test_plan_migration_pins_a_high_confidence_fixture_file`, which requires
+  the clean active-tree `proj-auth-spec.md` to be `high`).
+- **`-decision` suffix.** `proj-old-decision.md` ends in the token
+  `decision`, a built-in role not in the `_ROLE_SUFFIXES` alias map (which
+  only carries `adr → decision`). `infer_role` was extended so a trailing
+  token that is itself a built-in role resolves to that role directly — a
+  natural extension, documented in `cli.md` and the `infer_role` docstring.
+- **mtime-derived `Updated:` non-determinism (resolved Q3) — noted.** A
+  foreign doc with no in-file `Updated:` line gets `date.fromtimestamp(mtime)`.
+  No M4 test asserts a fixed `updated` value for a fixture file; a future
+  `migrate --apply` snapshot test must pin `--date` and avoid asserting an
+  mtime-derived `Updated:`.
+
+#### Exit criteria
+
+- [x] All 14 `test_plan_migration_*` units green.
+- [x] `test_migrate_dry_run_is_default_and_writes_nothing` +
+      `test_migrate_dry_run_reports_every_file` green; refuse-guard green.
 - [x] `ruff check` / `ruff format --check` / `mypy` clean tree-wide.
 
 ## Milestone-completion summary
