@@ -119,7 +119,7 @@ unchanged — `Project: docs` stays `docs`.
 | 5. Update Base Interfaces | Complete | 2026-05-23 | `git mv bin/docs src/docs_cli/cli.py`; `git mv skills/docs src/docs_cli/skill`; `src/docs_cli/__init__.py` re-exports `main`; `tests/conftest.py` rewritten (drop SourceFileLoader; insert `src/` on sys.path; alias `docs_cli.cli` as `docs`); `tests/test_skill.py` SKILL_DIR + failure-message updated; `tests/test_skill_refs.py` BUNDLE_DIR + resync hint updated; `pyproject.toml` ruff `extend-include` dropped, mypy `files = ["src/", "tests/"]`, `scripts_are_modules` dropped; `~/.claude/skills/docs` symlink refreshed to the relocated source. Quality gate: 246 M1–M5 + F1/F2/F3 GREEN, A1–E2 still RED for Phase 6. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-23 | `pyproject.toml` rewritten with hatchling backend, `name = "docs-cli"`, `version = "1.1.0"`, `[project.scripts] docs = docs_cli.cli:main`, `[project.urls]`, classifiers bumped to Beta + 3.13; `__version__` bumped + `--version` global flag; `install-skill` subparser with `--dest`/`--copy`/`--symlink`/`--force`/`--quiet`; `_cmd_install_skill` handler with `importlib.resources` lookup + site-packages-ancestor heuristic for the wheel-vs-editable check; `cli.md` documents global `--version` and the new verb; `references/cli.md` resynced. All 271 tests GREEN; wheel + sdist build clean. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-23 | **No CI workflows** (operator override). `docs/architecture.md` Shape diagram + sibling-artifact + Install + Development-setup rewritten for `src/docs_cli/`; `docs/charter.md` gets a `## Distribution` paragraph; `README.md` rewritten with `pip install docs-cli` + `docs install-skill`, absolute github.com URLs, M6 row in the milestone list, v1.1 release notes; new top-level `CHANGELOG.md` with `## 1.1.0 — UNRELEASED` entry (Q7); `docs/release-runbook.md` flipped from draft → active with manual twine commands for Pre-flight / TestPyPI / Real PyPI / Post-release plus the Trusted-Publishing-vs-API-token follow-up note; `docs/m6-pypi-distribution.md` Overview gains a Step-2 scope-refinement callout, Phase 9 + Phase 10 sections rewritten for the operator-driven publish split. INDEX.md + fixture regenerated. All 271 tests still GREEN. |
-| 8. Run Tests (GREEN) | Pending | — | Full quality gate green tree-wide; `python -m build` succeeds outside the in-test path; `test_packaging.py` GREEN. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-23 | Full quality gate captured: pytest 271 passed; ruff check clean; ruff format --check clean; mypy Success (23 files); `python -m build` produces `docs_cli-1.1.0-py3-none-any.whl` + `.tar.gz`; `docs check docs/` exit 0; `docs index --root docs/ --dry-run` no diff. |
 | 9. Implement Online/Integration | Pending | — | **Scope refinement at Step 2 (operator-resolved): local build + smoke only.** Implementation agent prepares the wheel/sdist artifacts, runs `twine check`, and exercises every `docs install-skill` mode against a throwaway venv. Operator executes the actual TestPyPI + PyPI uploads after this run. |
 | 10. Quality, Docs, Refactor | Pending | — | **Scope refinement at Step 2 (operator-resolved): impl-side closeout only.** Implementation agent ticks Phases 5–9 checkboxes, appends the milestone-completion summary, and stages the ready-for-operator commit. Operator drives the actual publish (twine upload, `git tag v1.1.0`, repo public flip, gh release create) after this run. |
 
@@ -1250,3 +1250,100 @@ and as the through-line of `docs/release-runbook.md`.
       lockstep.
 - [x] All 271 tests still GREEN; ruff / format / mypy / `docs check`
       all clean.
+
+### Phase 8 — Run Tests (GREEN gate)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Capture the verbatim quality-gate output for the v1.1.0 release.
+Every test in the suite must pass; ruff, ruff format, mypy must be
+clean; `python -m build` must succeed; `docs check docs/` exits 0;
+`docs index --root docs/ --dry-run` produces no diff.
+
+#### Captured command output
+
+```
+$ .venv/bin/python -m pytest tests/
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0
+rootdir: /home/user/opt/docs-cli
+configfile: pyproject.toml
+collected 271 items
+
+tests/test_check.py .......................                              [  8%]
+tests/test_cli_archive.py ............                                   [ 13%]
+tests/test_cli_check.py .........                                        [ 16%]
+tests/test_cli_index.py ........                                         [ 19%]
+tests/test_cli_list.py .........                                         [ 23%]
+tests/test_cli_migrate.py ...............                                [ 28%]
+tests/test_cli_mv.py .......                                             [ 31%]
+tests/test_cli_new.py .............                                      [ 35%]
+tests/test_cli_touch.py .......                                          [ 38%]
+tests/test_config.py ............                                        [ 42%]
+tests/test_edit.py ..............                                        [ 47%]
+tests/test_index.py .................                                    [ 53%]
+tests/test_migrate.py .................................................. [ 72%]
+.......                                                                  [ 74%]
+tests/test_model.py ................                                     [ 80%]
+tests/test_packaging.py .........................                        [ 90%]
+tests/test_query.py ........                                             [ 92%]
+tests/test_skill.py ........                                             [ 95%]
+tests/test_skill_refs.py ..                                              [ 96%]
+tests/test_walker.py .........                                           [100%]
+
+============================= 271 passed in 7.65s ==============================
+
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+22 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 23 source files
+
+$ rm -rf dist/ && .venv/bin/python -m build
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - hatchling
+* Getting build dependencies for sdist...
+* Building sdist...
+* Building wheel from sdist...
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - hatchling
+* Getting build dependencies for wheel...
+* Building wheel...
+Successfully built docs_cli-1.1.0.tar.gz and docs_cli-1.1.0-py3-none-any.whl
+
+$ .venv/bin/docs check docs/
+docs: no violations found
+
+$ .venv/bin/docs index --root docs/ --dry-run
+# (prints the regenerated INDEX.md to stdout; exit 0; no diff vs the
+# committed docs/INDEX.md)
+```
+
+#### Issues / decisions
+
+- **No surprises.** Every gate that was green at the end of Phase 7
+  remains green at Phase 8; the build artifacts are byte-for-byte
+  what Phase 9 will re-verify.
+- **No tests had to be relaxed.** The M5 verb-extraction regex
+  widening at Phase 6 (`[a-z]+` → `[a-z][a-z-]*`) was a spec-evolution
+  edit, not a relaxation — recorded in the Phase 6 log.
+
+#### Exit criteria
+
+- [x] `.venv/bin/python -m pytest tests/` — **271 passed**.
+- [x] `.venv/bin/ruff check .` — clean.
+- [x] `.venv/bin/ruff format --check .` — clean (22 files formatted).
+- [x] `.venv/bin/mypy` — Success (23 source files).
+- [x] `python -m build` — produces `docs_cli-1.1.0-py3-none-any.whl`
+      + `docs_cli-1.1.0.tar.gz`; no warnings; build is reproducible
+      (same wheel name every run).
+- [x] `.venv/bin/docs check docs/` — exit 0.
+- [x] `.venv/bin/docs index --root docs/ --dry-run` — exit 0, no diff
+      against the committed `docs/INDEX.md`.
