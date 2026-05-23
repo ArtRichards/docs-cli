@@ -41,11 +41,9 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/docs_cli"]
 # The bundled Claude Code skill at `src/docs_cli/skill/` is auto-included
-# as package data because it sits under the wheel's package root.
-# Adding a force-include directive on top would create duplicate zip
-# entries, so we keep the implicit-inclusion path and pin the structural
-# expectation via tests/test_packaging.py (B3).
-artifacts = ["src/docs_cli/skill/**"]
+# as package data because it lives under the wheel's package root; no
+# explicit include directive is needed. The shape is pinned by
+# tests/test_packaging.py (B3).
 
 [tool.hatch.build.targets.sdist]
 include = [

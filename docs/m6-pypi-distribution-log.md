@@ -1600,3 +1600,72 @@ publish, tag, visibility, or release-create action.
       all clean.
 - [x] **No PyPI upload, no tag, no visibility flip, no release-create
       performed by the impl agent.**
+
+### Phase 10 — Simplify pass (post-implementation)
+
+**Completed:** 2026-05-23
+
+#### Scope
+
+Post-implementation `/simplify` over M6's new code surface: the
+`install-skill` verb + helpers in `src/docs_cli/cli.py`, the Phase 5
+`conftest.py` rewrite, the new `test_packaging.py`, the
+`tests/_typing/docs.pyi` stub, the `[tool.hatch.build...]` block in
+`pyproject.toml`, the new install-skill section of `docs/cli.md`, and
+`docs/release-runbook.md`.
+
+#### Findings
+
+- `_locate_bundled_skill`, `_running_from_wheel_install`,
+  `_trees_byte_identical` — each helper earns its keep (named
+  intent, single responsibility, called from the one branch that
+  needs it). Heuristic in `_running_from_wheel_install` is
+  documented as a deliberate trade-off and out of scope per the
+  /simplify prompt.
+- `_cmd_install_skill` body — linear, branch-per-refusal flow is
+  already obvious. The `is_symlink() or is_file()` vs `rmtree`
+  split is subtle correctness logic (broken symlinks, symlinks to
+  directories); leaving it.
+- `conftest.py` — sys.path insertion + `sys.modules` alias dance is
+  minimal; each line has a one-line docstring justification and
+  the `docs_script` fixture is load-bearing for ~164 call sites.
+- `test_packaging.py` — session-scoped `built_dist` / `wheel_venv`
+  fixtures genuinely pay for themselves (build + venv + pip-install
+  are slow; running per-test would balloon the gate). `_load_pyproject`
+  is a thin but well-named one-liner reused by all Group-A tests.
+- `tests/_typing/docs.pyi` — required for mypy to see the
+  conftest sys.modules alias; cannot remove.
+- `docs/cli.md` install-skill section — concise, copy-pasteable;
+  no clearer phrasing surfaced.
+- `docs/release-runbook.md` — already operator-readable as a
+  cookbook; no restructuring earns its keep.
+
+#### Change applied
+
+| File | Action | Why |
+|---|---|---|
+| `pyproject.toml` | Modify | Remove the dead `artifacts = ["src/docs_cli/skill/**"]` directive in `[tool.hatch.build.targets.wheel]`. Hatchling already auto-includes the bundled skill as package data because it lives under the wheel's package root — verified empirically (rebuilt the wheel without the directive; the resulting `.whl` contains the same `docs_cli/skill/SKILL.md`, `references/cli.md`, `references/convention.md` entries). The block's own comment said as much; the directive was belt-and-suspenders. Rewrote the comment so it stands alone as accurate documentation. The A6 packaging test still passes (the comment continues to mention `skill` inside the wheel block). |
+
+#### Verification
+
+- Full suite: 271 passed (no test changed; no fixture changed).
+- `ruff format --check .` clean; `ruff check .` clean; `mypy` clean.
+- `python -m build` produced
+  `dist/docs_cli-1.1.0-py3-none-any.whl` and
+  `dist/docs_cli-1.1.0.tar.gz` cleanly; wheel contents byte-for-byte
+  identical to the Phase-9 artifacts (same 10 entries including
+  the three `docs_cli/skill/` files).
+- `twine check dist/*` PASSED on both artifacts.
+- Throwaway-venv smoke: installed the rebuilt wheel into
+  `/tmp/m6-smoke-venv`, ran `docs --version` → `docs 1.1.0`,
+  `docs install-skill --dest /tmp/m6-skill-out` → copied tree,
+  `diff -rq src/docs_cli/skill /tmp/m6-skill-out` → byte-identical.
+
+#### Exit criteria
+
+- [x] Every focus area inspected; non-changes recorded with reason.
+- [x] One genuine simplification applied (dead `artifacts`
+      directive removed; comment rewritten).
+- [x] All 271 tests still GREEN.
+- [x] Wheel + sdist still build; `twine check` still PASSES;
+      installed-wheel smoke still works end-to-end.
