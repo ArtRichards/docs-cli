@@ -3,7 +3,7 @@
 Status: active
 Role: plan
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-05-23
 
 Related:
 - implements: charter.md
@@ -90,6 +90,7 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 - Full-text search.
 - Per-doc revisions / history (git owns this).
 - Cross-root federation.
+- Templates beyond `docs new` defaults. If users want richer scaffolds, they hand-edit after creation.
 
 ## Resolved questions
 
