@@ -3,7 +3,7 @@
 Status: active
 Role: milestone
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-05-23
 
 Related:
 - parent-of: m5-claude-code-skill-log.md
@@ -724,3 +724,18 @@ the project's **final v1 milestone — v1 is complete** (M1-M5 all shipped).
   opened no new plan-level open question (OQ3).
 - `status.md` marks M5 → Complete and the project **v1-complete** — all five
   milestones shipped.
+
+## Post-ship adjustments (2026-05-23)
+
+A fresh-tree test of the installed skill exposed two issues:
+
+1. **The negative guard in the SKILL.md body — "if no `.docs.toml` exists … this skill does not apply" — was false against the CLI's documented behaviour.** [`cli.md`](cli.md)'s invocation section and `bin/docs:find_root` both fall back to cwd-as-root, so `docs new` works in any directory; the skill claimed otherwise.
+2. **The "consult `convention.md` / `cli.md`" pointer was broken in any tree but the docs project's own.** OQ-B's resolution wrote spec references as inline code (no markdown links) on the assumption an agent reading the skill had the docs project repo checked out — false in the deployed configuration where the skill installs at `~/.claude/skills/docs/` and is used in arbitrary trees.
+
+The post-ship work refined OQ-B's *implementation* (its intent — host-agnostic, no paths baked in — stands) and reversed Phase 7's "no `references/`" call:
+
+- **`skills/docs/SKILL.md` rewritten as a lean trigger surface.** The 143-total / 112-non-blank body is now 82 total / 60 non-blank: an explicit "When this skill applies / when it doesn't" section that handles the cwd-fallback honestly; a compact 8-row verb-task table; the "never hand-edit" guardrail; and real markdown links to the bundled references. The trigger `description` is unchanged from the Phase-5 wording. Per-verb prose detail relocated to `references/cli.md`.
+- **`skills/docs/references/{convention,cli}.md` bundled** as byte-identical mirrors of the source specs. `tests/test_skill_refs.py` enforces lockstep with two parametrized tests. `test_every_relative_link_resolves` finally has real coverage.
+- **`docs/cli.md` and `docs/convention.md` cleaned for the user-facing reference audience.** The two spec docs now carry only the mutual `pairs-with: <sibling>` in `Related:`; ADR / charter / plan / milestone cross-refs were removed (each of those dev artifacts already declares its own back-link from its side). The two dev-only `##` sections in cli.md ("Using `docs` from a Claude Code skill", "What's deliberately not in v1") were removed; their substance lives canonically in [architecture.md](architecture.md) and [plan.md](plan.md)'s "Out of scope for v1" respectively (one unique bullet — "Templates beyond `docs new` defaults" — was relocated to plan.md).
+
+Closing state after the adjustments: `pytest tests/` → **246 passed** (244 + the 2 lockstep tests); quality gate clean tree-wide; `docs check docs/` exit 0. See [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)'s post-ship section for the four-commit breakdown.

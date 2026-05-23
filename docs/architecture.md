@@ -3,7 +3,7 @@
 Status: active
 Role: reference
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-05-23
 
 Related:
 - implements: charter.md
@@ -38,8 +38,13 @@ ships a Claude Code skill at `skills/docs/SKILL.md` (M5). It is **not** a
 `bin/docs` module and adds no Python — it is a standalone markdown artifact
 that *drives* the verbs above: its `description` triggers an agent doing
 documentation work in a `docs`-managed tree, and its body redirects to the
-right `docs` verb. It is authored and version-controlled here; installation
-onto a host is the documented step below.
+right `docs` verb. Alongside `SKILL.md` sit two bundled reference files at
+`skills/docs/references/` — byte-identical mirrors of `docs/convention.md`
+and `docs/cli.md` — so an agent reading the skill on any installed host has
+the spec on hand without needing the docs repo checked out. Lockstep
+between the source specs and the bundle is enforced by
+`tests/test_skill_refs.py`. The skill is authored and version-controlled
+here; installation onto a host is the documented step below.
 
 ## Module responsibilities
 

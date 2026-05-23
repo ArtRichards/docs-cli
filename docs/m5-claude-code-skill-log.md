@@ -3,7 +3,7 @@
 Status: active
 Role: log
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-05-23
 
 Related:
 - child-of: m5-claude-code-skill.md
@@ -1073,3 +1073,25 @@ matching `docs` verb instead of hand-editing metadata, hand-curating
 - M5's exit criterion is met: an agent working in this repo is redirected to
   run `docs index` instead of hand-editing `INDEX.md`.
 - **The five-milestone v1 roadmap is complete.**
+
+## Post-ship adjustments (2026-05-23)
+
+A fresh-tree test of the installed skill (`/tmp/test-docs-tree/` walked
+through the full bootstrap → `docs new` / `index` / `archive` / `mv` /
+`touch` / `check` / `migrate` flow) exposed two issues — diagnosis in the
+milestone doc's Post-ship section. Four commits on branch
+`m5/skill-generalize`, stacked on the M5 stack:
+
+| Commit | What |
+|---|---|
+| `a817de6` | Generalize SKILL.md framing from project-management-specific wording ("plan/spec/charter/milestone") to general document-management ("specs, runbooks, references, design notes"); clarify the tool's purpose in the body's opening paragraph. |
+| `beec302` | Reshape the `description` for reliable triggering — "Use whenever the user asks to <X>" with the verbs and user keywords the Claude Code harness actually matches against; flip the body opening from descriptive to imperative; bold the central rule. |
+| `dab0a8a` | Bundle `docs/{convention,cli}.md` as `skills/docs/references/` (byte-identical mirrors) plus `tests/test_skill_refs.py` for lockstep. Clean `docs/cli.md` and `docs/convention.md` for the user-facing reference audience — `Related:` blocks pared to mutual `pairs-with` only; cli.md's two dev-only `##` sections removed; their substance moves to `architecture.md` (already covered) and `plan.md`'s "Out of scope for v1" (the one unique bullet — "Templates beyond `docs new` defaults"). |
+| `5a8b4f6` | Shorten `SKILL.md` from 160 → 82 lines (129 → 60 non-blank body): trigger surface, "when to use / when not to use" with the honest cwd-fallback note, compact 8-row verb-task table, "never hand-edit" rule, and real markdown links to the bundled references. Per-verb prose detail relocated to `references/cli.md`. |
+
+### Post-adjustment state
+
+- `pytest tests/` → **246 passed** (236 M1-M4 + 8 M5 `test_skill.py` + 2 lockstep `test_skill_refs.py`); quality gate clean tree-wide; `docs check docs/` exit 0.
+- The structural oracle (8 checks in `test_skill.py`) is unchanged; `test_every_relative_link_resolves` is no longer vacuous — the bundled references give it real targets.
+- The four resolved milestone-setup decisions (OQ1-OQ4) and all Step-2 author-guidance decisions (OQ-A..OQ-H) still hold. OQ-B's *implementation* (spec references as inline-code names with zero markdown links) is refined — the bundled references resolve via relative markdown links that travel with the installed skill, satisfying both OQ-B's host-agnostic intent and the user-facing reachability the original implementation broke.
+- Phase 7's "no `references/` needed" call is reversed: the body did fit under the size budget without progressive disclosure, but the body's pointer to the convention had no file to follow in the deployed install. Bundling resolves that.

@@ -44,6 +44,7 @@ docs mv <old> <new>                       Move + rewrite Related: references acr
 docs list [filters] [--json]              Query view of the tree.
 docs check [DIR]                          Validate metadata, refs, status/location drift.
 docs touch <file>                         Bump Updated: to today.
+docs migrate <dir> [--apply]              Adopt a foreign Markdown directory into the convention (dry-run by default).
 ```
 
 See [`docs/cli.md`](docs/cli.md) for full surface and exit codes.
@@ -52,16 +53,23 @@ See [`docs/cli.md`](docs/cli.md) for full surface and exit codes.
 
 ```sh
 git clone https://github.com/<you>/docs.git ~/opt/docs
-ln -s ~/opt/docs/bin/docs ~/bin/docs   # or wherever your $PATH wants it
+ln -s ~/opt/docs/bin/docs ~/bin/docs                 # CLI on $PATH
+ln -s ~/opt/docs/skills/docs ~/.claude/skills/docs   # Claude Code skill (optional)
 ```
 
 Requires Python 3.11+ (for stdlib `tomllib`). No third-party dependencies.
 
 ## Status
 
-M1 — Parser and `docs index` — shipped 2026-05-20. `docs index [DIR]` walks a docs root, parses each `.md` file's metadata, and regenerates `INDEX.md` with hand-edited preamble/trailer preserved. Stdlib-only Python, no third-party dependencies.
+**v1 complete.** All five milestones shipped 2026-05-20 through 2026-05-22:
 
-M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) — is the active milestone: the contract, test suite, and fixtures are in place (Phases 1–4), implementation is underway. See [`docs/m2-mutating-verbs.md`](docs/m2-mutating-verbs.md), [`docs/plan.md`](docs/plan.md), and [`docs/status.md`](docs/status.md).
+- M1 — Parser and `docs index`
+- M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
+- M3 — Validation and query (`check`, `list`)
+- M4 — Migration helper (`docs migrate`)
+- M5 — Claude Code skill at [`skills/docs/`](skills/docs/) — drives the verbs above automatically when an agent does documentation work in a `docs`-managed tree, with self-contained convention and CLI references bundled at `skills/docs/references/`.
+
+See [`docs/status.md`](docs/status.md) for per-milestone summaries and [`docs/plan.md`](docs/plan.md) for the v1.1 backlog.
 
 ## License
 

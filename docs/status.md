@@ -3,7 +3,7 @@
 Status: active
 Role: status
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-05-23
 
 Related:
 - pairs-with: plan.md
@@ -25,12 +25,16 @@ triggers on the right contexts (creating a plan/spec/charter/milestone,
 archiving or renaming a doc, listing docs, checking the tree, regenerating
 `INDEX.md`, adopting a foreign Markdown directory) and whose body redirects to
 the appropriate `docs` verb instead of hand-editing metadata, `INDEX.md`, or
-`archive/`. The convention itself is not re-taught — the body points at
-`convention.md` and `cli.md`. The four milestone-setup OPEN QUESTIONS (OQ1-OQ4)
-were resolved and recorded as Decisions in the task plan. See
-[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the per-phase
-history and [m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone
-summary.
+`archive/`. The convention itself is not re-taught — the body links to the
+bundled spec references at `skills/docs/references/`. The four milestone-setup
+OPEN QUESTIONS (OQ1-OQ4) were resolved and recorded as Decisions in the task
+plan. **Post-ship polish (2026-05-23)** shortened `SKILL.md` to a trigger
+surface (verb-task table + when-to-use scenarios + never-hand-edit rule),
+bundled `convention.md` and `cli.md` as `skills/docs/references/` (byte-
+identical mirrors with a lockstep test), and cleaned dev cross-refs out of
+the source specs. See [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)
+for the per-phase history (and the post-ship section appended to it) and
+[m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone summary.
 
 M4 — Migration helper (`docs migrate`) shipped 2026-05-22 across ten TDD
 phases. It added one verb — `docs migrate <dir>` — that adopts a
@@ -112,15 +116,16 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # 244 passed
+.venv/bin/python -m pytest tests/ -q          # 246 passed
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
 ./bin/docs check docs/                        # dogfood — exit 0
 ./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
 ```
-The suite is **244 passed** (236 M1-M4 + 8 M5 `tests/test_skill.py` structural
-checks). If `.venv/` is missing (fresh clone):
+The suite is **246 passed** (236 M1-M4 + 8 M5 `tests/test_skill.py` structural
+checks + 2 `tests/test_skill_refs.py` lockstep tests for the bundled spec
+references). If `.venv/` is missing (fresh clone):
 ```sh
 python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install pytest ruff mypy
