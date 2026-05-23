@@ -160,21 +160,30 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: Phase 2 — write tests/test_packaging.py RED.** Phase 1
-completed 2026-05-23: the doc-text commits landed; the GitHub repo
-`ArtRichards/docs-cli` was created `--private` with origin set; branch
-`m6/phases-1-4` pushed; the local checkout moved to
-`/home/user/opt/docs-cli/`; host pointers
-(`/home/user/.claude/projects/-home-user/memory/MEMORY.md`,
-`project_docs_cli.md`, `/home/user/.claude/settings.local.json`) updated;
-the `~/.claude/skills/docs` symlink and the absent `~/bin/docs` were
-inventoried for Phase 5 to refresh; `~/CLAUDE.md` had zero hits and was
-deliberately left untouched (recorded in the Phase 1 log as a no-op).
-The venv was recreated on the new path (per Step 1's OQ-C, because
-shebangs in `.venv/bin/{pytest,ruff,mypy,...}` break after the move).
-Phase 2 now authors `tests/test_packaging.py` (~22 RED tests grouped
-A–F) plus `docs/release-runbook.md` as a draft skeleton. The session
-continues to Phase 4 per the project's TDD discipline.
+**Next action: Phase 5 — relocate `bin/docs` to `src/docs_cli/cli.py`
++ skill to `src/docs_cli/skill/`.** Step 1 (Phases 1–4) is complete
+2026-05-23 on branch `m6/phases-1-4`. Phase 1 landed the doc-text
+commits, created the GitHub repo `ArtRichards/docs-cli` (private,
+origin set), pushed `m6/phases-1-4`, moved the local checkout to
+`/home/user/opt/docs-cli/`, updated host pointers
+(`MEMORY.md`, `project_docs_cli.md`, `settings.local.json`),
+inventoried the symlinks (`~/.claude/skills/docs` →
+`/home/user/opt/docs/skills/docs`, broken; `~/bin/docs` absent), and
+recreated the venv on the new path. Phase 2 authored
+`tests/test_packaging.py` (25 RED tests grouped A–F), added
+`build>=1.0` to the `[dev]` extra, and created
+`docs/release-runbook.md` as a draft skeleton. Phase 3 reused
+`tests/fixtures/trees/minimal/` for the installed-`docs check` smoke.
+Phase 4 captured the RED baseline: **9 failed + 16 errors + 246
+passed = 25 RED packaging tests + 246 green M1–M5 tests**, every RED
+attributable to its intended unimplemented surface (no
+`[build-system]`, non-PEP440 version, no `[project.scripts]`, no
+`docs_cli` package, no `install-skill` verb, layout invariants). The
+verbatim baseline is preserved at `/tmp/m6-phase-4-baseline.txt`.
+Quality gate clean tree-wide; `docs check docs/` exit 0. Step 2
+(Phases 5–10) implements the packaging surface; Phase 5 does the
+file moves first (`git mv bin/docs src/docs_cli/cli.py`, skill
+relocation, conftest update per OQ2).
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
