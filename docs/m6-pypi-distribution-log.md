@@ -116,7 +116,7 @@ unchanged — `Project: docs` stays `docs`.
 | 2. Write Tests (RED) | Complete | 2026-05-23 | `tests/test_packaging.py` (25 tests grouped A–F per Step 1's plan); `pyproject.toml` `[dev]` extra gains `build>=1.0` (Step 1 OQ-D); `docs/release-runbook.md` created as the draft skeleton. `tests/test_skill.py` + `tests/test_skill_refs.py` are deliberately untouched at this phase (Step 1 OQ-F defers the path edits to Phase 5 alongside the skill move). |
 | 3. Create Data/Fixtures | Complete | 2026-05-23 | Confirmed reuse of `tests/fixtures/trees/minimal/` for the installed-`docs check` / `docs index --dry-run` smokes (Step 1's Option A — `./bin/docs check tests/fixtures/trees/minimal/` exits 0; no new fixture needed). Phase 4 captures the RED baseline. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-23 | Captured the verbatim `pytest -q --tb=short` output: **9 FAILED + 16 ERRORS + 246 PASSED = 271 collected**. The 9 FAIL are the assertion-level RED on the pyproject static contract (A1–A6) + the layout invariants (F1–F3); the 16 ERROR are setup-fixture failures cascading from `built_dist` (`python -m build` rejects `version = "0.2.0-m2"` as non-PEP440 — exactly the Phase-6-fixes condition). M1–M5's 246 tests stay green; ruff/format/mypy clean tree-wide; `docs check docs/` exit 0. **Session pauses here** per the project's TDD discipline. |
-| 5. Update Base Interfaces | Pending | — | `git mv bin/docs src/docs_cli/cli.py`; `src/docs_cli/__init__.py` created; skill relocated per OQ4; `tests/conftest.py` updated per OQ2; `tests/test_skill.py` / `tests/test_skill_refs.py` paths updated; `pyproject.toml` ruff/mypy include lists updated; `bin/docs` resolved per OQ5. |
+| 5. Update Base Interfaces | Complete | 2026-05-23 | `git mv bin/docs src/docs_cli/cli.py`; `git mv skills/docs src/docs_cli/skill`; `src/docs_cli/__init__.py` re-exports `main`; `tests/conftest.py` rewritten (drop SourceFileLoader; insert `src/` on sys.path; alias `docs_cli.cli` as `docs`); `tests/test_skill.py` SKILL_DIR + failure-message updated; `tests/test_skill_refs.py` BUNDLE_DIR + resync hint updated; `pyproject.toml` ruff `extend-include` dropped, mypy `files = ["src/", "tests/"]`, `scripts_are_modules` dropped; `~/.claude/skills/docs` symlink refreshed to the relocated source. Quality gate: 246 M1–M5 + F1/F2/F3 GREEN, A1–E2 still RED for Phase 6. |
 | 6. Implement Offline/Core Path | Pending | — | `pyproject.toml` build backend (hatchling) + `[project.scripts]` + `[project.urls]` + package-data; `__version__` → `1.1.0`; `docs install-skill` verb (handler, argparse subparser, `importlib.resources` lookup); `cli.md` updated. |
 | 7. Update Tool/Wrapper Layer | Pending | — | `.github/workflows/release.yml` (Trusted Publishing); `.github/workflows/testpypi.yml`; `docs/release-runbook.md` finalised; `README.md` install section rewritten; `architecture.md` Shape/Install updated; `charter.md` distribution paragraph added. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate green tree-wide; `python -m build` succeeds outside the in-test path; `test_packaging.py` GREEN. |
@@ -794,3 +794,139 @@ ERRORs in the wheel-build cascade). The new assertions take effect
 once Phase 6 implements the surfaces they pin. Quality gate post-fix:
 246 green + 25 RED (baseline unchanged); ruff, `ruff format --check`,
 mypy, and `./bin/docs check docs/` all clean.
+
+### Phase 5 — Update Base Interfaces (structural relocation)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Move the executable script and the bundled Claude Code skill into a
+real Python package layout under `src/docs_cli/`, with zero behaviour
+changes. The phase exists to flip the three layout-invariant
+packaging tests (F1/F2/F3) GREEN and pin the import shape Phase 6
+will build on top of. The M1–M5 246-test suite stays green throughout
+via the conftest's `docs` alias (OQ2).
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `bin/docs` → `src/docs_cli/cli.py` | `git mv` | History preserved; no content edit. Empty `bin/` directory removed. |
+| `skills/docs/` → `src/docs_cli/skill/` | `git mv` | History preserved; empty `skills/` directory removed. The wheel ships exactly what the author edits (OQ4). |
+| `src/docs_cli/__init__.py` | Create | Re-exports `main` from `docs_cli.cli`. `__version__` deliberately left to Phase 6 (single source of truth in `cli.py` per Q1). |
+| `tests/conftest.py` | Rewrite | Dropped `importlib.machinery.SourceFileLoader` block. Inserts `src/` on `sys.path`; imports `docs_cli.cli`; aliases it as `docs` in `sys.modules` so `from docs import …` keeps working in the ~18 pre-M6 test files (OQ2). `docs_script` fixture retained (the plan called for dropping it, but every `test_cli_*.py` depends on it for the subprocess-invocation tests; now points at the relocated `src/docs_cli/cli.py`). |
+| `tests/test_skill.py` | Modify | `SKILL_DIR` → `REPO_ROOT / "src" / "docs_cli" / "skill"`; clutter-allowlist failure message updated to reference the new path; docstring at line 45 updated. |
+| `tests/test_skill_refs.py` | Modify | `BUNDLE_DIR` → `REPO_ROOT / "src" / "docs_cli" / "skill" / "references"`; module docstring resync hint and failure message both updated. |
+| `pyproject.toml` | Modify | Dropped `[tool.ruff].extend-include = ["bin/docs"]`; added `[tool.ruff].extend-exclude = ["tests/_typing/"]`; dropped `[tool.mypy].scripts_are_modules = true`; mypy `files` flipped from `["bin/docs", "tests/"]` to `["src/", "tests/"]`; added `[tool.mypy].mypy_path = "$MYPY_CONFIG_FILE_DIR/src:$MYPY_CONFIG_FILE_DIR/tests/_typing"`. `[project]` table left for Phase 6 (it owns name/version/build-system). |
+| `tests/_typing/docs.pyi` | Create | Mypy-only stub re-exporting `docs_cli.cli`'s public surface. The conftest aliases the runtime module as `docs` in `sys.modules`, but mypy can't observe that — the stub fills the typing gap without weakening any error code. |
+| `~/.claude/skills/docs` (host symlink) | Refresh | `ln -sfn /home/user/opt/docs-cli/src/docs_cli/skill ~/.claude/skills/docs` — pointed at the relocated source. The pre-Phase-1 symlink was dangling after the `~/opt/docs` → `~/opt/docs-cli` rename and again after this move. |
+| `docs/status.md` | Modify | "Next action" rewritten to point at Phase 6; verify-environment block updated for the new layout (post-Phase-5 use `.venv/bin/python -m docs_cli.cli …`; post-Phase-6 use `.venv/bin/docs`); "Watch out for" sweep replaced `bin/docs` references; reading-order line for the skill points at the new path. |
+| `docs/m6-pypi-distribution-log.md` | Modify | Phase-5 row → Complete; this log entry appended. |
+
+#### Actions taken
+
+- `git mv bin/docs src/docs_cli/cli.py` (preserved history with no
+  content edit). Removed empty `bin/__pycache__/` and `rmdir bin`.
+- `git mv skills/docs src/docs_cli/skill` (history preserved).
+  `rmdir skills` (empty parent).
+- Wrote `src/docs_cli/__init__.py` with `from docs_cli.cli import
+  main; __all__ = ["main"]`. Per Q1, the version constant lives in
+  `cli.py` only (single source of truth); `__init__.py` does not
+  re-declare `__version__`.
+- Rewrote `tests/conftest.py` per OQ2 + the Phase 5 plan: inserts
+  `src/` on `sys.path` before any test import resolves; imports
+  `docs_cli.cli`; aliases it as `docs` in `sys.modules`. Retains
+  the `docs_script` session fixture (re-pointed at
+  `src/docs_cli/cli.py`) so the subprocess-driven `test_cli_*.py`
+  tests keep launching the CLI exactly as before.
+- Updated `tests/test_skill.py` line 37 (`SKILL_DIR`), line 45
+  (docstring), line 228 (clutter-allowlist failure message).
+- Updated `tests/test_skill_refs.py` line 22 (`BUNDLE_DIR`), lines
+  3 / 10–11 (docstring + resync command), lines 31–32 (failure
+  message).
+- Cleaned `pyproject.toml` of the now-irrelevant
+  executable-script tooling: dropped `extend-include = ["bin/docs"]`
+  from `[tool.ruff]`, dropped `scripts_are_modules = true` from
+  `[tool.mypy]`, and flipped mypy's `files` list to `["src/",
+  "tests/"]`. The `[project]` table is intentionally untouched —
+  Phase 6 owns the name/version/build-system rewrite.
+- Refreshed `~/.claude/skills/docs` →
+  `/home/user/opt/docs-cli/src/docs_cli/skill`.
+- Updated `docs/status.md`: "Next action" now points at Phase 6;
+  verify-environment commands updated to use `python -m docs_cli.cli`
+  pre-Phase-6 and `.venv/bin/docs` post-Phase-6; "Watch out for"
+  references to `bin/docs` and the in-`pyproject` `extend-include`
+  shape rewritten; the resuming-this-work line for the bundled skill
+  now points at the relocated path.
+
+#### Issues / decisions
+
+- **`tests/_typing/docs.pyi` stub added to keep mypy GREEN.** With
+  the script-as-module trick gone (`scripts_are_modules` dropped),
+  mypy can no longer resolve `from docs import X` — the alias is a
+  runtime `sys.modules` insertion that static analysis cannot see.
+  The minimal fix is a stub at `tests/_typing/docs.pyi` that
+  re-exports `docs_cli.cli`'s public surface, plus a `mypy_path`
+  entry pointing at `tests/_typing` (the directory is ruff-excluded
+  so its hand-grouped import block survives `ruff check`). Mypy
+  goes back to "Success" without weakening any error-code or
+  silencing real defects in test code. Not in the Phase 5 plan; a
+  necessary follow-on from the OQ5 `bin/docs` deletion.
+- **Plan called for dropping the `docs_script` fixture; kept it.**
+  The plan text said "Drop the SourceFileLoader block and the unused
+  docs_script fixture." The fixture is NOT unused — eight
+  `test_cli_*.py` files reference it (`test_cli_archive.py`,
+  `test_cli_check.py`, `test_cli_index.py`, `test_cli_list.py`,
+  `test_cli_migrate.py`, `test_cli_mv.py`, `test_cli_new.py`,
+  `test_cli_touch.py`) and pass it to `_run(script, *args)` which
+  invokes the CLI as `[sys.executable, str(script), …]`. Dropping the
+  fixture would error-out ~70 tests at fixture-setup time. Kept the
+  fixture and re-pointed it at the relocated `src/docs_cli/cli.py`;
+  the file is plain stdlib Python and runs as a script unchanged.
+  Recorded as a Phase 5 plan deviation.
+- **`~/bin/docs` convenience symlink (Q9).** Per the resolved
+  question this is a no-op for the repo — host-only. The host had no
+  `~/bin/docs` at Phase 1 inventory and still does not; nothing to
+  refresh.
+- **`/home/user/opt/docs-cli/.venv/`** still has stale shebangs from
+  the Phase-1-era recreation (built against the old path), but
+  pytest/ruff/mypy are still reachable via
+  `.venv/bin/python -m pytest …` etc. The venv recreation only
+  matters once Phase 6's editable install lands the `docs` entry
+  point on PATH.
+
+#### Verification
+
+- `.venv/bin/python -m pytest tests/ --ignore=tests/test_packaging.py
+  -q` → **246 passed** (M1–M5 untouched).
+- `.venv/bin/python -m pytest tests/test_packaging.py -q` → **3
+  passed, 6 failed, 16 errors**. The 3 passed are F1
+  (`src/docs_cli/{__init__.py, cli.py, skill/SKILL.md}` exist), F2
+  (top-level `skills/docs/` is gone), F3 (`bin/docs` is gone) —
+  exactly the layout invariants Phase 5 is supposed to flip. The 6
+  failed + 16 errored are A1–A6 + B1–E2, every one of them blocked
+  on the Phase 6 surface (no `[build-system]`, no
+  `[project.scripts]`, no `install-skill` verb).
+
+#### Exit criteria
+
+- [x] `src/docs_cli/{__init__.py, cli.py, skill/SKILL.md}` exist;
+      history preserved through both `git mv` operations.
+- [x] `bin/docs` is gone (the parent `bin/` directory is gone too).
+- [x] `skills/docs/` is gone (the parent `skills/` directory is gone
+      too).
+- [x] `tests/conftest.py` no longer references `SourceFileLoader`
+      or `bin/docs`; `docs_cli.cli` is aliased as `docs` in
+      `sys.modules` per OQ2.
+- [x] `tests/test_skill.py` and `tests/test_skill_refs.py` reference
+      the new source path.
+- [x] `pyproject.toml` ruff/mypy config no longer references
+      `bin/docs`; `scripts_are_modules` removed.
+- [x] `~/.claude/skills/docs` symlink resolves to
+      `/home/user/opt/docs-cli/src/docs_cli/skill`.
+- [x] **246 M1–M5 tests still green.**
+- [x] **F1/F2/F3 packaging tests GREEN.** A1–E2 still RED; their RED
+      reasons all map to Phase 6 work (`[build-system]`,
+      `[project.scripts]`, `install-skill` verb).
+- [x] `docs/status.md` updated for Phase 5 completion.

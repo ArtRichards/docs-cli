@@ -32,8 +32,10 @@ addopts = "-ra --strict-markers"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-# The executable doesn't have a .py extension; explicitly include it.
-extend-include = ["bin/docs"]
+# Mypy stub for the `from docs import …` alias is hand-shaped to stay readable;
+# ruff's I001 import-fixer expands the parenthesised group into one line per
+# name, which is the wrong call for a .pyi re-export.
+extend-exclude = ["tests/_typing/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B", "UP", "SIM"]
@@ -44,6 +46,5 @@ python_version = "3.11"
 strict_optional = true
 warn_unused_ignores = true
 warn_redundant_casts = true
-files = ["bin/docs", "tests/"]
-# Treat the extensionless executable as a Python module.
-scripts_are_modules = true
+files = ["src/", "tests/"]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src:$MYPY_CONFIG_FILE_DIR/tests/_typing"

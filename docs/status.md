@@ -138,65 +138,51 @@ If you're starting a new Claude Code session against this repo:
 6. `docs/cli.md` — the command spec; the full eight-verb `docs` surface.
 7. `docs/convention.md`, `docs/architecture.md` — the on-disk format and the module sketch.
 8. `docs/m5-claude-code-skill.md` — v1's final milestone; its **Milestone-completion summary** describes the Claude Code skill that M6's `install-skill` verb will deliver via the wheel.
-9. `skills/docs/SKILL.md` — the M5 deliverable: the Claude Code skill that drives the verbs (relocates to `src/docs_cli/skill/SKILL.md` in M6 per OQ4).
+9. `src/docs_cli/skill/SKILL.md` — the M5 deliverable: the Claude Code skill that drives the verbs (relocated to its M6 home under the package source).
 10. `docs/charter.md` — what + why.
 11. `docs/definition-of-ready.md` — the gate cleared before implementation.
 
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs-cli
-.venv/bin/python -m pytest tests/ -q          # 246 passed (Phases 1–4); ~268 after Phase 4 (246 green + 22 RED packaging)
+.venv/bin/python -m pytest tests/ -q          # 249 passed (Phase 5); 271 after Phase 8
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
-./bin/docs check docs/                        # dogfood — exit 0
-./bin/docs index --root docs/ --dry-run       # smoke: idempotent dogfood
+.venv/bin/python -m docs_cli.cli check docs/  # dogfood — exit 0 (Phase 5; post-Phase-6 use `.venv/bin/docs`)
+.venv/bin/python -m docs_cli.cli index --root docs/ --dry-run  # smoke: idempotent dogfood
 ```
-The suite is **246 passed** (236 M1-M4 + 8 M5 `tests/test_skill.py` structural
-checks + 2 `tests/test_skill_refs.py` lockstep tests for the bundled spec
-references). If `.venv/` is missing (fresh clone):
+If `.venv/` is missing (fresh clone) or stale shebangs after the M6
+working-tree move:
 ```sh
-python3 -m venv .venv                         # needs python3-venv on Debian/Ubuntu
-.venv/bin/pip install pytest ruff mypy
+rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubuntu
+.venv/bin/pip install -e ".[dev]"             # post-Phase-6: lands `docs` on PATH; pre-Phase-6: `pytest ruff mypy build`
 ```
 
-**Next action: Phase 5 — relocate `bin/docs` to `src/docs_cli/cli.py`
-+ skill to `src/docs_cli/skill/`.** Step 1 (Phases 1–4) is complete
-2026-05-23 on branch `m6/phases-1-4`. Phase 1 landed the doc-text
-commits, created the GitHub repo `ArtRichards/docs-cli` (private,
-origin set), pushed `m6/phases-1-4`, moved the local checkout to
-`/home/user/opt/docs-cli/`, updated host pointers
-(`MEMORY.md`, `project_docs_cli.md`, `settings.local.json`),
-inventoried the symlinks (`~/.claude/skills/docs` →
-`/home/user/opt/docs/skills/docs`, broken; `~/bin/docs` absent), and
-recreated the venv on the new path. Phase 2 authored
-`tests/test_packaging.py` (25 RED tests grouped A–F), added
-`build>=1.0` to the `[dev]` extra, and created
-`docs/release-runbook.md` as a draft skeleton. Phase 3 reused
-`tests/fixtures/trees/minimal/` for the installed-`docs check` smoke.
-Phase 4 captured the RED baseline: **9 failed + 16 errors + 246
-passed = 25 RED packaging tests + 246 green M1–M5 tests**, every RED
-attributable to its intended unimplemented surface (no
-`[build-system]`, non-PEP440 version, no `[project.scripts]`, no
-`docs_cli` package, no `install-skill` verb, layout invariants). The
-verbatim baseline is preserved at `/tmp/m6-phase-4-baseline.txt`.
-Quality gate clean tree-wide; `docs check docs/` exit 0. A fresh-eyes
-review then returned **ship-with-fixes**; both items folded in on
-`m6/phases-1-4` (D5 now asserts `dest/SKILL.md` is byte-unchanged
-after a no-force rejection, `6be7e4c`; C2 now requires `1.1.0` as a
-whitespace-token rather than a substring; log subsection at `2b33f2d`
-records the deferred nits). Baseline unchanged: 246 green + 25 RED;
-all linters clean. Step 2 (Phases 5–10) implements the packaging
-surface; Phase 5 does the file moves first
-(`git mv bin/docs src/docs_cli/cli.py`, skill relocation, conftest
-update per OQ2).
+**Next action: Phase 6 — implement core (pyproject hatchling +
+`install-skill` verb).** Phase 5 (relocation) is complete on branch
+`m6/phases-5-10`. `git mv bin/docs src/docs_cli/cli.py` and
+`git mv skills/docs src/docs_cli/skill` ran clean (history preserved);
+`src/docs_cli/__init__.py` re-exports `main`; `tests/conftest.py` now
+inserts `src/` on `sys.path` and aliases `docs_cli.cli` as `docs` per
+OQ2; `tests/test_skill.py` and `tests/test_skill_refs.py` point at the
+new skill path; `pyproject.toml` ruff/mypy include lists updated
+(`bin/docs` references dropped); `~/.claude/skills/docs` symlink
+refreshed to `src/docs_cli/skill/`. Quality gate: 246 M1–M5 tests
+still green; F1/F2/F3 packaging tests now GREEN (layout invariants
+satisfied); A1–E2 remain RED until Phase 6 lands the
+`[build-system]` + `[project.scripts]` + `install-skill` verb.
 
 **Watch out for** (durable gotchas, still current):
-- The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
-- Quality gates run **tree-wide**: `ruff check .`, `ruff format --check .`, and `mypy` (no args — `pyproject.toml` scopes it to `bin/docs` + `tests/`). Commit once per TDD phase on `main`.
-- The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is spec-compliant, not hand-authored. If you change a `docs/*.md` body so its first paragraph or `Updated:` line changes, regenerate `docs/INDEX.md` and the snapshot in lockstep (`./bin/docs index --root docs`, then copy `docs/INDEX.md` onto the fixture). Editing a doc means bumping that doc's own `Updated:` per the convention.
+- The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's
+  editable install (`pip install -e ".[dev]"`), the `docs` command
+  lands on PATH via the `[project.scripts]` entry-point — same binary
+  the PyPI user gets. (Pre-Phase-6, invoke as
+  `.venv/bin/python -m docs_cli.cli …`.)
+- Quality gates run **tree-wide**: `ruff check .`, `ruff format --check .`, and `mypy` (no args — `pyproject.toml` scopes it to `src/` + `tests/`). Commit once per TDD phase on the active branch.
+- The dogfood snapshot (`tests/fixtures/expected/docs-INDEX.md`) is spec-compliant, not hand-authored. If you change a `docs/*.md` body so its first paragraph or `Updated:` line changes, regenerate `docs/INDEX.md` and the snapshot in lockstep (`docs index --root docs`, then copy `docs/INDEX.md` onto the fixture). Editing a doc means bumping that doc's own `Updated:` per the convention.
 - `docs mv` rewrites `Related:` metadata bullets only — prose markdown links in bodies are deliberately left alone (see the M2 Phase 9 log). `docs check` likewise validates `Related:` paths, not prose links.
 - `docs check`'s `malformed` rule covers a **missing H1 only** — `parse_metadata_block` ends the metadata block at the first non-label line rather than raising, so a malformed in-block line is not separately detectable (M3 Phase 5 decision).
 - INDEX markers quoted in a doc's preamble must be backtick-styled inline code, so the line-anchored detector (`_find_marker_lines`) does not false-match them.
-- The metadata block may contain one blank line between the inline `Label: value` run and a trailing bare-label group (`Related:` + bullets). `_metadata_line_span` in `bin/docs` is the single source of that block-boundary rule.
+- The metadata block may contain one blank line between the inline `Label: value` run and a trailing bare-label group (`Related:` + bullets). `_metadata_line_span` in `src/docs_cli/cli.py` is the single source of that block-boundary rule.
 - Git author email for this repo is `art@bitholdersinc.com` (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`.

@@ -34,7 +34,7 @@ import pytest
 from docs import _build_parser  # loaded via conftest's module registration
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SKILL_DIR = REPO_ROOT / "skills" / "docs"
+SKILL_DIR = REPO_ROOT / "src" / "docs_cli" / "skill"
 SKILL_MD = SKILL_DIR / "SKILL.md"
 
 
@@ -42,7 +42,7 @@ SKILL_MD = SKILL_DIR / "SKILL.md"
 
 
 def _read_skill() -> str:
-    """Return the raw text of skills/docs/SKILL.md."""
+    """Return the raw text of src/docs_cli/skill/SKILL.md."""
     return SKILL_MD.read_text(encoding="utf-8")
 
 
@@ -218,14 +218,14 @@ def test_every_relative_link_resolves() -> None:
 
 
 def test_skill_dir_has_no_clutter() -> None:
-    # ALLOWLIST (resolved OQ-D): the only permitted entries in skills/docs/ are
-    # SKILL.md and an optional references/ directory.
+    # ALLOWLIST (resolved OQ-D): the only permitted entries in the skill
+    # source dir are SKILL.md and an optional references/ directory.
     for entry in sorted(SKILL_DIR.iterdir()):
         if entry.name == "SKILL.md" and entry.is_file():
             continue
         if entry.name == "references" and entry.is_dir():
             continue
-        pytest.fail(f"unexpected entry in skills/docs/: {entry.name}")
+        pytest.fail(f"unexpected entry in src/docs_cli/skill/: {entry.name}")
 
 
 # --- check 8: the frontmatter parser is non-vacuous ------------------------
