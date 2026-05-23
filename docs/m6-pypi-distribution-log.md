@@ -757,3 +757,40 @@ which is walked at Phases 9 and 10.
 - [x] Verbatim baseline output preserved at
       `/tmp/m6-phase-4-baseline.txt`.
 - [x] **Step 1 (Phases 1–4) pauses here.**
+
+#### Review fixes
+
+After Step 1 paused, a fresh-eyes review returned **ship-with-fixes**
+with one should-fix and one cheap nit. Both folded in on
+`m6/phases-1-4` at `6be7e4c`:
+
+- **D5 — should-fix.** `test_d5_install_skill_refuses_non_identical_without_force`
+  previously only asserted a non-zero exit, then re-ran with `--force`.
+  A buggy implementation that errored out *after* partially overwriting
+  files would still satisfy that. Added a byte-content assertion
+  between the two `subprocess.run` calls: `dest/SKILL.md` must still
+  read `DIFFERENT CONTENT\n` after the no-force rejection. Pins the
+  spec's implicit "dest is preserved on rejection" guarantee.
+- **C2 — cheap nit.** `test_c2_docs_version_is_1_1_0` used
+  `"1.1.0" in combined`, which would also accept `21.1.0` or
+  `1.1.0.dev0`. Tightened to a whitespace-token match
+  (`"1.1.0" in combined.split()`).
+
+Deferred (with rationale):
+
+- **A6** — loose substring match for `"skill"`. Backstopped by B3
+  (wheel-contents check). Leave for Phase 6 if desired.
+- **C3** — substring `"verb in out"` matches M5 precedent in
+  `tests/test_skill.py`. Leave for codebase consistency.
+- **F2/F3** — non-existence assertions; backstopped by F1 + B3. Leave.
+- **conftest shape** — old wheel-venv shape; rewritten in Phase 5
+  per OQ2. Leave.
+- **`~/.claude/skills/docs` dangling symlink** — host-state nit
+  already inventoried for Phase 5 refresh. No action at Step 1.
+
+Both fixed tests remain RED at Phase 4 (D5 still ERRORs in the
+install-skill cascade because the verb does not exist yet; C2 still
+ERRORs in the wheel-build cascade). The new assertions take effect
+once Phase 6 implements the surfaces they pin. Quality gate post-fix:
+246 green + 25 RED (baseline unchanged); ruff, `ruff format --check`,
+mypy, and `./bin/docs check docs/` all clean.
