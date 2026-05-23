@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-23. 22 docs active, 0 archived._
+_Generated 2026-05-23. 23 docs active, 0 archived._
 
 ## Project — docs
 
@@ -48,6 +48,10 @@ _Generated 2026-05-23. 22 docs active, 0 archived._
 
 - [dual-status-adr.md](dual-status-adr.md) — _decision_ — A doc's lifecycle state could be expressed by:. Updated 2026-05-20.
 - [vocab-adr.md](vocab-adr.md) — _decision_ — The convention requires controlled vocabularies for `Status` and `Role`. Too small a set fails to express common…. Updated 2026-05-20.
+
+### Active — Runbook
+
+- [release-runbook.md](release-runbook.md) — _runbook_ — Per-release checklist for shipping a new `docs-cli` to PyPI. Finalised at M6 Phase 7 with the workflow wiring; this…. Updated 2026-05-23.
 
 ### Active — Reference
 

@@ -113,7 +113,7 @@ unchanged — `Project: docs` stays `docs`.
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract (+ identity rename) | Complete | 2026-05-23 | Promote M6 from `draft` to `active`; create this log; add a `## v1.1` section to `plan.md`; refresh `status.md` (M6 in flight); regenerate INDEX + snapshot. **Then perform the identity rename per OQ3**: `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`; `git push -u origin m6/phases-1-4`; `mv ~/opt/docs ~/opt/docs-cli` as the final action (subsequent phases run from the new path); update `~/CLAUDE.md`, `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`, and the MEMORY.md index line. No code change, no packaging surface. |
-| 2. Write Tests (RED) | Pending | — | `tests/test_packaging.py` with the six packaging sub-cases; `tests/test_skill.py` + `tests/test_skill_refs.py` paths updated; `docs/release-runbook.md` created as the operations checklist. |
+| 2. Write Tests (RED) | Complete | 2026-05-23 | `tests/test_packaging.py` (25 tests grouped A–F per Step 1's plan); `pyproject.toml` `[dev]` extra gains `build>=1.0` (Step 1 OQ-D); `docs/release-runbook.md` created as the draft skeleton. `tests/test_skill.py` + `tests/test_skill_refs.py` are deliberately untouched at this phase (Step 1 OQ-F defers the path edits to Phase 5 alongside the skill move). |
 | 3. Create Data/Fixtures | Pending | — | `tests/fixtures/trees/packaging-clean/` (a known-clean docs tree) or reuse an existing M1–M4 fixture (e.g. `minimal/`) for sub-case 6. |
 | 4. Run Tests (RED Baseline) | Pending | — | Confirm every `test_packaging.py` sub-case fails on the unimplemented packaging surface (no `[build-system]`, no entry point, no `install-skill`, no `docs_cli` module); existing 246 tests stay green; **session pauses here**. |
 | 5. Update Base Interfaces | Pending | — | `git mv bin/docs src/docs_cli/cli.py`; `src/docs_cli/__init__.py` created; skill relocated per OQ4; `tests/conftest.py` updated per OQ2; `tests/test_skill.py` / `tests/test_skill_refs.py` paths updated; `pyproject.toml` ruff/mypy include lists updated; `bin/docs` resolved per OQ5. |
@@ -365,3 +365,147 @@ pointers, and move the local checkout from `/home/user/opt/docs` to
 - [x] `./bin/docs check docs/` exit 0.
 - [x] No code change happened inside the repo (no `src/`, no
       `pyproject.toml` edits, no `bin/docs` move).
+
+### Phase 2 — Write Tests (RED)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Express every M6 packaging requirement as a failing check in code,
+plus a release-runbook skeleton for the operations side that pytest
+cannot exercise. No packaging surface authored; no files relocated.
+The 246-test in-tree suite stays green; the new `tests/test_packaging.py`
+collects and runs entirely RED (the GREEN→RED differentiation is
+Phase 4's job).
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_packaging.py` | Create | 25 tests grouped A–F (see "Test groups" below). Top-of-file `pytest.importorskip("build")` per Step 1 OQ-E; `from docs import _build_parser` via the conftest alias (Step 1 OQ-O). Session-scoped `built_dist` and `wheel_venv` fixtures run `python -m build` and `pip install <wheel>` once per session, keeping the per-test cost negligible after the first invocation. |
+| `pyproject.toml` | Modify | `[project.optional-dependencies] dev` gains `build>=1.0` (Step 1 OQ-D + OQ-M's `>=` bounds rule). Keeps the dev-extra contract self-describing — a fresh contributor's `pip install -e ".[dev]"` brings `build` in without an out-of-band install. |
+| `docs/release-runbook.md` | Create | Draft skeleton (Status: draft, Role: runbook) carrying the four-section checklist (Pre-flight / TestPyPI rehearsal / Real PyPI publish / Post-release). Phase 7 finalises this with the workflow wiring; Phase 9 and Phase 10 walk every row. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep via `./bin/docs index --root docs/` after `release-runbook.md` landed (new `Active — Runbook` group on the INDEX). |
+
+#### Test groups
+
+- **A1–A6 — `pyproject.toml` static contract.** A1 hatchling
+  `[build-system]`; A2 `name = "docs-cli"`; A3 `version = "1.1.0"`;
+  A4 `[project.scripts] docs = "docs_cli.cli:main"`; A5
+  `[project.urls]` Homepage / Repository / Issues; A6 a loose
+  hatch-build table mentions "skill" (Step 1 OQ-K). **A7 deferred** per
+  Step 1's plan (dev-extra contract decision is Phase 6's concern).
+- **B1–B4 — wheel and sdist artefacts.** B1 wheel builds as
+  `docs_cli-1.1.0-*.whl`; B2 sdist builds as
+  `docs_cli-1.1.0.tar.gz`; B3 wheel contains
+  `docs_cli/cli.py` + `docs_cli/skill/SKILL.md` +
+  `docs_cli/skill/references/{convention,cli}.md`; B4
+  `entry_points.txt` registers `docs = docs_cli.cli:main`.
+- **C1–C3 — installed CLI surface.** C1 venv has `docs` on PATH;
+  C2 `docs --version` prints `1.1.0`; C3 `docs --help` lists every
+  verb the in-tree `_build_parser()` registers plus `install-skill`
+  (Step 1 OQ-O — the conftest-alias import keeps the expected verb
+  set in lockstep with the parser).
+- **D1–D7 — `docs install-skill` verb.** D1 subcommand exists
+  (`--help` exits 0); D2 default action is `--copy` (`--dest <tmp>`
+  succeeds; never triggers the `~/.claude/skills/docs/` default per
+  Step 1 OQ-H); D3 the materialised tree is byte-identical to
+  `src/docs_cli/skill/`; D4 idempotent (two invocations exit 0);
+  D5 refuses a non-identical existing dest without `--force` and
+  succeeds with `--force`; D6 `--symlink` rejected on a wheel
+  install; D7 `--help` documents the default dest as
+  `~/.claude/skills/docs/` (Step 1 OQ-H — assertion via help text only).
+- **E1–E2 — installed `docs` against fixture trees.** E1 installed
+  `docs check tests/fixtures/trees/minimal/` exits 0; E2 installed
+  `docs index --root <fixture> --dry-run` exits 0. Uses the existing
+  `minimal/` fixture; Phase 3 confirms the reuse decision.
+- **F1–F3 — repo-layout invariants.** F1
+  `src/docs_cli/{__init__.py,cli.py,skill/SKILL.md}` exist; F2
+  top-level `skills/docs/` is gone (Step 1 OQ-F note: the test
+  asserts the post-Phase-5 state directly; it is RED until Phase 5
+  moves the skill); F3 `bin/docs` is gone (OQ5 — Phase 5 deletes).
+
+#### Actions taken
+
+- Wrote `tests/test_packaging.py` (≈ 460 lines, 25 tests). The
+  session-scoped `built_dist` fixture runs `python -m build` once
+  against `REPO_ROOT` into a `tmp_path_factory.mktemp("dist")`
+  outdir; `wheel_venv` creates a `venv.EnvBuilder` venv and
+  pip-installs the produced wheel, yielding the absolute path to
+  the venv's `docs` entry-point. Subprocess invocations carry
+  `capture_output=True, text=True` so failure messages surface in
+  the pytest report instead of vanishing into pipe buffers.
+- Added `build>=1.0` to `[project.optional-dependencies] dev`. The
+  `>=` bound mirrors the existing `pytest>=7.0` / `ruff>=0.4` /
+  `mypy>=1.0` per Step 1 OQ-M.
+- Created `docs/release-runbook.md` via `./bin/docs new runbook
+  release-runbook --root docs/` (scaffolds the metadata block),
+  then overwrote the body with the four-section checklist. Status
+  stays `draft` — Phase 7 finalises and flips to `active`.
+- Regenerated `docs/INDEX.md` (new `### Active — Runbook` group)
+  and copied onto `tests/fixtures/expected/docs-INDEX.md`.
+- Ran the quality gate tree-wide: `ruff check .` (clean after one
+  E402+I001 `# noqa` on the conftest-alias import), `ruff format
+  --check .` (clean after one reformat), `mypy` (clean — 21 source
+  files now). The `# noqa: E402, I001` on `from docs import
+  _build_parser` is the standard idiom for an `importorskip`-gated
+  late import.
+
+#### Issues / decisions
+
+- **`pytest.importorskip("build")` placement.** Module-level
+  `importorskip` runs at import time, before `from docs import
+  _build_parser`. Ruff's E402 (module-level import not at top) and
+  I001 (un-sorted imports) both flag the late `docs` import. The
+  fix is a targeted `# noqa: E402, I001` comment — the same idiom
+  M5's `tests/test_skill.py` would have used had it needed it. No
+  config-level ruff change.
+- **A7 deferred (Step 1 OQ-A7-SKIP).** The "`[dev]` extra includes
+  build" test would assert the contract that Phase 2 just added to
+  `pyproject.toml`. Step 1's plan defers the test to Phase 6 so
+  that the dev-extra-contract decision can land alongside the
+  hatchling/package-data shape rather than being pinned at Phase 2.
+- **Step 1 OQ-F — `test_skill.py` / `test_skill_refs.py` untouched.**
+  The skill source still lives at `skills/docs/` at Phase 2. The
+  M5-era tests still target that path and remain green. Phase 5
+  performs the skill move + the test-path edits together; doing
+  them now would leave the M5 tests RED for a non-M6 reason.
+- **Step 1 OQ-G — lockstep semantics.** `test_skill_refs.py`'s
+  lockstep check (bundled `convention.md` / `cli.md` mirrors must
+  byte-match `docs/`) keeps the same semantics at the new path
+  when Phase 5 runs. Phase 2 does not touch it.
+- **Step 1 OQ-N — `cli.md` install-skill section.** Documenting the
+  new verb in `cli.md` is Phase 6 (when the verb is implemented).
+  Phase 2 leaves `cli.md` alone.
+- **`docs new` `Updated:` for `release-runbook.md`.** `docs new`
+  emits today's `Updated:` line; no manual bump needed.
+
+#### Verification
+
+- `.venv/bin/python -m pytest tests/test_packaging.py --collect-only
+  -q` collects 25 tests cleanly (no import errors).
+- `.venv/bin/ruff check .` — clean.
+- `.venv/bin/ruff format --check .` — clean.
+- `.venv/bin/mypy` — clean (21 source files).
+- `./bin/docs check docs/` — exit 0.
+
+The packaging tests are intentionally RED at this phase; the full
+RED-baseline run is Phase 4's job (with the captured output appended
+to the Phase 4 log entry per the M5 log format).
+
+#### Exit criteria
+
+- [x] `tests/test_packaging.py` collects 25 tests with no
+      `ImportError` / `CollectError`.
+- [x] `pyproject.toml`'s `[dev]` extra includes `build>=1.0`.
+- [x] `docs/release-runbook.md` exists with a parseable metadata
+      block (`Status: draft`, `Role: runbook`) and the four-section
+      checklist.
+- [x] `docs/INDEX.md` and `tests/fixtures/expected/docs-INDEX.md`
+      regenerated in lockstep (new `Active — Runbook` group).
+- [x] `ruff check`, `ruff format --check`, `mypy` clean tree-wide.
+- [x] `./bin/docs check docs/` exit 0.
+- [x] M1–M5's 246 in-tree tests stay green (untouched at this phase).
+- [x] Ready for Phase 3 (confirm fixture reuse) and Phase 4 (capture
+      the RED baseline).
