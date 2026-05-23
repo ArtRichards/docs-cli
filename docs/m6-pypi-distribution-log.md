@@ -120,7 +120,7 @@ unchanged — `Project: docs` stays `docs`.
 | 6. Implement Offline/Core Path | Complete | 2026-05-23 | `pyproject.toml` rewritten with hatchling backend, `name = "docs-cli"`, `version = "1.1.0"`, `[project.scripts] docs = docs_cli.cli:main`, `[project.urls]`, classifiers bumped to Beta + 3.13; `__version__` bumped + `--version` global flag; `install-skill` subparser with `--dest`/`--copy`/`--symlink`/`--force`/`--quiet`; `_cmd_install_skill` handler with `importlib.resources` lookup + site-packages-ancestor heuristic for the wheel-vs-editable check; `cli.md` documents global `--version` and the new verb; `references/cli.md` resynced. All 271 tests GREEN; wheel + sdist build clean. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-23 | **No CI workflows** (operator override). `docs/architecture.md` Shape diagram + sibling-artifact + Install + Development-setup rewritten for `src/docs_cli/`; `docs/charter.md` gets a `## Distribution` paragraph; `README.md` rewritten with `pip install docs-cli` + `docs install-skill`, absolute github.com URLs, M6 row in the milestone list, v1.1 release notes; new top-level `CHANGELOG.md` with `## 1.1.0 — UNRELEASED` entry (Q7); `docs/release-runbook.md` flipped from draft → active with manual twine commands for Pre-flight / TestPyPI / Real PyPI / Post-release plus the Trusted-Publishing-vs-API-token follow-up note; `docs/m6-pypi-distribution.md` Overview gains a Step-2 scope-refinement callout, Phase 9 + Phase 10 sections rewritten for the operator-driven publish split. INDEX.md + fixture regenerated. All 271 tests still GREEN. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-23 | Full quality gate captured: pytest 271 passed; ruff check clean; ruff format --check clean; mypy Success (23 files); `python -m build` produces `docs_cli-1.1.0-py3-none-any.whl` + `.tar.gz`; `docs check docs/` exit 0; `docs index --root docs/ --dry-run` no diff. |
-| 9. Implement Online/Integration | Pending | — | **Scope refinement at Step 2 (operator-resolved): local build + smoke only.** Implementation agent prepares the wheel/sdist artifacts, runs `twine check`, and exercises every `docs install-skill` mode against a throwaway venv. Operator executes the actual TestPyPI + PyPI uploads after this run. |
+| 9. Implement Online/Integration | Complete (impl side) | 2026-05-23 | Built `dist/docs_cli-1.1.0-py3-none-any.whl` + `dist/docs_cli-1.1.0.tar.gz` (SHA256s in the Phase 9 log entry); `twine check dist/*` PASSED both; throwaway-venv smoke at `/tmp/docs-local-smoke/` verified `docs --version`, `docs --help` lists install-skill, `docs install-skill --dest` produces a byte-identical tree, re-invocation is a no-op (exit 0), `--symlink` from the wheel install is rejected (exit 2), `docs check tests/fixtures/trees/minimal/` exit 0. **Operator action required before this row flips to truly Complete: run `twine upload --repository testpypi dist/*` + verify TestPyPI install + `twine upload dist/*` per the runbook.** |
 | 10. Quality, Docs, Refactor | Pending | — | **Scope refinement at Step 2 (operator-resolved): impl-side closeout only.** Implementation agent ticks Phases 5–9 checkboxes, appends the milestone-completion summary, and stages the ready-for-operator commit. Operator drives the actual publish (twine upload, `git tag v1.1.0`, repo public flip, gh release create) after this run. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-23)
@@ -1347,3 +1347,177 @@ $ .venv/bin/docs index --root docs/ --dry-run
 - [x] `.venv/bin/docs check docs/` — exit 0.
 - [x] `.venv/bin/docs index --root docs/ --dry-run` — exit 0, no diff
       against the committed `docs/INDEX.md`.
+
+### Phase 9 — Implement Online/Integration (local build + smoke)
+
+**Completed (impl side):** 2026-05-23
+
+#### Objective
+
+Build clean release artifacts (wheel + sdist), verify them with
+`twine check`, and exercise every install-skill code path against a
+throwaway venv installed from the freshly-built wheel. Do NOT upload
+to TestPyPI or PyPI — the operator runs those steps after this commit
+lands. Leave a handoff section that the operator can act on without
+re-reading this whole log.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `dist/docs_cli-1.1.0-py3-none-any.whl` | Build artifact | Not committed; sits in `dist/` (gitignored). The operator's `twine upload` reads from this file. SHA256 captured below. |
+| `dist/docs_cli-1.1.0.tar.gz` | Build artifact | Same — not committed; operator uploads from `dist/`. |
+| `docs/m6-pypi-distribution-log.md` | Modify | Phase 9 row → Complete (impl side); this log entry appended with the smoke output + the operator handoff section. |
+
+#### Build + twine-check verification
+
+```
+$ rm -rf dist/ && .venv/bin/python -m build
+* Installing packages in isolated environment:
+  - hatchling
+* Getting build dependencies for wheel...
+* Building wheel...
+Successfully built docs_cli-1.1.0.tar.gz and docs_cli-1.1.0-py3-none-any.whl
+
+$ sha256sum dist/*
+5bb44331feae335d2c4e84b96dbfdd751d9f5f58c3b2c2cf65b0af73064b5f1b  dist/docs_cli-1.1.0-py3-none-any.whl
+f2f292d462214caedcb7762703e23f8b891500dc008264fd890c189afa8b9cee  dist/docs_cli-1.1.0.tar.gz
+
+$ .venv/bin/twine check dist/*
+Checking dist/docs_cli-1.1.0-py3-none-any.whl: PASSED
+Checking dist/docs_cli-1.1.0.tar.gz: PASSED
+```
+
+(SHA256s are deterministic for this content; if you rebuild from the
+same git SHA on the same Python interpreter the hashes match.)
+
+#### Throwaway-venv smoke
+
+```
+$ rm -rf /tmp/docs-local-smoke /tmp/docs-local-smoke-skill
+$ python3 -m venv /tmp/docs-local-smoke
+$ /tmp/docs-local-smoke/bin/pip install --quiet dist/docs_cli-1.1.0-py3-none-any.whl
+(install succeeds; no warnings)
+
+$ /tmp/docs-local-smoke/bin/docs --version
+docs 1.1.0
+
+$ /tmp/docs-local-smoke/bin/docs --help     # excerpt
+usage: docs [-h] [--version]
+            {index,new,archive,mv,touch,check,list,migrate,install-skill} ...
+  --version             show program's version number and exit
+    install-skill       Materialise the bundled Claude Code skill onto this
+                        host.
+
+$ /tmp/docs-local-smoke/bin/docs install-skill --dest /tmp/docs-local-smoke-skill
+docs: install-skill: copied bundled skill to /tmp/docs-local-smoke-skill
+
+$ diff -ru src/docs_cli/skill /tmp/docs-local-smoke-skill
+(empty — byte-identical)
+
+$ /tmp/docs-local-smoke/bin/docs install-skill --dest /tmp/docs-local-smoke-skill
+docs: install-skill: /tmp/docs-local-smoke-skill already matches the bundled skill; no-op.
+(exit 0 — idempotent)
+
+$ /tmp/docs-local-smoke/bin/docs install-skill --dest /tmp/docs-local-smoke-skill --symlink
+docs: install-skill --symlink is rejected for wheel installs (the bundled skill lives under site-packages and may be replaced by a future `pip install --upgrade docs-cli`). Use an editable install (`pip install -e .`) or drop --symlink for the default --copy.
+(exit 2 — rejection)
+
+$ /tmp/docs-local-smoke/bin/docs check tests/fixtures/trees/minimal/
+docs: no violations found
+(exit 0)
+```
+
+#### Issues / decisions
+
+- **No surprises** in the wheel-install path. The
+  site-packages-ancestor heuristic correctly classifies the
+  throwaway-venv install (which lives under
+  `/tmp/docs-local-smoke/lib/python3.12/site-packages/`) as a wheel
+  install, and the `--symlink` rejection fires.
+- **`/tmp/docs-local-smoke/` is throwaway** — no cleanup required
+  before re-running. Operator may delete after the publish flow.
+
+#### Exit criteria (impl side)
+
+- [x] `dist/docs_cli-1.1.0-py3-none-any.whl` exists and `twine check`
+      PASSES.
+- [x] `dist/docs_cli-1.1.0.tar.gz` exists and `twine check` PASSES.
+- [x] Throwaway-venv install from the wheel succeeds.
+- [x] Installed `docs --version` prints `docs 1.1.0`.
+- [x] Installed `docs --help` lists `install-skill`.
+- [x] `docs install-skill --dest <tmp>` produces a byte-identical
+      tree on first invocation.
+- [x] Re-running `docs install-skill --dest <tmp>` is a no-op (exit 0).
+- [x] `docs install-skill --dest <tmp> --symlink` from the wheel
+      install is rejected (exit 2; non-empty stderr).
+- [x] `docs check tests/fixtures/trees/minimal/` from the installed
+      `docs` exits 0.
+- [x] **No PyPI upload performed by the impl agent.** No `v1.1.0`
+      tag created.
+
+---
+
+#### OPERATOR ACTION REQUIRED before Phase 10 is truly complete
+
+The implementation agent has prepared every artifact and verified
+every local code path. The actual publish is the operator's. Follow
+[`docs/release-runbook.md`](release-runbook.md) for the full
+checklist; the short form is:
+
+1. **TestPyPI rehearsal** (do NOT skip — PyPI is append-only):
+   ```sh
+   .venv/bin/twine upload --repository testpypi dist/*
+   ```
+   Then create a throwaway venv and install:
+   ```sh
+   python3 -m venv /tmp/docs-test-venv
+   /tmp/docs-test-venv/bin/pip install \
+       --index-url https://test.pypi.org/simple/ \
+       --extra-index-url https://pypi.org/simple/ \
+       docs-cli==1.1.0
+   /tmp/docs-test-venv/bin/docs --version          # expect: docs 1.1.0
+   /tmp/docs-test-venv/bin/docs install-skill --dest /tmp/docs-test-skill
+   diff -ru src/docs_cli/skill /tmp/docs-test-skill   # expect: empty
+   /tmp/docs-test-venv/bin/docs check tests/fixtures/trees/minimal/  # expect: exit 0
+   ```
+
+2. **Replace the CHANGELOG placeholder.** Edit `CHANGELOG.md`:
+   `## 1.1.0 — UNRELEASED` → `## 1.1.0 — <today's date>`. Commit
+   on `m6/phases-5-10` (or after merge to `main` — operator's call).
+
+3. **Real PyPI publish:**
+   ```sh
+   .venv/bin/twine upload dist/*
+   ```
+
+4. **Verify the real install:**
+   ```sh
+   python3 -m venv /tmp/docs-real-venv
+   /tmp/docs-real-venv/bin/pip install docs-cli==1.1.0
+   /tmp/docs-real-venv/bin/docs --version          # expect: docs 1.1.0
+   /tmp/docs-real-venv/bin/docs install-skill --dest /tmp/docs-real-skill
+   ```
+
+5. **Flip the repo to public, tag, and create the release:**
+   ```sh
+   gh repo edit ArtRichards/docs-cli \
+       --visibility public --accept-visibility-change-consequences
+   git tag v1.1.0
+   git push origin v1.1.0
+   gh release create v1.1.0 \
+       --title "docs-cli 1.1.0" \
+       --notes "See [CHANGELOG.md](CHANGELOG.md#110---YYYY-MM-DD) and \
+[docs/m6-pypi-distribution.md](docs/m6-pypi-distribution.md) for the milestone summary."
+   ```
+
+6. **Post-publish doc updates** (small):
+   - `docs/status.md`: M6 row → Complete (DATE); "Next action" → "none — v1.1 shipped".
+   - `docs/plan.md`: M6 row → shipped.
+   - `docs/m6-pypi-distribution.md` Phase Checklist: tick Phase 10.
+   - `docs/m6-pypi-distribution-log.md` Phase 10 row → Complete (DATE).
+   - Regenerate `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+     in lockstep.
+
+After the operator finishes step 6, merge `m6/phases-5-10` into
+`main`.
