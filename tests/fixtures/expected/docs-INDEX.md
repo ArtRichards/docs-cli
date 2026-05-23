@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-23. 20 docs active, 0 archived._
+_Generated 2026-05-23. 21 docs active, 0 archived._
 
 ## Project — docs
 
@@ -29,6 +29,7 @@ _Generated 2026-05-23. 20 docs active, 0 archived._
 ### Active — Milestone
 
 - [m5-claude-code-skill.md](m5-claude-code-skill.md) — _milestone_ — - Milestone: M5 - Title: Claude Code skill - Surface: a Claude Code **skill** — a `SKILL.md` artifact (plus, if needed,…. Updated 2026-05-23.
+- [m6-pypi-distribution.md](m6-pypi-distribution.md) — _milestone_ — - Milestone: M6 (first v1.1 milestone) - Title: PyPI distribution as `docs-cli` - Surface: a buildable, installable…. Updated 2026-05-23.
 - [m3-validation-and-query.md](m3-validation-and-query.md) — _milestone_ — - Milestone: M3 - Title: Validation and query (`check`, `list`) - Surface: two new read-only CLI subcommands on the…. Updated 2026-05-22.
 - [m4-migration-helper.md](m4-migration-helper.md) — _milestone_ — - Milestone: M4 - Title: Migration helper (`docs migrate`) - Surface: one new CLI subcommand on the `docs` executable…. Updated 2026-05-22.
 - [m2-mutating-verbs.md](m2-mutating-verbs.md) — _milestone_ — - Milestone: M2 - Title: Mutating verbs (`new`, `archive`, `mv`, `touch`) - Surface: four new CLI subcommands on the…. Updated 2026-05-21.
