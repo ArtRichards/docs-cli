@@ -115,7 +115,7 @@ unchanged — `Project: docs` stays `docs`.
 | 1. Define Contract (+ identity rename) | Complete | 2026-05-23 | Promote M6 from `draft` to `active`; create this log; add a `## v1.1` section to `plan.md`; refresh `status.md` (M6 in flight); regenerate INDEX + snapshot. **Then perform the identity rename per OQ3**: `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`; `git push -u origin m6/phases-1-4`; `mv ~/opt/docs ~/opt/docs-cli` as the final action (subsequent phases run from the new path); update `~/CLAUDE.md`, `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`, and the MEMORY.md index line. No code change, no packaging surface. |
 | 2. Write Tests (RED) | Complete | 2026-05-23 | `tests/test_packaging.py` (25 tests grouped A–F per Step 1's plan); `pyproject.toml` `[dev]` extra gains `build>=1.0` (Step 1 OQ-D); `docs/release-runbook.md` created as the draft skeleton. `tests/test_skill.py` + `tests/test_skill_refs.py` are deliberately untouched at this phase (Step 1 OQ-F defers the path edits to Phase 5 alongside the skill move). |
 | 3. Create Data/Fixtures | Complete | 2026-05-23 | Confirmed reuse of `tests/fixtures/trees/minimal/` for the installed-`docs check` / `docs index --dry-run` smokes (Step 1's Option A — `./bin/docs check tests/fixtures/trees/minimal/` exits 0; no new fixture needed). Phase 4 captures the RED baseline. |
-| 4. Run Tests (RED Baseline) | Pending | — | Confirm every `test_packaging.py` sub-case fails on the unimplemented packaging surface (no `[build-system]`, no entry point, no `install-skill`, no `docs_cli` module); existing 246 tests stay green; **session pauses here**. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-23 | Captured the verbatim `pytest -q --tb=short` output: **9 FAILED + 16 ERRORS + 246 PASSED = 271 collected**. The 9 FAIL are the assertion-level RED on the pyproject static contract (A1–A6) + the layout invariants (F1–F3); the 16 ERROR are setup-fixture failures cascading from `built_dist` (`python -m build` rejects `version = "0.2.0-m2"` as non-PEP440 — exactly the Phase-6-fixes condition). M1–M5's 246 tests stay green; ruff/format/mypy clean tree-wide; `docs check docs/` exit 0. **Session pauses here** per the project's TDD discipline. |
 | 5. Update Base Interfaces | Pending | — | `git mv bin/docs src/docs_cli/cli.py`; `src/docs_cli/__init__.py` created; skill relocated per OQ4; `tests/conftest.py` updated per OQ2; `tests/test_skill.py` / `tests/test_skill_refs.py` paths updated; `pyproject.toml` ruff/mypy include lists updated; `bin/docs` resolved per OQ5. |
 | 6. Implement Offline/Core Path | Pending | — | `pyproject.toml` build backend (hatchling) + `[project.scripts]` + `[project.urls]` + package-data; `__version__` → `1.1.0`; `docs install-skill` verb (handler, argparse subparser, `importlib.resources` lookup); `cli.md` updated. |
 | 7. Update Tool/Wrapper Layer | Pending | — | `.github/workflows/release.yml` (Trusted Publishing); `.github/workflows/testpypi.yml`; `docs/release-runbook.md` finalised; `README.md` install section rewritten; `architecture.md` Shape/Install updated; `charter.md` distribution paragraph added. |
@@ -582,3 +582,178 @@ at session-fixture time (`built_dist`, `wheel_venv`) inside
 - [x] No fixture authoring needed; reuse decision recorded.
 - [x] M1–M5's 246 in-tree tests stay green (untouched at this phase).
 - [x] Ready for Phase 4 (RED baseline capture).
+
+### Phase 4 — Run Tests (RED Baseline)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Run the full test suite and capture the RED baseline before any
+packaging surface is implemented. Confirm every `test_packaging.py`
+test fails for its *intended* reason (no `[build-system]`, no entry
+point, no `docs_cli` package, no `install-skill` verb, `bin/docs` and
+`skills/docs/` still in place). M1–M5's 246 tests stay green. Per the
+project's TDD discipline, **Step 1 pauses here.**
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m6-pypi-distribution-log.md` | Modify | Phase 4 row → Complete; this log entry appended (Phase-4 baseline output + per-test attribution table). |
+
+#### Captured command output
+
+```
+$ .venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tee /tmp/m6-phase-4-baseline.txt
+........................................................................ [ 26%]
+........................................................................ [ 53%]
+........................................................................ [ 79%]
+...FFFFFFEEEEEEEEEEEEEEEEFFF...........................                  [100%]
+…
+9 failed, 246 passed, 16 errors in 4.46s
+```
+
+Aggregate: **271 collected → 246 green (M1–M5) + 25 RED (test_packaging
+group: 9 assertion-failures + 16 fixture-setup errors).**
+
+Full one-line list of every RED outcome:
+
+```
+ERROR tests/test_packaging.py::test_b1_wheel_builds - Failed: `python -m build` failed …
+ERROR tests/test_packaging.py::test_b2_sdist_builds - Failed: `python -m build` failed …
+ERROR tests/test_packaging.py::test_b3_wheel_contains_cli_and_skill - Failed: …
+ERROR tests/test_packaging.py::test_b4_entry_point_recorded_in_wheel - Failed: …
+ERROR tests/test_packaging.py::test_c1_docs_on_path_in_venv - Failed: …
+ERROR tests/test_packaging.py::test_c2_docs_version_is_1_1_0 - Failed: …
+ERROR tests/test_packaging.py::test_c3_docs_help_lists_every_verb - Failed: …
+ERROR tests/test_packaging.py::test_d1_install_skill_subcommand_exists - Failed: …
+ERROR tests/test_packaging.py::test_d2_install_skill_default_action_is_copy
+ERROR tests/test_packaging.py::test_d3_install_skill_tree_is_byte_identical
+ERROR tests/test_packaging.py::test_d4_install_skill_is_idempotent - Failed: …
+ERROR tests/test_packaging.py::test_d5_install_skill_refuses_non_identical_without_force
+ERROR tests/test_packaging.py::test_d6_install_skill_rejects_symlink_on_wheel_install
+ERROR tests/test_packaging.py::test_d7_install_skill_default_dest_documented
+ERROR tests/test_packaging.py::test_e1_installed_docs_check_passes_minimal_fixture
+ERROR tests/test_packaging.py::test_e2_installed_docs_index_dry_run_clean - Failed: …
+FAILED tests/test_packaging.py::test_a1_build_system_is_hatchling - AssertionError …
+FAILED tests/test_packaging.py::test_a2_project_name_is_docs_cli - AssertionError …
+FAILED tests/test_packaging.py::test_a3_project_version_is_1_1_0 - AssertionError …
+FAILED tests/test_packaging.py::test_a4_console_script_entry_point_present - …
+FAILED tests/test_packaging.py::test_a5_project_urls_present - AssertionError …
+FAILED tests/test_packaging.py::test_a6_hatch_build_packages_the_skill - AssertionError …
+FAILED tests/test_packaging.py::test_f1_src_docs_cli_layout - AssertionError: …
+FAILED tests/test_packaging.py::test_f2_top_level_skills_docs_removed - AssertionError …
+FAILED tests/test_packaging.py::test_f3_bin_docs_removed - AssertionError: …
+```
+
+Verbatim output preserved at `/tmp/m6-phase-4-baseline.txt`.
+
+#### Failure attribution — every RED for its intended reason
+
+| Test | Outcome | Intended RED reason at Phase 4 | Phase that GREENs it |
+|---|---|---|---|
+| `test_a1_build_system_is_hatchling` | FAIL | `[build-system]` missing from `pyproject.toml` | Phase 6 (adds hatchling) |
+| `test_a2_project_name_is_docs_cli` | FAIL | `name = "docs"` still | Phase 6 |
+| `test_a3_project_version_is_1_1_0` | FAIL | `version = "0.2.0-m2"` still | Phase 6 |
+| `test_a4_console_script_entry_point_present` | FAIL | `[project.scripts]` missing | Phase 6 |
+| `test_a5_project_urls_present` | FAIL | `[project.urls]` missing | Phase 6 |
+| `test_a6_hatch_build_packages_the_skill` | FAIL | no `[tool.hatch.build...]` table | Phase 6 |
+| `test_b1_wheel_builds` | ERROR | `built_dist` fixture: `python -m build` rejects non-PEP440 `version = "0.2.0-m2"` (and would fall back to setuptools with no `[build-system]` — both Phase-6 fixes) | Phase 6 |
+| `test_b2_sdist_builds` | ERROR | same as B1 | Phase 6 |
+| `test_b3_wheel_contains_cli_and_skill` | ERROR | same as B1 (cascades from `built_dist`) | Phase 6 |
+| `test_b4_entry_point_recorded_in_wheel` | ERROR | same as B1 | Phase 6 |
+| `test_c1_docs_on_path_in_venv` | ERROR | `wheel_venv` fixture cascades from `built_dist` failure | Phase 6 |
+| `test_c2_docs_version_is_1_1_0` | ERROR | same | Phase 6 |
+| `test_c3_docs_help_lists_every_verb` | ERROR | same | Phase 6 |
+| `test_d1_install_skill_subcommand_exists` | ERROR | same (also: verb does not exist) | Phase 6 |
+| `test_d2_install_skill_default_action_is_copy` | ERROR | same | Phase 6 |
+| `test_d3_install_skill_tree_is_byte_identical` | ERROR | same (also: `src/docs_cli/skill/` not present until Phase 5) | Phase 6 |
+| `test_d4_install_skill_is_idempotent` | ERROR | same | Phase 6 |
+| `test_d5_install_skill_refuses_non_identical_without_force` | ERROR | same | Phase 6 |
+| `test_d6_install_skill_rejects_symlink_on_wheel_install` | ERROR | same | Phase 6 |
+| `test_d7_install_skill_default_dest_documented` | ERROR | same | Phase 6 |
+| `test_e1_installed_docs_check_passes_minimal_fixture` | ERROR | `wheel_venv` cascade | Phase 6 |
+| `test_e2_installed_docs_index_dry_run_clean` | ERROR | same | Phase 6 |
+| `test_f1_src_docs_cli_layout` | FAIL | `src/docs_cli/` does not exist | Phase 5 (file moves) |
+| `test_f2_top_level_skills_docs_removed` | FAIL | `skills/docs/` still present | Phase 5 |
+| `test_f3_bin_docs_removed` | FAIL | `bin/docs` still present | Phase 5 |
+
+Every error/failure traces to the *intended* unimplemented packaging
+surface. There is no RED-for-wrong-reason on the books — the
+contract is correctly pinned, and Phase 5 / 6 can proceed.
+
+#### Per-check RED / GREEN breakdown
+
+- **Group A (pyproject contract — 6 tests).** All 6 FAIL on the
+  expected assertion (pyproject still has the pre-M6 stale shape).
+- **Group B (build artefacts — 4 tests).** All 4 ERROR via the
+  `built_dist` fixture; the root cause is the non-PEP440 version
+  string `0.2.0-m2`. `python -m build` validates `[project].version`
+  before even invoking the backend, so the test never reaches the
+  "no `[build-system]`" condition. Phase 6's version bump to
+  `1.1.0` AND hatchling registration fix this in one motion.
+- **Group C (CLI surface — 3 tests).** All 3 ERROR via the
+  `wheel_venv` fixture, which depends on a successful `built_dist`
+  build. Cascades cleanly.
+- **Group D (install-skill — 7 tests).** All 7 ERROR via
+  `wheel_venv`. (D1–D7 individually depend on the verb existing in
+  `cli.py`, which is Phase 6.)
+- **Group E (installed docs surface — 2 tests).** Both ERROR via
+  `wheel_venv` cascade.
+- **Group F (layout invariants — 3 tests).** All 3 FAIL on the
+  pre-Phase-5 layout (no `src/docs_cli/`, `skills/docs/` still
+  present, `bin/docs` still present).
+- **M1–M5 untouched.** All 246 in-tree tests still pass.
+
+#### Issues / decisions
+
+- **The 16 ERRORs are intentional, not lazy.** Step 1's plan flagged
+  RED-for-wrong-reason as a Phase-5-trust-breaker. The fixture
+  cascades here are RED-for-the-right-reason: `built_dist` is
+  *designed* to surface the no-build-backend / non-PEP440-version
+  state as a single `pytest.fail` with a clear message ("this is
+  the intended Phase-4 RED if no [build-system] is declared"), and
+  every downstream test ERRORs through that one root cause. When
+  Phase 6 fixes the root cause, all 16 unblock in lockstep.
+- **The non-PEP440 version string was the more proximate cause than
+  "no `[build-system]`."** Python's `build` tool validates
+  `[project].version` against PEP 440 before it tries to read
+  `[build-system]`. Either condition would block the build; only
+  one error message surfaces, and the version-string check fires
+  first. Phase 6 fixes both in the same commit, so the distinction
+  is bookkeeping only.
+- **OQ-L aggregate check.** Step 1's OQ-L expected ~22 RED
+  packaging tests; the actual count is 25 (9 FAIL + 16 ERROR).
+  The delta is the D group running 7 sub-tests rather than the
+  ~6 the OQ-E plan-text mentioned (D7's help-text default-dest
+  check is per OQ-H, and the F group runs 3 layout invariants
+  rather than baking them into a single multi-assert test). The
+  numerical drift is within the OQ-L "~22" band; no functional
+  change.
+
+#### Trigger-scenario checklist — N/A at Phase 4
+
+M5 walked a behavioural-trigger checklist at Phase 4 because the
+skill's GREEN oracle was partly judgement-driven. M6's packaging
+contract is fully structural — every check is a code-side assertion
+in `test_packaging.py`. There is no separate trigger-scenario list
+at this phase; the operational analogue is `docs/release-runbook.md`,
+which is walked at Phases 9 and 10.
+
+#### Exit criteria
+
+- [x] `tests/test_packaging.py` is fully RED — every test in the
+      file fails or errors.
+- [x] Each RED traces to the *intended* unimplemented surface (the
+      attribution table above is complete; no RED-for-wrong-reason).
+- [x] M1–M5's 246 in-tree tests stay green.
+- [x] `ruff check .` — clean.
+- [x] `ruff format --check .` — clean.
+- [x] `mypy` — clean.
+- [x] `./bin/docs check docs/` — exit 0.
+- [x] `docs/release-runbook.md` skeleton stands fully unsatisfied
+      (no checklist row is checked).
+- [x] Verbatim baseline output preserved at
+      `/tmp/m6-phase-4-baseline.txt`.
+- [x] **Step 1 (Phases 1–4) pauses here.**
