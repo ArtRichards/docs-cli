@@ -36,24 +36,26 @@ for the per-phase status table.
 
 **Project v1 shipped 2026-05-22 — M1-M5 all complete.** M5 — Claude
 Code skill closed the v1 roadmap on 2026-05-22 (post-ship polish on
-2026-05-23). It is the project's final v1 deliverable: a Claude Code
-skill — a `SKILL.md` artifact at `skills/docs/` — that makes an agent
-reach for the `docs` verbs automatically when doing documentation work
-in a `docs`-managed tree. It adds no CLI surface and changes no verb
-behaviour: it is a markdown artifact whose `description` triggers on
-the right contexts (creating a plan/spec/charter/milestone, archiving
-or renaming a doc, listing docs, checking the tree, regenerating
-`INDEX.md`, adopting a foreign Markdown directory) and whose body
-redirects to the appropriate `docs` verb instead of hand-editing
-metadata, `INDEX.md`, or `archive/`. The convention itself is not
-re-taught — the body links to the bundled spec references at
-`skills/docs/references/`. The four M5 milestone-setup OPEN QUESTIONS
-(OQ1-OQ4) were resolved and recorded as Decisions in the task plan.
-**Post-ship polish (2026-05-23)** shortened `SKILL.md` to a trigger
-surface (verb-task table + when-to-use scenarios + never-hand-edit
-rule), bundled `convention.md` and `cli.md` as `skills/docs/references/`
-(byte-identical mirrors with a lockstep test), and cleaned dev
-cross-refs out of the source specs. See
+2026-05-23; relocated under the package at M6 Phase 5). It is the
+project's final v1 deliverable: a Claude Code skill — a `SKILL.md`
+artifact at `src/docs_cli/skill/` (was `skills/docs/` at M5 ship) —
+that makes an agent reach for the `docs` verbs automatically when
+doing documentation work in a `docs`-managed tree. It adds no CLI
+surface and changes no verb behaviour: it is a markdown artifact
+whose `description` triggers on the right contexts (creating a
+plan/spec/charter/milestone, archiving or renaming a doc, listing
+docs, checking the tree, regenerating `INDEX.md`, adopting a foreign
+Markdown directory) and whose body redirects to the appropriate `docs`
+verb instead of hand-editing metadata, `INDEX.md`, or `archive/`. The
+convention itself is not re-taught — the body links to the bundled
+spec references at `src/docs_cli/skill/references/` (relocated from
+`skills/docs/references/` at M6 Phase 5). The four M5 milestone-setup
+OPEN QUESTIONS (OQ1-OQ4) were resolved and recorded as Decisions in
+the task plan. **Post-ship polish (2026-05-23)** shortened `SKILL.md`
+to a trigger surface (verb-task table + when-to-use scenarios +
+never-hand-edit rule), bundled `convention.md` and `cli.md` as
+references (byte-identical mirrors with a lockstep test), and
+cleaned dev cross-refs out of the source specs. See
 [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the
 per-phase history (and the post-ship section appended to it) and
 [m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone
@@ -145,18 +147,17 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs-cli
-.venv/bin/python -m pytest tests/ -q          # 249 passed (Phase 5); 271 after Phase 8
+.venv/bin/python -m pytest tests/ -q          # 271 passed
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
-.venv/bin/python -m docs_cli.cli check docs/  # dogfood — exit 0 (Phase 5; post-Phase-6 use `.venv/bin/docs`)
-.venv/bin/python -m docs_cli.cli index --root docs/ --dry-run  # smoke: idempotent dogfood
+.venv/bin/docs check docs/                    # dogfood — exit 0
+.venv/bin/docs index --root docs/ --dry-run   # smoke: idempotent dogfood
 ```
-If `.venv/` is missing (fresh clone) or stale shebangs after the M6
-working-tree move:
+If `.venv/` is missing (fresh clone) or `.venv/bin/docs` is absent:
 ```sh
 rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubuntu
-.venv/bin/pip install -e ".[dev]"             # post-Phase-6: lands `docs` on PATH; pre-Phase-6: `pytest ruff mypy build`
+.venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
 **Next action: operator-driven publish per

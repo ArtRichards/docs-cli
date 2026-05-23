@@ -153,68 +153,88 @@ skill drives the verbs identically to the in-repo install.
 
 ### Deliverables
 
-- [ ] `pyproject.toml`: `name = "docs-cli"`, `version = "1.1.0"`,
+- [x] `pyproject.toml`: `name = "docs-cli"`, `version = "1.1.0"`,
       `[build-system]` (hatchling), `[project.scripts] docs =
       "docs_cli.cli:main"`, `[project.urls]`, package data for the bundled
       skill. Old `keywords`, `classifiers`, `authors`, `license`, optional
-      `[dev]` extras preserved.
-- [ ] `src/docs_cli/__init__.py` — re-exports `main` from `cli`.
-- [ ] `src/docs_cli/cli.py` — the relocated `bin/docs`, byte-identical
-      module-body content, with `__version__` bumped to `1.1.0` and the
-      file extension/path change being the only structural diff.
-- [ ] `src/docs_cli/skill/SKILL.md` + `src/docs_cli/skill/references/{convention,cli}.md`
-      — relocated from `skills/docs/` (per OQ4 resolved 2026-05-23 — see
-      Decisions) so the wheel can ship them as package data. The top-level
-      `skills/docs/` path disappears.
-- [ ] `bin/docs` — removed (per OQ5 resolved 2026-05-23 — see Decisions).
-      Contributors run `pip install -e ".[dev]"` once; the `docs` entry
-      point lands on PATH directly. Phase 7 sweeps every M1–M5 doc and
-      status.md "Watch out for" note that referenced `bin/docs`.
-- [ ] New verb `docs install-skill [--dest DIR] [--copy|--symlink] [--force]`
-      implemented in `cli.py`; respects `~/.claude/skills/docs/` as default
-      dest; idempotent (re-running on an unchanged install is a no-op);
-      `--force` overwrites; surface and exit codes specified in `cli.md`.
-- [ ] `tests/test_packaging.py` — the in-tmpvenv install-and-run test
-      suite (see Requirements above for the five sub-cases).
-- [ ] `tests/conftest.py` — updated to load `docs_cli.cli` directly (no
-      `SourceFileLoader` gymnastics) and alias it as `docs` in
-      `sys.modules` so existing `from docs import X` test imports remain
-      unchanged (per OQ2 resolved 2026-05-23 — see Decisions).
-- [ ] `tests/test_skill.py` — paths updated; the "every named verb is
-      real" check now reads `docs_cli.cli._build_parser()`.
-- [ ] `tests/test_skill_refs.py` — reference paths updated for the
-      relocated `src/docs_cli/skill/references/`.
-- [ ] `.github/workflows/release.yml` — tag-triggered PyPI publish via
-      Trusted Publishing.
-- [ ] `.github/workflows/testpypi.yml` — manual-trigger TestPyPI publish.
-- [ ] `docs/release-runbook.md` — the per-release checklist (Role: runbook).
-- [ ] `README.md` — `pip install docs-cli` as the primary install; `docs
-      install-skill` for the skill; `git clone` documented as the contributor
-      path.
-- [ ] `docs/architecture.md` — Shape section updated for the new package
-      layout; Install section rewritten; Sibling-artifact note updated for
-      the bundled-skill-in-wheel.
-- [ ] `docs/cli.md` — new `install-skill` verb documented (synopsis,
-      flags, exit codes).
-- [ ] `docs/charter.md` — distribution paragraph added (it currently
-      assumes git-clone install).
-- [ ] `docs/plan.md` — v1.1 section added with M6 as the first milestone;
-      the parked `[vocabulary] add_fields` allowlist question remains as a
-      separate v1.1 entry, unrelated to M6.
-- [ ] `docs/status.md` — M6 added to the milestone table; `Current
-      milestone` rewritten; reading-order updated.
-- [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated
-      in lockstep.
-- [ ] GitHub repo **created** at `ArtRichards/docs-cli` (private until
+      `[dev]` extras preserved. (Classifiers also bumped Alpha → Beta + 3.13.)
+- [x] `src/docs_cli/__init__.py` — re-exports `main` from `cli`
+      (lazy via `__getattr__` to avoid the `runpy`
+      "found in sys.modules" warning under `python -m docs_cli.cli`).
+- [x] `src/docs_cli/cli.py` — the relocated `bin/docs`, byte-identical
+      module-body content except for the M6 additions (`__version__ =
+      "1.1.0"`, `--version` global flag, `install-skill` subparser +
+      `_cmd_install_skill` handler, the module docstring update).
+- [x] `src/docs_cli/skill/SKILL.md` + `src/docs_cli/skill/references/{convention,cli}.md`
+      — relocated from `skills/docs/` (per OQ4). Top-level
+      `skills/docs/` is gone.
+- [x] `bin/docs` — removed (per OQ5). Contributors run
+      `pip install -e ".[dev]"`; the `docs` entry point lands on PATH
+      directly. Every M1-M5 doc that referenced `bin/docs` swept in
+      Phases 5–7.
+- [x] New verb `docs install-skill [--dest DIR] [--copy|--symlink] [--force]`
+      (+ `--quiet`) implemented in `cli.py`; default dest
+      `~/.claude/skills/docs/`; idempotent byte-identical no-op; `--force`
+      overwrites; `--symlink` rejected from wheel installs via
+      site-packages-ancestor heuristic; exit codes 0/2; surface specified
+      in `cli.md`.
+- [x] `tests/test_packaging.py` — 25 tests grouped A-F (Phase 2);
+      builds wheel in tmp_path, installs into a `venv.EnvBuilder` venv,
+      exercises every install-skill code path, runs installed `docs check`
+      against the minimal fixture.
+- [x] `tests/conftest.py` — drops `SourceFileLoader`; inserts `src/`
+      on sys.path; aliases `docs_cli.cli` as `docs` in `sys.modules`
+      (OQ2). `docs_script` fixture retained (re-pointed at
+      `src/docs_cli/cli.py`) since ~70 test_cli_*.py invocations depend
+      on it — see Phase 5 log issues/decisions for the deviation.
+- [x] `tests/test_skill.py` — `SKILL_DIR` repath, failure-message
+      update, docstring update, and verb-extraction regex widened
+      to `[a-z][a-z-]*` so `install-skill` matches.
+- [x] `tests/test_skill_refs.py` — `BUNDLE_DIR` repath + resync hints
+      updated.
+- [ ] ~~`.github/workflows/release.yml`~~ **Scope-refined out at Step 2
+      (operator-resolved): NO CI workflows.** M6 ships via manual
+      `twine upload` driven by the operator per `docs/release-runbook.md`.
+      Trusted-Publishing path parked as a future-iteration note.
+- [ ] ~~`.github/workflows/testpypi.yml`~~ **Scope-refined out at Step 2.**
+      Same reason as above; operator runs `twine upload --repository
+      testpypi dist/*` manually.
+- [x] `docs/release-runbook.md` — Status: active; concrete `twine`
+      command list for Pre-flight (impl) / TestPyPI rehearsal (operator)
+      / real PyPI publish (operator) / post-release (operator).
+- [x] `README.md` — `pip install docs-cli` primary install; `docs
+      install-skill` for the skill; `git clone` documented for
+      contributors; absolute github.com URLs throughout (Q6); M6 row
+      added; v1.1 release notes paragraph.
+- [x] `docs/architecture.md` — Shape diagram redrawn for `src/docs_cli/`;
+      Sibling-artifact rewritten to describe wheel-package-data shipment;
+      Install + Development-setup sections rewritten for `pip install
+      docs-cli` (end users) + `pip install -e ".[dev]"` (contributors).
+- [x] `docs/cli.md` — `install-skill` section added between `touch`
+      and `migrate`; global `--version` added to the flags list.
+- [x] `docs/charter.md` — `## Distribution` paragraph added.
+- [x] `docs/plan.md` — `## v1.1` section added with M6 as the first
+      milestone; the parked `[vocabulary] add_fields` allowlist
+      question remains as a separate v1.1 entry, unrelated to M6.
+      (Landed at Phase 1.)
+- [x] `docs/status.md` — M6 added to the milestone table; `Current
+      milestone` rewritten; reading-order updated; "Watch out for" /
+      verify-environment sweep replaced `bin/docs` with the package
+      layout. (Landed at Phases 1, 5, 6, 7, 9, 10.)
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+      regenerated in lockstep (continuously through every phase).
+- [x] GitHub repo **created** at `ArtRichards/docs-cli` (private until
       v1.1 publishes — see Decisions); `m6/phases-1-4` pushed;
-      local checkout moved `~/opt/docs` → `~/opt/docs-cli`; `~/CLAUDE.md`
-      and `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
-      updated to the new path. Phase 1 work (per OQ3 resolved 2026-05-23 —
-      see Decisions).
-- [ ] GitHub repo flipped from private to public at Phase 10, immediately
-      before / coincident with the first PyPI publish.
-- [ ] PyPI release **1.1.0** published; install from PyPI in a throwaway
-      venv exercised (the Phase 9 dogfood gate).
+      local checkout moved `~/opt/docs` → `~/opt/docs-cli`;
+      `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
+      and `MEMORY.md` updated to the new path. (Phase 1 work.)
+- [ ] GitHub repo flipped from private to public at Phase 10,
+      immediately before / coincident with the first PyPI publish —
+      **operator-executed** per `release-runbook.md`.
+- [ ] PyPI release **1.1.0** published; install from PyPI in a
+      throwaway venv exercised — **operator-executed**; impl agent
+      built the artifacts at Phase 9 and ran the local-wheel smoke
+      against the same venv shape.
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-23)
 
