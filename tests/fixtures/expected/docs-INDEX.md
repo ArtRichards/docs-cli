@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-23. 21 docs active, 0 archived._
+_Generated 2026-05-23. 22 docs active, 0 archived._
 
 ## Project — docs
 
@@ -38,6 +38,7 @@ _Generated 2026-05-23. 21 docs active, 0 archived._
 ### Active — Log
 
 - [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: **M5 complete — shipped…. Updated 2026-05-23.
+- [m6-pypi-distribution-log.md](m6-pypi-distribution-log.md) — _log_ — - Project: docs - Milestone: M6 — PyPI distribution as `docs-cli` - Started: 2026-05-23 - Progress: **Milestone-setup…. Updated 2026-05-23.
 - [m3-validation-and-query-log.md](m3-validation-and-query-log.md) — _log_ — - Project: docs - Milestone: M3 — Validation and query (`check`, `list`) - Started: 2026-05-22 - Progress: Complete —…. Updated 2026-05-22.
 - [m4-migration-helper-log.md](m4-migration-helper-log.md) — _log_ — - Project: docs - Milestone: M4 — Migration helper (`docs migrate`) - Started: 2026-05-22 - Completed: 2026-05-22 -…. Updated 2026-05-22.
 - [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-05-21.

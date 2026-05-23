@@ -1,16 +1,17 @@
 # M6 — PyPI distribution as `docs-cli`
 
-Status: draft
+Status: active
 Role: milestone
 Project: docs
 Updated: 2026-05-23
 
 Related:
+- parent-of: m6-pypi-distribution-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: architecture.md
 - pairs-with: cli.md
-- pairs-with: m5-claude-code-skill.md
+- pairs-with: test-strategy.md
 
 ## Overview
 
@@ -21,9 +22,7 @@ Related:
   a one-shot **`docs install-skill`** verb that places the bundled Claude Code
   skill onto a host without requiring a repo clone; the corresponding repo,
   pyproject, README, and architecture rewiring.
-- Status: **DRAFT** — not yet started. This file is a proposal for v1.1;
-  `Status: draft` until accepted and moved to `active` at the milestone's
-  own Phase 1.
+- Status: ACTIVE (started 2026-05-23)
 
 ### Goal
 
@@ -68,8 +67,9 @@ skill drives the verbs identically to the in-repo install.
   hatchling (no plugins; defaults are sufficient). Add `[project.scripts]
   docs = "docs_cli.cli:main"`. Add `[project.urls]` (Homepage, Repository,
   Issues). Bump `version` to `1.1.0` (drop the milestone-suffix scheme used
-  during v1 development — `0.4.0-m4` was an in-development marker, not a
-  release version). `__version__` in `docs_cli/cli.py` follows.
+  during v1 development — `0.2.0-m2` was an in-development marker that
+  was never bumped after M2, not a release version). `__version__` in
+  `docs_cli/cli.py` follows.
 - **The wheel and sdist both build cleanly.** `python -m build` produces
   `dist/docs_cli-1.1.0-py3-none-any.whl` and
   `dist/docs_cli-1.1.0.tar.gz`. Both install into a throwaway venv and the
@@ -84,18 +84,21 @@ skill drives the verbs identically to the in-repo install.
   expand to real on-disk paths under all installers).
 - **Tests pass against the installed wheel, not just the in-tree source.**
   A new `tests/test_packaging.py` builds the wheel in a `tmp_path`, installs
-  it into a `venv.EnvBuilder`-created throwaway venv, and exercises:
-  (a) `docs --version` reports `1.1.0`; (b) `docs --help` lists every verb;
-  (c) `docs install-skill --dest <tmp>` produces the expected file tree at
-  `<tmp>/docs/SKILL.md` etc.; (d) the installed `docs check <fixture-tree>`
-  exits 0 against a known-clean fixture; (e) `import docs_cli` succeeds and
-  `docs_cli.cli.main` is callable. This is the milestone's most important
+  it into a `venv.EnvBuilder`-created throwaway venv, and exercises six
+  sub-cases: (1) the wheel + sdist build cleanly via `python -m build`;
+  (2) `pip install` of the wheel into the throwaway venv succeeds;
+  (3) `docs --version` reports `1.1.0`; (4) `docs --help` lists every verb
+  the in-tree parser lists (introspected via `_build_parser()`);
+  (5) `docs install-skill --dest <tmp>` produces a tree byte-identical to
+  the bundled source; (6) the installed `docs check <fixture-tree>` exits
+  0 on a known-clean fixture. This is the milestone's most important
   test: a green in-tree suite *cannot* catch packaging failures (missing
   package data, bad entry point, broken wheel manifest).
 - **The existing test suite remains green** after the relocation. Every
-  `from docs import X` either keeps working (via a `conftest.py` shim that
-  aliases `docs_cli.cli` as `docs` in `sys.modules`) or is mechanically
-  rewritten to `from docs_cli.cli import X`. Decision is OQ2.
+  `from docs import X` keeps working via a `conftest.py` shim that aliases
+  `docs_cli.cli` as `docs` in `sys.modules` (OQ2 resolved 2026-05-23 — see
+  Decisions; a mechanical import sweep is a clean follow-up commit, not
+  M6 scope).
 - **A GitHub Actions release workflow.** On a `v*` tag push: build sdist +
   wheel, run the in-tree quality gate, publish to PyPI via **Trusted
   Publishing** (OIDC; no API token in repo secrets). A separate manual-trigger
@@ -111,11 +114,18 @@ skill drives the verbs identically to the in-repo install.
   documented second, for contributors. The skill install becomes either
   `docs install-skill` (PyPI users) or a one-line `ln -s` (contributors with
   a checkout).
-- **The repo and local checkout are renamed.** GitHub repo and local
-  directory move from `docs` to `docs-cli` so the on-disk name, the PyPI
-  distribution, and the GitHub `Repository:` URL are consistent. The skill
-  name (`docs`) and the command (`docs`) are unchanged. (Repo rename mechanics
-  and timing are OQ3.)
+- **The repo and local checkout are renamed at Phase 1, before any publish
+  work.** OQ3 resolved 2026-05-23 — see Decisions. The repo currently has
+  **no git remote** (fresh local-only repo), so Phase 1 does **not** run
+  `gh repo rename`. Instead it creates a new GitHub repo with
+  `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`
+  (private until v1.1 publishes; see Decisions for the public-flip plan),
+  pushes the `m6/milestone-setup` branch, and moves the local checkout
+  `mv ~/opt/docs ~/opt/docs-cli`. `~/CLAUDE.md` and the project-memory
+  pointer file at
+  `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
+  update to the new path in the same phase. The skill name (`docs`) and
+  the command (`docs`) are unchanged.
 - **No change to the on-disk Markdown convention.** `Project: docs` in every
   metadata block stays `docs`. The convention is independent of the
   distribution name; the project's identity in its own metadata is its
@@ -133,11 +143,13 @@ skill drives the verbs identically to the in-repo install.
       module-body content, with `__version__` bumped to `1.1.0` and the
       file extension/path change being the only structural diff.
 - [ ] `src/docs_cli/skill/SKILL.md` + `src/docs_cli/skill/references/{convention,cli}.md`
-      — relocated (or symlinked from the original `skills/docs/` for
-      development; final layout per OQ4) so the wheel can ship them.
-- [ ] `bin/docs` — either removed (if dev workflow runs the entry point via
-      `docs` after `pip install -e .`) or reduced to a 2-line shim. Decision
-      in OQ5.
+      — relocated from `skills/docs/` (per OQ4 resolved 2026-05-23 — see
+      Decisions) so the wheel can ship them as package data. The top-level
+      `skills/docs/` path disappears.
+- [ ] `bin/docs` — removed (per OQ5 resolved 2026-05-23 — see Decisions).
+      Contributors run `pip install -e ".[dev]"` once; the `docs` entry
+      point lands on PATH directly. Phase 7 sweeps every M1–M5 doc and
+      status.md "Watch out for" note that referenced `bin/docs`.
 - [ ] New verb `docs install-skill [--dest DIR] [--copy|--symlink] [--force]`
       implemented in `cli.py`; respects `~/.claude/skills/docs/` as default
       dest; idempotent (re-running on an unchanged install is a no-op);
@@ -145,11 +157,13 @@ skill drives the verbs identically to the in-repo install.
 - [ ] `tests/test_packaging.py` — the in-tmpvenv install-and-run test
       suite (see Requirements above for the five sub-cases).
 - [ ] `tests/conftest.py` — updated to load `docs_cli.cli` directly (no
-      `SourceFileLoader` gymnastics) and, per OQ2, optionally alias it as
-      `docs` in `sys.modules` so existing `from docs import X` test
-      imports remain unchanged.
+      `SourceFileLoader` gymnastics) and alias it as `docs` in
+      `sys.modules` so existing `from docs import X` test imports remain
+      unchanged (per OQ2 resolved 2026-05-23 — see Decisions).
 - [ ] `tests/test_skill.py` — paths updated; the "every named verb is
       real" check now reads `docs_cli.cli._build_parser()`.
+- [ ] `tests/test_skill_refs.py` — reference paths updated for the
+      relocated `src/docs_cli/skill/references/`.
 - [ ] `.github/workflows/release.yml` — tag-triggered PyPI publish via
       Trusted Publishing.
 - [ ] `.github/workflows/testpypi.yml` — manual-trigger TestPyPI publish.
@@ -171,13 +185,21 @@ skill drives the verbs identically to the in-repo install.
       milestone` rewritten; reading-order updated.
 - [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated
       in lockstep.
-- [ ] GitHub repo renamed `docs` → `docs-cli`; local checkout moved
-      `~/opt/docs` → `~/opt/docs-cli`. Git remote URL updated. Mechanics
-      in OQ3.
+- [ ] GitHub repo **created** at `ArtRichards/docs-cli` (private until
+      v1.1 publishes — see Decisions); `m6/milestone-setup` pushed;
+      local checkout moved `~/opt/docs` → `~/opt/docs-cli`; `~/CLAUDE.md`
+      and `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
+      updated to the new path. Phase 1 work (per OQ3 resolved 2026-05-23 —
+      see Decisions).
+- [ ] GitHub repo flipped from private to public at Phase 10, immediately
+      before / coincident with the first PyPI publish.
 - [ ] PyPI release **1.1.0** published; install from PyPI in a throwaway
       venv exercised (the Phase 9 dogfood gate).
 
-## Current state analysis (snapshot at draft, 2026-05-23)
+## Current state analysis (snapshot at milestone kickoff, 2026-05-23)
+
+_Captured before Phase 1; historical. Post-milestone state lives in the
+Milestone-completion summary at the bottom of this file._
 
 - **What ships today.** A single executable Python file at `bin/docs`
   (2,534 lines, Python 3.11+, stdlib only). Eight verbs (`index`, `new`,
@@ -244,77 +266,143 @@ RED→GREEN cycle running against `tests/test_packaging.py` — the suite that
 can only pass when the wheel actually builds and the entry point actually
 works.
 
-### Phase 1: Define Contract
+### Phase 1: Define Contract (+ identity rename)
 
-- **Objective:** Promote this milestone from `idea` to `active`; commit the
-  scope and the OQ resolutions before any code moves.
-- **Files:**
+- **Objective:** Declare the M6 surface **and adopt the new identity
+  before any publishing work**. Promote this milestone from `draft` to
+  `active`; the milestone-setup OQ resolutions are already folded into
+  Decisions at milestone-setup time (2026-05-23). Phase 1 then carries
+  the GitHub-repo create + local-checkout move that OQ3 sequenced here.
+  No packaging surface or new verb stubs implemented; no Python relocated.
+- **Files (text/docs work):**
   - `docs/m6-pypi-distribution.md` — flip `Status: draft` → `active`,
-    bump `Updated:`, resolve OQ1–OQ5 (record each in Decisions).
-  - `docs/m6-pypi-distribution-log.md` — created; OQ resolutions and the
-    Phase-1 commit logged.
-  - `docs/plan.md` — add `## v1.1` section; M6 listed as first v1.1
-    milestone; the parked allowlist question stays where it is.
+    bump `Updated:`. (OQ2–OQ5 resolutions are already in Decisions.)
+  - `docs/m6-pypi-distribution-log.md` — phase-progress skeleton; Phase 1
+    commit logged.
+  - `docs/plan.md` — add a `## v1.1` section; M6 listed as first v1.1
+    milestone; the parked `[vocabulary] add_fields` allowlist question
+    stays where it is, as a separate v1.1 entry.
   - `docs/status.md` — `Current milestone` rewritten; M6 added to the
-    milestone table as `In flight`; "Next action" replaced.
-  - `docs/architecture.md` — Shape section gains a forward-pointer that
-    the layout will change at Phase 5; no actual change yet. `Updated:`
-    bumped.
+    milestone table as _in flight_; "Next action" replaced (mirrors how
+    M1–M5 transitions wrote their in-flight state). The "Watch out for"
+    block keeps its `bin/docs` reference unchanged at Phase 1 — that
+    sweep is Phase 7 work.
+  - `docs/architecture.md` — `Updated:` bumped; the Shape/Install
+    sections are **not** rewritten yet (that is Phase 7 work after the
+    packaging surface lands at Phase 6); a one-line forward-pointer note
+    is acceptable but not required.
+  - `docs/cli.md` — drop nothing yet; `docs install-skill` is added to
+    cli.md at Phase 6 when the verb is implemented (mirroring M4's
+    Phase-1 stub registration). Phase 1 may add a short forward-pointer
+    paragraph or defer entirely.
   - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated
     in lockstep so the two new M6 docs appear.
-- **Exit:** M6 is `active`; OQs are resolved (or explicitly carried to
-  Phase 2 with a deadline); ruff/mypy/pytest still green; `docs check
-  docs/` exits 0; the INDEX snapshot matches.
+- **Identity-rename actions (the new Phase 1 scope, executed in order
+  after the text-work commits land):**
+  1. **Create the GitHub repo and push.**
+     `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`
+     (private until v1.1 publishes; flipped to public at Phase 10 — see
+     Decisions). The repo currently has no remote — this is a fresh
+     local-only history — so `gh repo rename` is not the right verb.
+     Then `git push -u origin m6/milestone-setup`. (The branch stack is
+     `m6/*`; pushing the branch is sufficient — `main` is pushed when
+     the milestone merges.)
+  2. **Move the local checkout.** `mv ~/opt/docs ~/opt/docs-cli`. **This
+     changes the implementation agent's working directory mid-phase.**
+     Do this as the **last** action of Phase 1; all subsequent phases
+     and commands run from `/home/user/opt/docs-cli/`. The log records
+     the move; the conductor resumes from the new path.
+  3. **Update host pointers.** Edit `~/CLAUDE.md` — any line referencing
+     `~/opt/docs` becomes `~/opt/docs-cli` (mostly the `docs CLI project`
+     memory pointer line). Rename
+     `/home/user/.claude/projects/-home-user/memory/project_docs.md` →
+     `project_docs_cli.md` (slug + any in-file path references); update
+     the corresponding line in
+     `/home/user/.claude/projects/-home-user/memory/MEMORY.md`.
+- **Order discipline.** The doc-text commit lands **first** (so the
+  Phase 1 plan-changes commit is reviewable in isolation, on the current
+  filesystem path), the remote-create + push commit lands **second**,
+  and the local move is the **final** action — performed without a
+  preceding commit, since the move itself is not a tracked change. The
+  log entry for Phase 1 documents the post-move working directory.
+- **Exit:** M6 is `active`; ruff/mypy/pytest still green (246 passed);
+  `docs check docs/` exits 0; the INDEX snapshot matches; the new
+  origin URL exists and `git ls-remote origin` returns the pushed
+  branch; the local checkout is now at `/home/user/opt/docs-cli/`;
+  `~/CLAUDE.md` + project-memory pointer file reflect the new path;
+  **no code change has happened yet** inside the repo (no `src/`, no
+  `pyproject.toml` edits, no `bin/docs` move).
 
 ### Phase 2: Write Tests (RED)
 
-- **Objective:** Express every M6 requirement as a failing check, in code
-  where possible and as a release-runbook checklist where not.
+- **Objective:** Express every M6 requirement as a failing check — in code
+  where possible (`tests/test_packaging.py`) and as a release-runbook
+  checklist for the operations side that pytest cannot exercise. **No
+  packaging surface authored; no files relocated.**
 - **Files:**
-  - `tests/test_packaging.py` — implement all five sub-cases:
-    (1) wheel builds via `python -m build` into a `tmp_path` dist dir;
-    (2) wheel installs into a `venv.EnvBuilder` throwaway venv without
-    errors; (3) the venv's `docs --version` prints `1.1.0`;
-    (4) `docs --help` lists every verb the in-tree parser lists (use the
-    in-tree `_build_parser()` to derive the expected verb set);
-    (5) `docs install-skill --dest <tmp>` produces `<tmp>/SKILL.md` and
-    `<tmp>/references/{convention,cli}.md` byte-identical to the source
-    skill files; (6) the venv's `docs check <fixture-tree>` exits 0 on a
-    known-clean fixture.
-  - `tests/test_skill.py` — extend with one check: `tests/fixtures/expected`
-    or a tmp dir installed via `docs install-skill` produces a directory
-    structure that satisfies the same structural checks as the in-repo
-    `skills/docs/`.
-  - `docs/release-runbook.md` — created as a checklist of items the dogfood
-    pass must hit (this is the manual-execution analogue of M5's
-    trigger-scenario checklist).
-- **Exit:** every new check fails for the right reason — no build backend,
-  no entry point, no `install-skill` verb, no relocated package. The
-  existing 246-test suite remains green (since nothing has been moved yet).
+  - `tests/test_packaging.py` — implement the six sub-cases:
+    1. **Wheel builds.** `python -m build` produces
+       `dist/docs_cli-1.1.0-py3-none-any.whl` + `dist/docs_cli-1.1.0.tar.gz`
+       in a `tmp_path` dist dir.
+    2. **Wheel installs.** A `venv.EnvBuilder`-created throwaway venv
+       installs the wheel via `pip install` without errors.
+    3. **`docs --version` prints `1.1.0`.** The venv's `docs` entry-point
+       exits 0 and stdout matches the declared `__version__`.
+    4. **`docs --help` lists every verb the in-tree parser lists.** Derive
+       the expected verb set from the in-tree parser (the same
+       `_build_parser()` introspection M5's `test_skill.py` uses), assert
+       the wheel-installed `docs --help` output covers it. Catches a
+       missing entry-point or a broken subparser registration.
+    5. **`docs install-skill --dest <tmp>` produces the bundled tree.**
+       `<tmp>/SKILL.md` and `<tmp>/references/{convention,cli}.md` exist
+       and are byte-identical to the in-repo `src/docs_cli/skill/` source
+       (or `skills/docs/`, depending on OQ4's resolution).
+    6. **`docs check <fixture-tree>` exits 0.** The wheel-installed `docs`
+       passes `check` against a known-clean fixture tree
+       (`tests/fixtures/trees/packaging-clean/`).
+  - `tests/test_skill.py`, `tests/test_skill_refs.py` — paths updated for
+    the relocated skill source (OQ4 resolution).
+  - `docs/release-runbook.md` — created as the manual-execution checklist
+    walked at Phase 9 (TestPyPI) and Phase 10 (real PyPI). This is the
+    operational analogue of M1–M4's "dogfood against a fixture tree" and
+    M5's trigger-scenario checklist: bump version, regenerate INDEX, green
+    quality gate, tag, watch the workflow, install from PyPI in a
+    throwaway venv, smoke-test, write the GitHub release note.
+- **Exit:** every new `test_packaging.py` sub-case fails for the right
+  reason — no build backend (1), no entry point (2/3/4), no
+  `install-skill` verb (5), no relocated package (everything). The
+  existing 246-test suite remains green (nothing has moved yet); the
+  release runbook is fully unsatisfied.
 
 ### Phase 3: Create Data/Fixtures
 
 - **Objective:** Stage the fixtures the packaging tests need.
 - **Files:**
   - `tests/fixtures/trees/packaging-clean/` — a tiny known-clean docs tree
-    (one `.docs.toml`, one charter, one plan, no errors) used by the
-    `docs check` sub-case in `test_packaging.py`.
+    (one `.docs.toml`, one charter or status, one plan; **no errors**)
+    used by sub-case 6 of `test_packaging.py`. Either a minimal hand-
+    authored tree or a reuse of an existing M1–M4 fixture if one already
+    qualifies as clean (e.g. `tests/fixtures/trees/minimal/`).
   - Nothing else — the wheel itself is built fresh in each test run; no
     pre-built artifact is checked in.
 - **Exit:** every fixture a Phase-2 check references is present; running
   Phase 2's tests now fails on the *intended* reason (no build backend,
-  no entry point) rather than on a missing fixture.
+  no entry point, no `install-skill` verb) rather than on a missing
+  fixture path.
 
 ### Phase 4: Run Tests (RED Baseline)
 
 - **Objective:** Confirm every failure traces to the unimplemented
-  packaging surface, not misconfiguration. **Session pauses here.**
-- **Actions:** `.venv/bin/python -m pytest tests/test_packaging.py -v` —
-  capture full output; confirm each sub-case fails on the expected
-  ModuleNotFoundError / FileNotFoundError / wheel-build error.
+  packaging surface, not misconfiguration. **Step 1 (Phases 1–4) pauses
+  here** per the project's TDD discipline.
+- **Actions:** `.venv/bin/python -m pytest tests/ -q` — capture full
+  output; confirm each `test_packaging.py` sub-case fails on the expected
+  `ModuleNotFoundError` (`docs_cli`), wheel-build error (no
+  `[build-system]`), `FileNotFoundError` (no relocated skill), or
+  argparse error (no `install-skill` verb).
 - **Exit:** `tests/test_packaging.py` is fully RED for the right reasons;
-  the rest of the suite remains green; runbook checklist is fully
-  unsatisfied.
+  M1–M5's 246 tests stay green; ruff/format/mypy clean tree-wide; the
+  release-runbook checklist stands fully unsatisfied.
 
 ### Phase 5: Update Base Interfaces
 
@@ -322,109 +410,152 @@ works.
   diff in M6 by line count, but it is mechanical: file moves, not logic
   changes.
 - **Actions:**
-  - `git mv bin/docs src/docs_cli/cli.py` (or equivalent — verify
-    `__version__` line and `if __name__ == "__main__": main()` guard).
-  - Create `src/docs_cli/__init__.py` re-exporting `main`.
-  - Relocate the skill: `git mv skills/docs src/docs_cli/skill` (final
-    layout per OQ4). If OQ4 picks "mirror not move", leave `skills/docs/`
-    in place and add a sync check.
-  - Update `tests/conftest.py`: drop the `SourceFileLoader` block, replace
-    with `from docs_cli import cli as docs; sys.modules.setdefault("docs",
-    cli)` (the alias preserves existing `from docs import X` imports per
-    OQ2) — or rewrite every test import per the OQ2 resolution.
-  - Update `tests/test_skill.py` and `tests/test_skill_refs.py` for new
-    skill paths.
+  - `git mv bin/docs src/docs_cli/cli.py` — verify the `#!/usr/bin/env
+    python3` shebang is dropped (no longer needed for an importable
+    module), the `__version__` line is preserved, and the
+    `if __name__ == "__main__": main()` guard is preserved (so the file
+    is still directly runnable if a contributor wants).
+  - Create `src/docs_cli/__init__.py` re-exporting `main` and
+    `__version__`.
+  - Relocate the skill per OQ4 (recommended: `git mv skills/docs
+    src/docs_cli/skill`; the alternative — mirror — keeps the original
+    path and adds a sync test).
+  - Update `tests/conftest.py`: drop the `SourceFileLoader` block;
+    replace with `from docs_cli import cli` and (per OQ2's recommended
+    "alias" resolution) `sys.modules.setdefault("docs", cli)` so existing
+    `from docs import X` imports keep working without test-file edits.
+  - Update `tests/test_skill.py` and `tests/test_skill_refs.py` for the
+    relocated skill paths.
   - Update `pyproject.toml`'s `extend-include` (ruff) and `files` (mypy)
-    lists: `bin/docs` removed, `src/docs_cli/` added, `scripts_are_modules`
-    deleted (no longer needed).
-- **Exit:** the existing 246-test suite is green again after the move; ruff
-  / mypy clean tree-wide; `bin/docs` is gone or is a 2-line shim;
-  `tests/test_packaging.py` is still RED (no `[build-system]` yet).
+    lists: `bin/docs` removed, `src/docs_cli/` added,
+    `scripts_are_modules` deleted (no longer needed).
+  - Resolve `bin/docs` per OQ5 (recommended: delete; alternative: keep a
+    2-line shim).
+- **Exit:** the existing 246-test suite is green again after the move;
+  `ruff check` / `ruff format --check` / `mypy` clean tree-wide; `docs
+  check docs/` exits 0 from the relocated module (via the conftest alias
+  or an editable `pip install -e .` install); `tests/test_packaging.py`
+  is still RED (no `[build-system]` yet, no `install-skill` yet).
 
 ### Phase 6: Implement Offline/Core Path
 
 - **Objective:** Make the wheel build. Make the entry point work. Make
   `docs install-skill` work.
 - **Files:**
-  - `pyproject.toml` — add `[build-system]` (hatchling), `[project.scripts]
-    docs = "docs_cli.cli:main"`, `[project.urls]`, package-data declaration
-    for `docs_cli/skill/**`, `version = "1.1.0"`.
-  - `src/docs_cli/cli.py` — bump `__version__` to `1.1.0`; add the
-    `install-skill` verb (argparse subparser, handler `_install_skill`,
+  - `pyproject.toml` — `name = "docs-cli"`; `version = "1.1.0"` (drops the
+    `-m4` milestone-suffix scheme; see Decisions); add `[build-system]`
+    (hatchling, no plugins); add `[project.scripts] docs =
+    "docs_cli.cli:main"`; add `[project.urls]` (Homepage, Repository,
+    Issues); declare package data for `docs_cli/skill/**` so the bundled
+    skill ships inside the wheel.
+  - `src/docs_cli/cli.py` — bump `__version__` to `1.1.0`; implement the
+    `install-skill` verb (argparse subparser, handler `_cmd_install_skill`,
     exit codes per `cli.md`); resolve the bundled skill via
-    `importlib.resources.files("docs_cli") / "skill"`.
-  - `docs/cli.md` — `install-skill` synopsis, flags, exit codes added.
-- **Exit:** `python -m build` succeeds in a temp dir; the wheel contains
-  the skill files; `tests/test_packaging.py` sub-cases (1)–(5) pass; (6)
-  passes; the whole suite green.
+    `importlib.resources.files("docs_cli") / "skill"`; `--copy` is the
+    default action, `--symlink` is offered for contributor / editable
+    installs, `--force` overwrites an existing destination.
+  - `docs/cli.md` — `install-skill` section added: synopsis, flags
+    (`--dest`, `--copy`/`--symlink`, `--force`), exit codes, idempotency
+    note.
+- **Exit:** `python -m build` succeeds in a temp dir; the built wheel
+  contains the skill files (verifiable with `unzip -l`); every
+  `tests/test_packaging.py` sub-case (1)–(6) passes; the full suite is
+  green; `docs install-skill --dest <tmp>` produces a tree that
+  `tests/test_skill.py`'s structural checks accept.
 
 ### Phase 7: Update Tool/Wrapper Layer
 
-- **Objective:** Wire the release workflow and the docs.
+- **Objective:** Wire the release workflows and rewrite the install-facing
+  docs around the new packaging.
 - **Files:**
   - `.github/workflows/release.yml` — tag-triggered (`v*`); jobs: lint,
-    test, build, publish-to-pypi via Trusted Publishing (OIDC).
+    test, `python -m build`, publish-to-PyPI via **Trusted Publishing**
+    (OIDC; no API token in repo secrets — see Decisions).
   - `.github/workflows/testpypi.yml` — `workflow_dispatch` trigger;
-    publishes to TestPyPI; same lint/test/build prelude.
-  - `docs/release-runbook.md` — finalised: per-release checklist (bump,
-    INDEX, gate, tag, watch, throwaway-venv smoke, GitHub release note).
-  - `README.md` — install section rewritten: `pip install docs-cli` first,
-    `docs install-skill` second, `git clone` third (contributor path).
-  - `docs/architecture.md` — Shape section updated (`src/docs_cli/cli.py`,
-    `src/docs_cli/skill/`); Sibling-artifact note updated; Install section
-    rewritten.
-  - `docs/charter.md` — one-paragraph distribution note added.
-- **Exit:** workflows lint cleanly; README and architecture install
-  sections describe the wheel path correctly; the release runbook is
-  reviewable end-to-end.
+    publishes to TestPyPI; same lint/test/build prelude. This is the
+    dress-rehearsal workflow Phase 9 runs against.
+  - `docs/release-runbook.md` — finalised: per-release checklist (bump
+    version, regenerate INDEX, green quality gate, tag, watch the
+    workflow, install from the published artifact in a throwaway venv,
+    smoke-test, write the GitHub release note).
+  - `README.md` — install section rewritten: `pip install docs-cli`
+    first, `docs install-skill` second, `git clone` third (contributor
+    path).
+  - `docs/architecture.md` — Shape section updated for the new package
+    layout (`src/docs_cli/cli.py`, `src/docs_cli/skill/`); Sibling-
+    artifact note updated for the bundled-skill-in-wheel; Install
+    section rewritten (`pip install docs-cli` + `docs install-skill`).
+  - `docs/charter.md` — one-paragraph distribution note added; the
+    charter currently assumes a `git clone` install.
+- **Exit:** workflows lint cleanly (`actionlint` or `gh workflow view`);
+  README and architecture install sections describe the wheel path
+  correctly; the release runbook is reviewable end-to-end; the suite
+  remains green.
 
 ### Phase 8: Run Tests (GREEN)
 
-- **Objective:** Full suite green; quality gate clean tree-wide; wheel
-  builds and installs cleanly in CI.
-- **Actions:** `pytest -q`; `ruff check .`; `ruff format --check .`;
-  `mypy`; `python -m build` + smoke-install in a throwaway venv via the
-  in-test path.
-- **Exit:** all green.
+- **Objective:** Full suite green; quality gate clean tree-wide; the
+  wheel builds and installs cleanly in CI.
+- **Actions:** `.venv/bin/python -m pytest tests/ -q`;
+  `.venv/bin/ruff check .`; `.venv/bin/ruff format --check .`;
+  `.venv/bin/mypy`; `python -m build` (verifies the build outside the
+  in-test path); `docs check docs/` exit 0; `docs index --root docs/
+  --dry-run` idempotent.
+- **Exit:** all green. Test count is 246 + the new `test_packaging.py`
+  sub-cases (≈ 6 new tests). `tests/test_skill.py` and
+  `tests/test_skill_refs.py` pass against the relocated skill source.
 
 ### Phase 9: Implement Online/Integration (dogfood + TestPyPI dry-run)
 
 - **Objective:** Real publish to TestPyPI, real install from TestPyPI,
   real exercise. The packaging equivalent of M1–M4's "dogfood against a
-  fixture tree" phase.
+  fixture tree" phase and M5's trigger-scenario walk.
 - **Actions:**
   - Trigger `testpypi.yml`; confirm wheel + sdist land on TestPyPI under
     `docs-cli`.
   - On a clean throwaway venv: `pip install --index-url
     https://test.pypi.org/simple/ docs-cli==1.1.0` — confirm install
-    succeeds; run every checklist row in `docs/release-runbook.md`.
-  - Walk the runbook to completion against the TestPyPI artifact: `docs
-    --version`, `docs --help`, `docs install-skill`, `docs check` against
-    a fresh tree, the skill is discoverable by Claude Code, regenerate
-    this repo's `INDEX.md` via the installed `docs index`.
+    succeeds.
+  - Walk every row of `docs/release-runbook.md` against the TestPyPI
+    artifact: `docs --version`, `docs --help`, `docs install-skill`,
+    `docs check` against a fresh tree, regenerate this repo's
+    `INDEX.md` via the installed `docs index`, confirm the skill is
+    placed where Claude Code can discover it.
 - **Exit:** the runbook is fully satisfied against the TestPyPI artifact;
   no checklist row is open. If anything fails, the failure goes back into
-  Phase 6 or 7, not papered over.
+  Phase 6 or 7 — not papered over. The TestPyPI release is the safety net
+  that catches name typos, missing package-data globs, bad classifier
+  values, and README rendering errors *before* they hit pypi.org/project/
+  docs-cli/ (where they cannot be deleted, only yanked).
 
 ### Phase 10: Quality, Docs, Refactor (real PyPI publish + closeout)
 
 - **Objective:** Ship `docs-cli==1.1.0` to real PyPI; mark M6 complete.
+  The repo-identity rename already landed at Phase 1; Phase 10 only flips
+  the GitHub repo from private to public.
 - **Actions:**
-  - Tag `v1.1.0`; release workflow publishes to PyPI; install from PyPI
-    in a throwaway venv re-runs the runbook smoke subset.
-  - GitHub release notes written referencing the M6 summary.
-  - GitHub repo rename `docs` → `docs-cli` (per OQ3); local checkout
-    `~/opt/docs` → `~/opt/docs-cli`; git remote URL updated; CLAUDE.md
-    and the docs-cli project memory updated.
-  - `docs/status.md` — M6 → Complete, v1.1 in progress; reading order
-    updated.
+  - **Flip the GitHub repo to public.** `gh repo edit ArtRichards/docs-cli
+    --visibility public --accept-visibility-change-consequences`.
+    Sequenced immediately before the tag push so the first PyPI release
+    coincides with the public-facing repo (per OQ3-implicit Decision —
+    see Decisions).
+  - Tag `v1.1.0`; the release workflow publishes to PyPI via Trusted
+    Publishing; install from PyPI in a throwaway venv re-runs the
+    runbook smoke subset.
+  - GitHub release notes written referencing this milestone's
+    completion summary.
+  - `docs/status.md` — M6 → Complete; project is v1.1-released;
+    reading order updated.
   - `docs/plan.md` — v1.1 section's M6 row marked shipped; remaining
     parked questions unchanged.
-  - `docs/INDEX.md` + snapshot regenerated in lockstep.
+  - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+    regenerated in lockstep.
+  - Append milestone-completion summaries to this file and to the log,
+    parallel to M1–M5's closeout.
 - **Exit:** `pip install docs-cli` from any host installs a working
   `docs` command and a `docs install-skill` that places the skill
-  correctly; all docs reflect the new install story; the milestone is
-  complete.
+  correctly; all docs reflect the new install story; quality gate green
+  tree-wide; the GitHub repo is public; the milestone is complete.
 
 ## Phase Checklist
 
@@ -443,56 +574,149 @@ works.
 
 Key choices applying to this milestone (broader decisions live in
 `vocab-adr.md` / `dual-status-adr.md`; M5's Decisions section is the
-nearest precedent for milestone-local choices). Each open question below
-becomes a Decision here once resolved.
+nearest precedent for milestone-local choices). The first block records
+the milestone-setup OPEN QUESTIONS as resolved (the full
+question / why-it-matters / recommendation text is preserved under
+"OPEN QUESTIONS — resolved" below); the remaining items are durable
+decisions independent of the OQ list.
 
 - **OQ1 — the command name stays `docs`; no `docs-cli` script alias
-  (RESOLVED 2026-05-23, operator-confirmed as recommended).** Users type
-  `docs ...` exactly as they do today; the distribution name `docs-cli`
-  appears only at install time (`pip install docs-cli`). This is the
-  dominant pattern for the `<dist>-cli` family — `pip install
-  python-dateutil` → `import dateutil`; `pip install docs-cli` → `$ docs
-  ...`. No defensive `docs-cli` alias is added; if a future host has a
-  PATH collision on `docs`, the resolution is local (rename the offender,
-  or alias) rather than baked into the distribution.
-- **The distribution name is `docs-cli`.** The bare `docs` name on PyPI is
-  squat-blocked as an empty placeholder (simple index returns 200 with
-  zero release files; JSON API 404; project page 200). Recovering it
-  requires a PEP 541 transfer — multi-week, uncertain. `docs-cli` is
-  available, descriptive, and parallel to many established CLI gems
-  (`build`, `pip`, `pipx` all expose a `cli` form when their bare name
-  was taken). This is non-negotiable for v1.1 PyPI publishing.
+  (RESOLVED 2026-05-23, operator-confirmed as recommended).** Users
+  type `docs ...` exactly as they do today; the distribution name
+  `docs-cli` appears only at install time (`pip install docs-cli`).
+  This is the dominant pattern for the `<dist>-cli` family — `pip
+  install python-dateutil` → `import dateutil`; `pip install docs-cli`
+  → `$ docs ...`. No defensive `docs-cli` alias is added; if a future
+  host has a PATH collision on `docs`, the resolution is local (rename
+  the offender, or alias) rather than baked into the distribution.
+- **OQ2 — `tests/conftest.py` aliases `docs_cli.cli` as `docs` in
+  `sys.modules` (RESOLVED 2026-05-23, operator-confirmed as
+  recommended).** Every existing `from docs import X` test import keeps
+  working without edits; M6's diff stays scoped to packaging. A
+  mechanical import sweep (`from docs import` → `from docs_cli.cli
+  import`) across the ~18 test files is deferred as a clean
+  follow-up commit, not M6 scope. The alias is set with
+  `sys.modules.setdefault("docs", cli)` so a real `docs` module
+  installed by some unrelated package (none exists today) would still
+  win.
+- **OQ3 — repo identity moves to `docs-cli` at Phase 1, before any
+  publish work (RESOLVED 2026-05-23, operator override of the
+  draft-time Phase-10 recommendation).** Rationale: adopt the new
+  identity from the start so the publishing path debuts under the
+  permanent name — no last-minute rename touching working-directory,
+  remote URL, and host pointers in the same hour as the first PyPI
+  release. **Important qualifiers** (Phase 1 plan reflects each):
+  1. **No `gh repo rename`.** The repo currently has **no git remote** —
+     this is a fresh local-only history. Phase 1 creates the GitHub
+     repo from scratch:
+     `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`
+     then `git push -u origin m6/milestone-setup` (the m6/* branch
+     stack — `main` is pushed later when the milestone merges).
+  2. **Local checkout move:** `mv ~/opt/docs ~/opt/docs-cli` as the
+     **final** action of Phase 1, since it changes the implementation
+     agent's working directory mid-phase. The Phase 1 log entry
+     records the post-move working directory; subsequent phases run
+     from `/home/user/opt/docs-cli/`.
+  3. **Host pointers update in lockstep:** `~/CLAUDE.md` (the
+     `~/opt/docs` references become `~/opt/docs-cli`),
+     `/home/user/.claude/projects/-home-user/memory/project_docs.md` →
+     `project_docs_cli.md` (slug + in-file references), and
+     `/home/user/.claude/projects/-home-user/memory/MEMORY.md` (the
+     index line for the project memory).
+  4. GitHub's automatic redirect from any future-old URLs is irrelevant
+     here — there is no old URL to redirect from. The first publish in
+     Phase 10 is therefore the **only** publish, from the **only** URL
+     this project has ever had.
+- **OQ3-implicit — repo visibility: private until first PyPI publish,
+  then public (RESOLVED 2026-05-23, recommended).** Phase 1 creates
+  the repo `--private`. Phase 10 flips it to public immediately before
+  the `v1.1.0` tag push: `gh repo edit ArtRichards/docs-cli
+  --visibility public --accept-visibility-change-consequences`. The
+  rationale is conservative: between Phase 1 and Phase 10 the repo
+  contains an in-flight v1.1 milestone, a `pyproject.toml` whose
+  `name` flips mid-stream, and packaging surface that has not yet
+  been TestPyPI-rehearsed — none of which benefits from public
+  visibility before the first published artifact exists. Public is
+  cheap to acquire (one `gh repo edit` call) and irreversible-ish to
+  retract (existing public clones cannot be recalled). Public-from-
+  day-one is offered as the alternative but is **not** recommended
+  for M6.
+- **OQ4 — skill source moves to `src/docs_cli/skill/`; top-level
+  `skills/docs/` is removed (RESOLVED 2026-05-23, operator-confirmed
+  as recommended).** Single source of truth under the package; the
+  wheel ships exactly the directory the author edits; no sync surface
+  to police. For contributors doing `pip install -e .`, the editable
+  install means edits to `src/docs_cli/skill/SKILL.md` are immediately
+  visible to `docs install-skill --symlink`. `tests/test_skill_refs.py`
+  is updated to read the relocated source.
+- **OQ5 — `bin/docs` is deleted; contributors `pip install -e ".[dev]"`
+  once (RESOLVED 2026-05-23, operator-confirmed as recommended).**
+  Retires the executable-script tooling overhead M6 was built to drop
+  (`extend-include = ["bin/docs"]` in ruff, `scripts_are_modules =
+  true` in mypy). The pip-install-editable flow gives the contributor
+  the same `docs` binary the PyPI user gets — cleanest possible
+  parity. Phase 7 sweeps every M1–M5 doc that still references
+  `bin/docs` and the `status.md` "Watch out for" note that calls it
+  out as a still-current gotcha.
+- **The distribution name is `docs-cli`** — non-negotiable for v1.1
+  PyPI publishing. The bare `docs` name on PyPI is squat-blocked as an
+  empty placeholder (project page returns 200 with status `active`;
+  simple index empty; JSON API 404). Recovering it would require a PEP
+  541 abandoned-project request — multi-week, uncertain. **No PEP 541
+  transfer is attempted in M6**; `docs-cli` is verified available and
+  is descriptive enough that the bare-name squat is not a UX problem
+  (users type `docs ...` regardless).
+- **The version jumps from `0.2.0-m2` to `1.1.0`, dropping the
+  milestone-suffix scheme.** `pyproject.toml`'s declared version is
+  stale (`0.2.0-m2`; v1 shipped at M5 without bumping the package
+  version because nothing was being published). M6 publishes, so the
+  version is now consequential. The scheme transitions: `1.0.0` is
+  implicit (v1 reached completion at M5 but was never released to
+  PyPI); M6 ships v1.1 because it changes the install story
+  observably (`pip install docs-cli` + `docs install-skill`).
+  `__version__` in `docs_cli/cli.py` follows.
 - **The single-file-vs-package question stays parked, but the file is
-  relocated.** M6 needs an importable module to wire `[project.scripts]`,
-  so `bin/docs` becomes `src/docs_cli/cli.py`. **The 2,534 lines stay in
-  one file.** Per-verb splitting is a separate refactor the team can
-  revisit post-v1.1; it would inflate M6 by an order of magnitude with
-  no packaging benefit.
+  relocated.** M6 needs an importable module to wire
+  `[project.scripts]`, so `bin/docs` becomes `src/docs_cli/cli.py`.
+  **The ~2,500 lines stay in one file.** Per-verb splitting into
+  sub-modules is a separate refactor; it would inflate M6 by an order
+  of magnitude with no packaging benefit. The deeper question stays
+  parked.
 - **The skill ships inside the wheel.** A PyPI user must get the same
   skill behaviour a `git clone` user gets, or PyPI distribution is
-  half-built. The skill files are package data under `src/docs_cli/skill/`;
-  a new `docs install-skill` verb places them on the host. No `setup.py
-  install`-style hook, no `post_install` script — these are deprecated and
-  do not survive `pip install --user` / pipx anyway. Explicit verb is
-  preferable: the user runs it, sees the dest, confirms the copy.
-- **`docs install-skill` defaults to `--copy`, not `--symlink`.** A wheel
-  installed via `pip` may live anywhere — including read-only mounts,
-  containers, or zip-imported eggs — and a symlink from
-  `~/.claude/skills/docs` into that location is fragile. `--copy` is the
-  safe default; `--symlink` is offered for the contributor case (it
-  symlinks the source directory of an editable `pip install -e .` install
-  into the skills dir).
-- **Trusted Publishing (OIDC), not API tokens.** No long-lived PyPI token
-  in repo secrets; the GitHub Action authenticates to PyPI via OIDC. One
-  configuration step on the PyPI side (register the Trusted Publisher
-  binding for `docs-cli` against the `docs-cli` GitHub repo on the
-  `release.yml` workflow). Standard for new projects.
-- **TestPyPI rehearsal before every real release.** The Phase 9 dry-run
-  via TestPyPI is part of the runbook, not optional. The cost is one
-  workflow run and a throwaway venv; the upside is that the dress
-  rehearsal catches name typos, missing package-data globs, bad classifier
-  values, and rendering errors in the README *before* they hit
-  pypi.org/project/docs-cli/ where they cannot be deleted (only yanked).
+  half-built. The skill files are package data under
+  `src/docs_cli/skill/`; a new `docs install-skill` verb places them on
+  the host. No `setup.py install`-style hook, no `post_install`
+  script — these are deprecated and do not survive `pip install --user`
+  / `pipx` anyway. An explicit verb is preferable: the user runs it,
+  sees the destination, confirms the copy.
+- **`docs install-skill` defaults to `--copy`, not `--symlink`.** A
+  wheel installed via `pip` may live anywhere — including read-only
+  mounts, containers, or zip-imported eggs — and a symlink from
+  `~/.claude/skills/docs` into that location is fragile. `--copy` is
+  the safe default; `--symlink` is offered for the contributor case
+  (it symlinks the source directory of an editable `pip install -e .`
+  install into the skills dir). `--force` overwrites an existing
+  destination; without `--force`, an existing non-identical directory
+  is an error. The verb is idempotent: re-running on an unchanged
+  install is a no-op exit 0.
+- **Trusted Publishing (OIDC), not API tokens.** No long-lived PyPI
+  token in repo secrets; the GitHub Action authenticates to PyPI via
+  OIDC. One configuration step on the PyPI side: register the Trusted
+  Publisher binding for `docs-cli` against the `docs-cli` GitHub repo
+  on the `release.yml` workflow. Standard for new projects.
+- **TestPyPI rehearsal before every real release.** The Phase 9
+  dry-run via TestPyPI is part of the runbook, not optional. The cost
+  is one workflow run and a throwaway venv; the upside is that the
+  dress rehearsal catches name typos, missing package-data globs, bad
+  classifier values, and rendering errors in the README *before* they
+  hit pypi.org/project/docs-cli/ where they cannot be deleted, only
+  yanked.
+- **`hatchling` as the build backend, no plugins.** It is the modern
+  pythonic default, ships with the `build` tool's typical setup, and
+  needs no plugin to bundle package data the way M6 needs. No reason
+  to reach for `setuptools` (legacy semantics) or `flit` (less
+  flexibility around `[project.scripts]`).
 
 ## Testing / Quality Gate
 
@@ -506,16 +730,18 @@ Commands run at Phase 4 (RED baseline), Phase 8 (GREEN), and Phase 10:
 docs check docs/                                    # repo still clean
 docs index --root docs/ --dry-run                   # INDEX idempotent
 python -m build                                     # wheel + sdist build
-pytest tests/test_packaging.py -v                   # in-tmpvenv install + run
+.venv/bin/python -m pytest tests/test_packaging.py -v    # in-tmpvenv install + run
 ```
 
-Plus the M6-specific dogfood gate at Phase 9: walk `docs/release-runbook.md`
-end-to-end against the TestPyPI artifact, then again against the real PyPI
-artifact at Phase 10.
+Plus the M6-specific dogfood gate at Phase 9 (TestPyPI) and Phase 10
+(real PyPI): walk `docs/release-runbook.md` end-to-end against the
+published artifact.
 
-Expected at Phase 4: existing 246 tests green; every
-`tests/test_packaging.py` sub-case RED for the intended reason; runbook
-unsatisfied. Expected at Phase 8/10: all green, packaging tests included;
+Expected at Phase 4: M1–M5's 246 tests green; every
+`tests/test_packaging.py` sub-case RED for the intended reason
+(`ModuleNotFoundError`, no `[build-system]`, no entry point, no
+`install-skill` verb); the release runbook fully unsatisfied. Expected
+at Phase 8/10: all commands green, packaging tests included; the
 runbook fully satisfied against the published artifacts.
 
 ## Success Criteria
@@ -534,7 +760,9 @@ M6 is complete when:
 - [ ] `pyproject.toml`, `README.md`, `docs/architecture.md`, `docs/cli.md`,
       and `docs/charter.md` all describe the new install story
       consistently.
-- [ ] The GitHub repo and local checkout are renamed `docs-cli`; the
+- [ ] The GitHub repo `ArtRichards/docs-cli` exists and is public; the
+      local checkout is at `~/opt/docs-cli/`; `~/CLAUDE.md` and the
+      project-memory pointer file reflect the new path; the
       `Repository:` URL in `pyproject.toml` matches.
 - [ ] `docs/status.md` reflects M6 → Complete and the project as
       v1.1-in-progress.
@@ -543,68 +771,20 @@ M6 is complete when:
 
 ## OPEN QUESTIONS
 
-Four open questions to resolve at Phase 1 (Decisions above will absorb the
-verdicts). OQ1 was resolved at draft time (2026-05-23, operator-confirmed)
-and is preserved below under "OPEN QUESTIONS — resolved".
-
-### OQ2 — Test import shape: alias `docs_cli.cli` as `docs`, or rewrite every test?
-
-**Recommendation: alias.** `conftest.py` does `from docs_cli import cli;
-sys.modules.setdefault("docs", cli)`, and every existing `from docs import
-X` keeps working. The alternative — rewriting ~18 test files from `from
-docs import X` to `from docs_cli.cli import X` — is mechanical but pollutes
-the M6 diff with churn unrelated to packaging. Aliasing is one line;
-rewriting is ~150 lines of import edits. If the team later wants the
-explicit import, that's a separate sweep. **Alternative:** full rewrite —
-clearer long-term, but expands M6's blast radius unnecessarily.
-
-### OQ3 — Repo rename: when, and how invasive?
-
-**Recommendation: rename at Phase 10 (after the first PyPI publish
-succeeds), not before.** Sequence: tag and publish from the still-named
-`docs` repo, confirm the PyPI artifact works, *then* rename the GitHub
-repo (`gh repo rename docs-cli`) and the local checkout (`mv ~/opt/docs
-~/opt/docs-cli && git -C ~/opt/docs-cli remote set-url origin
-git@github.com:<owner>/docs-cli.git`). Rationale: the publish workflow is
-the unknown; renaming first risks two failures interacting. GitHub
-provides automatic redirects from the old repo URL for the foreseeable
-future, so the rename does not break clones or fetches in flight. CLAUDE.md
-and the project-memory pointer file update at the same time.
-**Alternative:** rename at Phase 1 (matches the new identity from the
-start, but means the first publish runs from a freshly-renamed repo —
-two changes at once).
-
-### OQ4 — Bundled skill layout: move into `src/docs_cli/skill/`, or mirror?
-
-**Recommendation: move (and remove `skills/docs/`).** A single source of
-truth for the skill — under `src/docs_cli/skill/` — that the wheel ships
-directly. The README and architecture docs point at the new path. For
-contributors doing `pip install -e .`, the editable install means edits to
-`src/docs_cli/skill/SKILL.md` are immediately visible to `docs install-skill
---symlink`. **Alternative:** mirror (keep `skills/docs/` as the authored
-copy and have a build hook copy into `src/docs_cli/skill/`) — preserves
-the existing top-level path but introduces a sync surface that
-`test_skill_refs.py`-style lockstep tests must police. Move is simpler.
-
-### OQ5 — `bin/docs`: delete, or keep as a thin shim?
-
-**Recommendation: delete.** After Phase 5 the contributor workflow is `pip
-install -e ".[dev]"`, which provides the `docs` command on `$PATH`
-directly. `bin/docs` becomes redundant. The single concession: `README.md`'s
-contributor section explicitly tells contributors to `pip install -e .`
-before expecting `docs ...` to work. **Alternative:** keep a 2-line shim
-(`from docs_cli.cli import main; raise SystemExit(main())`) for
-contributors who do not want an editable install — but this resurrects
-the original "executable script with no extension" complexity (ruff
-`extend-include`, mypy `scripts_are_modules`) that M6 was about to retire.
-Delete is cleaner.
+_All milestone-setup OQs resolved 2026-05-23._ Each resolution is
+recorded as a Decision in the "Decisions" section above; the full
+question, why-it-matters, and recommendation text is preserved under
+"OPEN QUESTIONS — resolved" below with a **RESOLVED** line at the head
+of each. This mirrors M5's milestone-setup precedent.
 
 ## OPEN QUESTIONS — resolved
 
-_Questions resolved before Phase 1 are recorded here; the resolution itself
-lives in the Decisions section above. The full question, why-it-matters, and
-recommendation text is preserved here as the historical record; a **RESOLVED**
-line at the head of each gives the verdict._
+_All five milestone-setup questions were triaged against [plan.md](plan.md)
+and the M1–M5 precedent and operator-confirmed on 2026-05-23. Each
+resolution is recorded as a Decision in the "Decisions" section above
+(OQ1–OQ5). The full question, why-it-matters, and recommendation text is
+preserved here as the historical record; a **RESOLVED** line at the head
+of each gives the verdict._
 
 ### OQ1 — Command name: stay `docs`, or also expose `docs-cli`?
 
@@ -627,3 +807,139 @@ analogue. Adding a defensive `docs-cli` script alias is one line and
 harmless but pointless when no one would type it. Renaming the command to
 `docs-cli` is rejected outright. **Alternative A:** expose both. **Alternative
 B:** rename the command to `docs-cli`. Recommended: stay `docs` only.
+
+### OQ2 — Test import shape: alias `docs_cli.cli` as `docs`, or rewrite every test?
+
+**RESOLVED (operator-confirmed 2026-05-23) — alias `docs_cli.cli` as
+`docs` in `tests/conftest.py`.** Approved as recommended. A mechanical
+import sweep across the ~18 test files is deferred as a clean follow-up
+commit, not M6 scope. See the OQ2 Decision above.
+
+**Question.** After `bin/docs` becomes `src/docs_cli/cli.py`, should
+`tests/conftest.py` alias the new module as `docs` in `sys.modules` —
+preserving every existing `from docs import X` import in the ~18 test
+files — or should every test be mechanically rewritten to
+`from docs_cli.cli import X`?
+
+**Why it matters.** It decides M6's blast radius. The alias keeps the
+diff narrowly scoped to packaging — one `conftest.py` change, zero
+test-file churn. The rewrite is mechanical but touches every test file
+that imports from the executable (a ~150-line import-edit sweep
+unrelated to the packaging story), and conflates two changes
+(packaging + import-style sweep) in the same milestone.
+
+**Recommended answer.** **Alias.** `conftest.py` does `from docs_cli
+import cli; sys.modules.setdefault("docs", cli)`, and every existing
+`from docs import X` keeps working. The rewrite is a clean follow-up
+sweep the team can do post-M6 in a single mechanical commit,
+separately reviewable. **Alternative:** full rewrite — clearer
+long-term, but expands M6's blast radius unnecessarily.
+
+### OQ3 — Repo rename: when, and how invasive?
+
+**RESOLVED (operator override of recommendation 2026-05-23) — adopt
+the new identity at Phase 1, before any publishing work.** The operator
+overrode the draft-time Phase-10 recommendation. Important qualifiers:
+the repo currently has **no git remote**, so Phase 1 does **not** run
+`gh repo rename` — it runs `gh repo create ArtRichards/docs-cli
+--source=. --private --remote=origin` to create the repo from scratch
+and `git push -u origin m6/milestone-setup` to land the branch. The
+local checkout move `mv ~/opt/docs ~/opt/docs-cli` is the final action
+of Phase 1, and subsequent phases run from the new path. `~/CLAUDE.md`
+and the project-memory pointer (and MEMORY.md index line) update in
+the same phase. See the OQ3 Decision above for the full sequencing and
+the OQ3-implicit Decision for the private→public visibility plan.
+
+**Question.** When does the GitHub repo rename from `docs` to
+`docs-cli` (and the local checkout move from `~/opt/docs` to
+`~/opt/docs-cli`) happen — at Phase 1 (matches the new identity from
+the start) or at Phase 10 (after the first PyPI publish succeeds)?
+
+**Why it matters.** The rename touches the git remote URL, the local
+filesystem path, `~/CLAUDE.md`'s `~/opt/docs` references, and the
+project-memory pointer file. Doing it early matches the new identity
+from the start but runs the first publish from a freshly-renamed repo
+(two unknowns interacting); doing it late keeps the publishing path
+isolated for its debut. GitHub provides automatic redirects from the
+old URL for the foreseeable future, so the rename does not break
+clones or fetches in flight regardless of timing.
+
+**Recommended answer (drafted above; overridden by the operator).**
+**Rename at Phase 10**, after the first PyPI publish succeeds.
+Sequence: tag and publish from the still-named `docs` repo, confirm
+the PyPI artifact works, *then* rename the GitHub repo (`gh repo
+rename docs-cli`) and the local checkout
+(`mv ~/opt/docs ~/opt/docs-cli && git -C ~/opt/docs-cli remote
+set-url origin git@github.com:<owner>/docs-cli.git`). `~/CLAUDE.md`
+and the project-memory pointer file update at the same time.
+**Alternative (chosen by the operator):** rename at Phase 1 —
+matches the new identity from the start but bundles two unknowns.
+The "two unknowns" objection is moderated by the fact that the
+publishing path is itself only rehearsed against TestPyPI at Phase
+9 before the real PyPI publish at Phase 10, so the rename runs many
+phases before the first publish is even attempted.
+
+### OQ4 — Bundled skill layout: move into `src/docs_cli/skill/`, or mirror from `skills/docs/`?
+
+**RESOLVED (operator-confirmed 2026-05-23) — move the skill source
+into `src/docs_cli/skill/` and remove the top-level `skills/docs/`.**
+Approved as recommended. `tests/test_skill_refs.py` is updated to read
+the relocated source. See the OQ4 Decision above.
+
+**Question.** Should the skill source relocate fully — `git mv
+skills/docs src/docs_cli/skill` so there is a single source of truth
+under the package — or stay at `skills/docs/` with a build hook /
+lockstep test that mirrors it into `src/docs_cli/skill/` for the wheel
+build?
+
+**Why it matters.** It decides whether the skill has one path or two.
+A move is the simplest possible state: one file, one path, the wheel
+ships exactly the directory the author edits. A mirror preserves the
+existing top-level `skills/docs/` path but introduces a sync surface
+that a lockstep test must police — exactly the shape M5's
+`tests/test_skill_refs.py` already enforces for `convention.md` /
+`cli.md`, so the precedent for "mirror with lockstep test" exists.
+
+**Recommended answer.** **Move** (and remove `skills/docs/`). A single
+source of truth is preferable to a mirror when nothing actively needs
+the old path. For contributors doing `pip install -e .`, the editable
+install means edits to `src/docs_cli/skill/SKILL.md` are immediately
+visible to `docs install-skill --symlink`. The README and architecture
+docs point at the new path (Phase 7). M5's existing
+`tests/test_skill_refs.py` is updated to read the relocated source.
+**Alternative:** mirror — preserves the existing `skills/docs/` path
+but introduces a sync surface and one more thing to maintain.
+
+### OQ5 — `bin/docs`: delete, or keep as a thin shim?
+
+**RESOLVED (operator-confirmed 2026-05-23) — delete `bin/docs`.**
+Approved as recommended. Contributors run `pip install -e ".[dev]"`
+once; the entry point lands on PATH. Phase 7 sweeps every M1–M5 doc
+and the `status.md` "Watch out for" note that referenced `bin/docs`.
+See the OQ5 Decision above.
+
+**Question.** After `bin/docs` is relocated to `src/docs_cli/cli.py`,
+should the `bin/docs` path disappear entirely, or remain as a 2-line
+shim (`from docs_cli.cli import main; raise SystemExit(main())`) for
+in-repo contributors who do not want to `pip install -e .`?
+
+**Why it matters.** It decides the in-repo contributor's friction
+floor. Delete means contributors **must** `pip install -e ".[dev]"`
+to get a working `docs` command (it lands on PATH via the entry
+point). A shim means `./bin/docs` keeps working without any install
+step, but resurrects the original "executable script with no
+extension" complexity (`extend-include = ["bin/docs"]` in ruff,
+`scripts_are_modules = true` in mypy) that M6 was about to retire.
+Also relevant: every M1–M5 doc and the existing `status.md` "Watch
+out for" note refer to `bin/docs`; those references must update if
+the path disappears.
+
+**Recommended answer.** **Delete.** The pip-install-editable flow
+(`pip install -e ".[dev]"`) is one command, standard for modern
+Python work, and gives the contributor exactly the same `docs`
+binary the PyPI user gets — the cleanest possible parity. The
+README's contributor section is updated to spell this out. Every
+doc reference to `bin/docs` is updated in lockstep (a Phase-7 edit
+sweep). **Alternative:** keep the 2-line shim — preserves the
+existing in-repo workflow without an install step, at the cost of
+the executable-script tooling overhead M6 was about to retire.

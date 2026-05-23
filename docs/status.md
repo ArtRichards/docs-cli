@@ -7,34 +7,57 @@ Updated: 2026-05-23
 
 Related:
 - pairs-with: plan.md
-- pairs-with: m5-claude-code-skill.md
+- pairs-with: m6-pypi-distribution.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
 
-**Project v1 is complete — all five milestones shipped.** M5 — Claude Code
-skill shipped 2026-05-22, closing the v1 roadmap.
+**M6 — PyPI distribution as `docs-cli` is in flight (milestone-setup
+phase complete, 2026-05-23).** The task plan
+[m6-pypi-distribution.md](m6-pypi-distribution.md) is promoted from
+`draft` to `active`; the log
+[m6-pypi-distribution-log.md](m6-pypi-distribution-log.md) is created.
+M6 is the first v1.1 milestone: it publishes the CLI as `docs-cli` on
+PyPI, relocates `bin/docs` to an importable package at
+`src/docs_cli/cli.py`, ships the Claude Code skill inside the wheel as
+package data, and adds one new verb — `docs install-skill` — that
+materialises the bundled skill onto a host. **All five milestone-setup
+OPEN QUESTIONS are resolved 2026-05-23** (OQ1 command name stays
+`docs`; OQ2 conftest aliases `docs_cli.cli` as `docs`; OQ3 repo
+identity moves at Phase 1 with a new GitHub repo created since the
+local repo has no remote yet — `ArtRichards/docs-cli` private until
+v1.1 publishes; OQ4 skill source moves to `src/docs_cli/skill/`; OQ5
+`bin/docs` is deleted). Phase 1's scope was expanded by the OQ3
+override to carry the identity rename — new GitHub repo, local
+checkout move `~/opt/docs` → `~/opt/docs-cli`, host-pointer updates —
+in addition to the usual milestone-activation docs work. See the log
+for the per-phase status table.
 
-M5 — Claude Code skill shipped 2026-05-22 across ten TDD phases. It is the
-project's final v1 deliverable: a Claude Code skill — a `SKILL.md` artifact at
-`skills/docs/` — that makes an agent reach for the `docs` verbs automatically
-when doing documentation work in a `docs`-managed tree. It adds no CLI surface
-and changes no verb behaviour: it is a markdown artifact whose `description`
-triggers on the right contexts (creating a plan/spec/charter/milestone,
-archiving or renaming a doc, listing docs, checking the tree, regenerating
-`INDEX.md`, adopting a foreign Markdown directory) and whose body redirects to
-the appropriate `docs` verb instead of hand-editing metadata, `INDEX.md`, or
-`archive/`. The convention itself is not re-taught — the body links to the
-bundled spec references at `skills/docs/references/`. The four milestone-setup
-OPEN QUESTIONS (OQ1-OQ4) were resolved and recorded as Decisions in the task
-plan. **Post-ship polish (2026-05-23)** shortened `SKILL.md` to a trigger
-surface (verb-task table + when-to-use scenarios + never-hand-edit rule),
-bundled `convention.md` and `cli.md` as `skills/docs/references/` (byte-
-identical mirrors with a lockstep test), and cleaned dev cross-refs out of
-the source specs. See [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)
-for the per-phase history (and the post-ship section appended to it) and
-[m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone summary.
+**Project v1 shipped 2026-05-22 — M1-M5 all complete.** M5 — Claude
+Code skill closed the v1 roadmap on 2026-05-22 (post-ship polish on
+2026-05-23). It is the project's final v1 deliverable: a Claude Code
+skill — a `SKILL.md` artifact at `skills/docs/` — that makes an agent
+reach for the `docs` verbs automatically when doing documentation work
+in a `docs`-managed tree. It adds no CLI surface and changes no verb
+behaviour: it is a markdown artifact whose `description` triggers on
+the right contexts (creating a plan/spec/charter/milestone, archiving
+or renaming a doc, listing docs, checking the tree, regenerating
+`INDEX.md`, adopting a foreign Markdown directory) and whose body
+redirects to the appropriate `docs` verb instead of hand-editing
+metadata, `INDEX.md`, or `archive/`. The convention itself is not
+re-taught — the body links to the bundled spec references at
+`skills/docs/references/`. The four M5 milestone-setup OPEN QUESTIONS
+(OQ1-OQ4) were resolved and recorded as Decisions in the task plan.
+**Post-ship polish (2026-05-23)** shortened `SKILL.md` to a trigger
+surface (verb-task table + when-to-use scenarios + never-hand-edit
+rule), bundled `convention.md` and `cli.md` as `skills/docs/references/`
+(byte-identical mirrors with a lockstep test), and cleaned dev
+cross-refs out of the source specs. See
+[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the
+per-phase history (and the post-ship section appended to it) and
+[m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone
+summary.
 
 M4 — Migration helper (`docs migrate`) shipped 2026-05-22 across ten TDD
 phases. It added one verb — `docs migrate <dir>` — that adopts a
@@ -72,9 +95,13 @@ for the milestone summary.
 | M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
+| M6 — PyPI distribution as `docs-cli` | _in flight_ (started 2026-05-23) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 
-All five milestones are shipped — **the project has reached v1**. Per-milestone
-task plans were created when each milestone was activated, not all up front.
+v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight** with M6 as its first
+milestone — PyPI publication, an importable package, and an
+`install-skill` verb that places the bundled Claude Code skill on a host
+without requiring a repo clone. Per-milestone task plans were created
+when each milestone was activated, not all up front.
 
 ## TDD phase order (used per milestone)
 
@@ -95,7 +122,7 @@ task plans were created when each milestone was activated, not all up front.
 - [Convention spec](convention.md) — on-disk format
 - [CLI spec](cli.md) — command surface
 - [Architecture](architecture.md) — module sketch + dev setup commands
-- [Plan](plan.md) — five-milestone roadmap
+- [Plan](plan.md) — milestone roadmap (v1 + v1.1)
 - [Definition of Ready](definition-of-ready.md) — gate to start
 
 ## Resuming this work (fresh session)
@@ -105,13 +132,15 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — five-milestone roadmap; **all five milestones are shipped — the project is v1-complete**. Read the v1-completion note and the Open questions (the parked extra-field allowlist carries to v1.1).
-4. `docs/cli.md` — the command spec; the full eight-verb `docs` surface.
-5. `docs/convention.md`, `docs/architecture.md` — the on-disk format and the module sketch.
-6. `docs/m5-claude-code-skill.md` — the most recently shipped milestone's task plan; its **Milestone-completion summary** describes the Claude Code skill.
-7. `skills/docs/SKILL.md` — the M5 deliverable: the Claude Code skill that drives the verbs.
-8. `docs/charter.md` — what + why.
-9. `docs/definition-of-ready.md` — the gate cleared before implementation.
+3. `docs/plan.md` — the roadmap; v1 (M1-M5) is shipped, v1.1 has begun with M6 as its first milestone. Read the v1-completion note and the Open questions (the parked extra-field allowlist still carries to v1.1).
+4. `docs/m6-pypi-distribution.md` — the active milestone's task plan; "Decisions" records the five milestone-setup OQs resolved 2026-05-23 (the full text is preserved under "OPEN QUESTIONS — resolved").
+5. `docs/m6-pypi-distribution-log.md` — the milestone log with the per-phase status table.
+6. `docs/cli.md` — the command spec; the full eight-verb `docs` surface.
+7. `docs/convention.md`, `docs/architecture.md` — the on-disk format and the module sketch.
+8. `docs/m5-claude-code-skill.md` — v1's final milestone; its **Milestone-completion summary** describes the Claude Code skill that M6's `install-skill` verb will deliver via the wheel.
+9. `skills/docs/SKILL.md` — the M5 deliverable: the Claude Code skill that drives the verbs (relocates to `src/docs_cli/skill/SKILL.md` in M6 per OQ4).
+10. `docs/charter.md` — what + why.
+11. `docs/definition-of-ready.md` — the gate cleared before implementation.
 
 **Verify environment** before doing any work:
 ```sh
@@ -131,10 +160,22 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: none — v1 is complete.** All five milestones (M1-M5) are
-shipped. Further work is v1.1 scope: the parked `[vocabulary] add_fields`
-extra-field allowlist question (see `plan.md`'s Open questions) and the
-deferred `bin/docs` single-file vs package split.
+**Next action: execute Phase 1.** All five milestone-setup OPEN
+QUESTIONS are resolved (recorded as Decisions in
+[m6-pypi-distribution.md](m6-pypi-distribution.md)). Phase 1 lands the
+text-work commits (this status.md update, the M6 plan/log activation,
+the `## v1.1` plan.md section, INDEX/snapshot regeneration), then
+performs the OQ3 identity rename — `gh repo create
+ArtRichards/docs-cli --source=. --private --remote=origin`,
+`git push -u origin m6/milestone-setup`, `mv ~/opt/docs ~/opt/docs-cli`
+as the final action (subsequent phases run from
+`/home/user/opt/docs-cli/`), and updates to `~/CLAUDE.md`,
+`/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`,
+and the MEMORY.md index line. Then Step 1 (Phases 2–4) begins: the
+Phase 2 RED baseline establishes `tests/test_packaging.py` failing for
+the right reasons (no `[build-system]`, no entry point, no
+`install-skill` verb), and the session pauses at Phase 4 per the
+project's TDD discipline.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
