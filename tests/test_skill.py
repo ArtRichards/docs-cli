@@ -174,12 +174,13 @@ def test_every_named_verb_is_a_real_subcommand() -> None:
     _, body = _split_frontmatter(_read_skill())
     # Verb candidates come ONLY from backtick-delimited inline code spans of
     # the form `docs <verb>` (resolved OQ-C). Bare prose mentions are ignored.
-    # The verb class is `[a-z]+` (no hyphen): all eight real verbs are plain
-    # lowercase, and excluding `-` stops a span like `docs --root <dir> index`
-    # from capturing `--root` as a bogus verb (resolved OQ-C author guidance).
+    # The verb class is `[a-z][a-z-]*`: real verbs are lowercase and may
+    # include `-` (M6's `install-skill`). The leading `[a-z]` requirement
+    # stops a span like `docs --root <dir> index` from capturing `--root`
+    # as a bogus verb (resolved OQ-C author guidance).
     named: set[str] = set()
     for span in re.findall(r"`([^`]+)`", body):
-        m = re.match(r"docs ([a-z]+)", span.strip())
+        m = re.match(r"docs ([a-z][a-z-]*)", span.strip())
         if m:
             named.add(m.group(1))
 

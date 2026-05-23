@@ -159,19 +159,24 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # post-Phase-6: lands `docs` on PATH; pre-Phase-6: `pytest ruff mypy build`
 ```
 
-**Next action: Phase 6 — implement core (pyproject hatchling +
-`install-skill` verb).** Phase 5 (relocation) is complete on branch
-`m6/phases-5-10`. `git mv bin/docs src/docs_cli/cli.py` and
-`git mv skills/docs src/docs_cli/skill` ran clean (history preserved);
-`src/docs_cli/__init__.py` re-exports `main`; `tests/conftest.py` now
-inserts `src/` on `sys.path` and aliases `docs_cli.cli` as `docs` per
-OQ2; `tests/test_skill.py` and `tests/test_skill_refs.py` point at the
-new skill path; `pyproject.toml` ruff/mypy include lists updated
-(`bin/docs` references dropped); `~/.claude/skills/docs` symlink
-refreshed to `src/docs_cli/skill/`. Quality gate: 246 M1–M5 tests
-still green; F1/F2/F3 packaging tests now GREEN (layout invariants
-satisfied); A1–E2 remain RED until Phase 6 lands the
-`[build-system]` + `[project.scripts]` + `install-skill` verb.
+**Next action: Phase 7 — update wrappers (specs/runbook/CHANGELOG, no
+CI per operator).** Phase 6 (implement core) is complete on branch
+`m6/phases-5-10`. `pyproject.toml` rewritten with hatchling backend,
+`name = "docs-cli"`, `version = "1.1.0"`, `[project.scripts] docs =
+docs_cli.cli:main`, `[project.urls]` pointing at
+`github.com/ArtRichards/docs-cli`, classifiers bumped to Beta + 3.13.
+`src/docs_cli/cli.py` carries `__version__ = "1.1.0"`, a global
+`--version` flag, the `install-skill` subparser (`--dest`/`--copy`/
+`--symlink`/`--force`/`--quiet`), and the `_cmd_install_skill`
+handler (importlib.resources lookup, site-packages-ancestor heuristic
+for the wheel-symlink refusal, byte-identical idempotency, --force
+overwrite, atomic clear-then-write). `docs/cli.md` documents both
+`--version` and the new verb; `src/docs_cli/skill/SKILL.md` adds the
+new verb to its verbs table; `src/docs_cli/skill/references/cli.md`
+resynced. `pip install -e ".[dev]"` lands `docs` on PATH;
+`.venv/bin/docs --version` prints `docs 1.1.0`; `python -m build`
+produces a clean `docs_cli-1.1.0-py3-none-any.whl` (5 source entries
++ dist-info). **All 271 tests GREEN.**
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

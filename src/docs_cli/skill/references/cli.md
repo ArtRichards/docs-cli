@@ -26,6 +26,7 @@ Global flags:
 - `--json` — emit machine-readable JSON output where applicable.
 - `--quiet` — suppress non-error output.
 - `--dry-run` — show what would change; make no edits.
+- `--version` — print `docs <version>` and exit 0.
 
 ## Subcommands
 
@@ -129,6 +130,47 @@ Exit codes:
 ### `docs touch <file>`
 
 Bump `Updated:` to today in `<file>`. No other changes. INDEX regenerated.
+
+### `docs install-skill [--dest DIR] [--copy|--symlink] [--force] [--quiet]`
+
+Materialise the bundled Claude Code skill onto the host.
+
+Synopsis. The `docs-cli` wheel carries a `docs_cli/skill/` directory (the
+[SKILL.md](../src/docs_cli/skill/SKILL.md) plus its bundled spec
+references). `install-skill` copies (or symlinks) that directory to a
+host-side location an agent driving Claude Code can read.
+
+Flags:
+
+- `--dest DIR` — destination directory. Default: `~/.claude/skills/docs/`.
+- `--copy` — copy the bundled files (default).
+- `--symlink` — symlink the destination to the in-tree source directory.
+  Rejected when running from a wheel install (the bundled skill lives
+  under `site-packages` and a future `pip install --upgrade docs-cli`
+  could replace it from under the symlink). Editable installs only.
+- `--force` — overwrite a non-identical existing destination.
+- `--quiet` — suppress success messages on stderr.
+
+Idempotency. If `<dest>` already exists and every bundled file matches
+byte-for-byte, `install-skill` prints a no-op message and exits 0
+without writing.
+
+Refusals. Exits 2 if (a) `<dest>` exists with non-identical content
+and `--force` was not supplied — the existing tree is preserved
+unchanged in this case; or (b) `--symlink` was requested from a wheel
+install. In both cases the message describes the recovery path
+(`--force`, `--dest <DIR>`, or an editable install).
+
+Windows note. `--symlink` may require developer-mode or elevated
+privileges depending on the user's Windows-side configuration; the
+default `--copy` is the recommended cross-platform path.
+
+Exit codes:
+
+- `0` — success (copy/symlink performed, or destination already matched
+  byte-for-byte and the call was a no-op).
+- `2` — refusal (non-identical dest without `--force`; or `--symlink`
+  from a wheel install).
 
 ### `docs migrate <dir> [--apply] [--json] [--quiet] [--date YYYY-MM-DD]`
 

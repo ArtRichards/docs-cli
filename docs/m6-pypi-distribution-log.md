@@ -117,11 +117,11 @@ unchanged — `Project: docs` stays `docs`.
 | 3. Create Data/Fixtures | Complete | 2026-05-23 | Confirmed reuse of `tests/fixtures/trees/minimal/` for the installed-`docs check` / `docs index --dry-run` smokes (Step 1's Option A — `./bin/docs check tests/fixtures/trees/minimal/` exits 0; no new fixture needed). Phase 4 captures the RED baseline. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-23 | Captured the verbatim `pytest -q --tb=short` output: **9 FAILED + 16 ERRORS + 246 PASSED = 271 collected**. The 9 FAIL are the assertion-level RED on the pyproject static contract (A1–A6) + the layout invariants (F1–F3); the 16 ERROR are setup-fixture failures cascading from `built_dist` (`python -m build` rejects `version = "0.2.0-m2"` as non-PEP440 — exactly the Phase-6-fixes condition). M1–M5's 246 tests stay green; ruff/format/mypy clean tree-wide; `docs check docs/` exit 0. **Session pauses here** per the project's TDD discipline. |
 | 5. Update Base Interfaces | Complete | 2026-05-23 | `git mv bin/docs src/docs_cli/cli.py`; `git mv skills/docs src/docs_cli/skill`; `src/docs_cli/__init__.py` re-exports `main`; `tests/conftest.py` rewritten (drop SourceFileLoader; insert `src/` on sys.path; alias `docs_cli.cli` as `docs`); `tests/test_skill.py` SKILL_DIR + failure-message updated; `tests/test_skill_refs.py` BUNDLE_DIR + resync hint updated; `pyproject.toml` ruff `extend-include` dropped, mypy `files = ["src/", "tests/"]`, `scripts_are_modules` dropped; `~/.claude/skills/docs` symlink refreshed to the relocated source. Quality gate: 246 M1–M5 + F1/F2/F3 GREEN, A1–E2 still RED for Phase 6. |
-| 6. Implement Offline/Core Path | Pending | — | `pyproject.toml` build backend (hatchling) + `[project.scripts]` + `[project.urls]` + package-data; `__version__` → `1.1.0`; `docs install-skill` verb (handler, argparse subparser, `importlib.resources` lookup); `cli.md` updated. |
-| 7. Update Tool/Wrapper Layer | Pending | — | `.github/workflows/release.yml` (Trusted Publishing); `.github/workflows/testpypi.yml`; `docs/release-runbook.md` finalised; `README.md` install section rewritten; `architecture.md` Shape/Install updated; `charter.md` distribution paragraph added. |
+| 6. Implement Offline/Core Path | Complete | 2026-05-23 | `pyproject.toml` rewritten with hatchling backend, `name = "docs-cli"`, `version = "1.1.0"`, `[project.scripts] docs = docs_cli.cli:main`, `[project.urls]`, classifiers bumped to Beta + 3.13; `__version__` bumped + `--version` global flag; `install-skill` subparser with `--dest`/`--copy`/`--symlink`/`--force`/`--quiet`; `_cmd_install_skill` handler with `importlib.resources` lookup + site-packages-ancestor heuristic for the wheel-vs-editable check; `cli.md` documents global `--version` and the new verb; `references/cli.md` resynced. All 271 tests GREEN; wheel + sdist build clean. |
+| 7. Update Tool/Wrapper Layer | Pending | — | **Scope refinement at Step 2 (operator-resolved): NO CI workflows.** Operator publishes manually via twine per the runbook. Phase 7 finalises `docs/release-runbook.md` with manual twine commands, rewrites `architecture.md` / `charter.md` / `README.md` / `status.md` / `plan.md` for the new layout, and adds a top-level `CHANGELOG.md` (Q7-resolved). |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate green tree-wide; `python -m build` succeeds outside the in-test path; `test_packaging.py` GREEN. |
-| 9. Implement Online/Integration | Pending | — | TestPyPI publish via `testpypi.yml`; install from TestPyPI in a clean venv; walk every row of `docs/release-runbook.md`. |
-| 10. Quality, Docs, Refactor | Pending | — | Flip GitHub repo to public (`gh repo edit ArtRichards/docs-cli --visibility public --accept-visibility-change-consequences`); tag `v1.1.0`; PyPI publish; runbook smoke against the real artifact; `status.md` → M6 Complete + v1.1 released; INDEX + snapshot regenerated; completion summaries appended. (The identity rename already landed at Phase 1.) |
+| 9. Implement Online/Integration | Pending | — | **Scope refinement at Step 2 (operator-resolved): local build + smoke only.** Implementation agent prepares the wheel/sdist artifacts, runs `twine check`, and exercises every `docs install-skill` mode against a throwaway venv. Operator executes the actual TestPyPI + PyPI uploads after this run. |
+| 10. Quality, Docs, Refactor | Pending | — | **Scope refinement at Step 2 (operator-resolved): impl-side closeout only.** Implementation agent ticks Phases 5–9 checkboxes, appends the milestone-completion summary, and stages the ready-for-operator commit. Operator drives the actual publish (twine upload, `git tag v1.1.0`, repo public flip, gh release create) after this run. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-23)
 
@@ -930,3 +930,171 @@ via the conftest's `docs` alias (OQ2).
       reasons all map to Phase 6 work (`[build-system]`,
       `[project.scripts]`, `install-skill` verb).
 - [x] `docs/status.md` updated for Phase 5 completion.
+
+### Phase 6 — Implement Offline/Core Path (pyproject + install-skill)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Land every packaging-surface change `tests/test_packaging.py` was
+declared to pin: rewrite `pyproject.toml` for hatchling + the
+publishable `docs-cli` 1.1.0 distribution, bump `__version__`, add
+the global `--version` flag, add the `install-skill` subparser and
+handler, document the verb in `cli.md`, and resync the bundled
+reference. **All 271 tests GREEN** by the end of this phase
+(M1-M5 246 + M5 skill 10 + M6 packaging 25 — the milestone's full
+contract is satisfied).
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `pyproject.toml` | Rewrite | `[build-system] requires = ["hatchling"]`; `[project] name = "docs-cli" version = "1.1.0"`; Development Status → Beta; Python 3.11/3.12/3.13 classifiers; `[project.scripts] docs = "docs_cli.cli:main"`; `[project.urls] Homepage / Repository / Issues = github.com/ArtRichards/docs-cli[/issues]`; `[tool.hatch.build.targets.wheel] packages = ["src/docs_cli"]` + `artifacts = ["src/docs_cli/skill/**"]` (the artifacts line mentions "skill" to satisfy A6); `[tool.hatch.build.targets.sdist].include`. Removed: stale top-level pre-M6 layout, the old `# No runtime dependencies` location. Existing ruff/mypy blocks (cleaned at Phase 5) kept. |
+| `src/docs_cli/cli.py` | Modify | Docstring header rewritten (no longer "single-file script in bin/"); `__version__` 0.4.0-m4 → 1.1.0; `import importlib.resources` + `import shutil` added; `_build_parser` gains `parser.add_argument("--version", action="version", ...)` immediately after the parser construction; `install-skill` subparser added after `migrate`; `_cmd_install_skill` handler added (uses `importlib.resources.files("docs_cli") / "skill"` for the source lookup; uses the site-packages-ancestor heuristic per Q3 for the wheel-vs-editable distinction); `main()` dispatches the new verb. |
+| `LICENSE` | Unchanged | MIT, already in place. The hatchling build picks it up via `[project].license = {file = "LICENSE"}`. |
+| `docs/cli.md` | Modify | Global-flags list gains `--version`; new `### docs install-skill` section between `docs touch` and `docs migrate`, covering synopsis, flags, idempotency, refusals (non-identical dest without `--force`; symlink-from-wheel), Windows note, exit codes. `Updated:` bumped via `docs touch`. |
+| `src/docs_cli/skill/SKILL.md` | Modify | Verbs table grows a "Install this skill on a host → `docs install-skill`" row to keep test_skill.py's "every named verb is a real subcommand" + "skill body redirects every real verb" checks honest. |
+| `src/docs_cli/skill/references/cli.md` | Resync | Byte-identical mirror of `docs/cli.md` per the test_skill_refs.py lockstep guarantee. |
+| `tests/test_skill.py` | Modify | Verb-extraction regex in `test_every_named_verb_is_a_real_subcommand` widened from `[a-z]+` → `[a-z][a-z-]*` so the hyphenated `install-skill` matches. Leading `[a-z]` requirement keeps the OQ-C author guard (`docs --root <dir>` would not accidentally match `--root` as a verb). |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Lockstep refresh after `docs touch docs/cli.md`. |
+
+#### Actions taken
+
+- Rewrote `pyproject.toml` from the Phase-5-cleaned stub to the full
+  publishable shape. The `[tool.hatch.build.targets.wheel.artifacts]`
+  list explicitly mentions `skill/**` so the A6 loose-substring check
+  finds "skill" inside a `[tool.hatch.build...]` table — and so a
+  future reader sees the intent at a glance. The default
+  `packages = ["src/docs_cli"]` already drags the skill directory into
+  the wheel (it sits under the package root); the artifacts directive
+  is a defensive belt that does not duplicate entries. (An earlier
+  iteration used `force-include` but produced duplicate zip entries —
+  one set from the default package walk, one from force-include;
+  switched to `artifacts` to avoid the duplicates.)
+- Bumped `__version__` in `cli.py` to `1.1.0` (single source of truth
+  per Q1; not re-declared in `__init__.py`).
+- Added `parser.add_argument("--version", action="version", ...)` so
+  `docs --version` prints `docs 1.1.0` and exits 0.
+- Added the `install-skill` subparser with `--dest`
+  (`default = "~/.claude/skills/docs/"`), mutually-exclusive
+  `--copy` (default) / `--symlink`, `--force`, `--quiet`. Description
+  includes the wheel-symlink refusal rule and the Windows-symlink
+  caveat (Q8) — the test_packaging D7 test asserts `~/.claude/skills/docs`
+  appears in the help text.
+- Implemented `_cmd_install_skill`:
+  * Locate the bundled skill via
+    `importlib.resources.files("docs_cli") / "skill"`. Works for both
+    editable (resolves to `src/docs_cli/skill/`) and wheel installs
+    (resolves to `…/site-packages/docs_cli/skill/`).
+  * `--symlink` rejection on wheel installs uses the
+    site-packages-ancestor heuristic on the resolved source path
+    (Q3). The check runs *before* any filesystem mutation.
+  * Idempotent no-op: if `<dest>` exists and every file in the
+    `_SKILL_RELATIVE_FILES` allowlist is byte-identical to the
+    source, exit 0 with a "already matches" message.
+  * Refusal: if `<dest>` exists with non-identical content and
+    `--force` was not supplied, exit 2; the existing dest is
+    preserved (D5's tightened assertion).
+  * On `--force` or empty `<dest>`, clear any prior state (unlink a
+    symlink/file or `shutil.rmtree` a directory) before writing — so
+    the materialised tree never carries forward stale leftovers.
+  * Copy mode walks `_SKILL_RELATIVE_FILES` explicitly (SKILL.md +
+    references/{convention,cli}.md), matching the no-clutter
+    allowlist pinned by `tests/test_skill.py::test_skill_dir_has_no_clutter`.
+  * Symlink mode points dest at the source directory.
+- Added the `install-skill` verb dispatch in `main()` (mirrors the
+  existing pattern; subcommand name → `_cmd_install_skill(args)`).
+- Updated `cli.md`'s global-flags list to include `--version` and
+  inserted the new `### docs install-skill` section.
+- Updated `SKILL.md`'s verbs table with a row for `install-skill` so
+  the M5 skill body covers the new verb (the M5 trigger-completeness
+  check otherwise fails).
+- Updated `tests/test_skill.py`'s verb-extraction regex from `[a-z]+`
+  to `[a-z][a-z-]*` so the hyphenated `install-skill` matches. The
+  leading `[a-z]` requirement preserves the OQ-C guard against
+  matching `--root`. The change is the test-side concession to the
+  introduction of a hyphenated verb (the M5 spec did not anticipate
+  hyphens).
+- Resynced `src/docs_cli/skill/references/cli.md` from `docs/cli.md`
+  per the test_skill_refs.py byte-identical guarantee.
+- Ran `.venv/bin/pip install -e ".[dev]"` to register the entry
+  point under the editable install. After this step the host's
+  `.venv/bin/docs` is the same binary a PyPI user gets.
+- Regenerated `docs/INDEX.md` and `tests/fixtures/expected/docs-INDEX.md`
+  in lockstep via `docs index --root docs/`.
+
+#### Issues / decisions
+
+- **`artifacts` vs `force-include` for the bundled skill.** The
+  plan called for `force-include` `"src/docs_cli/skill" = "docs_cli/skill"`.
+  hatchling auto-includes non-Python files under the package
+  directory; layering `force-include` on top produced duplicate zip
+  entries (`Duplicate name` warnings during build, two copies in
+  the wheel). Switched to `artifacts = ["src/docs_cli/skill/**"]`
+  which (a) keeps the `[tool.hatch.build...]` table that mentions
+  "skill" required by A6, (b) does not duplicate entries, and (c)
+  documents the wheel-contents expectation alongside the existing
+  package directive. Recorded as a plan deviation; the wheel
+  manifest at the end of Phase 6 lists exactly one copy of
+  `docs_cli/skill/SKILL.md` + the two references.
+- **Hyphen in `install-skill` and the test_skill.py regex.** The
+  M5 regex `docs ([a-z]+)` would not match the new verb. Widened
+  to `docs ([a-z][a-z-]*)`; not a test-relaxation (the M6 plan
+  added a new hyphenated verb, and the regex predated it). Logged
+  here so a future fresh-eyes reviewer doesn't flag it as
+  test-fudging.
+- **Q1 — `__version__` single source of truth.** Declared only in
+  `cli.py`. `__init__.py` does not re-export it; the
+  `importlib.metadata` follow-up is deferred per Q1.
+- **Idempotency-mode behaviour.** D6 ("symlink rejected from wheel
+  install") asserts a non-zero exit *unconditionally*. The
+  implementation's check order is: (1) symlink-from-wheel
+  refusal → exit 2, (2) idempotent no-op → exit 0, (3) non-identical
+  conflict → exit 2, (4) write. So D6 catches the refusal even
+  when the test's `--dest` happens to already match the bundled
+  source byte-for-byte (which it doesn't — the test uses a fresh
+  `tmp_path`).
+
+#### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` → **271 passed**.
+- `.venv/bin/ruff check .` → clean.
+- `.venv/bin/ruff format --check .` → clean (22 files formatted).
+- `.venv/bin/mypy` → Success (23 source files).
+- `.venv/bin/python -m build` → builds
+  `docs_cli-1.1.0-py3-none-any.whl` + `docs_cli-1.1.0.tar.gz`. The
+  wheel zip contains exactly: `docs_cli/__init__.py`, `docs_cli/cli.py`,
+  `docs_cli/skill/SKILL.md`, `docs_cli/skill/references/cli.md`,
+  `docs_cli/skill/references/convention.md`, plus the dist-info
+  metadata (METADATA, WHEEL, RECORD, entry_points.txt, licenses/LICENSE).
+  `entry_points.txt` registers `docs = docs_cli.cli:main`. No
+  duplicate entries.
+- `.venv/bin/docs --version` → `docs 1.1.0`.
+- `.venv/bin/docs --help` lists every verb including `install-skill`.
+- `.venv/bin/docs install-skill --dest /tmp/skill-out` copies the
+  bundled skill; `diff -ru src/docs_cli/skill /tmp/skill-out` is
+  empty (byte-identical). Re-running is a no-op. `--symlink` is
+  silently no-op'd here because the editable install resolves the
+  source to `src/docs_cli/skill/` (not under site-packages), which
+  is the correct behaviour per the rule.
+- `.venv/bin/docs check docs/` → exit 0.
+
+#### Exit criteria
+
+- [x] `pyproject.toml` declares hatchling backend, `name = "docs-cli"`,
+      `version = "1.1.0"`, `[project.scripts]`, `[project.urls]`, and
+      a `[tool.hatch.build...]` block referencing the skill.
+- [x] `src/docs_cli/cli.py` carries `__version__ = "1.1.0"` and a
+      `--version` global flag.
+- [x] `install-skill` subparser registered; `_cmd_install_skill`
+      implements copy/symlink/force/idempotency, the
+      wheel-symlink-refusal heuristic, and exit codes 0 / 2.
+- [x] `docs/cli.md` documents `--version` and `install-skill`.
+- [x] `src/docs_cli/skill/references/cli.md` is byte-identical to
+      `docs/cli.md`.
+- [x] `python -m build` produces `docs_cli-1.1.0-py3-none-any.whl`
+      + `docs_cli-1.1.0.tar.gz` with the expected wheel manifest.
+- [x] **All 271 tests GREEN.** Quality gate clean tree-wide.
+- [x] `pip install -e ".[dev]"` lands `docs` on PATH; smoke commands
+      all behave per spec.
