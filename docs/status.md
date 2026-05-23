@@ -180,10 +180,16 @@ attributable to its intended unimplemented surface (no
 `[build-system]`, non-PEP440 version, no `[project.scripts]`, no
 `docs_cli` package, no `install-skill` verb, layout invariants). The
 verbatim baseline is preserved at `/tmp/m6-phase-4-baseline.txt`.
-Quality gate clean tree-wide; `docs check docs/` exit 0. Step 2
-(Phases 5–10) implements the packaging surface; Phase 5 does the
-file moves first (`git mv bin/docs src/docs_cli/cli.py`, skill
-relocation, conftest update per OQ2).
+Quality gate clean tree-wide; `docs check docs/` exit 0. A fresh-eyes
+review then returned **ship-with-fixes**; both items folded in on
+`m6/phases-1-4` (D5 now asserts `dest/SKILL.md` is byte-unchanged
+after a no-force rejection, `6be7e4c`; C2 now requires `1.1.0` as a
+whitespace-token rather than a substring; log subsection at `2b33f2d`
+records the deferred nits). Baseline unchanged: 246 green + 25 RED;
+all linters clean. Step 2 (Phases 5–10) implements the packaging
+surface; Phase 5 does the file moves first
+(`git mv bin/docs src/docs_cli/cli.py`, skill relocation, conftest
+update per OQ2).
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.
