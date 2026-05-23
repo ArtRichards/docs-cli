@@ -334,7 +334,13 @@ def test_c2_docs_version_is_1_1_0(wheel_venv: Path) -> None:
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     combined = (result.stdout + result.stderr).strip()
-    assert "1.1.0" in combined, f"`docs --version` must print 1.1.0; got: {combined!r}"
+    # Exact-token match: bare substring `"1.1.0" in combined` would also
+    # accept `21.1.0` or `1.1.0.dev0`. Split on whitespace and require the
+    # version token to appear verbatim.
+    tokens = combined.split()
+    assert "1.1.0" in tokens, (
+        f"`docs --version` must print '1.1.0' as a standalone token; got: {combined!r}"
+    )
 
 
 def test_c3_docs_help_lists_every_verb(wheel_venv: Path) -> None:
@@ -474,6 +480,13 @@ def test_d5_install_skill_refuses_non_identical_without_force(
     assert result.returncode != 0, (
         "install-skill must refuse a non-identical existing dest without --force; "
         f"exited {result.returncode}"
+    )
+    # On rejection, dest must be preserved byte-for-byte. A buggy
+    # implementation that errored out partway through a non-atomic write
+    # would still satisfy the non-zero-exit check above without this guard.
+    assert (dest / "SKILL.md").read_text(encoding="utf-8") == "DIFFERENT CONTENT\n", (
+        "install-skill must leave dest unchanged when refusing a non-identical "
+        "existing destination without --force"
     )
     # And with --force, it succeeds.
     forced = subprocess.run(
