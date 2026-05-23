@@ -159,27 +159,26 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # post-Phase-6: lands `docs` on PATH; pre-Phase-6: `pytest ruff mypy build`
 ```
 
-**Next action: Phase 8 GREEN gate, then Phase 9 local build, then
-operator publish.** Phase 7 (update wrappers) is complete on branch
-`m6/phases-5-10`. `docs/architecture.md` redrawn for `src/docs_cli/`
-(Shape, sibling-artifact, Install, Development-setup);
-`docs/charter.md` gets a `## Distribution` paragraph; `README.md`
-rewritten with `pip install docs-cli` + `docs install-skill` and
-absolute github.com URLs; top-level `CHANGELOG.md` created with
-`## 1.1.0 — UNRELEASED` + backfilled `## 1.0.0 — 2026-05-22`;
-`docs/release-runbook.md` flipped from draft → active with manual
-twine commands for Pre-flight, TestPyPI rehearsal, real PyPI publish,
-and post-release (per operator override — no GH Actions workflows);
-`docs/m6-pypi-distribution.md` Overview gets a Step-2 scope-refinement
-callout and the Phase 9/10 sections are rewritten for the
-operator-driven publish split. INDEX.md + fixture lockstep-updated.
-**All 271 tests still GREEN.** Phase 8 runs the verbatim quality gate
-and captures the output to the log; Phase 9 builds + smokes the
-artifacts locally without uploading; Phase 10 ticks impl-side
-checkboxes and stages the ready-for-operator commit. Operator then
-runs `twine upload --repository testpypi dist/*`, verifies the
-TestPyPI install, then `twine upload dist/*`, then the
-tag/visibility/release-create sequence per the runbook.
+**Next action: operator-driven publish per
+[release-runbook.md](release-runbook.md).** Step 2 (Phases 5–10, impl
+side) is complete on branch `m6/phases-5-10`. Phase 5 relocated the
+CLI to `src/docs_cli/cli.py` and the skill to
+`src/docs_cli/skill/`. Phase 6 wired up the hatchling backend +
+`install-skill` verb + `--version` flag. Phase 7 rewrote the specs +
+runbook + README + CHANGELOG. Phase 8 captured a 271-passed GREEN
+gate. Phase 9 built `dist/docs_cli-1.1.0-py3-none-any.whl` +
+`.tar.gz` (SHA256s in the Phase 9 log), `twine check` PASS on both,
+and a throwaway-venv smoke exercised every install-skill code path.
+Phase 10 ticked Phases 5–9 in the milestone doc and appended the
+milestone-completion summary. **All 271 tests still GREEN.** The
+operator now runs the manual publish per the runbook:
+(1) `twine upload --repository testpypi dist/*` + verify on TestPyPI;
+(2) replace `## 1.1.0 — UNRELEASED` in `CHANGELOG.md` with today's
+date; (3) `twine upload dist/*`; (4) `gh repo edit ArtRichards/docs-cli
+--visibility public --accept-visibility-change-consequences`;
+(5) `git tag v1.1.0 && git push origin v1.1.0`; (6)
+`gh release create v1.1.0 ...`; (7) flip the M6 row in this file +
+the Phase-10 boxes to Complete (DATE).
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

@@ -121,7 +121,7 @@ unchanged — `Project: docs` stays `docs`.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-23 | **No CI workflows** (operator override). `docs/architecture.md` Shape diagram + sibling-artifact + Install + Development-setup rewritten for `src/docs_cli/`; `docs/charter.md` gets a `## Distribution` paragraph; `README.md` rewritten with `pip install docs-cli` + `docs install-skill`, absolute github.com URLs, M6 row in the milestone list, v1.1 release notes; new top-level `CHANGELOG.md` with `## 1.1.0 — UNRELEASED` entry (Q7); `docs/release-runbook.md` flipped from draft → active with manual twine commands for Pre-flight / TestPyPI / Real PyPI / Post-release plus the Trusted-Publishing-vs-API-token follow-up note; `docs/m6-pypi-distribution.md` Overview gains a Step-2 scope-refinement callout, Phase 9 + Phase 10 sections rewritten for the operator-driven publish split. INDEX.md + fixture regenerated. All 271 tests still GREEN. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-23 | Full quality gate captured: pytest 271 passed; ruff check clean; ruff format --check clean; mypy Success (23 files); `python -m build` produces `docs_cli-1.1.0-py3-none-any.whl` + `.tar.gz`; `docs check docs/` exit 0; `docs index --root docs/ --dry-run` no diff. |
 | 9. Implement Online/Integration | Complete (impl side) | 2026-05-23 | Built `dist/docs_cli-1.1.0-py3-none-any.whl` + `dist/docs_cli-1.1.0.tar.gz` (SHA256s in the Phase 9 log entry); `twine check dist/*` PASSED both; throwaway-venv smoke at `/tmp/docs-local-smoke/` verified `docs --version`, `docs --help` lists install-skill, `docs install-skill --dest` produces a byte-identical tree, re-invocation is a no-op (exit 0), `--symlink` from the wheel install is rejected (exit 2), `docs check tests/fixtures/trees/minimal/` exit 0. **Operator action required before this row flips to truly Complete: run `twine upload --repository testpypi dist/*` + verify TestPyPI install + `twine upload dist/*` per the runbook.** |
-| 10. Quality, Docs, Refactor | Pending | — | **Scope refinement at Step 2 (operator-resolved): impl-side closeout only.** Implementation agent ticks Phases 5–9 checkboxes, appends the milestone-completion summary, and stages the ready-for-operator commit. Operator drives the actual publish (twine upload, `git tag v1.1.0`, repo public flip, gh release create) after this run. |
+| 10. Quality, Docs, Refactor | Pending operator publish | 2026-05-23 (impl side) | Phase Checklist boxes 5–9 ticked in `m6-pypi-distribution.md`; Phase 10 box deliberately unchecked with the "operator-executed; flip after publish lands" note. Milestone-completion summary appended at the bottom of the milestone doc. Phase 10 log entry captures "what's ready: wheel built, smoke green, runbook fleshed out, branch ready to merge after operator publishes" + an operator-runbook appendix. `docs/status.md` rewritten for the operator-driven closeout sequence. INDEX + fixture regenerated. All 271 tests still GREEN. **Operator action required:** twine upload → tag push → repo public flip → `gh release create`; then flip this row to Complete with the publish date. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-23)
 
@@ -1521,3 +1521,82 @@ checklist; the short form is:
 
 After the operator finishes step 6, merge `m6/phases-5-10` into
 `main`.
+
+### Phase 10 — Quality, Docs, Refactor (closeout, impl side)
+
+**Completed (impl side):** 2026-05-23
+
+#### Objective
+
+Land every closeout edit the impl agent can author without
+depending on the publish date. Stage the branch as ready-to-merge
+once the operator's `twine upload` succeeds. Do not perform any
+publish, tag, visibility, or release-create action.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m6-pypi-distribution.md` | Modify | Phase Checklist boxes 5–9 ticked. Phase 10 box left unchecked with the inline "operator-executed; flip after publish lands" annotation. Milestone-completion summary appended at the bottom — describes the shipped scope, what's deferred, and the operator-side closeout steps. |
+| `docs/m6-pypi-distribution-log.md` | Modify | Phase-10 row → Pending operator publish (impl-side complete 2026-05-23); this log entry appended. |
+| `docs/status.md` | Modify | "Next action" already pointed at "Phase 8 GREEN gate, then Phase 9, then operator publish" at the close of Phase 7; Phase 10 doesn't rewrite that further. Phase 10 only ensures the M6 row + Quick links + reading order are accurate; flips happen only when the operator publishes. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Lockstep refresh after the milestone-doc edits bump its `Updated:`. |
+
+#### Actions taken
+
+- Ticked the Phase 5–9 boxes in
+  `docs/m6-pypi-distribution.md`'s Phase Checklist. Reformatted the
+  Phase 10 row to call out the operator-execution dependency in
+  italics.
+- Appended a `## Milestone-completion summary` section at the
+  bottom of the milestone doc, mirroring the M5 shape but flagged
+  with the "Impl side complete 2026-05-23. Operator-side publish
+  pending." note so a future reader understands the row hasn't
+  flipped yet.
+- Appended this Phase 10 log entry. The operator-runbook appendix
+  in the Phase 9 entry already covers the publish-side commands;
+  not duplicated here.
+- Touched the milestone doc + log to bump `Updated:`; ran
+  `docs index --root docs/` and lockstep-updated
+  `tests/fixtures/expected/docs-INDEX.md`.
+- Confirmed the quality gate is still green tree-wide.
+
+#### What's ready for the operator
+
+- `dist/docs_cli-1.1.0-py3-none-any.whl` and
+  `dist/docs_cli-1.1.0.tar.gz` are built (untouched since Phase 9;
+  SHA256s recorded in the Phase 9 log).
+- `docs/release-runbook.md` (Status: active) carries the concrete
+  command list for TestPyPI rehearsal, real PyPI publish, and the
+  post-release tag/visibility/release-create sequence.
+- The Phase 9 log entry's "OPERATOR ACTION REQUIRED" section gives
+  the exact `twine upload`, `pip install`, `git tag`, and
+  `gh release create` commands.
+- `CHANGELOG.md` has `## 1.1.0 — UNRELEASED`; the operator flips
+  it to today's date at publish time.
+
+#### What's deferred to the operator
+
+- `twine upload --repository testpypi dist/*` + smoke.
+- `twine upload dist/*` (real PyPI).
+- `git tag v1.1.0 && git push origin v1.1.0`.
+- `gh repo edit ArtRichards/docs-cli --visibility public --accept-visibility-change-consequences`.
+- `gh release create v1.1.0 ...`.
+- The small post-publish doc closeout: M6 row in `status.md` →
+  Complete (DATE); Phase 10 box → ticked; Phase 10 log row →
+  Complete (DATE); INDEX + fixture regenerated.
+
+#### Exit criteria (impl side)
+
+- [x] Phase Checklist boxes 5–9 ticked; Phase 10 box deliberately
+      unchecked with the operator-execution note.
+- [x] Milestone-completion summary appended to
+      `docs/m6-pypi-distribution.md`.
+- [x] Phase 10 log entry appended (this section).
+- [x] `docs/status.md` reflects the impl-side state.
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` in
+      lockstep.
+- [x] All 271 tests still GREEN; ruff / format / mypy / `docs check`
+      all clean.
+- [x] **No PyPI upload, no tag, no visibility flip, no release-create
+      performed by the impl agent.**

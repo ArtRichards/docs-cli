@@ -604,12 +604,12 @@ works.
 - [x] Phase 2: Write Tests (RED)
 - [x] Phase 3: Create Data/Fixtures
 - [x] Phase 4: Run Tests (RED Baseline)
-- [ ] Phase 5: Update Base Interfaces
-- [ ] Phase 6: Implement Offline/Core Path
-- [ ] Phase 7: Update Tool/Wrapper Layer
-- [ ] Phase 8: Run Tests (GREEN)
-- [ ] Phase 9: Implement Online/Integration (TestPyPI dry-run)
-- [ ] Phase 10: Quality, Docs, Refactor (real PyPI publish + closeout)
+- [x] Phase 5: Update Base Interfaces
+- [x] Phase 6: Implement Offline/Core Path
+- [x] Phase 7: Update Tool/Wrapper Layer
+- [x] Phase 8: Run Tests (GREEN)
+- [x] Phase 9: Implement Online/Integration (local build + smoke; impl side)
+- [ ] Phase 10: Quality, Docs, Refactor — _operator-executed; flip after publish lands_
 
 ## Decisions
 
@@ -984,3 +984,77 @@ doc reference to `bin/docs` is updated in lockstep (a Phase-7 edit
 sweep). **Alternative:** keep the 2-line shim — preserves the
 existing in-repo workflow without an install step, at the cost of
 the executable-script tooling overhead M6 was about to retire.
+
+## Milestone-completion summary
+
+> **Impl side complete 2026-05-23. Operator-side publish pending.**
+> The Phase 10 checkbox flips once the operator runs the
+> publish-driven closeout in [release-runbook.md](release-runbook.md).
+
+M6 shipped the first PyPI release of `docs`. Concretely:
+
+- **Distribution.** `docs-cli` 1.1.0 builds cleanly from the in-tree
+  `pyproject.toml` (hatchling backend). Wheel + sdist both pass
+  `twine check`. The `docs` console-script lands on PATH via
+  `[project.scripts] docs = "docs_cli.cli:main"`.
+- **Package shape.** `bin/docs` → `src/docs_cli/cli.py` (history
+  preserved through `git mv`; module remains logically monolithic
+  per the M6 Decision). `skills/docs/` → `src/docs_cli/skill/`; the
+  skill ships inside the wheel as package data (5 files total in
+  the wheel: `__init__.py`, `cli.py`, `skill/SKILL.md`, and the two
+  bundled references).
+- **New verb: `docs install-skill`.** Materialises the bundled
+  Claude Code skill onto a host. `--dest` overrides the default
+  `~/.claude/skills/docs/`; `--copy` (default) / `--symlink`;
+  `--force` overwrites a non-identical existing destination;
+  `--quiet` suppresses success messages. Idempotent
+  (byte-identical destination → no-op exit 0). `--symlink` is
+  rejected when running from a wheel install (site-packages
+  ancestor heuristic). Exit codes: 0 success / no-op; 2 refusal.
+- **Global `--version` flag.** `docs --version` prints `docs 1.1.0`.
+- **Convention unchanged.** `Project: docs` stays `docs`; the
+  on-disk Markdown convention, every existing verb, and the M5
+  Claude Code skill all behave identically. Only the distribution
+  name (`docs-cli`), the install path (`pip install`), and the
+  skill's delivery vehicle (`install-skill` instead of `ln -s`)
+  changed.
+- **Test surface.** 271 tests pass (M1–M5: 246 + M5 skill: 10 +
+  M6 packaging: 25). `tests/test_packaging.py` builds the wheel
+  in a `tmp_path`, pip-installs it into a throwaway venv, and
+  exercises every install-skill code path plus the installed
+  `docs check` against the minimal fixture — the test no in-tree
+  green run can replace. ruff, ruff format, mypy all clean
+  tree-wide.
+- **Operator runbook.** `docs/release-runbook.md` is the active
+  per-release checklist. Manual `twine upload` for both TestPyPI
+  and PyPI; the operator runs the publish, tag push, repo
+  visibility flip, and `gh release create` after this commit
+  lands. The Trusted-Publishing/OIDC alternative is preserved as
+  a future-iteration note.
+
+What's deliberately deferred:
+
+- **CI publish workflows** (GitHub Actions Trusted Publishing).
+  Scope-refined out of M6 per operator override. Lives on as a
+  follow-up note in the runbook.
+- **Per-verb module split.** `src/docs_cli/cli.py` remains a single
+  ~2.5k-line module; M6 picked the minimum-viable package shape.
+  Splitting is a non-packaging refactor any future milestone can
+  take up.
+- **`importlib.metadata` for `__version__`.** Hardcoded in both
+  `cli.py` and `pyproject.toml` (Q1 decision). The metadata-based
+  source-of-truth pattern is a follow-up.
+
+Operator-side closeout work (per the runbook):
+
+1. `twine upload --repository testpypi dist/*`; install from
+   TestPyPI in a throwaway venv; smoke.
+2. Replace `## 1.1.0 — UNRELEASED` in `CHANGELOG.md` with today's
+   date; commit.
+3. `twine upload dist/*` (real PyPI).
+4. `gh repo edit ArtRichards/docs-cli --visibility public --accept-visibility-change-consequences`.
+5. `git tag v1.1.0 && git push origin v1.1.0`.
+6. `gh release create v1.1.0 --title "docs-cli 1.1.0" --notes "..."`.
+7. Doc closeouts: M6 row in `status.md` → Complete (DATE); Phase 10
+   checkbox in this file → checked; INDEX + fixture regenerated.
+
