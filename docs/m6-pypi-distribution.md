@@ -120,7 +120,7 @@ skill drives the verbs identically to the in-repo install.
   `gh repo rename`. Instead it creates a new GitHub repo with
   `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`
   (private until v1.1 publishes; see Decisions for the public-flip plan),
-  pushes the `m6/milestone-setup` branch, and moves the local checkout
+  pushes the `m6/phases-1-4` branch, and moves the local checkout
   `mv ~/opt/docs ~/opt/docs-cli`. `~/CLAUDE.md` and the project-memory
   pointer file at
   `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
@@ -186,7 +186,7 @@ skill drives the verbs identically to the in-repo install.
 - [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated
       in lockstep.
 - [ ] GitHub repo **created** at `ArtRichards/docs-cli` (private until
-      v1.1 publishes — see Decisions); `m6/milestone-setup` pushed;
+      v1.1 publishes — see Decisions); `m6/phases-1-4` pushed;
       local checkout moved `~/opt/docs` → `~/opt/docs-cli`; `~/CLAUDE.md`
       and `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
       updated to the new path. Phase 1 work (per OQ3 resolved 2026-05-23 —
@@ -304,7 +304,7 @@ works.
      (private until v1.1 publishes; flipped to public at Phase 10 — see
      Decisions). The repo currently has no remote — this is a fresh
      local-only history — so `gh repo rename` is not the right verb.
-     Then `git push -u origin m6/milestone-setup`. (The branch stack is
+     Then `git push -u origin m6/phases-1-4`. (The branch stack is
      `m6/*`; pushing the branch is sufficient — `main` is pushed when
      the milestone merges.)
   2. **Move the local checkout.** `mv ~/opt/docs ~/opt/docs-cli`. **This
@@ -610,7 +610,7 @@ decisions independent of the OQ list.
      this is a fresh local-only history. Phase 1 creates the GitHub
      repo from scratch:
      `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`
-     then `git push -u origin m6/milestone-setup` (the m6/* branch
+     then `git push -u origin m6/phases-1-4` (the m6/* branch
      stack — `main` is pushed later when the milestone merges).
   2. **Local checkout move:** `mv ~/opt/docs ~/opt/docs-cli` as the
      **final** action of Phase 1, since it changes the implementation
@@ -843,7 +843,7 @@ overrode the draft-time Phase-10 recommendation. Important qualifiers:
 the repo currently has **no git remote**, so Phase 1 does **not** run
 `gh repo rename` — it runs `gh repo create ArtRichards/docs-cli
 --source=. --private --remote=origin` to create the repo from scratch
-and `git push -u origin m6/milestone-setup` to land the branch. The
+and `git push -u origin m6/phases-1-4` to land the branch. The
 local checkout move `mv ~/opt/docs ~/opt/docs-cli` is the final action
 of Phase 1, and subsequent phases run from the new path. `~/CLAUDE.md`
 and the project-memory pointer (and MEMORY.md index line) update in

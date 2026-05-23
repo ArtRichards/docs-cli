@@ -144,8 +144,8 @@ If you're starting a new Claude Code session against this repo:
 
 **Verify environment** before doing any work:
 ```sh
-cd ~/opt/docs
-.venv/bin/python -m pytest tests/ -q          # 246 passed
+cd ~/opt/docs-cli
+.venv/bin/python -m pytest tests/ -q          # 246 passed (Phases 1–4); ~268 after Phase 4 (246 green + 22 RED packaging)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
@@ -160,22 +160,21 @@ python3 -m venv .venv                         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install pytest ruff mypy
 ```
 
-**Next action: execute Phase 1.** All five milestone-setup OPEN
-QUESTIONS are resolved (recorded as Decisions in
-[m6-pypi-distribution.md](m6-pypi-distribution.md)). Phase 1 lands the
-text-work commits (this status.md update, the M6 plan/log activation,
-the `## v1.1` plan.md section, INDEX/snapshot regeneration), then
-performs the OQ3 identity rename — `gh repo create
-ArtRichards/docs-cli --source=. --private --remote=origin`,
-`git push -u origin m6/milestone-setup`, `mv ~/opt/docs ~/opt/docs-cli`
-as the final action (subsequent phases run from
-`/home/user/opt/docs-cli/`), and updates to `~/CLAUDE.md`,
-`/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`,
-and the MEMORY.md index line. Then Step 1 (Phases 2–4) begins: the
-Phase 2 RED baseline establishes `tests/test_packaging.py` failing for
-the right reasons (no `[build-system]`, no entry point, no
-`install-skill` verb), and the session pauses at Phase 4 per the
-project's TDD discipline.
+**Next action: Phase 2 — write tests/test_packaging.py RED.** Phase 1
+completed 2026-05-23: the doc-text commits landed; the GitHub repo
+`ArtRichards/docs-cli` was created `--private` with origin set; branch
+`m6/phases-1-4` pushed; the local checkout moved to
+`/home/user/opt/docs-cli/`; host pointers
+(`/home/user/.claude/projects/-home-user/memory/MEMORY.md`,
+`project_docs_cli.md`, `/home/user/.claude/settings.local.json`) updated;
+the `~/.claude/skills/docs` symlink and the absent `~/bin/docs` were
+inventoried for Phase 5 to refresh; `~/CLAUDE.md` had zero hits and was
+deliberately left untouched (recorded in the Phase 1 log as a no-op).
+The venv was recreated on the new path (per Step 1's OQ-C, because
+shebangs in `.venv/bin/{pytest,ruff,mypy,...}` break after the move).
+Phase 2 now authors `tests/test_packaging.py` (~22 RED tests grouped
+A–F) plus `docs/release-runbook.md` as a draft skeleton. The session
+continues to Phase 4 per the project's TDD discipline.
 
 **Watch out for** (durable gotchas, still current):
 - The executable is at `bin/docs`, **not** `docs` at repo root — `~/opt/docs/docs/` is the documentation directory; a same-name file would collide.

@@ -57,7 +57,7 @@ summarises:
    remote (fresh local-only history), so Phase 1 runs
    `gh repo create ArtRichards/docs-cli --source=. --private
    --remote=origin` rather than `gh repo rename`. Then `git push -u
-   origin m6/milestone-setup`; then `mv ~/opt/docs ~/opt/docs-cli` as
+   origin m6/phases-1-4`; then `mv ~/opt/docs ~/opt/docs-cli` as
    the final action of Phase 1 — the implementation agent's working
    directory moves mid-phase, and subsequent phases run from
    `/home/user/opt/docs-cli/`. `~/CLAUDE.md` and the project-memory
@@ -112,7 +112,7 @@ unchanged — `Project: docs` stays `docs`.
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract (+ identity rename) | Pending | — | Promote M6 from `draft` to `active`; create this log; add a `## v1.1` section to `plan.md`; refresh `status.md` (M6 in flight); regenerate INDEX + snapshot. **Then perform the identity rename per OQ3**: `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`; `git push -u origin m6/milestone-setup`; `mv ~/opt/docs ~/opt/docs-cli` as the final action (subsequent phases run from the new path); update `~/CLAUDE.md`, `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`, and the MEMORY.md index line. No code change, no packaging surface. |
+| 1. Define Contract (+ identity rename) | Complete | 2026-05-23 | Promote M6 from `draft` to `active`; create this log; add a `## v1.1` section to `plan.md`; refresh `status.md` (M6 in flight); regenerate INDEX + snapshot. **Then perform the identity rename per OQ3**: `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`; `git push -u origin m6/phases-1-4`; `mv ~/opt/docs ~/opt/docs-cli` as the final action (subsequent phases run from the new path); update `~/CLAUDE.md`, `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`, and the MEMORY.md index line. No code change, no packaging surface. |
 | 2. Write Tests (RED) | Pending | — | `tests/test_packaging.py` with the six packaging sub-cases; `tests/test_skill.py` + `tests/test_skill_refs.py` paths updated; `docs/release-runbook.md` created as the operations checklist. |
 | 3. Create Data/Fixtures | Pending | — | `tests/fixtures/trees/packaging-clean/` (a known-clean docs tree) or reuse an existing M1–M4 fixture (e.g. `minimal/`) for sub-case 6. |
 | 4. Run Tests (RED Baseline) | Pending | — | Confirm every `test_packaging.py` sub-case fails on the unimplemented packaging surface (no `[build-system]`, no entry point, no `install-skill`, no `docs_cli` module); existing 246 tests stay green; **session pauses here**. |
@@ -209,7 +209,7 @@ _Captured before Phase 1; historical._
 | `README.md` | Modify | 7 | Install section rewritten: `pip install docs-cli` first; `docs install-skill`; `git clone` third (contributor path). |
 | `.github/workflows/release.yml` | Create | 7 | Tag-triggered (`v*`); Trusted Publishing to PyPI. |
 | `.github/workflows/testpypi.yml` | Create | 7 | `workflow_dispatch`; publishes to TestPyPI for Phase 9 rehearsal. |
-| GitHub repo + local checkout | Create + move | 1 | Per OQ3 (resolved 2026-05-23): `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin` (no existing remote to rename); `git push -u origin m6/milestone-setup`; `mv ~/opt/docs ~/opt/docs-cli` as Phase 1's final action; `~/CLAUDE.md`, `project_docs_cli.md`, MEMORY.md updated. |
+| GitHub repo + local checkout | Create + move | 1 | Per OQ3 (resolved 2026-05-23): `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin` (no existing remote to rename); `git push -u origin m6/phases-1-4`; `mv ~/opt/docs ~/opt/docs-cli` as Phase 1's final action; `~/CLAUDE.md`, `project_docs_cli.md`, MEMORY.md updated. |
 | GitHub repo visibility | Flip private → public | 10 | Per OQ3-implicit (resolved 2026-05-23): `gh repo edit ArtRichards/docs-cli --visibility public --accept-visibility-change-consequences`, sequenced immediately before the `v1.1.0` tag push. |
 | PyPI 1.1.0 release | Publish | 10 | The actual shipping artifact. |
 
@@ -218,3 +218,150 @@ _Captured before Phase 1; historical._
 _Phase logs are appended here as each phase completes — one `### Phase
 N` section per phase, following the M1–M5 log format (Objective, Files
 changed, Actions taken, Issues / decisions, Exit criteria)._
+
+### Phase 1 — Define Contract (+ identity rename)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Declare the M6 surface and adopt the new `docs-cli` identity before any
+publishing work. Land the doc-text commit (plan.md gets a `## v1.1`
+section, status.md "Next action" is rewritten to point at Phase 2, the
+Phase-1 row in this log's TDD Phase Progress table flips to Complete,
+INDEX/snapshot are regenerated). Then execute the OQ3 identity-rename
+sequence: create the GitHub repo, push the working branch, edit host
+pointers, and move the local checkout from `/home/user/opt/docs` to
+`/home/user/opt/docs-cli`. No code change, no packaging surface; the
+246-test suite stays green throughout.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/plan.md` | Modify | New `## v1.1` section with the M6 row pointing at `m6-pypi-distribution.md`. The parked `[vocabulary] add_fields` allowlist note in the new section reminds readers it carries forward to v1.1 as a separate, unscheduled entry. |
+| `docs/status.md` | Modify | "Next action" rewritten to "Phase 2 — write tests/test_packaging.py RED"; the verify-environment snippet's `cd ~/opt/docs` becomes `cd ~/opt/docs-cli`; the test-count comment updated to flag the ~22-RED post-Phase-4 expectation. |
+| `docs/m6-pypi-distribution.md` | Modify (no text body change; refs only) | All `m6/milestone-setup` references rewritten to `m6/phases-1-4` per Step 1 OQ-A (the actual working branch). |
+| `docs/m6-pypi-distribution-log.md` | Modify | Phase 1 row → Complete (2026-05-23); `m6/milestone-setup` refs rewritten to `m6/phases-1-4`; this log entry appended. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep via `./bin/docs index --root docs/` after the text edits. |
+
+#### Actions taken
+
+- **Doc-text commit (commit 1) on `/home/user/opt/docs/`** (pre-rename
+  path; the rename happens after this commit). Patched
+  `m6/milestone-setup` → `m6/phases-1-4` throughout the milestone doc +
+  log + status.md (OQ-A of Step 1's plan). Added the `## v1.1` section
+  to plan.md. Rewrote status.md's "Next action" to point at Phase 2.
+  Flipped the Phase-1 row in this log's TDD Phase Progress table to
+  Complete. Regenerated INDEX.md + the dogfood snapshot in lockstep via
+  `./bin/docs index --root docs/`. Ran the quality gate (pytest 246
+  green, ruff check, ruff format --check, mypy, `./bin/docs check
+  docs/` exit 0). Committed with `M6 Phase 1: define contract; activate
+  milestone`.
+- **Identity-rename, step 1 — create GitHub repo.**
+  `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`
+  succeeded; `origin` set to the new GitHub URL.
+- **Identity-rename, step 2 — push the working branch.**
+  `git push -u origin m6/phases-1-4`. (Not `m6/milestone-setup` — the
+  actual branch this work happens on; `main` will be pushed when the
+  milestone merges.)
+- **Identity-rename, step 3 — host-pointer sweep.** Grepped `/opt/docs`
+  across `~/.bashrc`, `~/.zshrc`, `~/.config`, `~/system-docs`,
+  `~/.claude`, `~/CLAUDE.md`. Verified-edited hits:
+  `/home/user/.claude/projects/-home-user/memory/MEMORY.md` (line 1 —
+  `~/opt/docs` → `~/opt/docs-cli`),
+  `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`
+  (lines 3, 10, 16 — three `~/opt/docs` references),
+  `/home/user/.claude/settings.local.json` (lines 44–46 — three
+  `Bash(/home/user/opt/docs/.venv/...)` permission entries became
+  `Bash(/home/user/opt/docs-cli/.venv/...)`). **`~/CLAUDE.md` had zero
+  hits** — recorded as a deliberate no-op (no edit was required). No
+  hits in `~/.bashrc`, `~/.zshrc`, `~/.config`, or `~/system-docs`.
+- **Identity-rename, step 4 — symlink inventory (no edits yet; Phase 5
+  refreshes them when the skill relocates).**
+  - `~/bin/docs` does **not** exist on this host. (No symlink to break
+    or refresh.)
+  - `~/.claude/skills/docs` is a symlink →
+    `/home/user/opt/docs/skills/docs`. It breaks at this Phase 1 mv
+    (target path becomes `/home/user/opt/docs-cli/skills/docs`) and
+    again at Phase 5 (the source moves into
+    `/home/user/opt/docs-cli/src/docs_cli/skill/`). Phase 5 must
+    refresh it to the relocated source, or replace it with a
+    `docs install-skill --symlink` (editable-install flow).
+- **Identity-rename, step 5 — local checkout move.**
+  `mv /home/user/opt/docs /home/user/opt/docs-cli` from `/home/user`.
+  This step invalidated the existing shell `cwd` and broke every
+  shebang under `.venv/bin/` (each is `#!/home/user/opt/docs/.venv/bin/python3`).
+- **Identity-rename, step 6 — venv recreation (per Step 1's OQ-C).**
+  `cd /home/user/opt/docs-cli && rm -rf .venv && python3 -m venv .venv &&
+  .venv/bin/pip install --quiet pytest ruff mypy build`. `build` is
+  included now (per Step 1's OQ-D) so Phase 2's `pytest.importorskip
+  ("build")` collects rather than skipping.
+- **Identity-rename, step 7 — post-move verification on
+  `/home/user/opt/docs-cli`.** `git ls-remote origin` returns the
+  pushed `m6/phases-1-4` branch; `.venv/bin/python -m pytest tests/ -q`
+  still 246 green; `./bin/docs check docs/` exit 0.
+
+#### Issues / decisions
+
+- **OQ-A (branch name in plan + log).** The plan text and the log
+  Phase-1 row originally said `m6/milestone-setup`. The actual working
+  branch is `m6/phases-1-4`. Rewrote every reference at Phase 1
+  (single `sed -i` sweep across the three docs) so the historical
+  record matches the branch the commits actually land on.
+- **OQ-B (host pointer grep scope).** Grepped broadly across
+  `~/.bashrc`, `~/.zshrc`, `~/.config`, `~/system-docs`, `~/.claude`,
+  `~/CLAUDE.md`. Confirmed zero hits in `~/CLAUDE.md`, `~/.bashrc`,
+  `~/.zshrc`, `~/.config`, `~/system-docs`. The conversation/session
+  history files (`.jsonl`, paste-cache, plan-cache) under `~/.claude/`
+  also showed many hits but are append-only historical artifacts of
+  past sessions — left untouched by design.
+- **OQ-C (venv recreation after the mv).** The `.venv/bin/` shebangs
+  (`#!/home/user/opt/docs/.venv/bin/python3`) hard-code the pre-rename
+  absolute path. After the `mv`, every entry-point script
+  (`pytest`, `ruff`, `mypy`) became unrunnable. Recreated the venv on
+  the new path as the post-mv recovery step. The recreated venv is
+  identical in surface to the original (`pytest ruff mypy build`).
+- **OQ-D (`build` in `[dev]`).** Step 1's plan asked to add `build` to
+  `[project.optional-dependencies] dev` at Phase 2 — not at Phase 1.
+  Phase 1 installs `build` into the recreated venv via `pip install`
+  so Phase 2's `pytest.importorskip("build")` collects without
+  skipping; the `pyproject.toml` edit lands at Phase 2.
+- **`~/.claude/skills/docs` symlink — deferred to Phase 5.** Per Step
+  1's plan, the symlink is inventoried at Phase 1 but **not** edited.
+  Phase 5 refreshes it when the skill relocates to
+  `src/docs_cli/skill/`.
+- **`~/CLAUDE.md` is a deliberate no-op.** The host file had zero
+  `~/opt/docs` references; no edit needed. Recorded as a no-op for the
+  audit trail.
+- **GitHub repo visibility is `private`.** Per OQ3-implicit (resolved
+  at milestone setup): private until Phase 10's first PyPI publish,
+  then flipped to public via `gh repo edit ... --visibility public
+  --accept-visibility-change-consequences`.
+
+#### Exit criteria
+
+- [x] `Status:` in `m6-pypi-distribution.md` is `active` (was set at
+      milestone setup; unchanged at Phase 1).
+- [x] `docs/plan.md` has a `## v1.1` section with the M6 row.
+- [x] `docs/status.md` "Next action" points at Phase 2.
+- [x] The TDD Phase Progress table's Phase-1 row is Complete (2026-05-23).
+- [x] `docs/INDEX.md` and `tests/fixtures/expected/docs-INDEX.md` are
+      in lockstep.
+- [x] `m6/milestone-setup` is no longer mentioned anywhere; the working
+      branch reference is `m6/phases-1-4`.
+- [x] GitHub repo `ArtRichards/docs-cli` exists; `origin` is set; the
+      branch `m6/phases-1-4` is pushed and `git ls-remote origin`
+      returns it.
+- [x] Local checkout is at `/home/user/opt/docs-cli/`.
+- [x] `.venv/` recreated on the new path with `pytest ruff mypy build`.
+- [x] Host pointers updated: MEMORY.md, project_docs_cli.md,
+      settings.local.json. `~/CLAUDE.md` deliberately untouched.
+- [x] `~/bin/docs` (absent) and `~/.claude/skills/docs` (symlink →
+      `/home/user/opt/docs/skills/docs`, will break at Phase 5)
+      inventoried for Phase 5.
+- [x] `.venv/bin/python -m pytest tests/ -q` exits 0 with 246 passed.
+- [x] `ruff check .`, `ruff format --check .`, `mypy` all clean.
+- [x] `./bin/docs check docs/` exit 0.
+- [x] No code change happened inside the repo (no `src/`, no
+      `pyproject.toml` edits, no `bin/docs` move).
