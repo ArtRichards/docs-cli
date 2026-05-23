@@ -159,24 +159,27 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # post-Phase-6: lands `docs` on PATH; pre-Phase-6: `pytest ruff mypy build`
 ```
 
-**Next action: Phase 7 — update wrappers (specs/runbook/CHANGELOG, no
-CI per operator).** Phase 6 (implement core) is complete on branch
-`m6/phases-5-10`. `pyproject.toml` rewritten with hatchling backend,
-`name = "docs-cli"`, `version = "1.1.0"`, `[project.scripts] docs =
-docs_cli.cli:main`, `[project.urls]` pointing at
-`github.com/ArtRichards/docs-cli`, classifiers bumped to Beta + 3.13.
-`src/docs_cli/cli.py` carries `__version__ = "1.1.0"`, a global
-`--version` flag, the `install-skill` subparser (`--dest`/`--copy`/
-`--symlink`/`--force`/`--quiet`), and the `_cmd_install_skill`
-handler (importlib.resources lookup, site-packages-ancestor heuristic
-for the wheel-symlink refusal, byte-identical idempotency, --force
-overwrite, atomic clear-then-write). `docs/cli.md` documents both
-`--version` and the new verb; `src/docs_cli/skill/SKILL.md` adds the
-new verb to its verbs table; `src/docs_cli/skill/references/cli.md`
-resynced. `pip install -e ".[dev]"` lands `docs` on PATH;
-`.venv/bin/docs --version` prints `docs 1.1.0`; `python -m build`
-produces a clean `docs_cli-1.1.0-py3-none-any.whl` (5 source entries
-+ dist-info). **All 271 tests GREEN.**
+**Next action: Phase 8 GREEN gate, then Phase 9 local build, then
+operator publish.** Phase 7 (update wrappers) is complete on branch
+`m6/phases-5-10`. `docs/architecture.md` redrawn for `src/docs_cli/`
+(Shape, sibling-artifact, Install, Development-setup);
+`docs/charter.md` gets a `## Distribution` paragraph; `README.md`
+rewritten with `pip install docs-cli` + `docs install-skill` and
+absolute github.com URLs; top-level `CHANGELOG.md` created with
+`## 1.1.0 — UNRELEASED` + backfilled `## 1.0.0 — 2026-05-22`;
+`docs/release-runbook.md` flipped from draft → active with manual
+twine commands for Pre-flight, TestPyPI rehearsal, real PyPI publish,
+and post-release (per operator override — no GH Actions workflows);
+`docs/m6-pypi-distribution.md` Overview gets a Step-2 scope-refinement
+callout and the Phase 9/10 sections are rewritten for the
+operator-driven publish split. INDEX.md + fixture lockstep-updated.
+**All 271 tests still GREEN.** Phase 8 runs the verbatim quality gate
+and captures the output to the log; Phase 9 builds + smokes the
+artifacts locally without uploading; Phase 10 ticks impl-side
+checkboxes and stages the ready-for-operator commit. Operator then
+runs `twine upload --repository testpypi dist/*`, verifies the
+TestPyPI install, then `twine upload dist/*`, then the
+tag/visibility/release-create sequence per the runbook.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

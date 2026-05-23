@@ -15,6 +15,26 @@ Related:
 
 ## Overview
 
+> **Scope refinement at Step 2 (operator-resolved 2026-05-23).** Two
+> changes from the draft-time plan, both narrowing implementation
+> scope:
+>
+> 1. **No CI workflows.** The original
+>    `.github/workflows/{release,testpypi}.yml` Trusted-Publishing
+>    design is parked as a future-iteration note in
+>    [release-runbook.md](release-runbook.md). M6 ships via manual
+>    `twine upload` driven by the operator.
+> 2. **Operator-driven publish.** The implementation agent prepares
+>    every artifact, exercises every code path locally, and stages a
+>    ready-for-operator commit. The operator runs `twine upload` for
+>    both TestPyPI and PyPI, then the post-publish tag/visibility/
+>    release-create sequence per the runbook.
+>
+> Wherever this file's Phase 7 / 9 / 10 text describes workflow
+> dispatches or automated publishes, read it as the original design.
+> The Phase 9 and Phase 10 sections below have been rewritten to
+> reflect the new scope.
+
 - Milestone: M6 (first v1.1 milestone)
 - Title: PyPI distribution as `docs-cli`
 - Surface: a buildable, installable Python distribution **`docs-cli`** on
@@ -505,57 +525,78 @@ works.
   sub-cases (≈ 6 new tests). `tests/test_skill.py` and
   `tests/test_skill_refs.py` pass against the relocated skill source.
 
-### Phase 9: Implement Online/Integration (dogfood + TestPyPI dry-run)
+### Phase 9: Implement Online/Integration (local build + smoke)
 
-- **Objective:** Real publish to TestPyPI, real install from TestPyPI,
-  real exercise. The packaging equivalent of M1–M4's "dogfood against a
-  fixture tree" phase and M5's trigger-scenario walk.
+> **Scope refinement at Step 2 (operator-resolved 2026-05-23):** the
+> TestPyPI dress-rehearsal is **operator-executed**, not impl-agent
+> executed. The impl agent prepares the artifacts and exercises every
+> code path locally; the operator drives the actual TestPyPI and PyPI
+> uploads following `docs/release-runbook.md`. The original
+> Trusted-Publishing-via-GitHub-Actions design is parked as a
+> future-iteration note in the runbook.
+
+- **Objective (impl-side, Step 2):** Build a clean wheel + sdist,
+  verify both with `twine check`, and exercise every CLI surface
+  locally in a throwaway venv. Leave the artifacts and a handoff
+  section in the log so the operator can publish without rerunning the
+  build.
 - **Actions:**
-  - Trigger `testpypi.yml`; confirm wheel + sdist land on TestPyPI under
-    `docs-cli`.
-  - On a clean throwaway venv: `pip install --index-url
-    https://test.pypi.org/simple/ docs-cli==1.1.0` — confirm install
-    succeeds.
-  - Walk every row of `docs/release-runbook.md` against the TestPyPI
-    artifact: `docs --version`, `docs --help`, `docs install-skill`,
-    `docs check` against a fresh tree, regenerate this repo's
-    `INDEX.md` via the installed `docs index`, confirm the skill is
-    placed where Claude Code can discover it.
-- **Exit:** the runbook is fully satisfied against the TestPyPI artifact;
-  no checklist row is open. If anything fails, the failure goes back into
-  Phase 6 or 7 — not papered over. The TestPyPI release is the safety net
-  that catches name typos, missing package-data globs, bad classifier
-  values, and README rendering errors *before* they hit pypi.org/project/
-  docs-cli/ (where they cannot be deleted, only yanked).
+  - `rm -rf dist/ && .venv/bin/python -m build` — produces
+    `dist/docs_cli-1.1.0-py3-none-any.whl` + `.tar.gz`.
+  - `.venv/bin/pip install --quiet twine && .venv/bin/twine check dist/*`
+    — both artifacts PASS.
+  - Throwaway venv smoke (no PyPI involvement):
+    `python3 -m venv /tmp/docs-local-smoke`;
+    `/tmp/docs-local-smoke/bin/pip install dist/docs_cli-1.1.0-py3-none-any.whl`;
+    then exercise `docs --version`, `docs --help`,
+    `docs install-skill --dest /tmp/docs-local-smoke-skill`,
+    re-run `install-skill` (no-op), `install-skill … --symlink`
+    (exit 2 — wheel rejects), and `docs check tests/fixtures/trees/minimal/`
+    (exit 0).
+  - Append the wheel + sdist SHA256s, the `twine check` output, and
+    every smoke command's expected/actual output to the Phase 9 log
+    entry. Add a "OPERATOR ACTION REQUIRED" handoff section with the
+    exact `twine upload` commands for TestPyPI and PyPI.
+- **Exit:** wheel + sdist are byte-clean and twine-check-PASS; every
+  install-skill code path is exercised; impl agent commits Phase 9 and
+  hands off to the operator. **No PyPI upload from the impl agent.**
 
-### Phase 10: Quality, Docs, Refactor (real PyPI publish + closeout)
+### Phase 10: Quality, Docs, Refactor (closeout, impl side)
 
-- **Objective:** Ship `docs-cli==1.1.0` to real PyPI; mark M6 complete.
-  The repo-identity rename already landed at Phase 1; Phase 10 only flips
-  the GitHub repo from private to public.
+> **Scope refinement at Step 2 (operator-resolved 2026-05-23):** the
+> actual PyPI publish + repo-public-flip + tag-push + release-create
+> are **operator-executed** AFTER this run completes. The impl agent's
+> Phase 10 is closeout edits ONLY — status flip, milestone-doc
+> checkboxes, log appendix, INDEX regen — staged as a
+> ready-for-operator commit.
+
+- **Objective:** Land the impl-side closeout edits so that the moment
+  the operator's `twine upload` succeeds, the repo state already
+  reflects the milestone shipping (modulo the operator-flipped
+  `docs/status.md` M6-row date and the M6 row in `docs/plan.md`).
 - **Actions:**
-  - **Flip the GitHub repo to public.** `gh repo edit ArtRichards/docs-cli
-    --visibility public --accept-visibility-change-consequences`.
-    Sequenced immediately before the tag push so the first PyPI release
-    coincides with the public-facing repo (per OQ3-implicit Decision —
-    see Decisions).
-  - Tag `v1.1.0`; the release workflow publishes to PyPI via Trusted
-    Publishing; install from PyPI in a throwaway venv re-runs the
-    runbook smoke subset.
-  - GitHub release notes written referencing this milestone's
-    completion summary.
-  - `docs/status.md` — M6 → Complete; project is v1.1-released;
-    reading order updated.
-  - `docs/plan.md` — v1.1 section's M6 row marked shipped; remaining
-    parked questions unchanged.
+  - Tick every Phase Checklist box for Phases 5–9. **Phase 10 box
+    stays unchecked** with a note `operator-executed; flip after
+    publish lands`.
+  - Append the milestone-completion summary at the bottom of this
+    file, parallel to M1–M5's closeout — describe the shipped scope.
+  - Append a Phase 10 log entry covering "what's ready: wheel built,
+    smoke green, runbook fleshed out, branch ready to merge after
+    operator publishes". Include the runbook-step appendix.
+  - `docs/status.md`: M6 row → in-flight-with-edits; "Next action"
+    rewritten to the operator's publish-driven closeout sequence
+    (`twine upload`, tag push, repo visibility flip, gh release
+    create). The M6 row will flip to "Complete (DATE)" by the
+    operator after they publish.
   - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
     regenerated in lockstep.
-  - Append milestone-completion summaries to this file and to the log,
-    parallel to M1–M5's closeout.
-- **Exit:** `pip install docs-cli` from any host installs a working
-  `docs` command and a `docs install-skill` that places the skill
-  correctly; all docs reflect the new install story; quality gate green
-  tree-wide; the GitHub repo is public; the milestone is complete.
+  - Quality gate green tree-wide.
+- **Exit (impl side):** the branch is ready to merge once the operator
+  publishes; every doc edit that depends on the publish date is
+  flagged as operator-executed; the milestone summary is appended.
+  Operator-side closing actions (PyPI upload, repo public flip, tag
+  push, gh release create) are documented in `docs/release-runbook.md`
+  and are NOT performed by the impl agent.
 
 ## Phase Checklist
 

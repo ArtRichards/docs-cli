@@ -14,37 +14,51 @@ Related:
 
 ## Shape
 
-Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — the `docs/` documentation directory already lives there, and POSIX filesystems don't allow a file and directory with the same name in the same parent.) Layout inside the file is logical (no separate modules) until v1.1 forces a package split.
+Single Python module at `src/docs_cli/cli.py`, exposed as the
+`docs` console-script via the `docs_cli.cli:main` entry point declared
+in `pyproject.toml`. The `docs_cli/` package ships as a wheel on PyPI
+(distribution name `docs-cli`); the bundled Claude Code skill rides
+inside the same wheel as package data.
 
 ```
-bin/docs (executable; Python 3.11+, stdlib only)
-├── shebang + dunder version
-├── config        — TOML load, Vocab merging, archive-dir resolution
-├── model         — Doc dataclass; metadata block parser + editors
-├── walker        — directory traversal, filter, archive detection
-├── index         — INDEX.md render with marker-block preservation
-├── archive       — atomic move + status edit (M2)
-├── mv            — rename + Related: rewrite across tree (M2)
-├── new           — scaffolded doc creation (M2)
-├── touch         — Updated: bump (M2)
-├── check         — validation rules + exit-code matrix (M3)
-├── list          — query view, human + --json (M3)
-├── migrate       — foreign-tree inference + plan/apply (M4)
-└── cli           — argparse dispatch, exit codes, --root resolution
+src/docs_cli/                            (Python 3.11+, stdlib only)
+├── __init__.py                          ─ lazy re-export of `main`
+├── cli.py                               ─ the CLI module (~2.5k lines)
+│   ├── dunder version                   (__version__ = "1.1.0")
+│   ├── config        — TOML load, Vocab merging, archive-dir resolution
+│   ├── model         — Doc dataclass; metadata block parser + editors
+│   ├── walker        — directory traversal, filter, archive detection
+│   ├── index         — INDEX.md render with marker-block preservation
+│   ├── archive       — atomic move + status edit (M2)
+│   ├── mv            — rename + Related: rewrite across tree (M2)
+│   ├── new           — scaffolded doc creation (M2)
+│   ├── touch         — Updated: bump (M2)
+│   ├── check         — validation rules + exit-code matrix (M3)
+│   ├── list          — query view, human + --json (M3)
+│   ├── migrate       — foreign-tree inference + plan/apply (M4)
+│   ├── install-skill — materialise the bundled skill onto a host (M6)
+│   └── cli           — argparse dispatch, exit codes, --root resolution
+└── skill/                               ─ bundled Claude Code skill (M5)
+    ├── SKILL.md                          (frontmatter + trigger surface)
+    └── references/
+        ├── convention.md                 (byte-identical mirror)
+        └── cli.md                        (byte-identical mirror)
 ```
 
-**Sibling artifact: the Claude Code skill.** Alongside `bin/docs`, the repo
-ships a Claude Code skill at `skills/docs/SKILL.md` (M5). It is **not** a
-`bin/docs` module and adds no Python — it is a standalone markdown artifact
-that *drives* the verbs above: its `description` triggers an agent doing
-documentation work in a `docs`-managed tree, and its body redirects to the
-right `docs` verb. Alongside `SKILL.md` sit two bundled reference files at
-`skills/docs/references/` — byte-identical mirrors of `docs/convention.md`
-and `docs/cli.md` — so an agent reading the skill on any installed host has
-the spec on hand without needing the docs repo checked out. Lockstep
-between the source specs and the bundle is enforced by
-`tests/test_skill_refs.py`. The skill is authored and version-controlled
-here; installation onto a host is the documented step below.
+**Sibling artifact: the Claude Code skill.** The Claude Code skill at
+`src/docs_cli/skill/` (M5) is **not** a `cli.py` module and adds no
+Python — it is a standalone Markdown artifact that *drives* the verbs
+above: its `description` triggers an agent doing documentation work in
+a `docs`-managed tree, and its body redirects to the right `docs` verb.
+Alongside `SKILL.md` sit two bundled reference files at
+`src/docs_cli/skill/references/` — byte-identical mirrors of
+`docs/convention.md` and `docs/cli.md` — so an agent reading the skill
+on any installed host has the spec on hand without needing the docs
+repo checked out. Lockstep between the source specs and the bundle is
+enforced by `tests/test_skill_refs.py`. The skill is authored and
+version-controlled here, **ships as package data inside the
+`docs-cli` wheel**, and is materialised onto a host via
+`docs install-skill` (M6).
 
 ## Module responsibilities
 
@@ -107,9 +121,10 @@ The renderer's output between the markers has a fixed shape so that
   lexicographic order. Projects with zero active docs are omitted.
 - **Role group order.** Within each project, `status` is pinned to the
   top. The remaining Roles follow `CANONICAL_ROLE_ORDER` (defined in
-  `bin/docs`) — charter, plan, spec, milestone, log, decision, guide,
-  runbook, reference, postmortem, idea, notes. Role groups with zero
-  entries are omitted. `## Archived` appears last, after every project.
+  `src/docs_cli/cli.py`) — charter, plan, spec, milestone, log,
+  decision, guide, runbook, reference, postmortem, idea, notes. Role
+  groups with zero entries are omitted. `## Archived` appears last,
+  after every project.
 - **Within-section sort.** Primary key: `Updated:` descending. Tiebreaker:
   path ascending (lexicographic on the root-relative path).
 - **Entry format.** One bullet per doc:
@@ -227,26 +242,35 @@ For archive operations (M2): edit in-place first (atomic write), then move with 
 ## Install (end users)
 
 ```sh
-git clone https://github.com/<you>/docs.git ~/opt/docs
-ln -s $PWD/bin/docs ~/bin/docs              # or wherever your $PATH wants it
-ln -s $PWD/skills/docs ~/.claude/skills/docs   # install the Claude Code skill
+pip install docs-cli                           # lands `docs` on PATH
+docs install-skill                             # materialise the bundled skill at ~/.claude/skills/docs/
 ```
 
-The script is self-contained; no `pip install` step needed for runtime use.
-The skill at `skills/docs/` is copied or symlinked into `~/.claude/skills/docs/`
-— parallel to the `bin/docs` symlink onto `$PATH`. The committed skill artifact
-is host-agnostic; the host-specific path lives only in this install step.
+`docs-cli` is published on PyPI; the wheel carries the bundled Claude
+Code skill inside as package data, so a single `pip install` plus the
+one-shot `docs install-skill` is enough to use the CLI and to make the
+skill discoverable by Claude Code. No git clone required for runtime
+use. The committed skill artifact is host-agnostic; the host-specific
+path lives only in the `install-skill` invocation.
+
+`install-skill --dest <DIR>` overrides the default destination; `--force`
+overwrites a non-identical existing directory; `--symlink` is supported
+only for editable installs. The release runbook at
+[release-runbook.md](release-runbook.md) covers the publishing side.
 
 ## Development setup
 
 ```sh
-cd ~/opt/docs
+git clone https://github.com/ArtRichards/docs-cli.git ~/opt/docs-cli
+cd ~/opt/docs-cli
 python3 -m venv .venv                          # Python 3.11+; needs python3-venv on Debian/Ubuntu
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install pytest ruff mypy         # or: .venv/bin/pip install -e ".[dev]"
+.venv/bin/pip install -e ".[dev]"              # editable install + pytest/ruff/mypy/build
 ```
 
-The `.venv/` directory is gitignored. Recreate it from scratch in a fresh clone.
+The editable install lands `.venv/bin/docs` on PATH pointing at the
+in-tree `src/docs_cli/cli.py`. `.venv/` is gitignored; recreate it
+from scratch in a fresh clone.
 
 ## Commands (development)
 
@@ -255,5 +279,7 @@ The `.venv/` directory is gitignored. Recreate it from scratch in a fresh clone.
 .venv/bin/ruff check .                         # lint
 .venv/bin/ruff format --check .                # format check
 .venv/bin/mypy                                 # type-check (tree-wide, per pyproject)
-./bin/docs index docs/                         # dogfood smoke (post-M1)
+.venv/bin/docs check docs/                     # dogfood smoke
+.venv/bin/docs index --root docs/ --dry-run    # smoke: idempotent dogfood
+.venv/bin/python -m build                      # produces dist/docs_cli-<v>-*.whl + .tar.gz
 ```

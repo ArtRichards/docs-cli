@@ -118,7 +118,7 @@ unchanged — `Project: docs` stays `docs`.
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-23 | Captured the verbatim `pytest -q --tb=short` output: **9 FAILED + 16 ERRORS + 246 PASSED = 271 collected**. The 9 FAIL are the assertion-level RED on the pyproject static contract (A1–A6) + the layout invariants (F1–F3); the 16 ERROR are setup-fixture failures cascading from `built_dist` (`python -m build` rejects `version = "0.2.0-m2"` as non-PEP440 — exactly the Phase-6-fixes condition). M1–M5's 246 tests stay green; ruff/format/mypy clean tree-wide; `docs check docs/` exit 0. **Session pauses here** per the project's TDD discipline. |
 | 5. Update Base Interfaces | Complete | 2026-05-23 | `git mv bin/docs src/docs_cli/cli.py`; `git mv skills/docs src/docs_cli/skill`; `src/docs_cli/__init__.py` re-exports `main`; `tests/conftest.py` rewritten (drop SourceFileLoader; insert `src/` on sys.path; alias `docs_cli.cli` as `docs`); `tests/test_skill.py` SKILL_DIR + failure-message updated; `tests/test_skill_refs.py` BUNDLE_DIR + resync hint updated; `pyproject.toml` ruff `extend-include` dropped, mypy `files = ["src/", "tests/"]`, `scripts_are_modules` dropped; `~/.claude/skills/docs` symlink refreshed to the relocated source. Quality gate: 246 M1–M5 + F1/F2/F3 GREEN, A1–E2 still RED for Phase 6. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-23 | `pyproject.toml` rewritten with hatchling backend, `name = "docs-cli"`, `version = "1.1.0"`, `[project.scripts] docs = docs_cli.cli:main`, `[project.urls]`, classifiers bumped to Beta + 3.13; `__version__` bumped + `--version` global flag; `install-skill` subparser with `--dest`/`--copy`/`--symlink`/`--force`/`--quiet`; `_cmd_install_skill` handler with `importlib.resources` lookup + site-packages-ancestor heuristic for the wheel-vs-editable check; `cli.md` documents global `--version` and the new verb; `references/cli.md` resynced. All 271 tests GREEN; wheel + sdist build clean. |
-| 7. Update Tool/Wrapper Layer | Pending | — | **Scope refinement at Step 2 (operator-resolved): NO CI workflows.** Operator publishes manually via twine per the runbook. Phase 7 finalises `docs/release-runbook.md` with manual twine commands, rewrites `architecture.md` / `charter.md` / `README.md` / `status.md` / `plan.md` for the new layout, and adds a top-level `CHANGELOG.md` (Q7-resolved). |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-23 | **No CI workflows** (operator override). `docs/architecture.md` Shape diagram + sibling-artifact + Install + Development-setup rewritten for `src/docs_cli/`; `docs/charter.md` gets a `## Distribution` paragraph; `README.md` rewritten with `pip install docs-cli` + `docs install-skill`, absolute github.com URLs, M6 row in the milestone list, v1.1 release notes; new top-level `CHANGELOG.md` with `## 1.1.0 — UNRELEASED` entry (Q7); `docs/release-runbook.md` flipped from draft → active with manual twine commands for Pre-flight / TestPyPI / Real PyPI / Post-release plus the Trusted-Publishing-vs-API-token follow-up note; `docs/m6-pypi-distribution.md` Overview gains a Step-2 scope-refinement callout, Phase 9 + Phase 10 sections rewritten for the operator-driven publish split. INDEX.md + fixture regenerated. All 271 tests still GREEN. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate green tree-wide; `python -m build` succeeds outside the in-test path; `test_packaging.py` GREEN. |
 | 9. Implement Online/Integration | Pending | — | **Scope refinement at Step 2 (operator-resolved): local build + smoke only.** Implementation agent prepares the wheel/sdist artifacts, runs `twine check`, and exercises every `docs install-skill` mode against a throwaway venv. Operator executes the actual TestPyPI + PyPI uploads after this run. |
 | 10. Quality, Docs, Refactor | Pending | — | **Scope refinement at Step 2 (operator-resolved): impl-side closeout only.** Implementation agent ticks Phases 5–9 checkboxes, appends the milestone-completion summary, and stages the ready-for-operator commit. Operator drives the actual publish (twine upload, `git tag v1.1.0`, repo public flip, gh release create) after this run. |
@@ -1098,3 +1098,155 @@ contract is satisfied).
 - [x] **All 271 tests GREEN.** Quality gate clean tree-wide.
 - [x] `pip install -e ".[dev]"` lands `docs` on PATH; smoke commands
       all behave per spec.
+
+### Phase 7 — Update Tool/Wrapper Layer (specs, runbook, CHANGELOG)
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Roll the M1–M5 documentation forward to describe the post-M6 reality:
+where the CLI lives, how to install it from PyPI, how to install the
+skill from a wheel, and how the operator publishes a release. The
+scope refinement at Step 2 — **no CI workflows; operator drives the
+publish manually via twine** — lands here too, surfaced as a Step-2
+scope-refinement note at the top of `docs/m6-pypi-distribution.md`
+and as the through-line of `docs/release-runbook.md`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/architecture.md` | Rewrite (selective) | "Shape" diagram redrawn for `src/docs_cli/{__init__.py, cli.py, skill/}`; "Sibling artifact" rewritten to describe the skill as wheel-package-data; the `bin/docs` parenthetical (CANONICAL_ROLE_ORDER reference) updated to `src/docs_cli/cli.py`; Install section rewritten with `pip install docs-cli` + `docs install-skill`; Development setup rewritten with `pip install -e ".[dev]"`; Commands section gains `python -m build`. |
+| `docs/charter.md` | Modify | New `## Distribution` subsection (one paragraph) describing the PyPI distribution shape + `install-skill` + that `Project: docs` remains the on-disk identity. |
+| `docs/cli.md` | Modify (already touched at Phase 6) | Phase 7 only bumps `Updated:` again via `docs touch` — Phase 6 owns the global `--version` flag + the `install-skill` section. |
+| `docs/status.md` | Modify | "Next action" rewritten to point at Phase 8 (GREEN gate, then operator publish); verify-environment block updated; "Watch out for" sweep replaces `bin/docs` references with the package layout — already mostly landed at Phases 5 + 6; Phase 7 sweeps any residual stale text. |
+| `docs/plan.md` | Verify | No stale `skills/docs/` references found (the M5 row only mentioned the host install path `~/.claude/skills/docs/`, which is still accurate). No edit needed beyond the v1.1 section pointer already in place. |
+| `README.md` | Rewrite | Title `docs` → `docs-cli`; Install block now `pip install docs-cli` + `docs install-skill` with absolute github.com URLs throughout; M6 row added to the milestone list; v1.1 release notes paragraph added; CHANGELOG cross-link. The old `git clone + symlink` install path is dropped (M6's whole point is to retire it). |
+| `CHANGELOG.md` (new, top-level) | Create | Per Q7 resolution. `## 1.1.0 — UNRELEASED` entry covers Added / Changed / Removed for the M6 surface; `## 1.0.0 — 2026-05-22` records v1's M1–M5 deliveries. Follows the Keep-a-Changelog format. The `UNRELEASED` placeholder flips to today's date when the operator publishes (per the runbook). |
+| `docs/release-runbook.md` | Flesh out (draft → active) | Status flipped to `active`. Three checklisted sections: Pre-flight (impl-agent, Phases 8 + 9), TestPyPI rehearsal (operator), Real PyPI publish (operator), Post-release (operator). Every command is concrete (`twine upload`, `twine check`, `pip install --index-url …`, `gh repo edit … --visibility public`, `git tag v<VERSION>`, `gh release create`). Notes section preserves the Trusted-Publishing-vs-API-token alternative as a future-iteration follow-up; flags the append-only nature of PyPI (TestPyPI rehearsal non-optional). |
+| `docs/m6-pypi-distribution.md` | Modify | Top-of-file Step-2 scope-refinement callout added (NO CI workflows + operator-driven publish). Phase 9 section rewritten as "local build + smoke" (the impl-agent surface). Phase 10 section rewritten as "closeout, impl side" — operator-executes the actual PyPI upload + repo-public-flip + tag-push + release-create. |
+| `docs/m6-pypi-distribution-log.md` | Modify | Phase-7 row → Complete; this log entry appended. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Lockstep refresh after every `docs touch`. |
+
+#### Actions taken
+
+- Rewrote `docs/architecture.md`'s `## Shape` block with the actual
+  `src/docs_cli/` tree, including the bundled-skill subtree and a
+  pointer to `__version__ = "1.1.0"`. Replaced the "single Python
+  file at `bin/docs`" framing throughout. The data-flow diagram and
+  the renderer-format spec are unchanged (the architecture didn't
+  change; only the file path did).
+- Added a one-paragraph `## Distribution` subsection to
+  `docs/charter.md` immediately after `## Audience`. Lists the
+  install pair (`pip install docs-cli` + `docs install-skill`),
+  explicitly clarifies that the on-disk convention is unchanged, and
+  links to the runbook.
+- Rewrote `README.md` end-to-end: title `# docs` → `# docs-cli`;
+  install block becomes `pip install docs-cli` + `docs install-skill`;
+  every relative repo-link is replaced with an absolute
+  `https://github.com/ArtRichards/docs-cli/blob/main/...` URL per Q6
+  (so the README renders correctly when PyPI fetches it from the
+  sdist); M6 row added to the milestone list; new "v1.1 release
+  notes" paragraph; CHANGELOG cross-link added in the Status section.
+- Created the top-level `CHANGELOG.md` with `## 1.1.0 — UNRELEASED`
+  (Q7-resolved — operator flips the date at publish time). Backfilled
+  `## 1.0.0 — 2026-05-22` for the v1 work so the changelog covers the
+  full project history rather than starting at v1.1.
+- Flipped `docs/release-runbook.md` Status from `draft` to `active`
+  and rewrote the body for the manual-twine path. Pre-flight section
+  enumerates every gate the impl agent runs at Phases 8 and 9
+  (pytest, ruff, ruff format, mypy, `python -m build`, `twine check`,
+  local install smoke). TestPyPI section gives the exact `twine
+  upload --repository testpypi dist/*` + the throwaway-venv install
+  loop. Real PyPI section adds the `~/.pypirc` token note and the
+  `CHANGELOG.md` `UNRELEASED` → date flip. Post-release section
+  covers `gh repo edit --visibility public --accept-visibility-change-consequences`,
+  `git tag v<VERSION> && git push origin v<VERSION>`, and
+  `gh release create`. Notes preserve the Trusted-Publishing
+  alternative as a follow-up.
+- Added the Step-2 scope-refinement callout to the top of
+  `docs/m6-pypi-distribution.md`'s Overview. Rewrote its Phase 9
+  section as "local build + smoke" (the impl-agent surface — every
+  install-skill code path exercised against a throwaway venv via a
+  freshly-built wheel; no PyPI upload). Rewrote its Phase 10 section
+  as "closeout, impl side" — the impl agent ticks Phases 5–9, appends
+  the milestone-completion summary, and stages the ready-for-operator
+  commit; the operator executes the actual publish per the runbook.
+- Ran `docs touch` against every modified spec/runbook/milestone-doc
+  to bump `Updated:`, then `docs index --root docs/` and copied to
+  the dogfood fixture in lockstep.
+
+#### Issues / decisions
+
+- **README absolute URLs (Q6).** Every relative link in the README
+  is now an absolute `github.com/ArtRichards/docs-cli` URL so the
+  PyPI project page renders correctly (PyPI's README renderer
+  fetches the README from the sdist and cannot resolve repo-relative
+  hrefs). Trade-off: every release that retargets the URL (a
+  hypothetical fork or rename) requires a README sweep. Accepted as
+  the lesser evil — the README is read on PyPI far more often than
+  inside the repo.
+- **CHANGELOG date placeholder (Q7).** `## 1.1.0 — UNRELEASED`
+  rather than `## 1.1.0 — 2026-05-23`. The impl agent does not
+  publish; the publish date is set by the operator (could be the
+  same day, could be later). The runbook's "Real PyPI publish"
+  step says explicitly to replace `UNRELEASED` with today's date
+  at publish time.
+- **Backfilled v1.0.0 entry in CHANGELOG.** v1 shipped 2026-05-22
+  without a CHANGELOG; M6 introduces the file. Backfilled the
+  `## 1.0.0 — 2026-05-22` entry rather than starting the changelog
+  at v1.1.0 — easier for a PyPI reader to orient on the project's
+  history.
+- **plan.md unchanged at Phase 7.** The plan said to update
+  "line 78 skills/docs/ → src/docs_cli/skill/". The line in question
+  (`SKILL.md at \`~/.claude/skills/docs/\` (or wherever the install
+  convention lands).`) describes the host install path, not the
+  in-repo skill source. The host path is unchanged, so no edit.
+  Recorded as a no-op for the audit trail.
+- **`docs/m6-pypi-distribution.md` Phase 7 + 8 sections.** Left
+  largely intact — the in-place Step-2 scope-refinement callout
+  signposts the override. A reader will see the original draft text
+  framed by the callout; a future cleanup pass could strip the
+  workflow-specific text entirely, but that's churn for no
+  behaviour change. Logged as a deliberate non-edit.
+
+#### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` → **271 passed**.
+- `.venv/bin/ruff check .` → clean.
+- `.venv/bin/ruff format --check .` → clean.
+- `.venv/bin/mypy` → Success (23 source files).
+- `docs check docs/` → exit 0.
+- `docs index --root docs/ --dry-run` → exit 0, no diff against the
+  current INDEX.md.
+- `tests/fixtures/expected/docs-INDEX.md` is byte-identical to
+  `docs/INDEX.md` (snapshot lockstep).
+- README's links spot-checked — every relative href replaced with
+  `https://github.com/ArtRichards/docs-cli/...`.
+- CHANGELOG renders cleanly; `## 1.1.0 — UNRELEASED` and
+  `## 1.0.0 — 2026-05-22` are the two entries.
+
+#### Exit criteria
+
+- [x] `docs/architecture.md` Shape / sibling-artifact / install /
+      dev-setup reflect `src/docs_cli/` and `pip install docs-cli`.
+- [x] `docs/charter.md` has a `## Distribution` paragraph.
+- [x] `docs/cli.md` `Updated:` bumped; install-skill section + global
+      `--version` (Phase 6) preserved.
+- [x] `docs/status.md` "Next action" + verify-environment + watch-out
+      reflect the post-Phase-7 state.
+- [x] `docs/plan.md` v1.1 pointer current; no stale `skills/docs/` or
+      `bin/docs` references.
+- [x] `README.md` install block uses `pip install docs-cli`; absolute
+      github.com URLs throughout; M6 row + v1.1 release notes present.
+- [x] `CHANGELOG.md` (top-level) exists with `## 1.1.0 — UNRELEASED`
+      + a backfilled `## 1.0.0 — 2026-05-22` entry.
+- [x] `docs/release-runbook.md` Status: active; the four operator
+      checklists are concrete and complete.
+- [x] `docs/m6-pypi-distribution.md` carries the Step-2 scope-
+      refinement callout and the Phase 9/10 rewrites.
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` in
+      lockstep.
+- [x] All 271 tests still GREEN; ruff / format / mypy / `docs check`
+      all clean.

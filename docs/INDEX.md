@@ -15,7 +15,7 @@ _Generated 2026-05-23. 23 docs active, 0 archived._
 
 ### Active — Charter
 
-- [charter.md](charter.md) — _charter_ — A small, opinionated CLI (`docs`) that manages a tree of Markdown documentation by treating each file as a…. Updated 2026-05-20.
+- [charter.md](charter.md) — _charter_ — A small, opinionated CLI (`docs`) that manages a tree of Markdown documentation by treating each file as a…. Updated 2026-05-23.
 
 ### Active — Plan
 
@@ -29,7 +29,7 @@ _Generated 2026-05-23. 23 docs active, 0 archived._
 ### Active — Milestone
 
 - [m5-claude-code-skill.md](m5-claude-code-skill.md) — _milestone_ — - Milestone: M5 - Title: Claude Code skill - Surface: a Claude Code **skill** — a `SKILL.md` artifact (plus, if needed,…. Updated 2026-05-23.
-- [m6-pypi-distribution.md](m6-pypi-distribution.md) — _milestone_ — - Milestone: M6 (first v1.1 milestone) - Title: PyPI distribution as `docs-cli` - Surface: a buildable, installable…. Updated 2026-05-23.
+- [m6-pypi-distribution.md](m6-pypi-distribution.md) — _milestone_ — > **Scope refinement at Step 2 (operator-resolved 2026-05-23).** Two > changes from the draft-time plan, both narrowing…. Updated 2026-05-23.
 - [m3-validation-and-query.md](m3-validation-and-query.md) — _milestone_ — - Milestone: M3 - Title: Validation and query (`check`, `list`) - Surface: two new read-only CLI subcommands on the…. Updated 2026-05-22.
 - [m4-migration-helper.md](m4-migration-helper.md) — _milestone_ — - Milestone: M4 - Title: Migration helper (`docs migrate`) - Surface: one new CLI subcommand on the `docs` executable…. Updated 2026-05-22.
 - [m2-mutating-verbs.md](m2-mutating-verbs.md) — _milestone_ — - Milestone: M2 - Title: Mutating verbs (`new`, `archive`, `mv`, `touch`) - Surface: four new CLI subcommands on the…. Updated 2026-05-21.
@@ -51,11 +51,11 @@ _Generated 2026-05-23. 23 docs active, 0 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — Per-release checklist for shipping a new `docs-cli` to PyPI. Finalised at M6 Phase 7 with the workflow wiring; this…. Updated 2026-05-23.
+- [release-runbook.md](release-runbook.md) — _runbook_ — Per-release checklist for shipping a new `docs-cli` to PyPI. **M6 ships via manual twine** (operator override of the…. Updated 2026-05-23.
 
 ### Active — Reference
 
-- [architecture.md](architecture.md) — _reference_ — Single Python file at `bin/docs`, executable, shebanged. (Not at repo root — the `docs/` documentation directory…. Updated 2026-05-23.
+- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-05-23.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 - [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-05-20.
 

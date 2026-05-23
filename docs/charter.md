@@ -3,7 +3,7 @@
 Status: active
 Role: charter
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-05-23
 
 Related:
 - pairs-with: convention.md
@@ -44,3 +44,14 @@ Three pain points in every documentation tree we've worked with:
 
 - Engineers who keep their docs in a repository and want lightweight structure.
 - Agents (LLMs) that author and maintain docs; the JSON output and prescriptive convention give them a reliable surface to work against.
+
+## Distribution
+
+`docs` ships as the `docs-cli` distribution on PyPI (v1.1 onward) —
+`pip install docs-cli` lands the `docs` console-script on PATH and
+ships the bundled Claude Code skill inside the wheel as package data.
+A one-shot `docs install-skill` materialises that skill onto the host
+(default destination `~/.claude/skills/docs/`). The convention itself
+is unchanged — `Project: docs` stays `docs`; only the distribution
+name and the installation path differ. The release runbook at
+[release-runbook.md](release-runbook.md) governs publishing.
