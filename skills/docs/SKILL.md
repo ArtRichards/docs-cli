@@ -1,23 +1,22 @@
 ---
 name: docs
-description: Use the docs CLI for managing a tree of structured Markdown documents (specs, runbooks, references, design notes) — creating a doc, archiving or renaming one, listing docs, checking the tree, regenerating INDEX.md, or adopting a foreign Markdown directory. Run the docs verb instead of hand-editing metadata, INDEX.md, or archive/. A docs-managed tree is marked by a .docs.toml file at its root; not for Markdown outside such a tree.
+description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention. Always run the docs CLI verb (docs new / index / archive / mv / list / touch / check / migrate) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
 ---
 
 # docs — drive the CLI, do not hand-edit
 
-`docs` is a small CLI for managing a directory of structured Markdown — specs,
-runbooks, references, design notes, any document set where each file is
-self-describing (a metadata block under its H1) and the index is a derived
-view of the docs rather than a hand-maintained list. The tool keeps the
-machine-maintained parts (`INDEX.md`, the `archive/<date>/` layout, doc
-lifecycle metadata) in sync so authors stay focused on content. This skill
-names which `docs` verb to run for which task and how to read its output.
+Use the `docs` CLI for managing a tree of structured Markdown documents —
+specs, runbooks, references, design notes — where each file is
+self-describing (a metadata block under its H1) and `INDEX.md` is a
+generated view of the docs, not a hand-maintained list. **Run a `docs`
+verb for every metadata, index, archive, or lifecycle action; never
+hand-edit those parts.** The verb keeps the tree internally consistent —
+a hand edit silently drifts it out of sync. The sections below name which
+verb to run for which task and how to read its output.
 
-A `docs`-managed tree is such a directory, marked by a `.docs.toml` file at
-its root. When doing documentation work inside that tree, run the matching
-`docs` verb instead of editing the machine-maintained parts by hand — the
-verb keeps the tree internally consistent; a hand edit silently drifts it
-out of sync.
+A `docs`-managed tree is such a directory, marked by a `.docs.toml` file
+at its root. This skill only applies to such trees; outside one, edit
+Markdown normally.
 
 ## Never hand-edit these — run the verb
 
