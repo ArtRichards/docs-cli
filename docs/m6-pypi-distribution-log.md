@@ -114,7 +114,7 @@ unchanged — `Project: docs` stays `docs`.
 |---|---|---|---|
 | 1. Define Contract (+ identity rename) | Complete | 2026-05-23 | Promote M6 from `draft` to `active`; create this log; add a `## v1.1` section to `plan.md`; refresh `status.md` (M6 in flight); regenerate INDEX + snapshot. **Then perform the identity rename per OQ3**: `gh repo create ArtRichards/docs-cli --source=. --private --remote=origin`; `git push -u origin m6/phases-1-4`; `mv ~/opt/docs ~/opt/docs-cli` as the final action (subsequent phases run from the new path); update `~/CLAUDE.md`, `/home/user/.claude/projects/-home-user/memory/project_docs_cli.md`, and the MEMORY.md index line. No code change, no packaging surface. |
 | 2. Write Tests (RED) | Complete | 2026-05-23 | `tests/test_packaging.py` (25 tests grouped A–F per Step 1's plan); `pyproject.toml` `[dev]` extra gains `build>=1.0` (Step 1 OQ-D); `docs/release-runbook.md` created as the draft skeleton. `tests/test_skill.py` + `tests/test_skill_refs.py` are deliberately untouched at this phase (Step 1 OQ-F defers the path edits to Phase 5 alongside the skill move). |
-| 3. Create Data/Fixtures | Pending | — | `tests/fixtures/trees/packaging-clean/` (a known-clean docs tree) or reuse an existing M1–M4 fixture (e.g. `minimal/`) for sub-case 6. |
+| 3. Create Data/Fixtures | Complete | 2026-05-23 | Confirmed reuse of `tests/fixtures/trees/minimal/` for the installed-`docs check` / `docs index --dry-run` smokes (Step 1's Option A — `./bin/docs check tests/fixtures/trees/minimal/` exits 0; no new fixture needed). Phase 4 captures the RED baseline. |
 | 4. Run Tests (RED Baseline) | Pending | — | Confirm every `test_packaging.py` sub-case fails on the unimplemented packaging surface (no `[build-system]`, no entry point, no `install-skill`, no `docs_cli` module); existing 246 tests stay green; **session pauses here**. |
 | 5. Update Base Interfaces | Pending | — | `git mv bin/docs src/docs_cli/cli.py`; `src/docs_cli/__init__.py` created; skill relocated per OQ4; `tests/conftest.py` updated per OQ2; `tests/test_skill.py` / `tests/test_skill_refs.py` paths updated; `pyproject.toml` ruff/mypy include lists updated; `bin/docs` resolved per OQ5. |
 | 6. Implement Offline/Core Path | Pending | — | `pyproject.toml` build backend (hatchling) + `[project.scripts]` + `[project.urls]` + package-data; `__version__` → `1.1.0`; `docs install-skill` verb (handler, argparse subparser, `importlib.resources` lookup); `cli.md` updated. |
@@ -509,3 +509,76 @@ to the Phase 4 log entry per the M5 log format).
 - [x] M1–M5's 246 in-tree tests stay green (untouched at this phase).
 - [x] Ready for Phase 3 (confirm fixture reuse) and Phase 4 (capture
       the RED baseline).
+
+### Phase 3 — Create Data/Fixtures
+
+**Completed:** 2026-05-23
+
+#### Objective
+
+Confirm that the fixtures the Phase-2 packaging tests need are present
+on disk. Step 1's plan offered two options: Option A reuse
+`tests/fixtures/trees/minimal/`; Option B hand-author
+`tests/fixtures/trees/packaging-clean/`. Pick the one whose
+preconditions hold and document the reuse decision in the log.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| _(no new fixture files)_ | _Reuse decision_ | `tests/fixtures/trees/minimal/` (a single `lone-doc.md` + a `.docs.toml`) is reused for the installed-`docs check` (E1) and installed-`docs index --dry-run` (E2) smokes per Step 1's Option A. |
+
+#### Why there is nothing to stage
+
+The Phase-2 tests reference one fixture-tree path:
+`tests/fixtures/trees/minimal/`. It is present (created at M1):
+
+```
+tests/fixtures/trees/minimal/
+├── .docs.toml
+└── lone-doc.md
+```
+
+Running `./bin/docs check tests/fixtures/trees/minimal/` against the
+in-tree binary exits 0 at Phase 3 — the precondition for E1 and E2 is
+already satisfied. Authoring a parallel `tests/fixtures/trees/packaging-clean/`
+would duplicate the same shape without adding coverage. Option B is
+deliberately skipped per Step 1's plan ("if it does [exit 0], no new
+fixture; document the reuse decision in the log").
+
+Group F (layout invariants) and Group A (pyproject static) need no
+fixture data at all — they read from the repo root directly. Groups B,
+C, D rely on the build process and a throwaway venv, both materialised
+at session-fixture time (`built_dist`, `wheel_venv`) inside
+`tmp_path_factory.mktemp(...)`; no checked-in artefact applies.
+
+#### Verification — every Phase-2 input resolves
+
+- `tests/fixtures/trees/minimal/` exists and is clean
+  (`./bin/docs check tests/fixtures/trees/minimal/` exit 0).
+- `tests/fixtures/trees/minimal/.docs.toml` exists so the installed
+  `docs check` and `docs index --root` invocations resolve a config
+  without needing to walk up to the repo root.
+- `pyproject.toml` and the in-repo file system are the only other
+  inputs the Phase-2 tests touch — nothing fixture-shaped needed.
+
+#### Issues / decisions
+
+- **Option A vs Option B.** Option A (reuse) wins on the principle
+  that fixtures duplicate-by-shape introduce drift surface. Option B
+  was preserved in the plan as a fallback for the case where
+  `minimal/` had grown an unexpected violation between M1 and M6;
+  that did not happen.
+- **No new `.docs.toml` settings.** The Phase-2 tests assert
+  installed-CLI behaviour against a *clean* tree only — there is no
+  vocabulary or `add_statuses` / `add_roles` toggle to verify
+  through packaging. The existing minimal config is empty enough to
+  serve.
+
+#### Exit criteria
+
+- [x] `tests/fixtures/trees/minimal/` resolves on disk.
+- [x] `./bin/docs check tests/fixtures/trees/minimal/` exits 0.
+- [x] No fixture authoring needed; reuse decision recorded.
+- [x] M1–M5's 246 in-tree tests stay green (untouched at this phase).
+- [x] Ready for Phase 4 (RED baseline capture).
