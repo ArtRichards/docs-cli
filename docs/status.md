@@ -141,7 +141,7 @@ for the milestone summary.
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution as `docs-cli` | _implementation complete_ (merged 2026-05-24); publish pending | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 in progress; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
-| M8 — Adoption workflow (agent-driveable) | _stub drafted_ (2026-05-24); pending milestone-setup (depends on M7) | [Plan](m8-adoption-workflow.md) | _not yet created_ |
+| M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
 distribution) implementation-complete on `main` and awaiting

@@ -1,11 +1,12 @@
 # M8 — Adoption workflow (agent-driveable)
 
-Status: draft
+Status: active
 Role: milestone
 Project: docs
 Updated: 2026-05-24
 
 Related:
+- parent-of: m8-adoption-workflow-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: cli.md
@@ -24,9 +25,9 @@ Related:
   substantial rewrite of the bundled Claude Code skill's reference
   files to cover the adoption flow. SKILL.md gets only a single
   pointer line; the substance lives in `references/`.
-- Status: **DRAFT** — captured 2026-05-24. Depends on M7
-  shipping first (M7's accurate plan is the substrate M8 makes
-  driveable).
+- Status: ACTIVE (started 2026-05-24, milestone-setup complete).
+  Depends on M7 shipping first (M7's accurate plan is the
+  substrate M8 makes driveable).
 
 ### Goal
 
@@ -224,10 +225,14 @@ surfaced these findings. The fresh-subagent integration gate
 (Success Criteria below) tests this by handing subagents trees
 the M8 author has not specifically tuned for.
 
-## Decisions (carried forward + resolved at trial-time)
+## Decisions (carried forward + resolved at milestone-setup, 2026-05-24)
 
-- M7 must ship first. M8 builds on M7's accurate plan.
-- M6 has merged to main (2026-05-24); not yet published. M8
+### Carried forward
+
+- **M7 must ship first.** M8 builds on M7's accurate plan; M8
+  Phase 9 (the fresh-subagent gate) only meaningfully passes
+  once M7's confidence-distribution improvements have landed.
+- M6 has merged to `main` (2026-05-24); not yet published. M8
   builds on M6's package layout + skill bundling.
 - **Tree-wide single source of truth for excludes.** `[exclude]
   dirs` in `.docs.toml` applies to `migrate` + `index` + `check`
@@ -235,69 +240,612 @@ the M8 author has not specifically tuned for.
 - **SKILL.md stays clean; growth goes into `references/`.**
   Operator decision 2026-05-24.
 
-## Open questions (for milestone-setup)
+### OQ-A resolved — `--propose-excludes` heuristic
 
-1. **OQ-A — `--propose-excludes` heuristic.** In M8 scope, or
-   deferred? Recommendation: deferred. Explicit `--exclude` and
-   `.docsignore` cover the immediate need.
-2. **OQ-B — `.docsignore` syntax.** Subset of gitignore
-   (recommended — familiar), or simpler glob list?
-3. **OQ-C — M8 ship before or after M6 PyPI publish?**
-   Recommendation: after. M8's skill reference updates benefit
-   from landing on a shipped M6 baseline.
-4. **OQ-D — Should the skill `.docs.toml.example` ship as a
-   static file** (operators `cp` it into place), **or as a
-   `docs init --template`** verb that materialises it? Latter is
-   more agent-native but adds a new verb. Recommendation: ship
-   as static file in the skill bundle; defer the verb.
-5. **OQ-E — `docs new --body-from -` exit-code semantics.** If
-   the body content already contains a frontmatter-shaped block,
-   strip it? Refuse? Recommendation: refuse with a clear error;
-   the agent should pass body-below-H1 only, since `docs new`
-   owns the frontmatter.
-6. **OQ-F — `docs scaffold` (F9 alt #2) — ship it or not?**
-   Recommendation: skip for M8 unless the `--body-from` form
-   surfaces an edge case during the fresh-subagent integration
-   gate. Adding a verb is permanent surface area; defer.
-7. **OQ-G — How many fresh-subagent integration runs is enough
-   for the M8 ship gate?** Recommendation: 3 trees minimum
-   (small / medium / large), 5 trees ideal. At least 2 of 3
-   must complete without operator intervention.
+**Deferred.** Out of M8 scope. Explicit `--exclude` flag +
+`[exclude] dirs` in `.docs.toml` + `.docsignore` file cover the
+immediate need. Auto-detection of generated-data subdirs
+(heuristic: subdirs with >N files sharing a suffix pattern;
+subdirs with mostly non-md content; subdirs matching common
+"data" / "extractions" / "generated" / "build" names) is a
+plausible follow-up milestone — surface as a parked question
+in plan.md if it survives M8 fresh-subagent runs as a
+recurring pain point.
+
+### OQ-B resolved — `.docsignore` syntax
+
+**Subset of gitignore syntax.** Familiar to every developer;
+implementations exist (the convention can lean on the existing
+`pathspec`-style logic without adding a dependency — implement
+the minimal subset directly in stdlib). Specifically:
+
+- One pattern per line.
+- `#` starts a comment (rest of line ignored).
+- Blank lines ignored.
+- `**` matches any number of path segments.
+- `*` matches anything except `/`.
+- Trailing `/` means directory-only match.
+- Leading `/` anchors at the tree root.
+- `!` for negation (re-include) — supported but rare in
+  practice.
+
+Full gitignore semantics (e.g. nested `.gitignore` files,
+the directory-walk-pruning optimization) are NOT replicated —
+docs trees are small enough that walking everything and
+filtering is fine.
+
+### OQ-C resolved — M8 ship timing relative to M6 publish
+
+**Ship M8 after M6 PyPI publish.** Rationale:
+
+1. M8's skill-reference rewrite (F8) touches files M6 just
+   stabilised — landing on a shipped baseline avoids re-editing
+   the same files in flight.
+2. The fresh-subagent integration gate (Phase 9) tests against
+   real-world adoption scenarios; agents being able to
+   `pip install docs-cli` is part of the realistic flow.
+3. M6 publish is a separate gate already in the operator's
+   queue — sequencing M8 after it costs nothing.
+
+Practical sequence: **M6 publish → M7 ship → M8 ship.**
+
+### OQ-D resolved — `.docs.toml.example` ship form
+
+**Static file in the skill bundle.** Ships as
+`src/docs_cli/skill/references/docs-toml-template.toml`.
+Operators `cp` it into place at adoption time. The skill's
+`adoption-playbook.md` points at it explicitly.
+
+A `docs init --template` verb that materialises it
+programmatically is plausible but adds permanent CLI surface
+for a one-shot operation — defer to a later milestone unless
+the fresh-subagent runs surface a real pain point with `cp`.
+
+### OQ-E resolved — `docs new --body-from` body-with-frontmatter behavior
+
+**Refuse with a clear error.** If the body content piped to
+`--body-from -` (or read from `--body-from <path>`) starts
+with what looks like a metadata block (any line in the first
+20 lines matching `^[A-Z][A-Za-z-]+:\s`), exit with:
+
+```
+docs: --body-from content appears to contain a metadata block.
+      Pass body content only — `docs new` owns the frontmatter.
+      Stripped first 5 lines: <preview>
+```
+
+Exit code 2 (operator-correctable input error, parallel to
+existing CLI conventions).
+
+Rationale: stripping would mask agent bugs; refusing forces
+the agent to learn the correct shape. The clear error message
+lets the agent self-correct in the next call.
+
+### OQ-F resolved — `docs scaffold` sibling verb
+
+**Skip for M8.** The `--body-from` flag covers the same
+need with no new verb. Adding `docs scaffold` would be
+permanent CLI surface for a marginal ergonomic win.
+
+If the M8 fresh-subagent runs surface a case where
+`--body-from` is genuinely awkward (e.g. agent needs to read
+the scaffold before composing content), revisit at M9.
+Document the case in the Phase 9 log either way.
+
+### OQ-G resolved — Fresh-subagent integration gate threshold
+
+**3 trees minimum; 5 trees ideal. At least 2 of 3 must
+complete without operator intervention.** Trees selected to
+span size + style:
+
+- 1 small kebab-case tree (~5 files) — quick sanity check.
+- 1 medium snake_case TitleCase tree (~30 files) — dominant
+  real-world shape.
+- 1 large mixed tree (~70+ files, possibly with an
+  `archived/` subdir) — scale + edge-case stress.
+
+The third may surface a genuine OQ the playbook tells the
+agent to escalate (acceptable — that's the playbook working
+as designed). If a subagent stalls on something the playbook
+doesn't anticipate, that's a fail: iterate F8 / F9 / the
+playbook / SKILL.md before re-running. **The skill and the
+verb are the unit under test, not the LLM.**
+
+If runs against 5 trees are practical (cost / time
+permitting), run 5 — broader coverage of edge cases. The
+floor is 3.
+
+## Open questions
+
+_All seven milestone-setup OPEN QUESTIONS are resolved
+2026-05-24, recorded as Decisions above. No new questions
+surfaced during setup._
 
 ## TDD Implementation Plan
 
-Not yet expanded. Drafted at milestone-setup once OQs are
-resolved.
+The ten phases follow the methodology in
+[status.md](status.md). Because M8's load-bearing test is the
+**fresh-subagent integration gate at Phase 9** — not the unit
+suite — the earlier phases bias toward making the unit surface
+small and the skill references rich.
 
-Estimated phase shape:
+### Phase 1: Define Contract
 
-- **Phase 1 — Define Contract.** Activate milestone; cli.md gets
-  the new flags + `--body-from` documented; convention.md gets
-  the `[exclude]` section.
-- **Phase 2 — Write Tests (RED).** New
-  `tests/test_exclude.py` (tree-wide application across verbs),
-  `tests/test_triage_flags.py`, `tests/test_body_from.py`,
-  `tests/test_skill_adoption.py` (references content + SKILL.md
-  trigger discoverability).
-- **Phase 3 — Create Data/Fixtures.** Reuse M7's sanitised
-  Trial 2 fixtures for the exclude + triage tests. New tiny
-  fixtures for body-from edge cases.
-- **Phase 4 — Run Tests (RED Baseline).**
-- **Phase 5 — Update Base Interfaces.** Argparse subparser
-  updates; `.docs.toml` schema extension in `load_config`.
-- **Phase 6 — Implement Core.** `--exclude` everywhere;
-  triage flags in migrate output; `docs new --body-from`;
-  the `[exclude]` config plumb-through.
-- **Phase 7 — Update Wrappers.** SKILL.md one-line update; new
-  `references/adoption-playbook.md`; new
-  `references/docs-toml-template.toml`; cli.md sections.
-- **Phase 8 — Run Tests (GREEN).** All M1–M7 + new M8 tests pass.
-- **Phase 9 — Integrate (FRESH-SUBAGENT GATE).** Spawn fresh
-  Opus subagents (no prior context, fresh checkout, M8-bundled
-  skill only). Hand each one a different real foreign tree from
-  M7's fixtures. Each must complete the adoption loop end-to-end.
-  See Success Criteria for the bar.
-- **Phase 10 — Quality, Docs, Refactor.** Sweep + tag M8.
+- **Objective:** Promote this milestone from `draft` to `active`
+  (already done at milestone-setup, 2026-05-24); create the log
+  skeleton; record OQ A–G resolutions as Decisions (done);
+  refresh status.md's "Current milestone" and "Next action" to
+  point at Phase 2. No code change; no convention edits yet
+  (those land at Phase 5 / Phase 7 to keep the contract phase
+  reviewable in isolation).
+- **Files (text/docs work):**
+  - `docs/m8-adoption-workflow.md` — `Status: draft` → `active`
+    (done); `Updated:` bumped; Decisions populated with OQ A–G
+    resolutions (done).
+  - `docs/m8-adoption-workflow-log.md` — created with the
+    M5/M6/M7 log skeleton.
+  - `docs/status.md` — "Current milestone" rewritten to note
+    M8 setup complete + Phase 2 next; M8 row flipped from
+    "stub drafted" to "in flight (Phase 1 complete, blocked on
+    M7 ship)".
+  - `docs/plan.md` — already lists M8 (committed `1df6ec6`); no
+    further edit beyond the touch.
+  - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+    regenerated in lockstep so the new log appears.
+- **Exit:** M8 is `active`; log exists; status.md reflects
+  Phase 1 complete; tests still GREEN (M7's count, whatever it
+  is at the time); ruff/format/mypy clean; `docs check docs/`
+  exit 0; INDEX snapshot matches. No code change. No convention
+  change.
+
+### Phase 2: Write Tests (RED)
+
+- **Objective:** Express every M8 requirement (F3/F6/F7/F8/F9)
+  as a failing check before any implementation. Tests collect
+  cleanly; every new assertion fails for the intended reason.
+- **New test files:**
+  - `tests/test_exclude.py` (F3). Asserts:
+    1. `docs migrate --exclude <subdir>/` skips files under that
+       subdir in the migration plan.
+    2. `--exclude` is repeatable: `--exclude a --exclude b`
+       skips both.
+    3. `--exclude` accepts glob patterns: `--exclude '**/data/**'`,
+       `--exclude '*memo*'`.
+    4. `docs migrate --exclude-ext xlsx,html` skips files with
+       those extensions (when surfaced — see F7).
+    5. `[exclude] dirs = [...]` in `.docs.toml` applies
+       **tree-wide**: `docs index`, `docs check`, `docs list`
+       all honour it. One test per verb (4 tests).
+    6. `[exclude] globs = [...]` in `.docs.toml` also honoured
+       tree-wide.
+    7. `.docsignore` at the tree root is parsed with the
+       gitignore-subset syntax from OQ-B; honoured tree-wide.
+       Specific cases: pattern `*.tmp`, pattern `data/`,
+       pattern `/specific.md`, pattern `**/build/**`, comment
+       lines, blank lines, negation `!keep-me.md`.
+    8. CLI `--exclude` flag layers ON TOP of `.docs.toml` +
+       `.docsignore` baseline (doesn't replace).
+    9. Plan footer surfaces excluded count:
+       `"185 files excluded under <subdir>/"`.
+  - `tests/test_triage_flags.py` (F6). Asserts:
+    1. `--summary` produces one line per file with
+       `path  role  conf  notes` shape.
+    2. `--only ambiguous` returns only files with at least one
+       ambiguity in the JSON output; diffable against an
+       unflagged run.
+    3. `--group-by role` orders the plan output by role.
+    4. `--group-by confidence` orders by confidence (high →
+       medium → low).
+    5. Default plan footer (no flag) shows counts by role +
+       confidence + ambiguity type.
+    6. `--summary` and `--only ambiguous` compose:
+       `--summary --only ambiguous` works.
+  - `tests/test_non_md_surfacing.py` (F7). Asserts:
+    1. A tree with N non-md siblings at root surfaces a footer
+       line listing them: `"5 non-Markdown siblings at root not
+       considered: <names>"`.
+    2. The footer line appears only when N > 0.
+    3. `--exclude-ext` (from test_exclude.py) suppresses the
+       footer line for those extensions.
+  - `tests/test_body_from.py` (F9). Asserts:
+    1. `docs new milestone foo --body-from -` reads stdin and
+       writes the complete file in one call.
+    2. `docs new milestone foo --body-from <path>` reads from a
+       file.
+    3. Output file matches the same shape as the
+       scaffold-then-Write pattern (golden comparison).
+    4. **OQ-E enforcement**: body content containing what looks
+       like a metadata block (any line in first 20 matching
+       `^[A-Z][A-Za-z-]+:\s`) → exit 2 with the documented
+       error message + preview.
+    5. `--body-from` without a value → argparse error.
+    6. `--body-from <nonexistent-path>` → exit 2 with a
+       file-not-found error.
+    7. Idempotency: running twice with the same body content
+       and the same slug → second call exits 2 (file exists),
+       no overwrite. Same as current `docs new` semantics.
+  - `tests/test_skill_adoption.py` (F8). Asserts:
+    1. `src/docs_cli/skill/SKILL.md` description contains at
+       least 3 of the adoption trigger phrases ("adopt this
+       directory", "migrate this folder", "bring this into
+       docs convention", "import existing markdown specs").
+    2. `SKILL.md` contains the literal one-line pointer:
+       `"**Adopting an existing Markdown directory?** Read"`
+       + a link to `references/adoption-playbook.md`.
+    3. `src/docs_cli/skill/references/adoption-playbook.md`
+       exists with required H2 sections: "When this applies",
+       "Step 1", through "Step 6", "Worked example",
+       "Pitfalls".
+    4. `src/docs_cli/skill/references/docs-toml-template.toml`
+       exists and parses as valid TOML.
+    5. The template contains `[exclude]`, `[migrate]`,
+       `[vocabulary]` sections with at least one commented
+       example each.
+    6. M5's existing lockstep test
+       (`tests/test_skill_refs.py`) still passes — the
+       references/{convention,cli}.md byte-identity holds.
+- **Extensions:**
+  - `tests/test_migrate.py` — keep, extend. Add a test that
+    `--summary --json` is rejected (mutually exclusive).
+- **Exit:** every new test file collects cleanly; every new
+  test fails or errors on the intended unimplemented surface.
+  M7's full suite stays GREEN.
+
+### Phase 3: Create Data/Fixtures
+
+- **Objective:** Stage the fixtures the new tests reference.
+  Reuse M7's sanitised real-trees fixtures heavily; new
+  fixtures only for body-from edge cases and exclude tests.
+- **Fixtures to add:**
+  - `tests/fixtures/body-from/with-frontmatter.txt` — body
+    content starting with `Owner: Foo` and similar lines (the
+    OQ-E refusal case).
+  - `tests/fixtures/body-from/clean-body.md` — body content
+    with no metadata-shaped lines (the happy path).
+  - `tests/fixtures/body-from/edge-case-keyword.md` — body
+    containing a line like `Plan: stage one then stage two`
+    (false-positive risk for the metadata-block detector).
+    This test verifies the heuristic doesn't over-trigger.
+  - `tests/fixtures/docsignore/sample/.docsignore` — a
+    gitignore-style file exercising every OQ-B syntax case.
+  - `tests/fixtures/docsignore/sample/<various .md files>` —
+    files that should and shouldn't match.
+  - `tests/fixtures/trees/exclude-test/` — small synthetic
+    tree (~10 files) with a `.docs.toml` carrying `[exclude]
+    dirs = ["build"]` and a `build/` subdir to skip. Confirms
+    the tree-wide application of OQ-B's decision.
+- **Reuse from M7:**
+  - All 5 real-trees fixtures (kebab-tiny, snake-medium,
+    snake-large, archive-subdir, mixed-naming) for the
+    triage-flag tests and the Phase 9 fresh-subagent gate.
+- **Exit:** every fixture path the new tests reference exists;
+  RED baseline (Phase 4) failures trace to unimplemented
+  surface, not missing fixtures.
+
+### Phase 4: Run Tests (RED Baseline)
+
+- **Objective:** Confirm the new RED tests fail for intended
+  reasons; pin failure modes in the log.
+- **Actions:**
+  ```sh
+  .venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tee /tmp/m8-phase-4-baseline.txt
+  .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
+  .venv/bin/docs check docs/
+  ```
+- **Expected RED matrix:**
+
+  | Test group | Failure mode | Root cause |
+  |---|---|---|
+  | F3 exclude (9 tests) | `argparse` errors on `--exclude`; KeyError on `[exclude]`; FileNotFoundError on `.docsignore` parse | Flag + config + ignore-file unimplemented |
+  | F6 triage flags (6 tests) | argparse errors on `--summary` / `--only` / `--group-by`; default footer absent | Flags unimplemented |
+  | F7 non-md surfacing (3 tests) | Plan footer doesn't include the non-md line | Surfacing logic unimplemented |
+  | F9 body-from (7 tests) | argparse errors on `--body-from` | Flag unimplemented |
+  | F8 skill adoption (6 tests) | AssertionError on SKILL.md content; FileNotFoundError on adoption-playbook.md / docs-toml-template.toml | Skill references not written yet |
+
+- **Aggregate expected:** M7's full suite + ~31 new RED.
+  M7's quality gate stays clean.
+- **Exit:** Phase-4 log entry captures the verbatim baseline;
+  every RED traces to the intended unimplemented surface.
+
+### Phase 5: Update Base Interfaces
+
+- **Objective:** Schema + argparse + config plumbing changes.
+  No business logic yet (that's Phase 6).
+- **`src/docs_cli/cli.py` changes:**
+  - `Config` schema extension:
+    - Add `Config.exclude_dirs: tuple[str, ...]`.
+    - Add `Config.exclude_globs: tuple[str, ...]`.
+    - Add `Config.exclude_exts: tuple[str, ...]`.
+    - Add `Config.docsignore_patterns: tuple[Pattern, ...]`
+      (parsed at load time from `.docsignore` if present).
+  - `load_config` reads `[exclude]` table from `.docs.toml`:
+    `dirs`, `globs`, `exts`. Reads `.docsignore` from the tree
+    root if present; parses with the OQ-B subset.
+  - New helper `compile_exclude_predicate(config, cli_excludes)
+    -> Callable[[Path], bool]` returns a single predicate
+    combining config + CLI overrides. The predicate is the
+    one place every verb consults; no duplicated logic.
+  - Argparse — add identical `--exclude` action to each of
+    `migrate`, `index`, `check`, `list` subparsers
+    (repeatable, glob-supporting). Add `--exclude-ext` to
+    `migrate` (per F7's interaction).
+  - Argparse — add `--summary`, `--only` (with choices
+    `ambiguous`), `--group-by` (with choices `role`,
+    `confidence`) to `migrate`.
+  - Argparse — add `--body-from <path|->` to `new`. Mutually
+    exclusive with positional body args (currently there are
+    none, so just additive).
+  - Argparse — `--summary` and `--json` on `migrate` are
+    mutually exclusive (argparse enforces).
+- **Exit:** type-check passes; `docs migrate --help`,
+  `docs index --help`, etc. show the new flags; tests still
+  RED for behaviour but argparse errors gone (a few tests
+  flip from argparse-error RED to assertion RED — which is
+  forward progress).
+
+### Phase 6: Implement Offline/Core Path
+
+- **Objective:** Make every F3/F6/F7/F9 test GREEN. F8 lands
+  at Phase 7 (skill references are tool/wrapper layer).
+- **`src/docs_cli/cli.py` changes:**
+  - `_iter_doc_paths` (the tree walker used by every verb)
+    consults the exclude predicate. Honours config + CLI
+    overrides + `.docsignore`. Counts excluded files for the
+    footer.
+  - `migrate_plan` honours the exclude predicate; emits the
+    excluded-count + non-md-sibling footer lines.
+  - `_render_migrate_plan` (human output):
+    - `--summary` mode: one line per file
+      (`path  role  conf  notes` formatted columns).
+    - `--only ambiguous` mode: filter out entries with no
+      ambiguities.
+    - `--group-by role` / `--group-by confidence`: sort
+      entries before render.
+    - Default footer: counts by role + confidence + top
+      ambiguity types (re-uses M7's confidence enum).
+  - Non-md sibling surfacing: at the root of the migrated
+    tree (and root only, not recursive), enumerate non-md
+    files; emit footer line if any. Suppressed by
+    `--exclude-ext` for the suppressed extensions.
+  - `_cmd_new` handles `--body-from`:
+    - `-` reads stdin to EOF.
+    - `<path>` reads the file (exit 2 if missing).
+    - Apply OQ-E heuristic: scan first 20 lines; if any
+      matches `^[A-Z][A-Za-z-]+:\s` → exit 2 with the
+      documented error + preview of first 5 lines.
+    - Otherwise: scaffold the frontmatter as usual, then
+      append the body content under the H1. Single
+      atomic write.
+  - `.docsignore` parser: minimal OQ-B subset. ~60 lines
+    of code. Unit tests in `test_exclude.py` cover every
+    syntax case.
+- **Exit:** F3/F6/F7/F9 tests all GREEN; M7 quality gate
+  stays clean; `docs check docs/` exit 0; ruff/format/mypy
+  clean tree-wide.
+
+### Phase 7: Update Tool/Wrapper Layer (the skill rewrite)
+
+- **Objective:** The F8 work — write the adoption playbook
+  + `.docs.toml` template; minimal SKILL.md additions;
+  resync references; bump version; CHANGELOG.
+- **`src/docs_cli/skill/SKILL.md`** (minimal additions only):
+  - Description extension: add adoption triggers ("adopt
+    this directory", "migrate this folder", "bring this
+    into docs convention", "import existing markdown
+    specs"). Append to existing description; don't replace.
+  - Single new sentence near the verb table:
+    > **Adopting an existing Markdown directory?** Read
+    > [references/adoption-playbook.md](references/adoption-playbook.md)
+    > first.
+
+  Nothing else. SKILL.md must stay short (the F8 rule).
+  The test_skill_adoption.py assertions enforce this — if
+  SKILL.md balloons, the test fails on size or shape.
+- **`src/docs_cli/skill/references/adoption-playbook.md`**
+  (new — the substantial doc):
+  - Frontmatter (Status / Role / Project / Updated /
+    Related).
+  - `## When this applies` — you're standing in a
+    non-conforming dir.
+  - `## Step 1 — `docs migrate --json <dir>`` — get the
+    dry-run plan; pipe to `jq` for inspection.
+  - `## Step 2 — Triage the plan` — `--summary`,
+    `--only ambiguous`, `--group-by`. Decide on
+    `--exclude` patterns.
+  - `## Step 3 — Create `.docs.toml`` — point at
+    `references/docs-toml-template.toml`. Fill in
+    `[exclude] dirs`, `[vocabulary] add_roles`,
+    `[migrate] role_suffixes` per the tree's shape.
+  - `## Step 4 — Iterate` — re-run migrate dry-run; tune
+    excludes / config; repeat until plan is clean.
+  - `## Step 5 — `docs migrate --apply <dir>``.
+  - `## Step 6 — Verify` — `docs check <dir>` exit 0.
+  - `## Worked example` — a realistic ~200-file tree
+    end-to-end. Generic sanitised content — NO third-party
+    product / customer / feature names. Sourced from the
+    M7 fixtures.
+  - `## Pitfalls`:
+    - The `Status:` → `Lifecycle:` rename (M7 F0).
+    - `_v2` / `_Draft` non-role suffixes (M7 F10).
+    - When a subdir is actually a separate project (defer
+      to a future milestone).
+    - The agent-native `docs new --body-from -` pattern
+      (this milestone's F9).
+- **`src/docs_cli/skill/references/docs-toml-template.toml`**
+  (new — the operator template):
+  ```toml
+  # Project identity
+  # [project]
+  # name = "my-project"
+
+  # File exclusion (tree-wide — applies to migrate, index,
+  # check, list). Each verb may extend with --exclude on
+  # the command line.
+  [exclude]
+  dirs = [
+      # "generated",
+      # "build",
+      # "node_modules",
+  ]
+  globs = [
+      # "**/*.draft.md",
+  ]
+  exts = [
+      # "xlsx",
+      # "html",
+  ]
+
+  # Migration-time role inference extensions
+  [migrate]
+  role_suffixes = {
+      # "-rubric" = "template",
+      # "-memo" = "notes",
+  }
+  # project_name = "my-project"  # override the inferred name
+
+  # Controlled-vocab extensions
+  [vocabulary]
+  add_roles = [
+      # "explainer",
+  ]
+  add_lifecycles = [
+      # "experimental",
+  ]
+  ```
+  Heavy comments; every block has at least one commented
+  example so an operator can keep / strip / extend each.
+- **Spec updates:**
+  - `docs/cli.md` — add `--exclude`, `--summary`, `--only`,
+    `--group-by`, `--exclude-ext`, `--body-from` synopses
+    + examples. The plan-footer shape documented.
+  - `docs/convention.md` — `[exclude]` table documented;
+    `.docsignore` syntax subset documented; pointer to the
+    adoption playbook.
+  - `docs/architecture.md` — `Config` schema illustration
+    updated with the new exclude fields.
+  - `README.md` — adoption-flow section near the top:
+    `pip install docs-cli && docs install-skill`,
+    then point at the skill (which points at the
+    playbook). 5-line addition.
+  - `CHANGELOG.md` — new `## 1.3.0 — UNRELEASED` section
+    with M8 deliverables called out.
+  - `pyproject.toml` + `cli.py` `__version__` bump
+    `1.2.0` → `1.3.0`.
+- **Skill-refs lockstep:**
+  - `src/docs_cli/skill/references/convention.md` and
+    `references/cli.md` — resynced from `docs/` via the
+    M5/M6 mechanism. The new `adoption-playbook.md` and
+    `docs-toml-template.toml` are NOT mirrored from `docs/`
+    — they live only in the skill bundle.
+- **INDEX regenerated; fixture snapshot updated.**
+- **Exit:** F8 tests GREEN; `test_skill_refs.py` still
+  passes; SKILL.md stays ≤ ~90 lines (M5/M6 baseline +
+  ~5 line adoption pointer); ruff/format/mypy clean;
+  `docs check docs/` exit 0.
+
+### Phase 8: Run Tests (GREEN)
+
+- **Objective:** Capture the full GREEN gate verbatim. M7's
+  count + M8's ~31 new tests.
+- **Actions:**
+  ```sh
+  .venv/bin/python -m pytest tests/ -q
+  .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
+  .venv/bin/docs check docs/
+  .venv/bin/docs index --root docs/ --dry-run
+  .venv/bin/python -m build --outdir /tmp/m8-phase-8-build
+  ```
+- **Exit:** every command exit 0; Phase 8 log captures
+  verbatim output. STOP if anything RED.
+
+### Phase 9: Implement Online/Integration — **FRESH-SUBAGENT GATE**
+
+- **Objective:** The load-bearing test of M8. M8 doesn't
+  ship until fresh subagents demonstrably drive the
+  adoption loop end-to-end against trees they haven't seen.
+  This is more demanding than per-feature unit tests; it's
+  the integration gate per OQ-G.
+- **Setup:**
+  - Per OQ-G: spawn 3 subagents minimum, 5 ideal.
+  - Each subagent is fresh Opus with no prior conversation
+    context.
+  - Each gets a different M7 fixture tree:
+    - Subagent 1: `tests/fixtures/trees/real-trees/kebab-tiny/`
+    - Subagent 2: `tests/fixtures/trees/real-trees/snake-medium/`
+    - Subagent 3: `tests/fixtures/trees/real-trees/snake-large/`
+      (or `mixed-naming/`).
+  - Each is invoked with the bundled skill installed
+    (`docs install-skill --dest <agent-skill-dir>`).
+  - The conductor (this session, when actually executing
+    M8) hands each subagent the prompt:
+    > "I want to adopt the directory at <fixture-path> into
+    > the docs convention. Walk the workflow end-to-end and
+    > commit the result."
+
+    Nothing else. No hints, no `.docs.toml` pre-filled, no
+    walkthrough. The subagent reads SKILL.md, follows the
+    pointer to `references/adoption-playbook.md`, drives
+    the loop.
+- **Pass criteria (per OQ-G):**
+  - At least 2 of 3 subagents complete the full loop
+    (dry-run → triage → exclude → iterate → apply →
+    `docs check` exit 0 → commit) without operator
+    intervention.
+  - The third may escalate ONE OQ to the operator (the
+    playbook tells the agent which OQs are operator-only;
+    that's the playbook working as designed).
+  - If a subagent stalls on something the playbook doesn't
+    anticipate — that's a fail. **Iterate F8 / F9 / the
+    playbook / SKILL.md until subagents drive it.** The
+    skill and the verb are the unit under test, not the
+    LLM.
+- **Documentation:**
+  - Each subagent run logged in the Phase 9 log entry:
+    invocation, transcript summary (the conductor's view
+    of the subagent's tool calls), pass/fail, time-to-
+    completion, any unexpected behaviour.
+  - If a run fails, the playbook iteration is also
+    recorded — what was missing, what was added, did a
+    re-run pass.
+- **Out-of-scope (operator-driven, not part of the gate):**
+  - Network publishes (PyPI). M8 ships as 1.3.0 with the
+    same manual-twine flow as M6.
+- **Exit:** OQ-G threshold met (≥ 2 of 3 unattended); each
+  fixture has a committed adopted state under
+  `tests/fixtures/trees/real-trees-adopted/` (separate
+  directory; doesn't overwrite the unadopted fixtures); the
+  Phase 9 log records every run with full attribution.
+
+### Phase 10: Quality, Docs, Refactor
+
+- **Objective:** Polish + ship. Sweep dogfood consistency;
+  append milestone-completion summary; tag `v1.3.0`;
+  (operator-driven) publish.
+- **Actions:**
+  - Sweep this project's own `docs/` for any stale
+    references to M8-era APIs that didn't match the final
+    shape.
+  - Append "Milestone-completion summary" to
+    `docs/m8-adoption-workflow.md` (mirror M6/M7 summary
+    shape).
+  - Update `docs/status.md`: M8 → Complete (DATE);
+    milestone table row flipped; "Next action" rewritten.
+  - Update `CHANGELOG.md`: replace `## 1.3.0 — UNRELEASED`
+    with the actual ship date.
+  - `docs index --root docs/`; copy onto fixture.
+  - Final quality gate: pytest GREEN; ruff/format/mypy
+    clean; `docs check docs/` exit 0.
+  - **Publish (operator-driven):** `python -m build` +
+    `twine check` + manual `twine upload` per runbook.
+    Same flow as M6 + M7. 1.3.0 wheel ships the M8 adoption
+    workflow.
+  - Tag `v1.3.0`; push tag.
+  - `gh release create v1.3.0 ...` with M8 summary notes.
+- **Exit:** M8 task plan + log carry completion summaries;
+  status.md reflects M8 → Complete; CHANGELOG dated;
+  `v1.3.0` tagged; (operator-driven) artifact on PyPI; the
+  Phase 9 gate is the load-bearing record that adoption is
+  agent-driveable.
 
 ## Deliverables (provisional — finalised at milestone-setup)
 
