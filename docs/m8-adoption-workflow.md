@@ -103,16 +103,60 @@ or group the plan for triage.
   by ambiguity type. Gives a 30-second read of "is this plan good
   enough to `--apply`?".
 
-### F7 — Non-Markdown siblings are silently ignored
+### F7 — Non-Markdown siblings (sidecars) — surface + agent-authored, no new verb
 
 Trial 1's tree has 3 .html, 1 .xlsx, 1 .odt at root, all
-referenced from .md files. Migrate doesn't surface them. The
-convention says docs are Markdown — skipping is correct — but
-surfacing is useful for adopters.
+referenced from .md files. Migrate doesn't surface them today.
+The convention says docs are Markdown only, so skipping is
+correct — but adopting agents lose the signal that the binary
+is part of the tree's content surface.
 
-**M8 proposes:** add a plan-footer line "5 non-Markdown siblings at
-root not considered: <name>, <name>, …". Surfacing only; no
-action. Defer sidecar metadata to a later milestone.
+**Handling — surface + sidecar-via-existing-surface, NO new
+verb (lean for agent):**
+
+1. **Surface in plan footer.** One line at the migrate plan's
+   end:
+   ```
+   non-md siblings at root not considered:
+     report-2026-05-21.html, ceo-review.xlsx, source-pack.odt
+   ```
+   Suppressible per-extension via `--exclude-ext xlsx,html`
+   (per F3).
+
+2. **Agent authors a sidecar when warranted**, using the
+   already-shipping `docs new <role> <slug> --body-from -`
+   (per F9). A sidecar is a normal Markdown doc with a
+   `Related: artifact-of:` line pointing at the binary:
+
+   ```sh
+   docs new reference report-2026-05-21 --body-from - <<'EOF'
+   Related:
+   - artifact-of: report-2026-05-21.html
+
+   # Report 2026-05-21
+
+   Companion to `report-2026-05-21.html`. The HTML is the
+   primary artifact; this sidecar carries the metadata
+   (Lifecycle, Project, Related) the convention needs.
+
+   See [report-2026-05-21.html](report-2026-05-21.html) for
+   the rendered content.
+   EOF
+   ```
+
+   The `artifact-of:` is a standard `Related:` qualifier
+   shape — no new field, no schema change.
+
+3. **Playbook teaches the decision (per F8 below).** Which
+   binaries warrant a sidecar (referenced from prose;
+   long-lived; would be missed if untracked) vs. which are
+   noise (one-off exports; build artifacts; exclude via
+   `--exclude-ext`).
+
+**No new verb. No new flag** beyond F3's `--exclude-ext`. The
+sidecar pattern is "an authoring pattern the playbook
+teaches", not a tooling feature with its own implementation,
+tests, and surface area.
 
 ### F9 — `docs new` → Write friction breaks the agent flow
 
@@ -183,25 +227,58 @@ SKILL.md carrying only a short trigger line + a single link.
 
   Nothing else. SKILL.md stays short.
 
-- **`src/docs_cli/skill/references/adoption-playbook.md`** (new) —
-  the substantial doc. Sections:
+- **`src/docs_cli/skill/references/adoption-playbook.md`**
+  (new) — the substantial doc. Sections:
   - When this applies (you're standing in a non-conforming dir).
-  - Step 1 — `docs migrate --json <dir>` to get the dry-run plan.
-  - Step 2 — triage the plan (`--summary`, `--only ambiguous`),
-    decide on `--exclude` patterns.
+  - Step 1 — `docs migrate --json <dir>` to get the dry-run
+    plan. **Read the footer first** — it summarises counts by
+    role / confidence / ambiguity, excluded counts, M7 F5
+    multi-project hints, and F7 non-md siblings.
+  - Step 2 — triage the plan (`--summary`,
+    `--only ambiguous`, `--group-by`); decide on `--exclude`
+    patterns.
   - Step 3 — create `.docs.toml` (template at
-    `references/docs-toml-template.toml`), with `[exclude] dirs`,
-    `[vocabulary] add_roles`, `[migrate] role_suffixes`.
+    `references/docs-toml-template.toml`): `[exclude] dirs`
+    / `globs` / `exts`, `[vocabulary] add_roles` /
+    `add_lifecycles`, `[migrate] role_suffixes`,
+    `[migrate] project_name` (if the inferred project name
+    needs overriding).
   - Step 4 — re-run migrate dry-run; iterate until clean.
   - Step 5 — `docs migrate --apply <dir>`.
-  - Step 6 — verify with `docs check <dir>`.
+  - Step 6 — verify with `docs check <dir>` exit 0.
   - Worked example: a realistic ~200-file tree end-to-end.
     Generic sanitised content — NO third-party product /
     customer / feature names.
-  - Pitfalls: the prose-`Status:` → `Lifecycle:` change (per M7
-    F0); the `_v2` / `_Draft` non-role suffixes (per M7 F10);
-    when a subdir is actually a separate project (deferred).
-  - The agent-native `docs new --body-from -` pattern (per F9).
+  - **Multi-project trees (handling M7 F5 hints).** A
+    subsection walking the "this subdir looks like a separate
+    project" hint. Decision tree:
+    1. **Ignore** — parent project is correct.
+    2. **Exclude + recurse** — `--exclude <subdir>/` on the
+       parent; then `docs migrate <tree>/<subdir>
+       --config-project <name>` separately, producing two
+       plans the agent applies independently.
+    3. **Override parent project** — `docs migrate
+       --config-project <name>` for the single run when the
+       inferred name is wrong but the structure is right.
+
+    Worked sub-example showing the recurse pattern across 2
+    sub-projects in one parent tree.
+  - **Sidecars for non-md siblings (handling F7).**
+    Subsection walking: when a binary referenced from prose
+    warrants a sidecar (long-lived, meaningfully tracked,
+    needs Lifecycle / Project / Related metadata); how to
+    author one with `docs new <role> <slug> --body-from -`
+    (per F9); the `Related: artifact-of: <binary>` shape
+    that ties the sidecar to its artifact. When NOT to
+    author one (one-off exports, build artifacts —
+    `--exclude-ext` them instead).
+  - Pitfalls: prose-`Status:` → `Lifecycle:` (per M7 F0);
+    `_v2` / `_Draft` non-role suffixes (per M7 F10);
+    inferred project name needs override (per M7 F5 + F11);
+    generated-data dirs need `--exclude` (per F3).
+  - The agent-native `docs new --body-from -` pattern (per
+    F9) — single Bash call to author a full doc, no Read
+    round trip.
 
 - **`src/docs_cli/skill/references/docs-toml-template.toml`**
   (new) — pre-filled with `[exclude] dirs`, `[migrate]
@@ -330,16 +407,11 @@ Rationale: stripping would mask agent bugs; refusing forces
 the agent to learn the correct shape. The clear error message
 lets the agent self-correct in the next call.
 
-### OQ-F resolved — `docs scaffold` sibling verb
+### OQ-F resolved — `docs scaffold` sibling verb: skip
 
-**Skip for M8.** The `--body-from` flag covers the same
-need with no new verb. Adding `docs scaffold` would be
-permanent CLI surface for a marginal ergonomic win.
-
-If the M8 fresh-subagent runs surface a case where
-`--body-from` is genuinely awkward (e.g. agent needs to read
-the scaffold before composing content), revisit at M9.
-Document the case in the Phase 9 log either way.
+`--body-from` covers the need. No new verb. If a Phase 9
+subagent run surfaces a genuine `--body-from` gap, document
+it in the Phase 9 log and revisit post-M8.
 
 ### OQ-G resolved — Fresh-subagent integration gate threshold
 

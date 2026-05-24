@@ -20,9 +20,11 @@ Related:
 - Surface: extensions to `docs migrate`'s inference (`infer_role`,
   `infer_project`, `infer_status`, `migrate_plan`), a breaking
   rename of the controlled-vocab field from `Status:` to
-  `Lifecycle:`, vocab additions, and archive-subdir normalisation.
-  No new top-level verbs. M8 owns the operator/agent ergonomics
-  side (flags, skill references).
+  `Lifecycle:`, vocab additions, archive-subdir normalisation,
+  and **one new CLI flag** `--config-project <name>` to support
+  the multi-project agent workflow. No new verbs. M8 owns the
+  operator/agent ergonomics side (broader flags, skill
+  references).
 - Status: ACTIVE (started 2026-05-24, milestone-setup complete).
   Captured 2026-05-24 from a multi-tree trial (501 files across 25
   real-world sibling trees).
@@ -224,6 +226,12 @@ snake_case files in Trial 2:
 
 ### F11 — Project-name casing inherited verbatim from dir name
 
+(Per F5: agents can override the inferred project for a single
+migrate run via `--config-project <name>`; persistent override
+via `.docs.toml [migrate] project_name`.)
+
+
+
 Trial 2 produced 25 distinct project values — one per dir, perfect
 matching. But the casing is a free-for-all inherited from
 directory names. The casing-shape buckets:
@@ -276,6 +284,68 @@ project's own milestone files are `m1-parser-and-index.md`,
   pattern (which the convention already detects). F12 generalises
   to the *suffix* shape.
 
+### F5 — Multi-project trees: surface as inference hint; agent drives
+
+Every file in Trial 1 (235) and every file per-tree in Trial 2
+got a single project value inferred once from the root dir name
+and applied uniformly. Multi-project trees — a parent dir with
+multiple semantic projects underneath, common in monorepo doc
+roots — are a real-world shape the tool should help an agent
+adopt.
+
+**The tooling can't decide** whether a subdir is "a data dir we
+should exclude" vs. "a separate project we should treat
+distinctly" — that's a semantic call. But it **can surface
+candidates** and let the agent decide. Per the operator
+direction (2026-05-24): give the agent hints, don't bake the
+decision into the verb.
+
+**Detection heuristic.** For each immediate subdir of the
+migrated tree, compute the longest common filename prefix among
+the .md files inside. If that prefix differs meaningfully from
+the parent's inferred project AND covers ≥ N files (N=5), emit
+one advisory line in the plan footer:
+
+```
+hint: subdir 'foo-tools/' looks like a separate project
+      (common prefix 'foo_tools_', 17 .md files). To migrate it
+      independently:  docs migrate <tree>/foo-tools/
+                      --config-project foo-tools
+```
+
+That is the entire feature surface. The verb doesn't split the
+plan, doesn't recurse, doesn't pre-materialise anything. The
+agent reads the hint and decides:
+
+- **(a) Ignore** — the parent project is the right grouping;
+  proceed with the default plan.
+- **(b) Exclude + recurse** — `--exclude foo-tools/` on the
+  parent migrate; then `docs migrate <subdir> --config-project
+  foo-tools` separately. M8's adoption playbook (F8) carries
+  the worked example.
+- **(c) Override the parent project** — pass `--config-project
+  <name>` to the single parent migrate. Useful when the
+  inferred name is wrong but the structure is correct.
+
+**Why this is enough.** The trial revealed a *signal-to-noise*
+problem (185-file data subdir muddying the plan) not a
+*correctness* problem. F3 excludes (M8) clear noise; F5 hints
+flag legitimate sub-project boundaries. The agent, armed with
+both + the playbook, resolves multi-project trees in one or two
+iterations of the dry-run loop.
+
+**M7 proposes:**
+
+- `migrate_plan` runs the per-subdir-prefix heuristic; emits
+  one hint line per candidate in the plan footer.
+- **`--config-project <name>` flag** on `docs migrate` — the
+  one new M7 CLI surface, overrides the inferred project for
+  the run. Persisting the override via `.docs.toml` `[migrate]
+  project_name` (per F11) is the alternative for trees the
+  agent owns.
+- Hints are advisory only; no behaviour change beyond the
+  extra footer lines.
+
 ## Generalisation note
 
 The trial trees informed M7; they are evidence, not the target.
@@ -290,10 +360,12 @@ score equally well on fresh trees the M7 author hasn't seen
 ### Carried forward from M4 / M6
 
 - `docs migrate` stays dry-run by default. `--apply` semantics
-  unchanged. **M7 adds NO new top-level flags and NO new
-  verbs** — all M7 work is in inference + convention. The
-  in-project `Status:` → `Lifecycle:` sweep is a one-off
-  manual edit, not a shipped feature.
+  unchanged. **M7 adds exactly one new CLI flag**:
+  `--config-project <name>` on `docs migrate`, the override
+  knob the multi-project-hint workflow (F5) tells the agent
+  about. No other new flags; no new verbs. The in-project
+  `Status:` → `Lifecycle:` sweep is a one-off manual edit, not
+  a shipped feature.
 - The convention's archive shape (`archive/YYYY-MM-DD/<file>`)
   stays as-is. M7 adds normalisation TO it; doesn't change it.
 - M6 has merged to `main` (2026-05-24, considered reviewed; not
@@ -562,14 +634,16 @@ inference work touches the parser.
   |---|---|---|
   | F0 lifecycle rename (5 tests) | `KeyError` / `AssertionError` on `Lifecycle:` parsing | Parser only knows `Status:` today |
   | F1/F10/F12 inference (9 tests) | Wrong role inferred (mostly `notes`) | Inference broadening unimplemented |
-  | F11 project normalisation (per fixture) | `AssertionError: 'OrgInfo' != 'org-info'` | No normalisation today |
+  | F11 project normalisation (per fixture, ~5 tests) | `AssertionError: 'OrgInfo' != 'org-info'` | No normalisation today |
   | F4 archive normalisation (4 tests) | `AssertionError: no move_to in plan` | Archive normalisation unimplemented |
+  | F5 multi-project hints (3 tests) | `AssertionError: no hint in plan footer`; `argparse` error on `--config-project` | Hint emission + flag unimplemented |
   | confidence-distribution test | `(high + medium) / total ≈ 0.25` < 0.50 | Inference broadening unimplemented |
 
-- **Aggregate expected:** M6's 271 + ~24 new RED = ~295
-  collected, ~24 RED. M6's 271 stay GREEN. (Was 25 new RED
-  in the original plan — dropped by 1 with the removal of
-  the rename-helper test per operator decision 2026-05-24.)
+- **Aggregate expected:** M6's 271 + ~27 new RED = ~298
+  collected, ~27 RED. M6's 271 stay GREEN. (Adjustments from
+  the original ~25-test plan: -1 for the dropped rename-
+  helper test, +3 for the new F5 multi-project hint tests
+  added 2026-05-24.)
 - **Exit:** Phase-4 log entry captures the verbatim baseline
   output; every RED traces to its intended unimplemented
   surface; M6's quality gate stays clean.
@@ -592,6 +666,18 @@ inference work touches the parser.
   - Add `Confidence` enum / sentinel: `HIGH`, `MEDIUM`, `LOW`
     (today: just `high` / `low` strings). Update every emit
     site to use the enum.
+  - Rename `Config.add_statuses` → `Config.add_lifecycles`
+    and the `.docs.toml [vocabulary] add_statuses` key →
+    `[vocabulary] add_lifecycles`. Same mechanical breaking
+    rename as the field itself.
+  - Add `Config.role_suffixes: dict[str, str]` for F1's
+    per-`.docs.toml` `[migrate] role_suffixes` map (set up
+    at Phase 5; consumed at Phase 6).
+  - Add `Config.project_name: str | None` for F11's per-tree
+    override (set up at Phase 5; consumed at Phase 6).
+  - Argparse: add `--config-project <name>` to `docs migrate`
+    (the one new M7 flag, per F5). Overrides inferred
+    project for the run.
 - **In-project sweep (this project's own `docs/`):**
   - Every `docs/*.md` file's `Status: <vocab>` line becomes
     `Lifecycle: <vocab>`. Mechanical sweep with `sed` (or
@@ -599,10 +685,15 @@ inference work touches the parser.
     Suggested command:
     `sed -i 's/^Status: \(active\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`
     Verify with `grep -l "^Status:" docs/` → empty after.
-  - 25 docs files are touched. `Updated:` bumped per docs
-    convention (`docs touch <file>` once per file, or batched).
+  - 27 docs files touched (this project's current count).
+    `Updated:` bumped per docs convention (`docs touch <file>`
+    once per file, or batched).
   - `tests/fixtures/expected/docs-INDEX.md` regenerated after
     the sweep.
+  - **`.docs.toml` sweep:** if this project's `docs/.docs.toml`
+    has an `[vocabulary] add_statuses` key, rename it to
+    `add_lifecycles` (currently absent — no edit needed). Any
+    future project adopting M7+ uses the new key from day one.
 - **Convention.md edit (single point of truth):**
   - The "Metadata block" section's `Status:` paragraph is
     rewritten as `Lifecycle:`. Free-form `Status:` is now
@@ -675,6 +766,15 @@ inference work touches the parser.
       `Updated:` field; `--date` overrides globally. Files
       already correctly placed under `archive/YYYY-MM-DD/`
       generate no move.
+    - F5 multi-project hint emission. For each immediate
+      subdir, compute longest-common-prefix of `.md`
+      filenames; if it differs meaningfully from the parent
+      project AND the subdir has ≥ 5 `.md` files, emit a hint
+      line in the plan footer naming the candidate sub-project
+      and the suggested `docs migrate <subdir> --config-project
+      <name>` invocation.
+    - Honour `--config-project <name>` CLI override when
+      present (F5 hand-off).
   - `Config.role_suffixes` field — a `dict[str, str]` mapping
     custom suffix tokens to role names. Loaded from
     `[migrate.role_suffixes]` in `.docs.toml`. Merged into
@@ -705,13 +805,17 @@ inference work touches the parser.
     - Document the new confidence level `medium`.
     - Document `[migrate.role_suffixes]` and
       `[migrate] project_name`.
+    - Rename `[vocabulary] add_statuses` documentation →
+      `[vocabulary] add_lifecycles` (consistent with the F0
+      field rename).
   - `docs/cli.md`:
     - Note the F0 breaking change at the top of the migrate
-      verb section (no new flag — just the parser-side change
-      affects what an in-convention tree's metadata looks
-      like).
+      verb section.
+    - `docs migrate --config-project <name>` synopsis +
+      example (the one new M7 flag, per F5).
     - Document the project-name normalisation in the migrate
       plan's output shape.
+    - Document the multi-project hint footer shape (per F5).
     - `docs check` exit codes: clarify that medium-confidence
       inferences emit warnings (exit 1), not errors (exit 2).
   - `docs/architecture.md`:
