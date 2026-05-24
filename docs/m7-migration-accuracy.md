@@ -20,9 +20,12 @@ Related:
 - Surface: extensions to `docs migrate`'s inference (`infer_role`,
   `infer_project`, `infer_status`, `migrate_plan`), a breaking
   rename of the controlled-vocab field from `Status:` to
-  `Lifecycle:`, vocab additions, archive-subdir normalisation,
-  and **one new CLI flag** `--config-project <name>` to support
-  the multi-project agent workflow. No new verbs. M8 owns the
+  `Lifecycle:` (cascades to `[vocabulary] add_statuses` →
+  `add_lifecycles`, `Config.add_statuses` → `add_lifecycles`,
+  and the **`docs list --status` → `--lifecycle` CLI flag**),
+  vocab additions, archive-subdir normalisation, and **one new
+  CLI flag** `--config-project <name>` to support the
+  multi-project agent workflow. No new verbs. M8 owns the
   operator/agent ergonomics side (broader flags, skill
   references).
 - Status: ACTIVE (started 2026-05-24, milestone-setup complete).
@@ -120,6 +123,10 @@ foreign tree was already going to need a docs update.
 - `docs migrate` writes `Lifecycle:` in new metadata blocks.
 - `docs check` errors (not warns) on docs still carrying `Status:`
   as the controlled-vocab key.
+- **CLI flag rename:** `docs list --status <vocab>` becomes
+  `docs list --lifecycle <vocab>`. Same breaking-rename
+  discipline — no backward-compat alias. Only one argparse site
+  (`list_p`); `docs check` has no analogous flag today.
 - **No user-facing rename helper.** The only existing tree on
   the old key is this project's own `docs/` — swept manually
   at M7 Phase 5 (one-off `sed`-equivalent edit, not a shipped
@@ -670,6 +677,11 @@ inference work touches the parser.
     and the `.docs.toml [vocabulary] add_statuses` key →
     `[vocabulary] add_lifecycles`. Same mechanical breaking
     rename as the field itself.
+  - Rename the `docs list --status` argparse flag to
+    `--lifecycle` (single site at `list_p.add_argument` in
+    `src/docs_cli/cli.py`; `docs check` has no analogous
+    flag). Update the help text and the dest name. Same
+    breaking-rename discipline — no backward-compat alias.
   - Add `Config.role_suffixes: dict[str, str]` for F1's
     per-`.docs.toml` `[migrate] role_suffixes` map (set up
     at Phase 5; consumed at Phase 6).
@@ -708,6 +720,9 @@ inference work touches the parser.
     `Status:` in metadata gets updated to `Lifecycle:`.
     `grep -rn "Status:" tests/` to find them. (Distinct from
     the inference tests; this is just the schema rename.)
+  - `tests/test_cli_list.py` — every `--status` flag arg
+    becomes `--lifecycle`; assertion text referencing the
+    flag updated. Found via `grep -rn -- "--status" tests/`.
   - `tests/fixtures/expected/docs-INDEX.md` reflects the
     renamed key if it appears in the snapshot (it doesn't
     today — INDEX uses the role+project grouping not the
@@ -817,6 +832,9 @@ inference work touches the parser.
       verb section.
     - `docs migrate --config-project <name>` synopsis +
       example (the one new M7 flag, per F5).
+    - **`docs list` flag rename:** `--status` → `--lifecycle`
+      in the verb's synopsis (line ~83) and filter description
+      (line ~87).
     - Document the project-name normalisation in the migrate
       plan's output shape.
     - Document the multi-project hint footer shape (per F5).

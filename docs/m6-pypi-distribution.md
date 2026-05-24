@@ -15,6 +15,17 @@ Related:
 
 ## Overview
 
+> **Scope reframe 2026-05-24 (operator decision).** M6 is now
+> **preparation only** — the milestone delivered the packaging
+> machinery (build backend, package shape, `install-skill` verb,
+> runbook, README/architecture rewrites, GitHub repo) and closed at
+> Phase 10. The **actual PyPI publish is M9** (see
+> [m9-pypi-publish.md](m9-pypi-publish.md)), which runs post-M8 and
+> ships M6 + M7 + M8 as one batched `1.3.0` release per
+> [release-runbook.md](release-runbook.md). Read every "operator
+> publishes / Phase 10 flips after publish" bullet below as
+> superseded by M9; nothing in M6's scope is publish-dependent.
+
 > **Scope refinement at Step 2 (operator-resolved 2026-05-23).** Two
 > changes from the draft-time plan, both narrowing implementation
 > scope:
@@ -629,7 +640,7 @@ works.
 - [x] Phase 7: Update Tool/Wrapper Layer
 - [x] Phase 8: Run Tests (GREEN)
 - [x] Phase 9: Implement Online/Integration (local build + smoke; impl side)
-- [ ] Phase 10: Quality, Docs, Refactor — _operator-executed; flip after publish lands_
+- [x] Phase 10: Quality, Docs, Refactor — _closed 2026-05-24 as preparation only; publish moved to [M9](m9-pypi-publish.md)_
 
 ## Decisions
 
@@ -1007,9 +1018,14 @@ the executable-script tooling overhead M6 was about to retire.
 
 ## Milestone-completion summary
 
-> **Impl side complete 2026-05-23. Operator-side publish pending.**
-> The Phase 10 checkbox flips once the operator runs the
-> publish-driven closeout in [release-runbook.md](release-runbook.md).
+> **M6 complete 2026-05-24 as preparation only.** Phase 10 closed
+> as part of the 2026-05-24 scope reframe: the actual PyPI publish
+> is **[M9](m9-pypi-publish.md)**, which runs post-M8 and ships
+> M6 + M7 + M8 as one batched `1.3.0` release per
+> [release-runbook.md](release-runbook.md). The "Operator-side
+> closeout work" sub-list at the bottom of this summary is
+> superseded by M9 + the runbook — kept for historical context but
+> not to be followed standalone.
 
 M6 shipped the first PyPI release of `docs`. Concretely:
 
@@ -1065,7 +1081,8 @@ What's deliberately deferred:
   `cli.py` and `pyproject.toml` (Q1 decision). The metadata-based
   source-of-truth pattern is a follow-up.
 
-Operator-side closeout work (per the runbook):
+Operator-side closeout work _(historical — superseded by M9, see
+[m9-pypi-publish.md](m9-pypi-publish.md) + [release-runbook.md](release-runbook.md))_:
 
 1. `twine upload --repository testpypi dist/*`; install from
    TestPyPI in a throwaway venv; smoke.
@@ -1077,4 +1094,11 @@ Operator-side closeout work (per the runbook):
 6. `gh release create v1.1.0 --title "docs-cli 1.1.0" --notes "..."`.
 7. Doc closeouts: M6 row in `status.md` → Complete (DATE); Phase 10
    checkbox in this file → checked; INDEX + fixture regenerated.
+
+The above describes the M6-standalone publish that **never
+happened**. The 2026-05-24 scope reframe moved the publish to M9
+at version `1.3.0`, batched with M7 + M8. The M6 wheel + sdist in
+local `dist/` from 2026-05-23 are not uploaded; M9 rebuilds at M8
+ship time. See [release-runbook.md](release-runbook.md) for the
+operative checklist.
 
