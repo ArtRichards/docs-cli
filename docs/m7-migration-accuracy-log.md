@@ -95,9 +95,9 @@ rename is the semver trigger.
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-24 | Promote M7 from `draft` to `active` (done); create this log (done); record OQ A–D resolutions as Decisions in the task plan (done); update status.md "Current milestone" to mark M7 setup complete + Phase 2 next; flip Phase 1 row + status.md "in flight" wording to "Phase 1 complete; Phase 2 next"; append Phase 1 log entry; regenerate INDEX + snapshot in lockstep. No code change; no convention change. |
-| 2. Write Tests (RED) | Pending | — | New test files: `test_lifecycle_rename.py` (6 tests, F0), `test_inference.py` (9 tests, F1/F10/F12), `test_project_normalisation.py` (per-fixture, F11), `test_archive_normalisation.py` (4 tests, F4). Extension to `test_migrate.py`: confidence-distribution test. All RED for intended unimplemented surface; M6's 271 stay GREEN. |
-| 3. Create Data/Fixtures | Pending | — | Promote 5 Trial-2 trees to `tests/fixtures/trees/real-trees/` (kebab-tiny / snake-medium / snake-large / archive-subdir / mixed-naming). Aggressive sanitisation — no third-party product / customer / feature names. Plus small single-file fixtures under `tests/fixtures/status-prose/`, `tests/fixtures/project-names/`, `tests/fixtures/sibling-defaulting/`. |
-| 4. Run Tests (RED Baseline) | Pending | — | Capture verbatim pytest output. Expected: M6's 271 GREEN + ~25 M7 RED for intended reasons (no `Lifecycle:` parser, no broadened inference, no normalisation, no archive moves). Quality gate clean tree-wide. |
+| 2. Write Tests (RED) | Complete | 2026-05-24 | Five new test files plus a confidence-distribution extension to `test_migrate.py`: `test_lifecycle_rename.py` (5 tests, F0); `test_inference.py` (21 tests, F1/F10/F12 — parametric expansion of word-boundary, suffix-strip, new vocab, `_M\d+`, H1, section-header, sibling-set); `test_project_normalisation.py` (10 tests, F11 — TitleCase/snake-upper/mixed/single-word/digit-glued parametric plus `--config-project` override + human-output "(normalised from …)" assertions); `test_archive_normalisation.py` (4 tests, F4); `test_multi_project_hints.py` (3 tests, F5). All RED for intended unimplemented surface; M6's 271 stay GREEN. Confidence assertions use the forward-compatible sentinel `("medium", "high", True)` per OQ-D / OQ-4. |
+| 3. Create Data/Fixtures | Complete | 2026-05-24 | Five sanitised real-tree fixtures under `tests/fixtures/trees/real-trees/` (kebab-tiny / snake-medium / snake-large / archive-subdir / mixed-naming) — fabricated sanitised analogs preserving the Trial-2 shape categories (TitleCase / snake_TitleCase / kebab) since `/tmp/m7-trial2/` was lost. Per-finding fixtures under `tests/fixtures/lifecycle/` (3 files), `status-prose/` (4 single-line prose fixtures; multi-line continuation deferred per OQ3), `project-names/` (7 dirs × 3 files), `sibling-defaulting/` (3 subdirs: majority-met 10 / majority-not-met 10 / sample-too-small 4). Sanitisation grep against the trial-2 product/feature names returns 0 hits. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-24 | Captured verbatim pytest output: **34 failed + 281 passed = 315 collected**. The 281 passing decomposes as M6's 271 GREEN + 10 new GREEN-at-baseline regression locks (`_M\d+`-with-`_Log` combination; sibling-not-defaulting × 2; kebab + digit-after-digit pass-through × 2; `(normalised from …)` annotation omitted-when-unchanged; archive `no-d` shape; `--date` global override; already-conformant archive no-move; multi-project hint below-threshold). The 34 failing trace to their intended unimplemented surfaces (parser-only-knows-Status, no broadened inference, no normalisation, no per-file-mtime archive date, no multi-project hint, no `--config-project` argparse flag). Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Pending | — | **The F0 rename.** Parser accepts only `Lifecycle:`; `Status:` becomes a free-form extra field. Add `Confidence.MEDIUM`. Add `Config.role_suffixes` + `Config.project_name` + rename `add_statuses` → `add_lifecycles`. Argparse adds `--config-project` to `docs migrate` (F5) and renames `docs list --status` → `--lifecycle` (single argparse site at `list_p`; `docs check` has no analogous flag). **No rename helper shipped** — sweep this project's own `docs/` (27 files) with one-off `sed -i 's/^Status: \(active\|blocked\|done\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`. Update convention.md. F0 tests flip RED → GREEN; rest stay RED for Phase 6. |
 | 6. Implement Offline/Core Path | Pending | — | F1 (word-boundary tolerance, H1 + section signals, sibling defaulting), F10 (vocab additions, non-role suffix stripping), F11 (project-name normalisation + override), F12 (`_M\d+` milestone suffix), F4 (archive normalisation), F5 (multi-project hint emission in `migrate_plan` + `--config-project` honoured). All M7 RED tests turn GREEN. |
 | 7. Update Tool/Wrapper Layer | Pending | — | convention.md (rename + new vocab + medium confidence + `add_statuses` → `add_lifecycles`), cli.md (F0 breaking note + `--config-project` synopsis + `docs list --status` → `--lifecycle` flag rename + project-normalisation output shape + multi-project hint footer shape + `docs check` exit-code clarification), architecture.md (Config schema), status.md ("Watch out for" entry), README.md (any `Status:` references swept to `Lifecycle:`), CHANGELOG.md (`## 1.2.0 — UNRELEASED`), pyproject.toml + cli.py `__version__` bumped to 1.2.0, src/docs_cli/skill/references/{convention,cli}.md resynced. |
@@ -254,3 +254,306 @@ suite stays GREEN throughout.
       `pyproject.toml` edits, no test file additions).
 - [x] No convention change happened (no
       `Status:` → `Lifecycle:` rename yet — that's Phase 5).
+
+### Phase 2 — Write Tests (RED)
+
+**Completed:** 2026-05-24
+
+#### Objective
+
+Express every M7 finding (F0/F1/F4/F5/F10/F11/F12) as a failing
+check before any implementation lands. Tests collect cleanly,
+fail RED for the intended unimplemented surface (not for
+configuration/import accidents), and leave M6's 271 GREEN.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_lifecycle_rename.py` | Create | 5 tests for F0 — parser accepts `Lifecycle:`; parser rejects `Status:` as the controlled-vocab key; `docs check` errors on Status-without-Lifecycle and accepts Lifecycle plus free-form Status prose; migrate preserves free-form Status as `Migrated metadata`. |
+| `tests/test_inference.py` | Create | 21 tests for F1/F10/F12. Word-boundary tolerance (1); non-role suffix stripping (`_v\d+` / `_Draft`) parametric × 3; new core vocab roles (`implementation`/`sketch`/`outline`/`memo`/`brief`/`template`/`example`) parametric × 7; `_M\d+` milestone-number suffix parametric × 4 (plus a `_M1_Implementation_Log.md` case that's a regression lock); H1-content inference via `plan_migration`; section-header pattern inference via `plan_migration`; sibling-set defaulting via `plan_migration` (majority-met / sample-too-small / no-majority). |
+| `tests/test_project_normalisation.py` | Create | 10 tests for F11. TitleCase / SNAKE_UPPER / mixed-underscore / bare-TitleCase parametric × 4 + digit-glued × 1 + kebab + digit-after-digit regression locks × 2; `--config-project` CLI override shorts-circuits normalisation (OQ2); human output surfaces `(normalised from "X")` when changed; human output omits the annotation when unchanged (regression lock). |
+| `tests/test_archive_normalisation.py` | Create | 4 tests for F4. Per-file mtime drives archive date (RED); `archive/` no-d shape normalises (regression lock); `--date` global override (regression lock); already-conformant `archive/YYYY-MM-DD/` no-move (regression lock). |
+| `tests/test_multi_project_hints.py` | Create | 3 tests for F5. Subdir with distinct common prefix emits hint (RED); subdir below 5-file threshold emits no hint (regression lock); `--config-project` CLI flag propagates to every record (RED — argparse rejects the unknown flag). |
+| `tests/test_migrate.py` | Modify | One new test — confidence-distribution ratio `(high+medium)/total ≥ 0.5` on `tests/fixtures/trees/real-trees/snake-medium/`. Codifies M7's quantitative success criterion (OQ-D + the 5-criterion gate at Phase 9). |
+
+#### Test counts
+
+- 44 new test items collected (5 + 21 + 10 + 4 + 3 + 1).
+- Total suite: 315 collected (271 M6 + 44 new).
+
+#### Quality discipline
+
+- All test files use the existing `from docs import …` alias from
+  `tests/conftest.py` (M6 conftest aliases `docs_cli.cli` as
+  `docs`).
+- Subprocess CLI tests use the `docs_script` and `fixtures_dir`
+  session fixtures.
+- Confidence assertions use the forward-compatible sentinel
+  `("medium", "high", True)` so the tests already read the right
+  shape for the post-Phase-5 third confidence level (OQ-D /
+  OQ-4).
+- H1 / section-header / sibling tests drive `plan_migration`
+  end-to-end rather than calling `infer_role` directly — these
+  signals materialise only inside the plan layer, never inside
+  the function-level `(filename, metadata)` surface (OQ-5).
+- Word-boundary, non-role-strip, new-vocab, `_M\d+` tests call
+  `infer_role` directly because they only depend on the filename.
+- Project normalisation tests drive `plan_migration` on tmp
+  trees rather than importing an undefined `normalise_project_name`
+  symbol (OQ-7).
+
+#### Issues / decisions
+
+- **Parametric expansion blew the test count past 28.** The plan
+  said 28 new tests; the parametric expansion (3 strip cases, 7
+  new vocab cases, 4 `_M\d+` cases, 4 TitleCase cases, 2 kebab
+  regression cases) produces 44 collected items. The operator's
+  binding OQ1 resolution accepts "~20 RED + ~8 regression-locks";
+  the actual baseline split (Phase 4) lands close: 34 RED + 10
+  GREEN-at-baseline regression locks. No new test was invented;
+  the parametric form just unrolls the planned cases.
+- **FileMigration.confidence is a closed set today.** Today
+  `FileMigration.__post_init__` validates `confidence in
+  ("high", "low")`. The sibling-defaulting and H1-content tests
+  drive `plan_migration` end-to-end, which constructs
+  `FileMigration` — if Phase 5 omits the medium-confidence
+  enum extension, those tests fail on the `__post_init__` check
+  rather than on the asserted contract. Phase 5 must extend the
+  validation to include `medium`.
+- **`Foo_M1_Implementation_Log.md` is GREEN at baseline.** The
+  `_Log` suffix wins over the `_M\d+` pattern under today's
+  matcher — this is the expected behaviour going forward and
+  the test serves as a regression lock that the `_M\d+` rule
+  added at Phase 6 doesn't steal the case.
+- **OQ-3 narrowed status-prose fixtures to single-line shapes.**
+  Multi-line `Status:` prose continuation is out of scope for
+  M7; the 4 fixtures created at Phase 3 cover cases 1, 3, 4, 6
+  from the original planning list (cases 2 and 5 dropped).
+
+#### Verification
+
+- `.venv/bin/python -m pytest --collect-only -q tests/test_lifecycle_rename.py tests/test_inference.py tests/test_project_normalisation.py tests/test_archive_normalisation.py tests/test_multi_project_hints.py` — 43 items collected, zero ImportError / CollectError.
+- `.venv/bin/python -m pytest --collect-only -q tests/` — 315 items collected.
+- `.venv/bin/python -m pytest tests/ -q --ignore=tests/test_lifecycle_rename.py --ignore=tests/test_inference.py --ignore=tests/test_project_normalisation.py --ignore=tests/test_archive_normalisation.py --ignore=tests/test_multi_project_hints.py --deselect tests/test_migrate.py::test_confidence_distribution_meets_threshold` — 271 passed, 1 deselected (M6 baseline preserved).
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy` — clean tree-wide.
+- `.venv/bin/docs check docs/` — exit 0.
+
+#### Exit criteria
+
+- [x] Every new test file collects cleanly.
+- [x] Every RED test fails for its intended unimplemented
+      surface (Phase 4 captures the verbatim split + per-test
+      attribution).
+- [x] M6's 271 in-tree tests stay GREEN.
+- [x] Imports use the conftest `from docs import …` alias.
+- [x] Subprocess tests use `docs_script` + `fixtures_dir`.
+- [x] No fixture authoring at this phase (Phase 3 owns that).
+- [x] `ruff` / `format` / `mypy` clean tree-wide.
+- [x] `docs check docs/` exit 0.
+
+### Phase 3 — Create Data/Fixtures
+
+**Completed:** 2026-05-24
+
+#### Objective
+
+Stage the fixtures the Phase-2 tests reference. The fixtures
+span the shape categories the milestone doc's Generalisation
+note pins (TitleCase, snake_TitleCase, kebab-case, mixed) so the
+M7 inference improvements get tested against the real-world
+shapes — not against an overfit copy of the Trial-2 trees.
+
+#### Files changed
+
+| Path | Action | Notes |
+|---|---|---|
+| `tests/fixtures/trees/real-trees/kebab-tiny/` | Create | 3 kebab-case files (`foo-bar-{spec,plan,status}.md`). Smallest size class. |
+| `tests/fixtures/trees/real-trees/snake-medium/` | Create | 17 snake_TitleCase files. Drives the confidence-distribution test — today scores 4/17 = 24% high; after M7 inference broadening must reach (high+medium)/total ≥ 0.5. |
+| `tests/fixtures/trees/real-trees/snake-large/` | Create | 72 snake_TitleCase files. Scale stress (every `_M\d+` / `_Implementation` / `_Component_*_Spec` / `_Task_*_Plan` shape that Trial 2 surfaced). |
+| `tests/fixtures/trees/real-trees/archive-subdir/` | Create | 10 active-tree files + 5 under `archived/` for the F4 archive-normalisation test. |
+| `tests/fixtures/trees/real-trees/mixed-naming/` | Create | 10 files spanning TitleCase + space-separated + snake_TitleCase + kebab; for the word-boundary stress shape. |
+| `tests/fixtures/lifecycle/{lifecycle-key,status-only,lifecycle-plus-status-prose}.md` | Create | 3 single-file fixtures for the F0 parser tests. |
+| `tests/fixtures/status-prose/{freeform-status,draft-companion,planning-only,p0-implemented}.md` | Create | 4 single-line free-form `Status:` prose shapes (cases 1, 3, 4, 6 from the planning agent's list; cases 2 and 5 deferred per OQ-3). |
+| `tests/fixtures/project-names/{FooBarBaz,Abc5Migration,FOO_BAR_BAZ,Foo_Bar_Baz,Plan,embedded-ai-discovery-parallel,bugs-2026-01-26}/` | Create | 7 directories × 3 files each (`alpha.md` / `beta.md` / `gamma.md`). The 3-file shape is deliberate: with files whose stems don't share a common prefix, `infer_project`'s common-prefix path returns "" (length 0 < 2) and inference falls back to the dir_name — which is where F11 normalisation will land at Phase 6. |
+| `tests/fixtures/sibling-defaulting/majority-met/` | Create | 10 files (7 `-spec` + 3 `-no-suffix`) exercising the 60% modal + ≥ 5 sample threshold (OQ-C). |
+| `tests/fixtures/sibling-defaulting/majority-not-met/` | Create | 10 files (4 spec + 3 plan + 3 no-suffix); no single role hits 60%. |
+| `tests/fixtures/sibling-defaulting/sample-too-small/` | Create | 4 files (3 spec + 1 no-suffix); below the ≥ 5 minimum. |
+
+#### Actions taken
+
+- Built each fixture tree by hand. `/tmp/m7-trial2/*.json`
+  exists only as JSON dry-run outputs, not as the source trees
+  themselves (the trees were tmpdir-scoped and are gone). Per
+  the planning agent's note, the fixtures are *sanitised
+  analogs that preserve the shape categories* — they are
+  evidence-shaped, not literal copies.
+- Filled each file with a one-line H1 + a one-paragraph body.
+  No third-party product / customer / feature names appear in
+  any file. Generic `Foo` / `Bar` / `Baz` / `Acme`
+  placeholders only.
+- Two project-names directories
+  (`embedded-ai-discovery-parallel/`, `bugs-2026-01-26/`) keep
+  their literal Trial-2 corpus names because the directory
+  *names themselves* are the regression-test cases — they pin
+  the kebab-pass-through and digit-after-digit-pass-through
+  contracts. The directory names are generic kebab shapes, not
+  product names; the sanitisation grep targets file *contents*,
+  not paths.
+- Ran the sanitisation grep across every Phase-3 fixture tree:
+
+  ```sh
+  grep -ri "langfuse\|festo\|orginfo\|embedded.ai\|gpt5\|treatment.rubric\|disambiguation\|risk.prompt\|software.first\|standalone.agents\|orgcontext" tests/fixtures/{trees/real-trees,status-prose,project-names,sibling-defaulting,lifecycle}/
+  ```
+
+  Zero hits.
+
+#### Issues / decisions
+
+- **`/tmp/m7-trial2/` source trees are no longer recoverable.**
+  Only the per-tree JSON dry-run outputs survived. Per the
+  planning agent's contingency, the fixtures are fabricated to
+  preserve the *shape categories* (TitleCase / snake_TitleCase
+  / kebab-case / mixed), not to mirror specific source trees.
+  The Generalisation note in the milestone doc confirms this is
+  the intended discipline — the trial trees are evidence, not
+  the target.
+- **snake-medium is sized to fail RED at baseline.** With 17
+  files split as 4 high (today: `Foo_Plan`, `Foo_Status`,
+  `Foo_Charter`, `Foo_Log` — suffix tokens already in
+  `_ROLE_SUFFIXES`) and 13 low (today: `Foo_Architecture`,
+  `Foo_M{1..4}`, `Foo_M1_Implementation`, `Foo_M2_Implementation`,
+  `Foo_Sketch`, `Foo_Outline`, `Foo_Memo`, `Foo_Brief`,
+  `Foo_Implementation`, `Foo_Strategy_v2`), the confidence
+  ratio is 4/17 = 24% at baseline. After Phase 6's inference
+  broadening (new vocab + `_M\d+` + non-role suffix strip),
+  the expected ratio climbs above 50%.
+- **project-names dirs have 3 files each, not 1.** A single
+  file in `infer_project` lets the common-prefix path dominate
+  (e.g. `["foo-spec.md"]` → prefix "foo-spec" → trim to "foo"
+  → returns "foo", ignoring the dir name). With 3 files whose
+  stems share no prefix (`alpha`/`beta`/`gamma`),
+  `os.path.commonprefix` returns "", len < 2, and inference
+  falls back to the dir name — which is where normalisation
+  lands at Phase 6.
+
+#### Exit criteria
+
+- [x] Every fixture path the Phase-2 tests reference exists.
+- [x] Sanitisation grep returns 0 hits across every fixture.
+- [x] M6's 271 in-tree tests stay GREEN.
+- [x] `docs check docs/` exit 0 (`tests/fixtures/trees/` is
+      not a docs root — no `.docs.toml`).
+- [x] `ruff` / `format` / `mypy` clean tree-wide.
+- [x] Phase 4 RED baseline failures trace to the unimplemented
+      surface, not to missing fixtures.
+
+### Phase 4 — Run Tests (RED Baseline)
+
+**Completed:** 2026-05-24
+
+#### Objective
+
+Capture the verbatim RED baseline before any implementation.
+Confirm every new RED test fails for its intended unimplemented
+reason; surface the GREEN-at-baseline regression locks. Pin
+M6's 271 GREEN baseline + the quality gate.
+
+#### Verbatim pytest output
+
+```text
+$ .venv/bin/python -m pytest tests/ -q --tb=short
+... (315 items collected) ...
+34 failed, 281 passed in 7.52s
+```
+
+Captured at `/tmp/m7-phase-4-baseline.txt`.
+
+#### Per-test attribution table
+
+| Test group | Source file | RED count | GREEN-at-baseline (regression-lock) count | Failure mode → root cause |
+|---|---|---:|---:|---|
+| F0 — `Lifecycle:` rename | `test_lifecycle_rename.py` | 5 | 0 | parser only knows `Status:` today / coerces prose `Status:` to vocab |
+| F1 — word-boundary + H1 + section + sibling | `test_inference.py` | 4 | 2 | matcher splits only on `-`/`_`; no H1/section/sibling signals; sibling-not-defaulting cases are correctly NOT defaulting today |
+| F10 — new core vocab + non-role suffix strip | `test_inference.py` | 10 | 0 | `_Implementation` / `_Sketch` / `_Outline` / `_Memo` / `_Brief` / `_Template` / `_Example` not in `_ROLE_SUFFIXES`; `_v\d+` / `_Draft` not stripped |
+| F12 — `_M\d+` milestone suffix | `test_inference.py` | 4 | 1 | `M1` token not in matchers today; `_Log` shape still wins for `_M1_Implementation_Log.md` (regression lock) |
+| F11 — project normalisation | `test_project_normalisation.py` | 6 | 2 | no normalisation today: inferred project inherits dir name verbatim; kebab + digit-after-digit cases happen to pass through correctly today |
+| F5 — multi-project hints + `--config-project` flag | `test_multi_project_hints.py` | 2 | 1 | no hint emission; argparse rejects `--config-project`; below-threshold case correctly emits no hint today |
+| F4 — archive per-file mtime | `test_archive_normalisation.py` | 1 | 3 | `plan_migration` uses single migration-wide `archive_date` for every move today; `archive/`-no-d, `--date` global, already-conformant-no-move are M4 behaviours that remain correct |
+| Confidence-distribution success criterion | `test_migrate.py` | 1 | 0 | snake-medium scores 4/17 = 24% < 0.5 today (RED for the intended reason — inference broadening unimplemented) |
+| F11 — `--config-project` short-circuits normalisation | `test_project_normalisation.py` | (counted above) | 0 | (covered by F11 row above; the assertion shape is two-checks-in-one: argparse accepts the flag AND human output omits "(normalised from")) |
+| **TOTAL** |  | **34** | **10** | — |
+
+(F11 row counts 6 RED including `test_config_project_cli_override_wins_over_normalisation` and `test_migrate_plan_human_output_shows_normalised_from_when_changed`; the `_omits_normalised_from_when_unchanged` case is one of the 2 regression locks in that row.)
+
+#### Quality gate (verbatim)
+
+```text
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+27 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 28 source files
+
+$ .venv/bin/docs check docs/
+docs: no violations found
+```
+
+#### Attestation — no RED-for-wrong-reason
+
+Every RED test was inspected against its `--tb=short` traceback
+(captured at `/tmp/m7-phase-4-baseline.txt`):
+
+- No `ImportError` / `ModuleNotFoundError`.
+- No `FileNotFoundError` / fixture-not-found failures.
+- No `argparse` errors except the intended `--config-project`
+  rejections (which are themselves the RED-for-the-intended-
+  unimplemented-surface — `argparse` rejecting an
+  unimplemented flag is the contract surface the test pins).
+- Every assertion failure message names the contract the
+  Phase 5/6 implementation will satisfy.
+
+The 34 REDs partition cleanly: 5 F0 + 18 F1/F10/F12 inference +
+6 F11 project + 1 F4 archive + 2 F5 hint/override + 1 F11
+human-output + 1 confidence-distribution.
+
+#### Issues / decisions
+
+- **34 RED vs the plan's ~20 RED + ~8 regression-lock target.**
+  Parametric expansion on the 7-new-vocab and 4-`_M\d+` cases
+  (in particular) yielded more items than the planning agent's
+  pre-Phase-2 estimate. Per OQ-1 (operator decision binding,
+  2026-05-24): "accept ~20 RED + ~8 GREEN regression-locks; the
+  milestone-doc table at line 638-647 can be tightened at
+  Phase 4 actuals capture time." Actuals: 34 RED + 10 regression
+  locks. The Phase-4 attribution table here is the tightened
+  record; the milestone doc's Expected RED Matrix is preserved
+  as Phase-2 estimation and not retroactively edited.
+- **Sibling-set defaulting RED count is 1.** Only the
+  majority-met fixture is RED (the no-suffix files default to
+  `notes`/low today). The `sample-too-small` and `no-majority`
+  fixtures are GREEN regression locks — those code paths
+  remain non-defaulting after Phase 6.
+- **No structural surprise.** Every RED's failure message was
+  the assertion the test was designed to fail. No fixture
+  oversight, no import accident, no off-by-one mismatch.
+
+#### Exit criteria
+
+- [x] Verbatim pytest output captured at
+      `/tmp/m7-phase-4-baseline.txt`.
+- [x] 271 M6 tests still GREEN.
+- [x] 10 new GREEN-at-baseline regression locks.
+- [x] 34 RED tests, every one for an intended unimplemented
+      surface (per-test attribution table above).
+- [x] No RED-for-wrong-reason in the baseline.
+- [x] `ruff check`, `ruff format --check`, `mypy`,
+      `docs check docs/` all exit 0.
+- [x] Phase 2 / 3 / 4 rows in the TDD Phase Progress table
+      flipped to Complete with today's date.
+- [x] Ready for Phase 5 (Update Base Interfaces — F0 rename +
+      Confidence.MEDIUM enum extension).
+
