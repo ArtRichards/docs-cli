@@ -161,7 +161,7 @@ _Captured before Phase 2; historical._
 | `pyproject.toml` | Modify | 7 | `version = "1.2.0"`. |
 | `src/docs_cli/skill/references/convention.md` | Modify | 7 | Resync from `docs/convention.md`. |
 | `src/docs_cli/skill/references/cli.md` | Modify | 7 | Resync from `docs/cli.md`. |
-| Every `docs/*.md` Status: line | Modify | 5 | Mechanical one-off sweep via `sed -i 's/^Status: \(active\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md` (no shipped helper). ~25 files touched. Verify with `grep -l "^Status:" docs/` → empty after. |
+| Every `docs/*.md` Status: line | Modify | 5 | Mechanical one-off sweep via `sed -i 's/^Status: \(active\|blocked\|done\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md` (no shipped helper; regex covers full BUILTIN_STATUSES). 27 files at the audit point (23 `active` + 4 `done`); count may drift before Phase 5. Verify with `grep -l "^Status:" docs/` → empty after. |
 | `tests/manual/m7_success_criteria.py` | Create | 9 | Aggregates the 5 success metrics from the Phase 9 JSON dumps. |
 
 ## Phase logs

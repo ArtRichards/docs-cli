@@ -681,11 +681,15 @@ inference work touches the parser.
 - **In-project sweep (this project's own `docs/`):**
   - Every `docs/*.md` file's `Status: <vocab>` line becomes
     `Lifecycle: <vocab>`. Mechanical sweep with `sed` (or
-    equivalent) — one-off edit, not a shipped feature.
-    Suggested command:
-    `sed -i 's/^Status: \(active\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`
+    equivalent) — one-off edit, not a shipped feature. The
+    regex covers the full `BUILTIN_STATUSES` set (`active`,
+    `blocked`, `done`, `draft`, `superseded`, `archived`):
+    `sed -i 's/^Status: \(active\|blocked\|done\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`
     Verify with `grep -l "^Status:" docs/` → empty after.
-  - 27 docs files touched (this project's current count).
+  - 27 docs files touched at the audit point this plan was
+    written (audit 2026-05-24: 23 with `Status: active` + 4
+    with `Status: done`). Count may drift before Phase 5
+    actually runs; the sweep handles whatever's there.
     `Updated:` bumped per docs convention (`docs touch <file>`
     once per file, or batched).
   - `tests/fixtures/expected/docs-INDEX.md` regenerated after

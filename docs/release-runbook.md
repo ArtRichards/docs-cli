@@ -3,7 +3,7 @@
 Status: active
 Role: runbook
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-05-24
 
 Related:
 - pairs-with: m6-pypi-distribution.md
@@ -27,8 +27,7 @@ future-iteration note at the bottom of this file.
       placeholder is replaced with today's date at operator-publish time).
 - [ ] `docs/INDEX.md` regenerated; `tests/fixtures/expected/docs-INDEX.md`
       lockstep-updated.
-- [ ] `.venv/bin/python -m pytest tests/ -q` — full suite green
-      (271 passed at v1.1.0).
+- [ ] `.venv/bin/python -m pytest tests/ -q` — full suite green.
 - [ ] `.venv/bin/ruff check .` — clean.
 - [ ] `.venv/bin/ruff format --check .` — clean.
 - [ ] `.venv/bin/mypy` — clean.

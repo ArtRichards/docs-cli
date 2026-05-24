@@ -55,7 +55,7 @@ _Generated 2026-05-24. 27 docs active, 0 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — Per-release checklist for shipping a new `docs-cli` to PyPI. **M6 ships via manual twine** (operator override of the…. Updated 2026-05-23.
+- [release-runbook.md](release-runbook.md) — _runbook_ — Per-release checklist for shipping a new `docs-cli` to PyPI. **M6 ships via manual twine** (operator override of the…. Updated 2026-05-24.
 
 ### Active — Reference
 

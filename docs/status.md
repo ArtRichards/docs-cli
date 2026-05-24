@@ -139,7 +139,7 @@ for the milestone summary.
 | M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
-| M6 — PyPI distribution as `docs-cli` | _implementation complete_ (merged 2026-05-24); publish pending | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
+| M6 — PyPI distribution as `docs-cli` | _implementation complete_ (merged 2026-05-24); publish deferred to batched 1.3.0 (post-M8) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 in progress; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 
