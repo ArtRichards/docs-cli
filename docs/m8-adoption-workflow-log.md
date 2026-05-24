@@ -51,10 +51,14 @@ the task plan. Summary:
    `/` / leading `/` / negation `!`. NOT full gitignore — no
    nested files, no walk-pruning. Implementation in stdlib
    (~60 lines).
-3. **OQ-C — M8 ship timing — RESOLVED 2026-05-24, after M6
-   PyPI publish.** Practical sequence: M6 publish → M7 ship →
-   M8 ship. Phase 9 fresh-subagent runs benefit from
-   `pip install docs-cli` being available.
+3. **OQ-C — Publish timing — RESOLVED 2026-05-24, publish
+   deferred until after M8 (possibly further pending review
+   cycles).** No per-milestone publish. The first PyPI publish
+   ships the M6 + M7 + M8 surface as one artifact (version
+   1.3.0). Phase 9 fresh-subagent runs install from the local
+   wheel (`dist/docs_cli-1.3.0-*.whl`) — equivalent UX.
+   Practical sequence: M7 ship → M8 ship → operator review →
+   batched publish.
 4. **OQ-D — `.docs.toml.example` form — RESOLVED 2026-05-24,
    static file.** Ships as
    `src/docs_cli/skill/references/docs-toml-template.toml`.
@@ -124,7 +128,8 @@ _Captured before Phase 2; historical._
   `[migrate.role_suffixes]` + `[migrate] project_name`. No
   `[exclude]` section. Argparse subparsers as they ship at M7:
   `migrate` has `--apply`, `--json`, `--quiet`, `--date`, plus
-  M7's `--rename-status-to-lifecycle`. No `--exclude` /
+  (no new flags or verbs from M7 — F0 was a pure parser
+  rename, in-project sweep done manually). No `--exclude` /
   `--summary` / `--only` / `--group-by` / `--exclude-ext`. The
   `new` verb has no `--body-from`.
 - **Specs.** `docs/convention.md` documents `[vocabulary]` +

@@ -222,32 +222,32 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next actions** (parallelisable; M6 publish is operator-driven, M7
-setup can begin in parallel):
+**Next action: M7 — execute Phase 2 (Write Tests RED).**
 
-**(A) M6 — operator-driven publish per
-[release-runbook.md](release-runbook.md).** Implementation merged
-to `main` 2026-05-24 as `ff7f9d5`. Wheel + sdist in local `dist/`
-(`twine check` PASS). 271 tests GREEN. Operator runs:
-(1) `twine upload --repository testpypi dist/*` + verify on TestPyPI;
-(2) replace `## 1.1.0 — UNRELEASED` in `CHANGELOG.md` with today's
-date; (3) `twine upload dist/*`; (4) `gh repo edit ArtRichards/docs-cli
---visibility public --accept-visibility-change-consequences`;
-(5) `git tag v1.1.0 && git push origin v1.1.0`; (6)
-`gh release create v1.1.0 ...`; (7) flip the M6 row in this file +
-the Phase-10 boxes to Complete (DATE).
+**Publish is deferred** until after M8, possibly further pending
+review cycles (operator decision 2026-05-24). No per-milestone
+publish. The first PyPI publish ships M6 + M7 + M8 as one
+batched artifact (version `1.3.0` — the M8 bump; intermediate
+1.1.0 / 1.2.0 never see PyPI, which is fine — no prior public
+release). The wheel + sdist sitting in local `dist/` from M6
+are NOT uploaded; M7 + M8 will produce their own
+`dist/docs_cli-1.2.0-*` and `dist/docs_cli-1.3.0-*` artifacts
+locally without publishing.
 
-**(B) M7 — execute Phase 2 (Write Tests RED).** Milestone-setup
-complete 2026-05-24: all 4 OQs (A–D) resolved as Decisions, TDD
-Implementation Plan expanded per-phase in
-[m7-migration-accuracy.md](m7-migration-accuracy.md), log skeleton
-created at
+**M7 Phase 2:** author `tests/test_lifecycle_rename.py`,
+`tests/test_inference.py`, `tests/test_project_normalisation.py`,
+`tests/test_archive_normalisation.py`, plus a
+confidence-distribution extension to `tests/test_migrate.py`.
+All RED for intended unimplemented surface; M6's 271 stay GREEN.
+Milestone-setup complete 2026-05-24: all 4 OQs (A–D) resolved as
+Decisions, TDD Implementation Plan expanded per-phase in
+[m7-migration-accuracy.md](m7-migration-accuracy.md), log
+skeleton at
 [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md).
-Phase 2 next: author `tests/test_lifecycle_rename.py` (6 tests),
-`tests/test_inference.py` (9 tests), `tests/test_project_normalisation.py`,
-`tests/test_archive_normalisation.py` (4 tests), plus a
-confidence-distribution extension to `tests/test_migrate.py`. All
-RED for intended unimplemented surface; M6's 271 stay GREEN.
+
+**M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
+ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed
+2026-05-24 as `929e525`.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

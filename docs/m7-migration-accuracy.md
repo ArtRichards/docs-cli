@@ -118,9 +118,14 @@ foreign tree was already going to need a docs update.
 - `docs migrate` writes `Lifecycle:` in new metadata blocks.
 - `docs check` errors (not warns) on docs still carrying `Status:`
   as the controlled-vocab key.
-- A one-shot `docs migrate --rename-status-to-lifecycle <tree>`
-  helper sweeps an existing docs tree. The docs-cli project itself
-  is the first customer (M7 Phase 5 ports our own `docs/` over).
+- **No user-facing rename helper.** The only existing tree on
+  the old key is this project's own `docs/` — swept manually
+  at M7 Phase 5 (one-off `sed`-equivalent edit, not a shipped
+  feature). External adopters of M7+ never encounter the old
+  key (a fresh `pip install docs-cli` ≥ 1.2.0 only knows
+  `Lifecycle:`), so no user need exists. (Operator decision
+  2026-05-24 — drop the verb; consider only functionalities a
+  user would need.)
 
 This finding subsumes the original "free-form `Status:` is dropped"
 issue — once `Status:` is no longer a special key, the existing
@@ -285,8 +290,10 @@ score equally well on fresh trees the M7 author hasn't seen
 ### Carried forward from M4 / M6
 
 - `docs migrate` stays dry-run by default. `--apply` semantics
-  unchanged. **M7 adds NO new top-level flags** — all M7 work is
-  in inference + convention + a one-shot rename helper.
+  unchanged. **M7 adds NO new top-level flags and NO new
+  verbs** — all M7 work is in inference + convention. The
+  in-project `Status:` → `Lifecycle:` sweep is a one-off
+  manual edit, not a shipped feature.
 - The convention's archive shape (`archive/YYYY-MM-DD/<file>`)
   stays as-is. M7 adds normalisation TO it; doesn't change it.
 - M6 has merged to `main` (2026-05-24, considered reviewed; not
@@ -428,9 +435,6 @@ inference work touches the parser.
     5. `docs migrate` preserves a foreign tree's `Status: <prose>`
        line as an entry under `## Migrated metadata` rather than
        coercing.
-    6. `docs migrate --rename-status-to-lifecycle <tree>` (the
-       one-shot helper) rewrites the controlled-vocab field
-       in-place across an in-convention tree.
   - `tests/test_inference.py` (F1, F10, F12). Asserts:
     1. Word-boundary suffix tolerance:
        `Project Name - Database Population Plan.md` →
@@ -556,14 +560,16 @@ inference work touches the parser.
 
   | Test group | Failure mode | Root cause |
   |---|---|---|
-  | F0 lifecycle rename (6 tests) | `KeyError` / `AssertionError` on `Lifecycle:` parsing | Parser only knows `Status:` today |
+  | F0 lifecycle rename (5 tests) | `KeyError` / `AssertionError` on `Lifecycle:` parsing | Parser only knows `Status:` today |
   | F1/F10/F12 inference (9 tests) | Wrong role inferred (mostly `notes`) | Inference broadening unimplemented |
   | F11 project normalisation (per fixture) | `AssertionError: 'OrgInfo' != 'org-info'` | No normalisation today |
   | F4 archive normalisation (4 tests) | `AssertionError: no move_to in plan` | Archive normalisation unimplemented |
   | confidence-distribution test | `(high + medium) / total ≈ 0.25` < 0.50 | Inference broadening unimplemented |
 
-- **Aggregate expected:** M6's 271 + ~25 new RED = ~296
-  collected, ~25 RED. M6's 271 stay GREEN.
+- **Aggregate expected:** M6's 271 + ~24 new RED = ~295
+  collected, ~24 RED. M6's 271 stay GREEN. (Was 25 new RED
+  in the original plan — dropped by 1 with the removal of
+  the rename-helper test per operator decision 2026-05-24.)
 - **Exit:** Phase-4 log entry captures the verbatim baseline
   output; every RED traces to its intended unimplemented
   surface; M6's quality gate stays clean.
@@ -572,11 +578,11 @@ inference work touches the parser.
 
 - **Objective:** The F0 controlled-vocab rename. **This is the
   load-bearing structural change.** Sweep this project's own
-  `docs/` tree from `Status:` to `Lifecycle:` mechanically;
-  update the parser to accept only `Lifecycle:` for the
-  controlled-vocab key; ship the one-shot rename helper. Add
-  the third confidence level. No inference-broadening work yet
-  (that's Phase 6).
+  `docs/` tree from `Status:` to `Lifecycle:` (manual one-off
+  edit — no shipped helper); update the parser to accept only
+  `Lifecycle:` for the controlled-vocab key. Add the third
+  confidence level. No inference-broadening work yet (that's
+  Phase 6).
 - **Parser + writer changes:**
   - `src/docs_cli/cli.py` — rename `STATUS_KEY` constant to
     `LIFECYCLE_KEY` (or equivalent); parse only `Lifecycle:`
@@ -586,20 +592,17 @@ inference work touches the parser.
   - Add `Confidence` enum / sentinel: `HIGH`, `MEDIUM`, `LOW`
     (today: just `high` / `low` strings). Update every emit
     site to use the enum.
-  - `_cmd_migrate` — add `--rename-status-to-lifecycle <tree>`
-    one-shot mode (mutually exclusive with `--apply`). When
-    set, walks the tree's `.md` files, rewrites `Status: <vocab>`
-    → `Lifecycle: <vocab>`, preserves any pre-existing
-    `Status:` prose (it becomes an extra field automatically).
-    Atomic per-file (tmp + rename); idempotent
-    (running twice is a no-op the second time).
 - **In-project sweep (this project's own `docs/`):**
   - Every `docs/*.md` file's `Status: <vocab>` line becomes
-    `Lifecycle: <vocab>`. The actual run uses
-    `docs migrate --rename-status-to-lifecycle docs/`.
-  - 25 docs files are touched. Each gets a one-line edit + a
-    bumped `Updated:`.
-  - `tests/fixtures/expected/docs-INDEX.md` regenerated.
+    `Lifecycle: <vocab>`. Mechanical sweep with `sed` (or
+    equivalent) — one-off edit, not a shipped feature.
+    Suggested command:
+    `sed -i 's/^Status: \(active\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`
+    Verify with `grep -l "^Status:" docs/` → empty after.
+  - 25 docs files are touched. `Updated:` bumped per docs
+    convention (`docs touch <file>` once per file, or batched).
+  - `tests/fixtures/expected/docs-INDEX.md` regenerated after
+    the sweep.
 - **Convention.md edit (single point of truth):**
   - The "Metadata block" section's `Status:` paragraph is
     rewritten as `Lifecycle:`. Free-form `Status:` is now
@@ -703,10 +706,10 @@ inference work touches the parser.
     - Document `[migrate.role_suffixes]` and
       `[migrate] project_name`.
   - `docs/cli.md`:
-    - `docs migrate --rename-status-to-lifecycle <tree>`
-      synopsis + example.
     - Note the F0 breaking change at the top of the migrate
-      verb section.
+      verb section (no new flag — just the parser-side change
+      affects what an in-convention tree's metadata looks
+      like).
     - Document the project-name normalisation in the migrate
       plan's output shape.
     - `docs check` exit codes: clarify that medium-confidence
@@ -811,21 +814,28 @@ inference work touches the parser.
   - `docs index --root docs/`; copy onto fixture.
   - Final quality gate: pytest GREEN; ruff / format / mypy
     clean; `docs check docs/` exit 0.
-  - **Publish (operator-driven):** `python -m build` +
-    `twine check` + manual `twine upload` per runbook. Same
-    flow as M6. The 1.2.0 wheel ships the F0 rename — first
-    M7-published artifact.
-  - Tag `v1.2.0`; push tag.
-  - `gh release create v1.2.0 ...` with M7 summary notes.
+  - **Publish: DEFERRED.** Operator decision 2026-05-24 (M8
+  OQ-C): no per-milestone publish. The first PyPI publish
+  ships the M6 + M7 + M8 surface as one artifact after M8 (or
+  later, pending review cycles). M7 Phase 10 stops at
+  "ready to publish": `python -m build` produces
+  `dist/docs_cli-1.2.0-*` artifacts locally; `twine check`
+  PASS; no `twine upload`; no tag; no GitHub release. The
+  Phase 10 log entry records "ready; deferred to post-M8
+  batched publish".
 - **Exit:** M7 task plan + log carry completion summaries;
-  status.md reflects M7 → Complete; CHANGELOG dated; `v1.2.0`
-  tagged; (operator-driven) artifact on PyPI; the project's
-  own docs all on `Lifecycle:`; 296+ tests GREEN.
+  status.md reflects M7 → Complete; CHANGELOG entry dated;
+  `dist/docs_cli-1.2.0-*` built locally and `twine check`
+  clean; the project's own docs all on `Lifecycle:`; 296+
+  tests GREEN. **No publish, no tag, no GitHub release** —
+  those land at the batched post-M8 publish.
 
 ## Deliverables (provisional — finalised at milestone-setup)
 
-- F0 rename in parser + writer; convention.md spec change;
-  `--rename-status-to-lifecycle` one-shot helper.
+- F0 rename in parser + writer; convention.md spec change.
+  (No `--rename-status-to-lifecycle` helper — operator
+  decision 2026-05-24 to drop it; this project's own sweep is
+  a one-off manual `sed` edit, not a shipped feature.)
 - F1 inference broadening: H1, section-header, sibling-set,
   word-boundary, `[migrate] role_suffixes` config.
 - F4 archive normalisation in `migrate_plan`.

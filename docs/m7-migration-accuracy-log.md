@@ -80,9 +80,10 @@ inference with H1 + section-header + sibling-set signals,
 introduces a third "medium" confidence level, normalises project
 names to lowercase-kebab, and proposes archive normalisation for
 foreign trees that already keep an `archived/` subdir. No new
-CLI surface — pure inference + convention + a one-shot rename
-helper for in-convention trees (`docs migrate
---rename-status-to-lifecycle <tree>`). The trial-2 fixtures from
+CLI surface — pure inference + convention. (No `--rename-status-
+to-lifecycle` helper; the in-project sweep at Phase 5 is a
+one-off manual `sed` edit, not a shipped feature — operator
+decision 2026-05-24.) The trial-2 fixtures from
 the 2026-05-24 multi-tree sweep (sanitised at Phase 3) become
 the regression baseline. M7 ships as 1.2.0 — the breaking schema
 rename is the semver trigger.
@@ -95,9 +96,9 @@ rename is the semver trigger.
 | 2. Write Tests (RED) | Pending | — | New test files: `test_lifecycle_rename.py` (6 tests, F0), `test_inference.py` (9 tests, F1/F10/F12), `test_project_normalisation.py` (per-fixture, F11), `test_archive_normalisation.py` (4 tests, F4). Extension to `test_migrate.py`: confidence-distribution test. All RED for intended unimplemented surface; M6's 271 stay GREEN. |
 | 3. Create Data/Fixtures | Pending | — | Promote 5 Trial-2 trees to `tests/fixtures/trees/real-trees/` (kebab-tiny / snake-medium / snake-large / archive-subdir / mixed-naming). Aggressive sanitisation — no third-party product / customer / feature names. Plus small single-file fixtures under `tests/fixtures/status-prose/`, `tests/fixtures/project-names/`, `tests/fixtures/sibling-defaulting/`. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture verbatim pytest output. Expected: M6's 271 GREEN + ~25 M7 RED for intended reasons (no `Lifecycle:` parser, no broadened inference, no normalisation, no archive moves). Quality gate clean tree-wide. |
-| 5. Update Base Interfaces | Pending | — | **The F0 rename.** Parser accepts only `Lifecycle:`; `Status:` becomes a free-form extra field. Add `Confidence.MEDIUM`. Implement `docs migrate --rename-status-to-lifecycle <tree>` one-shot helper. Sweep this project's own `docs/` to the new key (~25 files). Update convention.md to document the rename. F0 tests flip RED → GREEN; the rest stay RED for Phase 6. |
+| 5. Update Base Interfaces | Pending | — | **The F0 rename.** Parser accepts only `Lifecycle:`; `Status:` becomes a free-form extra field. Add `Confidence.MEDIUM`. **No rename helper shipped** — sweep this project's own `docs/` to the new key (~25 files) with a one-off `sed`-equivalent edit (`sed -i 's/^Status: \(active\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`). Update convention.md. F0 tests flip RED → GREEN; rest stay RED for Phase 6. |
 | 6. Implement Offline/Core Path | Pending | — | F1 (word-boundary tolerance, H1 + section signals, sibling defaulting), F10 (vocab additions, non-role suffix stripping), F11 (project-name normalisation + override), F12 (`_M\d+` milestone suffix), F4 (archive normalisation in `migrate_plan`). All M7 RED tests turn GREEN. |
-| 7. Update Tool/Wrapper Layer | Pending | — | convention.md (rename + new vocab + medium confidence), cli.md (the rename helper + project normalisation output), architecture.md (Config schema), status.md ("Watch out for" entry), README.md (any Status: references), CHANGELOG.md (`## 1.2.0 — UNRELEASED`), pyproject.toml + cli.py `__version__` bumped to 1.2.0, src/docs_cli/skill/references/{convention,cli}.md resynced. |
+| 7. Update Tool/Wrapper Layer | Pending | — | convention.md (rename + new vocab + medium confidence), cli.md (F0 breaking note + project-normalisation output shape + `docs check` exit-code clarification), architecture.md (Config schema), status.md ("Watch out for" entry), README.md (any `Status:` references swept to `Lifecycle:`), CHANGELOG.md (`## 1.2.0 — UNRELEASED`), pyproject.toml + cli.py `__version__` bumped to 1.2.0, src/docs_cli/skill/references/{convention,cli}.md resynced. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest ≥ 296 passed; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff. |
 | 9. Implement Online/Integration | Pending | — | Mapped to dogfooding against Trial 2 fixtures. Confirm 5 quantitative success criteria (confidence ≥ 50%, notes ≤ 30%, status preservation 100%, archive proposals ≥ 80%, normalisation ≥ 90%). Helper script at `tests/manual/m7_success_criteria.py` aggregates and reports. |
 | 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M7 → Complete; CHANGELOG dated; `v1.2.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6; `gh release create v1.2.0`. |
@@ -119,7 +120,7 @@ _Captured before Phase 2; historical._
   with `Status:` as the controlled-vocab key.
   `docs/cli.md` documents the 8-verb surface; `docs migrate` has
   `--apply`, `--json`, `--quiet`, `--date` (no
-  `--rename-status-to-lifecycle` yet).
+  no rename helper either — the M7 sweep is manual).
 - **Tests.** 271 passing (M6's GREEN gate). M4's
   `tests/test_migrate.py` covers basic migrate happy paths; no
   tests for the failure modes M7 fixes.
@@ -140,23 +141,23 @@ _Captured before Phase 2; historical._
 | `docs/status.md` | Modify | 1, 5, 7, 10 | Phase 1: M7 setup complete; Phase 5: "Watch out for" gets F0 entry; Phase 10: M7 → Complete. |
 | `docs/plan.md` | (already registered) | — | M7 row added at the registration commit `1df6ec6`. |
 | `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` | Regenerate | 1, 5, 7, 10 | Every doc-touching phase regenerates in lockstep. |
-| `tests/test_lifecycle_rename.py` | Create | 2 | F0 — 6 tests covering parser acceptance/rejection, check error, migrate preservation, rename helper. |
+| `tests/test_lifecycle_rename.py` | Create | 2 | F0 — 5 tests covering parser acceptance/rejection, check error, migrate preservation. (No 6th rename-helper test — helper dropped per operator decision 2026-05-24.) |
 | `tests/test_inference.py` | Create | 2 | F1/F10/F12 — 9 tests covering word-boundary, non-role stripping, new vocab, `_M\d+`, H1, section headers, sibling defaulting (3 cases). |
 | `tests/test_project_normalisation.py` | Create | 2 | F11 — per-fixture parametric tests. |
 | `tests/test_archive_normalisation.py` | Create | 2 | F4 — 4 tests for `archived/` and `archive/` normalisation. |
 | `tests/test_migrate.py` | Modify | 2 | Add confidence-distribution test against a representative fixture. |
 | `tests/fixtures/trees/real-trees/{kebab-tiny,snake-medium,snake-large,archive-subdir,mixed-naming}/` | Create | 3 | 5 sanitised Trial-2 trees. |
 | `tests/fixtures/{status-prose,project-names,sibling-defaulting}/` | Create | 3 | Small single-file fixtures per finding. |
-| `src/docs_cli/cli.py` | Modify | 5, 6, 7 | Phase 5: F0 parser rename + Confidence enum + rename helper. Phase 6: F1/F10/F11/F12/F4 inference + normalisation + archive normalisation. Phase 7: `__version__` bumped to 1.2.0. |
+| `src/docs_cli/cli.py` | Modify | 5, 6, 7 | Phase 5: F0 parser rename + Confidence enum (NO new verb / flag). Phase 6: F1/F10/F11/F12/F4 inference + normalisation + archive normalisation. Phase 7: `__version__` bumped to 1.2.0. |
 | `docs/convention.md` | Modify | 5, 7 | Phase 5: rename `Status:` → `Lifecycle:` in the schema. Phase 7: document new vocab + medium confidence + `[migrate]` config knobs. |
-| `docs/cli.md` | Modify | 7 | `--rename-status-to-lifecycle` synopsis; F0 breaking-change note; project-normalisation output shape; `docs check` exit-code clarification. |
+| `docs/cli.md` | Modify | 7 | F0 breaking-change note at the top of the migrate verb section; project-normalisation output shape; `docs check` exit-code clarification for medium confidence. No new flag documented (none added). |
 | `docs/architecture.md` | Modify | 7 | `Config` schema includes `role_suffixes` + `project_name`. |
 | `README.md` | Modify | 7 | Any `Status:` references swept to `Lifecycle:`. |
 | `CHANGELOG.md` | Modify | 7, 10 | Phase 7: `## 1.2.0 — UNRELEASED` entry. Phase 10: dated. |
 | `pyproject.toml` | Modify | 7 | `version = "1.2.0"`. |
 | `src/docs_cli/skill/references/convention.md` | Modify | 7 | Resync from `docs/convention.md`. |
 | `src/docs_cli/skill/references/cli.md` | Modify | 7 | Resync from `docs/cli.md`. |
-| Every `docs/*.md` Status: line | Modify | 5 | Mechanical sweep via `docs migrate --rename-status-to-lifecycle docs/`. ~25 files touched. |
+| Every `docs/*.md` Status: line | Modify | 5 | Mechanical one-off sweep via `sed -i 's/^Status: \(active\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md` (no shipped helper). ~25 files touched. Verify with `grep -l "^Status:" docs/` → empty after. |
 | `tests/manual/m7_success_criteria.py` | Create | 9 | Aggregates the 5 success metrics from the Phase 9 JSON dumps. |
 
 ## Phase logs

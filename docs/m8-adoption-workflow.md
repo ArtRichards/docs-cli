@@ -274,20 +274,29 @@ the directory-walk-pruning optimization) are NOT replicated —
 docs trees are small enough that walking everything and
 filtering is fine.
 
-### OQ-C resolved — M8 ship timing relative to M6 publish
+### OQ-C resolved — Publish timing (operator decision, 2026-05-24)
 
-**Ship M8 after M6 PyPI publish.** Rationale:
+**Publish is deferred until after M8 — possibly further,
+pending review cycles.** No per-milestone publish. The first
+PyPI publish ships the M6 + M7 + M8 surface as one artifact
+(version `1.3.0` — the M8 bump), via the existing
+`release-runbook.md` manual `twine upload` flow.
 
-1. M8's skill-reference rewrite (F8) touches files M6 just
-   stabilised — landing on a shipped baseline avoids re-editing
-   the same files in flight.
-2. The fresh-subagent integration gate (Phase 9) tests against
-   real-world adoption scenarios; agents being able to
-   `pip install docs-cli` is part of the realistic flow.
-3. M6 publish is a separate gate already in the operator's
-   queue — sequencing M8 after it costs nothing.
+Implications for M8:
 
-Practical sequence: **M6 publish → M7 ship → M8 ship.**
+1. M8 Phase 9 (the fresh-subagent gate) tests against a
+   **locally-installed** wheel, not `pip install docs-cli`
+   from PyPI. Subagents do
+   `pip install /home/user/opt/docs-cli/dist/docs_cli-1.3.0-py3-none-any.whl`
+   into a throwaway venv (equivalent UX; same artifact).
+2. M8 Phase 10's publish step is **deferred** rather than
+   executed. The Phase 10 log entry records "ready to
+   publish; awaiting operator review cycle".
+
+Practical sequence (revised): **M7 ship → M8 ship → operator
+review → (eventually) batched publish of 1.3.0.** Skipping
+1.1.0 and 1.2.0 on PyPI is a no-op because there's no prior
+public release — the first published version simply IS 1.3.0.
 
 ### OQ-D resolved — `.docs.toml.example` ship form
 
@@ -835,15 +844,28 @@ small and the skill references rich.
   - `docs index --root docs/`; copy onto fixture.
   - Final quality gate: pytest GREEN; ruff/format/mypy
     clean; `docs check docs/` exit 0.
-  - **Publish (operator-driven):** `python -m build` +
-    `twine check` + manual `twine upload` per runbook.
-    Same flow as M6 + M7. 1.3.0 wheel ships the M8 adoption
-    workflow.
-  - Tag `v1.3.0`; push tag.
-  - `gh release create v1.3.0 ...` with M8 summary notes.
+  - **Publish: STILL DEFERRED** per OQ-C, pending operator
+    review cycles. M8 Phase 10 builds the artifact locally
+    (`python -m build` → `dist/docs_cli-1.3.0-*`) and runs
+    `twine check` to confirm it's PyPI-clean, but does NOT
+    upload, does NOT tag, does NOT create a GitHub release.
+    The Phase 10 log entry records "ready; awaiting operator
+    review → batched publish".
+  - The first PyPI publish ships **1.3.0** (the M8 version —
+    M6 set 1.1.0, M7 bumped to 1.2.0, M8 to 1.3.0; the
+    intermediate versions never see PyPI, which is fine —
+    no prior public release exists). Flow when the operator
+    decides to publish: `gh repo edit ArtRichards/docs-cli
+    --visibility public --accept-visibility-change-consequences`
+    → `twine upload --repository testpypi dist/*` + smoke →
+    `twine upload dist/*` → `git tag v1.3.0 && git push
+    origin v1.3.0` → `gh release create v1.3.0`. Runbook at
+    `docs/release-runbook.md` is the operator's reference.
 - **Exit:** M8 task plan + log carry completion summaries;
-  status.md reflects M8 → Complete; CHANGELOG dated;
-  `v1.3.0` tagged; (operator-driven) artifact on PyPI; the
+  status.md reflects M8 → Complete + "ready for operator
+  review → batched publish"; CHANGELOG dated;
+  `dist/docs_cli-1.3.0-*` built locally + `twine check`
+  clean; **no publish, no tag, no GitHub release**; the
   Phase 9 gate is the load-bearing record that adoption is
   agent-driveable.
 

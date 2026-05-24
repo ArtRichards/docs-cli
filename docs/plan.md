@@ -90,16 +90,19 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 ## v1.1
 
 v1.1 is in flight as of 2026-05-23. M6 (PyPI distribution) is
-implementation-complete and merged to `main` (2026-05-24);
-publication to PyPI is operator-driven (manual `twine upload` per
-`release-runbook.md`). M7 and M8 are stub-drafted from the
-2026-05-24 multi-tree trial against real-world foreign trees.
+implementation-complete and merged to `main` (2026-05-24). M7
+and M8 are past milestone-setup and entering implementation
+(M8 blocks on M7 ship). **Publish is deferred until after M8**
+(possibly further, pending operator review cycles): one batched
+PyPI publish at version `1.3.0` ships the M6 + M7 + M8 surface.
+Intermediate versions (1.1.0, 1.2.0) never appear on PyPI —
+fine, since there's no prior public release.
 
-| Milestone | Status | Task plan |
-|---|---|---|
-| M6 — PyPI distribution as `docs-cli` | implementation complete (merged 2026-05-24); operator publish pending | [m6-pypi-distribution.md](m6-pypi-distribution.md) |
-| M7 — Migration plan accuracy | stub drafted 2026-05-24; pending milestone-setup | [m7-migration-accuracy.md](m7-migration-accuracy.md) |
-| M8 — Adoption workflow (agent-driveable) | stub drafted 2026-05-24; pending milestone-setup (depends on M7) | [m8-adoption-workflow.md](m8-adoption-workflow.md) |
+| Milestone | Status | Task plan | Log |
+|---|---|---|---|
+| M6 — PyPI distribution as `docs-cli` | implementation complete (merged 2026-05-24); publish deferred to batched 1.3.0 | [m6-pypi-distribution.md](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
+| M7 — Migration plan accuracy | active (milestone-setup complete 2026-05-24, Phase 2 next) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M8 — Adoption workflow (agent-driveable) | active (milestone-setup complete 2026-05-24; Phase 2+ blocks on M7 ship) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 
 **M7** hardens `docs migrate`'s inference + introduces a breaking
 controlled-vocab rename (`Status:` → `Lifecycle:`). It targets ≥50%
