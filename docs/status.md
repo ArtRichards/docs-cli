@@ -140,7 +140,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution as `docs-cli` | _implementation complete_ (merged 2026-05-24); publish pending | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _stub drafted_ (2026-05-24); pending milestone-setup | [Plan](m7-migration-accuracy.md) | _not yet created_ |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 in progress; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _stub drafted_ (2026-05-24); pending milestone-setup (depends on M7) | [Plan](m8-adoption-workflow.md) | _not yet created_ |
 
 v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
@@ -237,13 +237,17 @@ date; (3) `twine upload dist/*`; (4) `gh repo edit ArtRichards/docs-cli
 `gh release create v1.1.0 ...`; (7) flip the M6 row in this file +
 the Phase-10 boxes to Complete (DATE).
 
-**(B) M7 — enter milestone-setup.** The stub at
-[m7-migration-accuracy.md](m7-migration-accuracy.md) carries the
-trial evidence + 6 categorical findings (F0/F1/F4/F10/F11/F12) +
-4 open questions ready for setup. Resolve OQs A–D, expand the
-TDD Implementation Plan from the stub skeleton, and create
-`m7-migration-accuracy-log.md`. Once M7 is past Phase 1, M8 setup
-can follow without blocking on M7's implementation.
+**(B) M7 — execute Phase 2 (Write Tests RED).** Milestone-setup
+complete 2026-05-24: all 4 OQs (A–D) resolved as Decisions, TDD
+Implementation Plan expanded per-phase in
+[m7-migration-accuracy.md](m7-migration-accuracy.md), log skeleton
+created at
+[m7-migration-accuracy-log.md](m7-migration-accuracy-log.md).
+Phase 2 next: author `tests/test_lifecycle_rename.py` (6 tests),
+`tests/test_inference.py` (9 tests), `tests/test_project_normalisation.py`,
+`tests/test_archive_normalisation.py` (4 tests), plus a
+confidence-distribution extension to `tests/test_migrate.py`. All
+RED for intended unimplemented surface; M6's 271 stay GREEN.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

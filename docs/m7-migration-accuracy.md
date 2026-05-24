@@ -1,11 +1,12 @@
 # M7 — Migration plan accuracy
 
-Status: draft
+Status: active
 Role: milestone
 Project: docs
 Updated: 2026-05-24
 
 Related:
+- parent-of: m7-migration-accuracy-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md
@@ -22,8 +23,9 @@ Related:
   `Lifecycle:`, vocab additions, and archive-subdir normalisation.
   No new top-level verbs. M8 owns the operator/agent ergonomics
   side (flags, skill references).
-- Status: **DRAFT** — captured 2026-05-24 from a multi-tree trial
-  (501 files across 25 real-world sibling trees).
+- Status: ACTIVE (started 2026-05-24, milestone-setup complete).
+  Captured 2026-05-24 from a multi-tree trial (501 files across 25
+  real-world sibling trees).
 
 ### Goal
 
@@ -278,75 +280,547 @@ these findings. Concrete test: the new inference signals should
 score equally well on fresh trees the M7 author hasn't seen
 (the fresh-subagent integration gate in M8 exercises this).
 
-## Decisions (carried forward + resolved at trial-time)
+## Decisions (carried forward + resolved at milestone-setup, 2026-05-24)
+
+### Carried forward from M4 / M6
 
 - `docs migrate` stays dry-run by default. `--apply` semantics
-  unchanged. M7 adds NO new flags.
+  unchanged. **M7 adds NO new top-level flags** — all M7 work is
+  in inference + convention + a one-shot rename helper.
 - The convention's archive shape (`archive/YYYY-MM-DD/<file>`)
   stays as-is. M7 adds normalisation TO it; doesn't change it.
-- M6 has merged to main (2026-05-24, considered reviewed; not yet
-  published to PyPI). M7 builds on M6's `src/docs_cli/` layout.
+- M6 has merged to `main` (2026-05-24, considered reviewed; not
+  yet published to PyPI). M7 builds on M6's `src/docs_cli/`
+  layout.
+
+### Resolved at trial-time + milestone-setup
+
 - **F0 controlled-vocab rename.** `Lifecycle:` replaces `Status:`
   for the controlled-vocab field. Breaking change — no
-  backward-compat window.
+  backward-compat window. Free-form `Status:` lines are
+  preserved through migrate as `## Migrated metadata`. (Operator,
+  2026-05-24.)
+- **Tree-wide single source of truth for excludes.** Decision
+  recorded in M8's stub; M7 is unaffected — M7 adds no exclude
+  surface. (For consistency: noted here so M7 setup confirms it
+  has no dependency to satisfy.)
 
-## Open questions (for milestone-setup)
+### OQ-A resolved — Role vocab additions
 
-1. **OQ-A — Vocab additions for role.** Add `template`, `example`,
-   `explainer`, `implementation`, `sketch`, `outline`, `memo`,
-   `brief` to controlled-role vocab? Or expose via
-   `[vocabulary] add_roles`? Recommendation: add `template`,
-   `example`, `implementation`, `sketch`, `outline`, `memo`,
-   `brief` to core (common across multiple trees). Leave
-   `explainer` to `add_roles` (more niche).
-2. **OQ-B — Project-name normalisation rules for ambiguous splits.**
-   `Abc5Migration` → `abc-5-migration` or `abc5-migration`? Digit
-   handling is the trickiest case. Recommendation: split on
-   case-boundary AND letter-to-digit boundary (so `Abc5Migration`
-   → `abc-5-migration`). Surface in plan with the original for
-   operator override.
-3. **OQ-C — Sibling-set defaulting threshold.** What fraction of
-   siblings must share a role before defaulting a no-match file?
-   Recommendation: 60% majority + minimum sample of 5 siblings.
-4. **OQ-D — Confidence levels.** Today there are 2 (high, low).
-   M7 introduces "medium" for sibling-set / H1-content / section-
-   header matches. Should `docs check` treat medium as warning or
-   error? Recommendation: warning.
+Add to **core controlled-role vocab**: `template`, `example`,
+`implementation`, `sketch`, `outline`, `memo`, `brief`. These are
+common across multiple unrelated trees in Trial 2 (the largest
+group, `_Implementation`, accounted for 54 of 367 snake_case
+files — 15%). Leave `explainer` to `[vocabulary] add_roles` (more
+niche; appeared in only one tree). Convention.md gets a single
+sentence per new role in the role-vocabulary section.
+
+### OQ-B resolved — Project-name normalisation for digit-glued names
+
+Split on case boundaries AND letter-to-digit boundaries. So:
+
+- `FooBarBaz` → `foo-bar-baz`
+- `Abc5Migration` → `abc-5-migration` (digit isolated)
+- `FOO_BAR_BAZ` → `foo-bar-baz` (snake_upper)
+- `Foo_Bar_Baz` → `foo-bar-baz` (mixed)
+- `bugs-2026-01-26` → `bugs-2026-01-26` (already kebab; dates
+  preserved — digit-after-digit doesn't trigger a split)
+
+Surface the normalisation inline in the migrate plan output:
+`project: foo-bar-baz (normalised from "FooBarBaz")` so the
+operator can spot mis-normalisations. The
+`[migrate] project_name` override in `.docs.toml` lets the
+operator pin the project value explicitly.
+
+### OQ-C resolved — Sibling-set defaulting threshold
+
+A file with no matching suffix defaults to the modal sibling role
+when **both** conditions hold:
+
+- ≥ 60% of sibling files share the same role (60% majority).
+- The subdir has ≥ 5 sibling files total (minimum sample).
+
+Below either threshold, the file falls to `notes` at low
+confidence (today's behaviour). When sibling defaulting fires,
+confidence is **medium** (the new third level — see OQ-D).
+
+### OQ-D resolved — Confidence levels: introduce "medium"
+
+Add a third confidence level **`medium`** between `high` and
+`low`. Used by:
+
+- Sibling-set defaulting (OQ-C).
+- H1-content-based inference (F1).
+- Section-header-pattern inference (F1).
+- Non-role suffix stripping that then matches (F10): `MyPlan_v2.md`
+  strips to `MyPlan` and matches `_Plan` — but with `medium`
+  confidence to reflect the strip.
+
+**`docs check` treats medium as warning** (exit 1), not error
+(exit 2). Rationale: medium-confidence inferences are good-enough
+defaults that don't need operator attention but should be
+surfaced for review. `docs list --confidence` filter (M7
+extension) takes `high`, `medium`, `low`. Trial 2 confidence
+metric becomes `(high + medium) / total` for the success
+criterion.
+
+## Open questions
+
+_All four milestone-setup OPEN QUESTIONS are resolved 2026-05-24,
+recorded as Decisions above. No new questions surfaced during
+setup._
 
 ## TDD Implementation Plan
 
-Not yet expanded. M7 follows the same 10-phase TDD shape as
-M1–M6. Drafted at milestone-setup once OQs are resolved.
+The ten phases follow the methodology in
+[status.md](status.md). Because M7 is **breaking the convention
+schema** (F0 rename) AND **broadening inference** AND **sweeping
+this project's own docs over to the new key**, the phases bias
+toward landing F0 first as a stable substrate before the
+inference work touches the parser.
 
-Estimated phase shape:
+### Phase 1: Define Contract
 
-- **Phase 1 — Define Contract.** Activate milestone; cli.md
-  unchanged (no new flags); convention.md gets the F0 rename;
-  status.md row added.
-- **Phase 2 — Write Tests (RED).** New `tests/test_inference.py`
-  + extension to `tests/test_migrate.py` for F0/F4/F10/F11/F12.
-  H1 + section-header inference test cases derived from Trial 2
-  trees (sanitised).
-- **Phase 3 — Create Data/Fixtures.** Promote Trial 2 trees to
-  `tests/fixtures/trees/real-trees/<tree-name>/` — sanitised
-  aggressively (no third-party product / customer / feature
-  names). Aim for 5–8 fixtures spanning size + style.
-- **Phase 4 — Run Tests (RED Baseline).** Capture failures; pin
-  to F0/F4/F10/F11/F12 root causes.
-- **Phase 5 — Update Base Interfaces.** F0 rename across the
-  parser + writer + this project's own `docs/` tree
-  (mechanical). Sweep `Status:` → `Lifecycle:` in every
-  in-project file; regenerate INDEX.
-- **Phase 6 — Implement Core.** F1/F4/F10/F11/F12 in
-  `migrate_plan` / `infer_role` / `infer_project`.
-- **Phase 7 — Update Wrappers.** convention.md / cli.md / README
-  reflect the new field name + the expanded vocab.
-- **Phase 8 — Run Tests (GREEN).** 271 + N tests pass (M6's 271
-  + M7's new ones).
-- **Phase 9 — Integrate.** Re-run migrate on the Trial 2
-  fixtures; confirm the headline-numbers success criteria.
-- **Phase 10 — Quality, Docs, Refactor.** Sweep dogfood
-  consistency; tag the M7 changeset.
+- **Objective:** Promote this milestone from `draft` to `active`
+  (already done at milestone-setup, 2026-05-24); create the log
+  skeleton; record OQ A–D resolutions as Decisions (done); refresh
+  status.md's "Current milestone" and "Next action" to point at
+  Phase 2. No code change; no convention edits yet (those land at
+  Phase 5 / Phase 7 to keep the contract phase reviewable in
+  isolation).
+- **Files (text/docs work):**
+  - `docs/m7-migration-accuracy.md` — Status: draft → active
+    (done); Updated: bumped; Decisions section populated with
+    OQ A–D resolutions (done).
+  - `docs/m7-migration-accuracy-log.md` — created with the M5/M6
+    log skeleton (frontmatter, metadata, OQ summaries, phase
+    table, files-to-modify table, phase-logs placeholder).
+  - `docs/status.md` — "Current milestone" rewritten to mark M7
+    setup complete + Phase 2 next; M7 row in the milestone table
+    flipped from "stub drafted" to "in flight (Phase 1 complete,
+    Phase 2 next)".
+  - `docs/plan.md` — already lists M7 (committed `1df6ec6`); no
+    further edit beyond the touch.
+  - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+    regenerated in lockstep so the new log appears.
+- **Exit:** M7 is `active`; log exists; status.md reflects
+  Phase 1 complete; 271 tests still GREEN; ruff/format/mypy
+  clean; `docs check docs/` exit 0; INDEX snapshot matches.
+  No code change has happened. No convention change has happened.
+
+### Phase 2: Write Tests (RED)
+
+- **Objective:** Express every M7 requirement (F0/F1/F4/F10/F11/
+  F12) as a failing check before any implementation. Tests
+  collect cleanly; every new assertion fails for the **intended**
+  reason (the unimplemented surface, not misconfiguration).
+- **New test files:**
+  - `tests/test_lifecycle_rename.py` (F0). Asserts:
+    1. Parser accepts `Lifecycle: active` as the controlled-vocab
+       key (today: parser only accepts `Status:`).
+    2. Parser rejects `Status: active` as the controlled-vocab
+       key — a `Status:` line is now a free-form prose extra
+       field, not the lifecycle.
+    3. `docs check` errors (exit 2) on a doc with `Status: <vocab
+       value>` and no `Lifecycle:` line.
+    4. `docs check` accepts a doc with `Lifecycle: active` and a
+       free-form `Status: Implementation in progress` line.
+    5. `docs migrate` preserves a foreign tree's `Status: <prose>`
+       line as an entry under `## Migrated metadata` rather than
+       coercing.
+    6. `docs migrate --rename-status-to-lifecycle <tree>` (the
+       one-shot helper) rewrites the controlled-vocab field
+       in-place across an in-convention tree.
+  - `tests/test_inference.py` (F1, F10, F12). Asserts:
+    1. Word-boundary suffix tolerance:
+       `Project Name - Database Population Plan.md` →
+       `role: plan`.
+    2. Non-role suffix stripping: `MyPlan_v2.md` and
+       `MyPlan_Draft.md` strip to `MyPlan` → `role: plan` at
+       confidence `medium`; `MyPlan_Draft.md` also surfaces
+       `Lifecycle: draft` hint.
+    3. New core vocab roles match: `*_Implementation.md`,
+       `*_Sketch.md`, `*_Outline.md`, `*_Memo.md`, `*_Brief.md`,
+       `*_Template.md`, `*_Example.md` → respective role at
+       high confidence.
+    4. `_M\d+` suffix detection: `Foo_M1.md`, `Foo_M2.md`,
+       `Foo_M10.md` → `role: milestone` at medium confidence.
+    5. H1-content inference: `# Foo Plan` → `role: plan` at
+       medium confidence when the suffix doesn't match.
+    6. Section-header pattern inference: a file with
+       `## Goal` + `## Scope` + `## Requirements` →
+       `role: plan` at medium confidence.
+    7. Sibling-set defaulting: in a 10-file subdir where 7 are
+       `spec`, an 8th unrecognised-suffix file gets
+       `role: spec` at medium confidence (OQ-C: 60% threshold,
+       ≥ 5 sibling minimum).
+    8. Sibling-set NOT defaulting when subdir has < 5 files
+       (below sample threshold).
+    9. Sibling-set NOT defaulting when no role hits 60% (below
+       majority threshold).
+  - `tests/test_project_normalisation.py` (F11). Asserts the
+    OQ-B normalisation rules — TitleCase, snake_upper,
+    digit-glued, mixed — all produce expected kebab-case.
+    Includes a regression case for kebab-case input
+    (`embedded-ai-discovery-parallel`) passing through unchanged.
+    Includes a test that the `[migrate] project_name` override
+    in `.docs.toml` wins over normalisation.
+    Includes a test that the migrate plan's human output surfaces
+    `(normalised from "<original>")` when normalisation changed
+    the value.
+  - `tests/test_archive_normalisation.py` (F4). Asserts:
+    1. A foreign tree with `archived/<file>.md` at root generates
+       a proposed move to `archive/YYYY-MM-DD/<file>.md` in the
+       migration plan, with date taken per-file from mtime or
+       `Updated:`.
+    2. A foreign tree with `archive/<file>.md` (no `d`) also
+       triggers normalisation.
+    3. `--date YYYY-MM-DD` overrides per-file dates with a global
+       date.
+    4. A file already at `archive/YYYY-MM-DD/<file>.md`
+       (correctly placed) is NOT proposed for any move.
+- **Extensions to existing test files:**
+  - `tests/test_migrate.py` — keep, extend. Add a confidence-
+    distribution test: against a representative fixture, confirm
+    `(high + medium) / total ≥ 0.5`. (The success-criterion
+    measure, codified.)
+- **Quality discipline:**
+  - All new tests use the existing fixture-loading helpers from
+    `tests/conftest.py`.
+  - No fixture authoring in this phase — that's Phase 3.
+  - `ruff` / `mypy` / `format` clean tree-wide.
+- **Exit:** every new test file collects cleanly; every new
+  test fails or errors on the intended unimplemented surface.
+  M6's 271 tests stay GREEN. Phase 4 captures the verbatim
+  baseline.
+
+### Phase 3: Create Data/Fixtures
+
+- **Objective:** Stage the fixtures the new tests reference.
+  This is the load-bearing data-engineering phase — promote
+  selected Trial 2 trees from `/tmp/m7-trial2/` to
+  `tests/fixtures/trees/real-trees/` with **aggressive
+  sanitisation**: no third-party product / customer / feature
+  names; file shapes / sizes / metadata patterns preserved.
+- **Fixture set to promote (5 trees, spanning size + style):**
+
+  | Fixture slug | Original | Files | Style | Notes |
+  |---|---|---|---|---|
+  | `kebab-tiny/` | one of the `ph-langfuse*` trees | ~3 | kebab-case | smallest size class |
+  | `snake-medium/` | one of the medium `ph-*` trees | ~30 | snake_TitleCase | dominant real-world shape |
+  | `snake-large/` | one of the `ph-embedded-*` trees | ~70–90 | snake_TitleCase | scale stress |
+  | `archive-subdir/` | derived from Trial 1's tree | ~10 + `archived/` | mixed | F4 archive normalisation test |
+  | `mixed-naming/` | a tree with multiple style families | ~15 | TitleCase + space + kebab | F1 word-boundary stress |
+
+- **Per-finding extra fixtures (small, focused):**
+  - `tests/fixtures/status-prose/` — 6 single-file fixtures
+    with various `Status: <prose>` shapes, for F0 + F2.
+  - `tests/fixtures/project-names/` — 7 single-file fixtures
+    with TitleCase / snake_upper / digit-glued / mixed
+    directory shells, for F11.
+  - `tests/fixtures/sibling-defaulting/` — 3 subdirs:
+    `majority-met/` (10 files, 7 spec + 3 mixed),
+    `majority-not-met/` (10 files, 4 spec + 6 mixed),
+    `sample-too-small/` (4 files, 4 spec + 0 mixed).
+- **Sanitisation rules (enforced before commit):**
+  - Replace product / customer / company names with `Foo`,
+    `Bar`, `Baz`, `Acme`, generic placeholders.
+  - Replace feature / module names with semantically-equivalent
+    generic versions (`embedded-ai-discovery-parallel` →
+    `feature-discovery-parallel`).
+  - Truncate file bodies aggressively — the metadata block + H1
+    + first paragraph is enough for every inference test.
+    Preserve file size buckets if a test depends on them.
+  - Strip dates that could fingerprint the original tree.
+- **`docs check` must remain clean on the docs root** — fixture
+  files live under `tests/fixtures/trees/` which is not a docs
+  root (no `.docs.toml`), so they don't interfere.
+- **Exit:** every fixture path the new tests reference exists;
+  sanitisation review passes (a manual grep for product/customer
+  names returns clean); RED baseline failures (Phase 4) trace to
+  the unimplemented surface, not to missing fixtures.
+
+### Phase 4: Run Tests (RED Baseline)
+
+- **Objective:** Confirm the new RED tests fail for the
+  intended reasons; pin the failure modes in the log.
+- **Actions:**
+  ```sh
+  .venv/bin/python -m pytest tests/ -q --tb=short 2>&1 | tee /tmp/m7-phase-4-baseline.txt
+  .venv/bin/ruff check .
+  .venv/bin/ruff format --check .
+  .venv/bin/mypy
+  .venv/bin/docs check docs/
+  ```
+- **Expected RED matrix:**
+
+  | Test group | Failure mode | Root cause |
+  |---|---|---|
+  | F0 lifecycle rename (6 tests) | `KeyError` / `AssertionError` on `Lifecycle:` parsing | Parser only knows `Status:` today |
+  | F1/F10/F12 inference (9 tests) | Wrong role inferred (mostly `notes`) | Inference broadening unimplemented |
+  | F11 project normalisation (per fixture) | `AssertionError: 'OrgInfo' != 'org-info'` | No normalisation today |
+  | F4 archive normalisation (4 tests) | `AssertionError: no move_to in plan` | Archive normalisation unimplemented |
+  | confidence-distribution test | `(high + medium) / total ≈ 0.25` < 0.50 | Inference broadening unimplemented |
+
+- **Aggregate expected:** M6's 271 + ~25 new RED = ~296
+  collected, ~25 RED. M6's 271 stay GREEN.
+- **Exit:** Phase-4 log entry captures the verbatim baseline
+  output; every RED traces to its intended unimplemented
+  surface; M6's quality gate stays clean.
+
+### Phase 5: Update Base Interfaces
+
+- **Objective:** The F0 controlled-vocab rename. **This is the
+  load-bearing structural change.** Sweep this project's own
+  `docs/` tree from `Status:` to `Lifecycle:` mechanically;
+  update the parser to accept only `Lifecycle:` for the
+  controlled-vocab key; ship the one-shot rename helper. Add
+  the third confidence level. No inference-broadening work yet
+  (that's Phase 6).
+- **Parser + writer changes:**
+  - `src/docs_cli/cli.py` — rename `STATUS_KEY` constant to
+    `LIFECYCLE_KEY` (or equivalent); parse only `Lifecycle:`
+    as the controlled-vocab key; treat `Status:` as a free-form
+    extra field (handled by the existing extra-field
+    preservation path).
+  - Add `Confidence` enum / sentinel: `HIGH`, `MEDIUM`, `LOW`
+    (today: just `high` / `low` strings). Update every emit
+    site to use the enum.
+  - `_cmd_migrate` — add `--rename-status-to-lifecycle <tree>`
+    one-shot mode (mutually exclusive with `--apply`). When
+    set, walks the tree's `.md` files, rewrites `Status: <vocab>`
+    → `Lifecycle: <vocab>`, preserves any pre-existing
+    `Status:` prose (it becomes an extra field automatically).
+    Atomic per-file (tmp + rename); idempotent
+    (running twice is a no-op the second time).
+- **In-project sweep (this project's own `docs/`):**
+  - Every `docs/*.md` file's `Status: <vocab>` line becomes
+    `Lifecycle: <vocab>`. The actual run uses
+    `docs migrate --rename-status-to-lifecycle docs/`.
+  - 25 docs files are touched. Each gets a one-line edit + a
+    bumped `Updated:`.
+  - `tests/fixtures/expected/docs-INDEX.md` regenerated.
+- **Convention.md edit (single point of truth):**
+  - The "Metadata block" section's `Status:` paragraph is
+    rewritten as `Lifecycle:`. Free-form `Status:` is now
+    documented as a common extra-field shape (preserved like
+    `Owner:`, `Tags:`).
+- **Test updates:**
+  - Any existing M1–M6 test that asserts the literal string
+    `Status:` in metadata gets updated to `Lifecycle:`.
+    `grep -rn "Status:" tests/` to find them. (Distinct from
+    the inference tests; this is just the schema rename.)
+  - `tests/fixtures/expected/docs-INDEX.md` reflects the
+    renamed key if it appears in the snapshot (it doesn't
+    today — INDEX uses the role+project grouping not the
+    lifecycle).
+- **Exit:** F0 tests in `test_lifecycle_rename.py` flip from
+  RED to GREEN; this project's own `docs/` parses + checks
+  clean under the new key; `docs check docs/` exit 0; 271
+  M6 tests + 6 F0 tests = 277 GREEN; inference tests
+  (Phase 6's surface) still RED.
+
+### Phase 6: Implement Offline/Core Path
+
+- **Objective:** Implement F1 (broader inference), F10 (vocab
+  + non-role stripping), F11 (project normalisation), F12
+  (`_M\d+` milestone suffix), F4 (archive normalisation).
+  All remaining M7 RED tests turn GREEN.
+- **`src/docs_cli/cli.py` changes:**
+  - `infer_role`:
+    - Add new core vocab to the ROLES set: `template`,
+      `example`, `implementation`, `sketch`, `outline`, `memo`,
+      `brief`.
+    - Word-boundary tolerance: also match `<token>` at end of
+      filename (case-insensitive) separated by space or
+      underscore, not just hyphen.
+    - Non-role suffix stripping: strip `_Draft`, `_Ready`,
+      `_v\d+` from the stem before matching; if the strip
+      enables a match, return at **medium** confidence and
+      (for `_Draft`) surface a `Lifecycle: draft` hint.
+    - `_M\d+` suffix pattern → `role: milestone` at medium
+      confidence.
+    - H1-content inference: read the first H1 line; if it ends
+      with a role-word (`Plan`, `Spec`, `Status`, `Charter`,
+      `Architecture`, etc.), return that role at medium
+      confidence (only when suffix matching didn't already
+      hit).
+    - Section-header inference: scan top-level `##` headers;
+      apply pattern table (Goal+Scope+Requirements → plan;
+      Context+Decision+Consequences → decision; dated headers
+      → log). Medium confidence.
+    - Sibling-set defaulting: when no signal hits, count
+      sibling roles in the same subdir; if a single role
+      reaches ≥ 60% AND the subdir has ≥ 5 files, return that
+      role at medium confidence.
+  - `infer_project`:
+    - Add `normalise_project_name(name: str) -> str` helper.
+      Splits on case boundaries + underscores + letter-to-digit
+      boundaries; rejoins with `-`; lowercases. Preserves
+      digit-after-digit (so `bugs-2026-01-26` stays intact).
+    - Apply normalisation to the inferred project value.
+    - Honour `[migrate] project_name = "..."` in `.docs.toml`
+      as an override.
+    - Surface `(normalised from "<original>")` in the migrate
+      plan's human output when normalisation changed the
+      value.
+  - `migrate_plan`:
+    - F4 archive normalisation. On detecting a root-level
+      `archive/` or `archived/` subdir, generate `move_to`
+      entries for each file beneath into
+      `archive/YYYY-MM-DD/<file>`. Per-file date from mtime or
+      `Updated:` field; `--date` overrides globally. Files
+      already correctly placed under `archive/YYYY-MM-DD/`
+      generate no move.
+  - `Config.role_suffixes` field — a `dict[str, str]` mapping
+    custom suffix tokens to role names. Loaded from
+    `[migrate.role_suffixes]` in `.docs.toml`. Merged into
+    the suffix-matching list at inference time.
+- **convention.md (touched at Phase 7 for the user-facing
+  doc):** Phase 6 may add a brief inline comment in
+  `_load_config` near the new key — actual user-facing prose
+  comes at Phase 7.
+- **Exit:** all M7 tests GREEN; `docs check docs/` exit 0;
+  ruff / format / mypy clean tree-wide; the confidence-
+  distribution test passes (`(high+medium)/total ≥ 0.5` on
+  the medium-fixture).
+
+### Phase 7: Update Tool/Wrapper Layer
+
+- **Objective:** Update user-facing specs + skill references
+  to reflect M7's surface changes. No code changes (those
+  landed at Phase 5/6).
+- **Files (text/docs work):**
+  - `docs/convention.md`:
+    - Replace every `Status:` reference (in the schema
+      definition) with `Lifecycle:`.
+    - Add a paragraph noting that `Status:` is now a common
+      extra-field shape, preserved verbatim under
+      `## Migrated metadata`.
+    - Document the expanded role vocab (the 7 new core
+      roles).
+    - Document the new confidence level `medium`.
+    - Document `[migrate.role_suffixes]` and
+      `[migrate] project_name`.
+  - `docs/cli.md`:
+    - `docs migrate --rename-status-to-lifecycle <tree>`
+      synopsis + example.
+    - Note the F0 breaking change at the top of the migrate
+      verb section.
+    - Document the project-name normalisation in the migrate
+      plan's output shape.
+    - `docs check` exit codes: clarify that medium-confidence
+      inferences emit warnings (exit 1), not errors (exit 2).
+  - `docs/architecture.md`:
+    - Update the `Config` schema illustration to include
+      `role_suffixes` and `project_name`.
+    - No structural diagram change.
+  - `docs/status.md`:
+    - "Watch out for" gets a new entry: the F0 rename was
+      done in M7 Phase 5; anything still referencing
+      `Status:` in M1–M5 docs is historical.
+  - `README.md`:
+    - Any installation / quick-start that mentions `Status:`
+      → `Lifecycle:`.
+    - One-line note in the "What's new in v1.1" section if
+      it exists.
+  - `CHANGELOG.md`:
+    - New `## 1.2.0 — UNRELEASED` section with the M7
+      breaking change called out. M6 (1.1.0) stays as the
+      prior entry; M7 ships as 1.2.0 (per semver, breaking
+      schema rename).
+  - `src/docs_cli/skill/references/convention.md` and
+    `references/cli.md` — resync from `docs/convention.md` +
+    `docs/cli.md` (the existing lockstep mechanism).
+  - `pyproject.toml` — bump version `1.1.0` → `1.2.0`
+    (matches CHANGELOG); bump `__version__` in `cli.py`.
+  - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+    regenerated in lockstep.
+- **Exit:** convention.md, cli.md, architecture.md, README.md,
+  CHANGELOG.md all up to date with M7's surface; the bundled
+  skill references mirror the source; INDEX matches snapshot;
+  ruff / format / mypy clean; pytest still GREEN; the
+  skill-refs lockstep test (`test_skill_refs.py`) still
+  passes.
+
+### Phase 8: Run Tests (GREEN)
+
+- **Objective:** Capture the full GREEN gate verbatim. M6's
+  271 + M7's ~25 = ~296 GREEN; ruff / format / mypy / docs
+  check clean.
+- **Actions:**
+  ```sh
+  .venv/bin/python -m pytest tests/ -q
+  .venv/bin/ruff check .
+  .venv/bin/ruff format --check .
+  .venv/bin/mypy
+  .venv/bin/docs check docs/
+  .venv/bin/docs index --root docs/ --dry-run
+  ```
+- **Exit:** every command exit 0; verbatim output captured in
+  the Phase 8 log entry; **STOP** here if anything is RED —
+  fix the root cause, never relax a test.
+
+### Phase 9: Implement Online/Integration
+
+- **Objective:** Mapped to **dogfooding against the Trial 2
+  fixtures** (M7 has no online surface). Confirm the
+  quantitative success criteria:
+  - Confidence high+medium ≥ 50% (target; today 25%).
+  - Role `notes` fallback rate ≤ 30% (today 73%).
+  - Out-of-vocab `Status:` values: 100% preserved.
+  - Archive moves proposed: ≥ 80% of trees with an `archived/`
+    subdir.
+  - Project-name normalisation hits ≥ 90% of Trial 2's 25
+    distinct values.
+- **Actions:**
+  ```sh
+  for fixture in tests/fixtures/trees/real-trees/*/; do
+    .venv/bin/docs migrate --json "$fixture" > "/tmp/m7-phase-9-$(basename $fixture).json"
+  done
+  .venv/bin/python tests/manual/m7_success_criteria.py /tmp/m7-phase-9-*.json
+  ```
+  (A small helper script under `tests/manual/` aggregates and
+  reports the metrics. Not auto-run as part of the test suite
+  because Trial 2 is fixture-derived; the success-criterion
+  test in `test_migrate.py` is the per-fixture version.)
+- **Exit:** all 5 quantitative success criteria met. If any
+  is missed, surface the gap, decide whether to iterate
+  Phase 6 or scope it out for a follow-up milestone.
+
+### Phase 10: Quality, Docs, Refactor
+
+- **Objective:** Polish + ship. Sweep dogfood consistency;
+  append milestone-completion summary; merge M7 stack to
+  `main`; tag `v1.2.0`; (optionally) publish to PyPI
+  operator-side per the runbook.
+- **Actions:**
+  - Sweep this project's own `docs/`: every M1–M6 log file
+    reviewed for stale `Status:` references (some legitimately
+    historical — M5's log says "Status: active" because that
+    was the field name when M5 shipped; preserve those as
+    historical record).
+  - Append "Milestone-completion summary" to
+    `docs/m7-migration-accuracy.md` (mirror M6's summary
+    shape).
+  - Update `docs/status.md`: M7 → Complete (DATE); milestone
+    table row flipped; "Next action" rewritten to M8 setup
+    or M6 publish (whichever is operator-prioritised).
+  - Update `CHANGELOG.md`: replace `## 1.2.0 — UNRELEASED`
+    with the actual ship date.
+  - `docs index --root docs/`; copy onto fixture.
+  - Final quality gate: pytest GREEN; ruff / format / mypy
+    clean; `docs check docs/` exit 0.
+  - **Publish (operator-driven):** `python -m build` +
+    `twine check` + manual `twine upload` per runbook. Same
+    flow as M6. The 1.2.0 wheel ships the F0 rename — first
+    M7-published artifact.
+  - Tag `v1.2.0`; push tag.
+  - `gh release create v1.2.0 ...` with M7 summary notes.
+- **Exit:** M7 task plan + log carry completion summaries;
+  status.md reflects M7 → Complete; CHANGELOG dated; `v1.2.0`
+  tagged; (operator-driven) artifact on PyPI; the project's
+  own docs all on `Lifecycle:`; 296+ tests GREEN.
 
 ## Deliverables (provisional — finalised at milestone-setup)
 
