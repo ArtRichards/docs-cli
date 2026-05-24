@@ -3,15 +3,57 @@
 Status: active
 Role: status
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-05-24
 
 Related:
 - pairs-with: plan.md
 - pairs-with: m6-pypi-distribution.md
+- pairs-with: m7-migration-accuracy.md
+- pairs-with: m8-adoption-workflow.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
+
+**M6 implementation is complete and merged to `main` (2026-05-24);
+PyPI publication is operator-driven.** Two follow-on milestones are
+stub-drafted from a 2026-05-24 multi-tree trial: **M7 — Migration
+plan accuracy** (the next milestone to enter setup) and **M8 —
+Adoption workflow** (depends on M7). See `plan.md`'s v1.1 section.
+
+### M6 — operator publish pending
+
+M6 was merged to `main` 2026-05-24 as commit `ff7f9d5`. Wheel +
+sdist sit in local `dist/` awaiting `twine upload` per
+`release-runbook.md`. After publish, the M6 row in this file and
+the Phase 10 checklist boxes flip to Complete.
+
+### M7 + M8 — stubs drafted from the 2026-05-24 trial
+
+The multi-tree trial against 25 real-world foreign trees (501 .md
+files) surfaced 11 categorical findings. They cluster into two
+milestones:
+
+- **M7 — Migration plan accuracy** (next): renames the
+  controlled-vocab field `Status:` → `Lifecycle:` (breaking,
+  no backward compat), broadens role inference (suffix matching,
+  H1 + section signals, sibling defaulting), normalises project
+  names to lowercase-kebab, normalises `archived/` subdirs into
+  `archive/YYYY-MM-DD/`, expands the role vocab (`implementation`,
+  `sketch`, `outline`, `memo`, `brief`). No new CLI surface. Stub
+  at [m7-migration-accuracy.md](m7-migration-accuracy.md).
+- **M8 — Adoption workflow** (after M7): `--exclude` tree-wide
+  (in `migrate` + `index` + `check` + `list` via `.docs.toml`'s
+  new `[exclude]` section), triage flags
+  (`--summary`, `--only ambiguous`), `docs new --body-from <-|path>`
+  (closes Read-before-Write friction), and a substantial rewrite
+  of the bundled skill's references for the adoption flow
+  (SKILL.md stays slim — one pointer line). Stub at
+  [m8-adoption-workflow.md](m8-adoption-workflow.md). Load-bearing
+  ship gate: **fresh-subagent dogfooding** of the adoption loop
+  end-to-end against trees the M8 author hasn't tuned for.
+
+### M6 milestone-setup history (kept for context)
 
 **M6 — PyPI distribution as `docs-cli` is in flight (milestone-setup
 phase complete, 2026-05-23).** The task plan
@@ -97,13 +139,18 @@ for the milestone summary.
 | M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
-| M6 — PyPI distribution as `docs-cli` | _in flight_ (started 2026-05-23) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
+| M6 — PyPI distribution as `docs-cli` | _implementation complete_ (merged 2026-05-24); publish pending | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
+| M7 — Migration plan accuracy | _stub drafted_ (2026-05-24); pending milestone-setup | [Plan](m7-migration-accuracy.md) | _not yet created_ |
+| M8 — Adoption workflow (agent-driveable) | _stub drafted_ (2026-05-24); pending milestone-setup (depends on M7) | [Plan](m8-adoption-workflow.md) | _not yet created_ |
 
-v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight** with M6 as its first
-milestone — PyPI publication, an importable package, and an
-`install-skill` verb that places the bundled Claude Code skill on a host
-without requiring a repo clone. Per-milestone task plans were created
-when each milestone was activated, not all up front.
+v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
+distribution) implementation-complete on `main` and awaiting
+operator publish; M7 (migration accuracy — breaking `Status:` →
+`Lifecycle:` rename + inference broadening) is the next milestone
+to enter setup; M8 (adoption workflow — `--exclude` tree-wide,
+triage flags, `docs new --body-from`, skill-reference rewrite for
+adoption) follows M7. Per-milestone task plans are expanded when
+each milestone activates; M7's and M8's logs are not yet created.
 
 ## TDD phase order (used per milestone)
 
@@ -134,15 +181,30 @@ If you're starting a new Claude Code session against this repo:
 **Reading order** (≤ 10 minutes):
 1. `~/CLAUDE.md` — host-level guidance + memory pointers
 2. `docs/status.md` — this file
-3. `docs/plan.md` — the roadmap; v1 (M1-M5) is shipped, v1.1 has begun with M6 as its first milestone. Read the v1-completion note and the Open questions (the parked extra-field allowlist still carries to v1.1).
-4. `docs/m6-pypi-distribution.md` — the active milestone's task plan; "Decisions" records the five milestone-setup OQs resolved 2026-05-23 (the full text is preserved under "OPEN QUESTIONS — resolved").
-5. `docs/m6-pypi-distribution-log.md` — the milestone log with the per-phase status table.
-6. `docs/cli.md` — the command spec; the full eight-verb `docs` surface.
-7. `docs/convention.md`, `docs/architecture.md` — the on-disk format and the module sketch.
-8. `docs/m5-claude-code-skill.md` — v1's final milestone; its **Milestone-completion summary** describes the Claude Code skill that M6's `install-skill` verb will deliver via the wheel.
-9. `src/docs_cli/skill/SKILL.md` — the M5 deliverable: the Claude Code skill that drives the verbs (relocated to its M6 home under the package source).
-10. `docs/charter.md` — what + why.
-11. `docs/definition-of-ready.md` — the gate cleared before implementation.
+3. `docs/plan.md` — the roadmap; v1 (M1-M5) shipped, v1.1 in
+   flight (M6 merged + publish-pending; M7+M8 stub-drafted).
+4. `docs/m6-pypi-distribution.md` — M6 task plan; "Decisions"
+   records the five milestone-setup OQs resolved 2026-05-23.
+5. `docs/m6-pypi-distribution-log.md` — M6 log with the per-phase
+   status table.
+6. `docs/m7-migration-accuracy.md` — M7 stub: the breaking
+   `Status:` → `Lifecycle:` rename and inference broadening
+   (findings F0–F12 from the 2026-05-24 trial).
+7. `docs/m8-adoption-workflow.md` — M8 stub: the agent + operator
+   ergonomics (tree-wide `--exclude`, triage flags,
+   `docs new --body-from`, skill-reference rewrite).
+8. `docs/cli.md` — the command spec; the full eight-verb `docs`
+   surface.
+9. `docs/convention.md`, `docs/architecture.md` — the on-disk
+   format and the module sketch.
+10. `docs/m5-claude-code-skill.md` — v1's final milestone; its
+    **Milestone-completion summary** describes the skill that
+    M6's `install-skill` verb delivers via the wheel.
+11. `src/docs_cli/skill/SKILL.md` — the bundled skill (relocated
+    under the package source at M6 Phase 5).
+12. `docs/charter.md` — what + why.
+13. `docs/definition-of-ready.md` — the gate cleared before
+    implementation.
 
 **Verify environment** before doing any work:
 ```sh
@@ -160,19 +222,13 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: operator-driven publish per
-[release-runbook.md](release-runbook.md).** Step 2 (Phases 5–10, impl
-side) is complete on branch `m6/phases-5-10`. Phase 5 relocated the
-CLI to `src/docs_cli/cli.py` and the skill to
-`src/docs_cli/skill/`. Phase 6 wired up the hatchling backend +
-`install-skill` verb + `--version` flag. Phase 7 rewrote the specs +
-runbook + README + CHANGELOG. Phase 8 captured a 271-passed GREEN
-gate. Phase 9 built `dist/docs_cli-1.1.0-py3-none-any.whl` +
-`.tar.gz` (SHA256s in the Phase 9 log), `twine check` PASS on both,
-and a throwaway-venv smoke exercised every install-skill code path.
-Phase 10 ticked Phases 5–9 in the milestone doc and appended the
-milestone-completion summary. **All 271 tests still GREEN.** The
-operator now runs the manual publish per the runbook:
+**Next actions** (parallelisable; M6 publish is operator-driven, M7
+setup can begin in parallel):
+
+**(A) M6 — operator-driven publish per
+[release-runbook.md](release-runbook.md).** Implementation merged
+to `main` 2026-05-24 as `ff7f9d5`. Wheel + sdist in local `dist/`
+(`twine check` PASS). 271 tests GREEN. Operator runs:
 (1) `twine upload --repository testpypi dist/*` + verify on TestPyPI;
 (2) replace `## 1.1.0 — UNRELEASED` in `CHANGELOG.md` with today's
 date; (3) `twine upload dist/*`; (4) `gh repo edit ArtRichards/docs-cli
@@ -180,6 +236,14 @@ date; (3) `twine upload dist/*`; (4) `gh repo edit ArtRichards/docs-cli
 (5) `git tag v1.1.0 && git push origin v1.1.0`; (6)
 `gh release create v1.1.0 ...`; (7) flip the M6 row in this file +
 the Phase-10 boxes to Complete (DATE).
+
+**(B) M7 — enter milestone-setup.** The stub at
+[m7-migration-accuracy.md](m7-migration-accuracy.md) carries the
+trial evidence + 6 categorical findings (F0/F1/F4/F10/F11/F12) +
+4 open questions ready for setup. Resolve OQs A–D, expand the
+TDD Implementation Plan from the stub skeleton, and create
+`m7-migration-accuracy-log.md`. Once M7 is past Phase 1, M8 setup
+can follow without blocking on M7's implementation.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

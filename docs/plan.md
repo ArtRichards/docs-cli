@@ -3,7 +3,7 @@
 Status: active
 Role: plan
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-05-24
 
 Related:
 - implements: charter.md
@@ -11,13 +11,18 @@ Related:
 - pairs-with: convention.md
 - pairs-with: status.md
 - parent-of: m1-parser-and-index.md
+- parent-of: m7-migration-accuracy.md
+- parent-of: m8-adoption-workflow.md
 
 ## Sequencing
 
-Three milestones to v1, then a migration helper, then a Claude Code skill wrapper.
+Three milestones to v1, then a migration helper, then a Claude Code
+skill wrapper. v1.1 picks up with packaging, then migration
+hardening + adoption workflow.
 
 ```
-M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)
+v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)
+v1.1:  M6 (PyPI distribution)  →  M7 (migration accuracy)  →  M8 (adoption workflow)
 ```
 
 ## M1 — Parser, walker, and `docs index`
@@ -84,16 +89,37 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 
 ## v1.1
 
-v1.1 is in flight as of 2026-05-23. The roadmap continues monotonically from
-M5; M6 is the first v1.1 milestone.
+v1.1 is in flight as of 2026-05-23. M6 (PyPI distribution) is
+implementation-complete and merged to `main` (2026-05-24);
+publication to PyPI is operator-driven (manual `twine upload` per
+`release-runbook.md`). M7 and M8 are stub-drafted from the
+2026-05-24 multi-tree trial against real-world foreign trees.
 
 | Milestone | Status | Task plan |
 |---|---|---|
-| M6 — PyPI distribution as `docs-cli` | _in flight_ (started 2026-05-23) | [m6-pypi-distribution.md](m6-pypi-distribution.md) |
+| M6 — PyPI distribution as `docs-cli` | implementation complete (merged 2026-05-24); operator publish pending | [m6-pypi-distribution.md](m6-pypi-distribution.md) |
+| M7 — Migration plan accuracy | stub drafted 2026-05-24; pending milestone-setup | [m7-migration-accuracy.md](m7-migration-accuracy.md) |
+| M8 — Adoption workflow (agent-driveable) | stub drafted 2026-05-24; pending milestone-setup (depends on M7) | [m8-adoption-workflow.md](m8-adoption-workflow.md) |
 
-The parked `[vocabulary] add_fields` extra-field allowlist (see _Open
-questions_ below) carries forward to v1.1 as a separate, unscheduled
-entry. It is unrelated to M6.
+**M7** hardens `docs migrate`'s inference + introduces a breaking
+controlled-vocab rename (`Status:` → `Lifecycle:`). It targets ≥50%
+high-confidence plans on real trees (today: 25.3%) and surfaces
+common real-world suffixes (`_Implementation`, `_Sketch`, etc.) +
+project-name normalisation. No new CLI flags — pure inference + a
+convention change.
+
+**M8** builds on M7's accurate plan with operator + agent
+ergonomics: `--exclude` tree-wide (`.docs.toml` `[exclude]`
+applies to `migrate` + `index` + `check` + `list`), triage flags
+(`--summary`, `--only ambiguous`), `docs new --body-from` (closes
+the harness's Read-before-Write friction), and a substantial
+rewrite of the bundled skill's reference files to cover the
+adoption flow. SKILL.md stays slim — one pointer line. Load-bearing
+gate: fresh-subagent dogfooding of the adoption loop end-to-end.
+
+The parked `[vocabulary] add_fields` extra-field allowlist (see
+_Open questions_ below) carries forward to v1.1 as a separate,
+unscheduled entry. It is unrelated to M6/M7/M8.
 
 ## Out of scope for v1
 
