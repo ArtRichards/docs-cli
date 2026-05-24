@@ -10,23 +10,50 @@ Related:
 - pairs-with: m6-pypi-distribution.md
 - pairs-with: m7-migration-accuracy.md
 - pairs-with: m8-adoption-workflow.md
+- pairs-with: m9-pypi-publish.md
+- pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
 
-**M6 implementation is complete and merged to `main` (2026-05-24);
-PyPI publication is operator-driven.** Two follow-on milestones are
-stub-drafted from a 2026-05-24 multi-tree trial: **M7 — Migration
-plan accuracy** (the next milestone to enter setup) and **M8 —
-Adoption workflow** (depends on M7). See `plan.md`'s v1.1 section.
+**M6 closed 2026-05-24 as preparation only.** The 2026-05-24 scope
+reframe split the actual PyPI publish out of M6 into a new
+milestone — **M9 — PyPI publish 1.3.0** — so M6 could close
+cleanly instead of hanging at "implementation done, publish
+pending" for the M7 + M8 weeks. Two follow-on implementation
+milestones are stub-drafted from a 2026-05-24 multi-tree trial:
+**M7 — Migration plan accuracy** (the next milestone to enter
+setup) and **M8 — Adoption workflow** (depends on M7). M9 runs
+last, post-M8, as an operator-driven publish of the batched
+M6 + M7 + M8 surface. See `plan.md`'s v1.1 section.
 
-### M6 — operator publish pending
+### M6 — preparation complete (2026-05-24)
 
-M6 was merged to `main` 2026-05-24 as commit `ff7f9d5`. Wheel +
-sdist sit in local `dist/` awaiting `twine upload` per
-`release-runbook.md`. After publish, the M6 row in this file and
-the Phase 10 checklist boxes flip to Complete.
+M6 was merged to `main` 2026-05-24 as commit `ff7f9d5` and
+closed at Phase 10 as **preparation only** — packaging machinery
+(build backend, package shape, `install-skill` verb, runbook
+scaffold, GitHub repo) delivered; no PyPI upload was ever in
+M6's scope after the 2026-05-24 reframe. The wheel + sdist in
+local `dist/` from 2026-05-23 are not uploaded; M9 will rebuild
+fresh from the post-M8 tree at publish time. See
+[m6-pypi-distribution.md](m6-pypi-distribution.md)'s top
+"Scope reframe" callout and the
+[release-runbook.md](release-runbook.md) for the operative
+checklist.
+
+### M9 — PyPI publish 1.3.0 (stub, post-M8)
+
+[m9-pypi-publish.md](m9-pypi-publish.md) stub-drafted 2026-05-24.
+Activates once M8 ships. The operative checklist is
+[release-runbook.md](release-runbook.md): operator one-time prep
+(accounts, 2FA, API tokens, `~/.pypirc`) done in parallel with
+M7 / M8; then a single contiguous post-M8 session for version
+bump → CHANGELOG restructure → tree state → quality gate →
+artifact build → local smoke → TestPyPI rehearsal → real PyPI
+publish → post-release closeouts (repo public flip, tag +
+GitHub release, token re-scope, doc closeouts). M6 / M7 / M8
+ship together as `docs-cli==1.3.0`. No code work; no TDD phases.
 
 ### M7 + M8 — stubs drafted from the 2026-05-24 trial
 
@@ -139,18 +166,21 @@ for the milestone summary.
 | M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
-| M6 — PyPI distribution as `docs-cli` | _implementation complete_ (merged 2026-05-24); publish deferred to batched 1.3.0 (post-M8) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
+| M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 in progress; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
+| M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
-distribution) implementation-complete on `main` and awaiting
-operator publish; M7 (migration accuracy — breaking `Status:` →
-`Lifecycle:` rename + inference broadening) is the next milestone
-to enter setup; M8 (adoption workflow — `--exclude` tree-wide,
-triage flags, `docs new --body-from`, skill-reference rewrite for
-adoption) follows M7. Per-milestone task plans are expanded when
-each milestone activates; M7's and M8's logs are not yet created.
+distribution preparation) closed 2026-05-24 as preparation only
+after the scope reframe split publish out into M9; M7 (migration
+accuracy — breaking `Status:` → `Lifecycle:` rename + inference
+broadening) is the next implementation milestone to enter setup;
+M8 (adoption workflow — `--exclude` tree-wide, triage flags,
+`docs new --body-from`, skill-reference rewrite for adoption)
+follows M7; M9 (PyPI publish 1.3.0) is the operator-driven
+publish of the batched M6 + M7 + M8 surface, runs last. Per-
+milestone task plans are expanded when each milestone activates.
 
 ## TDD phase order (used per milestone)
 
@@ -193,6 +223,8 @@ If you're starting a new Claude Code session against this repo:
 7. `docs/m8-adoption-workflow.md` — M8 stub: the agent + operator
    ergonomics (tree-wide `--exclude`, triage flags,
    `docs new --body-from`, skill-reference rewrite).
+7a. `docs/m9-pypi-publish.md` + `docs/release-runbook.md` — M9
+   stub + operative publish checklist; activates post-M8.
 8. `docs/cli.md` — the command spec; the full eight-verb `docs`
    surface.
 9. `docs/convention.md`, `docs/architecture.md` — the on-disk
@@ -224,15 +256,14 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 
 **Next action: M7 — execute Phase 2 (Write Tests RED).**
 
-**Publish is deferred** until after M8, possibly further pending
-review cycles (operator decision 2026-05-24). No per-milestone
-publish. The first PyPI publish ships M6 + M7 + M8 as one
-batched artifact (version `1.3.0` — the M8 bump; intermediate
-1.1.0 / 1.2.0 never see PyPI, which is fine — no prior public
-release). The wheel + sdist sitting in local `dist/` from M6
-are NOT uploaded; M7 + M8 will produce their own
-`dist/docs_cli-1.2.0-*` and `dist/docs_cli-1.3.0-*` artifacts
-locally without publishing.
+**Publish is M9** (operator decision 2026-05-24, scope-reframed
+2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
++ M8 as one batched `docs-cli==1.3.0` artifact per
+[release-runbook.md](release-runbook.md). Intermediate versions
+`1.1.0` and `1.2.0` never reach PyPI, which is fine — no prior
+public release exists. The wheel + sdist sitting in local
+`dist/` from M6 are NOT uploaded; M9 rebuilds fresh from the
+post-M8 tree.
 
 **M7 Phase 2:** author `tests/test_lifecycle_rename.py`,
 `tests/test_inference.py`, `tests/test_project_normalisation.py`,
