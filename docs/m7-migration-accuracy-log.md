@@ -14,8 +14,7 @@ Related:
 - Project: docs
 - Milestone: M7 — Migration plan accuracy
 - Started: 2026-05-24
-- Progress: **Milestone-setup phase complete; Phase 1 in
-  progress.** The task plan
+- Progress: **Phase 1 complete; Phase 2 next.** The task plan
   [m7-migration-accuracy.md](m7-migration-accuracy.md) is promoted
   from `draft` to `active`; M7 is the second v1.1 milestone (after
   M6). All four milestone-setup OPEN QUESTIONS are resolved
@@ -95,7 +94,7 @@ rename is the semver trigger.
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | In progress | 2026-05-24 | Promote M7 from `draft` to `active` (done); create this log (done); record OQ A–D resolutions as Decisions in the task plan (done); update status.md "Current milestone" to mark M7 setup complete + Phase 2 next. No code change; no convention change. Regenerate INDEX + snapshot. |
+| 1. Define Contract | Complete | 2026-05-24 | Promote M7 from `draft` to `active` (done); create this log (done); record OQ A–D resolutions as Decisions in the task plan (done); update status.md "Current milestone" to mark M7 setup complete + Phase 2 next; flip Phase 1 row + status.md "in flight" wording to "Phase 1 complete; Phase 2 next"; append Phase 1 log entry; regenerate INDEX + snapshot in lockstep. No code change; no convention change. |
 | 2. Write Tests (RED) | Pending | — | New test files: `test_lifecycle_rename.py` (6 tests, F0), `test_inference.py` (9 tests, F1/F10/F12), `test_project_normalisation.py` (per-fixture, F11), `test_archive_normalisation.py` (4 tests, F4). Extension to `test_migrate.py`: confidence-distribution test. All RED for intended unimplemented surface; M6's 271 stay GREEN. |
 | 3. Create Data/Fixtures | Pending | — | Promote 5 Trial-2 trees to `tests/fixtures/trees/real-trees/` (kebab-tiny / snake-medium / snake-large / archive-subdir / mixed-naming). Aggressive sanitisation — no third-party product / customer / feature names. Plus small single-file fixtures under `tests/fixtures/status-prose/`, `tests/fixtures/project-names/`, `tests/fixtures/sibling-defaulting/`. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture verbatim pytest output. Expected: M6's 271 GREEN + ~25 M7 RED for intended reasons (no `Lifecycle:` parser, no broadened inference, no normalisation, no archive moves). Quality gate clean tree-wide. |
@@ -170,3 +169,88 @@ _Captured before Phase 2; historical._
 _Per-phase entries are appended below as each phase completes,
 mirroring M5/M6 log shape: Objective / Files changed / Actions
 taken / Issues / decisions / Exit criteria._
+
+### Phase 1 — Define Contract
+
+**Completed:** 2026-05-24
+
+#### Objective
+
+Declare the M7 surface — the F0 controlled-vocab rename
+(`Status:` → `Lifecycle:`), the inference broadening (F1, F10,
+F12), F4 archive normalisation, F11 project-name normalisation,
+and F5's lone new CLI flag `--config-project <name>`. No code
+change at this phase; no convention edits. Promote the task plan
+to active (done at milestone-setup), create this log (done),
+record OQ A–D resolutions as Decisions (done), and refresh
+`status.md` + the log's TDD Phase Progress table so the
+historical record reads "Phase 1 complete; Phase 2 next" rather
+than "Phase 1 in progress" at the close-out commit. The 271-test
+suite stays GREEN throughout.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/status.md` | Modify | M7 milestone-table row flipped from "Phase 1 in progress" to "Phase 1 complete; Phase 2 next". The "Next action" was already pointing at Phase 2 from the milestone-setup commit; no further edit needed. |
+| `docs/m7-migration-accuracy-log.md` | Modify | "Progress" paragraph (Implementation metadata) rewritten from "Milestone-setup phase complete; Phase 1 in progress" → "Phase 1 complete; Phase 2 next". TDD Phase Progress table's Phase 1 row Status flipped In progress → Complete; row Notes tightened to reflect the close-out scope (table-row tightening + log entry + final INDEX regen). This Phase-1 log entry appended. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep via `.venv/bin/docs index --root docs/` after the text edits, so the (already-registered) M7 plan + log carry their fresh `Updated:` line in the snapshot. |
+
+#### Actions taken
+
+- **Audit of prior commits.** Verified that the bulk of the M7
+  Phase 1 deliverables landed in the four earlier setup commits
+  (`1df6ec6` — register M7 + M8 stubs; `ad58816` — activate +
+  expand TDD plan + create log; `25d4f79` — `docs list --status`
+  → `--lifecycle` flag rename scope addition; `a701876` — M9
+  split). The residual delta at Phase 1 close-out is purely the
+  "row flips + log entry" wording.
+- **Doc-text edits.** Tightened `status.md`'s M7 row and the
+  M7 log's "Progress" paragraph + TDD Phase Progress table to
+  read "Phase 1 complete; Phase 2 next". Bumped `Updated:` lines
+  per the convention (`docs touch` semantics — same-day edits
+  keep today's date; no actual day change).
+- **INDEX regen.** Ran `.venv/bin/docs index --root docs/`;
+  copied `docs/INDEX.md` over
+  `tests/fixtures/expected/docs-INDEX.md` so the dogfood
+  snapshot reflects the M7-log "Phase 1 complete" body change
+  (the snapshot includes each doc's first-paragraph description).
+- **Quality gate.** Ran the full gate from the project root:
+  pytest 271 green; `ruff check .` clean; `ruff format --check .`
+  clean; `mypy` Success; `.venv/bin/docs check docs/` exit 0.
+
+#### Issues / decisions
+
+- **No new code, no convention edit.** Phase 1 stays the
+  reviewable-in-isolation phase per the task plan's Phase 1
+  exit criteria. The F0 schema rename and the in-project
+  `Status:` → `Lifecycle:` sweep are Phase 5 work; the inference
+  broadening is Phase 6 work. Confirmed via `git diff` that the
+  Phase 1 close-out commit touches only `docs/status.md`,
+  `docs/m7-migration-accuracy-log.md`, `docs/INDEX.md`, and the
+  INDEX snapshot.
+- **Status-line wording carried forward.** This log's
+  front-matter still reads `Status: active` (not `Lifecycle:`)
+  because the rename has not happened yet — the parser only
+  accepts `Status:` until Phase 5 lands. The parenthetical note
+  immediately after the "Progress" paragraph explains the
+  transitional state for future readers.
+
+#### Exit criteria
+
+- [x] `Status:` in `m7-migration-accuracy.md` is `active`
+      (set at milestone-setup; unchanged here).
+- [x] `docs/m7-migration-accuracy-log.md` exists; its TDD Phase
+      Progress table's Phase 1 row is Complete (2026-05-24).
+- [x] `docs/status.md` M7 milestone-table row reads "Phase 1
+      complete; Phase 2 next".
+- [x] `docs/INDEX.md` and
+      `tests/fixtures/expected/docs-INDEX.md` are byte-identical
+      after regeneration.
+- [x] `.venv/bin/python -m pytest tests/ -q` — 271 passed.
+- [x] `ruff check .`, `ruff format --check .`, `mypy` — clean.
+- [x] `.venv/bin/docs check docs/` — exit 0.
+- [x] No code change happened (no `src/` edits, no
+      `pyproject.toml` edits, no test file additions).
+- [x] No convention change happened (no
+      `Status:` → `Lifecycle:` rename yet — that's Phase 5).

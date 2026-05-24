@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 in progress; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 complete; Phase 2 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
