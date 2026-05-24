@@ -105,7 +105,7 @@ fine, since there's no prior public release.
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [m6-pypi-distribution.md](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | active (milestone-setup complete 2026-05-24, Phase 2 next) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | active (Phases 1-4 complete 2026-05-24, Phase 5 next) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | active (milestone-setup complete 2026-05-24; Phase 2+ blocks on M7 ship) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | stub-drafted (2026-05-24; activates post-M8; operator-driven per [release-runbook.md](release-runbook.md)) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -113,8 +113,11 @@ fine, since there's no prior public release.
 controlled-vocab rename (`Status:` → `Lifecycle:`). It targets ≥50%
 high-confidence plans on real trees (today: 25.3%) and surfaces
 common real-world suffixes (`_Implementation`, `_Sketch`, etc.) +
-project-name normalisation. No new CLI flags — pure inference + a
-convention change.
+project-name normalisation. Adds exactly **one new CLI flag** —
+`docs migrate --config-project <name>` (the multi-project agent
+override per F5); renames `docs list --status` → `--lifecycle`
+in lockstep with the controlled-vocab field rename. Otherwise
+pure inference + a convention change.
 
 **M8** builds on M7's accurate plan with operator + agent
 ergonomics: `--exclude` tree-wide (`.docs.toml` `[exclude]`

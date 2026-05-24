@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phase 1 complete; Phase 2 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-4 complete; Phase 5 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -254,7 +254,7 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M7 — execute Phase 2 (Write Tests RED).**
+**Next action: M7 — execute Phase 5 (Update Base Interfaces — F0 `Status:` → `Lifecycle:` rename + Confidence.MEDIUM + `--config-project` argparse flag).**
 
 **Publish is M9** (operator decision 2026-05-24, scope-reframed
 2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
@@ -265,16 +265,24 @@ public release exists. The wheel + sdist sitting in local
 `dist/` from M6 are NOT uploaded; M9 rebuilds fresh from the
 post-M8 tree.
 
-**M7 Phase 2:** author `tests/test_lifecycle_rename.py`,
-`tests/test_inference.py`, `tests/test_project_normalisation.py`,
-`tests/test_archive_normalisation.py`, plus a
-confidence-distribution extension to `tests/test_migrate.py`.
-All RED for intended unimplemented surface; M6's 271 stay GREEN.
-Milestone-setup complete 2026-05-24: all 4 OQs (A–D) resolved as
-Decisions, TDD Implementation Plan expanded per-phase in
-[m7-migration-accuracy.md](m7-migration-accuracy.md), log
-skeleton at
-[m7-migration-accuracy-log.md](m7-migration-accuracy-log.md).
+**M7 Phases 1-4 complete (2026-05-24):** task plan promoted to
+active, OQ A–D recorded as Decisions, log + per-phase entries
+written, 44 new test items authored (34 RED + 10 GREEN-at-
+baseline regression locks), sanitised fixtures staged at
+`tests/fixtures/{lifecycle,status-prose,project-names,sibling-defaulting}/`
++ `tests/fixtures/trees/real-trees/{kebab-tiny,snake-medium,snake-large,archive-subdir,mixed-naming}/`,
+RED baseline captured at `/tmp/m7-phase-4-baseline.txt`
+(34 failed, 281 passed; M6's 271 GREEN preserved + 10 new
+regression locks). Quality gate clean tree-wide.
+
+**M7 Phase 5 next:** the F0 controlled-vocab rename
+(`Status:` → `Lifecycle:`, breaking, no backward-compat),
+`Confidence.MEDIUM` enum extension, `Config.role_suffixes` +
+`Config.project_name` fields, `add_statuses` → `add_lifecycles`
+rename, `docs migrate --config-project <name>` argparse, and the
+`docs list --status` → `--lifecycle` argparse rename. F0 tests
+in `test_lifecycle_rename.py` flip RED → GREEN; rest stay RED
+for Phase 6.
 
 **M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
 ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed
