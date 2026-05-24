@@ -82,6 +82,19 @@ Goal: agents use `docs` automatically when working in a docs root.
 
 Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs index`.
 
+## v1.1
+
+v1.1 is in flight as of 2026-05-23. The roadmap continues monotonically from
+M5; M6 is the first v1.1 milestone.
+
+| Milestone | Status | Task plan |
+|---|---|---|
+| M6 — PyPI distribution as `docs-cli` | _in flight_ (started 2026-05-23) | [m6-pypi-distribution.md](m6-pypi-distribution.md) |
+
+The parked `[vocabulary] add_fields` extra-field allowlist (see _Open
+questions_ below) carries forward to v1.1 as a separate, unscheduled
+entry. It is unrelated to M6.
+
 ## Out of scope for v1
 
 - Link-graph queries / `docs graph`.

@@ -1,6 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "docs"
-version = "0.2.0-m2"
+name = "docs-cli"
+version = "1.1.0"
 description = "Prescriptive CLI for managing trees of structured Markdown docs."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -8,20 +12,47 @@ license = {file = "LICENSE"}
 authors = [{name = "Art Richards", email = "art@bitholdersinc.com"}]
 keywords = ["markdown", "documentation", "cli"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Documentation",
     "Topic :: Software Development :: Documentation",
 ]
 # No runtime dependencies — stdlib only.
+
+[project.scripts]
+docs = "docs_cli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ArtRichards/docs-cli"
+Repository = "https://github.com/ArtRichards/docs-cli"
+Issues = "https://github.com/ArtRichards/docs-cli/issues"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "ruff>=0.4",
     "mypy>=1.0",
+    "build>=1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docs_cli"]
+# The bundled Claude Code skill at `src/docs_cli/skill/` is auto-included
+# as package data because it lives under the wheel's package root; no
+# explicit include directive is needed. The shape is pinned by
+# tests/test_packaging.py (B3).
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/docs_cli",
+    "tests",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
 ]
 
 [tool.pytest.ini_options]
@@ -31,8 +62,10 @@ addopts = "-ra --strict-markers"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-# The executable doesn't have a .py extension; explicitly include it.
-extend-include = ["bin/docs"]
+# Mypy stub for the `from docs import …` alias is hand-shaped to stay readable;
+# ruff's I001 import-fixer expands the parenthesised group into one line per
+# name, which is the wrong call for a .pyi re-export.
+extend-exclude = ["tests/_typing/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B", "UP", "SIM"]
@@ -43,6 +76,5 @@ python_version = "3.11"
 strict_optional = true
 warn_unused_ignores = true
 warn_redundant_casts = true
-files = ["bin/docs", "tests/"]
-# Treat the extensionless executable as a Python module.
-scripts_are_modules = true
+files = ["src/", "tests/"]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/src:$MYPY_CONFIG_FILE_DIR/tests/_typing"

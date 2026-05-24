@@ -7,26 +7,29 @@ See `docs/` (relative to repo root) for the full specification:
 - cli.md             command surface
 - architecture.md    module sketch, data flow, INDEX renderer format
 
-This file is a single-file Python script. The repo's `docs/` directory
-shares the project name; the executable lives in `bin/` to avoid the
-filename-vs-directory collision (POSIX disallows a file and directory
-with the same name in the same parent).
+The single-file module is exposed as the ``docs`` console-script via
+the ``docs_cli.cli:main`` entry point declared in ``pyproject.toml``.
+The Claude Code skill ships alongside under ``docs_cli/skill/`` and is
+materialised onto a host via the ``docs install-skill`` verb.
 
 M1: parser, walker, renderer, `docs index`, config loading. M2 adds the
 mutating verbs `new`, `archive`, `mv`, and `touch`. M3 adds the
 validation and query verbs `check` and `list`, and regroups the INDEX
 by Project then Role. M4 adds the migration verb `migrate`, which adopts
-a non-conforming foreign directory into the convention.
+a non-conforming foreign directory into the convention. M6 packages the
+CLI as `docs-cli` on PyPI and adds the `install-skill` verb.
 """
 
 from __future__ import annotations
 
-__version__ = "0.4.0-m4"
+__version__ = "1.1.0"
 
 import argparse
+import importlib.resources
 import json
 import os
 import re
+import shutil
 import sys
 import tomllib
 from collections.abc import Iterator, Mapping, Sequence
@@ -1790,6 +1793,11 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="docs",
         description="Prescriptive CLI for managing trees of structured Markdown docs.",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"docs {__version__}",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Shared flags for the M2 mutating verbs. `index` keeps its own copies
@@ -1993,6 +2001,54 @@ def _build_parser() -> argparse.ArgumentParser:
     migrate_p.add_argument(
         "--date",
         help="Archive date YYYY-MM-DD for normalised moves (default: today).",
+    )
+
+    install_skill_p = subparsers.add_parser(
+        "install-skill",
+        help="Materialise the bundled Claude Code skill onto this host.",
+        description=(
+            "Copy (or symlink) the bundled `docs` Claude Code skill from the "
+            "installed `docs_cli` package onto a host so an agent driving "
+            "Claude Code can pick it up. The default destination is "
+            "~/.claude/skills/docs/; an existing destination must already be "
+            "byte-identical to the bundled source or carry --force. "
+            "--symlink is rejected when running from a wheel install (the "
+            "bundled skill lives under site-packages; symlinking would couple "
+            "the skill's stability to the venv's lifecycle); use it only with "
+            "an editable install. On Windows, --symlink may require "
+            "developer-mode or elevated privileges; --copy is recommended."
+        ),
+    )
+    install_skill_p.add_argument(
+        "--dest",
+        default="~/.claude/skills/docs/",
+        help="Destination directory (default: ~/.claude/skills/docs/).",
+    )
+    mode = install_skill_p.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--copy",
+        dest="mode",
+        action="store_const",
+        const="copy",
+        help="Copy the bundled skill files (default).",
+    )
+    mode.add_argument(
+        "--symlink",
+        dest="mode",
+        action="store_const",
+        const="symlink",
+        help="Symlink to the bundled skill source (editable installs only).",
+    )
+    install_skill_p.set_defaults(mode="copy")
+    install_skill_p.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite a non-identical existing destination.",
+    )
+    install_skill_p.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress success messages on stderr.",
     )
 
     return parser
@@ -2494,6 +2550,145 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# `docs install-skill` materialises the bundled Claude Code skill onto a host.
+# ---------------------------------------------------------------------------
+
+
+# Files the bundled skill is allowed to contain. Pinned by
+# tests/test_skill.py's "no clutter" check; we list them here so the
+# materialisation step copies exactly the supported surface.
+_SKILL_RELATIVE_FILES: tuple[Path, ...] = (
+    Path("SKILL.md"),
+    Path("references") / "convention.md",
+    Path("references") / "cli.md",
+)
+
+
+def _locate_bundled_skill() -> Path:
+    """Return the absolute path to the bundled `docs_cli/skill/` directory.
+
+    Uses ``importlib.resources.files`` so the lookup works for both the
+    editable install (path points back into ``src/docs_cli/skill/``) and
+    the wheel install (path points into the venv's
+    ``site-packages/docs_cli/skill/``). The return is a real
+    ``pathlib.Path``; ``importlib.resources`` may return an abstract
+    ``Traversable`` for namespace packages, but ``docs_cli`` is a real
+    on-disk package in both deployment shapes.
+    """
+    base = importlib.resources.files("docs_cli") / "skill"
+    return Path(str(base))
+
+
+def _running_from_wheel_install(source: Path) -> bool:
+    """True iff the bundled source lives under a `site-packages` directory.
+
+    The heuristic intentionally matches both regular venv installs
+    (`.venv/lib/python3.x/site-packages/docs_cli/skill`) and user-site
+    installs (`~/.local/lib/python3.x/site-packages/docs_cli/skill`).
+    An editable install resolves back to the in-tree
+    `src/docs_cli/skill/`, which has no `site-packages` ancestor.
+    """
+    return any(part == "site-packages" for part in source.resolve().parts)
+
+
+def _trees_byte_identical(src: Path, dest: Path) -> bool:
+    """True iff every file listed in ``_SKILL_RELATIVE_FILES`` exists at
+    ``dest`` with the same byte contents as at ``src``.
+
+    Used to decide whether a populated destination is a clean no-op
+    (skip) or a real conflict (refuse, unless --force).
+    """
+    for rel in _SKILL_RELATIVE_FILES:
+        src_file = src / rel
+        dst_file = dest / rel
+        if not dst_file.exists():
+            return False
+        if src_file.read_bytes() != dst_file.read_bytes():
+            return False
+    return True
+
+
+def _cmd_install_skill(args: argparse.Namespace) -> int:
+    """Materialise the bundled `docs` skill onto the host.
+
+    Exit codes:
+        0 — success (copy/symlink performed, or destination already
+            byte-identical so this is a no-op).
+        2 — refusal: destination exists with non-identical content and
+            ``--force`` was not supplied, or ``--symlink`` was requested
+            from a wheel install.
+    """
+    dest = Path(os.path.expanduser(args.dest)).resolve()
+    source = _locate_bundled_skill()
+
+    # Wheel-install symlink refusal (Q3 — site-packages ancestor heuristic).
+    if args.mode == "symlink" and _running_from_wheel_install(source):
+        print(
+            "docs: install-skill --symlink is rejected for wheel installs "
+            "(the bundled skill lives under site-packages and may be replaced "
+            "by a future `pip install --upgrade docs-cli`). Use an editable "
+            "install (`pip install -e .`) or drop --symlink for the default "
+            "--copy.",
+            file=sys.stderr,
+        )
+        return 2
+
+    # No-op fast path: dest already matches the bundled source byte-for-byte.
+    if dest.exists() and _trees_byte_identical(source, dest):
+        if not args.quiet:
+            print(
+                f"docs: install-skill: {dest} already matches the bundled skill; no-op.",
+                file=sys.stderr,
+            )
+        return 0
+
+    # Conflict: dest exists with different content and --force was not given.
+    if dest.exists() and not args.force:
+        print(
+            f"docs: install-skill: destination {dest} exists with content that "
+            "differs from the bundled skill. Re-run with --force to overwrite. "
+            "(Use --dest <DIR> to install elsewhere.)",
+            file=sys.stderr,
+        )
+        return 2
+
+    # If we're here, either dest does not exist or --force is set. Ensure a
+    # clean slate before writing so partial leftovers from a previous attempt
+    # do not contaminate the materialised tree.
+    if dest.exists():
+        if dest.is_symlink() or dest.is_file():
+            dest.unlink()
+        else:
+            shutil.rmtree(dest)
+
+    if args.mode == "symlink":
+        # Editable install: point dest at the source directory.
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.symlink_to(source, target_is_directory=True)
+        if not args.quiet:
+            print(
+                f"docs: install-skill: symlinked {dest} -> {source}",
+                file=sys.stderr,
+            )
+        return 0
+
+    # Copy mode (default). Walk the supported file set explicitly rather than
+    # blanket-copying the source dir; this matches the
+    # `_SKILL_RELATIVE_FILES` allowlist that the no-clutter test pins.
+    dest.mkdir(parents=True, exist_ok=True)
+    for rel in _SKILL_RELATIVE_FILES:
+        target = dest / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source / rel, target)
+    if not args.quiet:
+        print(
+            f"docs: install-skill: copied bundled skill to {dest}",
+            file=sys.stderr,
+        )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. Returns the process exit code.
 
@@ -2502,6 +2697,7 @@ def main(argv: list[str] | None = None) -> int:
         new, archive, mv, touch — mutating verbs (M2).
         check, list — validation and query verbs (M3).
         migrate — adopt a non-conforming foreign directory (M4).
+        install-skill — materialise the bundled Claude Code skill (M6).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).
@@ -2527,6 +2723,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_list(args)
     if args.command == "migrate":
         return _cmd_migrate(args)
+    if args.command == "install-skill":
+        return _cmd_install_skill(args)
     return 2
 
 

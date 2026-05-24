@@ -34,7 +34,7 @@ import pytest
 from docs import _build_parser  # loaded via conftest's module registration
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SKILL_DIR = REPO_ROOT / "skills" / "docs"
+SKILL_DIR = REPO_ROOT / "src" / "docs_cli" / "skill"
 SKILL_MD = SKILL_DIR / "SKILL.md"
 
 
@@ -42,7 +42,7 @@ SKILL_MD = SKILL_DIR / "SKILL.md"
 
 
 def _read_skill() -> str:
-    """Return the raw text of skills/docs/SKILL.md."""
+    """Return the raw text of src/docs_cli/skill/SKILL.md."""
     return SKILL_MD.read_text(encoding="utf-8")
 
 
@@ -174,12 +174,13 @@ def test_every_named_verb_is_a_real_subcommand() -> None:
     _, body = _split_frontmatter(_read_skill())
     # Verb candidates come ONLY from backtick-delimited inline code spans of
     # the form `docs <verb>` (resolved OQ-C). Bare prose mentions are ignored.
-    # The verb class is `[a-z]+` (no hyphen): all eight real verbs are plain
-    # lowercase, and excluding `-` stops a span like `docs --root <dir> index`
-    # from capturing `--root` as a bogus verb (resolved OQ-C author guidance).
+    # The verb class is `[a-z][a-z-]*`: real verbs are lowercase and may
+    # include `-` (M6's `install-skill`). The leading `[a-z]` requirement
+    # stops a span like `docs --root <dir> index` from capturing `--root`
+    # as a bogus verb (resolved OQ-C author guidance).
     named: set[str] = set()
     for span in re.findall(r"`([^`]+)`", body):
-        m = re.match(r"docs ([a-z]+)", span.strip())
+        m = re.match(r"docs ([a-z][a-z-]*)", span.strip())
         if m:
             named.add(m.group(1))
 
@@ -218,14 +219,14 @@ def test_every_relative_link_resolves() -> None:
 
 
 def test_skill_dir_has_no_clutter() -> None:
-    # ALLOWLIST (resolved OQ-D): the only permitted entries in skills/docs/ are
-    # SKILL.md and an optional references/ directory.
+    # ALLOWLIST (resolved OQ-D): the only permitted entries in the skill
+    # source dir are SKILL.md and an optional references/ directory.
     for entry in sorted(SKILL_DIR.iterdir()):
         if entry.name == "SKILL.md" and entry.is_file():
             continue
         if entry.name == "references" and entry.is_dir():
             continue
-        pytest.fail(f"unexpected entry in skills/docs/: {entry.name}")
+        pytest.fail(f"unexpected entry in src/docs_cli/skill/: {entry.name}")
 
 
 # --- check 8: the frontmatter parser is non-vacuous ------------------------

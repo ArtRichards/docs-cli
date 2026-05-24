@@ -51,6 +51,7 @@ but easy to misuse — confirm with the user before any verb that writes.
 | Bump a doc's `Updated:` | `docs touch <file>` | reindexes |
 | Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors |
 | Adopt a foreign tree | `docs migrate <dir>` | dry-run by default; `--apply` to write |
+| Install this skill on a host | `docs install-skill` | `--dest`, `--copy` (default), `--symlink`, `--force` |
 
 `docs` walks up from the current directory to find `.docs.toml`. Use
 `docs <verb> --root DIR` to point at a specific tree explicitly. For
