@@ -1,0 +1,230 @@
+"""F1 / F10 / F12 — broadened role inference (Phase 2, RED).
+
+Today `infer_role` matches a small fixed set of `-{spec,plan,adr,…}` suffix
+tokens; 73% of real-world files fall through to the `notes` low-confidence
+catch-all. The 2026-05-24 multi-tree trial (501 .md files across 25 trees)
+surfaced the broader inference signals the convention needs:
+
+- F1  H1-content / section-header / sibling-set / word-boundary signals.
+- F10 7 new core vocab roles + `_Draft` / `_Ready` / `_v\\d+` non-role
+      suffix stripping.
+- F12 `_M\\d+` milestone-suffix pattern.
+
+The introduction of a third confidence level `medium` (OQ-D, 2026-05-24) backs
+the new signals: word-boundary and new-vocab matches stay `high`; H1, section,
+sibling, and post-strip matches return `medium`.
+
+Per OQ-5 (operator decision 2026-05-24): the H1 / section-header / sibling
+tests drive `plan_migration` end-to-end rather than calling `infer_role`
+directly — these signals materialise only inside the plan layer (the
+function-level `infer_role(filename, metadata)` has no in-tree text or
+sibling-set surface). Word-boundary, non-role-suffix-strip, new-vocab, and
+`_M\\d+` tests do call `infer_role` directly because they only depend on the
+filename.
+
+Confidence assertions use the forward-compatible form
+`confidence in ("medium", "high", True)` so the test reads the right shape
+once Phase 5 lands the third level. Today's two-level (`high`/`low`) world
+makes these RED for the intended reason: the signal isn't picked up, so the
+file lands in `notes`/`low` rather than the asserted role/medium.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from docs import infer_role, plan_migration
+
+# Forward-compatible confidence sentinel set (OQ4, 2026-05-24): once Phase 5
+# adds the third level `medium`, tests reading "medium" via membership keep
+# passing if implementers map to either the new string `medium` or — for the
+# function-level `(role, confident)` tuple — the legacy `True` shape kept for
+# back-compat.
+_CONFIDENCE_OK = ("medium", "high", True)
+
+
+def _write(path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+# --- Word-boundary tolerance (F1) ------------------------------------------
+
+
+def test_infer_role_word_boundary_space_separated():
+    """A TitleCase filename whose final whitespace-separated token is a role
+    (`Project Name - Database Population Plan.md`) infers `role: plan` —
+    today the splitter only splits on `-` / `_`, so the trailing word is
+    `Plan` (capitalised, no leading separator) and inference falls back to
+    `notes`.
+    """
+    role, conf = infer_role("Project Name - Database Population Plan.md", {})
+    assert role == "plan"
+    assert conf in _CONFIDENCE_OK
+
+
+# --- Non-role suffix stripping (F10) ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    "filename",
+    ["MyPlan_v2.md", "MyPlan_Draft.md", "MyPlan_v3.md"],
+)
+def test_infer_role_strips_non_role_suffixes(filename):
+    """`_v\\d+`, `_Draft`, `_Ready` are non-role signals: strip them and
+    re-match the remaining stem. After stripping, `_Plan` matches → role
+    `plan` at medium confidence. Today the matcher sees the full stem and
+    falls back to `notes`.
+    """
+    role, conf = infer_role(filename, {})
+    assert role == "plan", f"stripping failed for {filename}: got {role!r}"
+    assert conf in _CONFIDENCE_OK
+
+
+# --- New core vocab roles (F10) --------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "filename,expected_role",
+    [
+        ("MyDoc_Implementation.md", "implementation"),
+        ("MyDoc_Sketch.md", "sketch"),
+        ("MyDoc_Outline.md", "outline"),
+        ("MyDoc_Memo.md", "memo"),
+        ("MyDoc_Brief.md", "brief"),
+        ("MyDoc_Template.md", "template"),
+        ("MyDoc_Example.md", "example"),
+    ],
+)
+def test_infer_role_new_core_vocab_roles(filename, expected_role):
+    """The 7 new core controlled-role vocab additions (OQ-A) — case-insensitive
+    suffix match in `_TitleCase` shape. Today none of these are roles, so
+    every case lands in `notes`.
+    """
+    role, conf = infer_role(filename, {})
+    assert role == expected_role, f"{filename}: expected {expected_role}, got {role!r}"
+    assert conf in _CONFIDENCE_OK
+
+
+# --- F12 — milestone-number suffix pattern ---------------------------------
+
+
+@pytest.mark.parametrize(
+    "filename",
+    ["Foo_M1.md", "Foo_M2.md", "Foo_M10.md", "Foo_M01.md"],
+)
+def test_infer_role_milestone_number_suffix(filename):
+    """Filenames ending with `_M\\d+` are milestone-task-plan docs (Trial 2
+    surfaced 12+ such files). Phase 5/6 maps the pattern to `role:
+    milestone` at medium confidence. Today the bare `_M1` token is not a
+    role; inference falls to `notes`.
+    """
+    role, conf = infer_role(filename, {})
+    assert role == "milestone", f"{filename}: got {role!r}"
+    assert conf in _CONFIDENCE_OK
+
+
+def test_infer_role_milestone_number_suffix_with_log_combines():
+    """`Foo_M1_Implementation_Log.md` ends with `_Log` — the existing log
+    matcher wins over the `_M\\d+` pattern. Today the `_Log` suffix is
+    correctly detected (this is a regression lock — GREEN at baseline once
+    suffix matching handles the mixed shape).
+    """
+    role, _conf = infer_role("Foo_M1_Implementation_Log.md", {})
+    assert role == "log"
+
+
+# --- F1 — H1-content inference (via plan_migration) ------------------------
+
+
+def test_infer_role_h1_content_inference(tmp_path):
+    """A file whose filename suffix doesn't match a role but whose H1 ends in
+    a role word (`# Foo Plan`) should infer `role: plan` at medium
+    confidence. Today H1-content inference isn't wired into `plan_migration`,
+    so the file falls back to `notes`.
+    """
+    _write(
+        tmp_path / "foo.md",
+        "# Foo Plan\n\nA plan-shaped document body.\n",
+    )
+    plan = plan_migration(tmp_path)
+    fm = next(f for f in plan.files if f.rel == "foo.md")
+    assert fm.role == "plan"
+    assert fm.confidence in _CONFIDENCE_OK
+
+
+# --- F1 — section-header pattern inference (via plan_migration) ------------
+
+
+def test_infer_role_section_header_pattern_plan(tmp_path):
+    """A file with `## Goal` + `## Scope` + `## Requirements` section
+    headers should infer `role: plan` at medium confidence even when neither
+    the filename suffix nor the H1 reveals the role. Today section-header
+    inference is unimplemented; inference falls back to `notes`.
+    """
+    _write(
+        tmp_path / "ambiguous.md",
+        (
+            "# Ambiguous Document\n\n"
+            "## Goal\nAchieve X.\n\n"
+            "## Scope\nIn-tree work.\n\n"
+            "## Requirements\nMust-haves.\n\n"
+            "## Exit criteria\nDone when…\n"
+        ),
+    )
+    plan = plan_migration(tmp_path)
+    fm = next(f for f in plan.files if f.rel == "ambiguous.md")
+    assert fm.role == "plan"
+    assert fm.confidence in _CONFIDENCE_OK
+
+
+# --- F1 — sibling-set defaulting (OQ-C: ≥ 60% modal, ≥ 5 sample) -----------
+
+
+def test_sibling_set_defaulting_fires_when_majority_met(fixtures_dir):
+    """In a 10-file subdir where 7 files carry a `-spec` suffix, the 3
+    remaining no-suffix files default to `role: spec` at medium confidence
+    via sibling-set defaulting. Today the fallback is `notes` at low
+    confidence — the modal-sibling code path doesn't exist.
+    """
+    fixture = fixtures_dir / "sibling-defaulting" / "majority-met"
+    plan = plan_migration(fixture)
+    # The three no-suffix files (file-08, file-09, file-10 by naming) should
+    # now resolve to `spec` via sibling-set defaulting.
+    defaulted = [
+        f for f in plan.files if "no-suffix" in f.rel or f.rel.endswith(("08.md", "09.md", "10.md"))
+    ]
+    assert defaulted, "fixture must contain no-suffix files"
+    for fm in defaulted:
+        assert fm.role == "spec", f"{fm.rel}: expected spec via defaulting, got {fm.role!r}"
+        assert fm.confidence in _CONFIDENCE_OK
+
+
+def test_sibling_set_NOT_defaulting_when_sample_too_small(fixtures_dir):
+    """A 4-file subdir (below the ≥ 5 minimum sample, OQ-C) must NOT default
+    even if a single role is the modal one. The no-suffix file falls to
+    `notes` at low confidence (today's behaviour) — this is a regression
+    lock that should be GREEN at baseline.
+    """
+    fixture = fixtures_dir / "sibling-defaulting" / "sample-too-small"
+    plan = plan_migration(fixture)
+    no_suffix = [f for f in plan.files if "no-suffix" in f.rel]
+    assert no_suffix, "fixture must contain a no-suffix file"
+    for fm in no_suffix:
+        assert fm.role == "notes"
+        assert fm.confidence in ("low", False)
+
+
+def test_sibling_set_NOT_defaulting_when_no_majority(fixtures_dir):
+    """A 10-file subdir whose roles are mixed enough that no single role
+    reaches 60% modal share must NOT default. The no-suffix files fall to
+    `notes` at low confidence (today's behaviour) — regression lock,
+    GREEN at baseline.
+    """
+    fixture = fixtures_dir / "sibling-defaulting" / "majority-not-met"
+    plan = plan_migration(fixture)
+    no_suffix = [f for f in plan.files if "no-suffix" in f.rel]
+    assert no_suffix, "fixture must contain no-suffix files"
+    for fm in no_suffix:
+        assert fm.role == "notes"
+        assert fm.confidence in ("low", False)

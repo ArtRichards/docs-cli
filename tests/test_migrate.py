@@ -611,3 +611,37 @@ def test_apply_migration_raises_on_archive_move_collision(tmp_path):
         pass
     else:
         raise AssertionError("apply_migration must raise FileExistsError on a collision")
+
+
+# --- M7 — confidence distribution success criterion (Phase 2, RED) ---------
+
+
+def test_confidence_distribution_meets_threshold(fixtures_dir):
+    """The M7 success-criterion measure (OQ-D, 2026-05-24): on a
+    representative sanitised real-tree fixture, the (high + medium)
+    confidence share must be at least 50%.
+
+    Trial 2 (2026-05-24) measured 25.3% high-confidence under the M4
+    inference. Once M7 lands the broadened inference (H1, section-headers,
+    sibling-set defaulting, non-role-suffix stripping, the 7 new core
+    vocab roles, the `_M\\d+` pattern, word-boundary tolerance), the same
+    representative tree must produce (high + medium) / total ≥ 0.5.
+
+    The fixture `tests/fixtures/trees/real-trees/snake-medium/` is the
+    sanitised "snake_TitleCase" tree from Trial 2 — the dominant
+    real-world shape, ~17 files.
+
+    Today the fixture exists (created at Phase 3) but the inference
+    broadening doesn't, so the ratio sits well below 0.5 — RED for the
+    intended reason.
+    """
+    fixture = fixtures_dir / "trees" / "real-trees" / "snake-medium"
+    plan = plan_migration(fixture)
+    assert plan.files, "fixture must have at least one file"
+    total = len(plan.files)
+    high_plus_medium = sum(1 for fm in plan.files if fm.confidence in ("high", "medium"))
+    ratio = high_plus_medium / total
+    assert ratio >= 0.5, (
+        f"(high+medium)/total = {high_plus_medium}/{total} = {ratio:.2f} < 0.5; "
+        f"M7 inference broadening must lift this above the threshold."
+    )
