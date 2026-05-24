@@ -15,7 +15,7 @@ _Generated 2026-05-24. 27 docs active, 0 archived._
 
 ### Active — Charter
 
-- [charter.md](charter.md) — _charter_ — A small, opinionated CLI (`docs`) that manages a tree of Markdown documentation by treating each file as a…. Updated 2026-05-23.
+- [charter.md](charter.md) — _charter_ — A small, opinionated CLI (`docs`) that manages a tree of Markdown documentation by treating each file as a…. Updated 2026-05-24.
 
 ### Active — Plan
 
