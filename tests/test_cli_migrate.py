@@ -192,6 +192,36 @@ def test_migrate_refuses_a_docs_root(docs_script, fixtures_dir, tmp_path):
     assert _snapshot(managed) == before, "a refused migrate must not touch the tree"
 
 
+def test_migrate_allows_a_migrate_only_sidecar_and_honours_project_name(
+    docs_script, fixtures_dir, tmp_path
+):
+    """OQ5 positive contract: a `.docs.toml` carrying ONLY a `[migrate]`
+    section (no `[project]`, no `[archive]`, no `[vocabulary]`) is a
+    foreign-tree migration sidecar — it must NOT trigger the
+    docs-root refusal, and its `project_name` must override the inferred
+    project for every plan record.
+
+    Companion to ``test_migrate_refuses_a_docs_root`` — locks the narrowing
+    introduced in M7 (cli.py: `managed_sections & data.keys()`).
+    """
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    (root / ".docs.toml").write_text('[migrate]\nproject_name = "foo"\n')
+
+    proc = _run(docs_script, "migrate", str(root), "--json")
+    assert proc.returncode == 0, (
+        f"a [migrate]-only sidecar must NOT trigger the docs-root refusal; "
+        f"got exit {proc.returncode}\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+    )
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+
+    data = json.loads(proc.stdout)
+    assert data, "expected at least one plan record"
+    for rec in data:
+        assert rec["project"] == "foo", (
+            f"[migrate] project_name must override inferred project for every record; got: {rec!r}"
+        )
+
+
 # --- applied tree passes check ---------------------------------------------
 
 

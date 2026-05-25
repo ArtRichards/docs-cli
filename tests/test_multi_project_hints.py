@@ -106,6 +106,56 @@ def test_subdir_below_five_file_threshold_emits_no_hint(docs_script, tmp_path):
         )
 
 
+# --- F5 / OQ6 — divergent subdir-name vs. file-prefix: file-prefix wins ----
+
+
+def test_subdir_hint_uses_file_prefix_when_it_diverges_from_subdir_name(docs_script, tmp_path):
+    """OQ6 lock: when the subdir name and the common file-prefix normalise
+    to different kebab values, the hint's ``--config-project`` argument
+    uses the file-prefix (the Trial-2-measured signal), NOT the subdir
+    name.
+
+    Tree shape: subdir ``tools/`` containing 5 ``.md`` files whose
+    longest common filename prefix is ``foo_``. The hint must suggest
+    ``--config-project foo`` (file-prefix candidate) — never
+    ``--config-project tools`` (subdir-name candidate).
+    """
+    tree = tmp_path / "divergent-multi-project"
+    for i in range(5):
+        _write(tree / f"parent-{i}-spec.md", f"# Parent {i}\n\nBody.\n")
+    sub = tree / "tools"
+    for name in (
+        "foo_widget.md",
+        "foo_gadget.md",
+        "foo_thing.md",
+        "foo_doodad.md",
+        "foo_gizmo.md",
+    ):
+        _write(sub / name, f"# {name}\n\nBody.\n")
+
+    proc = subprocess.run(
+        [sys.executable, str(docs_script), "migrate", str(tree)],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    hint_lines = [line for line in proc.stdout.splitlines() if line.lstrip().startswith("hint:")]
+    assert hint_lines, "expected a multi-project hint line in the plan footer; got:\n" + proc.stdout
+    # Exactly one hint should target the `tools/` subdir.
+    tools_hints = [h for h in hint_lines if "'tools/'" in h or "tools/" in h]
+    assert tools_hints, f"expected a hint naming the tools/ subdir; got hints:\n{hint_lines!r}"
+    for h in tools_hints:
+        assert "--config-project foo" in h, (
+            "OQ6: when the file-prefix differs from the subdir name, the "
+            "hint must use the file-prefix candidate (`foo`); "
+            f"got: {h!r}"
+        )
+        assert "--config-project tools" not in h, (
+            f"OQ6: hint must NOT suggest the subdir name when the file-prefix differs; got: {h!r}"
+        )
+
+
 # --- F5 — --config-project propagates to every record ----------------------
 
 

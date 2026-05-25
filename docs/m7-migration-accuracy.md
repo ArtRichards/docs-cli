@@ -1157,15 +1157,29 @@ real-tree fixtures (117 files total)
   paperless-auto-filer project) is the intended future
   vehicle, NOT a hosted-model fallback.
 - **Phase 10 simplify candidates** (carried forward to
-  M8 / future): `infer_status` function name (still reads
-  `Lifecycle:` internally — OQ3 carry-over);
+  M8 / Step 3 / future): `infer_status` function name (still
+  reads `Lifecycle:` internally — OQ3 carry-over);
   `BUILTIN_STATUSES` constant name (still references the
   lifecycle vocab — OQ4 carry-over); `insert_metadata_block`
   parameter named `status` (still writes `Lifecycle:` —
   OQ3 carry-over); `Confidence` enum vs. string sentinels
-  (currently string `high|medium|low`; enum is a future
-  cleanup per OQ7). None of these affect the on-disk
-  surface; all are internal-naming nits.
+  (currently string `high|medium|low` plus the legacy
+  `bool` returned by the function-level `infer_role` — the
+  mixed `str | bool` return type is the carry-over from the
+  pre-medium two-level world; enum is a future cleanup per
+  OQ7); test function names still containing `_status` after
+  the F0 rename (e.g. `test_list_filter_by_status`,
+  `test_parse_missing_status`, `test_check_doc_unknown_status`,
+  `test_infer_status_always_returns_a_builtin_status`); test
+  helper functions still accepting a `status=` keyword
+  parameter (`_valid(status=…)`, `_doc(status=…)` in
+  `tests/test_check.py` and `tests/test_index.py`) for
+  back-compat with pre-M7 call sites. The `_REQUIRED_METADATA_FIELDS`
+  constant was reviewed and is already correct (Phase 5 swap
+  `Status` → `Lifecycle` landed at cli.py); no action needed.
+  None of these affect the on-disk surface; all are internal-
+  naming nits and belong in the M7 Step 3 simplify branch
+  (NOT in this Step 2 review-fix cycle).
 
 ### Open questions
 

@@ -225,6 +225,57 @@ def test_infer_role_section_header_pattern_plan(tmp_path):
     )
 
 
+# --- F1 — section-header pattern inference: status (positive + negative) ---
+
+
+def test_infer_role_section_header_pattern_status_current_state_plus_updates(tmp_path):
+    """OQ-D / milestone spec (m7-migration-accuracy.md:157): the
+    section-header signal for ``role: status`` requires an AND-of-multiple-
+    signals shape — ``## Current state + ## Progress`` OR
+    ``## Current state + ## Updates``. A bare ``## Updates`` heading alone
+    must NOT trigger status inference (it is too common across miscellaneous
+    notes to carry the signal on its own).
+
+    Positive: ``## Current state`` + ``## Updates`` → role=status, medium.
+    """
+    _write(
+        tmp_path / "status-doc.md",
+        ("# Some Doc\n\n## Current state\nNow.\n\n## Updates\n- 2026-05-25: did the thing.\n"),
+    )
+    plan = plan_migration(tmp_path)
+    fm = next(f for f in plan.files if f.rel == "status-doc.md")
+    assert fm.role == "status", (
+        f"`## Current state` + `## Updates` must infer status; got {fm.role!r}"
+    )
+    assert fm.confidence == "medium", (
+        f"section-header inference must return medium confidence (OQ-D); got {fm.confidence!r}"
+    )
+
+
+def test_infer_role_section_header_bare_updates_does_NOT_infer_status(tmp_path):
+    """Negative companion: a file whose ONLY ``##`` heading is
+    ``## Updates`` (no ``## Current state``) must NOT silently infer
+    ``role: status``. Status inference is an AND-of-multiple-signals
+    contract; the bare-``Updates`` shape is the negative case that the
+    earlier `or "updates" in headings_set` clause swallowed too loosely.
+
+    Today's tighter implementation falls back to ``notes``.
+    """
+    _write(
+        tmp_path / "notes-doc.md",
+        ("# Some Notes\n\n## Updates\n- 2026-05-25: just a notes file with an Updates section.\n"),
+    )
+    plan = plan_migration(tmp_path)
+    fm = next(f for f in plan.files if f.rel == "notes-doc.md")
+    assert fm.role == "notes", (
+        f"a bare `## Updates` heading must NOT infer status (spec requires "
+        f"`## Current state` + (`## Progress` OR `## Updates`)); got {fm.role!r}"
+    )
+    assert fm.confidence in ("low", False), (
+        f"with no inference signal, the file lands in notes/low; got {fm.confidence!r}"
+    )
+
+
 # --- F1 — sibling-set defaulting (OQ-C: ≥ 60% modal, ≥ 5 sample) -----------
 
 
