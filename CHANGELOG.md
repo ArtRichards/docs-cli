@@ -5,6 +5,111 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.0 — UNRELEASED
+
+M8: the adoption workflow becomes agent-driveable. A single
+layered exclusion surface (`--exclude` / `[exclude]` /
+`.docsignore`) replaces the M7 "everything walks" semantic;
+the migrate plan grows triage flags (`--summary`,
+`--only ambiguous`, `--group-by`) and a default footer
+summary; non-Markdown root siblings surface in the plan; and
+`docs new --body-from` closes the read-before-write friction
+in agent flows. The bundled skill gains a substantial
+adoption playbook + a starter `.docs.toml` template.
+
+Per the post-M8 batched publish (M9), 1.3.0 ships locally
+only — the public PyPI release is the same 1.3.0 number,
+batching the M6 + M7 + M8 surface into one publish event.
+
+### Added
+
+- **`--exclude PATTERN`** (M8 — F3) on `docs migrate`, `docs
+  index`, `docs check`, `docs list`. Repeatable; supports
+  gitignore-flavoured globs (`*` / `**` / trailing-`/` /
+  leading-`/`). Layered on top of `[exclude]` config and
+  `.docsignore`.
+- **`[exclude]` table in `.docs.toml`** (M8 — F3). Three
+  keys: `dirs = [...]` (directory-name matches at any
+  depth), `globs = [...]` (gitignore-flavoured patterns),
+  `exts = [...]` (extension matches).
+- **`.docsignore`** at the tree root (M8 — F3). One file
+  only — nested files are NOT consulted (OQ-B). One
+  pattern per line; gitignore-flavoured syntax subset
+  (comments, blanks, `**`, `*`, `?`, trailing-`/`,
+  leading-`/`, `!` negation, bare-pattern any-depth match).
+- **`--exclude-ext EXTS`** (M8 — F3) on `docs migrate`.
+  Comma-separated list of extensions to suppress from the
+  non-Markdown sibling footer and from any exclude-predicate
+  evaluation.
+- **`--summary` triage mode** (M8 — F6) on `docs migrate`.
+  One tabular line per file (`path  role  conf  notes`).
+  Mutually exclusive with `--json` (argparse-enforced).
+- **`--only ambiguous` filter** (M8 — F6) on `docs migrate`.
+  Drops the high-confidence-no-ambiguity rows from the
+  per-file plan. Composes with `--summary` and `--group-by`.
+- **`--group-by role|confidence`** (M8 — F6) on `docs migrate`.
+  Sorts the per-file plan by role (alphabetical) or by
+  confidence (`high → medium → low`).
+- **Default plan-footer summary** (M8 — F6). Every
+  `docs migrate` dry-run emits four anchored tokens after
+  the per-file block: `summary:`, `roles:`, `confidence:`,
+  `ambiguities:`. Always present, even on an empty plan.
+- **Non-Markdown root-sibling surfacing** (M8 — F7). The
+  `docs migrate` dry-run footer surfaces non-`.md` siblings
+  at the migration root as `<N> non-Markdown siblings at
+  root not considered: <names>` so an adopting agent sees
+  binaries referenced from prose. Suppressed entirely when
+  `--exclude-ext` filters the list to empty.
+- **`docs new --body-from <PATH|->`** (M8 — F9). Reads body
+  content from a file or stdin and appends it under the
+  scaffolded frontmatter. Atomic, one Bash call.
+  Conservative refusal heuristic (OQ-E): the first 20 body
+  lines are scanned for `^[A-Z][A-Za-z-]+:\s` and the call
+  exits 2 if any match — agents must pass body content
+  only; `docs new` owns the frontmatter.
+- **Adoption playbook** at
+  `src/docs_cli/skill/references/adoption-playbook.md` (M8
+  — F8). Six-step procedural deep-dive: dry-run → triage →
+  `.docs.toml` → iterate → apply → verify. Includes a
+  worked example and a pitfalls subsection.
+- **`.docs.toml` template** at
+  `src/docs_cli/skill/references/docs-toml-template.toml`
+  (M8 — F8). Commented starter for `[exclude]`,
+  `[migrate]`, `[vocabulary]` (+ `[project]` /
+  `[archive]`); every example line commented out.
+- **SKILL.md adoption pointer + trigger phrases** (M8 — F8).
+  Description gains four adoption-flow phrases ("adopt this
+  directory", "migrate this folder", "bring this into docs
+  convention", "import existing markdown specs"). A new
+  one-line pointer block redirects to
+  `references/adoption-playbook.md` near the verb table.
+
+### Changed
+
+- **Migrate carve-out widened** (M8 — OQ1). A `.docs.toml`
+  carrying `[exclude]` is accepted by `docs migrate` even
+  alongside the M7 managed-marker sections (`[project]` /
+  `[archive]` / `[vocabulary]`). The operator's explicit
+  signal "use migrate to triage / re-migrate this managed
+  tree but skip the listed paths".
+- **`_SKILL_RELATIVE_FILES` extended** to include
+  `use-cases.md` (a pre-existing bundle file `install-skill
+  --copy` previously missed because it walked the bundle
+  via this very tuple) plus the two M8 new references.
+
+### Notes
+
+- M6 + M7 + M8 are batched into a single PyPI publish event
+  in M9 (per operator OQ-C). The on-disk Markdown
+  convention is otherwise stable; the M7 `Lifecycle:`
+  rename is a one-time keyword change with no backward-
+  compat alias.
+- `MigrationPlan` grows three optional human-output-only
+  fields (`excluded_count`, `excluded_breakdown`,
+  `suppressed_exts`) per OQ1 — OMITTED from
+  `migration_to_json` so the JSON schema stays flat,
+  mirroring the M7 `multi_project_hints` precedent.
+
 ## 1.2.0 — 2026-05-25
 
 The first breaking convention-schema release. Renames the

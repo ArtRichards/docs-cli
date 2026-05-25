@@ -227,6 +227,45 @@ A docs root is not required to be flat. Beyond the machine-managed archive subtr
 
 Whether to keep a tree flat or nest it is the author's call. The metadata block and the generated `INDEX.md` — not the directory layout — are the primary navigation surface; subdirectories are a convenience for humans browsing with `ls` or an editor file-tree. `docs new` can create a doc directly into a subdirectory (`docs new spec sub/feature`); `docs mv` can relocate one between directories.
 
+## Exclusion
+
+M8 introduces a single layered exclusion surface every walker
+consults — `docs migrate`, `docs index`, `docs check`,
+`docs list`. The four sources combine **additively** (no
+source replaces another); see [`cli.md`'s "Common: exclusion"
+section](cli.md#common-exclusion) for the per-verb shape.
+
+- **`[exclude]` table in `.docs.toml`** (persistent, per-tree).
+  Three keys — `dirs = [...]` for directory-name matches at
+  any depth, `globs = [...]` for gitignore-flavoured glob
+  patterns, `exts = [...]` for extension matches. The
+  bundled adoption skill's `references/docs-toml-template.toml`
+  carries a commented starter.
+- **`.docsignore` at the tree root** (persistent, per-tree).
+  Single file only — nested `.docsignore` files are NOT
+  consulted (OQ-B). One pattern per line. Syntax subset:
+  - `# comment` and blank lines are no-ops.
+  - Trailing `/` → directory match.
+  - Leading `/` → root-anchored (no nested match).
+  - `**` → any number of segments; `*` → any non-slash chunk;
+    `?` → one non-slash character.
+  - Leading `!` → re-include (last match wins, matching
+    gitignore).
+  - Bare pattern (no `/`) → matches any path segment at any
+    depth.
+- **`--exclude PATTERN`** on the CLI (ephemeral, repeatable;
+  same glob syntax as `.docsignore`). Layered on top of the
+  two persistent sources.
+- **`--exclude-ext EXTS`** on `migrate` (one-off, csv).
+  Extension matches; also suppresses the matching binaries
+  from the non-Markdown sibling footer.
+
+For the procedural deep-dive — when to use `[exclude]` vs
+`.docsignore` vs CLI overrides, and the dry-run → triage →
+iterate → apply loop — see the bundled
+[adoption playbook](https://github.com/ArtRichards/docs-cli/blob/main/src/docs_cli/skill/references/adoption-playbook.md)
+(also materialised on a host via `docs install-skill`).
+
 ## INDEX file
 
 The `INDEX.md` file at the root of the docs tree is a **generated view, not a managed doc**. It does not require a metadata block, and `docs` excludes it from traversal by filename. (Specifically: any file at the docs root literally named `INDEX.md` is read as the existing index for marker-block preservation and skipped during walking; it never appears as an entry in itself.)
@@ -259,6 +298,14 @@ A docs root frequently contains files that aren't Markdown — HTML review packe
 This keeps `docs` focused on the Markdown navigation layer while letting authors keep canonical data, presentation artifacts, and generated outputs co-located with the specs that describe them. The Markdown layer is the navigable map; everything else lives alongside it.
 
 If you want a non-Markdown artifact to appear *prominently* in `INDEX.md` (e.g., a key reviewer packet that needs to be the first thing readers see), describe it in a short companion `.md` doc that points at it via `Related:` — the companion doc carries the metadata and appears in the index; the artifact stays as the canonical file. A future v1.1 may add a first-class `Attachments:` field; for v1 the companion-doc pattern is the recommendation.
+
+**Migration-time surfacing (M8 — F7).** `docs migrate <dir>` now
+surfaces non-Markdown root-level siblings in the dry-run plan
+footer as `<N> non-Markdown siblings at root not considered:
+<names>` so an adopting agent sees the binaries that prose
+references but the walker (markdown-only) skips. Use
+`--exclude-ext EXTS` (csv) or the `[exclude] exts = [...]`
+config to drop the noise once the operator's reviewed the list.
 
 ## File naming
 

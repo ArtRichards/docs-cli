@@ -112,7 +112,7 @@ M8 ships as 1.3.0 after M7.
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 4 baseline-GREEN regression locks + 41 RED for intended reasons (45 new collected items; 369 collected total; 328 passed + 41 failed).** Per-file: test_exclude.py 20 RED + 2 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Audit round 2 tightened tests 5 + 6 in test_exclude.py — added conformant docs under build/ and nested/ so the `list` / `index` assertions pin Phase 6's exclude predicate (vs. the today-coincidence of malformed-doc walker-skipping). Fresh-eyes review then swapped test 7 case 1 from `*.tmp` to `*.draft.md` so the `.docsignore` parser path — not the markdown-only walker — is what excludes the file at Phase 6; tightened `test_default_plan_footer_shows_counts` to anchor all four footer tokens to the footer slice; deleted the unused `tests/fixtures/docsignore/sample/` and `tests/fixtures/trees/exclude-test/` directories (inline-via-tmp_path is the codebase convention). Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Complete | 2026-05-25 | `Config` gained the four exclude fields; `MigrationPlan` gained 3 optional human-output-only fields (per OQ1; OMITTED from `migration_to_json`). `load_config` reads `[exclude]` + root `.docsignore`. New `_compile_docsignore_pattern` + `compile_exclude_predicate` helpers (stdlib `re` only). `predicate=` keyword threaded through `_iter_doc_texts` / `walk` / `check_tree` / `query_docs` / `_refresh_index` (per OQ2). Argparse: `--exclude PATTERN` on idx/check/list/migrate via shared `_add_exclude_flag` helper; `--summary` ⊻ `--json` mutex + `--only {ambiguous}` + `--group-by {role,confidence}` + `--exclude-ext EXTS` on migrate; `--body-from PATH` on new. `_cmd_migrate` managed-marker comment carries M8 OQ1 `[exclude]` carve-out. Quality gate clean. 340 GREEN / 29 RED — argparse-error → behaviour-RED transition complete; predicate already flips 8 index/check/list-arm REDs to GREEN. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-25 | `plan_migration` gained `cli_excludes` / `cli_exclude_exts` kwargs + the predicate wire-up; excluded files counted + bucketed by top-level prefix; `MigrationPlan` populated with the three new fields. `_print_migration_plan` gained `mode` / `only` / `group_by` kwargs — `--summary` emits one tabular line per file; `--only ambiguous` filters; `--group-by role/confidence` sorts. Footer (after per-file block per OQ3): excluded counts → non-md siblings → multi-project hints → default summary (`summary:` / `roles:` / `confidence:` / `ambiguities:`). `_cmd_new` handles `--body-from` (file or `-`/stdin) with OQ-E refusal scanning the first 20 lines for `^[A-Z][A-Za-z-]+:\s` — validation runs BEFORE the dry-run check per OQ4. `_cmd_migrate` carve-out widened: `[exclude]` in `.docs.toml` waives the managed-marker refusal even alongside `[project]/[archive]/[vocabulary]` (the operator's explicit signal "use migrate to triage this managed tree"). 364 GREEN / 5 RED — all 5 remaining REDs are F8 skill-content (Phase 7). |
-| 7. Update Tool/Wrapper Layer (skill rewrite) | Pending | — | SKILL.md: append adoption trigger phrases to description; add one-line pointer to `references/adoption-playbook.md`. New `references/adoption-playbook.md` (substantial — six numbered steps + worked example + multi-project sub-section + sidecars sub-section + pitfalls). New `references/docs-toml-template.toml` (commented starter; `[exclude]` + `[migrate]` + `[vocabulary]`). Spec updates: cli.md (new flags), convention.md (`[exclude]` + `.docsignore` syntax), architecture.md (Config schema), README.md (adoption section), CHANGELOG.md (1.3.0). pyproject + cli.py `__version__` bumped to 1.3.0. Skill-refs lockstep maintained for convention.md + cli.md. |
+| 7. Update Tool/Wrapper Layer (skill rewrite) | Complete | 2026-05-25 | SKILL.md: appended 4 adoption triggers to description (1024-char ceiling OK); added one-line pointer block (`**Adopting an existing Markdown directory?** Read [references/adoption-playbook.md]`); also swept M7 misses (`docs list --status` → `--lifecycle`; "hand-flip `Status:`" → "hand-flip `Lifecycle:`"; metadata-block `Status:` → `Lifecycle:`). New `references/adoption-playbook.md` (343 lines; six required H2s + worked example + pitfalls; frontmatter Lifecycle/Role/Project/Updated/Related). New `references/docs-toml-template.toml` (~90 lines; `[exclude]` + `[migrate]` + `[vocabulary]` + `[project]` + `[archive]`; every example commented). `_SKILL_RELATIVE_FILES` extended with `use-cases.md` (pre-existing packaging gap) + the 2 new files. `pyproject.toml` + `cli.py __version__`: 1.2.0 → 1.3.0. `tests/test_packaging.py` version pins bumped (3 spots) + the two helper-function names refreshed for clarity. docs/cli.md: synopses extended for `new` (`--body-from`) + `index` / `check` / `list` (`--exclude`) + `migrate` (full new surface); + "Triage flags (M8)" + "Plan footer (M8)" subsections + a new "Common: exclusion" top-level section. docs/convention.md: new `## Exclusion` section after Subdirectories + one-paragraph M8 F7 note on the Non-Markdown section. docs/architecture.md: bumped version comment to 1.3.0; layout sketch extended with use-cases / adoption-playbook / docs-toml-template; Config + walker sections extended with the M8 fields + predicate. README.md: Adoption section (5 lines) after Install; Commands list extended; Status section adds M8 row + bumps publish-strategy framing. CHANGELOG.md: new `## 1.3.0 — UNRELEASED` block (Added / Changed / Notes). Lockstep resync of skill references after `docs touch`. Quality gate clean; **all 369 GREEN — F8 RED tests flipped to GREEN.** |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest M7-count + ~31 = expected GREEN total; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff; `python -m build` produces 1.3.0 wheel + sdist. |
 | 9. Implement Online/Integration — **FRESH-SUBAGENT GATE** | Pending | — | **Load-bearing.** Spawn 3 fresh Opus subagents, no prior context, with the bundled skill installed (`docs install-skill`). Each gets a different M7 fixture and the prompt "adopt this directory; commit the result". Pass: ≥ 2 of 3 complete the full loop unattended. Third may escalate ONE playbook-flagged OQ. Stall = skill bug; iterate F8 / F9 / playbook / SKILL.md and re-run. Each run logged with transcript summary + pass/fail + iteration history. |
 | 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M8 → Complete; CHANGELOG dated; `v1.3.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6/M7; `gh release create v1.3.0`. |
@@ -815,3 +815,132 @@ F3/F6/F7/F9 RED test GREEN; F8 stays RED for Phase 7.
 - [x] Quality gate clean: ruff / ruff-format / mypy / `docs
       check docs/`.
 - [x] Tally: **364 GREEN / 5 RED (369 total)**.
+
+### Phase 7 — Update Tool/Wrapper Layer (skill rewrite)
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Author the F8 skill-content deliverables (adoption playbook +
+`.docs.toml` template); make the minimal SKILL.md additions
+(four adoption-trigger phrases in the description + a one-line
+pointer block); extend `_SKILL_RELATIVE_FILES`; bump the
+project version 1.2.0 → 1.3.0 across `pyproject.toml`,
+`cli.py`, and `tests/test_packaging.py`; widen the M7 spec docs
+(`cli.md`, `convention.md`, `architecture.md`) with the M8
+surface; add a 5-line README "Adoption" section; author the
+`CHANGELOG.md` `## 1.3.0 — UNRELEASED` block; resync the
+skill-reference lockstep after the spec edits.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `src/docs_cli/skill/SKILL.md` | Modify | Description: 4 adoption-trigger phrases appended ("adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs") — well under the 1024-char ceiling. Body: new one-line pointer block before the "Three things never to hand-edit" heading, naming both `references/adoption-playbook.md` and the bundled `docs-toml-template.toml`. M7 sweep misses cleaned up — `docs list --status` → `--lifecycle`; hand-flip `Status:` → `Lifecycle:`; metadata-block enumeration starts with `Lifecycle:` instead of `Status:`. Size: 89 lines (well under the 500-line budget). |
+| `src/docs_cli/skill/references/adoption-playbook.md` | Create | 343 lines. Frontmatter (`Lifecycle: active`, `Role: guide`, `Project: docs`, `Updated: 2026-05-25`, `Related: child-of SKILL.md` + `references: cli.md` + `references: convention.md`). Required H2s: `## When this applies`, `## Step 1 — Dry-run plan`, `## Step 2 — Triage the plan`, `## Step 3 — Create .docs.toml from references/docs-toml-template.toml`, `## Step 4 — Iterate`, `## Step 5 — Apply`, `## Step 6 — Verify`, `## Worked example`, `## Pitfalls`. Pitfalls cover `Status:`→`Lifecycle:` (M7 F0), `_v2`/`_Draft` non-role suffixes (M7 F10), inferred-project-name override (M7 F5 + F11), generated-data dirs needing `--exclude` (M8 F3), sidecars via `--body-from` for non-md binaries (M8 F7 + F9), multi-project subdir hint (F5). Generic sanitised content; sourced from kebab-tiny / snake-medium-style examples; NO third-party names. |
+| `src/docs_cli/skill/references/docs-toml-template.toml` | Create | ~90 lines. `[exclude]` (dirs/globs/exts), `[migrate]` (role_suffixes inline-table + commented project_name), `[vocabulary]` (add_lifecycles + add_roles), plus commented `[project]` and `[archive]` for completeness. Every example commented. Heavily commented prose explaining each section's purpose. Parses cleanly via `tomllib.loads`. |
+| `src/docs_cli/cli.py` | Modify | `__version__` 1.2.0 → 1.3.0. `_SKILL_RELATIVE_FILES` extended with `use-cases.md` + `adoption-playbook.md` + `docs-toml-template.toml`. The `use-cases.md` addition closes a pre-existing packaging gap — the file shipped in the wheel as package-data but `install-skill --copy` walked this tuple, so the file silently never landed on a host. |
+| `pyproject.toml` | Modify | `version = "1.2.0"` → `"1.3.0"`. |
+| `tests/test_packaging.py` | Modify | 3 occurrences of `1.2.0` → `1.3.0` (the docstrings + version assertions + the wheel/sdist filename pins). Two helper function names refreshed: `test_a3_project_version_is_1_2_0` → `..._1_3_0`; `test_c2_docs_version_is_1_1_0` → `..._1_3_0` (existing rename oversight from M7 — body already asserted 1.2.0). |
+| `docs/cli.md` | Modify | `docs new` synopsis: `[--body-from PATH|-]`. `docs index` / `check` / `list` synopses: `[--exclude PATTERN]`. `docs migrate` synopsis: full new surface (`--summary` / `--only` / `--group-by` / `--exclude` / `--exclude-ext`; mutex `--json`/`--summary`). New "Triage flags (M8 — F6)" + "Plan footer (M8 — F3/F5/F6/F7)" subsections under migrate. New top-level "Common: exclusion" section before "Output conventions" documenting the four layered sources. M8 (OQ1) carve-out bullet added to the migrate refusal description. |
+| `docs/convention.md` | Modify | New `## Exclusion` section after "Subdirectories" / before "INDEX file" covering all four layered sources + the OQ-B `.docsignore` syntax subset + cross-link to the bundled adoption playbook. Existing "Non-Markdown files in the tree" section extended with a one-paragraph "Migration-time surfacing (M8 — F7)" note. |
+| `docs/architecture.md` | Modify | Layout sketch: `__version__ = "1.3.0"`; config row notes the M8 additions; skill/references/ tree extended with `use-cases.md`, `adoption-playbook.md`, `docs-toml-template.toml` (bundle-only, no `docs/` mirror). `Config` module section: four new fields documented + `compile_exclude_predicate` helper added. `walker` module section: `predicate=` keyword added with M8 F3 cross-reference. |
+| `README.md` | Modify | Commands block: `--body-from` + `--exclude` synopses added. New `## Adopting an existing tree` section (5 lines) right after Install. Status section: M8 row added; publish-strategy framing bumped (1.2.0/1.3.0 narrative). |
+| `CHANGELOG.md` | Modify | New `## 1.3.0 — UNRELEASED` block at the top: Added (12 bullets covering F3/F6/F7/F8/F9), Changed (migrate carve-out widening + `_SKILL_RELATIVE_FILES` extension), Notes (publish batching + MigrationPlan-fields-omitted-from-JSON note). |
+| `src/docs_cli/skill/references/cli.md` | Modify | Lockstep re-sync after `docs/cli.md` edits. Byte-identical mirror. |
+| `src/docs_cli/skill/references/convention.md` | Modify | Lockstep re-sync after `docs/convention.md` edits. Byte-identical mirror. |
+| `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced after the `docs touch` bumps + the new skill-reference-content drops. |
+
+#### Actions taken
+
+1. Read `tests/test_packaging.py` per OQ7 — confirmed it
+   `zipfile`-inspects the wheel for fixed paths, doesn't iterate
+   `_SKILL_RELATIVE_FILES`. Adding files to the tuple is safe;
+   only the version pins (`1.2.0` → `1.3.0`) need updating.
+2. Bumped version: `pyproject.toml`, `cli.py __version__`, and 3
+   string occurrences in `tests/test_packaging.py` (helper
+   function names + the assertion bodies). Also refreshed
+   `test_c2_docs_version_is_1_1_0` → `..._1_3_0` — a pre-
+   existing rename oversight in the function name.
+3. Extended `_SKILL_RELATIVE_FILES` with `use-cases.md` +
+   `adoption-playbook.md` + `docs-toml-template.toml`.
+4. Authored `references/docs-toml-template.toml` — `[exclude]`,
+   `[migrate]` (with inline-table `role_suffixes = {}` valid
+   TOML), `[vocabulary]`, plus commented `[project]` / `[archive]`.
+   Verified parses cleanly via `tomllib.loads` and that all three
+   required substrings (`[exclude]` / `[migrate]` / `[vocabulary]`)
+   are present.
+5. Authored `references/adoption-playbook.md` — frontmatter with
+   full M5/M7 metadata; all nine required H2s; worked example
+   sourced from the kebab-tiny / snake-medium-style fixtures
+   (generic `Foo` / `foo-bar` naming, NO third-party names);
+   pitfalls section covering all six known traps.
+6. SKILL.md minimal additions: appended 4 adoption-trigger
+   phrases to the description (well under 1024 chars); added a
+   one-line pointer block before the "Three things never to
+   hand-edit" heading; swept three M7 misses in the body
+   (`--status` → `--lifecycle`; hand-flip `Status:` → `Lifecycle:`;
+   metadata enumeration). Final body 89 lines (under the 500-
+   line budget). All M7 verbs still named in the body so
+   `test_every_named_verb_is_a_real_subcommand` stays GREEN.
+7. Widened the docs (`cli.md`, `convention.md`, `architecture.md`)
+   with the M8 surface — new flag synopses, the "Triage flags"
+   + "Plan footer" subsections, the "Common: exclusion" top-
+   level section, the `Config` schema additions, the layout
+   sketch extension, and the OQ-B `.docsignore` syntax subset
+   under `## Exclusion`.
+8. Added 5-line README "Adoption" section after Install; updated
+   the Commands block synopses; bumped the Status section's
+   M8 row + publish-strategy narrative.
+9. Authored `CHANGELOG.md ## 1.3.0 — UNRELEASED` (Added /
+   Changed / Notes; ~80 lines covering every F3/F6/F7/F8/F9
+   surface change).
+10. Touched `docs/cli.md` / `docs/convention.md` /
+    `docs/architecture.md` via `docs touch`; regen'd
+    `docs/INDEX.md` + snapshot in lockstep. Re-cp'd
+    `docs/{cli,convention}.md` into
+    `src/docs_cli/skill/references/` to satisfy
+    `tests/test_skill_refs.py` byte-identity.
+
+#### Issues / decisions
+
+- **OQ7 verified.** `tests/test_packaging.py` inspects the
+  wheel zip directly; no iteration over
+  `_SKILL_RELATIVE_FILES`. Adding files to the tuple required
+  no test edit beyond the version bumps.
+- **Pre-existing test_c2 function name typo** ("1_1_0") was
+  also fixed in the same pass — body asserted 1.2.0 before
+  this commit, now correctly asserts 1.3.0 and the function
+  name matches.
+- **SKILL.md size stays well within the 500-line budget** —
+  89 lines after the M8 additions. The plan's "stay ≤ ~90
+  lines" target is met exactly.
+- **Worked-example sanitisation.** The adoption playbook's
+  worked example uses generic `Foo` / `foo` naming +
+  hypothetical filenames — no third-party product / customer
+  / feature names. The fixture pool inspected is the M7
+  sanitised set (`tests/fixtures/trees/real-trees/`).
+- **`docs-toml-template.toml` inline-table syntax** for
+  `role_suffixes = {}` — valid TOML, parses cleanly via
+  `tomllib`; matches the M7 `[migrate] role_suffixes`
+  convention.
+
+#### Exit criteria
+
+- [x] `tests/test_skill_adoption.py` — 5/5 GREEN (was 5 RED).
+- [x] `tests/test_skill.py` — still GREEN (size budget OK; new
+      pointer line increased to 89 lines from 84).
+- [x] `tests/test_skill_refs.py` — still GREEN (lockstep re-sync
+      successful).
+- [x] `tests/test_packaging.py` — version pins updated 1.2.0 →
+      1.3.0; tests don't fire at the unit-level pytest run (the
+      Group B/C/D/E tests build a wheel + run it, gated at
+      Phase 8).
+- [x] `docs check docs/` — exit 0.
+- [x] `docs index --root docs/` — INDEX.md regen'd; snapshot
+      lockstep maintained.
+- [x] Ruff / ruff-format / mypy — clean.
+- [x] **All 369 tests GREEN.** Every M8 RED has flipped to
+      GREEN — the spec contract is fully implemented and
+      tested.

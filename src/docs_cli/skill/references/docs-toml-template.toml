@@ -1,0 +1,89 @@
+# Starter `.docs.toml` for adopting a foreign Markdown directory
+# into the `docs` convention. Drop this file at the root of the
+# directory you're adopting, uncomment + tune the lines that match
+# your tree, then run `docs migrate <dir>` to dry-run the plan.
+#
+# Every section below is OPTIONAL. The defaults assume the directory
+# name is a sensible project slug; the archive subdir is `archive/`;
+# the lifecycle + role vocabularies are the built-ins (see
+# `references/convention.md`).
+#
+# Anything outside `[exclude]`, `[migrate]`, `[vocabulary]`,
+# `[project]`, `[archive]` is ignored.
+
+# ---- Project identity -----------------------------------------------------
+# [project]
+# # The project name surfaced in `INDEX.md` and the `--project` filter on
+# # `docs list`. Defaults to the directory's basename when absent.
+# name = "my-project"
+
+# ---- Archive layout -------------------------------------------------------
+# [archive]
+# # The single subdir under root that holds archived docs. The
+# # `docs archive` verb moves files into `archive/<date>/<name>`
+# # and `docs check` enforces the location ↔ lifecycle invariant.
+# dir = "archive"
+# # The date format used for the archive subdir name + the
+# # `Updated:` metadata line. Standard strftime tokens.
+# date_format = "%Y-%m-%d"
+
+# ---- Tree-wide file exclusion (M8 F3) -------------------------------------
+# Applies to `docs migrate`, `docs index`, `docs check`, and
+# `docs list`. Each verb may extend on the command line with
+# `--exclude PATTERN` (repeatable). A root-level `.docsignore`
+# file is also consulted (gitignore-flavoured syntax — `*` / `**`
+# / trailing-`/` / leading-`/` / `!` negation).
+[exclude]
+# Directory names. Each match excludes every file under that dir,
+# at any depth. The directory name matches as a path segment
+# (so `build` excludes `build/` and `nested/build/`).
+dirs = [
+    # "build",
+    # "generated",
+    # "node_modules",
+    # ".cache",
+]
+# Glob patterns; the same gitignore-flavoured syntax the
+# `.docsignore` parser uses (`*` / `**` / `?` / `/`). Most useful
+# for excluding files by name pattern (drafts, scratch).
+globs = [
+    # "**/*.draft.md",
+    # "**/scratch-*.md",
+]
+# Extensions to suppress from the non-Markdown sibling footer at
+# the migration root (HTML / XLSX / ODT, etc.). The footer only
+# applies to non-`.md` files; the walker itself is markdown-only.
+exts = [
+    # "html",
+    # "xlsx",
+    # "odt",
+]
+
+# ---- Migration-time role / project inference (M7 F1/F5/F11) --------------
+[migrate]
+# Custom filename-suffix → role map merged into the built-in
+# suffix mapping. Use these when your tree carries roles the
+# built-in vocabulary doesn't surface from a filename alone.
+role_suffixes = {}
+# Examples (inline-table syntax — valid TOML):
+# role_suffixes = { "-rubric" = "template", "-memo" = "notes" }
+#
+# Per-tree project-name override. When set, F11 normalisation is
+# bypassed and every `migrate` record carries this project name.
+# project_name = "my-project"
+
+# ---- Controlled-vocab extensions (M3 F0 / M7 F0) -------------------------
+[vocabulary]
+# Additional Lifecycle values merged into the built-in set
+# (`draft`, `active`, `blocked`, `done`, `archived`, `superseded`).
+# Removals are not supported — built-ins are always present.
+add_lifecycles = [
+    # "experimental",
+    # "deprecated",
+]
+# Additional Role values merged into the built-in role vocabulary
+# (see `references/convention.md` for the canonical list).
+add_roles = [
+    # "explainer",
+    # "runbook-variant",
+]

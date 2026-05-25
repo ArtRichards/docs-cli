@@ -30,7 +30,7 @@ Global flags:
 
 ## Subcommands
 
-### `docs new <role> <slug> [--project NAME] [--title "…"]`
+### `docs new <role> <slug> [--project NAME] [--title "…"] [--body-from PATH|-]`
 
 Scaffold a new doc in the active tree.
 
@@ -39,10 +39,12 @@ Scaffold a new doc in the active tree.
 - `--title` overrides the inferred H1 (default: the slug's last path segment, title-cased, with `-` and `_` treated as word separators).
 - Writes the metadata block with `Lifecycle: draft`, `Role: <role>`, `Project: <inferred>`, `Updated: <today>`.
 - Does not refresh INDEX (the new doc is empty; the user is expected to fill it, then run `docs index` or let another verb trigger it).
+- `--body-from PATH` (M8 — F9) reads body content from `PATH` (or `-` for stdin) and appends it under the scaffolded frontmatter. Closes the read-before-write friction in agent flows — one atomic Bash call writes the complete file. The body text is appended verbatim (the file ends byte-equal with the body).
+  - **Refusal heuristic (OQ-E).** The first 20 lines of the supplied body are scanned for `^[A-Z][A-Za-z-]+:\s`; if any line matches, `docs new` exits 2 with the message `--body-from content appears to contain a metadata block. Pass body content only — docs new owns the frontmatter.` plus the first five body lines as preview. The conservative regex catches accidental frontmatter dumps; a body line like `Plan: stage one then stage two` will trip the heuristic — pass content only.
 
-Exits 2 on invalid role or invalid slug; 1 on existing file.
+Exits 2 on invalid role, invalid slug, missing `--body-from` path, or a body that trips the metadata-block refusal; 1 on existing file.
 
-### `docs index [DIR]`
+### `docs index [DIR] [--exclude PATTERN]`
 
 Regenerate `INDEX.md` in the docs root.
 
@@ -50,6 +52,7 @@ Regenerate `INDEX.md` in the docs root.
 - Rewrites only the content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` markers.
 - Creates the markers if INDEX.md exists but lacks them; creates the whole file if it doesn't exist.
 - Idempotent: running twice with no changes produces no diff.
+- `--exclude PATTERN` (M8 — F3, repeatable) skips paths matching `PATTERN`. Layered on top of `.docs.toml [exclude]` and a root `.docsignore` — see [Common: exclusion](#common-exclusion) below.
 
 Exits 0 always (warnings printed to stderr; use `docs check` for hard validation).
 
@@ -80,7 +83,7 @@ Move/rename a doc and rewrite every `Related:` reference that points at `<old>` 
 
 Exits 1 on collision (`<new>` exists).
 
-### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json]`
+### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json] [--exclude PATTERN]`
 
 Query view.
 
@@ -104,7 +107,7 @@ Query view.
 
 Exits 0.
 
-### `docs check [DIR] [--stale N] [--json]`
+### `docs check [DIR] [--stale N] [--json] [--exclude PATTERN]`
 
 Validate the tree. Reports (and exits nonzero on) any of:
 
@@ -179,7 +182,7 @@ Exit codes:
 - `2` — refusal (non-identical dest without `--force`; or `--symlink`
   from a wheel install).
 
-### `docs migrate <dir> [--apply] [--json] [--quiet] [--date YYYY-MM-DD] [--config-project NAME]`
+### `docs migrate <dir> [--apply] [--json | --summary] [--only ambiguous] [--group-by role|confidence] [--exclude PATTERN] [--exclude-ext EXTS] [--quiet] [--date YYYY-MM-DD] [--config-project NAME]`
 
 Adopt a non-conforming foreign directory into the convention.
 
@@ -207,7 +210,11 @@ see before it runs.)
   `[vocabulary]`). M7 (OQ5) narrows this: a `.docs.toml`
   containing ONLY a `[migrate]` section is a foreign-tree
   migration sidecar (e.g. `[migrate] project_name = "foo"`) and
-  is read without refusing.
+  is read without refusing. M8 (OQ1) widens the carve-out
+  further: when `[exclude]` is present in the `.docs.toml`, the
+  refusal is waived even alongside the managed markers — the
+  operator's explicit signal "use migrate to triage / re-migrate
+  this managed tree but skip the listed paths".
 - Without `--apply`, `migrate` writes nothing — it prints the plan (human, or
   `--json`) and exits.
 - With `--apply`, `migrate` inserts the inferred metadata block into each file
@@ -225,6 +232,54 @@ see before it runs.)
   project_name = "NAME"` entry in the tree's `.docs.toml`.
   Precedence: CLI `--config-project` > sidecar > inferred-and-
   normalised.
+- `--exclude PATTERN` (M8 — F3, repeatable) skips paths matching
+  `PATTERN`. Layered on top of `.docs.toml [exclude]` and a
+  root `.docsignore` — see [Common: exclusion](#common-exclusion)
+  below.
+- `--exclude-ext EXTS` (M8 — F3, comma-separated) suppresses
+  files with the listed extensions from the non-Markdown
+  sibling footer (and from any exclude-predicate evaluation).
+  Use to silence binaries the operator's already aware of
+  (`--exclude-ext html,xlsx,odt`).
+
+**Triage flags (M8 — F6).** For a directory with > 20 files,
+the default per-file plan scrolls past usefulness. Three flags
+shape the output for rapid triage:
+
+- `--summary` swaps the verbose per-file block for one
+  tabular line per file (`path<60> role<12> conf<8> notes`).
+  Mutually exclusive with `--json` (argparse rejects the
+  combination with `--summary: not allowed with --json`).
+- `--only ambiguous` filters the per-file plan to records
+  with at least one ambiguity. Composes with `--summary` and
+  `--group-by`.
+- `--group-by role` / `--group-by confidence` sorts the
+  per-file plan. `role` groups by Role alphabetically;
+  `confidence` orders `high → medium → low`.
+
+**Plan footer (M8 — F3/F5/F6/F7).** Every dry-run plan
+(default or `--summary` mode) emits a footer block AFTER the
+per-file output, in this order:
+
+1. One line per excluded prefix bucket:
+   `<N> files excluded under <prefix>` (per `[exclude]` /
+   `.docsignore` / `--exclude` match).
+2. One line surfacing non-Markdown root-level siblings (M8
+   F7): `<N> non-Markdown siblings at root not considered:
+   <names>`. Suppressed entirely when the displayed list is
+   empty (after `--exclude-ext` filtering).
+3. Multi-project hints (M7 F5; one line per detected subdir).
+4. The default summary block (four lines, tokens always
+   present so an agent parser can rely on them):
+   ```
+   summary: <N> files; <M> ambiguous (low=<x>, medium=<y>, high=<z>)
+   roles: spec=<n1> plan=<n2> ...
+   confidence: high=<n> medium=<n> low=<n>
+   ambiguities: notes-fallback=<n1> synthesised-h1=<n2> ...
+   ```
+   The four tokens — `summary:`, `roles:`, `confidence:`,
+   `ambiguities:` — are stable and always appear (even on an
+   empty plan: `ambiguities: none` when no file has any).
 
 **Inference rules.** For each file `migrate` infers the four required fields:
 
@@ -372,6 +427,42 @@ and `confidence` widens to a three-level vocabulary:
 Exits 2 when `<dir>` is a managed docs root (`.docs.toml` carries
 `[project]`/`[archive]`/`[vocabulary]`) or does not exist; 0 on
 a successful dry-run or `--apply`.
+
+## Common: exclusion
+
+Four of the verbs (`migrate` / `index` / `check` / `list`) walk
+a tree. M8 (F3) introduces a single layered exclusion surface
+they all consult. The four sources combine **additively** — no
+source replaces another:
+
+1. **`.docs.toml [exclude]`** (persistent, per-tree). Three
+   keys:
+   - `dirs = ["build", "generated", "node_modules"]` —
+     directory-name matches at any depth.
+   - `globs = ["**/*.draft.md"]` — gitignore-flavoured glob
+     patterns.
+   - `exts = ["html", "xlsx"]` — extension matches.
+2. **`.docsignore`** at the tree root (persistent, per-tree;
+   one file only — nested files are NOT consulted, per OQ-B).
+   One pattern per line, gitignore-flavoured syntax (subset):
+   - `# comment` and blank lines are no-ops.
+   - Trailing `/` → directory match.
+   - Leading `/` → root-anchored (no nested match).
+   - `**` → any segments; `*` → any chunk; `?` → one char.
+   - Leading `!` → re-include (last match wins).
+   - Bare pattern (no `/`) → match any path segment at any
+     depth.
+3. **`--exclude PATTERN`** on the CLI (ephemeral, one-off,
+   repeatable). Same glob syntax as `.docsignore`.
+4. **`--exclude-ext EXTS`** on `migrate` (one-off, csv).
+   Extension matches; also suppresses the non-Markdown
+   sibling footer.
+
+The four sources are layered before the walk; an excluded
+path is never read, parsed, or considered for INDEX / check /
+list / migrate output. `migrate`'s plan footer surfaces the
+total excluded count per top-level dir prefix
+(`5 files excluded under build/`).
 
 ## Output conventions
 

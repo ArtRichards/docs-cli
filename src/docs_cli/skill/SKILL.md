@@ -1,6 +1,6 @@
 ---
 name: docs
-description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention. Always run the docs CLI verb (docs new / index / archive / mv / list / touch / check / migrate) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
+description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / check / migrate) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
 ---
 
 # docs — run the verb, never hand-edit
@@ -47,7 +47,7 @@ but easy to misuse — confirm with the user before any verb that writes.
 | Regenerate the index | `docs index` | idempotent; rewrites only the marker block |
 | Archive a finished doc | `docs archive <file>` | `--reason`, `--date`, `--cascade` |
 | Rename or move a doc | `docs mv <old> <new>` | rewrites `Related:` tree-wide |
-| List or query docs | `docs list` | `--status`, `--role`, `--project`, `--stale`, `--json` |
+| List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
 | Bump a doc's `Updated:` | `docs touch <file>` | reindexes |
 | Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors |
 | Adopt a foreign tree | `docs migrate <dir>` | dry-run by default; `--apply` to write |
@@ -58,17 +58,23 @@ but easy to misuse — confirm with the user before any verb that writes.
 full flag and exit-code detail, read
 [`references/cli.md`](references/cli.md) or run `docs <verb> --help`.
 
+**Adopting an existing Markdown directory?** Read
+[references/adoption-playbook.md](references/adoption-playbook.md)
+first — it walks the dry-run → triage → exclude → iterate → apply →
+verify loop end-to-end and points at the starter
+[`references/docs-toml-template.toml`](references/docs-toml-template.toml).
+
 ## Three things never to hand-edit
 
 - **`INDEX.md`** — generated between `<!-- docs:generated -->` markers.
   Run `docs index` to regenerate.
 - **A file's location relative to `archive/`** — never `mv`/`git mv` a
-  file into or out of `archive/<date>/`, and never hand-flip `Status:`
-  to or from `archived`. Run `docs archive` so status and location move
-  together.
-- **A metadata block** — `Status:` / `Role:` / `Project:` / `Updated:` /
-  `Related:`. Use `docs new` to scaffold a new block; `docs touch` to
-  bump the date. Never hand-write or hand-edit.
+  file into or out of `archive/<date>/`, and never hand-flip
+  `Lifecycle:` to or from `archived`. Run `docs archive` so lifecycle
+  and location move together.
+- **A metadata block** — `Lifecycle:` / `Role:` / `Project:` /
+  `Updated:` / `Related:`. Use `docs new` to scaffold a new block;
+  `docs touch` to bump the date. Never hand-write or hand-edit.
 
 ## Reference
 

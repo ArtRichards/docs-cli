@@ -24,9 +24,10 @@ inside the same wheel as package data.
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
 ├── cli.py                               ─ the CLI module (~2.5k lines)
-│   ├── dunder version                   (__version__ = "1.2.0")
+│   ├── dunder version                   (__version__ = "1.3.0")
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
-│   │                   `[migrate]` per-tree overrides (M7)
+│   │                   `[migrate]` per-tree overrides (M7),
+│   │                   `[exclude]` + `.docsignore` (M8)
 │   ├── model         — Doc dataclass; metadata block parser + editors
 │   ├── walker        — directory traversal, filter, archive detection
 │   ├── index         — INDEX.md render with marker-block preservation
@@ -43,7 +44,10 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
     ├── SKILL.md                          (frontmatter + trigger surface)
     └── references/
         ├── convention.md                 (byte-identical mirror)
-        └── cli.md                        (byte-identical mirror)
+        ├── cli.md                        (byte-identical mirror)
+        ├── use-cases.md                  (M5; bundle-only, no `docs/` mirror)
+        ├── adoption-playbook.md          (M8 F8; bundle-only, no mirror)
+        └── docs-toml-template.toml       (M8 F8; bundle-only starter)
 ```
 
 **Sibling artifact: the Claude Code skill.** The Claude Code skill at
@@ -76,18 +80,34 @@ version-controlled here, **ships as package data inside the
   frozenset[str]`, `index_filename`, plus M7's two `[migrate]` per-tree
   overrides: `role_suffixes: dict[str, str]` (custom filename-suffix →
   role mapping) and `project_name: str | None` (per-tree project override,
-  equivalent to the `--config-project NAME` CLI flag).
+  equivalent to the `--config-project NAME` CLI flag), plus M8's four
+  exclude fields: `exclude_dirs: tuple[str, ...]`, `exclude_globs:
+  tuple[str, ...]`, `exclude_exts: tuple[str, ...]` from the `[exclude]`
+  table, and `docsignore_patterns: tuple[str, ...]` carrying the raw
+  line contents of a root-level `.docsignore` file.
 - `load_config(root) -> Config` reads `.docs.toml` (or returns defaults
   when absent). M7: the `[vocabulary] add_statuses` TOML key was renamed
   `add_lifecycles` without a backward-compat alias; the new `[migrate]`
-  section is optional.
+  section is optional. M8: also reads the optional `[exclude]` table
+  and a root-level `.docsignore` file (raw line contents — compilation
+  to regex is deferred to `compile_exclude_predicate`).
 - `validate_lifecycle` / `validate_role` are the two vocab-checks (M7:
   `validate_status` was renamed `validate_lifecycle`).
+- `compile_exclude_predicate(config, cli_excludes=(), cli_exts=()) ->
+  Callable[[str], bool]` (M8 F3) returns a single layered predicate
+  the walker consults. Combines `[exclude]` config, the root
+  `.docsignore` file, and CLI overrides additively. Stdlib-only
+  (`re`; uses an internal `_compile_docsignore_pattern` helper).
 
 ### `walker`
 
-- `walk(root: Path, config: Config) -> Iterator[Doc]` — yields parsed Docs.
-- Skips non-`.md`, hidden files, anything matching ignore patterns in `.docs.toml` (future).
+- `walk(root: Path, config: Config, predicate=None) -> Iterator[Doc]`
+  — yields parsed Docs. M8 (F3) adds the optional `predicate`
+  keyword for layered exclusion (see `config.compile_exclude_predicate`).
+- Skips non-`.md`, hidden files, the root-level `INDEX.md`, and
+  (when `predicate` is set) any path the predicate flags. The
+  sibling `_iter_doc_texts` (lenient counterpart used by `check`,
+  `list`, `migrate`) carries the same `predicate` keyword.
 - Distinguishes active tree from archive subtree (via configured `archive_dir`).
 
 ### `index`

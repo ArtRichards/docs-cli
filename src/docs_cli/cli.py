@@ -22,7 +22,7 @@ CLI as `docs-cli` on PyPI and adds the `install-skill` verb.
 
 from __future__ import annotations
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 import argparse
 import importlib.resources
@@ -3612,6 +3612,13 @@ _SKILL_RELATIVE_FILES: tuple[Path, ...] = (
     Path("SKILL.md"),
     Path("references") / "convention.md",
     Path("references") / "cli.md",
+    # M8 (F8) additions + the M5-era pre-existing use-cases.md that
+    # `install-skill --copy` previously missed (it walked the bundle
+    # via this very tuple, so a file not in the tuple silently shipped
+    # in the wheel but never landed at the host).
+    Path("references") / "use-cases.md",
+    Path("references") / "adoption-playbook.md",
+    Path("references") / "docs-toml-template.toml",
 )
 
 
