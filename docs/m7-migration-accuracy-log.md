@@ -3,7 +3,7 @@
 Status: active
 Role: log
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - child-of: m7-migration-accuracy.md
@@ -450,7 +450,7 @@ shapes — not against an overfit copy of the Trial-2 trees.
 
 ### Phase 4 — Run Tests (RED Baseline)
 
-**Completed:** 2026-05-24
+**Completed:** 2026-05-24 (post-fresh-eyes-review tightening: 2026-05-25)
 
 #### Objective
 
@@ -461,6 +461,8 @@ M6's 271 GREEN baseline + the quality gate.
 
 #### Verbatim pytest output
 
+Initial Phase-4 capture (2026-05-24):
+
 ```text
 $ .venv/bin/python -m pytest tests/ -q --tb=short
 ... (315 items collected) ...
@@ -469,11 +471,31 @@ $ .venv/bin/python -m pytest tests/ -q --tb=short
 
 Captured at `/tmp/m7-phase-4-baseline.txt`.
 
+Post-fresh-eyes-review (2026-05-25): the Step-1 reviewer surfaced
+should-fix tightening (strict-medium pinning per OQ-D, parametric
+expansion of `test_migrate_preserves_freeform_status` across all 4
+status-prose fixtures, new `FileMigration(confidence="medium")`
+constructor anchor, new `docs check` exit-1 medium anchor). Net
+delta: +5 RED tests (3 from parametric expansion, 1 FileMigration
+constructor, 1 `docs check` exit-1 medium anchor). The strict-medium
+assertion tightenings on H1 / section / sibling-defaulting /
+`_v\d+`-strip categories do not add RED count — they replace the
+forward-compatible `(medium, high, True)` sentinel with strict
+`"medium"` checks on the first parametric case (so the existing
+RED-on-role-mismatch still fires first at baseline; the medium
+strictness asserts post-Phase-6).
+
+```text
+$ .venv/bin/python -m pytest tests/ -q --tb=short
+... (320 items collected) ...
+39 failed, 281 passed in 7.44s
+```
+
 #### Per-test attribution table
 
 | Test group | Source file | RED count | GREEN-at-baseline (regression-lock) count | Failure mode → root cause |
 |---|---|---:|---:|---|
-| F0 — `Lifecycle:` rename | `test_lifecycle_rename.py` | 5 | 0 | parser only knows `Status:` today / coerces prose `Status:` to vocab |
+| F0 — `Lifecycle:` rename | `test_lifecycle_rename.py` | 5 (baseline) → 10 (post-review: parametric expansion ×4 prose fixtures + `FileMigration(confidence="medium")` anchor + `docs check` exit-1 medium anchor) | 0 | parser only knows `Status:` today / coerces prose `Status:` to vocab; `FileMigration.__post_init__` rejects `medium`; `docs check` exits 2 on missing required field today |
 | F1 — word-boundary + H1 + section + sibling | `test_inference.py` | 4 | 2 | matcher splits only on `-`/`_`; no H1/section/sibling signals; sibling-not-defaulting cases are correctly NOT defaulting today |
 | F10 — new core vocab + non-role suffix strip | `test_inference.py` | 10 | 0 | `_Implementation` / `_Sketch` / `_Outline` / `_Memo` / `_Brief` / `_Template` / `_Example` not in `_ROLE_SUFFIXES`; `_v\d+` / `_Draft` not stripped |
 | F12 — `_M\d+` milestone suffix | `test_inference.py` | 4 | 1 | `M1` token not in matchers today; `_Log` shape still wins for `_M1_Implementation_Log.md` (regression lock) |
@@ -482,7 +504,7 @@ Captured at `/tmp/m7-phase-4-baseline.txt`.
 | F4 — archive per-file mtime | `test_archive_normalisation.py` | 1 | 3 | `plan_migration` uses single migration-wide `archive_date` for every move today; `archive/`-no-d, `--date` global, already-conformant-no-move are M4 behaviours that remain correct |
 | Confidence-distribution success criterion | `test_migrate.py` | 1 | 0 | snake-medium scores 4/17 = 24% < 0.5 today (RED for the intended reason — inference broadening unimplemented) |
 | F11 — `--config-project` short-circuits normalisation | `test_project_normalisation.py` | (counted above) | 0 | (covered by F11 row above; the assertion shape is two-checks-in-one: argparse accepts the flag AND human output omits "(normalised from")) |
-| **TOTAL** |  | **34** | **10** | — |
+| **TOTAL** |  | **34** (baseline) → **39** (post-review) | **10** | — |
 
 (F11 row counts 6 RED including `test_config_project_cli_override_wins_over_normalisation` and `test_migrate_plan_human_output_shows_normalised_from_when_changed`; the `_omits_normalised_from_when_unchanged` case is one of the 2 regression locks in that row.)
 
@@ -541,15 +563,89 @@ human-output + 1 confidence-distribution.
   the assertion the test was designed to fail. No fixture
   oversight, no import accident, no off-by-one mismatch.
 
+#### Post-review tightening (2026-05-25)
+
+Fresh-eyes reviewer surfaced ALL should-fix and nits across the
+five Step-1 commits (`d91cf41` Phase 1 → `cbf274e` audit fixes).
+NO blockers. Applied 1-3 commits' worth of fixes:
+
+- **Strict-medium pinning (review finding #1).** Per-category
+  `confidence == "medium"` exact assertion (vs the forward-
+  compatible `(medium, high, True)` sentinel) on the
+  sibling-defaulting majority-met test, the H1-content inference
+  test, the section-header pattern test, and the first parametric
+  case of non-role-suffix strip (`MyPlan_v2.md`). New CLI exit-code
+  anchor `test_check_exits_1_on_medium_confidence_inference` pins
+  the OQ-D `medium → warning (exit 1)` contract surface.
+- **F10 new-vocab high-only (review finding #2).** Tightened
+  `test_infer_role_new_core_vocab_roles` to `conf in ("high", True)`
+  — dropped `medium` from the accepted set since OQ-A puts these
+  7 roles in the CORE controlled-role vocab → high confidence.
+- **F12 `_M01` annotation (review finding #3).** Inline parametrize-
+  block comment marking `Foo_M01.md` as the intentional regex-
+  coverage addition (not in milestone task plan line 530's list).
+- **Multi-project below-threshold robustness (review finding #4).**
+  Walk plan output line-by-line, asserting no `hint:`-prefixed
+  line names `small-sub` (replaces the brittle substring-in-stdout
+  check).
+- **`real-trees/README.md` (review finding #5).** Declares the
+  four currently-unwired fixtures (`kebab-tiny`, `snake-large`,
+  `archive-subdir`, `mixed-naming`) as staged for Phase 9 manual
+  dogfooding (`tests/manual/m7_success_criteria.py`, not yet
+  created).
+- **Operator precedence (review finding #6).** Parenthesised the
+  `or`/`and` clause in
+  `test_migrate_preserves_freeform_status_as_migrated_metadata`.
+- **Filter tightening (review finding #7).** Removed redundant
+  `f.rel.endswith(("08.md", "09.md", "10.md"))` clause in
+  `test_sibling_set_defaulting_fires_when_majority_met`; keeps
+  `"no-suffix" in f.rel` only.
+- **Status-prose parametric expansion (review finding #8).**
+  Parametrised `test_migrate_preserves_freeform_status` over all
+  4 fixtures (`freeform-status.md`, `draft-companion.md`,
+  `planning-only.md`, `p0-implemented.md`). +3 RED at baseline.
+- **`FileMigration(confidence="medium")` constructor anchor
+  (review finding #9).** New
+  `test_file_migration_accepts_medium_confidence`. Pins Phase 5
+  validator extension as explicit contract surface; RED today on
+  `__post_init__`'s `("high", "low")` check.
+- **Milestone-doc `architecture` correction (review finding #10).**
+  F10 finding table row for `_Architecture` rewritten — `architecture`
+  is NOT in the core role vocab; needs `add_roles` per-tree opt-in
+  (consistent with the operator rationale that deferred `explainer`).
+  OQ-A Decisions block updated to mark both `explainer` and
+  `architecture` as `add_roles`-only.
+- **Phase-4 expected matrix preamble (review finding #11).**
+  Inline note pointing at this log entry's actuals (34 RED + 10
+  locks baseline; 39 RED + 10 locks post-review). The milestone
+  doc's pre-Phase-2 estimation table is preserved unchanged as
+  historical record.
+
+Post-fix counts:
+
+- 320 tests collected (M6's 271 + 49 M7 new).
+- 39 failed, 281 passed (39 = 34 baseline RED + 3 prose-fixture
+  parametric expansion + 1 FileMigration medium anchor + 1
+  `docs check` exit-1 medium anchor; 281 = M6's 271 + 10
+  regression locks, unchanged from baseline).
+- 0 RED-for-wrong-reason: every failure traces to its intended
+  unimplemented surface (parser-only-knows-`Status`,
+  `__post_init__` rejects `medium`, missing-field-is-error not
+  medium-warning, no broadened inference, no normalisation, no
+  multi-project hint, argparse rejects `--config-project`).
+- Quality gate: `ruff check`, `ruff format --check`, `mypy`,
+  `docs check docs/` all exit 0.
+
 #### Exit criteria
 
 - [x] Verbatim pytest output captured at
       `/tmp/m7-phase-4-baseline.txt`.
 - [x] 271 M6 tests still GREEN.
 - [x] 10 new GREEN-at-baseline regression locks.
-- [x] 34 RED tests, every one for an intended unimplemented
-      surface (per-test attribution table above).
-- [x] No RED-for-wrong-reason in the baseline.
+- [x] 34 RED tests at baseline; 39 RED post-review-tightening
+      (per-test attribution table above), every one for an
+      intended unimplemented surface.
+- [x] No RED-for-wrong-reason in the baseline or post-tightening.
 - [x] `ruff check`, `ruff format --check`, `mypy`,
       `docs check docs/` all exit 0.
 - [x] Phase 2 / 3 / 4 rows in the TDD Phase Progress table

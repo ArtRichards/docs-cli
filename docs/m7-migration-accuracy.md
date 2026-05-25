@@ -3,7 +3,7 @@
 Status: active
 Role: milestone
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - parent-of: m7-migration-accuracy-log.md
@@ -214,7 +214,7 @@ snake_case files in Trial 2:
 | `_Constraints` | 5 | role `reference` |
 | `_Handoff` | 5 | role `notes` at medium |
 | `_Outline` | 4 | role `plan` at medium |
-| `_Architecture` | 3 | role `reference` (architecture is already a known role) |
+| `_Architecture` | 3 | domain-specific — needs `add_roles` per-tree opt-in (`architecture` is NOT in the core role vocab; explainer-style roles deferred per operator rationale) |
 | `_Decision_Tree` | 2 | role `decision` at medium |
 
 **M7 proposes:**
@@ -397,9 +397,12 @@ Add to **core controlled-role vocab**: `template`, `example`,
 `implementation`, `sketch`, `outline`, `memo`, `brief`. These are
 common across multiple unrelated trees in Trial 2 (the largest
 group, `_Implementation`, accounted for 54 of 367 snake_case
-files — 15%). Leave `explainer` to `[vocabulary] add_roles` (more
-niche; appeared in only one tree). Convention.md gets a single
-sentence per new role in the role-vocabulary section.
+files — 15%). Leave `explainer` AND `architecture` to
+`[vocabulary] add_roles` per-tree opt-in (both more niche; explainer
+appeared in only one tree, `_Architecture` in three but consistent
+with the operator rationale for keeping explainer-style /
+descriptive roles out of the core vocab). Convention.md gets a
+single sentence per new core role in the role-vocabulary section.
 
 ### OQ-B resolved — Project-name normalisation for digit-glued names
 
@@ -635,7 +638,12 @@ inference work touches the parser.
   .venv/bin/mypy
   .venv/bin/docs check docs/
   ```
-- **Expected RED matrix:**
+- **Expected RED matrix** (planning-time estimation; see the
+  Phase-4 log entry for the tightened actuals — 34 RED + 10
+  GREEN regression locks after parametric expansion and the
+  Phase-1-4-review-fix strict-medium tightening; ~27 below was
+  the pre-Phase-2 planning-time estimate, preserved unchanged
+  as the historical record):
 
   | Test group | Failure mode | Root cause |
   |---|---|---|

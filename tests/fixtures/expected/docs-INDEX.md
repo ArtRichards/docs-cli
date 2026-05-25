@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-24. 29 docs active, 0 archived._
+_Generated 2026-05-25. 29 docs active, 0 archived._
 
 ## Project — docs
 
@@ -28,8 +28,8 @@ _Generated 2026-05-24. 29 docs active, 0 archived._
 
 ### Active — Milestone
 
+- [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
 - [m6-pypi-distribution.md](m6-pypi-distribution.md) — _milestone_ — > **Scope reframe 2026-05-24 (operator decision).** M6 is now > **preparation only** — the milestone delivered the…. Updated 2026-05-24.
-- [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-24.
 - [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-24.
 - [m9-pypi-publish.md](m9-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-24, post M6 scope reframe.** M9 enters > active state once M8 ships. The operative checklist…. Updated 2026-05-24.
 - [m5-claude-code-skill.md](m5-claude-code-skill.md) — _milestone_ — - Milestone: M5 - Title: Claude Code skill - Surface: a Claude Code **skill** — a `SKILL.md` artifact (plus, if needed,…. Updated 2026-05-23.
@@ -40,7 +40,7 @@ _Generated 2026-05-24. 29 docs active, 0 archived._
 
 ### Active — Log
 
-- [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-24.
+- [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
 - [m8-adoption-workflow-log.md](m8-adoption-workflow-log.md) — _log_ — - Project: docs - Milestone: M8 — Adoption workflow (agent-driveable) - Started: 2026-05-24 - Progress:…. Updated 2026-05-24.
 - [m9-pypi-publish-log.md](m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries get appended as the operator walks [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-24.
 - [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: **M5 complete — shipped…. Updated 2026-05-23.
