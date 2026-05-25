@@ -1,0 +1,8 @@
+# Comment line; should be ignored
+
+*.tmp
+data/
+/specific.md
+**/build/**
+*.md
+!keep-me.md
