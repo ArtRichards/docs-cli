@@ -363,12 +363,11 @@ public PyPI release ships as v1.3.0 batched with M6 + M8 at
 the M9 milestone per the operator OQ-C split.
 
 **M8 shipped locally as 1.3.0** (2026-05-25). All 10 TDD
-phases complete; Phase 9 PASSED with the same-instance dogfood
-substitution caveat (the agent-spawning tool the plan
-specified is not available in this execution environment —
-see the Phase 9 log entry for the trade-off; **OPERATOR REVIEW
-POINT** on whether the same-instance pass suffices or whether
-a fresh-subagent re-run is needed). Surface delivered: F3
+phases complete; Phase 9 fresh-subagent gate **PASSED 3/3
+unattended** on real fresh Opus subagents (operator-directed
+re-run after the implementation agent's same-instance dogfood
+substitution; both stages documented in the Phase 9 log).
+Surface delivered: F3
 (tree-wide `--exclude` + `[exclude]` + `.docsignore`), F6
 (triage flags + default footer summary), F7 (non-md sibling
 surfacing), F8 (substantial skill rewrite + adoption playbook

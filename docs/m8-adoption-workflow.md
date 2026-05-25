@@ -1016,8 +1016,9 @@ integration gate. M8 doesn't ship until it passes.
 - [x] Phase 6 — Implement Core
 - [x] Phase 7 — Update Wrappers
 - [x] Phase 8 — Run Tests (GREEN)
-- [x] Phase 9 — Integrate (FRESH-SUBAGENT GATE) — with caveat
-      (same-instance dogfood substitution; see Phase 9 log)
+- [x] Phase 9 — Integrate (FRESH-SUBAGENT GATE) — verified
+      (stage 1 same-instance dogfood + stage 2 real fresh
+      Opus subagents 3/3 PASS unattended; see Phase 9 log)
 - [x] Phase 10 — Quality, Docs, Refactor
 
 ## Trial-run artefacts (shared with M7)
@@ -1085,18 +1086,25 @@ clean: ruff / ruff-format / mypy / `docs check docs/` / `docs
 index --dry-run` / `python -m build` / `twine check` all exit
 0.
 
-**Fresh-subagent gate (Phase 9):** **3/3 PASS — but as a
-same-instance dogfood pass rather than fresh subagents (the
-agent-spawning tool the plan specified is not available in
-this execution environment).** Run 1 (kebab-tiny, 3 files)
-failed on the first pass and surfaced a real playbook bug
-(Step 3 / Step 5 / Step 6 ordering); iterated the playbook
-and re-ran cleanly. Run 2 (snake-medium, 17 files) and Run 3
-(snake-large, 72 files) passed unattended. Adopted state
-committed to `tests/fixtures/trees/real-trees-adopted/
-{kebab-tiny,snake-medium,snake-large}/`. **OPERATOR REVIEW
-POINT** — the same-instance vs fresh-subagent distinction is
-documented in detail in the Phase 9 log entry.
+**Fresh-subagent gate (Phase 9):** **3/3 PASS unattended on
+real fresh Opus subagents** (operator-directed re-run,
+2026-05-25). The gate ran in two stages: stage 1 was a
+same-instance dogfood pass (the implementation agent
+couldn't nest Agent tool calls) which surfaced and fixed a
+real playbook bug in Step 3 / Step 5 / Step 6 ordering;
+stage 2 spawned three fresh Opus subagents via the
+conductor's Agent tool, each given a minimal "adopt this
+directory" prompt with explicit `/tmp` paths and instructed
+to read SKILL.md from the explicit path (not host
+auto-discovery). All three (kebab-tiny commit `8d80627`;
+snake-medium `eb62d9d`; snake-large `ba09da9`) completed the
+adoption loop end-to-end without operator intervention and
+without further playbook iterations. Adopted state captured
+to `tests/fixtures/trees/real-trees-adopted/
+{kebab-tiny,snake-medium,snake-large}/`. Minor playbook
+polish opportunities surfaced (`--quiet` semantics, INDEX
+ordering wording, project-name inference source) — recorded
+as follow-ons; non-blocking.
 
 **Ship surface:** Local artefacts in `dist/`
 (`docs_cli-1.3.0-py3-none-any.whl` +
@@ -1106,9 +1114,12 @@ PyPI publish is M9's scope.
 
 **Open follow-ons:**
 
-- The true fresh-subagent Phase 9 verification (if the
-  operator chooses option 2 from the Phase 9 log's OPERATOR
-  REVIEW POINT).
+- Playbook polish from the stage-2 friction items: wire
+  `--quiet` to actually quiet `--apply` per-file output, or
+  update the playbook example to set expectations; tighten
+  Step 5 → Step 6 INDEX ordering wording; mention that the
+  inferred project name can come from filename prefix, not
+  only directory basename.
 - Auto-`--propose-excludes` heuristic (OQ-A); the playbook
   steps the operator through hand-authoring `[exclude]`
   today, but a future enhancement could surface candidate
