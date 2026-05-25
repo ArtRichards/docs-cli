@@ -1,6 +1,6 @@
 """Unit tests for the M4 migration inference + planning helpers (Phase 2, RED).
 
-Targets: `infer_role`, `infer_project`, `infer_status`, `infer_updated`,
+Targets: `infer_role`, `infer_project`, `infer_lifecycle`, `infer_updated`,
 `detect_archive_layout`, `insert_metadata_block`, and `plan_migration`. The
 pure-inference tests use inline data; `plan_migration` runs against the
 `foreign/` fixture tree (Phase 3).
@@ -24,9 +24,9 @@ from docs import (
     apply_migration,
     check_doc,
     detect_archive_layout,
+    infer_lifecycle,
     infer_project,
     infer_role,
-    infer_status,
     infer_updated,
     insert_metadata_block,
     load_config,
@@ -146,41 +146,41 @@ def test_infer_project_single_file():
     assert isinstance(result, str) and result
 
 
-# --- infer_status ----------------------------------------------------------
+# --- infer_lifecycle -------------------------------------------------------
 
 
-def test_infer_status_in_file_status_wins():
+def test_infer_lifecycle_in_file_lifecycle_wins():
     # M7 (F0): the controlled-vocab key in `metadata` is now `Lifecycle:`.
-    status, confident = infer_status({"Lifecycle": "blocked"}, in_archive=False)
-    assert status == "blocked"
+    lifecycle, confident = infer_lifecycle({"Lifecycle": "blocked"}, in_archive=False)
+    assert lifecycle == "blocked"
     assert confident is True
 
 
-def test_infer_status_archive_membership_defaults_to_archived():
-    status, confident = infer_status({}, in_archive=True)
-    assert status == "archived"
+def test_infer_lifecycle_archive_membership_defaults_to_archived():
+    lifecycle, confident = infer_lifecycle({}, in_archive=True)
+    assert lifecycle == "archived"
 
 
-def test_infer_status_default_active_in_active_tree():
-    status, _ = infer_status({}, in_archive=False)
-    assert status == "active"
+def test_infer_lifecycle_default_active_in_active_tree():
+    lifecycle, _ = infer_lifecycle({}, in_archive=False)
+    assert lifecycle == "active"
 
 
-def test_infer_status_out_of_vocab_in_file_value_rejected():
+def test_infer_lifecycle_out_of_vocab_in_file_value_rejected():
     # "wip" is not a built-in lifecycle — it must not leak through.
-    status, confident = infer_status({"Lifecycle": "wip"}, in_archive=False)
-    assert status in BUILTIN_STATUSES
-    assert status != "wip"
+    lifecycle, confident = infer_lifecycle({"Lifecycle": "wip"}, in_archive=False)
+    assert lifecycle in BUILTIN_STATUSES
+    assert lifecycle != "wip"
 
 
-def test_infer_status_always_returns_a_builtin_status():
+def test_infer_lifecycle_always_returns_a_builtin_lifecycle():
     for meta, in_arch in (
         ({}, False),
         ({}, True),
         ({"Lifecycle": "nonsense"}, False),
     ):
-        status, _ = infer_status(meta, in_archive=in_arch)
-        assert status in BUILTIN_STATUSES
+        lifecycle, _ = infer_lifecycle(meta, in_archive=in_arch)
+        assert lifecycle in BUILTIN_STATUSES
 
 
 # --- infer_updated ---------------------------------------------------------

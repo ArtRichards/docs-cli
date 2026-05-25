@@ -188,10 +188,9 @@ the marker block and the derived content.
     boundaries (`FooBar`), letter↔digit (`Abc5Mig`), underscores;
     lowercases; trims; collapses repeats. Preserves digit-after-digit so
     `2026-01-26` survives intact.
-  - `infer_status(metadata, in_archive) -> (lifecycle, confident)` —
-    in-file `Lifecycle:` line (M7-renamed; function name preserved at
-    Phase 5 — Phase 10 simplify candidate), else `archived` (in an
-    archive subdir) or `active`.
+  - `infer_lifecycle(metadata, in_archive) -> (lifecycle, confident)` —
+    in-file `Lifecycle:` line, else `archived` (in an archive subdir)
+    or `active`. (Renamed from `infer_status` at M7 Phase 10 simplify.)
   - `infer_updated(metadata, mtime, date_format) -> (updated, confident)` —
     in-file `Updated:` line, else the file mtime.
   - `detect_archive_layout(rel_path, archive_date) -> str | None` — maps a

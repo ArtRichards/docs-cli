@@ -1512,21 +1512,18 @@ def normalise_project_name(name: str) -> str:
     return s
 
 
-def infer_status(
+def infer_lifecycle(
     metadata: Mapping[str, str | tuple[str, ...]], in_archive: bool
 ) -> tuple[str, bool]:
     """Infer a doc's `Lifecycle:` from in-file metadata or its archive membership.
 
-    Despite the legacy name (kept to avoid a function rename ripple — Phase 10
-    simplify candidate), this helper produces the controlled-vocab
-    ``Lifecycle:`` value M7's F0 rename introduced. An in-file ``Lifecycle:``
-    line wins when it carries a built-in lifecycle value (see
-    `BUILTIN_STATUSES`) — confident. Otherwise the value defaults to
-    ``archived`` when ``in_archive`` is True, ``active`` when it is False — a
-    confident default for the archive case, a best-effort default for the
-    active case. An in-file ``Lifecycle:`` value outside the vocabulary is
-    rejected and the default is used instead. A free-form ``Status:`` prose
-    line carries no controlled-vocab signal and is ignored here (it is
+    An in-file ``Lifecycle:`` line wins when it carries a built-in lifecycle
+    value (see `BUILTIN_STATUSES`) — confident. Otherwise the value defaults
+    to ``archived`` when ``in_archive`` is True, ``active`` when it is False
+    — a confident default for the archive case, a best-effort default for
+    the active case. An in-file ``Lifecycle:`` value outside the vocabulary
+    is rejected and the default is used instead. A free-form ``Status:``
+    prose line carries no controlled-vocab signal and is ignored here (it is
     preserved as an extra field by `insert_metadata_block`).
 
     Args:
@@ -1926,7 +1923,7 @@ def plan_migration(
 
     Recurses the whole tree via `_iter_doc_texts` (with a default `Config`),
     inspects every ``.md`` file, and assembles a `FileMigration` per file:
-    runs `infer_role` / `infer_project` / `infer_status` / `infer_updated`,
+    runs `infer_role` / `infer_project` / `infer_lifecycle` / `infer_updated`,
     flags every ambiguity, sets ``confidence``, and calls
     `detect_archive_layout` to plan any archive-normalising move. The
     active-tree directory layout is left untouched — only files under
@@ -2003,7 +2000,7 @@ def plan_migration(
         reconciled_metadata = bool(metadata)
 
         role, role_conf = infer_role(path.name, metadata, config)
-        status, _status_conf = infer_status(metadata, in_archive)
+        lifecycle, _lifecycle_conf = infer_lifecycle(metadata, in_archive)
         updated, _updated_conf = infer_updated(metadata, path.stat().st_mtime, config.date_format)
 
         # F4: when --date is not set, the archive-move date comes per-file
@@ -2020,7 +2017,7 @@ def plan_migration(
         # Ambiguity-flagging rule (resolved Q1): flag for exactly three
         # sources — a `notes` role fallback, a synthesised H1, and an
         # out-of-vocab in-file `Lifecycle:` that had to be substituted. The
-        # plain active-tree status default and the mtime-derived `Updated:`
+        # plain active-tree lifecycle default and the mtime-derived `Updated:`
         # fallback are expected best-effort defaults and are NOT flagged.
         # Preserving extra metadata fields is deterministic and lossless, so
         # it is NOT an ambiguity; an archive-move collision IS — that
@@ -2041,7 +2038,7 @@ def plan_migration(
         if isinstance(in_file_lifecycle, str) and in_file_lifecycle.strip() not in BUILTIN_STATUSES:
             ambiguities.append(
                 f"In-file Lifecycle: {in_file_lifecycle.strip()!r} is out of vocabulary "
-                f"— substituted with built-in {status!r}."
+                f"— substituted with built-in {lifecycle!r}."
             )
 
         if ambiguities:
@@ -2056,7 +2053,7 @@ def plan_migration(
                 rel=rel,
                 role=role,
                 project=project,
-                lifecycle=status,
+                lifecycle=lifecycle,
                 updated=updated,
                 synthesized_h1=synthesized_h1,
                 reconciled_metadata=reconciled_metadata,
