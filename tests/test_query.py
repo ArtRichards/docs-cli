@@ -36,7 +36,7 @@ def test_query_no_filters_returns_all_docs(fixtures_dir):
     assert len(docs) == 9
 
 
-def test_query_filter_by_status(fixtures_dir):
+def test_query_filter_by_lifecycle(fixtures_dir):
     docs = _q(fixtures_dir, lifecycle="active")
     assert docs
     assert all(d.lifecycle == "active" for d in docs)

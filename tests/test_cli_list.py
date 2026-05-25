@@ -43,7 +43,7 @@ def test_list_exits_0(docs_script, fixtures_dir):
     assert proc.returncode == 0
 
 
-def test_list_filter_by_status(docs_script, fixtures_dir):
+def test_list_filter_by_lifecycle(docs_script, fixtures_dir):
     proc = _run(
         docs_script, "list", "--root", _multi(fixtures_dir), "--lifecycle", "draft", "--json"
     )

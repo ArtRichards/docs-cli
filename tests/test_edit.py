@@ -60,7 +60,7 @@ def test_set_metadata_field_preserves_every_other_line():
     assert diffs == [("Updated: 2026-05-20", "Updated: 2026-05-21")]
 
 
-def test_set_metadata_field_replaces_status_without_disturbing_related():
+def test_set_metadata_field_replaces_lifecycle_without_disturbing_related():
     out = set_metadata_field(WELL_FORMED, "Lifecycle", "archived")
     assert "Lifecycle: archived" in out
     assert "Lifecycle: active" not in out

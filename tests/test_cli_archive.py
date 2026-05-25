@@ -58,7 +58,7 @@ def test_archive_removes_the_original(docs_script, fixtures_dir, tmp_path):
     assert not (root / "lone-doc.md").exists()
 
 
-def test_archive_sets_status_archived(docs_script, fixtures_dir, tmp_path):
+def test_archive_sets_lifecycle_archived(docs_script, fixtures_dir, tmp_path):
     root = _minimal_tree(fixtures_dir, tmp_path)
     proc = _run(docs_script, "archive", str(root / "lone-doc.md"))
     assert proc.returncode == 0, proc.stderr
