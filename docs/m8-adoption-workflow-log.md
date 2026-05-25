@@ -114,7 +114,7 @@ M8 ships as 1.3.0 after M7.
 | 6. Implement Offline/Core Path | Complete | 2026-05-25 | `plan_migration` gained `cli_excludes` / `cli_exclude_exts` kwargs + the predicate wire-up; excluded files counted + bucketed by top-level prefix; `MigrationPlan` populated with the three new fields. `_print_migration_plan` gained `mode` / `only` / `group_by` kwargs — `--summary` emits one tabular line per file; `--only ambiguous` filters; `--group-by role/confidence` sorts. Footer (after per-file block per OQ3): excluded counts → non-md siblings → multi-project hints → default summary (`summary:` / `roles:` / `confidence:` / `ambiguities:`). `_cmd_new` handles `--body-from` (file or `-`/stdin) with OQ-E refusal scanning the first 20 lines for `^[A-Z][A-Za-z-]+:\s` — validation runs BEFORE the dry-run check per OQ4. `_cmd_migrate` carve-out widened: `[exclude]` in `.docs.toml` waives the managed-marker refusal even alongside `[project]/[archive]/[vocabulary]` (the operator's explicit signal "use migrate to triage this managed tree"). 364 GREEN / 5 RED — all 5 remaining REDs are F8 skill-content (Phase 7). |
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Complete | 2026-05-25 | SKILL.md: appended 4 adoption triggers to description (1024-char ceiling OK); added one-line pointer block (`**Adopting an existing Markdown directory?** Read [references/adoption-playbook.md]`); also swept M7 misses (`docs list --status` → `--lifecycle`; "hand-flip `Status:`" → "hand-flip `Lifecycle:`"; metadata-block `Status:` → `Lifecycle:`). New `references/adoption-playbook.md` (343 lines; six required H2s + worked example + pitfalls; frontmatter Lifecycle/Role/Project/Updated/Related). New `references/docs-toml-template.toml` (~90 lines; `[exclude]` + `[migrate]` + `[vocabulary]` + `[project]` + `[archive]`; every example commented). `_SKILL_RELATIVE_FILES` extended with `use-cases.md` (pre-existing packaging gap) + the 2 new files. `pyproject.toml` + `cli.py __version__`: 1.2.0 → 1.3.0. `tests/test_packaging.py` version pins bumped (3 spots) + the two helper-function names refreshed for clarity. docs/cli.md: synopses extended for `new` (`--body-from`) + `index` / `check` / `list` (`--exclude`) + `migrate` (full new surface); + "Triage flags (M8)" + "Plan footer (M8)" subsections + a new "Common: exclusion" top-level section. docs/convention.md: new `## Exclusion` section after Subdirectories + one-paragraph M8 F7 note on the Non-Markdown section. docs/architecture.md: bumped version comment to 1.3.0; layout sketch extended with use-cases / adoption-playbook / docs-toml-template; Config + walker sections extended with the M8 fields + predicate. README.md: Adoption section (5 lines) after Install; Commands list extended; Status section adds M8 row + bumps publish-strategy framing. CHANGELOG.md: new `## 1.3.0 — UNRELEASED` block (Added / Changed / Notes). Lockstep resync of skill references after `docs touch`. Quality gate clean; **all 369 GREEN — F8 RED tests flipped to GREEN.** |
 | 8. Run Tests (GREEN) | Complete | 2026-05-25 | **369/369 GREEN** (45 new M8 items + 324 M7-baseline). Quality gate: ruff `All checks passed`; ruff format `33 files already formatted`; mypy `Success: no issues found in 34 source files`; `docs check docs/` `no violations found`; `docs index --dry-run` no diff. `python -m build` produced `docs_cli-1.3.0-py3-none-any.whl` + `docs_cli-1.3.0.tar.gz`; twine check `PASSED` on both. `docs --version` reports `docs 1.3.0`. Verbatim capture: `/tmp/m8-phase-8-green.txt`. |
-| 9. Implement Online/Integration — **FRESH-SUBAGENT GATE** | Pending | — | **Load-bearing.** Spawn 3 fresh Opus subagents, no prior context, with the bundled skill installed (`docs install-skill`). Each gets a different M7 fixture and the prompt "adopt this directory; commit the result". Pass: ≥ 2 of 3 complete the full loop unattended. Third may escalate ONE playbook-flagged OQ. Stall = skill bug; iterate F8 / F9 / playbook / SKILL.md and re-run. Each run logged with transcript summary + pass/fail + iteration history. |
+| 9. Implement Online/Integration — **FRESH-SUBAGENT GATE** | Complete (with caveat — see Phase 9 log) | 2026-05-25 | **3/3 PASS — but as a same-instance dogfood pass rather than fresh subagents** (the agent-spawning tool the plan specified is not available in this execution environment). All three fixtures adopted end-to-end against the freshly-built 1.3.0 wheel + freshly-installed skill at `/tmp/m8-gate-N/skill/`. Run 1 (kebab-tiny) initially failed on the original playbook's Step 3 ordering — surfaced a real playbook bug; iterated the playbook to make the Step 3 / Step 5 / Step 6 ordering explicit and re-ran cleanly. Run 2 (snake-medium, 17 files) and Run 3 (snake-large, 72 files) PASS unattended. Adopted state committed to `tests/fixtures/trees/real-trees-adopted/{kebab-tiny,snake-medium,snake-large}/`; sanitisation grep zero hits. **OPERATOR REVIEW POINT — see Phase 9 log for the fresh-vs-same-instance trade-off.** |
 | 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M8 → Complete; CHANGELOG dated; `v1.3.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6/M7; `gh release create v1.3.0`. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-24)
@@ -1037,3 +1037,199 @@ docs_cli-1.3.0.tar.gz
 - [x] `docs --version` reports `docs 1.3.0`.
 - [x] Verbatim capture written to `/tmp/m8-phase-8-green.txt`
       for the Phase 9 conductor.
+
+### Phase 9 — Fresh-subagent integration gate
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Validate that the adoption workflow is agent-driveable
+end-to-end against the M7 fixtures the M8 author did not
+specifically tune for. The pass criterion (per OQ-G): ≥ 2 of
+3 fresh Opus subagents complete the loop unattended.
+
+#### **OPERATOR REVIEW POINT — same-instance dogfood substitution**
+
+**The agent-spawning tool the plan specified
+(`subagent_type: general-purpose, model: opus` via the Agent
+tool) is NOT available in this execution environment.** The
+prompt's own escalation paragraph admits as much
+("`SendMessage` is unavailable"). The Phase 9 gate as
+literally specified — three independent fresh subagents
+driving the adoption playbook in parallel — cannot run.
+
+The substitution this conductor made: **a same-instance
+dogfood pass** against each fixture, running every step the
+fresh subagent would run, against the freshly-built 1.3.0
+wheel + freshly-installed skill at isolated `/tmp/m8-gate-N/`
+paths. The mechanics are tested faithfully (every command, every
+exit code, every adopted-file content). What is NOT tested is
+the load-bearing property the plan calls out: that a model
+with NO prior context (i.e. no recall of having authored the
+playbook) can follow the playbook unaided. The author of the
+playbook is also the conductor of the pass; the conductor's
+familiarity with the surface biases the run.
+
+**Operator action requested.** Decide whether to:
+
+1. Accept the same-instance dogfood pass as a partial
+   verification + ship M8 as 1.3.0 (locally, per OQ-C —
+   publish is M9 anyway).
+2. Re-run the true Phase 9 gate in a follow-up turn /
+   session where the Agent tool is available (the
+   `m8/phases-5-10` branch carries the test suite, the
+   built wheel, and the iterated playbook ready to drive a
+   real fresh-subagent run).
+3. Defer the verdict — ship 1.3.0 locally on the strength of
+   the same-instance pass; flag the true fresh-subagent
+   verification as a follow-on item for M9 or a dedicated
+   `m8/phase-9-followup` branch.
+
+The recommendation from this conductor is **option 1** — the
+substantive playbook bug surfaced (the Step 3/5/6 ordering)
+was found by the same-instance pass, and the iterated
+playbook now anticipates it. A true fresh subagent might
+surface additional issues, but the load-bearing path
+(install-skill → migrate → triage → apply → check) is
+mechanically verified end-to-end.
+
+#### Per-run log
+
+##### Run 1 — kebab-tiny (3 files)
+
+**Workspace:** `/tmp/m8-gate-1/{venv,skill,work}/`
+**Wheel:** `dist/docs_cli-1.3.0-py3-none-any.whl` (built at
+Phase 8; rebuilt mid-Phase-9 after the playbook iteration).
+**Skill:** materialised via `docs install-skill --dest
+/tmp/m8-gate-1/skill/`. Verified all 5 expected files
+present: `SKILL.md`, `references/{convention,cli,use-cases,
+adoption-playbook,docs-toml-template}.{md,toml}`.
+
+**Outcome:** PASS after one playbook iteration. Two passes:
+
+*Pass 1 (FAIL — playbook gap surfaced).* Followed the
+playbook as authored: Step 1 dry-run summary → Step 3 wrote
+`.docs.toml` with `[project] name = "foo-bar"` → Step 5
+`--apply` REFUSED with `docs: <tree> is already a docs root
+(.docs.toml has ['project']) — migrate is for foreign trees`.
+Root cause: the M8 (OQ1) carve-out waives the managed-marker
+refusal only when `[exclude]` is also present in the
+`.docs.toml`; for trees that need no persistent excludes
+(kebab-tiny), the playbook's Step 3 "write `.docs.toml`
+before `--apply`" advice is wrong.
+
+*Iteration applied.* Edited
+`src/docs_cli/skill/references/adoption-playbook.md`:
+- Rewrote Step 3 with an "IMPORTANT ordering note" block
+  spelling out the three patterns (no persistent
+  excludes → defer .docs.toml to after --apply; persistent
+  excludes → write `.docs.toml` with ONLY `[exclude]`/
+  `[migrate]` and run --apply; one-off excludes → use CLI
+  flags only, no `.docs.toml` here at all).
+- Extended Step 5's heading + body to call out the carve-out
+  refusal explicitly with the exact error string.
+- Renamed Step 6 to "Verify (`docs check <dir>` exit 0;
+  write final `.docs.toml`; commit)" and added a code
+  example for the post-`--apply` `.docs.toml` authoring.
+
+Rebuilt the wheel + reinstalled the skill into all three
+`/tmp/m8-gate-N/` workspaces with `install-skill --force`.
+
+*Pass 2 (PASS).* Reset gate-1 to baseline; re-ran with the
+corrected playbook order: dry-run → `--apply` → write
+`.docs.toml` → check → commit. `docs check` exit 0. Commit
+sha `6d8decaaab37e408e240eaf61f3a3bfcb3e57187`.
+
+##### Run 2 — snake-medium (17 files)
+
+**Outcome:** PASS unattended. 17 files; 2 ambiguous (both
+notes-fallback on `Foo_Architecture.md` /
+`Foo_Strategy_v2.md` — the documented intentional
+fallback per the playbook's Pitfalls section). No
+exclude config needed. Apply → write `[project] name =
+"foo"` → check exit 0 → commit
+`a78e18fecdd711476eef241ef9a2225f7544651d`.
+
+The footer also surfaced the project-name normalisation
+hint `project: foo (normalised from "Foo")` at the top
+of the plan output — consistent with the playbook
+pitfall's mention of F11 normalisation. The operator's
+written `[project] name = "foo"` matches the inferred
+value; no follow-up `--config-project` override needed.
+
+##### Run 3 — snake-large (72 files)
+
+**Outcome:** PASS unattended. 72 files; 6 ambiguous (all
+notes-fallback — documented intentional pattern). 19
+spec files (`Foo_Component_*_Spec.md`); 21 plan files;
+10 milestone + 10 implementation files. The triage
+summary read cleanly via `--summary --only ambiguous`
+(6 lines, all intentional). No exclude config needed
+(no build/generated dirs in the fixture). Apply → write
+`[project]` → check exit 0 → commit
+`c4c2d8c880107ce6d3cc4547aa3ff6d0c21187a1`.
+
+#### Adopted-state capture
+
+Copied each `/tmp/m8-gate-N/work/tree/` content (minus
+`.git/`) into
+`tests/fixtures/trees/real-trees-adopted/{kebab-tiny,
+snake-medium,snake-large}/`. Each adopted fixture verified
+locally via the in-tree CLI (`.venv/bin/docs check
+<path>`) exit 0.
+
+**Sanitisation grep** (mirroring M7 log line 405 pattern):
+```
+grep -ril -E 'truck.?tech|trucktech|bit.?holders' \
+    tests/fixtures/trees/real-trees-adopted/
+```
+Zero hits — the fixtures inherit M7's sanitisation; the
+adoption-time edits are confined to metadata blocks
+(`Lifecycle: active`, `Role: ...`, `Project: foo`/`foo-bar`,
+`Updated: 2026-05-25`).
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `src/docs_cli/skill/references/adoption-playbook.md` | Modify | Step 3 rewritten with the IMPORTANT-ordering-note block; Step 5 extended with the carve-out refusal explainer; Step 6 extended with the post-`--apply` `.docs.toml` authoring example. |
+| `tests/fixtures/trees/real-trees-adopted/kebab-tiny/` | Create | 3 .md + `.docs.toml` — adopted state from Run 1 (pass 2). |
+| `tests/fixtures/trees/real-trees-adopted/snake-medium/` | Create | 17 .md + `.docs.toml` — adopted state from Run 2. |
+| `tests/fixtures/trees/real-trees-adopted/snake-large/` | Create | 72 .md + `.docs.toml` — adopted state from Run 3. |
+| `dist/docs_cli-1.3.0-{whl,tar.gz}` | Rebuild | Rebuilt mid-Phase-9 after the playbook iteration so the `/tmp/m8-gate-N/` workspaces consumed the updated content. NOT committed (`dist/` is gitignored). |
+
+#### Issues / decisions
+
+- **Operator-review point above.** The same-instance vs
+  fresh-subagent substitution is the load-bearing call.
+- **Playbook bug surfaced (Step 3/5/6 ordering).** Real bug,
+  caught by the dogfood pass, iterated and re-verified.
+  Mirrors the spec's intent: "if a subagent stalls on
+  something the playbook doesn't anticipate, that's a fail
+  — iterate."
+- **Pre-existing `--quiet` interaction.** `migrate --apply
+  --quiet` still prints the human plan to stdout — `--quiet`
+  only suppresses the success message on stderr. Not a bug
+  (the JSON or summary modes are explicit), but worth
+  noting; the adoption playbook's Step 5 example matches the
+  observed behaviour.
+- **`MigrationPlan.suppressed_exts` ordering preservation.**
+  `--exclude-ext` values are normalised lowercase + stripped
+  of `.`; the predicate uses the same lookup. Verified
+  working in Phase 6; no Phase 9 issue.
+
+#### Exit criteria
+
+- [x] 3/3 fixtures adopted; `docs check <fixture>` exit 0
+      on each.
+- [x] Adopted state committed to
+      `tests/fixtures/trees/real-trees-adopted/<tree>/`.
+- [x] Sanitisation grep zero hits.
+- [x] Playbook iteration applied + documented; rebuilt wheel
+      + reinstalled skill mid-phase.
+- [/] **PARTIAL — operator review point.** The fresh-subagent
+      property cannot be verified in this execution
+      environment; the same-instance dogfood pass is offered
+      as a substitution with explicit caveats. See "OPERATOR
+      REVIEW POINT" subsection above.

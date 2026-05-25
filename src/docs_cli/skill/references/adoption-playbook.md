@@ -102,7 +102,29 @@ not considered: ...` line, the migration root has non-`.md` files
 - Suppress noise via `--exclude-ext html,xlsx,odt` (one-off) or
   `[exclude] exts = [...]` (persistent).
 
-## Step 3 — Create `.docs.toml` from `references/docs-toml-template.toml`
+## Step 3 — Decide on excludes (write a sidecar `.docs.toml` ONLY if persistent)
+
+> **IMPORTANT ordering note.** `docs migrate --apply` refuses a
+> tree whose `.docs.toml` carries `[project]` / `[archive]` /
+> `[vocabulary]` **unless** that `.docs.toml` also carries an
+> `[exclude]` section. The M8 carve-out (OQ1) is the operator's
+> explicit signal "use migrate on this managed tree but skip
+> the listed paths". The practical consequence:
+>
+> - **If the tree needs NO persistent excludes** (small kebab-
+>   tiny-style trees), DO NOT write a `.docs.toml` before
+>   `--apply`. Run `--apply` first; write the `.docs.toml`
+>   carrying `[project]` (and any other managed-marker config)
+>   AFTER `--apply`. See Step 5 / Step 6 below.
+> - **If the tree needs persistent excludes** (build dirs,
+>   draft files, etc.), write a sidecar `.docs.toml` with ONLY
+>   `[exclude]` (no `[project]`/`[archive]`/`[vocabulary]`) and
+>   run `--apply`. After `--apply`, extend the same `.docs.toml`
+>   with `[project]` etc. for the persistent managed state.
+> - **If the tree needs one-off excludes** (a single migration
+>   run), skip writing `.docs.toml` here entirely; pass
+>   `--exclude PATTERN` and/or `--exclude-ext EXTS` on the
+>   `--apply` command line.
 
 The bundled template at
 [`references/docs-toml-template.toml`](docs-toml-template.toml)
@@ -181,30 +203,52 @@ file tree.
 Once the dry-run plan is clean:
 
 ```
-docs migrate path/to/dir --apply
+docs migrate path/to/dir --apply --quiet
 ```
 
-`--apply` writes the inferred metadata block into every file the
-plan covers (atomic edit — never partial), then moves any
+`--apply` writes the inferred metadata block into every file
+the plan covers (atomic edit — never partial), then moves any
 archive-style subdirs into `archive/<date>/<name>` per the M7
 detection. Already-conformant files are left untouched.
 
-For idiomatic agent flow: pair `--apply` with `--quiet` to
-suppress success messages, then commit:
+**Ordering reminder (per Step 3).** If you authored a
+`.docs.toml` carrying `[project]`/`[archive]`/`[vocabulary]`
+WITHOUT also adding `[exclude]`, `--apply` will refuse with:
 
 ```
-docs migrate path/to/dir --apply --quiet
-git -C path/to/dir add -A
-git -C path/to/dir commit -m "adopt the foreign tree under the docs convention"
+docs: <dir> is already a docs root (.docs.toml has [...]) —
+migrate is for foreign trees; use index / check / list instead.
 ```
 
-## Step 6 — Verify (`docs check <dir>` exit 0; commit)
+The fix: either remove the managed-marker sections from the
+sidecar `.docs.toml` (keeping ONLY `[exclude]` + `[migrate]`),
+or add an `[exclude]` section (even an empty one — `[exclude]`
+on its own line is enough to waive the refusal). The
+recommended pattern for trees that don't need persistent
+excludes is to write the `[project]`-bearing `.docs.toml` AFTER
+`--apply` (Step 6).
+
+## Step 6 — Verify (`docs check <dir>` exit 0; write final `.docs.toml`; commit)
 
 The acceptance gate is `docs check` exit 0 on the adopted tree:
 
 ```
 docs check path/to/dir       # exit 0 clean / 1 warnings / 2 errors
 ```
+
+If the tree has no `.docs.toml` yet (because Step 3 deferred
+writing one), this is the moment to author it. The simplest
+form for a project that needs no persistent excludes:
+
+```toml
+[project]
+name = "my-project"
+```
+
+(Per Step 3's note, writing this BEFORE `--apply` would have
+triggered the carve-out refusal; writing it AFTER `--apply` is
+fine because the metadata is already in place and `check` /
+`index` consult `.docs.toml` without the refusal logic.)
 
 If `check` surfaces warnings (most commonly `stale` on docs the
 tree hasn't touched in > 90 days), decide whether to age them
