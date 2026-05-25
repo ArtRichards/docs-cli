@@ -105,9 +105,9 @@ M8 ships as 1.3.0 after M7.
 | Phase | Status | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-24 | Promoted M8 from `draft` to `active`; created this log; recorded OQ A–G resolutions as Decisions in the task plan; status.md "Current milestone" + milestone-table row + Next action point at M8. No code change; no convention change. INDEX + snapshot regenerated in lockstep. M7 shipped 2026-05-25; Phase 2+ unblocked. |
-| 2. Write Tests (RED) | Pending (waits on M7 ship) | — | New test files: `test_exclude.py` (9 tests, F3), `test_triage_flags.py` (6 tests, F6), `test_non_md_surfacing.py` (3 tests, F7), `test_body_from.py` (7 tests, F9), `test_skill_adoption.py` (6 tests, F8). Extension to `test_migrate.py`: `--summary --json` mutual exclusion. All RED for intended unimplemented surface; M7's full suite stays GREEN. |
-| 3. Create Data/Fixtures | Pending | — | Reuse M7's 5 sanitised real-trees fixtures heavily. New small fixtures: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`, `docsignore/sample/` (gitignore syntax exercises), `trees/exclude-test/` (small synthetic tree with `[exclude]` in `.docs.toml`). |
-| 4. Run Tests (RED Baseline) | Pending | — | Capture verbatim pytest output. Expected: M7's full suite GREEN + ~31 M8 RED for intended reasons (argparse errors on new flags; config KeyErrors on `[exclude]`; skill-reference FileNotFoundErrors). Quality gate clean tree-wide. |
+| 2. Write Tests (RED) | Complete | 2026-05-25 | 5 new test files + 1 test added to `test_migrate.py` across 6 commits. Functions: `test_exclude.py` (9, F3 — 22 items with parametric expansion on tests 3, 5, 6, 7), `test_triage_flags.py` (6, F6 — 6 items), `test_non_md_surfacing.py` (3, F7 — 3 items), `test_body_from.py` (7, F9 — 8 items with parametric on test 4), `test_skill_adoption.py` (5, F8 — 5 items, per OQ6 dropped the lockstep dup), `test_migrate.py::test_summary_and_json_are_mutually_exclusive` (1, F6). All RED for intended unimplemented surface; M7's 324 stays GREEN. |
+| 3. Create Data/Fixtures | Complete | 2026-05-25 | Reused M7's 5 sanitised real-trees fixtures (kebab-tiny + snake-medium drive the triage tests; the other 3 remain Phase 9 substrate). 3 new fixture sets: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`, `docsignore/sample/` (every OQ-B syntax case + sample files), `trees/exclude-test/` (small synthetic tree with `[exclude] dirs = ["build"]` in `.docs.toml` + a deliberately-malformed `build/generated.md`). Two `build/` subdirs force-added (-f) because the repo .gitignore has `build/` (project-output convention); the force-add is part of the contract surface. Sanitisation grep (per M7 log line 405) zero hits. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 7 baseline-GREEN regression locks + 38 RED for intended reasons (45 new collected items; 369 collected total; 331 passed + 38 failed).** Per-file: test_exclude.py 17 RED + 5 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Pending | — | `Config` schema gains `exclude_dirs` / `exclude_globs` / `exclude_exts` / `docsignore_patterns`. `load_config` reads `[exclude]` + parses `.docsignore`. `compile_exclude_predicate` helper unifies CLI + config + ignore-file. Argparse: identical `--exclude` action on migrate/index/check/list; `--summary` / `--only` / `--group-by` / `--exclude-ext` on migrate; `--body-from` on new. Mutual exclusion: `--summary` vs `--json`. |
 | 6. Implement Offline/Core Path | Pending | — | `_iter_doc_paths` consults the exclude predicate (tree-wide). `migrate_plan` honours predicate + emits excluded-count + non-md-sibling footer. `_render_migrate_plan` handles `--summary` / `--only ambiguous` / `--group-by` + default footer summary. `_cmd_new` handles `--body-from` with stdin/file + OQ-E refusal heuristic. `.docsignore` parser (~60 lines, stdlib only). |
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Pending | — | SKILL.md: append adoption trigger phrases to description; add one-line pointer to `references/adoption-playbook.md`. New `references/adoption-playbook.md` (substantial — six numbered steps + worked example + multi-project sub-section + sidecars sub-section + pitfalls). New `references/docs-toml-template.toml` (commented starter; `[exclude]` + `[migrate]` + `[vocabulary]`). Spec updates: cli.md (new flags), convention.md (`[exclude]` + `.docsignore` syntax), architecture.md (Config schema), README.md (adoption section), CHANGELOG.md (1.3.0). pyproject + cli.py `__version__` bumped to 1.3.0. Skill-refs lockstep maintained for convention.md + cli.md. |
@@ -294,3 +294,252 @@ GREEN throughout.
       `pyproject.toml` edits, no test file additions).
 - [x] No convention change happened (no `[exclude]` schema yet
       — that's Phase 5).
+
+### Phase 2 — Write Tests (RED)
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Express every M8 finding (F3/F6/F7/F8/F9) as a failing check before
+any implementation lands. Tests collect cleanly; every new RED test
+fails for its intended unimplemented surface (argparse on new flags,
+absent skill references, today-absent footer surfacings). M7's 324
+in-tree tests stay GREEN throughout.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_exclude.py` | Create | 9 distinct test functions for F3 (parametric expansion on tests 3, 5, 6, 7 → 22 collected items). Covers `--exclude` flag (basic skip + repeatable + glob), `--exclude-ext`, `[exclude] dirs` + `[exclude] globs` tree-wide on every verb (index/check/list/migrate), `.docsignore` OQ-B syntax subset (7 cases), CLI layering over .docs.toml, plan-footer excluded-count line. |
+| `tests/test_triage_flags.py` | Create | 6 tests for F6 (6 items): `--summary` per-file lines; `--only ambiguous` filter; `--group-by role` / `--group-by confidence`; default plan-footer counts (substring-token assertions per OQ3 — Phase 6 picks the exact shape); `--summary` + `--only ambiguous` compose. |
+| `tests/test_non_md_surfacing.py` | Create | 3 tests for F7 (3 items): footer line surfaces 3 non-md siblings with all names + count; N==0 → no footer line (regression lock); `--exclude-ext` suppresses the footer when filtered list is empty (OQ4). |
+| `tests/test_body_from.py` | Create | 7 test functions for F9 (8 items with test 4 parametric ×2 — with-frontmatter.txt + edge-case-keyword.md per OQ5). Covers stdin happy path, file-path happy path, scaffold+body composition golden, OQ-E metadata-block refusal (exit 2 + documented error tokens), missing-value argparse error, nonexistent-path exit 2, idempotency refusal. |
+| `tests/test_skill_adoption.py` | Create | 5 tests for F8 (5 items, NOT 6 — per OQ6 the proposed 6th "lockstep guarantee" test would duplicate the existing `test_skill_refs.py::test_bundled_ref_matches_source`; dropped). Asserts SKILL.md adoption triggers, one-line pointer, adoption-playbook.md exists with required H2s, docs-toml-template.toml is valid TOML with `[exclude]` / `[migrate]` / `[vocabulary]` sections + commented examples. |
+| `tests/test_migrate.py` | Modify | One new test — `test_summary_and_json_are_mutually_exclusive` asserts `docs migrate --summary --json` → exit 2 + "not allowed with" in stderr. |
+
+#### Test counts
+
+- 45 new collected items: 22 + 6 + 3 + 8 + 5 + 1.
+- 9 + 6 + 3 + 7 + 5 + 1 = 31 distinct test functions per the
+  plan's count.
+- Total suite: 369 collected (324 M7 + 45 M8).
+
+#### Quality discipline
+
+- All test files use the existing `from docs import …` alias from
+  `tests/conftest.py` (M6 conftest aliases `docs_cli.cli` as
+  `docs`) where they import library surface; subprocess CLI tests
+  use the `docs_script` + `fixtures_dir` session fixtures.
+- Helper `_run(docs_script, *args)` + `_write(path, text)` defined
+  per file, mirroring `tests/test_migrate.py` lines 590-593 + the
+  `tests/test_cli_new.py` lines 15-21 pattern.
+- `tests/test_skill_adoption.py` imports its helpers from sibling
+  module `test_skill` (pytest's auto-extended sys.path resolves
+  the bare module name — adding a `tests/__init__.py` would
+  collide with the project's flat-package convention).
+- Substring assertions only on the default-footer + group-by
+  shapes (per OQ3) — Phase 6 picks the exact rendering.
+
+#### Issues / decisions
+
+- **OQ5 (planning) — edge-case-keyword.md folds into test 4's
+  parametrisation, NOT its own happy-path test.** The OQ-E
+  heuristic is conservative-by-design; `Plan: stage one then
+  stage two` matches `^[A-Z][A-Za-z-]+:\s` and IS expected to
+  refuse. The parametrisation documents the false-positive
+  trade-off rather than pinning a test that would expect the
+  heuristic to be smarter than its design spec.
+- **OQ6 (planning) — 5 skill_adoption tests, not 6.** The 6th
+  proposed test ("lockstep guarantee still holds") would
+  duplicate `tests/test_skill_refs.py::test_bundled_ref_matches_source`.
+  Module docstring records this.
+- **OQ7 (planning) — Phase 1 sha credit landed as a 2-commit
+  sequence** (close-out commit + amend-with-sha-then-follow-up
+  sha-credit commit). Cleaner than amending the close-out commit
+  (which would be self-referential).
+- **OQ8 (planning, surfaced for Step 2) — `use-cases.md` /
+  new skill references not in `_SKILL_RELATIVE_FILES`.** The new
+  reference files (`adoption-playbook.md`, `docs-toml-template.toml`)
+  need to be added to `_SKILL_RELATIVE_FILES` at Phase 7 so
+  `install-skill --symlink` + the no-clutter / byte-identity checks
+  cover them. Not in Step 1 scope.
+- **`test_body_from_idempotency_second_call_refuses` uses
+  `proc.returncode != 0` + `"already exists"` substring** rather
+  than pinning exit 2 (which the plan's text implied). Today's
+  cli.py 2605-2607 returns exit code 1 on existing-file refusal;
+  Phase 5/6 keeps that existing semantics. The test's loose
+  exit-code assertion accommodates the established behaviour
+  without inventing a new contract.
+
+#### Verification
+
+- `.venv/bin/python -m pytest --collect-only -q tests/test_exclude.py tests/test_triage_flags.py tests/test_non_md_surfacing.py tests/test_body_from.py tests/test_skill_adoption.py` — 44 items collected (22 + 6 + 3 + 8 + 5), zero ImportError / CollectError.
+- `.venv/bin/python -m pytest --collect-only -q tests/` — 369 items collected.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy` — clean tree-wide.
+- `.venv/bin/docs check docs/` — exit 0.
+
+#### Exit criteria
+
+- [x] Every new test file collects cleanly.
+- [x] Every RED test fails for its intended unimplemented
+      surface (Phase 4 captures the verbatim split + per-test
+      attribution).
+- [x] M7's 324 in-tree tests stay GREEN.
+- [x] Imports use the conftest `from docs import …` alias.
+- [x] Subprocess tests use `docs_script` + `fixtures_dir`.
+- [x] No fixture authoring at this phase (Phase 3 owns that).
+- [x] `ruff` / `format` / `mypy` clean tree-wide.
+- [x] `docs check docs/` exit 0.
+
+### Phase 3 — Create Data/Fixtures
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Stage the small fixture set the Phase-2 tests reference. Reuse
+M7's 5 sanitised real-trees fixtures heavily; new fixtures only
+for body-from edge cases, the docsignore syntax exerciser, and
+a small `[exclude]`-bearing synthetic tree.
+
+#### Files changed
+
+| Path | Action | Notes |
+|---|---|---|
+| `tests/fixtures/body-from/with-frontmatter.txt` | Create | Real metadata block at the head (`Owner: alice` + `Tags: infra`) — triggers OQ-E refusal. |
+| `tests/fixtures/body-from/clean-body.md` | Create | Happy-path body with no metadata-shaped lines (`## Overview` + `## Details`). |
+| `tests/fixtures/body-from/edge-case-keyword.md` | Create | OQ5 false-positive trade-off — `Plan: stage one then stage two` matches `^[A-Z][A-Za-z-]+:\s` so the conservative-by-design heuristic refuses. Test 4's parametrisation pins the documented behaviour. |
+| `tests/fixtures/docsignore/sample/.docsignore` | Create | Exercises every OQ-B syntax case: `*.tmp`, `data/`, `/specific.md`, `**/build/**`, comment, blank, `!keep-me.md` after a preceding `*.md`. |
+| `tests/fixtures/docsignore/sample/{keep,specific,keep-me}.md` + `data/x.md` + `nested/build/y.md` + `nested/keep-me.md` + `something.tmp` | Create | Sample files exercising the patterns above. |
+| `tests/fixtures/trees/exclude-test/.docs.toml` | Create | `[project] name = "exclude-test"` + `[exclude] dirs = ["build"]`. |
+| `tests/fixtures/trees/exclude-test/{spec,plan}.md` | Create | Conformant docs (H1-then-metadata-block per the convention). |
+| `tests/fixtures/trees/exclude-test/build/generated.md` | Create | Deliberately malformed (no metadata block) — proves `[exclude] dirs = ["build"]` is the only reason `docs check` exits 0. |
+
+#### Actions taken
+
+- Built each fixture by hand. Body-from + docsignore fixtures
+  use generic placeholders (`alice` / `infra` / `Foo` / `Bar`).
+  No third-party product / customer / feature names appear.
+- Force-added both `build/` subdirs with `git add -f` because
+  the repo .gitignore has `build/` (project-output convention).
+  Documented in the Phase 3 commit message.
+- Ran the sanitisation grep (mirror M7 log line 405):
+
+  ```sh
+  grep -ri "langfuse\|festo\|orginfo\|embedded.ai\|gpt5\|treatment.rubric\|disambiguation\|risk.prompt\|software.first\|standalone.agents\|orgcontext" tests/fixtures/{body-from,docsignore,trees/exclude-test}/
+  ```
+
+  Zero hits.
+
+#### Issues / decisions
+
+- **Reuse over re-author.** kebab-tiny + snake-medium drive the
+  triage tests directly; snake-large + archive-subdir + mixed-naming
+  remain Phase 9 substrate. No new copies of the M7 fixtures.
+- **`build/` gitignore tension.** The repo's project-level
+  .gitignore excludes `build/` (Python wheel output convention).
+  The exclude-test fixture deliberately uses `build/` as the
+  exclude-dirs target because that's the most realistic
+  adoption-tree shape. Force-add + commit message annotation
+  resolves the tension at the per-file level without weakening
+  the project-wide ignore.
+
+#### Exit criteria
+
+- [x] Every fixture path the new tests reference exists.
+- [x] Sanitisation grep returns zero hits.
+- [x] M7's 324 in-tree tests stay GREEN.
+- [x] Quality gate clean tree-wide.
+- [x] `docs check docs/` exit 0.
+
+### Phase 4 — Run Tests (RED Baseline)
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Capture the verbatim RED baseline before any implementation.
+Confirm every new RED test fails for its intended unimplemented
+reason; surface the GREEN-at-baseline regression locks. Pin
+M7's 324 GREEN baseline + the quality gate.
+
+#### Verbatim pytest output
+
+```text
+$ .venv/bin/python -m pytest tests/ -q --tb=short
+... (369 items collected) ...
+38 failed, 331 passed in 9.65s
+```
+
+Captured at `/tmp/m8-phase-4-baseline.txt`.
+
+#### Per-test attribution table
+
+| Test group | Source file | RED count | GREEN-at-baseline (regression-lock) count | Failure mode → root cause |
+|---|---|---:|---:|---|
+| F3 — `--exclude` flag, `[exclude]` config, `.docsignore`, plan-footer count | `test_exclude.py` | 17 | 5 | argparse rejects `--exclude` / `--exclude-ext` on every verb (exit 2); `.docsignore` not parsed; `[exclude]` not consulted by walker; footer absent. Locks: docsignore patterns where the today-absent predicate yields the contract-correct outcome (`*.tmp` / comment-only / blank-only); `list`-verb tree-wide on `[exclude] dirs` + `[exclude] globs` (list already filters non-.md / missing-metadata). |
+| F6 — triage flags + default footer | `test_triage_flags.py` | 6 | 0 | argparse rejects `--summary` / `--only` / `--group-by` (exit 2); default footer doesn't emit the documented substrings. |
+| F6 — `--summary` × `--json` mutex | `test_migrate.py` | 1 | 0 | argparse rejects `--summary` as "unrecognized" today; Phase 5 flips to "not allowed with" via mutex group. |
+| F7 — non-md sibling surfacing | `test_non_md_surfacing.py` | 2 | 1 | footer line absent today. Lock: N==0 → no footer line (correctly absent today). |
+| F9 — `docs new --body-from` | `test_body_from.py` | 7 | 1 | argparse rejects `--body-from` (exit 2); OQ-E refusal absent; idempotency contract unstable today. Lock: missing-value → exit 2 (today's "unrecognized" path coincidentally matches the contract). |
+| F8 — skill adoption playbook + template | `test_skill_adoption.py` | 5 | 0 | SKILL.md description has no adoption phrases; one-line pointer absent; `references/adoption-playbook.md` and `references/docs-toml-template.toml` do not exist. |
+| **TOTAL** |  | **38** | **7** | — |
+
+Function totals: 9 + 6 + 1 + 3 + 7 + 5 = 31 distinct test functions.
+Collected-item totals: 22 + 6 + 1 + 3 + 8 + 5 = 45 items.
+
+#### Quality gate (verbatim)
+
+```text
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+33 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 34 source files
+
+$ .venv/bin/docs check docs/
+docs: no violations found
+```
+
+#### Attestation — no RED-for-wrong-reason
+
+Every RED test was inspected against its `--tb=short` traceback
+(captured at `/tmp/m8-phase-4-baseline.txt`):
+
+- No `ImportError` / `ModuleNotFoundError`.
+- No `FileNotFoundError` / fixture-not-found failures (every
+  fixture path the tests reference was staged at Phase 3).
+- The `argparse` errors ARE the intended RED surface for the
+  unimplemented flags (`--exclude`, `--exclude-ext`, `--summary`,
+  `--only`, `--group-by`, `--body-from`) — Phase 5 flips them
+  from argparse-error RED to assertion RED, then Phase 6/7
+  takes them to GREEN.
+- Every assertion failure message names the contract the
+  Phase 5/6/7 implementation will satisfy.
+
+The 38 REDs partition cleanly: 17 F3 + 6 F6-triage + 1 F6-mutex
++ 2 F7 + 7 F9 + 5 F8 (the 7 baseline-GREEN regression locks
+are listed in the per-test attribution table above).
+
+#### Issues / decisions
+
+- **45 collected items vs 31 distinct functions.** Parametric
+  expansion on test_exclude.py (tests 3 ×2, 5 ×4, 6 ×4, 7 ×7) +
+  test_body_from.py (test 4 ×2) accounts for the +14 difference.
+  Per OQ2 (planning resolution, binding): "9 distinct test
+  functions in test_exclude.py via parametrization … Phase 4
+  log notes the collected-item count vs function count." Done.
+- **7 baseline-GREEN locks vs the plan's expectation of
+  RED-only.** The plan's Expected RED matrix anticipated only
+  RED for the new flags. The actual baseline has 7 items that
+  pass at baseline for the same reason F7 N==0 passes (the
+  today-absent feature happens to produce the contract-correct
+  outcome). These are regression locks — Phase 6 must preserve
+  them. The Per-test attribution table above flags each one.
+- **No structural surprise.** Every RED's failure message was
+  the assertion the test was designed to fail. No fixture
+  oversight, no import accident, no off-by-one mismatch.
