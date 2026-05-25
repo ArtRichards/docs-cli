@@ -37,19 +37,16 @@ def _config() -> Config:
 def _doc(
     name: str,
     role: str = "spec",
-    status: str = "active",
+    lifecycle: str = "active",
     updated: date = date(2026, 5, 20),
     body: str = "Body paragraph one.\n\nBody paragraph two.",
     archived: bool = False,
     project: str | None = "test",
 ) -> Doc:
-    # The `status` parameter name is preserved at the helper signature for
-    # back-compat with existing test call sites; the Doc attribute is
-    # `lifecycle` post-M7 (F0).
     return Doc(
         path=Path(f"/fake/{name}"),
         title=name.replace(".md", "").replace("-", " ").title(),
-        lifecycle=status,
+        lifecycle=lifecycle,
         role=role,
         project=project,
         updated=updated,
@@ -127,7 +124,7 @@ def test_render_summary_counts_active_and_archived():
     docs = [
         _doc("a.md"),
         _doc("b.md"),
-        _doc("old.md", status="archived", archived=True),
+        _doc("old.md", lifecycle="archived", archived=True),
     ]
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     assert "2 docs active, 1 archived" in out
@@ -200,7 +197,7 @@ def test_render_within_section_sorts_by_updated_desc_then_path_asc():
 def test_render_archived_section_appears_last_with_archived_heading():
     docs = [
         _doc("a.md"),
-        _doc("old.md", status="archived", archived=True),
+        _doc("old.md", lifecycle="archived", archived=True),
     ]
     out = render_index(docs, _config(), existing=None, root=_ROOT)
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]

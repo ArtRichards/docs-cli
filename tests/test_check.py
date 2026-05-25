@@ -33,14 +33,10 @@ def _config() -> Config:
     )
 
 
-def _valid(status: str = "active", role: str = "spec", updated: str = "2026-05-20") -> str:
-    """A well-formed doc body with one field optionally varied.
-
-    The `status` parameter name is kept for back-compat with the existing
-    test helper call sites; the on-disk key is M7's `Lifecycle:`.
-    """
+def _valid(lifecycle: str = "active", role: str = "spec", updated: str = "2026-05-20") -> str:
+    """A well-formed doc body with one field optionally varied."""
     return (
-        f"# Sample\n\nLifecycle: {status}\nRole: {role}\n"
+        f"# Sample\n\nLifecycle: {lifecycle}\nRole: {role}\n"
         f"Project: probe\nUpdated: {updated}\n\nBody paragraph.\n"
     )
 
@@ -86,7 +82,7 @@ def test_check_doc_missing_h1_is_malformed():
 def test_check_doc_unknown_status():
     findings = check_doc(
         Path("/r/d.md"),
-        _valid(status="frobnicated"),
+        _valid(lifecycle="frobnicated"),
         Path("/r"),
         _config(),
         stale=None,
@@ -131,7 +127,7 @@ def test_check_doc_unparseable_date():
 def test_check_doc_archived_status_outside_archive_subtree(tmp_path):
     doc = tmp_path / "stray.md"
     findings = check_doc(
-        doc, _valid(status="archived"), tmp_path, _config(), stale=None, today=_TODAY
+        doc, _valid(lifecycle="archived"), tmp_path, _config(), stale=None, today=_TODAY
     )
     assert [f.rule for f in findings] == ["status-drift"]
     assert findings[0].severity == "error"
@@ -140,7 +136,7 @@ def test_check_doc_archived_status_outside_archive_subtree(tmp_path):
 def test_check_doc_active_status_inside_archive_subtree(tmp_path):
     doc = tmp_path / "archive" / "2026-01-01" / "lingering.md"
     findings = check_doc(
-        doc, _valid(status="active"), tmp_path, _config(), stale=None, today=_TODAY
+        doc, _valid(lifecycle="active"), tmp_path, _config(), stale=None, today=_TODAY
     )
     assert [f.rule for f in findings] == ["status-drift"]
 
@@ -148,7 +144,7 @@ def test_check_doc_active_status_inside_archive_subtree(tmp_path):
 def test_check_doc_archived_status_inside_archive_is_clean(tmp_path):
     doc = tmp_path / "archive" / "2026-01-01" / "proper.md"
     findings = check_doc(
-        doc, _valid(status="archived"), tmp_path, _config(), stale=None, today=_TODAY
+        doc, _valid(lifecycle="archived"), tmp_path, _config(), stale=None, today=_TODAY
     )
     assert findings == []
 
@@ -185,26 +181,26 @@ def test_check_doc_resolvable_related_ref_is_clean(tmp_path):
 
 
 def test_check_doc_stale_active_doc_warns_when_stale_set():
-    text = _valid(status="active", updated="2026-01-01")
+    text = _valid(lifecycle="active", updated="2026-01-01")
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=30, today=_TODAY)
     assert [f.rule for f in findings] == ["stale"]
     assert findings[0].severity == "warning"
 
 
 def test_check_doc_stale_not_reported_without_stale_flag():
-    text = _valid(status="active", updated="2026-01-01")
+    text = _valid(lifecycle="active", updated="2026-01-01")
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=None, today=_TODAY)
     assert findings == []
 
 
 def test_check_doc_stale_ignores_non_active_docs():
-    text = _valid(status="draft", updated="2026-01-01")
+    text = _valid(lifecycle="draft", updated="2026-01-01")
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=30, today=_TODAY)
     assert findings == []
 
 
 def test_check_doc_recent_active_doc_not_stale():
-    text = _valid(status="active", updated="2026-05-20")
+    text = _valid(lifecycle="active", updated="2026-05-20")
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=30, today=_TODAY)
     assert findings == []
 
