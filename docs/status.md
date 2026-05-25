@@ -22,11 +22,13 @@ reframe split the actual PyPI publish out of M6 into a new
 milestone — **M9 — PyPI publish 1.3.0** — so M6 could close
 cleanly instead of hanging at "implementation done, publish
 pending" for the M7 + M8 weeks. Two follow-on implementation
-milestones are stub-drafted from a 2026-05-24 multi-tree trial:
-**M7 — Migration plan accuracy** (the next milestone to enter
-setup) and **M8 — Adoption workflow** (depends on M7). M9 runs
-last, post-M8, as an operator-driven publish of the batched
-M6 + M7 + M8 surface. See `plan.md`'s v1.1 section.
+milestones cluster the 2026-05-24 multi-tree trial's findings:
+**M7 — Migration plan accuracy** (Complete 2026-05-25;
+ship-ready locally, publish deferred to M9 batched 1.3.0) and
+**M8 — Adoption workflow** (in flight; depends on M7's ship,
+which is now landed). M9 runs last, post-M8, as an operator-
+driven publish of the batched M6 + M7 + M8 surface. See
+`plan.md`'s v1.1 section.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -61,13 +63,17 @@ The multi-tree trial against 25 real-world foreign trees (501 .md
 files) surfaced 11 categorical findings. They cluster into two
 milestones:
 
-- **M7 — Migration plan accuracy** (next): renames the
-  controlled-vocab field `Status:` → `Lifecycle:` (breaking,
-  no backward compat), broadens role inference (suffix matching,
-  H1 + section signals, sibling defaulting), normalises project
-  names to lowercase-kebab, normalises `archived/` subdirs into
-  `archive/YYYY-MM-DD/`, expands the role vocab (`implementation`,
-  `sketch`, `outline`, `memo`, `brief`). No new CLI surface. Stub
+- **M7 — Migration plan accuracy** (Complete 2026-05-25):
+  renamed the controlled-vocab field `Status:` → `Lifecycle:`
+  (breaking, no backward compat), broadened role inference
+  (suffix matching, H1 + section signals, sibling defaulting),
+  normalised project names to lowercase-kebab, normalised
+  `archived/` subdirs into `archive/YYYY-MM-DD/`, expanded the
+  role vocab with 7 core additions (`implementation`, `sketch`,
+  `outline`, `memo`, `brief`, `template`, `example`). One new
+  CLI flag: `docs migrate --config-project NAME` (plus
+  `--lifecycle` rename on `docs list`). Trial-2 dogfood: 88%
+  high+medium against the sanitised real-tree fixtures. Plan
   at [m7-migration-accuracy.md](m7-migration-accuracy.md).
 - **M8 — Adoption workflow** (after M7): `--exclude` tree-wide
   (in `migrate` + `index` + `check` + `list` via `.docs.toml`'s
@@ -352,9 +358,9 @@ NO tag, NO GitHub release). M7 is ship-ready locally; the
 public PyPI release ships as v1.3.0 batched with M6 + M8 at
 the M9 milestone per the operator OQ-C split.
 
-**M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
-ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed
-2026-05-24 as `929e525`.
+**M8** is in flight (Phase 1 complete; **Phase 2+ unblocked by
+M7 ship 2026-05-25**). All 7 OQs (A–G) resolved 2026-05-24.
+Setup committed 2026-05-24 as `929e525`.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

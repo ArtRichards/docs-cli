@@ -2424,7 +2424,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "requires for every .md file, and produce a migration plan — one "
             "decision per file, every ambiguity flagged. Dry-run by default; "
             "--apply inserts the metadata blocks and normalises archive-style "
-            "subdirectories. Refuses a directory that is already a docs root."
+            "subdirectories. Refuses a directory whose .docs.toml carries a "
+            "managed-root marker ([project], [archive], or [vocabulary]); a "
+            ".docs.toml containing only a [migrate] section is read as a "
+            "foreign-tree migration-sidecar (M7)."
         ),
     )
     migrate_p.add_argument("dir", help="The foreign directory to migrate.")
