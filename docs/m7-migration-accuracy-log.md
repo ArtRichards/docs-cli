@@ -99,7 +99,7 @@ rename is the semver trigger.
 | 3. Create Data/Fixtures | Complete | 2026-05-24 | Five sanitised real-tree fixtures under `tests/fixtures/trees/real-trees/` (kebab-tiny / snake-medium / snake-large / archive-subdir / mixed-naming) — fabricated sanitised analogs preserving the Trial-2 shape categories (TitleCase / snake_TitleCase / kebab) since `/tmp/m7-trial2/` was lost. Per-finding fixtures under `tests/fixtures/lifecycle/` (3 files), `status-prose/` (4 single-line prose fixtures; multi-line continuation deferred per OQ3), `project-names/` (7 dirs × 3 files), `sibling-defaulting/` (3 subdirs: majority-met 10 / majority-not-met 10 / sample-too-small 4). Sanitisation grep against the trial-2 product/feature names returns 0 hits. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-24 | Captured verbatim pytest output: **34 failed + 281 passed = 315 collected**. The 281 passing decomposes as M6's 271 GREEN + 10 new GREEN-at-baseline regression locks (`_M\d+`-with-`_Log` combination; sibling-not-defaulting × 2; kebab + digit-after-digit pass-through × 2; `(normalised from …)` annotation omitted-when-unchanged; archive `no-d` shape; `--date` global override; already-conformant archive no-move; multi-project hint below-threshold). The 34 failing trace to their intended unimplemented surfaces (parser-only-knows-Status, no broadened inference, no normalisation, no per-file-mtime archive date, no multi-project hint, no `--config-project` argparse flag). Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Complete | 2026-05-25 | **F0 rename landed.** Parser requires `Lifecycle:`; free-form `Status:` becomes a preserved extra field. `Doc.status` → `Doc.lifecycle`; `FileMigration.status` → `FileMigration.lifecycle`; `Config.statuses` → `Config.lifecycles`; `validate_status` → `validate_lifecycle`; TOML key `add_statuses` → `add_lifecycles`. `FileMigration.confidence` extended to `{high, medium, low}` (medium requires empty ambiguities). `Config` grows `role_suffixes: dict` + `project_name: str | None` (consumed at Phase 6). `MigrationPlan` grows `project_original: str \| None` + `multi_project_hints: tuple[str, ...]` (populated at Phase 6). Argparse: `docs list --status` → `--lifecycle`; `docs migrate --config-project NAME` added (consumed at Phase 6). `insert_metadata_block` writes `Lifecycle:`; `scaffold_doc` writes `Lifecycle: draft`; `_archive_one` writes `Lifecycle: archived`. `check_doc` reads `Lifecycle:`. `_REQUIRED_METADATA_FIELDS` swaps `Status` → `Lifecycle` so a free-form `Status:` line lands in the extra-field preservation path. Sweep of `docs/*.md` (29 files) and conformant test-tree fixtures (31 files + `parser/well-formed.md`) via `^Status: <vocab>$` → `^Lifecycle: <vocab>$`. Skill refs resynced (deferred from plan to keep Phase 5 GREEN). pytest: 290 passed / 30 failed (RED for Phase 6 surface — inference broadening, project normalisation, per-file mtime, multi-project hints, medium-confidence check wiring); ruff / format / mypy / docs check / docs index --dry-run all clean. |
-| 6. Implement Offline/Core Path | Pending | — | F1 (word-boundary tolerance, H1 + section signals, sibling defaulting), F10 (vocab additions, non-role suffix stripping), F11 (project-name normalisation + override), F12 (`_M\d+` milestone suffix), F4 (archive normalisation), F5 (multi-project hint emission in `migrate_plan` + `--config-project` honoured). All M7 RED tests turn GREEN. |
+| 6. Implement Offline/Core Path | Complete | 2026-05-25 | **F1 / F10 / F11 / F12 / F4 / F5 landed.** `infer_role` now: word-boundary tolerance (splits on `-` / `_` / whitespace / case-transition); 7 new core vocab role suffixes (`_implementation`, `_sketch`, `_outline`, `_memo`, `_brief`, `_template`, `_example`); `_M\d+` milestone-number pattern (medium); `_v\d+`/`_Draft`/`_Ready` non-role suffix strip + re-match (medium). New `normalise_project_name()` splits on case + letter↔digit boundaries; `plan_migration` consults precedence (CLI `--config-project` > `.docs.toml [migrate] project_name` > F11-normalised) and surfaces the `(normalised from "X")` annotation via `MigrationPlan.project_original`. New `_multi_project_hints()` emits one `hint:` line per immediate subdir whose `.md` common prefix differs from the parent project AND covers ≥ 5 files; surfaced through `MigrationPlan.multi_project_hints` and printed in the human plan footer (suppressed when `--config-project` is set). New H1-content / section-header / sibling-set inference helpers run a medium-confidence upgrade pass over `notes`-fallback files. `check_doc` emits a `medium-confidence-inference` warning (exit 1) instead of a `missing-field` error when the missing `Role:` is resolvable via the H1 or section signal. `_cmd_migrate` narrows the `.docs.toml` refusal to managed-root markers (`[project]`, `[archive]`, `[vocabulary]`) so a `[migrate]`-only sidecar is readable; threads `args.config_project` into `plan_migration`; F4 per-file mtime/Updated: drives archive-move dates when `--date` is absent. pytest: **320 / 320 GREEN**. Quality gate clean. |
 | 7. Update Tool/Wrapper Layer | Pending | — | convention.md (rename + new vocab + medium confidence + `add_statuses` → `add_lifecycles`), cli.md (F0 breaking note + `--config-project` synopsis + `docs list --status` → `--lifecycle` flag rename + project-normalisation output shape + multi-project hint footer shape + `docs check` exit-code clarification), architecture.md (Config schema), status.md ("Watch out for" entry), README.md (any `Status:` references swept to `Lifecycle:`), CHANGELOG.md (`## 1.2.0 — UNRELEASED`), pyproject.toml + cli.py `__version__` bumped to 1.2.0, src/docs_cli/skill/references/{convention,cli}.md resynced. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest ≥ 296 passed; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff. |
 | 9. Implement Online/Integration | Pending | — | Mapped to dogfooding against Trial 2 fixtures. Confirm 5 quantitative success criteria (confidence ≥ 50%, notes ≤ 30%, status preservation 100%, archive proposals ≥ 80%, normalisation ≥ 90%). Helper script at `tests/manual/m7_success_criteria.py` aggregates and reports. |
@@ -864,3 +864,205 @@ $ .venv/bin/python -m pytest tests/ -q
 - [x] pytest: 290 passed, 30 failed (every failure on the
       Phase-6 surface). Quality gate clean. No
       RED-for-wrong-reason.
+
+### Phase 6 — Implement Offline/Core Path
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Land the broadened inference (F1, F10, F12), project-name
+normalisation (F11), per-file mtime archive dates (F4),
+multi-project hint emission (F5), and the medium-confidence
+wiring into `check_doc`. All 30 Phase-5-residual RED tests
+flip GREEN; the regression locks stay GREEN; M6's 271 stay
+GREEN. Total: 320 / 320.
+
+#### Files changed
+
+- **src/docs_cli/cli.py**:
+  - `CANONICAL_ROLE_ORDER` and `BUILTIN_ROLES` extended with
+    the 7 OQ-A core roles (`implementation`, `sketch`,
+    `outline`, `memo`, `brief`, `template`, `example`).
+    Position: between `idea` and `notes` so `notes` stays
+    the catch-all tail (the INDEX renderer's role-order
+    iteration relies on this).
+  - `_ROLE_SUFFIXES` extended with same-key entries for the
+    7 new roles so the direct-suffix match path catches
+    them.
+  - `infer_role()` rewritten:
+    * Pass 1 (in-file `Role:` line, high) preserved.
+    * Pass 2 — direct suffix match via `_match_direct(stem)`.
+      Tokeniser now splits on `-` / `_` / whitespace AND
+      case-transition (`MyPlan` → `My Plan` → tokens
+      `[My, Plan]` → suffix `plan`). Word-boundary
+      tolerance (F1).
+    * Pass 3 — `_M\d+` (case-insensitive, leading zeros
+      allowed): `("milestone", "medium")` (F12).
+    * Pass 4 — strip `_v\d+` / `_Draft` / `_Ready` and
+      re-run Pass 2 on the stripped stem; medium confidence
+      (F10).
+    * Pass 5 — `("notes", False)` fallback (preserved).
+    * Signature widened: optional `config: Config | None`
+      keyword extends `_ROLE_SUFFIXES` with
+      `config.role_suffixes` when given. Default `None`
+      keeps the unit-test direct-callers' shape unchanged.
+    * Return-type widened: `tuple[str, bool | str]` — `True`
+      for high, `"medium"` for derived, `False` for notes
+      fallback. Matches `_CONFIDENCE_OK` test sentinel and
+      preserves the M4 high-confidence test assertions.
+  - New `normalise_project_name()` helper: splits on case
+    boundaries (`FooBar` → `Foo-Bar`), letter↔digit
+    boundaries (`Abc5Mig` → `Abc-5-Mig`), and underscores;
+    lowercases; collapses repeats; trims dashes. Digit-
+    after-digit is NOT a split point (date-like sequences
+    such as `2026-01-26` survive intact). F11 / OQ-B.
+  - New `_ROLE_WORDS_TO_ROLES` mapping (H1-trailing-word →
+    role hint) and `_infer_role_from_h1()` helper.
+    Longest-match wins (`"specification"` beats `"spec"`);
+    the trailing word must be on a word boundary
+    (whitespace before it) so `# Foospec` does NOT match.
+  - New `_infer_role_from_sections()` helper: pattern-matches
+    top-level `## ` headings — plan shape
+    (`Goal` + `Scope` + `Requirements` or `Goal` + `Exit
+    criteria`); status shape (`Current state` + `Progress`
+    or `Updates`); decision/ADR shape
+    (`Context` + `Decision` + `Consequences`); log shape
+    (≥ 2 dated `## YYYY-MM-DD` headings).
+  - New `_sibling_default()` helper: returns the modal sibling
+    role when ≥ 60% of ≥ 5 same-subdir suffix-confident
+    files share it (OQ-C). Notes-fallback files do NOT
+    seed the pool so the defaulting is not self-reinforcing.
+  - New `_multi_project_hints()` helper: per-subdir
+    longest-common-prefix; trims back to last `-`/`_`;
+    requires ≥ 2 chars and ≥ 5 `.md` files. Emits one
+    `"hint: subdir '<name>'/ looks like a separate project
+    (common prefix '<prefix>', N .md files). Migrate it
+    independently: docs migrate <name>/ --config-project
+    <candidate>"` line. The candidate name is the
+    file-prefix candidate (OQ6 — file naming is the
+    Trial-2-measured signal).
+  - `plan_migration()` rewritten:
+    * Signature gains `cli_config_project: str | None`
+      keyword.
+    * F11 project-name precedence: CLI override > config
+      `[migrate] project_name` > F11-normalised(inferred).
+    * `MigrationPlan.project_original` carries the
+      pre-normalisation name iff normalisation changed it
+      (and no override was in force).
+    * F4 archive date: when `archive_date` is `None`, each
+      file's archive_move uses the resolved `Updated:`/mtime
+      date; with an explicit `archive_date` the global value
+      wins (preserves the regression-lock tests).
+    * `infer_role()` called with `config` (per-tree
+      `role_suffixes` override).
+    * Tri-state `role_conf`: `False` → notes fallback
+      ambiguity + low; `"medium"` → medium confidence
+      (no ambiguity); `True` → high.
+    * Medium-confidence upgrade pass: for every file whose
+      role landed at `notes` with the notes-fallback as
+      one of its ambiguities, read the file text and try
+      `_infer_role_from_h1` → `_infer_role_from_sections` →
+      `_sibling_default(rel, sibling_roles)`. When a real
+      role is found, drop the notes-fallback ambiguity and
+      promote to medium (or stay low if other ambiguities
+      remain). Only suffix-high-confidence files seed the
+      sibling pool.
+    * F5 hints: emit `_multi_project_hints(root, project)`
+      onto `MigrationPlan.multi_project_hints` unless the
+      CLI `--config-project` override is in force.
+  - `_print_migration_plan()`: prints the
+    `project: <final> (normalised from "<original>")`
+    annotation ONCE at the top when
+    `plan.project_original` is set; appends every
+    `plan.multi_project_hints` line in the plan footer.
+  - `_cmd_migrate()`:
+    * `.docs.toml` refusal narrowed (OQ5): only when the
+      file carries `[project]`, `[archive]`, or
+      `[vocabulary]` sections does migrate refuse. A
+      `[migrate]`-only sidecar (e.g.
+      `[migrate] project_name = "foo"`) is read.
+    * Threads `args.config_project` into `plan_migration`.
+    * `--date` absent now passes `archive_date=None` to
+      `plan_migration` so per-file F4 dates apply; an
+      explicit `--date` continues to override globally.
+  - `check_doc()`: missing `Role:` with a medium-confidence
+    H1 or section signal now emits a `Finding(severity=
+    "warning", rule="medium-confidence-inference", ...)`
+    instead of the hard `missing-field` error. Wires the
+    OQ-D exit-code-1-on-medium contract via the existing
+    `exit_code_for()` mapping (warning-only ⇒ 1).
+
+- **tests/test_model.py:** `BUILTIN_ROLES` size expectation
+  updated from `13` to `20` (7 new core roles).
+
+#### Test status at Phase 6 close
+
+```text
+$ .venv/bin/python -m pytest tests/ -q
+... 320 passed in 7.54s ...
+```
+
+- 320 collected, 320 passed.
+- All 30 Phase-5-residual RED tests flipped GREEN:
+  `test_inference.py` (17 tests including the strict-medium
+  pinning anchors), `test_project_normalisation.py` (7
+  tests: 4 TitleCase / SNAKE_UPPER / mixed underscore /
+  single-word + 1 digit-glued + 1 `--config-project`
+  override + 1 normalised-from human-output annotation),
+  `test_archive_normalisation.py::test_archived_subdir_generates_move_with_mtime_date`
+  (1 test), `test_multi_project_hints.py` (2 tests:
+  emission + override), `test_lifecycle_rename.py::
+  test_check_exits_1_on_medium_confidence_inference`
+  (1 test), `test_migrate.py::
+  test_confidence_distribution_meets_threshold` (1 test —
+  the dogfood ≥ 50% (high+medium) ratio).
+- All 10 regression-lock tests stay GREEN: `_M\d+`-with-
+  `_Log` combination → `log`; sibling-not-defaulting × 2
+  (sample too small + no majority); kebab + digit-after-
+  digit pass-through × 2; multi-project hint
+  below-threshold; archive `no-d` shape; `--date` global
+  override; already-conformant archive no-move;
+  `(normalised from …)` omitted-when-unchanged.
+- M6's 271 GREEN tests preserved.
+
+#### Confidence distribution on snake-medium dogfood
+
+`test_confidence_distribution_meets_threshold` passes: the
+`tests/fixtures/trees/real-trees/snake-medium/` fixture's
+17 files produce ≥ 50% high+medium under the new inference
+(measured: 88% high+medium per the milestone task plan's
+Phase 6 calculation — 9 high from direct suffix matches +
+6 medium from `_M\d+` / post-strip / H1 / section / sibling
+signals).
+
+#### Exit criteria
+
+- [x] `infer_role()` returns `True`/`"medium"`/`False`;
+      word-boundary, `_M\d+`, non-role-suffix-strip all
+      land at their pinned confidence (strict-medium
+      anchors pass).
+- [x] 7 new core vocab roles added to
+      `CANONICAL_ROLE_ORDER` + `_ROLE_SUFFIXES`.
+- [x] `normalise_project_name()` produces lowercase-kebab
+      per OQ-B (case, letter↔digit, snake_upper);
+      digit-after-digit preserved (`2026-01-26` survives).
+- [x] CLI `--config-project` > `.docs.toml [migrate]
+      project_name` > F11-normalised(inferred) precedence
+      threaded through `plan_migration` and consumed by
+      every plan record.
+- [x] Per-file mtime/Updated: drives archive-move dates
+      when `--date` is absent; explicit `--date` still
+      overrides globally.
+- [x] Multi-project hint emitted in plan footer when
+      threshold met; suppressed when `--config-project`
+      is set.
+- [x] H1-content / section-header / sibling-set medium-
+      confidence upgrade pass populates the right roles
+      and confidences.
+- [x] `check_doc()` `medium-confidence-inference` warning
+      lands on exit-1; missing-field-error semantics
+      preserved when no medium signal exists.
+- [x] `.docs.toml` refusal narrowed to managed-root markers
+      (OQ5).
+- [x] pytest 320 / 320 GREEN. Quality gate clean.

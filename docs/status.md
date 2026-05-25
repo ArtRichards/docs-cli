@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-5 complete on 2026-05-25; Phase 6 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-6 complete on 2026-05-25; Phase 7 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -254,7 +254,7 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M7 — execute Phase 6 (Implement Offline/Core Path — broadened inference F1/F10/F12 + project normalisation F11 + per-file mtime archive F4 + multi-project hints F5).**
+**Next action: M7 — execute Phase 7 (Update Tool/Wrapper Layer — convention.md + cli.md + architecture.md + CHANGELOG + skill refs resync + v1.2.0 bump).**
 
 **Publish is M9** (operator decision 2026-05-24, scope-reframed
 2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
@@ -300,17 +300,32 @@ project normalisation, per-file mtime archive, multi-project
 hints, medium-confidence check wiring, snake-medium fixture
 high+medium ratio). Quality gate clean.
 
-**M7 Phase 6 next:** implement broadened role inference
-(F1 word-boundary + H1 + section-header + sibling-set
-defaulting), the 7 new core vocab roles + `_v\d+` / `_Draft`
-strip (F10), the `_M\d+` milestone-suffix pattern (F12),
-project-name normalisation to lowercase-kebab (F11) with
-`.docs.toml [migrate] project_name` + `--config-project`
-override precedence, per-file mtime drives archive-move date
-(F4), and multi-project hint emission in the plan footer (F5).
-Wire `check_doc` to emit medium-confidence
-inference findings as warnings (exit 1), not errors.
-All 30 remaining M7 RED tests flip GREEN; total stays 320.
+**M7 Phase 6 complete (2026-05-25):** F1 / F10 / F11 / F12 /
+F4 / F5 all landed. `infer_role` now does word-boundary +
+case-transition splitting, recognises the 7 new core vocab
+roles + `_M\d+` milestone pattern + `_v\d+`/`_Draft`/`_Ready`
+strip with medium confidence. `normalise_project_name()`
+produces lowercase-kebab and `plan_migration` honours CLI
+> sidecar > inferred precedence with the `(normalised from
+"X")` annotation. Per-file mtime drives archive moves when
+`--date` is absent. Multi-project hints surface in the plan
+footer. `check_doc` emits `medium-confidence-inference`
+warnings (exit 1) when a missing `Role:` is resolvable via
+H1 or section pattern. `.docs.toml` refusal narrowed so a
+`[migrate]`-only sidecar is readable. **pytest: 320 / 320
+GREEN.** Quality gate clean.
+
+**M7 Phase 7 next:** rewrite the user-facing specs to
+document the new surface — convention.md (vocab additions,
+medium confidence, `[migrate]` config, `add_lifecycles`
+rename), cli.md (F0 breaking note, `--config-project`,
+`--lifecycle` flag, expanded Inference rules, hint footer,
+new `medium-confidence-inference` rule), architecture.md
+(new helpers + Config / MigrationPlan field additions),
+status.md "Watch out for" entry, README.md + CHANGELOG.md
+(new `## 1.2.0 — UNRELEASED` section), bump pyproject.toml
++ `__version__` to 1.2.0, resync bundled skill references.
+No code changes; no test status change.
 
 **M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
 ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed

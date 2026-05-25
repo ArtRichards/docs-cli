@@ -42,7 +42,9 @@ def _write_text(metadata_lines: str, body: str = "body") -> str:
 
 def test_builtin_vocab_sizes():
     assert len(BUILTIN_STATUSES) == 6
-    assert len(BUILTIN_ROLES) == 13
+    # M7 (F10/OQ-A) adds 7 new core roles: implementation, sketch, outline,
+    # memo, brief, template, example. Total: 13 + 7 = 20.
+    assert len(BUILTIN_ROLES) == 20
 
 
 def test_parse_happy_path(tmp_path):

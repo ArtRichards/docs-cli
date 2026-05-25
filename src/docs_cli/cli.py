@@ -46,7 +46,10 @@ BUILTIN_STATUSES: frozenset[str] = frozenset(
 )
 
 # Order matches convention.md. The INDEX renderer pins `status` to the top
-# of the Active section; this order applies to all other Roles.
+# of the Active section; this order applies to all other Roles. M7 (F10/OQ-A)
+# adds 7 new core vocab roles between `idea` and `notes` so `notes` stays
+# the catch-all tail: implementation, sketch, outline, memo, brief, template,
+# example.
 CANONICAL_ROLE_ORDER: tuple[str, ...] = (
     "charter",
     "plan",
@@ -60,6 +63,13 @@ CANONICAL_ROLE_ORDER: tuple[str, ...] = (
     "reference",
     "postmortem",
     "idea",
+    "implementation",
+    "sketch",
+    "outline",
+    "memo",
+    "brief",
+    "template",
+    "example",
     "notes",
 )
 BUILTIN_ROLES: frozenset[str] = frozenset(CANONICAL_ROLE_ORDER)
@@ -1098,6 +1108,24 @@ def check_doc(
     # --- missing or empty required fields ---
     for required in ("Lifecycle", "Role", "Updated"):
         if _is_empty(metadata.get(required)):
+            # M7 (Phase 6): a missing `Role:` line whose value is
+            # resolvable at medium confidence from an H1-content or
+            # section-header signal becomes a warning (rule
+            # `medium-confidence-inference`) rather than the hard
+            # `missing-field` error — OQ-D's exit-1-on-medium contract.
+            if required == "Role":
+                inferred = _infer_role_from_h1(text) or _infer_role_from_sections(text)
+                if inferred and inferred != "notes":
+                    findings.append(
+                        Finding(
+                            path,
+                            "warning",
+                            "medium-confidence-inference",
+                            f"Role: missing; inferred as {inferred!r} from H1/section signal "
+                            f"(medium confidence).",
+                        )
+                    )
+                    continue
             findings.append(
                 Finding(
                     path,
@@ -1326,7 +1354,10 @@ def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
 # assembles the plan; `apply_migration` executes it. Dry-run by default.
 
 # Filename trailing-token → built-in role. `-adr` maps to the `decision` role
-# (ADR is the common spelling of an architecture decision record).
+# (ADR is the common spelling of an architecture decision record). M7 (F10)
+# adds the 7 new core vocab roles as direct-match suffixes — same-value-as-key
+# entries needed since `infer_role` first consults `_ROLE_SUFFIXES` before
+# falling through to `BUILTIN_ROLES` membership.
 _ROLE_SUFFIXES: dict[str, str] = {
     "spec": "spec",
     "plan": "plan",
@@ -1337,6 +1368,13 @@ _ROLE_SUFFIXES: dict[str, str] = {
     "guide": "guide",
     "runbook": "runbook",
     "reference": "reference",
+    "implementation": "implementation",
+    "sketch": "sketch",
+    "outline": "outline",
+    "memo": "memo",
+    "brief": "brief",
+    "template": "template",
+    "example": "example",
 }
 
 # Archive-style directory names `detect_archive_layout` recognises as the first
@@ -1344,47 +1382,86 @@ _ROLE_SUFFIXES: dict[str, str] = {
 _ARCHIVE_SUBDIR_NAMES: frozenset[str] = frozenset({"archive", "archived", "project-history"})
 
 
-def infer_role(filename: str, metadata: Mapping[str, str | tuple[str, ...]]) -> tuple[str, bool]:
+def infer_role(
+    filename: str,
+    metadata: Mapping[str, str | tuple[str, ...]],
+    config: Config | None = None,
+) -> tuple[str, bool | str]:
     """Infer a doc's `Role:` from its filename and any in-file metadata.
 
-    Inference order:
+    Inference passes (M7 — F1 / F10 / F12):
 
     1. An in-file ``Role:`` metadata line, when it carries a built-in role
-       (see `BUILTIN_ROLES`), wins outright — confident.
-    2. Otherwise the filename's trailing token (split on ``-`` / ``_``, with
-       the ``.md`` suffix dropped) is mapped to a role: ``-spec`` -> ``spec``,
-       ``-plan`` -> ``plan``, ``-adr`` -> ``decision``, ``-log`` -> ``log``,
-       ``-status`` -> ``status``, ``-charter`` -> ``charter``,
-       ``-guide`` -> ``guide``, ``-runbook`` -> ``runbook``,
-       ``-reference`` -> ``reference`` — confident. A trailing token that is
-       itself a built-in role (e.g. ``-decision``, ``-milestone``) resolves to
-       that role directly.
-    3. Otherwise the role falls back to the ``notes`` built-in catch-all —
-       not confident.
+       (see `BUILTIN_ROLES`), wins outright — confidence ``True``.
+    2. The filename's trailing token (split on ``-`` / ``_`` / whitespace,
+       with the ``.md`` suffix dropped) is mapped to a role via
+       ``_ROLE_SUFFIXES`` (extended with ``config.role_suffixes`` when
+       given) or by ``BUILTIN_ROLES`` membership — confidence ``True``.
+    3. A trailing ``_M\\d+`` (case-insensitive, leading zeros allowed) is the
+       Trial-2 milestone-task-plan shape — returns ``("milestone",
+       "medium")``.
+    4. ``_v\\d+`` / ``_Draft`` / ``_Ready`` non-role suffixes are stripped
+       (case-insensitive) and pass 2 is re-tried on the stripped stem —
+       confidence ``"medium"`` (derived signal).
+    5. Otherwise the role falls back to ``"notes"`` — confidence ``False``.
 
     Args:
         filename: The file's basename (e.g. ``auth-spec.md``).
         metadata: Metadata-shaped lines already present in the file, as
             produced by `parse_metadata_block`.
+        config: Optional `Config` whose ``role_suffixes`` extends the
+            built-in suffix map for this run (per-tree custom mapping via
+            ``[migrate] role_suffixes`` in ``.docs.toml``). ``None`` is the
+            test-friendly default and consults ``_ROLE_SUFFIXES`` only.
 
     Returns:
-        ``(role, confident)`` — ``role`` is always a member of
-        `BUILTIN_ROLES`; ``confident`` is True when a suffix or a valid
-        in-file ``Role:`` line determined it, False on the ``notes`` fallback.
+        ``(role, confidence)`` — ``role`` is always a member of
+        `BUILTIN_ROLES`. ``confidence`` is ``True`` for a direct suffix or
+        in-file ``Role:`` match, the string ``"medium"`` for the derived
+        ``_M\\d+`` / non-role-suffix-strip signals, and ``False`` for the
+        ``notes`` fallback.
     """
     in_file = metadata.get("Role")
     if isinstance(in_file, str) and in_file.strip() in BUILTIN_ROLES:
         return in_file.strip(), True
 
+    suffix_map: dict[str, str] = (
+        dict(_ROLE_SUFFIXES) if config is None else {**_ROLE_SUFFIXES, **config.role_suffixes}
+    )
+
     stem = filename[:-3] if filename.endswith(".md") else filename
-    tokens = re.split(r"[-_]", stem)
-    suffix = tokens[-1].lower() if tokens else ""
-    if suffix in _ROLE_SUFFIXES:
-        return _ROLE_SUFFIXES[suffix], True
-    # A trailing token that is itself a built-in role resolves to itself
-    # (e.g. `…-decision.md` → `decision`, `…-milestone.md` → `milestone`).
-    if suffix in BUILTIN_ROLES:
-        return suffix, True
+
+    def _match_direct(s: str) -> str | None:
+        # Word-boundary tolerance (F1): split on `-`, `_`, whitespace, AND
+        # case-transitions (`FooPlan` → `Foo`, `Plan`). Case-transition
+        # splitting lets a TitleCase-glued name like `MyPlan` resolve to
+        # `plan` once the v-suffix is stripped.
+        boundaried = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", s)
+        tokens = re.split(r"[-_\s]+", boundaried)
+        if not tokens or not tokens[-1]:
+            return None
+        suffix = tokens[-1].lower()
+        if suffix in suffix_map:
+            return suffix_map[suffix]
+        if suffix in BUILTIN_ROLES:
+            return suffix
+        return None
+
+    # Pass 2: direct suffix match (high confidence).
+    direct = _match_direct(stem)
+    if direct is not None:
+        return direct, True
+
+    # Pass 3: trailing `_M\d+` milestone-number pattern (medium).
+    if re.search(r"_M\d+$", stem, flags=re.IGNORECASE):
+        return "milestone", "medium"
+
+    # Pass 4: strip non-role suffixes and re-try (medium).
+    stripped = re.sub(r"_(?:Draft|Ready|v\d+)$", "", stem, flags=re.IGNORECASE)
+    if stripped != stem:
+        retried = _match_direct(stripped)
+        if retried is not None:
+            return retried, "medium"
 
     return "notes", False
 
@@ -1412,6 +1489,27 @@ def infer_project(filenames: Sequence[str], dir_name: str) -> str:
     if len(prefix) >= 2:
         return prefix
     return dir_name
+
+
+def normalise_project_name(name: str) -> str:
+    """Normalise a project slug to lowercase-kebab (M7 — F11 / OQ-B).
+
+    Splits on case boundaries (`FooBar` → `Foo-Bar`), letter↔digit
+    boundaries (`Abc5Mig` → `Abc-5-Mig`), and underscores; lowercases the
+    result; collapses repeats; trims leading / trailing dashes.
+
+    Digit-after-digit is NOT a split point, so a date-like sequence such
+    as ``2026-01-26`` survives intact.
+    """
+    if not name:
+        return name
+    s = re.sub(r"(?<=[a-z])(?=[A-Z])", "-", name)
+    s = re.sub(r"(?<=[A-Za-z])(?=\d)", "-", s)
+    s = re.sub(r"(?<=\d)(?=[A-Za-z])", "-", s)
+    s = s.replace("_", "-")
+    s = s.lower()
+    s = re.sub(r"-+", "-", s).strip("-")
+    return s
 
 
 def infer_status(
@@ -1670,7 +1768,157 @@ def _in_archive_subdir(rel_path: str) -> bool:
     return rel_path.split("/")[0] in _ARCHIVE_SUBDIR_NAMES
 
 
-def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan:
+# H1-trailing-word → built-in role hint (M7 — F1). Used by
+# `_infer_role_from_h1` when the filename suffix gave no signal.
+_ROLE_WORDS_TO_ROLES: dict[str, str] = {
+    "plan": "plan",
+    "spec": "spec",
+    "specification": "spec",
+    "status": "status",
+    "charter": "charter",
+    "log": "log",
+    "decision": "decision",
+    "guide": "guide",
+    "runbook": "runbook",
+    "reference": "reference",
+    "implementation": "implementation",
+    "sketch": "sketch",
+    "outline": "outline",
+    "memo": "memo",
+    "brief": "brief",
+    "milestone": "milestone",
+    "postmortem": "postmortem",
+    "template": "template",
+    "example": "example",
+}
+
+
+def _infer_role_from_h1(text: str) -> str | None:
+    """Find the first H1 in ``text``; return a role hint if its trailing
+    word matches a known role-word, else None.
+
+    Longest match wins (``"specification"`` beats ``"spec"``). The trailing
+    word must be on a word boundary — preceded by whitespace or the H1's
+    opening ``# `` so a title like ``# Foospec`` does NOT match.
+    """
+    for line in text.splitlines():
+        if line.startswith("# "):
+            title = line[2:].rstrip().lower()
+            if not title:
+                return None
+            for word in sorted(_ROLE_WORDS_TO_ROLES, key=len, reverse=True):
+                if title == word:
+                    return _ROLE_WORDS_TO_ROLES[word]
+                if title.endswith(word) and title[-len(word) - 1].isspace():
+                    return _ROLE_WORDS_TO_ROLES[word]
+            return None
+    return None
+
+
+def _infer_role_from_sections(text: str) -> str | None:
+    """Pattern-match top-level ``## `` headings; return a role hint or None.
+
+    The patterns mirror the Trial-2 conventional shapes:
+
+    - plan: ``## Goal`` + ``## Scope`` + ``## Requirements`` (or
+      ``## Exit criteria``).
+    - status: ``## Current state`` + ``## Progress`` (or ``## Updates``).
+    - decision (ADR): ``## Context`` + ``## Decision`` + ``## Consequences``.
+    - log: at least two dated ``## YYYY-MM-DD`` headings.
+    """
+    headings = [line[3:].strip().lower() for line in text.splitlines() if line.startswith("## ")]
+    headings_set = set(headings)
+    if {"goal", "scope", "requirements"}.issubset(headings_set) or {
+        "goal",
+        "exit criteria",
+    }.issubset(headings_set):
+        return "plan"
+    if {"current state", "progress"}.issubset(headings_set) or "updates" in headings_set:
+        return "status"
+    if {"context", "decision", "consequences"}.issubset(headings_set):
+        return "decision"
+    dated = sum(1 for h in headings if re.match(r"\d{4}-\d{2}-\d{2}", h))
+    if dated >= 2:
+        return "log"
+    return None
+
+
+def _sibling_default(
+    rel: str,
+    sibling_roles: dict[str, list[str]],
+    *,
+    min_majority: float = 0.6,
+    min_sample: int = 5,
+) -> str | None:
+    """Return the modal sibling role when ≥ ``min_majority`` of ≥ ``min_sample``
+    siblings share it; else ``None``. M7 — F1 / OQ-C.
+
+    Siblings are files in the same immediate subdir whose role was inferred
+    at high confidence (the function-level direct-suffix path); the modal
+    pool intentionally excludes files that also reached the fallback so the
+    defaulting is not self-reinforcing.
+    """
+    subdir = "/".join(rel.split("/")[:-1])
+    siblings = sibling_roles.get(subdir, [])
+    if len(siblings) < min_sample:
+        return None
+    counts: dict[str, int] = {}
+    for r in siblings:
+        counts[r] = counts.get(r, 0) + 1
+    role, count = max(counts.items(), key=lambda kv: kv[1])
+    if count / len(siblings) >= min_majority:
+        return role
+    return None
+
+
+def _multi_project_hints(
+    root: Path,
+    parent_project: str,
+    *,
+    threshold: int = 5,
+) -> tuple[str, ...]:
+    """For each immediate subdir whose ``.md`` files share a common
+    filename prefix distinct from ``parent_project`` AND cover ≥
+    ``threshold`` files, return one advisory ``"hint: …"`` line. M7 — F5.
+
+    The candidate name is the file-prefix per OQ6 — file naming is the
+    Trial-2-measured signal. When the file-prefix and the subdir-name
+    normalise to the same kebab value, either one names the candidate;
+    when they differ, the file-prefix wins.
+    """
+    hints: list[str] = []
+    for child in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")):
+        md_files = sorted(f for f in child.iterdir() if f.is_file() and f.suffix == ".md")
+        if len(md_files) < threshold:
+            continue
+        stems = [f.stem for f in md_files]
+        prefix = os.path.commonprefix(stems)
+        idx = max(prefix.rfind("-"), prefix.rfind("_"))
+        if idx >= 0:
+            prefix = prefix[:idx]
+        if len(prefix) < 2:
+            continue
+        candidate = normalise_project_name(prefix)
+        if candidate == parent_project:
+            continue
+        # OQ6: prefer the file-prefix candidate when it differs from the
+        # subdir name. When they match, the candidate is already aligned.
+        hint = (
+            f"hint: subdir {child.name!r}/ looks like a separate project "
+            f"(common prefix {prefix!r}, {len(md_files)} .md files). "
+            f"Migrate it independently: docs migrate {child.name}/ "
+            f"--config-project {candidate}"
+        )
+        hints.append(hint)
+    return tuple(hints)
+
+
+def plan_migration(
+    root: Path,
+    archive_date: str | None = None,
+    *,
+    cli_config_project: str | None = None,
+) -> MigrationPlan:
     """Build the `MigrationPlan` for the foreign directory ``root``.
 
     Recurses the whole tree via `_iter_doc_texts` (with a default `Config`),
@@ -1678,23 +1926,64 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
     runs `infer_role` / `infer_project` / `infer_status` / `infer_updated`,
     flags every ambiguity, sets ``confidence``, and calls
     `detect_archive_layout` to plan any archive-normalising move. The
-    active-tree directory layout is left untouched — only files under detected
-    archive-style subdirs carry an ``archive_move``.
+    active-tree directory layout is left untouched — only files under
+    detected archive-style subdirs carry an ``archive_move``.
+
+    M7 — F4 / F5 / F11 surface:
+
+    - When ``archive_date`` is ``None``, archive moves use a per-file date
+      derived from the file's ``Updated:`` line (or its mtime fall-back)
+      instead of a single migration-run-wide default. An explicit
+      ``archive_date`` continues to override globally — the existing
+      ``--date`` flag's semantics.
+    - The inferred project name is normalised to lowercase-kebab (F11). A
+      ``[migrate] project_name`` entry in the tree's ``.docs.toml`` (when
+      present), and the ``cli_config_project`` argument (the
+      ``--config-project NAME`` CLI flag) both short-circuit normalisation
+      — precedence is CLI > sidecar > inferred-and-normalised. The
+      pre-normalisation name is carried on
+      ``MigrationPlan.project_original`` when normalisation changed it.
+    - When the override path is NOT taken, immediate subdirs whose ``.md``
+      files share a common filename prefix distinct from the parent's
+      project AND cover ≥ 5 files are surfaced as advisory
+      ``"hint: …"`` lines on ``MigrationPlan.multi_project_hints``.
+    - Files whose role falls back to ``notes`` get a medium-confidence
+      upgrade pass via H1-content, section-header pattern, and sibling-set
+      defaulting — derived signals OQ-D pins at the ``"medium"`` confidence
+      level.
 
     Args:
         root: The foreign directory to plan a migration for.
-        archive_date: The ``YYYY-MM-DD`` archive date for normalised moves;
-            defaults to today when ``None``.
+        archive_date: Explicit ``YYYY-MM-DD`` archive date that overrides
+            the per-file date selection. ``None`` activates the F4 per-file
+            mtime / Updated: path.
+        cli_config_project: The ``--config-project NAME`` CLI value, or
+            ``None`` when the flag is absent. Wins over ``.docs.toml``'s
+            ``[migrate] project_name``.
 
     Returns:
-        A `MigrationPlan` whose ``files`` are in root-relative path order.
+        A `MigrationPlan` whose ``files`` are in root-relative path order
+        and whose ``project_original`` / ``multi_project_hints`` describe
+        F5 / F11 surfaces.
     """
-    if archive_date is None:
-        archive_date = date.today().strftime("%Y-%m-%d")
+    date_explicit = archive_date is not None
 
     config = load_config(root)
     pairs = list(_iter_doc_texts(root, config))
-    project = infer_project([p.name for p, _ in pairs], root.resolve().name)
+
+    # F11 project-name precedence: CLI override > `.docs.toml [migrate]
+    # project_name` > F11-normalised(inferred).
+    inferred_raw = infer_project([p.name for p, _ in pairs], root.resolve().name)
+    inferred_normalised = normalise_project_name(inferred_raw)
+    if cli_config_project is not None:
+        project = cli_config_project
+        project_original: str | None = None
+    elif config.project_name is not None:
+        project = config.project_name
+        project_original = None
+    else:
+        project = inferred_normalised
+        project_original = inferred_raw if inferred_raw != inferred_normalised else None
 
     # First pass: per-file inference, building one `FileMigration` per file.
     migrations: list[FileMigration] = []
@@ -1710,10 +1999,20 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
             synthesized_h1 = True
         reconciled_metadata = bool(metadata)
 
-        role, role_conf = infer_role(path.name, metadata)
+        role, role_conf = infer_role(path.name, metadata, config)
         status, _status_conf = infer_status(metadata, in_archive)
         updated, _updated_conf = infer_updated(metadata, path.stat().st_mtime, config.date_format)
-        archive_move = detect_archive_layout(rel, archive_date)
+
+        # F4: when --date is not set, the archive-move date comes per-file
+        # from the resolved `Updated:` (or mtime fall-back) instead of a
+        # single migration-run default. With an explicit archive_date the
+        # global override wins for every file.
+        file_archive_date: str = (
+            archive_date
+            if date_explicit and archive_date is not None
+            else updated.strftime("%Y-%m-%d")
+        )
+        archive_move = detect_archive_layout(rel, file_archive_date)
 
         # Ambiguity-flagging rule (resolved Q1): flag for exactly three
         # sources — a `notes` role fallback, a synthesised H1, and an
@@ -1726,7 +2025,9 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
         # `Status:` prose line is no longer vocab-checked; it is preserved
         # via the extra-field pathway.
         ambiguities: list[str] = []
-        if not role_conf:
+        # `role_conf` is a tri-value: True (high), "medium" (derived), False (notes fallback).
+        notes_fallback = role_conf is False
+        if notes_fallback:
             ambiguities.append(
                 f"Role inferred as 'notes' fallback — no filename suffix or "
                 f"in-file Role: matched ({path.name})."
@@ -1740,7 +2041,12 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
                 f"— substituted with built-in {status!r}."
             )
 
-        confidence = "low" if ambiguities else "high"
+        if ambiguities:
+            confidence: str = "low"
+        elif role_conf == "medium":
+            confidence = "medium"
+        else:
+            confidence = "high"
         migrations.append(
             FileMigration(
                 path=path,
@@ -1756,6 +2062,54 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
                 archive_move=archive_move,
             )
         )
+
+    # F1 medium-confidence upgrade pass: for files that landed on `notes`
+    # at low confidence (the suffix-only inference fall-back), re-run
+    # H1-content → section-header → sibling-set in order. Only files whose
+    # ONLY ambiguity is the notes-fallback note can fully upgrade to
+    # medium; any remaining ambiguity keeps confidence at low (per the
+    # M4 invariant that any ambiguity ⇒ low).
+    sibling_roles: dict[str, list[str]] = {}
+    for fm in migrations:
+        # Only suffix-confident files seed the sibling pool so the
+        # defaulting is not self-reinforcing across notes-fallback files.
+        if fm.confidence == "high":
+            subdir = "/".join(fm.rel.split("/")[:-1])
+            sibling_roles.setdefault(subdir, []).append(fm.role)
+
+    upgraded: list[FileMigration] = []
+    notes_fallback_note = "Role inferred as 'notes' fallback"
+    for fm in migrations:
+        if fm.role != "notes" or fm.confidence != "low":
+            upgraded.append(fm)
+            continue
+        # Only consider files whose low-confidence rationale includes the
+        # notes-fallback (i.e. the role inference itself failed).
+        if not any(notes_fallback_note in note for note in fm.ambiguities):
+            upgraded.append(fm)
+            continue
+        # Read the file text once per upgrade candidate.
+        try:
+            file_text = fm.path.read_text()
+        except OSError:
+            upgraded.append(fm)
+            continue
+        new_role = (
+            _infer_role_from_h1(file_text)
+            or _infer_role_from_sections(file_text)
+            or _sibling_default(fm.rel, sibling_roles)
+        )
+        if not new_role or new_role == "notes":
+            upgraded.append(fm)
+            continue
+        # Drop the now-resolved notes-fallback note; remaining ambiguities
+        # (synthesised H1, out-of-vocab Lifecycle:) keep the file at low.
+        remaining = tuple(a for a in fm.ambiguities if notes_fallback_note not in a)
+        new_confidence: str = "medium" if not remaining else "low"
+        upgraded.append(
+            replace(fm, role=new_role, confidence=new_confidence, ambiguities=remaining)
+        )
+    migrations = upgraded
 
     # Second pass (resolved review finding): two foreign files in different
     # archive-style subdirs can normalise to the same `archive/<date>/<name>`
@@ -1784,7 +2138,19 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
             for fm in migrations
         ]
 
-    return MigrationPlan(root=root, files=tuple(migrations))
+    # F5: multi-project hint emission. The CLI override path
+    # short-circuits hint emission — the operator already pinned a
+    # project so the heuristic adds no value.
+    hints: tuple[str, ...] = (
+        () if cli_config_project is not None else _multi_project_hints(root, project)
+    )
+
+    return MigrationPlan(
+        root=root,
+        files=tuple(migrations),
+        project_original=project_original,
+        multi_project_hints=hints,
+    )
 
 
 def apply_migration(plan: MigrationPlan) -> None:
@@ -2568,6 +2934,11 @@ def _print_migration_plan(plan: MigrationPlan) -> None:
     non-required fields preserved into a ``## Migrated metadata`` section),
     and every ambiguity.
     """
+    # F11: when project normalisation changed the inferred value, print
+    # the annotation ONCE at the top so per-file lines stay flat.
+    if plan.project_original is not None and plan.files:
+        print(f'project: {plan.files[0].project} (normalised from "{plan.project_original}")')
+        print()
     for fm in plan.files:
         print(fm.rel)
         print(f"  role: {fm.role}    project: {fm.project}    lifecycle: {fm.lifecycle}")
@@ -2588,6 +2959,9 @@ def _print_migration_plan(plan: MigrationPlan) -> None:
         for note in fm.ambiguities:
             print(f"  ambiguity: {note}")
         print()
+    # F5: hints land in the plan footer.
+    for hint in plan.multi_project_hints:
+        print(hint)
 
 
 def _cmd_migrate(args: argparse.Namespace) -> int:
@@ -2596,16 +2970,29 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         print(f"docs: directory not found: {target}", file=sys.stderr)
         return 2
 
-    # `migrate` refuses a directory that is already a managed docs root — that
-    # tree is for index / check / list, and re-inserting blocks could
-    # duplicate metadata.
-    if (target / ".docs.toml").is_file():
-        print(
-            f"docs: {target} is already a docs root (.docs.toml present) — "
-            "migrate is for foreign trees; use index / check / list instead.",
-            file=sys.stderr,
-        )
-        return 2
+    # `migrate` refuses a directory whose `.docs.toml` carries the
+    # managed-root marker sections (`[project]`, `[archive]`, or
+    # `[vocabulary]`) — that tree is for index / check / list, and
+    # re-inserting blocks could duplicate metadata. M7 (OQ5) narrows the
+    # refusal: a sidecar `.docs.toml` containing ONLY a `[migrate]`
+    # section is a foreign-tree migration hint (e.g. `[migrate]
+    # project_name = "foo-bar"`) and is read without refusing.
+    toml_path = target / ".docs.toml"
+    if toml_path.is_file():
+        try:
+            data = tomllib.loads(toml_path.read_text())
+        except tomllib.TOMLDecodeError as exc:
+            print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+            return 2
+        managed_sections = {"project", "archive", "vocabulary"}
+        if managed_sections & data.keys():
+            print(
+                f"docs: {target} is already a docs root (.docs.toml has "
+                f"{sorted(managed_sections & data.keys())!r}) — "
+                "migrate is for foreign trees; use index / check / list instead.",
+                file=sys.stderr,
+            )
+            return 2
 
     if args.date:
         try:
@@ -2613,10 +3000,16 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         except MetadataError as exc:
             print(f"docs: --date: {exc}", file=sys.stderr)
             return 2
-    date_str = args.date or date.today().strftime("%Y-%m-%d")
+        # `args.date` explicitly set ⇒ override per-file dates globally
+        # (M4 semantics retained).
+        date_str: str | None = args.date
+    else:
+        # Absent ⇒ F4: plan_migration picks the per-file Updated:/mtime
+        # date for each archive move.
+        date_str = None
 
     try:
-        plan = plan_migration(target, date_str)
+        plan = plan_migration(target, date_str, cli_config_project=args.config_project)
         if args.apply:
             apply_migration(plan)
     except (MetadataError, VocabularyError, OSError) as exc:
