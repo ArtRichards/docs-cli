@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-05-25
 
 Related:
 - implements: charter.md
@@ -24,12 +24,13 @@ inside the same wheel as package data.
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
 ├── cli.py                               ─ the CLI module (~2.5k lines)
-│   ├── dunder version                   (__version__ = "1.1.0")
-│   ├── config        — TOML load, Vocab merging, archive-dir resolution
+│   ├── dunder version                   (__version__ = "1.2.0")
+│   ├── config        — TOML load, Vocab merging, archive-dir resolution,
+│   │                   `[migrate]` per-tree overrides (M7)
 │   ├── model         — Doc dataclass; metadata block parser + editors
 │   ├── walker        — directory traversal, filter, archive detection
 │   ├── index         — INDEX.md render with marker-block preservation
-│   ├── archive       — atomic move + status edit (M2)
+│   ├── archive       — atomic move + lifecycle edit (M2; M7 rename)
 │   ├── mv            — rename + Related: rewrite across tree (M2)
 │   ├── new           — scaffolded doc creation (M2)
 │   ├── touch         — Updated: bump (M2)
@@ -64,9 +65,24 @@ version-controlled here, **ships as package data inside the
 
 ### `model`
 
-- `Doc` dataclass (frozen): `path`, `title`, `status`, `role`, `project`, `updated`, `related: tuple[(verb, path), ...]`, `extra: Mapping[str, str | tuple[str, ...]]`, `body`, `archived`.
+- `Doc` dataclass (frozen): `path`, `title`, `lifecycle` (M7-renamed from `status`), `role`, `project`, `updated`, `related: tuple[(verb, path), ...]`, `extra: Mapping[str, str | tuple[str, ...]]`, `body`, `archived`.
 - `parse(text: str, path: Path, root: Path) -> Doc` — H1 + metadata block parser, layered on `parse_metadata_block` / `_metadata_line_span`.
 - `parse` is pure (no I/O). M2 writes metadata back with surgical, minimal-diff line edits (`set_metadata_field`, `rewrite_related_refs`, `scaffold_doc`) rather than a full re-serializer — see the M2 milestone Decisions.
+
+### `config`
+
+- `Config` dataclass (frozen): `project`, `archive_dir`, `date_format`,
+  `lifecycles: frozenset[str]` (M7-renamed from `statuses`), `roles:
+  frozenset[str]`, `index_filename`, plus M7's two `[migrate]` per-tree
+  overrides: `role_suffixes: dict[str, str]` (custom filename-suffix →
+  role mapping) and `project_name: str | None` (per-tree project override,
+  equivalent to the `--config-project NAME` CLI flag).
+- `load_config(root) -> Config` reads `.docs.toml` (or returns defaults
+  when absent). M7: the `[vocabulary] add_statuses` TOML key was renamed
+  `add_lifecycles` without a backward-compat alias; the new `[migrate]`
+  section is optional.
+- `validate_lifecycle` / `validate_role` are the two vocab-checks (M7:
+  `validate_status` was renamed `validate_lifecycle`).
 
 ### `walker`
 
@@ -83,11 +99,13 @@ version-controlled here, **ships as package data inside the
   archived docs share one section.
 - Deterministic: same inputs produce byte-identical output.
 
-**Display order within Status: active.** The top level is one section per
+**Display order within Lifecycle: active.** The top level is one section per
 `Project` — the docs root's own project first, then the rest in ascending
 lexicographic order. Within a project, Roles follow the canonical convention
 order (charter, plan, spec, milestone, log, status, decision, guide, runbook,
-reference, postmortem, idea, notes), **except `status` is pinned to the top**
+reference, postmortem, idea, implementation, sketch, outline, memo, brief,
+template, example, notes — M7 adds the 7 core roles between `idea` and
+`notes`), **except `status` is pinned to the top**
 — it's the "you are here" pin and the entry point for most navigation. Within
 each Role section, entries are sorted by `Updated:` descending, then by path
 ascending as a deterministic tiebreaker.
@@ -122,8 +140,10 @@ The renderer's output between the markers has a fixed shape so that
 - **Role group order.** Within each project, `status` is pinned to the
   top. The remaining Roles follow `CANONICAL_ROLE_ORDER` (defined in
   `src/docs_cli/cli.py`) — charter, plan, spec, milestone, log,
-  decision, guide, runbook, reference, postmortem, idea, notes. Role
-  groups with zero entries are omitted. `## Archived` appears last,
+  decision, guide, runbook, reference, postmortem, idea,
+  implementation, sketch, outline, memo, brief, template, example,
+  notes (M7 — F10 adds the 7 core roles between `idea` and `notes`).
+  Role groups with zero entries are omitted. `## Archived` appears last,
   after every project.
 - **Within-section sort.** Primary key: `Updated:` descending. Tiebreaker:
   path ascending (lexicographic on the root-relative path).
@@ -154,37 +174,81 @@ the marker block and the derived content.
 - `migrate` adopts a *non-conforming* foreign directory into the convention.
   It is read-only by default (a dry-run plan); `--apply` performs the edits.
 - **Inference helpers** — pure functions, no I/O:
-  - `infer_role(filename, metadata) -> (role, confident)` — filename-suffix
-    token → built-in role, with an in-file `Role:` line overriding and a
-    `notes` fallback.
+  - `infer_role(filename, metadata, config=None) -> (role, confidence)` —
+    multi-pass: in-file `Role:` (high) → filename-suffix match (high) →
+    `_M\d+` milestone pattern (medium) → non-role-suffix strip
+    (`_v\d+`/`_Draft`/`_Ready`) + re-match (medium) → `notes` fallback
+    (low). Word-boundary tolerance: tokeniser splits on `-`/`_`/whitespace
+    AND case-transition (`MyPlan` → suffix `plan`). Optional `config`
+    extends the built-in suffix map with `config.role_suffixes`.
+    Confidence is `True`/`"medium"`/`False`.
   - `infer_project(filenames, dir_name) -> str` — the longest common
     `-`/`_`-delimited filename prefix, or the directory name.
-  - `infer_status(metadata, in_archive) -> (status, confident)` — in-file
-    `Status:` line, else `archived` (in an archive subdir) or `active`.
+  - `normalise_project_name(name) -> str` (M7 — F11) — splits on case
+    boundaries (`FooBar`), letter↔digit (`Abc5Mig`), underscores;
+    lowercases; trims; collapses repeats. Preserves digit-after-digit so
+    `2026-01-26` survives intact.
+  - `infer_status(metadata, in_archive) -> (lifecycle, confident)` —
+    in-file `Lifecycle:` line (M7-renamed; function name preserved at
+    Phase 5 — Phase 10 simplify candidate), else `archived` (in an
+    archive subdir) or `active`.
   - `infer_updated(metadata, mtime, date_format) -> (updated, confident)` —
     in-file `Updated:` line, else the file mtime.
   - `detect_archive_layout(rel_path, archive_date) -> str | None` — maps a
     non-conformant archive-style path (`archived/`, `project-history/`, a
     bare `archive/file.md`) to `archive/<date>/<basename>`; returns `None`
     for an active-tree file or one already at `archive/<valid-date>/`.
+  - `_infer_role_from_h1(text) -> str | None` (M7 — F1) — H1 trailing-word
+    match; longest match wins; word-boundary required.
+  - `_infer_role_from_sections(text) -> str | None` (M7 — F1) — top-level
+    `## ` heading pattern match (plan / status / decision / log shapes).
+  - `_sibling_default(rel, sibling_roles) -> str | None` (M7 — F1 / OQ-C)
+    — modal sibling role at ≥ 60% over ≥ 5 same-subdir suffix-confident
+    files.
+  - `_multi_project_hints(root, parent_project, threshold=5) -> tuple[str, ...]`
+    (M7 — F5) — emits one `"hint: …"` line per immediate subdir whose
+    `.md` common-filename-prefix differs from `parent_project` and
+    covers ≥ `threshold` files. Candidate name is the file-prefix
+    (per OQ6).
 - **Block-insertion** — `insert_metadata_block(text, *, title, status, role,
   project, updated, date_format)` places (or synthesises) the H1, inserts the
-  required metadata block beneath it, preserves the body verbatim, and
-  reconciles any pre-existing metadata-shaped lines into the block instead of
-  duplicating them. Distinct from `set_metadata_field` (edits an existing
+  required metadata block (M7 — writes `Lifecycle:`), preserves the body
+  verbatim, and reconciles any pre-existing metadata-shaped lines into the
+  block instead of duplicating them; non-required pre-existing lines (a
+  free-form `Status:`, `Owner:`, `Tags:`, `Related:`, etc.) are preserved
+  into a `## Migrated metadata` body section with each label `Migrated-`
+  prefixed. Distinct from `set_metadata_field` (edits an existing
   block) and `scaffold_doc` (builds from nothing) — see the M4 Decisions.
-- **Plan / apply** — `plan_migration(root, archive_date) -> MigrationPlan`
-  walks the tree (via `_iter_doc_texts` with a default `Config`), runs the
-  inference helpers, and assembles one `FileMigration` per `.md` file with a
-  confidence and every ambiguity flagged. `apply_migration(plan)` executes it:
-  `insert_metadata_block` + `atomic_write` per file, plus the archive moves.
-  `migration_to_json(plan)` serialises the whole plan to the `--json` schema
-  pinned in [cli.md](cli.md).
+  The function-signature parameter is still named `status` for back-
+  compat (Phase 10 simplify candidate).
+- **Plan / apply** — `plan_migration(root, archive_date=None, *,
+  cli_config_project=None) -> MigrationPlan` walks the tree (via
+  `_iter_doc_texts` with a default `Config`), runs the inference helpers,
+  and assembles one `FileMigration` per `.md` file with a confidence and
+  every ambiguity flagged. M7 (F11) consults the precedence chain
+  CLI `--config-project` > `.docs.toml [migrate] project_name` >
+  F11-normalised(inferred); the pre-normalisation name flows onto
+  `MigrationPlan.project_original` when normalisation changed it. M7 (F4)
+  uses each file's `Updated:`/mtime as the archive-move date when
+  `archive_date` is `None`. A medium-confidence upgrade pass over
+  `notes`-fallback files runs H1 → section → sibling-set in order. M7
+  (F5) emits `MigrationPlan.multi_project_hints` via
+  `_multi_project_hints` unless `cli_config_project` is set.
+  `apply_migration(plan)` executes it: `insert_metadata_block` +
+  `atomic_write` per file, plus the archive moves.
+  `migration_to_json(plan)` serialises the whole plan to the `--json`
+  schema pinned in [cli.md](cli.md).
 - **Models** — `FileMigration` (frozen) carries one per-file decision: the
-  inferred `role`/`project`/`status`/`updated`, `confidence`, `ambiguities`,
-  `synthesized_h1`, `reconciled_metadata`, and an optional `archive_move`
-  destination. `MigrationPlan` (frozen) holds the `root` and the tuple of
-  `FileMigration`s in root-relative path order.
+  inferred `role`/`project`/`lifecycle` (M7-renamed)/`updated`,
+  `confidence` (`"high"|"medium"|"low"` — M7 widens to three values per
+  OQ-D; `medium` requires empty `ambiguities`), `ambiguities`,
+  `synthesized_h1`, `reconciled_metadata`, and an optional
+  `archive_move` destination. `MigrationPlan` (frozen) holds the `root`,
+  the tuple of `FileMigration`s in root-relative path order,
+  `project_original: str | None` (M7 — the pre-normalisation project
+  name when F11 changed the value, else `None`), and
+  `multi_project_hints: tuple[str, ...]` (M7 — F5 advisory hints, empty
+  when none apply or when the CLI override is in force).
 - **Scope boundary** — the active-tree directory layout is left untouched;
   `--apply` adds metadata in place and only ever moves docs out of detected
   archive-style subdirs. No role-bucket flattening or project re-foldering.

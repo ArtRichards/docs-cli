@@ -100,7 +100,7 @@ rename is the semver trigger.
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-24 | Captured verbatim pytest output: **34 failed + 281 passed = 315 collected**. The 281 passing decomposes as M6's 271 GREEN + 10 new GREEN-at-baseline regression locks (`_M\d+`-with-`_Log` combination; sibling-not-defaulting × 2; kebab + digit-after-digit pass-through × 2; `(normalised from …)` annotation omitted-when-unchanged; archive `no-d` shape; `--date` global override; already-conformant archive no-move; multi-project hint below-threshold). The 34 failing trace to their intended unimplemented surfaces (parser-only-knows-Status, no broadened inference, no normalisation, no per-file-mtime archive date, no multi-project hint, no `--config-project` argparse flag). Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Complete | 2026-05-25 | **F0 rename landed.** Parser requires `Lifecycle:`; free-form `Status:` becomes a preserved extra field. `Doc.status` → `Doc.lifecycle`; `FileMigration.status` → `FileMigration.lifecycle`; `Config.statuses` → `Config.lifecycles`; `validate_status` → `validate_lifecycle`; TOML key `add_statuses` → `add_lifecycles`. `FileMigration.confidence` extended to `{high, medium, low}` (medium requires empty ambiguities). `Config` grows `role_suffixes: dict` + `project_name: str | None` (consumed at Phase 6). `MigrationPlan` grows `project_original: str \| None` + `multi_project_hints: tuple[str, ...]` (populated at Phase 6). Argparse: `docs list --status` → `--lifecycle`; `docs migrate --config-project NAME` added (consumed at Phase 6). `insert_metadata_block` writes `Lifecycle:`; `scaffold_doc` writes `Lifecycle: draft`; `_archive_one` writes `Lifecycle: archived`. `check_doc` reads `Lifecycle:`. `_REQUIRED_METADATA_FIELDS` swaps `Status` → `Lifecycle` so a free-form `Status:` line lands in the extra-field preservation path. Sweep of `docs/*.md` (29 files) and conformant test-tree fixtures (31 files + `parser/well-formed.md`) via `^Status: <vocab>$` → `^Lifecycle: <vocab>$`. Skill refs resynced (deferred from plan to keep Phase 5 GREEN). pytest: 290 passed / 30 failed (RED for Phase 6 surface — inference broadening, project normalisation, per-file mtime, multi-project hints, medium-confidence check wiring); ruff / format / mypy / docs check / docs index --dry-run all clean. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-25 | **F1 / F10 / F11 / F12 / F4 / F5 landed.** `infer_role` now: word-boundary tolerance (splits on `-` / `_` / whitespace / case-transition); 7 new core vocab role suffixes (`_implementation`, `_sketch`, `_outline`, `_memo`, `_brief`, `_template`, `_example`); `_M\d+` milestone-number pattern (medium); `_v\d+`/`_Draft`/`_Ready` non-role suffix strip + re-match (medium). New `normalise_project_name()` splits on case + letter↔digit boundaries; `plan_migration` consults precedence (CLI `--config-project` > `.docs.toml [migrate] project_name` > F11-normalised) and surfaces the `(normalised from "X")` annotation via `MigrationPlan.project_original`. New `_multi_project_hints()` emits one `hint:` line per immediate subdir whose `.md` common prefix differs from the parent project AND covers ≥ 5 files; surfaced through `MigrationPlan.multi_project_hints` and printed in the human plan footer (suppressed when `--config-project` is set). New H1-content / section-header / sibling-set inference helpers run a medium-confidence upgrade pass over `notes`-fallback files. `check_doc` emits a `medium-confidence-inference` warning (exit 1) instead of a `missing-field` error when the missing `Role:` is resolvable via the H1 or section signal. `_cmd_migrate` narrows the `.docs.toml` refusal to managed-root markers (`[project]`, `[archive]`, `[vocabulary]`) so a `[migrate]`-only sidecar is readable; threads `args.config_project` into `plan_migration`; F4 per-file mtime/Updated: drives archive-move dates when `--date` is absent. pytest: **320 / 320 GREEN**. Quality gate clean. |
-| 7. Update Tool/Wrapper Layer | Pending | — | convention.md (rename + new vocab + medium confidence + `add_statuses` → `add_lifecycles`), cli.md (F0 breaking note + `--config-project` synopsis + `docs list --status` → `--lifecycle` flag rename + project-normalisation output shape + multi-project hint footer shape + `docs check` exit-code clarification), architecture.md (Config schema), status.md ("Watch out for" entry), README.md (any `Status:` references swept to `Lifecycle:`), CHANGELOG.md (`## 1.2.0 — UNRELEASED`), pyproject.toml + cli.py `__version__` bumped to 1.2.0, src/docs_cli/skill/references/{convention,cli}.md resynced. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-25 | **Specs + CHANGELOG rewritten; v1.2.0 bumped.** convention.md: Required-fields table swaps `Status:` → `Lifecycle:` with a breaking-change callout; new "Status" optional-field row (free-form prose, preserved-not-vocab-checked); Lifecycle section header renamed; Role table gains 7 M7 additions; new "Inference and confidence" section documenting high/medium/low semantics; new "Per-tree `[migrate]` config" section documenting `project_name` and `role_suffixes`; archive subtree rules updated. cli.md: F0 breaking-change callout at top of `docs migrate`; `docs list --status` → `--lifecycle`; `--json` schema field `status` → `lifecycle` in both `docs list` and `docs migrate`; expanded Inference rules (5 passes + word-boundary + case-transition + medium signals + sibling-set); F11 normalisation section with `(normalised from "X")` annotation; F5 multi-project hint section with the literal hint line shape; `--config-project NAME` synopsis added; `docs check` rule list gains `medium-confidence-inference`; exit-code matrix updated. architecture.md: new `config` module section (Config dataclass + `validate_lifecycle` rename + new `[migrate]` fields); `model` Doc.status → Doc.lifecycle; INDEX role-order updated with 7 new roles; `migrate` module — every new inference helper (`normalise_project_name`, `_infer_role_from_h1`, `_infer_role_from_sections`, `_sibling_default`, `_multi_project_hints`) documented; FileMigration.lifecycle / confidence widens; MigrationPlan.project_original / multi_project_hints documented; `__version__ = "1.2.0"`. status.md: "Watch out for" entry for M7's breaking rename + skill-refs lockstep. README.md: lone `Status:` swapped to `Lifecycle:`. CHANGELOG.md: new `## 1.2.0 — UNRELEASED` section above 1.1.0 with Changed (breaking) + Added blocks documenting every M7 feature. pyproject.toml + `__version__` → 1.2.0. Bundled skill refs (`src/docs_cli/skill/references/{convention,cli}.md`) resynced from `docs/`. Updated dates on touched docs bumped to 2026-05-25. `tests/test_packaging.py` version expectations bumped (1.1.0 → 1.2.0; function name `test_a3_project_version_is_1_1_0` → `_1_2_0`). pytest: **320 / 320 GREEN**; `docs --version` → `docs 1.2.0`. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest ≥ 296 passed; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff. |
 | 9. Implement Online/Integration | Pending | — | Mapped to dogfooding against Trial 2 fixtures. Confirm 5 quantitative success criteria (confidence ≥ 50%, notes ≤ 30%, status preservation 100%, archive proposals ≥ 80%, normalisation ≥ 90%). Helper script at `tests/manual/m7_success_criteria.py` aggregates and reports. |
 | 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M7 → Complete; CHANGELOG dated; `v1.2.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6; `gh release create v1.2.0`. |
@@ -1066,3 +1066,145 @@ signals).
 - [x] `.docs.toml` refusal narrowed to managed-root markers
       (OQ5).
 - [x] pytest 320 / 320 GREEN. Quality gate clean.
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Document M7's surface in every user-facing spec so the agent
+reading `docs install-skill`'s materialised skill and the
+operator reading `docs/` see the same set of facts. Bump the
+version to 1.2.0 and resync the bundled skill references in
+lockstep. No code changes; no test status change.
+
+#### Files changed
+
+- **docs/convention.md:** Required-fields table swaps to
+  `Lifecycle:` with a breaking-change callout pointing at
+  `dual-status-adr.md`; new "Status" optional-field row
+  (free-form prose, preserved verbatim, not vocab-checked);
+  Lifecycle section header renamed from "Status (built-in)"
+  to "Lifecycle (built-in)"; Role table gains 7 M7 additions
+  (`implementation`, `sketch`, `outline`, `memo`, `brief`,
+  `template`, `example`) with an "M7 — F10 / OQ-A" anchor;
+  new "Inference and confidence" section documenting
+  high/medium/low semantics + the OQ-D exit-1-on-medium
+  contract; new "Per-tree `[migrate]` config" section
+  documenting `project_name` + `role_suffixes` + the OQ5
+  sidecar-shape narrow-refusal; archive subtree rules
+  updated to `Lifecycle:` (with `status-drift` rule id
+  preserved); `[vocabulary] add_lifecycles` TOML key noted
+  as renamed without alias.
+
+- **docs/cli.md:** F0 breaking-change callout at top of
+  `docs migrate`; `docs list` synopsis flag renamed
+  `--status` → `--lifecycle` (no alias note); `--json`
+  schema rows `status` → `lifecycle` in BOTH `docs list`
+  and `docs migrate` schemas; expanded Inference rules
+  describing all 5 passes (in-file Role: high → suffix
+  match high → `_M\d+` medium → strip + retry medium →
+  H1/section/sibling medium → notes low); F11 normalisation
+  section with the literal `(normalised from "X")` shape;
+  F5 multi-project hint section with the literal hint line
+  shape (`hint: subdir 'X/' looks like a separate project
+  (common prefix 'P', N .md files). Migrate it
+  independently: docs migrate X/ --config-project Y`);
+  `--config-project NAME` synopsis added with precedence
+  chain (CLI > sidecar > inferred-and-normalised);
+  `docs check` rule list gains
+  `medium-confidence-inference`; exit-code matrix updated
+  with the medium → exit 1 path. `.docs.toml` refusal
+  narrowed-to-managed-root-markers documented (OQ5).
+
+- **docs/architecture.md:** New `config` module section
+  (Config dataclass + `lifecycles` field + new `[migrate]`
+  fields + `validate_lifecycle` rename); `model` Doc.status
+  → Doc.lifecycle; `__version__` → 1.2.0; INDEX role-order
+  updated to include the 7 new core roles between `idea`
+  and `notes`; `migrate` module section — every new
+  inference helper (`normalise_project_name`,
+  `_infer_role_from_h1`, `_infer_role_from_sections`,
+  `_sibling_default`, `_multi_project_hints`) documented
+  with its signature, purpose, and OQ anchor;
+  `FileMigration.lifecycle` + `confidence` widening
+  documented; `MigrationPlan.project_original` +
+  `multi_project_hints` documented; `archive` module note
+  updated for the lifecycle edit.
+
+- **docs/status.md:** "Watch out for" gotcha entry for M7
+  (the on-disk rename + skill-refs lockstep test).
+
+- **README.md:** the lone `Status:` line in the example
+  metadata block swapped to `Lifecycle:`.
+
+- **CHANGELOG.md:** new `## 1.2.0 — UNRELEASED` section
+  inserted ABOVE the existing `## 1.1.0 — UNRELEASED`
+  section. Documents every M7 surface — Changed (breaking)
+  block: F0 rename + flag rename + JSON schema field
+  rename + TOML key rename. Added block: medium confidence,
+  7 new core role additions, F11 normalisation, per-file
+  archive-move dates (F4), multi-project hints (F5),
+  `--config-project NAME` (F5), `[migrate] role_suffixes`
+  (F1), broadened role inference (F1/F10/F12). Notes
+  block: Trial-2 measurements, OQ5 sidecar shape.
+
+- **pyproject.toml:** `version = "1.1.0"` → `"1.2.0"`.
+- **src/docs_cli/cli.py:** `__version__ = "1.1.0"` →
+  `"1.2.0"`.
+- **tests/test_packaging.py:** every `1.1.0` literal
+  swapped to `1.2.0` (A3 / B1 / B2 / C2 wheel-name,
+  sdist-name, `docs --version` token, function name
+  `test_a3_project_version_is_1_1_0` →
+  `test_a3_project_version_is_1_2_0`).
+
+- **src/docs_cli/skill/references/convention.md** +
+  **src/docs_cli/skill/references/cli.md** — resynced from
+  `docs/` via byte-copy. `tests/test_skill_refs.py`
+  enforces lockstep.
+
+- **docs/INDEX.md** + **tests/fixtures/expected/docs-INDEX.md**
+  — regenerated in lockstep (Updated: dates bumped for the
+  4 touched docs: convention.md, cli.md, architecture.md,
+  status.md, plus the M7 log).
+
+#### Test status at Phase 7 close
+
+```text
+$ .venv/bin/python -m pytest tests/ -q
+... 320 passed in 7.55s ...
+```
+
+- 320 / 320 GREEN. No test count change at Phase 7 (the
+  packaging tests' version assertions flipped from `1.1.0`
+  to `1.2.0`; the skill-refs lockstep test re-verified
+  after the resync).
+- `docs --version` prints `docs 1.2.0`.
+- Quality gate: `ruff check`, `ruff format --check`,
+  `mypy`, `docs check docs/`, `docs index --dry-run` all
+  exit 0.
+
+#### Exit criteria
+
+- [x] convention.md documents the `Lifecycle:` rename, the
+      7 new core role additions, the medium confidence
+      semantic, the `[migrate]` per-tree config, and the
+      `add_lifecycles` rename.
+- [x] cli.md documents the F0 breaking change, the
+      `--lifecycle` flag rename, the `--config-project` flag,
+      the full inference cascade, the F11 normalisation
+      annotation, the F5 multi-project hint footer, and the
+      new `medium-confidence-inference` rule.
+- [x] architecture.md adds the `config` module section and
+      every new migrate helper.
+- [x] status.md carries the M7 watch-out entry.
+- [x] README.md `Status:` swept to `Lifecycle:`.
+- [x] CHANGELOG.md `## 1.2.0 — UNRELEASED` section in place
+      above 1.1.0.
+- [x] pyproject.toml + cli.py `__version__` at 1.2.0.
+- [x] tests/test_packaging.py version expectations bumped.
+- [x] Skill refs at `src/docs_cli/skill/references/` byte-
+      equal to `docs/`.
+- [x] docs/INDEX.md regenerated; fixture snapshot byte-equal.
+- [x] pytest 320 / 320 GREEN; quality gate clean.

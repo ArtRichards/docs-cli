@@ -5,6 +5,89 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.0 — UNRELEASED
+
+The first breaking convention-schema release. Renames the
+controlled-vocab lifecycle key from `Status:` to `Lifecycle:`;
+broadens role inference; normalises project names and archive
+moves. Per the post-M8 batched publish (M9), 1.2.0 ships
+locally only — the public PyPI release is 1.3.0, batching the
+M6 + M7 + M8 surface together.
+
+### Changed (breaking)
+
+- **Controlled-vocab field rename (M7 — F0).** `Status:` →
+  `Lifecycle:` in the metadata block. A pre-existing
+  `Status:` line is now a free-form extra field, preserved
+  through `docs migrate` into the `## Migrated metadata` body
+  section as `Migrated-Status:`. The `[vocabulary] add_statuses`
+  config key is renamed `add_lifecycles`. `docs list --status`
+  is renamed `docs list --lifecycle`. The `--json` schema field
+  `status` is renamed `lifecycle` in both `docs list` and
+  `docs migrate`. No backward-compat alias.
+
+### Added
+
+- **Medium confidence (M7 — OQ-D).**
+  `FileMigration.confidence` adds a third value `"medium"`
+  between `"high"` and `"low"`. Derived inference signals
+  (H1 content, section-header patterns, sibling-set
+  defaulting, non-role-suffix stripping, the `_M\d+`
+  milestone-number pattern) return medium. `docs check`
+  treats medium-confidence inferences as warnings (exit 1),
+  not errors. New `docs check` rule key
+  `medium-confidence-inference`.
+- **Role vocab additions (M7 — F10 / OQ-A).** 7 new core
+  roles: `implementation`, `sketch`, `outline`, `memo`,
+  `brief`, `template`, `example`. The INDEX renderer
+  positions them between `idea` and `notes`.
+- **Project-name normalisation (M7 — F11).** `docs migrate`
+  now normalises inferred project values to lowercase-kebab
+  (TitleCase / SNAKE_UPPER / letter-to-digit / mixed
+  underscore all rejoin with `-`); digit-after-digit is
+  preserved so `bugs-2026-01-26` survives intact. The
+  original is surfaced inline as `project: foo-bar-baz
+  (normalised from "FooBarBaz")` once at the top of the
+  human plan when normalisation changed the value.
+- **Per-file archive-move dates (M7 — F4).** `docs migrate`
+  proposes archive normalisations using each file's
+  `Updated:` (or mtime fall-back) per file instead of a
+  single migration-run default. `--date` continues to
+  override globally.
+- **Multi-project hints (M7 — F5).** `docs migrate` surfaces
+  a `hint: …` line in the plan footer when an immediate
+  subdir's longest-common filename prefix differs from the
+  parent project and the subdir holds ≥ 5 `.md` files.
+- **`--config-project NAME` (M7 — F5).** New CLI flag on
+  `docs migrate`; overrides the inferred project for the
+  run, bypasses normalisation, suppresses hint emission. The
+  persistent equivalent is `[migrate] project_name = "…"` in
+  `.docs.toml`.
+- **`[migrate] role_suffixes` (M7 — F1).** New `.docs.toml`
+  map letting an operator teach `docs migrate` a custom
+  per-tree suffix → role mapping (extends the built-in map).
+- **Broadened role inference (M7 — F1 / F10 / F12).**
+  `infer_role` now tokenises on case-transition boundaries
+  (`MyPlan` → suffix `plan`), recognises a trailing
+  `_M\d+` pattern as `milestone` (medium), strips
+  `_v\d+`/`_Draft`/`_Ready` non-role suffixes and re-tries
+  (medium), and at the plan layer infers from H1
+  trailing-word, section-header patterns, and sibling-set
+  defaulting at ≥ 60% / ≥ 5 (medium).
+
+### Notes
+
+- The 2026-05-24 multi-tree trial (501 .md files across
+  25 trees) measured 25.3% high-confidence under the M4
+  inference. M7's broadened inference brings the sanitised
+  `snake-medium` fixture to ~88% high+medium.
+- `docs migrate` now narrows the refusal of a `.docs.toml`
+  to managed-root markers (`[project]`, `[archive]`,
+  `[vocabulary]`). A `.docs.toml` containing only a
+  `[migrate]` section (e.g. `project_name = "foo"`) is read
+  without refusing — the foreign-tree migration-sidecar
+  shape.
+
 ## 1.1.0 — UNRELEASED
 
 The first PyPI release. Distribution name is `docs-cli`; the console-script

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-05-25
 
 Related:
 - pairs-with: cli.md
@@ -62,9 +62,23 @@ The block terminates at the first blank line whose next non-empty line is *not* 
 
 | Field | Type | Meaning |
 |---|---|---|
-| `Status` | controlled vocab | doc's lifecycle state |
+| `Lifecycle` | controlled vocab | doc's lifecycle state |
 | `Role` | controlled vocab | what kind of doc this is |
 | `Updated` | `YYYY-MM-DD` | last meaningful update |
+
+> **Lifecycle (M7 — F0) — breaking change since 1.1.**
+> Before 1.2 the lifecycle field was named `Status:`. M7 renamed
+> the controlled-vocab key to `Lifecycle:` because the 2026-05-24
+> multi-tree trial found that almost every real-world foreign doc
+> uses `Status:` as a free-form progress line ("Implemented;
+> retained as design record", "Draft normative companion spec",
+> etc.). A free-form `Status:` line in a doc is now treated as an
+> ordinary extra field: preserved verbatim by `docs migrate` (into
+> the `## Migrated metadata` body section as
+> `Migrated-Status:`), surfaced through `docs list --json` under
+> `extra_fields`, and ignored by `docs check`'s vocabulary
+> validator. See `dual-status-adr.md` for the operator decision
+> trail.
 
 ### Optional fields
 
@@ -74,14 +88,15 @@ The block terminates at the first blank line whose next non-empty line is *not* 
 | `Related` | list of `<verb>: <path>` | typed cross-references to other docs |
 | `Owner` | free-form | the human or team accountable for this doc |
 | `Tags` | comma-separated | free-form tags for filtering |
+| `Status` | free-form | a human-readable progress sentence (M7 — preserved, not vocab-checked) |
 
 Any additional `Label:` fields are harvested and exposed under `docs list --json` but not interpreted by the tool.
 
 ## Vocabularies
 
-### Status (built-in)
+### Lifecycle (built-in)
 
-| Status | When |
+| Lifecycle | When |
 |---|---|
 | `draft` | Being written, not ready for use. |
 | `active` | Current, in use, source of truth. |
@@ -106,11 +121,74 @@ Any additional `Label:` fields are harvested and exposed under `docs list --json
 | `reference` | Evergreen technical reference. |
 | `postmortem` | Incident retrospective. |
 | `idea` | Pre-decision exploration. |
+| `implementation` | A focused implementation note tied to a plan or milestone (M7). |
+| `sketch` | An exploratory sketch, pre-formalisation (M7). |
+| `outline` | A skeletal pre-write of a plan or spec (M7). |
+| `memo` | A short prose note; less structured than `notes` (M7). |
+| `brief` | A condensed summary of a larger surface (M7). |
+| `template` | A reusable doc template (M7). |
+| `example` | A worked example used as reference (M7). |
 | `notes` | Catch-all. |
+
+> **Role vocab additions (M7 — F10 / OQ-A).** M7 promotes 7
+> previously-extension-only roles to the core vocab — Trial 2
+> (2026-05-24) found these are common enough in real-world docs
+> that the built-in set should cover them.
 
 ### Extending vocabularies
 
-`.docs.toml` may **add** statuses and roles via `[vocabulary]` — never remove or rename built-ins. Additions are local to that docs root. Cross-project queries collapse to the built-in set; per-project queries see the union.
+`.docs.toml` may **add** lifecycles and roles via `[vocabulary]` — never remove or rename built-ins. Additions are local to that docs root. Cross-project queries collapse to the built-in set; per-project queries see the union.
+
+```toml
+[vocabulary]
+add_lifecycles = ["shipped"]   # M7: renamed from `add_statuses` (no alias)
+add_roles      = ["adr", "rfc"]
+```
+
+### Inference and confidence (M7 — F1 / F10 / F12 / OQ-D)
+
+`docs migrate` infers each foreign doc's `Role:` from filename
+suffixes, post-strip variants, the H1 title, the file's section
+shape, and the modal sibling-set. Inferences carry a confidence:
+
+- **high** — direct filename-suffix match (`my-feature-spec.md`,
+  `my-feature_Plan.md`, `foo-decision.md`) or an in-file `Role:`
+  metadata line that already names a built-in role.
+- **medium** — a derived signal: stripping `_v\d+` / `_Draft` /
+  `_Ready` and re-matching; the `_M\d+` milestone-number pattern;
+  an H1 ending in a role word (`# Foo Plan`); a section-header
+  pattern (e.g. `## Goal` + `## Scope` + `## Requirements`
+  reads as a plan); a sibling-set modal default at ≥ 60% over
+  ≥ 5 same-subdir files.
+- **low** — every fall-through that didn't match a real signal;
+  the role lands at `notes` and `confidence: low` is paired with
+  one or more ambiguity notes.
+
+`docs check` treats a medium-confidence inference as a warning
+(exit 1), not an error (exit 2). `docs migrate --json` records
+the level under `confidence` (string, one of
+`high|medium|low`).
+
+### Per-tree `[migrate]` config (M7 — F1 / F5 / F11)
+
+A docs root's `.docs.toml` may also carry a `[migrate]` section
+to teach `docs migrate` per-tree overrides. A `.docs.toml`
+containing ONLY a `[migrate]` section (no `[project]`,
+`[archive]`, or `[vocabulary]`) is treated as a foreign-tree
+migration sidecar — `docs migrate` reads it without refusing:
+
+```toml
+[migrate]
+project_name   = "foo-tools"             # F11: skip normalisation, use verbatim
+role_suffixes  = { spec_v2 = "spec" }    # F1: per-tree custom suffix mapping
+```
+
+- `project_name` — pin the project name for every plan record
+  (the same effect as `--config-project NAME`, persisted in the
+  tree's config). Bypasses F11 lowercase-kebab normalisation
+  entirely.
+- `role_suffixes` — extends the built-in filename-suffix → role
+  map with per-tree entries.
 
 ## Relationship verbs
 
@@ -131,11 +209,11 @@ Any additional `Label:` fields are harvested and exposed under `docs list --json
 
 Completed work moves to an archive subtree. Default subdir name: `archive/`. Convention: `archive/YYYY-MM-DD/` per archive event. Configurable via `[archive] dir` in `.docs.toml`.
 
-Status/location consistency rules:
+Lifecycle/location consistency rules:
 
-- A doc at the top level (active tree) MUST have `Status:` in `{draft, active, blocked, done, superseded}`.
-- A doc under the archive subtree MUST have `Status: archived`.
-- `docs check` reports any mismatch with nonzero exit.
+- A doc at the top level (active tree) MUST have `Lifecycle:` in `{draft, active, blocked, done, superseded}`.
+- A doc under the archive subtree MUST have `Lifecycle: archived`.
+- `docs check` reports any mismatch with nonzero exit (rule `status-drift`).
 
 `done` vs `archived`: `done` stays in the active tree (evergreen reference); `archived` is moved to the archive subtree. Use `done` when the doc is finished but still referenced day-to-day.
 

@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-6 complete on 2026-05-25; Phase 7 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-7 complete on 2026-05-25; Phase 8 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -254,7 +254,7 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M7 — execute Phase 7 (Update Tool/Wrapper Layer — convention.md + cli.md + architecture.md + CHANGELOG + skill refs resync + v1.2.0 bump).**
+**Next action: M7 — execute Phase 8 (Run Tests GREEN — capture verbatim quality-gate output at `/tmp/m7-phase-8-green.txt`).**
 
 **Publish is M9** (operator decision 2026-05-24, scope-reframed
 2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
@@ -315,17 +315,25 @@ H1 or section pattern. `.docs.toml` refusal narrowed so a
 `[migrate]`-only sidecar is readable. **pytest: 320 / 320
 GREEN.** Quality gate clean.
 
-**M7 Phase 7 next:** rewrite the user-facing specs to
-document the new surface — convention.md (vocab additions,
-medium confidence, `[migrate]` config, `add_lifecycles`
-rename), cli.md (F0 breaking note, `--config-project`,
-`--lifecycle` flag, expanded Inference rules, hint footer,
-new `medium-confidence-inference` rule), architecture.md
-(new helpers + Config / MigrationPlan field additions),
-status.md "Watch out for" entry, README.md + CHANGELOG.md
-(new `## 1.2.0 — UNRELEASED` section), bump pyproject.toml
-+ `__version__` to 1.2.0, resync bundled skill references.
-No code changes; no test status change.
+**M7 Phase 7 complete (2026-05-25):** convention.md, cli.md,
+architecture.md, status.md, README.md, CHANGELOG.md all
+updated to document M7's surface. New CHANGELOG entry
+`## 1.2.0 — UNRELEASED` lists every breaking + additive
+change (F0 rename, --lifecycle flag, JSON schema field
+rename, add_lifecycles, 7 new core roles, medium
+confidence, F11 normalisation, F4 per-file mtime, F5 hints,
+--config-project, [migrate] sidecar). architecture.md gets
+a new `config` module section. pyproject.toml +
+`__version__` bumped to 1.2.0; `docs --version` prints
+`docs 1.2.0`. Bundled skill refs resynced via byte-copy
+(test_skill_refs.py GREEN). docs/INDEX.md regenerated;
+fixture snapshot byte-equal. pytest: 320 / 320 GREEN.
+Quality gate clean tree-wide.
+
+**M7 Phase 8 next:** capture verbatim quality-gate output
+at `/tmp/m7-phase-8-green.txt` (pytest, ruff check, ruff
+format --check, mypy, docs check, docs index --dry-run).
+No code change.
 
 **M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
 ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed
@@ -344,3 +352,4 @@ ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed
 - INDEX markers quoted in a doc's preamble must be backtick-styled inline code, so the line-anchored detector (`_find_marker_lines`) does not false-match them.
 - The metadata block may contain one blank line between the inline `Label: value` run and a trailing bare-label group (`Related:` + bullets). `_metadata_line_span` in `src/docs_cli/cli.py` is the single source of that block-boundary rule.
 - Git author email for this repo is `art@bitholdersinc.com` (locally configured), not the `art@trucktech.in` default from `~/CLAUDE.md`.
+- M7 (v1.2.0) renames the controlled-vocab field from `Status:` to `Lifecycle:` on disk — breaking, no backward-compat alias. References to `Status:` inside M1-M5 historical log narrative are deliberately preserved verbatim (the field-name swap is the only on-disk change). Bundled skill references at `src/docs_cli/skill/references/` must be resynced from `docs/{convention,cli}.md` in lockstep — `tests/test_skill_refs.py` enforces byte-equality.

@@ -15,7 +15,7 @@ Documentation directories rot. Hand-maintained `INDEX.md` files drift from reali
 ```markdown
 # Title
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: docs
 Updated: 2026-05-23
