@@ -1466,3 +1466,70 @@ catching it.
 - [x] Review-fix commit `992f4a2` landed on `m8/phases-5-10`.
 - [x] Nit #2 documented as a deferred follow-on; no Step 2
       regression.
+
+## Simplify pass
+
+**Completed:** 2026-05-25 (branch `m8/simplify`)
+
+Two minimal edits landed on the simplify branch. The M8
+surface (`compile_exclude_predicate`, `_compile_docsignore_pattern`,
+`_print_migration_plan` mode dispatch, `_cmd_new --body-from`,
+`_cmd_migrate` exclude wiring, `MigrationPlan` field additions)
+was walked end-to-end; everything else was already minimal
+after the Step 2 audit + fresh-eyes review.
+
+- **Nit #2 — playbook examples drop the misleading `--apply
+  --quiet`.** The deferred Step-2 nit (operator-picked option
+  (b) — documentation fix, not a behaviour change to
+  `--quiet`). `src/docs_cli/skill/references/adoption-playbook.md`
+  Steps 5 and 6 examples are now `docs migrate <dir> --apply`
+  (without `--quiet`); Step 5 adds a one-line parenthetical
+  noting that `--quiet` only suppresses the trailing stderr
+  success line (per-file edit output still prints). The
+  playbook is skill-only — no lockstep `docs/` mirror — so the
+  edit is direct.
+
+- **`_cmd_new --body-from` scaffold-vs-body composition
+  linearised.** The pre-edit line was a conditional
+  expression (`text + body_text if body_text.startswith("\n")
+  else text + "\n" + body_text`) — read-once-then-parse-twice
+  in the same statement. Replaced with a two-line equivalent:
+  `separator = "" if body_text.startswith("\n") else "\n";
+  text = text + separator + body_text`. Same bytes written;
+  the `written.endswith(body)` golden still passes.
+
+**`MigrationPlan.excluded_count` — DEFERRED (no change).**
+The field is set in `plan_migration` but never read (the
+human plan footer iterates `excluded_breakdown` directly and
+the JSON output is `migration_to_json`-shaped, which doesn't
+include it). It is derivable as `sum(c for _, c in
+excluded_breakdown)`. Removing it is a public-dataclass
+field deletion, which crosses the simplify-mandate's
+behaviour-preserving line for any external consumer of
+`plan_migration` (which is importable via the `docs` shim).
+Documented here as a future cleanup tied to a `MigrationPlan`
+API revision, not a `/simplify` nit.
+
+**Other M8 regions reviewed — no changes warranted.**
+`_compile_docsignore_pattern` is a clean char-by-char
+translator with four documented dispatch arms; no shorter
+form. `compile_exclude_predicate` is four explicit buckets
+(dirs / globs / exts / docsignore) with a linear predicate;
+the doc comments earn their keep. `_print_migration_plan`
+`mode`/`only`/`group_by` dispatch is a single linear shape:
+filter → optional sort → branch on mode → footer block.
+`_cmd_migrate` exclude-ext CSV parsing is a 3-line tuple
+comprehension; the duplicate normalisation in
+`compile_exclude_predicate` and `plan_migration` is layered
+defense, not dead code (each consumer normalises locally).
+
+#### Test count + quality gate
+
+- pytest: **369 / 369 GREEN** at each commit boundary.
+- ruff check / ruff format --check / mypy / docs check docs/
+  all exit 0 at each commit boundary.
+- `python -m build` + `twine check dist/*` PASSED for the
+  1.3.0 wheel + sdist post-simplify (sanity — artefact is
+  byte-equivalent to the Step-2 build for the unchanged
+  surface; the touched files are skill resources and one
+  scaffold-composition line).

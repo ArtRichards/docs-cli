@@ -3040,11 +3040,12 @@ def _cmd_new(args: argparse.Namespace) -> int:
     if body_text is not None:
         # Compose scaffold + body. The scaffold ends with a single `\n`;
         # we want exactly one blank line separating the frontmatter from
-        # the body. If the body already starts with a newline, defer to
-        # it; otherwise inject one. The body text itself is appended
+        # the body, so inject one only when the body doesn't already
+        # start with a newline. The body text itself is appended
         # verbatim — `test_body_from_output_matches_scaffold_plus_body_golden`
         # asserts `written.endswith(body)` byte-equality.
-        text = text + body_text if body_text.startswith("\n") else text + "\n" + body_text
+        separator = "" if body_text.startswith("\n") else "\n"
+        text = text + separator + body_text
 
     if args.dry_run:
         if not args.quiet:
