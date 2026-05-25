@@ -96,17 +96,18 @@ split the actual PyPI publish out of M6 into a new milestone,
 **M9 — PyPI publish 1.3.0**, so M6 could close cleanly instead
 of hanging at "implementation done, publish pending" for the
 M7 + M8 weeks. **M7 shipped 2026-05-25** (publish deferred to
-M9); M8 is in flight (now unblocked). M9 is operator-driven,
-runs last (post-M8), and ships M6 + M7 + M8 as one batched
-`docs-cli==1.3.0` artifact per [release-runbook.md](release-runbook.md).
-Intermediate versions (1.1.0, 1.2.0) never appear on PyPI —
-fine, since there's no prior public release.
+M9); **M8 shipped 2026-05-25 locally as 1.3.0** (publish
+deferred to M9). M9 is operator-driven, runs next, and ships
+M6 + M7 + M8 as one batched `docs-cli==1.3.0` artifact per
+[release-runbook.md](release-runbook.md). Intermediate
+versions (1.1.0, 1.2.0) never appear on PyPI — fine, since
+there's no prior public release.
 
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [m6-pypi-distribution.md](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
-| M8 — Adoption workflow (agent-driveable) | active (milestone-setup complete 2026-05-24; M7 shipped 2026-05-25 — Phase 2+ now unblocked) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
+| M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | stub-drafted (2026-05-24; activates post-M8; operator-driven per [release-runbook.md](release-runbook.md)) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
 **M7** hardens `docs migrate`'s inference + introduces a breaking

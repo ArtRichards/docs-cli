@@ -2775,7 +2775,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "subdirectories. Refuses a directory whose .docs.toml carries a "
             "managed-root marker ([project], [archive], or [vocabulary]); a "
             ".docs.toml containing only a [migrate] section is read as a "
-            "foreign-tree migration-sidecar (M7)."
+            "foreign-tree migration-sidecar (M7). M8 widens this further: "
+            "an [exclude] section in .docs.toml waives the refusal even "
+            "alongside the managed markers — the operator's explicit "
+            "signal 'use migrate to triage / re-migrate this managed tree'."
         ),
     )
     migrate_p.add_argument("dir", help="The foreign directory to migrate.")

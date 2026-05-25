@@ -179,7 +179,7 @@ for the milestone summary.
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
-| M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
+| M9 — PyPI publish 1.3.0 | **Activated** (2026-05-25; M8 shipped locally; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
 distribution preparation) closed 2026-05-24 as preparation only
@@ -362,24 +362,38 @@ NO tag, NO GitHub release). M7 is ship-ready locally; the
 public PyPI release ships as v1.3.0 batched with M6 + M8 at
 the M9 milestone per the operator OQ-C split.
 
-**M8** is in flight (Phases 1-4 complete; **Phase 5 next**;
-Phase 2+ unblocked by M7 ship 2026-05-25). All 7 OQs (A–G)
-resolved 2026-05-24. Setup committed 2026-05-24 as `929e525`;
-Phase 1 close-out committed 2026-05-25 as `ce39e85`.
+**M8 shipped locally as 1.3.0** (2026-05-25). All 10 TDD
+phases complete; Phase 9 PASSED with the same-instance dogfood
+substitution caveat (the agent-spawning tool the plan
+specified is not available in this execution environment —
+see the Phase 9 log entry for the trade-off; **OPERATOR REVIEW
+POINT** on whether the same-instance pass suffices or whether
+a fresh-subagent re-run is needed). Surface delivered: F3
+(tree-wide `--exclude` + `[exclude]` + `.docsignore`), F6
+(triage flags + default footer summary), F7 (non-md sibling
+surfacing), F8 (substantial skill rewrite + adoption playbook
++ `.docs.toml` template), F9 (`docs new --body-from`). Tests:
+**369 GREEN** (324 M7 + 45 new M8 items). Quality gate clean.
+Local artefacts: `dist/docs_cli-1.3.0-py3-none-any.whl` +
+`dist/docs_cli-1.3.0.tar.gz`; `twine check` PASSED on both.
+**NO publish, NO tag, NO GitHub release** — per OQ-C the
+publish is M9's scope.
 
 **M8 Phases 1-4 complete (2026-05-25):** task plan promoted to
 active and OQ A–G recorded as Decisions at milestone-setup; log +
 per-phase Phase 1-4 entries written; 31 new test functions / 45
 new collected items authored at Phase 2 across 5 new test files
 + 1 added test in `test_migrate.py`; new sanitised fixtures
-staged at `tests/fixtures/{body-from,docsignore/sample,trees/exclude-test}/`;
+staged at `tests/fixtures/body-from/` (3 files; the
+`.docsignore` syntax cases and `[exclude]`-bearing trees are
+written inline via `tmp_path` in the Phase 2 tests
+themselves);
 RED baseline captured at `/tmp/m8-phase-4-baseline.txt`
-(**40 failed, 329 passed; 369 collected total** — M7's 324
-GREEN preserved + 5 new baseline-GREEN regression locks + 40 RED
-for intended reasons). Same-instance audit tightened two weak
-test_exclude.py assertions (added conformant docs under excluded
-subdirs so `list`/`index` arms pin the Phase 6 predicate
-explicitly). Quality gate clean tree-wide.
+(**41 failed, 328 passed; 369 collected total** — M7's 324
+GREEN preserved + 4 new baseline-GREEN regression locks + 41 RED
+for intended reasons; the initial 40+5 baseline tightened to
+41+4 in the fresh-eyes audit pass, which converted two weak
+locks into proper REDs). Quality gate clean tree-wide.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

@@ -23,7 +23,7 @@ inside the same wheel as package data.
 ```
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
-├── cli.py                               ─ the CLI module (~2.5k lines)
+├── cli.py                               ─ the CLI module (~3.8k lines)
 │   ├── dunder version                   (__version__ = "1.3.0")
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),

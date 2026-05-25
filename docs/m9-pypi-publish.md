@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - parent-of: m9-pypi-publish-log.md
@@ -28,7 +28,7 @@ Related:
   the v1.3.0 tag + GitHub release, and the post-publish doc
   closeouts that turn M6 / M7 / M8 / M9 rows in `status.md` and
   `plan.md` into `Complete (DATE)`.
-- Status: DRAFT — activates when M8 ships
+- Status: DRAFT — **ACTIVATED 2026-05-25 (M8 shipped locally as 1.3.0)**
 
 ### Goal
 

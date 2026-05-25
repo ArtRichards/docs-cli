@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - pairs-with: m9-pypi-publish.md
@@ -96,10 +96,33 @@ Once M8 is merged to `main`, the operator drives this block from
 
 ### Version + changelog
 
-- [ ] Bump `pyproject.toml` `version` from `1.1.0` to `1.3.0`.
-- [ ] Bump `__version__` in `src/docs_cli/cli.py` from `1.1.0` to
-      `1.3.0`.
-- [ ] Restructure `CHANGELOG.md`:
+**Status as of M8 close (2026-05-25):** The version + CHANGELOG
+bumps the original runbook predicted for M9 already landed
+inline at the M7 + M8 Phase 7 commits. M9's job at this block
+shrinks to **verification** rather than authoring.
+
+- [x] `pyproject.toml` `version` is `1.3.0` (bumped at M8
+      Phase 7).
+- [x] `__version__` in `src/docs_cli/cli.py` is `1.3.0`
+      (bumped at M8 Phase 7).
+- [x] `CHANGELOG.md` carries `## 1.3.0 — 2026-05-25` at the
+      top (dated at M8 Phase 10). The 1.3.0 entry body covers
+      the M6 + M7 + M8 surface together; the M7 breaking
+      `Lifecycle:` rename is called out in the M7 entry below.
+
+If the operator needs to amend any of these before the publish
+session (e.g. last-minute additions to the CHANGELOG entry),
+do so as a regular commit on `main`; the runbook below
+proceeds from a clean working tree at HEAD.
+
+Original-spec authoring steps (now mostly historical):
+
+- [ ] (Historical — done at M8 Phase 7.) Bump `pyproject.toml`
+      `version` from `1.1.0` to `1.3.0`.
+- [ ] (Historical — done at M8 Phase 7.) Bump `__version__` in
+      `src/docs_cli/cli.py` from `1.1.0` to `1.3.0`.
+- [ ] (Historical — done at M8 Phase 7 + dated at M8 Phase 10.)
+      Restructure `CHANGELOG.md`:
       - Rename the `## 1.1.0 — UNRELEASED` header to
         `## 1.3.0 — UNRELEASED`.
       - Rewrite the entry-body intro ("The first PyPI release …")

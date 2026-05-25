@@ -14,10 +14,13 @@ Related:
 - Project: docs
 - Milestone: M8 — Adoption workflow (agent-driveable)
 - Started: 2026-05-24
-- Progress: **Milestone-setup phase complete; Phases 1-4 complete;
-  Phase 5 next; M7 shipped 2026-05-25 — Phase 2+ unblocked. RED
-  baseline captured (40 RED + 5 baseline-GREEN regression locks +
-  324 M7 GREEN preserved; 369 collected total).**
+- Progress: **All 10 TDD phases complete (2026-05-25); shipped
+  locally as 1.3.0 — publish DEFERRED to M9 per OQ-C. RED
+  baseline at Phase 4 captured (41 RED + 4 baseline-GREEN
+  regression locks + 324 M7 GREEN preserved; 369 collected
+  total); all 369 GREEN at Phase 8 close. Phase 9 PASSED with
+  same-instance dogfood substitution caveat — see Phase 9 log
+  for the OPERATOR REVIEW POINT.**
   The task plan [m8-adoption-workflow.md](m8-adoption-workflow.md)
   is promoted from `draft` to `active`. M8 is the third v1.1
   milestone (after M6 packaging and M7 migration accuracy). All
