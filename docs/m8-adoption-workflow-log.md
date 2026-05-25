@@ -113,7 +113,7 @@ M8 ships as 1.3.0 after M7.
 | 5. Update Base Interfaces | Complete | 2026-05-25 | `Config` gained the four exclude fields; `MigrationPlan` gained 3 optional human-output-only fields (per OQ1; OMITTED from `migration_to_json`). `load_config` reads `[exclude]` + root `.docsignore`. New `_compile_docsignore_pattern` + `compile_exclude_predicate` helpers (stdlib `re` only). `predicate=` keyword threaded through `_iter_doc_texts` / `walk` / `check_tree` / `query_docs` / `_refresh_index` (per OQ2). Argparse: `--exclude PATTERN` on idx/check/list/migrate via shared `_add_exclude_flag` helper; `--summary` ⊻ `--json` mutex + `--only {ambiguous}` + `--group-by {role,confidence}` + `--exclude-ext EXTS` on migrate; `--body-from PATH` on new. `_cmd_migrate` managed-marker comment carries M8 OQ1 `[exclude]` carve-out. Quality gate clean. 340 GREEN / 29 RED — argparse-error → behaviour-RED transition complete; predicate already flips 8 index/check/list-arm REDs to GREEN. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-25 | `plan_migration` gained `cli_excludes` / `cli_exclude_exts` kwargs + the predicate wire-up; excluded files counted + bucketed by top-level prefix; `MigrationPlan` populated with the three new fields. `_print_migration_plan` gained `mode` / `only` / `group_by` kwargs — `--summary` emits one tabular line per file; `--only ambiguous` filters; `--group-by role/confidence` sorts. Footer (after per-file block per OQ3): excluded counts → non-md siblings → multi-project hints → default summary (`summary:` / `roles:` / `confidence:` / `ambiguities:`). `_cmd_new` handles `--body-from` (file or `-`/stdin) with OQ-E refusal scanning the first 20 lines for `^[A-Z][A-Za-z-]+:\s` — validation runs BEFORE the dry-run check per OQ4. `_cmd_migrate` carve-out widened: `[exclude]` in `.docs.toml` waives the managed-marker refusal even alongside `[project]/[archive]/[vocabulary]` (the operator's explicit signal "use migrate to triage this managed tree"). 364 GREEN / 5 RED — all 5 remaining REDs are F8 skill-content (Phase 7). |
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Complete | 2026-05-25 | SKILL.md: appended 4 adoption triggers to description (1024-char ceiling OK); added one-line pointer block (`**Adopting an existing Markdown directory?** Read [references/adoption-playbook.md]`); also swept M7 misses (`docs list --status` → `--lifecycle`; "hand-flip `Status:`" → "hand-flip `Lifecycle:`"; metadata-block `Status:` → `Lifecycle:`). New `references/adoption-playbook.md` (343 lines; six required H2s + worked example + pitfalls; frontmatter Lifecycle/Role/Project/Updated/Related). New `references/docs-toml-template.toml` (~90 lines; `[exclude]` + `[migrate]` + `[vocabulary]` + `[project]` + `[archive]`; every example commented). `_SKILL_RELATIVE_FILES` extended with `use-cases.md` (pre-existing packaging gap) + the 2 new files. `pyproject.toml` + `cli.py __version__`: 1.2.0 → 1.3.0. `tests/test_packaging.py` version pins bumped (3 spots) + the two helper-function names refreshed for clarity. docs/cli.md: synopses extended for `new` (`--body-from`) + `index` / `check` / `list` (`--exclude`) + `migrate` (full new surface); + "Triage flags (M8)" + "Plan footer (M8)" subsections + a new "Common: exclusion" top-level section. docs/convention.md: new `## Exclusion` section after Subdirectories + one-paragraph M8 F7 note on the Non-Markdown section. docs/architecture.md: bumped version comment to 1.3.0; layout sketch extended with use-cases / adoption-playbook / docs-toml-template; Config + walker sections extended with the M8 fields + predicate. README.md: Adoption section (5 lines) after Install; Commands list extended; Status section adds M8 row + bumps publish-strategy framing. CHANGELOG.md: new `## 1.3.0 — UNRELEASED` block (Added / Changed / Notes). Lockstep resync of skill references after `docs touch`. Quality gate clean; **all 369 GREEN — F8 RED tests flipped to GREEN.** |
-| 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest M7-count + ~31 = expected GREEN total; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff; `python -m build` produces 1.3.0 wheel + sdist. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-25 | **369/369 GREEN** (45 new M8 items + 324 M7-baseline). Quality gate: ruff `All checks passed`; ruff format `33 files already formatted`; mypy `Success: no issues found in 34 source files`; `docs check docs/` `no violations found`; `docs index --dry-run` no diff. `python -m build` produced `docs_cli-1.3.0-py3-none-any.whl` + `docs_cli-1.3.0.tar.gz`; twine check `PASSED` on both. `docs --version` reports `docs 1.3.0`. Verbatim capture: `/tmp/m8-phase-8-green.txt`. |
 | 9. Implement Online/Integration — **FRESH-SUBAGENT GATE** | Pending | — | **Load-bearing.** Spawn 3 fresh Opus subagents, no prior context, with the bundled skill installed (`docs install-skill`). Each gets a different M7 fixture and the prompt "adopt this directory; commit the result". Pass: ≥ 2 of 3 complete the full loop unattended. Third may escalate ONE playbook-flagged OQ. Stall = skill bug; iterate F8 / F9 / playbook / SKILL.md and re-run. Each run logged with transcript summary + pass/fail + iteration history. |
 | 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M8 → Complete; CHANGELOG dated; `v1.3.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6/M7; `gh release create v1.3.0`. |
 
@@ -944,3 +944,96 @@ skill-reference lockstep after the spec edits.
 - [x] **All 369 tests GREEN.** Every M8 RED has flipped to
       GREEN — the spec contract is fully implemented and
       tested.
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Capture the full GREEN gate verbatim before the load-bearing
+fresh-subagent gate at Phase 9. Eight commands, each captured
+to `/tmp/m8-phase-8-green.txt`:
+
+1. `pytest tests/ -q`
+2. `ruff check .`
+3. `ruff format --check .`
+4. `mypy`
+5. `docs check docs/`
+6. `docs index --root docs/ --dry-run`
+7. `python -m build`
+8. `python -m twine check dist/*`
+
+#### Verbatim gate (excerpt)
+
+```text
+=== pytest ===
+369 passed in 9.86s
+
+=== ruff check ===
+All checks passed!
+
+=== ruff format --check ===
+33 files already formatted
+
+=== mypy ===
+Success: no issues found in 34 source files
+
+=== docs check docs/ ===
+docs: no violations found
+
+=== docs index --root docs/ --dry-run head ===
+# docs — Documentation
+...
+
+=== rm dist + python -m build ===
+Successfully built docs_cli-1.3.0.tar.gz and docs_cli-1.3.0-py3-none-any.whl
+
+=== twine check ===
+Checking dist/docs_cli-1.3.0-py3-none-any.whl: PASSED
+Checking dist/docs_cli-1.3.0.tar.gz: PASSED
+
+=== ls dist/ ===
+docs_cli-1.3.0-py3-none-any.whl
+docs_cli-1.3.0.tar.gz
+```
+
+`docs --version` → `docs 1.3.0`. Full capture at
+`/tmp/m8-phase-8-green.txt`.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m8-adoption-workflow-log.md` | Modify | This Phase 8 entry + TDD Phase Progress row flipped Complete. |
+| `dist/docs_cli-1.3.0-py3-none-any.whl` + `dist/docs_cli-1.3.0.tar.gz` | Create | Local build artefacts. NOT committed (`dist/` is gitignored); Phase 10 may rebuild as the closeout step. |
+
+#### Issues / decisions
+
+- **`tests/test_packaging.py` runs the full build path** as part
+  of pytest (it has session-scoped fixtures `built_dist` and
+  `wheel_venv`). Those tests already exercised the wheel build
+  + venv install + `docs install-skill --dest` and all passed —
+  no separate Phase 8 step required to verify wheel
+  internals. The 369 GREEN count includes the 22 packaging
+  tests (B/C/D/E groups).
+- **45 new M8 collected items in total** (41 originally-RED +
+  4 originally-GREEN regression-lock + the audit-tightening
+  carry-over) all flipped GREEN as planned. Combined with the
+  324 M7-era baseline → 369 collected.
+- **`docs index --dry-run`** produces stdout that matches the
+  on-disk INDEX.md byte-for-byte (after the Phase 7 regen +
+  snapshot cp). No diff.
+
+#### Exit criteria
+
+- [x] pytest 369 GREEN, 0 RED, 0 skipped.
+- [x] Ruff / ruff-format / mypy all clean.
+- [x] `docs check docs/` exit 0.
+- [x] `docs index --dry-run` no diff.
+- [x] `python -m build` produced `docs_cli-1.3.0-py3-none-any.whl`
+      + `docs_cli-1.3.0.tar.gz`.
+- [x] `twine check dist/*` PASSED on both artefacts.
+- [x] `docs --version` reports `docs 1.3.0`.
+- [x] Verbatim capture written to `/tmp/m8-phase-8-green.txt`
+      for the Phase 9 conductor.
