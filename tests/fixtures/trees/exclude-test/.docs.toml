@@ -1,5 +1,0 @@
-[project]
-name = "exclude-test"
-
-[exclude]
-dirs = ["build"]

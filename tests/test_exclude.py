@@ -271,11 +271,16 @@ def test_docs_toml_exclude_globs_apply_tree_wide(docs_script, tmp_path, verb):
 @pytest.mark.parametrize(
     "ignore_pattern, present_files, excluded_paths, kept_paths",
     [
-        # 1. trailing * — extension match
+        # 1. trailing * — extension match against .md files (the migrate
+        # walker only visits .md by convention, so a bare `*.tmp` against
+        # `scratch.tmp` would coincidentally exclude via the walker, not
+        # via .docsignore parsing — false-GREEN risk for Phase 6. Use
+        # `*.draft.md` against .md files so only docsignore-glob matching
+        # can exclude `scratch.draft.md`.)
         (
-            "*.tmp",
-            {"keep.md": "# K\n", "scratch.tmp": "raw"},
-            ["scratch.tmp"],
+            "*.draft.md",
+            {"keep.md": "# K\n", "scratch.draft.md": "# Scratch\n"},
+            ["scratch.draft.md"],
             ["keep.md"],
         ),
         # 2. trailing / — directory match

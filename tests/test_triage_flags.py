@@ -117,11 +117,18 @@ def test_default_plan_footer_shows_counts(docs_script, fixtures_dir):
     out = proc.stdout.lower()
     # Per OQ3 — substring assertions only. The default footer summarises
     # counts by role + confidence + ambiguity; the substrings below are
-    # the load-bearing tokens.
+    # the load-bearing tokens. `confidence:` already appears in per-file
+    # rendering today, so a Phase 6 that adds the other footer tokens but
+    # forgets `confidence:` in the footer would pass on substring-anywhere.
+    # Anchor all four tokens to the footer slice (substring after the
+    # `summary:` anchor) so the footer block must contain all four.
     assert "summary:" in out, proc.stdout
-    assert "roles:" in out, proc.stdout
-    assert "confidence:" in out, proc.stdout
-    assert "ambiguities:" in out, proc.stdout
+    footer_idx = out.index("summary:")
+    footer = out[footer_idx:]
+    assert "summary:" in footer, proc.stdout
+    assert "roles:" in footer, proc.stdout
+    assert "confidence:" in footer, proc.stdout
+    assert "ambiguities:" in footer, proc.stdout
 
 
 # --- 6. --summary and --only ambiguous compose -----------------------------

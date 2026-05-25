@@ -587,14 +587,14 @@ small and the skill references rich.
     containing a line like `Plan: stage one then stage two`
     (false-positive risk for the metadata-block detector).
     This test verifies the heuristic doesn't over-trigger.
-  - `tests/fixtures/docsignore/sample/.docsignore` — a
-    gitignore-style file exercising every OQ-B syntax case.
-  - `tests/fixtures/docsignore/sample/<various .md files>` —
-    files that should and shouldn't match.
-  - `tests/fixtures/trees/exclude-test/` — small synthetic
-    tree (~10 files) with a `.docs.toml` carrying `[exclude]
-    dirs = ["build"]` and a `build/` subdir to skip. Confirms
-    the tree-wide application of OQ-B's decision.
+  - `.docsignore` syntax cases and small synthetic
+    `[exclude]`-bearing trees are written **inline via
+    `tmp_path`** by the Phase-2 tests themselves (see the
+    `_write(root / ".docsignore", ...)` pattern in
+    `tests/test_exclude.py`). No on-disk fixture directory is
+    staged for these — the inline tmp_path approach is the
+    established convention in this codebase and was the
+    delivered shape at Phase 3 close-out.
 - **Reuse from M7:**
   - All 5 real-trees fixtures (kebab-tiny, snake-medium,
     snake-large, archive-subdir, mixed-naming) for the

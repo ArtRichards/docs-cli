@@ -108,8 +108,8 @@ M8 ships as 1.3.0 after M7.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-25 | Promoted M8 from `draft` to `active`; created this log; recorded OQ A–G resolutions as Decisions in the task plan; status.md "Current milestone" + milestone-table row + Next action point at M8. Close-out commit `ce39e85` + sha-credit follow-up `4a7b00f`. No code change; no convention change. INDEX + snapshot regenerated in lockstep. M7 shipped 2026-05-25; Phase 2+ unblocked. |
 | 2. Write Tests (RED) | Complete | 2026-05-25 | 5 new test files + 1 test added to `test_migrate.py` across 6 commits. Functions: `test_exclude.py` (9, F3 — 22 items with parametric expansion on tests 3, 5, 6, 7), `test_triage_flags.py` (6, F6 — 6 items), `test_non_md_surfacing.py` (3, F7 — 3 items), `test_body_from.py` (7, F9 — 8 items with parametric on test 4), `test_skill_adoption.py` (5, F8 — 5 items, per OQ6 dropped the lockstep dup), `test_migrate.py::test_summary_and_json_are_mutually_exclusive` (1, F6). All RED for intended unimplemented surface; M7's 324 stays GREEN. |
-| 3. Create Data/Fixtures | Complete | 2026-05-25 | Reused M7's 5 sanitised real-trees fixtures (kebab-tiny + snake-medium drive the triage tests; the other 3 remain Phase 9 substrate). 3 new fixture sets: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`, `docsignore/sample/` (every OQ-B syntax case + sample files), `trees/exclude-test/` (small synthetic tree with `[exclude] dirs = ["build"]` in `.docs.toml` + a deliberately-malformed `build/generated.md`). Two `build/` subdirs force-added (-f) because the repo .gitignore has `build/` (project-output convention); the force-add is part of the contract surface. Sanitisation grep (per M7 log line 405) zero hits. |
-| 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 5 baseline-GREEN regression locks + 40 RED for intended reasons (45 new collected items; 369 collected total; 329 passed + 40 failed).** Per-file: test_exclude.py 19 RED + 3 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Audit tightened tests 5 + 6 in test_exclude.py — added conformant docs under build/ and nested/ so the `list` / `index` assertions pin Phase 6's exclude predicate (vs. the today-coincidence of malformed-doc walker-skipping). Quality gate clean tree-wide. |
+| 3. Create Data/Fixtures | Complete | 2026-05-25 | Reused M7's 5 sanitised real-trees fixtures (kebab-tiny + snake-medium drive the triage tests; the other 3 remain Phase 9 substrate). 1 new on-disk fixture set: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`. The `.docsignore` syntax cases and `[exclude]`-bearing trees are written **inline via `tmp_path`** by the Phase-2 tests themselves (`_write(root / ".docsignore", ...)` pattern in `tests/test_exclude.py`) — established codebase convention; no on-disk fixture dirs needed. Sanitisation grep (per M7 log line 405) zero hits on the new on-disk fixtures. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 4 baseline-GREEN regression locks + 41 RED for intended reasons (45 new collected items; 369 collected total; 328 passed + 41 failed).** Per-file: test_exclude.py 20 RED + 2 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Audit round 2 tightened tests 5 + 6 in test_exclude.py — added conformant docs under build/ and nested/ so the `list` / `index` assertions pin Phase 6's exclude predicate (vs. the today-coincidence of malformed-doc walker-skipping). Fresh-eyes review then swapped test 7 case 1 from `*.tmp` to `*.draft.md` so the `.docsignore` parser path — not the markdown-only walker — is what excludes the file at Phase 6; tightened `test_default_plan_footer_shows_counts` to anchor all four footer tokens to the footer slice; deleted the unused `tests/fixtures/docsignore/sample/` and `tests/fixtures/trees/exclude-test/` directories (inline-via-tmp_path is the codebase convention). Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Pending | — | `Config` schema gains `exclude_dirs` / `exclude_globs` / `exclude_exts` / `docsignore_patterns`. `load_config` reads `[exclude]` + parses `.docsignore`. `compile_exclude_predicate` helper unifies CLI + config + ignore-file. Argparse: identical `--exclude` action on migrate/index/check/list; `--summary` / `--only` / `--group-by` / `--exclude-ext` on migrate; `--body-from` on new. Mutual exclusion: `--summary` vs `--json`. |
 | 6. Implement Offline/Core Path | Pending | — | `_iter_doc_paths` consults the exclude predicate (tree-wide). `migrate_plan` honours predicate + emits excluded-count + non-md-sibling footer. `_render_migrate_plan` handles `--summary` / `--only ambiguous` / `--group-by` + default footer summary. `_cmd_new` handles `--body-from` with stdin/file + OQ-E refusal heuristic. `.docsignore` parser (~60 lines, stdlib only). |
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Pending | — | SKILL.md: append adoption trigger phrases to description; add one-line pointer to `references/adoption-playbook.md`. New `references/adoption-playbook.md` (substantial — six numbered steps + worked example + multi-project sub-section + sidecars sub-section + pitfalls). New `references/docs-toml-template.toml` (commented starter; `[exclude]` + `[migrate]` + `[vocabulary]`). Spec updates: cli.md (new flags), convention.md (`[exclude]` + `.docsignore` syntax), architecture.md (Config schema), README.md (adoption section), CHANGELOG.md (1.3.0). pyproject + cli.py `__version__` bumped to 1.3.0. Skill-refs lockstep maintained for convention.md + cli.md. |
@@ -168,8 +168,7 @@ _Captured before Phase 2; historical._
 | `tests/test_skill_adoption.py` | Create | 2 | 6 tests for SKILL.md trigger phrases, pointer to playbook, playbook structure, TOML template validity, lockstep persistence. |
 | `tests/test_migrate.py` | Modify | 2 | Add `--summary --json` mutual-exclusion test. |
 | `tests/fixtures/body-from/` | Create | 3 | 3 small fixtures for F9 body-from edge cases. |
-| `tests/fixtures/docsignore/sample/` | Create | 3 | `.docsignore` exercising every OQ-B syntax case + sample files. |
-| `tests/fixtures/trees/exclude-test/` | Create | 3 | Small synthetic tree with `.docs.toml` `[exclude] dirs` + a `build/` subdir to skip. |
+| _(no on-disk fixtures for `.docsignore` / `[exclude]` cases)_ | — | 3 | `.docsignore` syntax cases and `[exclude]`-bearing trees are written **inline via `tmp_path`** by the Phase-2 tests themselves (see `_write(root / ".docsignore", ...)` in `tests/test_exclude.py`); no on-disk fixture dir is staged. Established codebase convention. |
 | `tests/fixtures/trees/real-trees/` | (reuse from M7) | 3, 9 | M7 fixtures consumed by triage tests + Phase 9 fresh-subagent runs. |
 | `tests/fixtures/trees/real-trees-adopted/` | Create | 9 | Phase 9 outputs — committed adopted state of each fixture, one per subagent run. |
 | `src/docs_cli/cli.py` | Modify | 5, 6, 7 | Phase 5: argparse + Config schema + `compile_exclude_predicate`. Phase 6: walker + render + body-from + .docsignore parser. Phase 7: `__version__` bumped to 1.3.0. |
@@ -401,9 +400,11 @@ in-tree tests stay GREEN throughout.
 #### Objective
 
 Stage the small fixture set the Phase-2 tests reference. Reuse
-M7's 5 sanitised real-trees fixtures heavily; new fixtures only
-for body-from edge cases, the docsignore syntax exerciser, and
-a small `[exclude]`-bearing synthetic tree.
+M7's 5 sanitised real-trees fixtures heavily; new on-disk
+fixtures only for body-from edge cases. The `.docsignore`
+syntax cases and small `[exclude]`-bearing synthetic trees are
+authored **inline via `tmp_path`** by the Phase-2 tests
+themselves — the established codebase convention.
 
 #### Files changed
 
@@ -412,24 +413,24 @@ a small `[exclude]`-bearing synthetic tree.
 | `tests/fixtures/body-from/with-frontmatter.txt` | Create | Real metadata block at the head (`Owner: alice` + `Tags: infra`) — triggers OQ-E refusal. |
 | `tests/fixtures/body-from/clean-body.md` | Create | Happy-path body with no metadata-shaped lines (`## Overview` + `## Details`). |
 | `tests/fixtures/body-from/edge-case-keyword.md` | Create | OQ5 false-positive trade-off — `Plan: stage one then stage two` matches `^[A-Z][A-Za-z-]+:\s` so the conservative-by-design heuristic refuses. Test 4's parametrisation pins the documented behaviour. |
-| `tests/fixtures/docsignore/sample/.docsignore` | Create | Exercises every OQ-B syntax case: `*.tmp`, `data/`, `/specific.md`, `**/build/**`, comment, blank, `!keep-me.md` after a preceding `*.md`. |
-| `tests/fixtures/docsignore/sample/{keep,specific,keep-me}.md` + `data/x.md` + `nested/build/y.md` + `nested/keep-me.md` + `something.tmp` | Create | Sample files exercising the patterns above. |
-| `tests/fixtures/trees/exclude-test/.docs.toml` | Create | `[project] name = "exclude-test"` + `[exclude] dirs = ["build"]`. |
-| `tests/fixtures/trees/exclude-test/{spec,plan}.md` | Create | Conformant docs (H1-then-metadata-block per the convention). |
-| `tests/fixtures/trees/exclude-test/build/generated.md` | Create | Deliberately malformed (no metadata block) — proves `[exclude] dirs = ["build"]` is the only reason `docs check` exits 0. |
+| _(none)_ for `.docsignore` / `[exclude]` cases | — | Every `.docsignore` test in `tests/test_exclude.py::test_docsignore_syntax_subset` writes its `.docsignore` inline via `_write(root / ".docsignore", ...)` into `tmp_path`; every `[exclude]` test (5 + 6 + 8) writes its `.docs.toml` + sample tree the same way. No on-disk fixture directory is staged for these — the inline tmp_path pattern is the established convention in this codebase. |
+| `tests/fixtures/trees/real-trees/` | (reuse from M7) | M7's `kebab-tiny` + `snake-medium` drive the triage tests; `snake-large`, `archive-subdir`, `mixed-naming` remain Phase 9 substrate. No new copies. |
 
 #### Actions taken
 
-- Built each fixture by hand. Body-from + docsignore fixtures
-  use generic placeholders (`alice` / `infra` / `Foo` / `Bar`).
-  No third-party product / customer / feature names appear.
-- Force-added both `build/` subdirs with `git add -f` because
-  the repo .gitignore has `build/` (project-output convention).
-  Documented in the Phase 3 commit message.
-- Ran the sanitisation grep (mirror M7 log line 405):
+- Built each body-from fixture by hand. Generic placeholders
+  (`alice` / `infra` / `Foo` / `Bar`). No third-party product /
+  customer / feature names appear.
+- Authored `.docsignore` and `[exclude]` cases inline in the
+  Phase-2 tests (see the `_write(...)` helper in
+  `tests/test_exclude.py`). No on-disk fixture directories
+  needed; the tests build the trees they need in `tmp_path`
+  per pytest convention.
+- Ran the sanitisation grep over the new on-disk fixtures
+  (mirror M7 log line 405):
 
   ```sh
-  grep -ri "langfuse\|festo\|orginfo\|embedded.ai\|gpt5\|treatment.rubric\|disambiguation\|risk.prompt\|software.first\|standalone.agents\|orgcontext" tests/fixtures/{body-from,docsignore,trees/exclude-test}/
+  grep -ri "langfuse\|festo\|orginfo\|embedded.ai\|gpt5\|treatment.rubric\|disambiguation\|risk.prompt\|software.first\|standalone.agents\|orgcontext" tests/fixtures/body-from/
   ```
 
   Zero hits.
@@ -439,13 +440,17 @@ a small `[exclude]`-bearing synthetic tree.
 - **Reuse over re-author.** kebab-tiny + snake-medium drive the
   triage tests directly; snake-large + archive-subdir + mixed-naming
   remain Phase 9 substrate. No new copies of the M7 fixtures.
-- **`build/` gitignore tension.** The repo's project-level
-  .gitignore excludes `build/` (Python wheel output convention).
-  The exclude-test fixture deliberately uses `build/` as the
-  exclude-dirs target because that's the most realistic
-  adoption-tree shape. Force-add + commit message annotation
-  resolves the tension at the per-file level without weakening
-  the project-wide ignore.
+- **Inline-via-tmp_path over on-disk fixture dirs for
+  `.docsignore` + `[exclude]`.** The `.docsignore` syntax cases
+  vary widely per parametric case (pattern + present-files +
+  excluded-paths + kept-paths); maintaining an on-disk
+  exerciser fixture would duplicate effort with no benefit
+  beyond what the inline `_write(root / ".docsignore", ...)`
+  pattern already gives the tests. Same for the small
+  `[exclude]`-bearing trees in tests 5/6/8. Established
+  codebase convention — keeps the test bodies self-contained
+  and avoids a `build/` gitignore tension that would otherwise
+  arise (the repo's project-level .gitignore excludes `build/`).
 
 #### Exit criteria
 
@@ -471,25 +476,29 @@ M7's 324 GREEN baseline + the quality gate.
 ```text
 $ .venv/bin/python -m pytest tests/ -q --tb=short
 ... (369 items collected) ...
-40 failed, 329 passed in 9.55s
+41 failed, 328 passed in 9.49s
 ```
 
 Captured at `/tmp/m8-phase-4-baseline.txt`. (Initial 38-failed-331-passed
 baseline was captured before the same-instance audit strengthened
 test_exclude.py tests 5 and 6 by adding conformant docs under the
-excluded subdirs; final baseline above is post-audit.)
+excluded subdirs. A subsequent fresh-eyes review then swapped the
+test 7 case-1 pattern from `*.tmp` to `*.draft.md` so the predicate
+path — not the markdown-only walker — is what excludes the file at
+Phase 6; that swap converted the case-1 baseline-GREEN lock to a
+proper RED. Final baseline above is post-both-rounds.)
 
 #### Per-test attribution table
 
 | Test group | Source file | RED count | GREEN-at-baseline (regression-lock) count | Failure mode → root cause |
 |---|---|---:|---:|---|
-| F3 — `--exclude` flag, `[exclude]` config, `.docsignore`, plan-footer count | `test_exclude.py` | 19 | 3 | argparse rejects `--exclude` / `--exclude-ext` on every verb (exit 2); `.docsignore` not parsed; `[exclude]` not consulted by walker; footer absent. Locks: docsignore patterns where the today-absent predicate yields the contract-correct outcome (`*.tmp` excludes non-.md anyway; comment-only and blank-only patterns are correctly no-ops). |
+| F3 — `--exclude` flag, `[exclude]` config, `.docsignore`, plan-footer count | `test_exclude.py` | 20 | 2 | argparse rejects `--exclude` / `--exclude-ext` on every verb (exit 2); `.docsignore` not parsed; `[exclude]` not consulted by walker; footer absent. Remaining locks: docsignore patterns where the today-absent predicate yields the contract-correct outcome (comment-only and blank-only patterns are correctly no-ops). |
 | F6 — triage flags + default footer | `test_triage_flags.py` | 6 | 0 | argparse rejects `--summary` / `--only` / `--group-by` (exit 2); default footer doesn't emit the documented substrings. |
 | F6 — `--summary` × `--json` mutex | `test_migrate.py` | 1 | 0 | argparse rejects `--summary` as "unrecognized" today; Phase 5 flips to "not allowed with" via mutex group. |
 | F7 — non-md sibling surfacing | `test_non_md_surfacing.py` | 2 | 1 | footer line absent today. Lock: N==0 → no footer line (correctly absent today). |
 | F9 — `docs new --body-from` | `test_body_from.py` | 7 | 1 | argparse rejects `--body-from` (exit 2); OQ-E refusal absent; idempotency contract unstable today. Lock: missing-value → exit 2 (today's "unrecognized" path coincidentally matches the contract). |
 | F8 — skill adoption playbook + template | `test_skill_adoption.py` | 5 | 0 | SKILL.md description has no adoption phrases; one-line pointer absent; `references/adoption-playbook.md` and `references/docs-toml-template.toml` do not exist. |
-| **TOTAL** |  | **40** | **5** | — |
+| **TOTAL** |  | **41** | **4** | — |
 
 Function totals: 9 + 6 + 1 + 3 + 7 + 5 = 31 distinct test functions.
 Collected-item totals: 22 + 6 + 1 + 3 + 8 + 5 = 45 items.
@@ -526,9 +535,10 @@ Every RED test was inspected against its `--tb=short` traceback
 - Every assertion failure message names the contract the
   Phase 5/6/7 implementation will satisfy.
 
-The 38 REDs partition cleanly: 17 F3 + 6 F6-triage + 1 F6-mutex
-+ 2 F7 + 7 F9 + 5 F8 (the 7 baseline-GREEN regression locks
-are listed in the per-test attribution table above).
+The 41 REDs partition cleanly: 20 F3 + 6 F6-triage + 1 F6-mutex
++ 2 F7 + 7 F9 + 5 F8 (matches the per-test attribution table
+above; the 4 baseline-GREEN regression locks are listed there
+as well).
 
 #### Issues / decisions
 
