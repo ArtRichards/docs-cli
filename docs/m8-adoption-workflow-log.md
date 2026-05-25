@@ -14,8 +14,10 @@ Related:
 - Project: docs
 - Milestone: M8 — Adoption workflow (agent-driveable)
 - Started: 2026-05-24
-- Progress: **Milestone-setup phase complete; Phase 1 complete;
-  Phase 2 next; M7 shipped 2026-05-25 — Phase 2+ unblocked.**
+- Progress: **Milestone-setup phase complete; Phases 1-4 complete;
+  Phase 5 next; M7 shipped 2026-05-25 — Phase 2+ unblocked. RED
+  baseline captured (38 RED + 7 baseline-GREEN regression locks +
+  324 M7 GREEN preserved; 369 collected total).**
   The task plan [m8-adoption-workflow.md](m8-adoption-workflow.md)
   is promoted from `draft` to `active`. M8 is the third v1.1
   milestone (after M6 packaging and M7 migration accuracy). All
@@ -104,7 +106,7 @@ M8 ships as 1.3.0 after M7.
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Complete | 2026-05-24 | Promoted M8 from `draft` to `active`; created this log; recorded OQ A–G resolutions as Decisions in the task plan; status.md "Current milestone" + milestone-table row + Next action point at M8. No code change; no convention change. INDEX + snapshot regenerated in lockstep. M7 shipped 2026-05-25; Phase 2+ unblocked. |
+| 1. Define Contract | Complete | 2026-05-25 | Promoted M8 from `draft` to `active`; created this log; recorded OQ A–G resolutions as Decisions in the task plan; status.md "Current milestone" + milestone-table row + Next action point at M8. Close-out commit `ce39e85` + sha-credit follow-up `4a7b00f`. No code change; no convention change. INDEX + snapshot regenerated in lockstep. M7 shipped 2026-05-25; Phase 2+ unblocked. |
 | 2. Write Tests (RED) | Complete | 2026-05-25 | 5 new test files + 1 test added to `test_migrate.py` across 6 commits. Functions: `test_exclude.py` (9, F3 — 22 items with parametric expansion on tests 3, 5, 6, 7), `test_triage_flags.py` (6, F6 — 6 items), `test_non_md_surfacing.py` (3, F7 — 3 items), `test_body_from.py` (7, F9 — 8 items with parametric on test 4), `test_skill_adoption.py` (5, F8 — 5 items, per OQ6 dropped the lockstep dup), `test_migrate.py::test_summary_and_json_are_mutually_exclusive` (1, F6). All RED for intended unimplemented surface; M7's 324 stays GREEN. |
 | 3. Create Data/Fixtures | Complete | 2026-05-25 | Reused M7's 5 sanitised real-trees fixtures (kebab-tiny + snake-medium drive the triage tests; the other 3 remain Phase 9 substrate). 3 new fixture sets: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`, `docsignore/sample/` (every OQ-B syntax case + sample files), `trees/exclude-test/` (small synthetic tree with `[exclude] dirs = ["build"]` in `.docs.toml` + a deliberately-malformed `build/generated.md`). Two `build/` subdirs force-added (-f) because the repo .gitignore has `build/` (project-output convention); the force-add is part of the contract surface. Sanitisation grep (per M7 log line 405) zero hits. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 7 baseline-GREEN regression locks + 38 RED for intended reasons (45 new collected items; 369 collected total; 331 passed + 38 failed).** Per-file: test_exclude.py 17 RED + 5 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Quality gate clean tree-wide. |
@@ -375,7 +377,7 @@ in-tree tests stay GREEN throughout.
 #### Verification
 
 - `.venv/bin/python -m pytest --collect-only -q tests/test_exclude.py tests/test_triage_flags.py tests/test_non_md_surfacing.py tests/test_body_from.py tests/test_skill_adoption.py` — 44 items collected (22 + 6 + 3 + 8 + 5), zero ImportError / CollectError.
-- `.venv/bin/python -m pytest --collect-only -q tests/` — 369 items collected.
+- `.venv/bin/python -m pytest --collect-only -q tests/` — 369 items collected (324 M7 + 44 from the 5 new files + 1 added test in test_migrate.py = 45 net new items).
 - `.venv/bin/ruff check .`, `ruff format --check .`, `mypy` — clean tree-wide.
 - `.venv/bin/docs check docs/` — exit 0.
 

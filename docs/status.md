@@ -174,7 +174,7 @@ for the milestone summary.
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
-| M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; **Phase 1 complete**; Phase 2 next; M7 shipped 2026-05-25 — Phase 2+ unblocked; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
+| M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; **Phases 1-4 complete**; Phase 5 next; M7 shipped 2026-05-25 — Phase 2+ unblocked; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
@@ -358,10 +358,21 @@ NO tag, NO GitHub release). M7 is ship-ready locally; the
 public PyPI release ships as v1.3.0 batched with M6 + M8 at
 the M9 milestone per the operator OQ-C split.
 
-**M8** is in flight (Phase 1 complete; **Phase 2+ unblocked by
-M7 ship 2026-05-25**). All 7 OQs (A–G) resolved 2026-05-24.
-Setup committed 2026-05-24 as `929e525`; Phase 1 close-out
-committed 2026-05-25 as `ce39e85`.
+**M8** is in flight (Phases 1-4 complete; **Phase 5 next**;
+Phase 2+ unblocked by M7 ship 2026-05-25). All 7 OQs (A–G)
+resolved 2026-05-24. Setup committed 2026-05-24 as `929e525`;
+Phase 1 close-out committed 2026-05-25 as `ce39e85`.
+
+**M8 Phases 1-4 complete (2026-05-25):** task plan promoted to
+active and OQ A–G recorded as Decisions at milestone-setup; log +
+per-phase Phase 1-4 entries written; 31 new test functions / 45
+new collected items authored at Phase 2 across 5 new test files
++ 1 added test in `test_migrate.py`; new sanitised fixtures
+staged at `tests/fixtures/{body-from,docsignore/sample,trees/exclude-test}/`;
+RED baseline captured at `/tmp/m8-phase-4-baseline.txt`
+(**38 failed, 331 passed; 369 collected total** — M7's 324
+GREEN preserved + 7 new baseline-GREEN regression locks + 38 RED
+for intended reasons). Quality gate clean tree-wide.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's
