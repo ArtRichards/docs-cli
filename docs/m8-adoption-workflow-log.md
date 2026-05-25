@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - child-of: m8-adoption-workflow.md
@@ -15,7 +15,7 @@ Related:
 - Milestone: M8 — Adoption workflow (agent-driveable)
 - Started: 2026-05-24
 - Progress: **Milestone-setup phase complete; Phase 1 in
-  progress; blocked on M7 ship before Phase 2 can begin.**
+  progress; M7 shipped 2026-05-25 — Phase 2+ now unblocked.**
   The task plan [m8-adoption-workflow.md](m8-adoption-workflow.md)
   is promoted from `draft` to `active`. M8 is the third v1.1
   milestone (after M6 packaging and M7 migration accuracy). All
@@ -30,11 +30,9 @@ Related:
   the task plan. M8 ships as 1.3.0. The load-bearing test is
   Phase 9 — the fresh-subagent integration gate.
 
-(Note: doc-lifecycle status is in the front-matter `Status:`
-field above — M7 introduces the `Status:` → `Lifecycle:` rename
-at its Phase 5; this M8 log uses `Status:` until that sweep
-lands, then will be re-keyed automatically by the same M7
-helper.)
+(M7's `Status:` → `Lifecycle:` rename shipped 2026-05-25; this
+log's front-matter and every other docs-tree front-matter line
+were re-keyed in that sweep.)
 
 ## Milestone-setup open questions
 
