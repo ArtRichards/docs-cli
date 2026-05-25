@@ -3,7 +3,7 @@
 Status: active
 Role: status
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - pairs-with: plan.md
@@ -265,15 +265,21 @@ public release exists. The wheel + sdist sitting in local
 `dist/` from M6 are NOT uploaded; M9 rebuilds fresh from the
 post-M8 tree.
 
-**M7 Phases 1-4 complete (2026-05-24):** task plan promoted to
-active, OQ A–D recorded as Decisions, log + per-phase entries
-written, 44 new test items authored (34 RED + 10 GREEN-at-
-baseline regression locks), sanitised fixtures staged at
+**M7 Phases 1-4 complete (2026-05-24; review-tightening 2026-05-25):**
+task plan promoted to active, OQ A–D recorded as Decisions, log +
+per-phase entries written, 44 new test items authored at Phase 2
+(34 RED + 10 GREEN-at-baseline regression locks), sanitised
+fixtures staged at
 `tests/fixtures/{lifecycle,status-prose,project-names,sibling-defaulting}/`
 + `tests/fixtures/trees/real-trees/{kebab-tiny,snake-medium,snake-large,archive-subdir,mixed-naming}/`,
 RED baseline captured at `/tmp/m7-phase-4-baseline.txt`
 (34 failed, 281 passed; M6's 271 GREEN preserved + 10 new
-regression locks). Quality gate clean tree-wide.
+regression locks). **Fresh-eyes review 2026-05-25** added 5
+contract anchors (strict-medium pinning + parametric expansion
+of status-prose preservation + `FileMigration(confidence="medium")`
+constructor + `docs check` exit-1 medium anchor) for a post-fix
+count of **39 RED + 281 passed (320 collected)**; M6's 271 still
+GREEN. Quality gate clean tree-wide.
 
 **M7 Phase 5 next:** the F0 controlled-vocab rename
 (`Status:` → `Lifecycle:`, breaking, no backward-compat),

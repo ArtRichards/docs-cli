@@ -11,7 +11,7 @@ _Generated 2026-05-25. 29 docs active, 0 archived._
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-24.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-25.
 
 ### Active — Charter
 
