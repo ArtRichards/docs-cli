@@ -1462,3 +1462,77 @@ literal vocab value + end-of-line; prose mentions like
       2026-05-25.)
 - [x] **No `twine upload`, no `git tag v1.2.0`, no GitHub
       release.**
+
+## Simplify pass
+
+**Completed:** 2026-05-25 (branch `m7/simplify`)
+
+Three internal-naming simplifications landed as separate commits.
+Each preserved the on-disk surface, behaviour, and test contract;
+each ran a full pytest + ruff + format + mypy + `docs check` gate
+before commit.
+
+- **NIT 2 — test function names containing `_status` after F0.**
+  Renamed four test function names whose bodies already exercised
+  the post-F0 `Lifecycle:` contract (`--lifecycle` flag,
+  `Lifecycle:` key, `doc.lifecycle` attribute) but whose names
+  still carried the pre-rename hygiene:
+  `test_query_filter_by_status` → `_by_lifecycle`;
+  `test_list_filter_by_status` → `_by_lifecycle`;
+  `test_set_metadata_field_replaces_status_without_disturbing_related`
+  → `_replaces_lifecycle_...`;
+  `test_archive_sets_status_archived` →
+  `test_archive_sets_lifecycle_archived`. Other `_status`-named
+  tests were left alone (those whose bodies test the `status` role
+  or the `status-drift` rule name — the literal "status" is the
+  contract).
+
+- **NIT 3 — test-helper `status=` parameter names.** `_valid(...)`
+  in `tests/test_check.py` and `_doc(...)` in `tests/test_index.py`
+  both internally wrote to the `lifecycle=` attribute; only the
+  keyword param name kept the pre-F0 naming for back-compat.
+  Sweep both helpers + every call site (8 in test_check.py, 2 in
+  test_index.py); drop the back-compat docstrings that exist only
+  to explain the inconsistency just removed.
+
+- **OQ3 — `infer_status` → `infer_lifecycle`.** Phase 5 left this
+  helper internally reading `metadata.get("Lifecycle")` but still
+  named `infer_status`; an explicit OQ3 carry-over from Phase 5 to
+  Phase 10. The mismatch forced a stale legacy-name-explainer
+  paragraph in the docstring and a confusingly-named local
+  variable `status` in `plan_migration`'s per-file loop. Renamed
+  function + import + 5 `test_infer_status_*` functions + the
+  `architecture.md` reference. Historical M4 logs keep the old
+  name verbatim as historical record.
+
+**NIT 1 — `infer_role` mixed `bool | str` return type — DEFERRED
+(no change).** A `Literal["high","medium","low"]` would simplify
+the caller (the single `role_conf == "medium"` check in
+`plan_migration`), but the M4-era `test_migrate.py` tests pin the
+contract via `assert confident is True` / `assert confident is
+False` identity checks. Changing the implementation would force
+relaxing those identity assertions to string equality — a test
+modification, not an implementation simplification. The carry-over
+note in the milestone-doc M7 summary marks this as a future
+cleanup tied to a deliberate `Confidence` enum introduction (per
+OQ7), not a Phase 10 simplify nit.
+
+**Other M7-touched regions reviewed — no changes warranted.** The
+F1 medium-confidence upgrade pass (`plan_migration` body) is
+linear and the guard-then-continue style is idiomatic; no
+abstraction layer to drop. `normalise_project_name` is four
+explicit regex passes + lowercase + collapse — pure linear
+description of OQ-B. `_multi_project_hints` is a single linear
+loop; the F4 `file_archive_date` ternary is a single conditional.
+The OQ5 `.docs.toml` refusal in `_cmd_migrate` is one
+intersection check against a literal set. None of these have a
+shorter "obvious code" form than what's already shipped.
+
+#### Test count + quality gate
+
+- pytest: **324 / 324 GREEN** at each commit boundary.
+- ruff check / ruff format --check / mypy / docs check docs/ all
+  exit 0 at each commit boundary.
+- `docs index --root docs/` byte-equals
+  `tests/fixtures/expected/docs-INDEX.md` after the
+  `architecture.md` reference edit.

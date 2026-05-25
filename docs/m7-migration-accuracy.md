@@ -1156,30 +1156,33 @@ real-tree fixtures (117 files total)
   local-only auto-filer pattern (per the operator's
   paperless-auto-filer project) is the intended future
   vehicle, NOT a hosted-model fallback.
-- **Phase 10 simplify candidates** (carried forward to
-  M8 / Step 3 / future): `infer_status` function name (still
-  reads `Lifecycle:` internally — OQ3 carry-over);
-  `BUILTIN_STATUSES` constant name (still references the
-  lifecycle vocab — OQ4 carry-over); `insert_metadata_block`
-  parameter named `status` (still writes `Lifecycle:` —
-  OQ3 carry-over); `Confidence` enum vs. string sentinels
-  (currently string `high|medium|low` plus the legacy
-  `bool` returned by the function-level `infer_role` — the
-  mixed `str | bool` return type is the carry-over from the
-  pre-medium two-level world; enum is a future cleanup per
-  OQ7); test function names still containing `_status` after
-  the F0 rename (e.g. `test_list_filter_by_status`,
-  `test_parse_missing_status`, `test_check_doc_unknown_status`,
-  `test_infer_status_always_returns_a_builtin_status`); test
-  helper functions still accepting a `status=` keyword
-  parameter (`_valid(status=…)`, `_doc(status=…)` in
-  `tests/test_check.py` and `tests/test_index.py`) for
-  back-compat with pre-M7 call sites. The `_REQUIRED_METADATA_FIELDS`
+- **Phase 10 simplify candidates** — **Step 3 simplify branch
+  `m7/simplify` resolved three; one explicitly deferred.** See
+  the M7 implementation log's "Simplify pass" section for the
+  per-commit detail. Landed: `infer_status` → `infer_lifecycle`
+  (OQ3 carry-over, single helper rename across cli.py + tests +
+  architecture.md); the four `_status`-named test functions whose
+  bodies test post-F0 Lifecycle behaviour renamed to `_lifecycle`
+  (`test_list_filter_by_status`, `test_query_filter_by_status`,
+  `test_set_metadata_field_replaces_status_without_disturbing_related`,
+  `test_archive_sets_status_archived`); the `_valid(status=…)`
+  and `_doc(status=…)` test-helper parameters renamed to
+  `lifecycle=` with all call sites updated. Deferred: the mixed
+  `str | bool` `infer_role` return type — a clean `Literal[
+  "high","medium","low"]` simplifies the caller but the M4-era
+  `test_migrate.py` tests pin `assert confident is True` /
+  `is False` identity checks, so the rename relaxes a test
+  contract (not just internal naming). Tied to a future deliberate
+  `Confidence` enum introduction per OQ7, not a Phase 10 nit.
+  Unchanged (no genuine simplification): `BUILTIN_STATUSES`
+  constant name (OQ4 carry-over — broader rename, defer with
+  OQ7's enum); `insert_metadata_block` `status` parameter (OQ3
+  carry-over — single internal call site, kept for callsite
+  stability); other `_status`-named test functions whose bodies
+  test the `status` role or `status-drift` rule (the literal
+  "status" IS the contract). The `_REQUIRED_METADATA_FIELDS`
   constant was reviewed and is already correct (Phase 5 swap
   `Status` → `Lifecycle` landed at cli.py); no action needed.
-  None of these affect the on-disk surface; all are internal-
-  naming nits and belong in the M7 Step 3 simplify branch
-  (NOT in this Step 2 review-fix cycle).
 
 ### Open questions
 
