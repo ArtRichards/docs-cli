@@ -1388,3 +1388,81 @@ milestone-doc deliverable":
       release** — per OQ-C.
 - [x] **Awaiting operator review → batched publish (M9).**
       Branch `m8/phases-5-10` ready for fresh-eyes review.
+
+### Post-Phase-10 — Step 2 fresh-eyes review fix
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Address Nit #1 from the Step 2 fresh-eyes review: the
+`tests/test_packaging.py` byte-identity / wheel-contents checks
+(`test_d3` + `test_b3`) pinned only the 3 pre-M8 bundled skill
+files and did NOT include the 3 additions that joined the
+`_SKILL_RELATIVE_FILES` allowlist in M8
+(`use-cases.md`, `adoption-playbook.md`,
+`docs-toml-template.toml`). A typo in that tuple would silently
+break `docs install-skill --copy` for those files with no test
+catching it.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_packaging.py` | Modify | Extended `test_b3` explicit-assertion set and `test_d3` byte-identity for-loop with the 3 new relative paths. Pure additive — no new test files, no new fixtures, no behaviour change. |
+| `docs/m8-adoption-workflow-log.md` | Modify | This sub-entry. |
+| `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Lockstep after `docs touch` on the impl log. |
+
+#### Actions taken
+
+1. Read `_SKILL_RELATIVE_FILES` at `src/docs_cli/cli.py:3614`
+   to confirm the 3 new entries and the exact relative paths
+   (`Path("references") / "use-cases.md"` etc.).
+2. Extended `test_b3_wheel_contains_cli_and_skill` with 3
+   additional `assert "docs_cli/skill/references/<file>" in
+   names` lines and a comment explaining why every
+   allowlist file must also ship in the wheel.
+3. Extended the `for rel in (...)` tuple in
+   `test_d3_install_skill_tree_is_byte_identical` with the
+   3 new `Path(...)` entries so the byte-identity check
+   covers them too. Pinning these here means a typo or stale
+   walk in `_SKILL_RELATIVE_FILES` trips a loud
+   byte-identity failure.
+4. Ran the full quality gate (all exit 0):
+   - `pytest tests/test_packaging.py -v` — 25 PASSED.
+   - `pytest tests/ -q` — **369 PASSED** (count unchanged;
+     extension lived inside an existing for-loop, did not
+     add new parametric items).
+   - `ruff check .` — clean.
+   - `ruff format --check .` — 33 files already formatted.
+   - `mypy` — Success: no issues found in 34 source files.
+   - `docs check docs/` — no violations found.
+5. Committed as `m8 review fix: extend test_packaging to
+   cover the 3 new bundled skill files` (sha `992f4a2`).
+
+#### Issues / decisions
+
+- **Nit #2 deferred.** The review surfaced a second nit:
+  `_print_migration_plan` always emits per-file lines on
+  `--apply`, so the playbook's `--apply --quiet` examples in
+  Steps 5/6 are mildly misleading (`--quiet` only suppresses
+  the trailing stderr success line). This is pre-existing
+  pre-M8 behaviour and the review's own verdict was to
+  defer it. Options for Step 3 (simplify) or a follow-on:
+  (a) wire `--quiet` to skip `_print_migration_plan` on
+  `--apply`, or (b) update the playbook examples to drop
+  the misleading `--quiet`. Operator picks at Step 3.
+- **No code change.** Pure test-surface widening; the M8
+  shipped bits (`cli.py`, skill bundle, docs, CHANGELOG)
+  did not move. 1.3.0 wheel artefacts remain the same.
+
+#### Exit criteria
+
+- [x] `test_b3` + `test_d3` cover all 6 entries of
+      `_SKILL_RELATIVE_FILES` (no allowlist file can be
+      silently skipped by `install-skill --copy`).
+- [x] Full quality gate clean (369 GREEN, ruff, ruff-format,
+      mypy, `docs check`).
+- [x] Review-fix commit `992f4a2` landed on `m8/phases-5-10`.
+- [x] Nit #2 documented as a deferred follow-on; no Step 2
+      regression.
