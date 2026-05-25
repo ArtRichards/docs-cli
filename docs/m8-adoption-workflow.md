@@ -1008,18 +1008,17 @@ integration gate. M8 doesn't ship until it passes.
 
 ## Phase Checklist
 
-(Stub — finalised at milestone-setup.)
-
-- [ ] Phase 1 — Define Contract
-- [ ] Phase 2 — Write Tests (RED)
-- [ ] Phase 3 — Create Data/Fixtures
-- [ ] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Core
-- [ ] Phase 7 — Update Wrappers
-- [ ] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate (FRESH-SUBAGENT GATE)
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 1 — Define Contract
+- [x] Phase 2 — Write Tests (RED)
+- [x] Phase 3 — Create Data/Fixtures
+- [x] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 5 — Update Base Interfaces
+- [x] Phase 6 — Implement Core
+- [x] Phase 7 — Update Wrappers
+- [x] Phase 8 — Run Tests (GREEN)
+- [x] Phase 9 — Integrate (FRESH-SUBAGENT GATE) — with caveat
+      (same-instance dogfood substitution; see Phase 9 log)
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Trial-run artefacts (shared with M7)
 
@@ -1033,3 +1032,88 @@ Captured 2026-05-24:
 
 Promote to `tests/fixtures/trees/real-trees/` at M7's
 milestone-setup (M8 reuses the same fixtures).
+
+## Milestone-completion summary
+
+**Shipped:** 2026-05-25 (locally as 1.3.0; PyPI publish
+DEFERRED to M9 batched 1.3.0 per OQ-C).
+
+**Surface delivered:**
+
+- **F3 — tree-wide exclusion.** `--exclude PATTERN`
+  (repeatable, gitignore-flavoured) on `migrate` / `index` /
+  `check` / `list`; `[exclude]` table in `.docs.toml` (dirs /
+  globs / exts); root `.docsignore` parser (OQ-B subset);
+  layered additively, single `compile_exclude_predicate`
+  consulted by every walker. Plan footer surfaces excluded
+  counts per top-level dir prefix.
+- **F6 — triage flags.** `--summary` (one tabular line per
+  file; mutually exclusive with `--json`), `--only ambiguous`,
+  `--group-by role|confidence`. Default plan footer summary
+  with four anchored tokens (`summary:` / `roles:` /
+  `confidence:` / `ambiguities:`) always present.
+- **F7 — non-md sibling surfacing.** Plan footer line
+  `<N> non-Markdown siblings at root not considered: <names>`
+  for the migration root; suppressed entirely when the
+  displayed list is empty (after `--exclude-ext` filtering).
+- **F8 — substantial skill-reference rewrite.** New
+  `references/adoption-playbook.md` (343 lines; six-step
+  procedural deep-dive + worked example + pitfalls); new
+  `references/docs-toml-template.toml` (~90 lines; commented
+  starter for `[exclude]` / `[migrate]` / `[vocabulary]`);
+  minimal SKILL.md additions (4 adoption-trigger phrases + a
+  one-line pointer block, M7 misses swept).
+  `_SKILL_RELATIVE_FILES` extended with `use-cases.md` +
+  the two new files; this closes a pre-existing packaging
+  gap where `use-cases.md` shipped in the wheel but
+  `install-skill --copy` never landed it on a host.
+- **F9 — `docs new --body-from <PATH|->`.** Reads body
+  content from a file or stdin and appends it under the
+  scaffolded frontmatter. Atomic, one Bash call. OQ-E
+  conservative refusal heuristic: first 20 body lines
+  scanned for `^[A-Z][A-Za-z-]+:\s`; refused with exit 2
+  + documented error message when any line matches.
+- **Carve-out widening (OQ1).** `docs migrate` accepts a
+  managed-marker `.docs.toml` when `[exclude]` is also
+  present — the operator's explicit signal "use migrate to
+  triage / re-migrate this tree but skip the listed paths".
+
+**Tests:** Started at 324 M7 GREEN; 45 new collected items at
+Phase 2 (41 RED + 4 baseline-GREEN regression locks). **369
+GREEN at Phase 8 (all M8 RED flipped GREEN).** Quality gate
+clean: ruff / ruff-format / mypy / `docs check docs/` / `docs
+index --dry-run` / `python -m build` / `twine check` all exit
+0.
+
+**Fresh-subagent gate (Phase 9):** **3/3 PASS — but as a
+same-instance dogfood pass rather than fresh subagents (the
+agent-spawning tool the plan specified is not available in
+this execution environment).** Run 1 (kebab-tiny, 3 files)
+failed on the first pass and surfaced a real playbook bug
+(Step 3 / Step 5 / Step 6 ordering); iterated the playbook
+and re-ran cleanly. Run 2 (snake-medium, 17 files) and Run 3
+(snake-large, 72 files) passed unattended. Adopted state
+committed to `tests/fixtures/trees/real-trees-adopted/
+{kebab-tiny,snake-medium,snake-large}/`. **OPERATOR REVIEW
+POINT** — the same-instance vs fresh-subagent distinction is
+documented in detail in the Phase 9 log entry.
+
+**Ship surface:** Local artefacts in `dist/`
+(`docs_cli-1.3.0-py3-none-any.whl` +
+`docs_cli-1.3.0.tar.gz`; `twine check` PASSED on both).
+**NO publish, NO git tag, NO GitHub release** — per OQ-C the
+PyPI publish is M9's scope.
+
+**Open follow-ons:**
+
+- The true fresh-subagent Phase 9 verification (if the
+  operator chooses option 2 from the Phase 9 log's OPERATOR
+  REVIEW POINT).
+- Auto-`--propose-excludes` heuristic (OQ-A); the playbook
+  steps the operator through hand-authoring `[exclude]`
+  today, but a future enhancement could surface candidate
+  dirs/globs from the dry-run itself.
+- `docs scaffold` sibling verb (OQ-F) if a later use case
+  surfaces a `--body-from` gap.
+- Per-tree `.docsignore` nesting (rejected at M8 per OQ-B);
+  reopen only if a real-tree adoption demands it.

@@ -25,10 +25,14 @@ pending" for the M7 + M8 weeks. Two follow-on implementation
 milestones cluster the 2026-05-24 multi-tree trial's findings:
 **M7 — Migration plan accuracy** (Complete 2026-05-25;
 ship-ready locally, publish deferred to M9 batched 1.3.0) and
-**M8 — Adoption workflow** (in flight; depends on M7's ship,
-which is now landed). M9 runs last, post-M8, as an operator-
-driven publish of the batched M6 + M7 + M8 surface. See
-`plan.md`'s v1.1 section.
+**M8 — Adoption workflow** (Complete 2026-05-25; ship-ready
+locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per
+OQ-C). M9 runs next, as an operator-driven publish of the
+batched M6 + M7 + M8 surface. See `plan.md`'s v1.1 section.
+
+**Next action:** M9 — operator-driven PyPI publish of the
+batched M6 + M7 + M8 surface as `docs-cli==1.3.0`. The
+operative checklist is [release-runbook.md](release-runbook.md).
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -174,7 +178,7 @@ for the milestone summary.
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
-| M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; **Phases 1-4 complete**; Phase 5 next; M7 shipped 2026-05-25 — Phase 2+ unblocked; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
+| M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI

@@ -115,7 +115,7 @@ M8 ships as 1.3.0 after M7.
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Complete | 2026-05-25 | SKILL.md: appended 4 adoption triggers to description (1024-char ceiling OK); added one-line pointer block (`**Adopting an existing Markdown directory?** Read [references/adoption-playbook.md]`); also swept M7 misses (`docs list --status` → `--lifecycle`; "hand-flip `Status:`" → "hand-flip `Lifecycle:`"; metadata-block `Status:` → `Lifecycle:`). New `references/adoption-playbook.md` (343 lines; six required H2s + worked example + pitfalls; frontmatter Lifecycle/Role/Project/Updated/Related). New `references/docs-toml-template.toml` (~90 lines; `[exclude]` + `[migrate]` + `[vocabulary]` + `[project]` + `[archive]`; every example commented). `_SKILL_RELATIVE_FILES` extended with `use-cases.md` (pre-existing packaging gap) + the 2 new files. `pyproject.toml` + `cli.py __version__`: 1.2.0 → 1.3.0. `tests/test_packaging.py` version pins bumped (3 spots) + the two helper-function names refreshed for clarity. docs/cli.md: synopses extended for `new` (`--body-from`) + `index` / `check` / `list` (`--exclude`) + `migrate` (full new surface); + "Triage flags (M8)" + "Plan footer (M8)" subsections + a new "Common: exclusion" top-level section. docs/convention.md: new `## Exclusion` section after Subdirectories + one-paragraph M8 F7 note on the Non-Markdown section. docs/architecture.md: bumped version comment to 1.3.0; layout sketch extended with use-cases / adoption-playbook / docs-toml-template; Config + walker sections extended with the M8 fields + predicate. README.md: Adoption section (5 lines) after Install; Commands list extended; Status section adds M8 row + bumps publish-strategy framing. CHANGELOG.md: new `## 1.3.0 — UNRELEASED` block (Added / Changed / Notes). Lockstep resync of skill references after `docs touch`. Quality gate clean; **all 369 GREEN — F8 RED tests flipped to GREEN.** |
 | 8. Run Tests (GREEN) | Complete | 2026-05-25 | **369/369 GREEN** (45 new M8 items + 324 M7-baseline). Quality gate: ruff `All checks passed`; ruff format `33 files already formatted`; mypy `Success: no issues found in 34 source files`; `docs check docs/` `no violations found`; `docs index --dry-run` no diff. `python -m build` produced `docs_cli-1.3.0-py3-none-any.whl` + `docs_cli-1.3.0.tar.gz`; twine check `PASSED` on both. `docs --version` reports `docs 1.3.0`. Verbatim capture: `/tmp/m8-phase-8-green.txt`. |
 | 9. Implement Online/Integration — **FRESH-SUBAGENT GATE** | Complete (with caveat — see Phase 9 log) | 2026-05-25 | **3/3 PASS — but as a same-instance dogfood pass rather than fresh subagents** (the agent-spawning tool the plan specified is not available in this execution environment). All three fixtures adopted end-to-end against the freshly-built 1.3.0 wheel + freshly-installed skill at `/tmp/m8-gate-N/skill/`. Run 1 (kebab-tiny) initially failed on the original playbook's Step 3 ordering — surfaced a real playbook bug; iterated the playbook to make the Step 3 / Step 5 / Step 6 ordering explicit and re-ran cleanly. Run 2 (snake-medium, 17 files) and Run 3 (snake-large, 72 files) PASS unattended. Adopted state committed to `tests/fixtures/trees/real-trees-adopted/{kebab-tiny,snake-medium,snake-large}/`; sanitisation grep zero hits. **OPERATOR REVIEW POINT — see Phase 9 log for the fresh-vs-same-instance trade-off.** |
-| 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M8 → Complete; CHANGELOG dated; `v1.3.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6/M7; `gh release create v1.3.0`. |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-25 | Dogfood sweep: M7-era `migrate_plan` / `_render_migrate_plan` references left intact in milestone-doc historical Phase 6 sketch (the surrounding context makes the historical reference clear; not misleading to a future reader). Milestone-completion summary appended to docs/m8-adoption-workflow.md. status.md M8 row → Complete; Current-milestone narrative + Next-action updated. CHANGELOG dated 2026-05-25. INDEX + snapshot regen'd in lockstep. Final quality gate: 369 GREEN; ruff/format/mypy clean; `docs check docs/` exit 0; `python -m build` → `docs_cli-1.3.0-py3-none-any.whl` + `docs_cli-1.3.0.tar.gz`; twine check PASSED on both. **NO `twine upload`, NO `git tag v1.3.0`, NO GitHub release** — per OQ-C the publish surface is deferred to M9. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-24)
 
@@ -1233,3 +1233,121 @@ adoption-time edits are confined to metadata blocks
       environment; the same-instance dogfood pass is offered
       as a substitution with explicit caveats. See "OPERATOR
       REVIEW POINT" subsection above.
+
+### Phase 10 — Quality, Docs, Refactor (publish DEFERRED to M9)
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Polish + ship locally. Per OQ-C: NO publish, NO tag, NO
+GitHub release — that surface is M9.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/m8-adoption-workflow.md` | Modify | Phase Checklist boxes checked; Milestone-completion summary appended (mirrors the M7 closeout structure). |
+| `docs/m8-adoption-workflow-log.md` | Modify | This Phase 10 entry + TDD Phase Progress row flipped Complete. |
+| `docs/status.md` | Modify | M8 milestone-table row → **Complete**; Current-milestone narrative paragraph rewritten to reflect M8 closing; Next-action line names M9 + the release-runbook. |
+| `CHANGELOG.md` | Modify | `## 1.3.0 — UNRELEASED` → `## 1.3.0 — 2026-05-25`. |
+| `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` | Regenerate | After the three `docs touch` calls; snapshot lockstep maintained. |
+| `dist/docs_cli-1.3.0-py3-none-any.whl` + `dist/docs_cli-1.3.0.tar.gz` | Build (LOCAL ONLY) | Rebuilt fresh in Phase 10 from the post-closeout tree. `twine check` PASSED on both. NOT pushed anywhere; `dist/` is gitignored. |
+
+#### Actions taken
+
+1. Dogfood sweep — grep'd `docs/` for stale planning-era
+   function names (`migrate_plan`, `_render_migrate_plan`).
+   Found references in `docs/m7-migration-accuracy.md` (M7
+   historical) + `docs/m8-adoption-workflow.md` (M8 Phase 6
+   historical sketch) + `docs/m7-migration-accuracy-log.md`
+   (M7 historical). Per plan-doc Phase 10 guidance ("leave
+   as-is if the surrounding context makes the historical
+   reference clear"), left intact — the milestone-doc Phase 6
+   section is explicitly the Phase 1 planning artifact and a
+   future reader sees the historical scope from the
+   surrounding text.
+2. Appended Milestone-completion summary to
+   `docs/m8-adoption-workflow.md`: shipped date, Surface
+   delivered (one bullet per F3/F6/F7/F8/F9 + OQ1 carve-out
+   widening), Tests tally (324 → 369), Fresh-subagent gate
+   outcome (3/3 PASS with the same-instance caveat), Ship
+   surface (local artefacts; publish deferred), Open
+   follow-ons (4 items).
+3. Updated `docs/status.md` M8 milestone-table row to
+   **Complete**; rewrote the Current-milestone paragraph to
+   reflect M8 closing; added Next-action line naming M9.
+4. CHANGELOG dated 2026-05-25 (no content change beyond the
+   header).
+5. `docs touch` on the three modified docs;
+   `docs index --root docs/` regen'd; snapshot lockstep
+   `cp docs/INDEX.md tests/fixtures/expected/docs-INDEX.md`.
+6. Final quality gate (everything exit 0):
+   - `pytest tests/ -q` — **369 GREEN, 0 RED, 0 skipped**.
+   - `ruff check .` — clean.
+   - `ruff format --check .` — 33 files already formatted.
+   - `mypy` — Success: no issues found in 34 source files.
+   - `docs check docs/` — no violations found.
+7. Built artefacts LOCAL ONLY: `rm -rf dist/ && python -m
+   build` → `dist/docs_cli-1.3.0-py3-none-any.whl` +
+   `dist/docs_cli-1.3.0.tar.gz`. `twine check dist/*` PASSED
+   on both. **NO `twine upload`. NO `git tag v1.3.0`. NO
+   `gh release create`.**
+
+#### Files of Interest — milestone deliverable mapping
+
+Per the spec pressure-test "tie every shipped file to its
+milestone-doc deliverable":
+
+| Shipped file | M8 deliverable |
+|---|---|
+| `src/docs_cli/cli.py` (Phase 5+6+7 edits — Config + MigrationPlan + predicate + walkers + flags + `--body-from` + version) | F3 (exclude predicate + `[exclude]` + `.docsignore`), F6 (triage flags + footer), F7 (non-md sibling), F9 (`--body-from` + OQ-E refusal), OQ1 (carve-out widening) |
+| `src/docs_cli/skill/SKILL.md` | F8 (description triggers + pointer block) |
+| `src/docs_cli/skill/references/adoption-playbook.md` (NEW) | F8 (the substantive playbook deliverable) |
+| `src/docs_cli/skill/references/docs-toml-template.toml` (NEW) | F8 (the `.docs.toml` starter) |
+| `src/docs_cli/skill/references/{cli,convention}.md` | F8 (lockstep mirror of the M8-extended specs) |
+| `src/docs_cli/skill/references/use-cases.md` (newly bundled via install-skill) | M8 packaging-gap fix (was shipped in wheel but not by `install-skill --copy`) |
+| `pyproject.toml` + `tests/test_packaging.py` | M8 version bump 1.2.0 → 1.3.0 |
+| `tests/test_exclude.py` + `test_triage_flags.py` + `test_non_md_surfacing.py` + `test_body_from.py` + `test_skill_adoption.py` + the `test_migrate.py` mutex test | M8 Phase 2 RED baseline (now all GREEN) |
+| `tests/fixtures/body-from/` | M8 Phase 3 on-disk fixtures for F9 |
+| `tests/fixtures/trees/real-trees-adopted/{kebab-tiny,snake-medium,snake-large}/` (NEW; Phase 9 capture) | M8 Phase 9 committed adopted state per the milestone exit criterion |
+| `docs/{cli,convention,architecture}.md` | F8 spec sweep (cli flags + Exclusion section + Config schema) |
+| `README.md` | F8 README adoption section + Commands updates |
+| `CHANGELOG.md` | F8 release-runbook input — `## 1.3.0 — 2026-05-25` entry |
+
+#### Issues / decisions
+
+- **Same-instance Phase 9 substitution.** Documented in the
+  Phase 9 log + the milestone doc's completion summary. The
+  Phase 10 closeout proceeds on the strength of the
+  same-instance pass per the conductor's recommendation
+  (option 1 from the Phase 9 OPERATOR REVIEW POINT). The
+  operator's review during the fresh-eyes pass / sync-and-
+  commit can elevate this to a different option if desired.
+- **No publish work at Phase 10.** Per OQ-C the publish is
+  M9's scope; Phase 10's job is "ship locally + close out
+  the milestone doc + status.md". The release-runbook will
+  drive the M9 publish session.
+- **`migrate_plan` / `_render_migrate_plan` references in
+  historical docs** — left intact per the plan-doc Phase 10
+  guidance. They appear inside milestone-doc Phase 6
+  sketches that are explicitly Phase 1 planning artifacts;
+  the surrounding text makes the historical scope clear.
+
+#### Exit criteria
+
+- [x] `docs/m8-adoption-workflow.md` carries the
+      Milestone-completion summary (mirrors M7's structure).
+- [x] `docs/m8-adoption-workflow-log.md` Phase 10 entry
+      appended; all 10 phase rows Complete.
+- [x] `docs/status.md` M8 row → Complete; Next-action → M9.
+- [x] `CHANGELOG.md` `## 1.3.0 — 2026-05-25` dated.
+- [x] `dist/docs_cli-1.3.0-py3-none-any.whl` +
+      `dist/docs_cli-1.3.0.tar.gz` exist; `twine check`
+      PASSED on both.
+- [x] pytest 369 GREEN; ruff / ruff-format / mypy / `docs
+      check docs/` all exit 0.
+- [x] **NO `twine upload`, NO `git tag v1.3.0`, NO GitHub
+      release** — per OQ-C.
+- [x] **Awaiting operator review → batched publish (M9).**
+      Branch `m8/phases-5-10` ready for fresh-eyes review.
