@@ -203,13 +203,16 @@ file tree.
 Once the dry-run plan is clean:
 
 ```
-docs migrate path/to/dir --apply --quiet
+docs migrate path/to/dir --apply
 ```
 
 `--apply` writes the inferred metadata block into every file
 the plan covers (atomic edit — never partial), then moves any
 archive-style subdirs into `archive/<date>/<name>` per the M7
 detection. Already-conformant files are left untouched.
+
+(`--quiet` is available but only suppresses the trailing
+stderr success line — per-file edit output still prints.)
 
 **Ordering reminder (per Step 3).** If you authored a
 `.docs.toml` carrying `[project]`/`[archive]`/`[vocabulary]`
@@ -331,7 +334,7 @@ fallback) — acceptable; the operator confirms those should land
 as `notes` and runs:
 
 ```
-docs migrate ~/old-specs --apply --quiet
+docs migrate ~/old-specs --apply
 docs check ~/old-specs
 git -C ~/old-specs add -A && git commit -m "adopt foo specs"
 ```
