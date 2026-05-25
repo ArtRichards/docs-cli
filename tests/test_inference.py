@@ -67,18 +67,36 @@ def test_infer_role_word_boundary_space_separated():
 
 
 @pytest.mark.parametrize(
-    "filename",
-    ["MyPlan_v2.md", "MyPlan_Draft.md", "MyPlan_v3.md"],
+    "filename,strict_medium",
+    [
+        # First case is the strict-medium anchor (review finding #1): the
+        # post-strip match must be specifically `medium`, not "any of medium/
+        # high/True". A Phase 6 implementation that returns "high" for every
+        # strip would silently degrade OQ-D's three-confidence-level resolution.
+        ("MyPlan_v2.md", True),
+        ("MyPlan_Draft.md", False),
+        ("MyPlan_v3.md", False),
+    ],
 )
-def test_infer_role_strips_non_role_suffixes(filename):
+def test_infer_role_strips_non_role_suffixes(filename, strict_medium):
     """`_v\\d+`, `_Draft`, `_Ready` are non-role signals: strip them and
     re-match the remaining stem. After stripping, `_Plan` matches → role
     `plan` at medium confidence. Today the matcher sees the full stem and
     falls back to `notes`.
+
+    The first parametric case (`MyPlan_v2.md`) asserts confidence ==
+    `"medium"` exactly, pinning OQ-D's three-level resolution against an
+    accidental Phase-6 implementation that always returns `"high"`.
     """
     role, conf = infer_role(filename, {})
     assert role == "plan", f"stripping failed for {filename}: got {role!r}"
-    assert conf in _CONFIDENCE_OK
+    if strict_medium:
+        assert conf == "medium", (
+            f"non-role-suffix strip must return medium confidence (OQ-D); "
+            f"got {conf!r} for {filename}"
+        )
+    else:
+        assert conf in _CONFIDENCE_OK
 
 
 # --- New core vocab roles (F10) --------------------------------------------
@@ -100,10 +118,20 @@ def test_infer_role_new_core_vocab_roles(filename, expected_role):
     """The 7 new core controlled-role vocab additions (OQ-A) — case-insensitive
     suffix match in `_TitleCase` shape. Today none of these are roles, so
     every case lands in `notes`.
+
+    OQ-A puts these in the CORE controlled-role vocab — direct suffix match
+    yields **high** confidence (same as today's pre-existing `_Plan` / `_Spec`
+    matchers). `medium` is reserved for derived signals (post-strip,
+    H1-content, section-header, sibling-set defaulting). This assertion drops
+    `medium` from the accepted set so a Phase 6 implementation can't quietly
+    degrade these to medium confidence (review finding #2).
     """
     role, conf = infer_role(filename, {})
     assert role == expected_role, f"{filename}: expected {expected_role}, got {role!r}"
-    assert conf in _CONFIDENCE_OK
+    assert conf in ("high", True), (
+        f"new core vocab roles are direct suffix matches → high confidence (OQ-A); "
+        f"got {conf!r} for {filename}"
+    )
 
 
 # --- F12 — milestone-number suffix pattern ---------------------------------
@@ -111,6 +139,12 @@ def test_infer_role_new_core_vocab_roles(filename, expected_role):
 
 @pytest.mark.parametrize(
     "filename",
+    # `Foo_M1.md`, `Foo_M2.md`, `Foo_M10.md` come straight from the milestone
+    # task plan (line 530). `Foo_M01.md` is an intentional regex-coverage
+    # addition (review finding #3): the `_M\d+` pattern must accept leading
+    # zeros so a tree that names its milestones `_M01.._M09` still matches.
+    # Trial 2 did not surface this shape; pinning it here keeps the pattern
+    # forward-compatible without requiring a separate test.
     ["Foo_M1.md", "Foo_M2.md", "Foo_M10.md", "Foo_M01.md"],
 )
 def test_infer_role_milestone_number_suffix(filename):
@@ -142,6 +176,11 @@ def test_infer_role_h1_content_inference(tmp_path):
     a role word (`# Foo Plan`) should infer `role: plan` at medium
     confidence. Today H1-content inference isn't wired into `plan_migration`,
     so the file falls back to `notes`.
+
+    OQ-D pins H1-content inference at **medium** confidence (review
+    finding #1). Asserting medium exactly — not the
+    medium/high/True compatibility set — prevents a Phase 6 implementation
+    from quietly upgrading H1-content matches to "high".
     """
     _write(
         tmp_path / "foo.md",
@@ -150,7 +189,9 @@ def test_infer_role_h1_content_inference(tmp_path):
     plan = plan_migration(tmp_path)
     fm = next(f for f in plan.files if f.rel == "foo.md")
     assert fm.role == "plan"
-    assert fm.confidence in _CONFIDENCE_OK
+    assert fm.confidence == "medium", (
+        f"H1-content inference must return medium confidence (OQ-D); got {fm.confidence!r}"
+    )
 
 
 # --- F1 — section-header pattern inference (via plan_migration) ------------
@@ -161,6 +202,10 @@ def test_infer_role_section_header_pattern_plan(tmp_path):
     headers should infer `role: plan` at medium confidence even when neither
     the filename suffix nor the H1 reveals the role. Today section-header
     inference is unimplemented; inference falls back to `notes`.
+
+    OQ-D pins section-header inference at **medium** confidence (review
+    finding #1). Strict-medium assertion prevents accidental upgrade to
+    "high" by a Phase 6 implementation.
     """
     _write(
         tmp_path / "ambiguous.md",
@@ -175,7 +220,9 @@ def test_infer_role_section_header_pattern_plan(tmp_path):
     plan = plan_migration(tmp_path)
     fm = next(f for f in plan.files if f.rel == "ambiguous.md")
     assert fm.role == "plan"
-    assert fm.confidence in _CONFIDENCE_OK
+    assert fm.confidence == "medium", (
+        f"section-header inference must return medium confidence (OQ-D); got {fm.confidence!r}"
+    )
 
 
 # --- F1 — sibling-set defaulting (OQ-C: ≥ 60% modal, ≥ 5 sample) -----------
@@ -186,18 +233,28 @@ def test_sibling_set_defaulting_fires_when_majority_met(fixtures_dir):
     remaining no-suffix files default to `role: spec` at medium confidence
     via sibling-set defaulting. Today the fallback is `notes` at low
     confidence — the modal-sibling code path doesn't exist.
+
+    OQ-D / OQ-C pin sibling-set defaulting at **medium** confidence (review
+    finding #1). Strict-medium assertion on every defaulted file prevents
+    a Phase 6 implementation from quietly returning "high" for defaulted
+    files (which would erase the operator-attention signal the medium
+    level is designed to carry).
     """
     fixture = fixtures_dir / "sibling-defaulting" / "majority-met"
     plan = plan_migration(fixture)
     # The three no-suffix files (file-08, file-09, file-10 by naming) should
-    # now resolve to `spec` via sibling-set defaulting.
-    defaulted = [
-        f for f in plan.files if "no-suffix" in f.rel or f.rel.endswith(("08.md", "09.md", "10.md"))
-    ]
+    # now resolve to `spec` via sibling-set defaulting. Review finding #7:
+    # the prior `endswith(("08.md","09.md","10.md"))` clause was a redundant
+    # over-broad filter — every no-suffix file in the fixture has
+    # "no-suffix" in its rel path already.
+    defaulted = [f for f in plan.files if "no-suffix" in f.rel]
     assert defaulted, "fixture must contain no-suffix files"
     for fm in defaulted:
         assert fm.role == "spec", f"{fm.rel}: expected spec via defaulting, got {fm.role!r}"
-        assert fm.confidence in _CONFIDENCE_OK
+        assert fm.confidence == "medium", (
+            f"{fm.rel}: sibling-set defaulting must return medium confidence (OQ-D); "
+            f"got {fm.confidence!r}"
+        )
 
 
 def test_sibling_set_NOT_defaulting_when_sample_too_small(fixtures_dir):

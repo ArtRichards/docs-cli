@@ -76,6 +76,14 @@ def test_subdir_below_five_file_threshold_emits_no_hint(docs_script, tmp_path):
     """A subdir with fewer than 5 `.md` files is below the heuristic
     threshold; no hint is emitted. Regression lock — GREEN at baseline
     today (no hint emission at all yet, so this trivially passes).
+
+    Review finding #4: the original `if "hint:" in stdout: assert "small-sub"
+    not in stdout` was brittle — at baseline `"hint:"` was absent so the
+    assertion was a no-op; post-Phase-6, a substring search could fail for
+    unrelated reasons (e.g. the path `tmp_path/multi-project-small/small-sub`
+    is itself in the plan output as a parent path). Walk hint lines and pin
+    the exact shape from the milestone doc (line 313-321):
+    `hint: subdir 'X/' looks like a separate project … --config-project X`.
     """
     tree = tmp_path / "multi-project-small"
     _make_multi_project_tree(tree, parent_files=5, child_subdir="small-sub", child_files=3)
@@ -85,11 +93,16 @@ def test_subdir_below_five_file_threshold_emits_no_hint(docs_script, tmp_path):
         text=True,
     )
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
-    # "hint:" must not appear naming the small subdir.
-    if "hint:" in proc.stdout:
-        # Allow other unrelated hint lines; assert no hint for small-sub.
-        assert "small-sub" not in proc.stdout, (
-            "no hint expected for a subdir below the 5-file threshold; got:\n" + proc.stdout
+    # Walk plan output line-by-line; no hint line may mention `small-sub`
+    # as either the subdir candidate (`subdir 'small-sub/'`) or the
+    # `--config-project small-sub` suggestion.
+    for line in proc.stdout.splitlines():
+        stripped = line.lstrip()
+        if not stripped.startswith("hint:"):
+            continue
+        assert "small-sub" not in line, (
+            "no hint expected for a subdir below the 5-file threshold; "
+            f"offending line: {line!r}\nfull stdout:\n{proc.stdout}"
         )
 
 
