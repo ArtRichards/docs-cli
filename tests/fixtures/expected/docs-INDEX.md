@@ -42,7 +42,7 @@ _Generated 2026-05-25. 29 docs active, 0 archived._
 
 - [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
 - [m8-adoption-workflow-log.md](m8-adoption-workflow-log.md) — _log_ — - Project: docs - Milestone: M8 — Adoption workflow (agent-driveable) - Started: 2026-05-24 - Progress: **All 10 TDD…. Updated 2026-05-25.
-- [m9-pypi-publish-log.md](m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries get appended as the operator walks [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-24.
+- [m9-pypi-publish-log.md](m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries appended as the operator walked [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-25.
 - [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: **M5 complete — shipped…. Updated 2026-05-23.
 - [m6-pypi-distribution-log.md](m6-pypi-distribution-log.md) — _log_ — - Project: docs - Milestone: M6 — PyPI distribution as `docs-cli` - Started: 2026-05-23 - Progress: **Milestone-setup…. Updated 2026-05-23.
 - [m3-validation-and-query-log.md](m3-validation-and-query-log.md) — _log_ — - Project: docs - Milestone: M3 — Validation and query (`check`, `list`) - Started: 2026-05-22 - Progress: Complete —…. Updated 2026-05-22.
@@ -57,7 +57,7 @@ _Generated 2026-05-25. 29 docs active, 0 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook is **M9's operative artifact** — every…. Updated 2026-05-25.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-05-25.
 
 ### Active — Reference
 

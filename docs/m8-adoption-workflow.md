@@ -1128,3 +1128,19 @@ PyPI publish is M9's scope.
   surfaces a `--body-from` gap.
 - Per-tree `.docsignore` nesting (rejected at M8 per OQ-B);
   reopen only if a real-tree adoption demands it.
+
+## M9 publish flip (2026-05-25)
+
+M8's surface shipped to the public via `docs-cli==1.3.0` on
+PyPI at the M9 batched publish (2026-05-25, alongside M6 and
+M7). The 1.3.0 number M8 carried internally is the same
+number that reached PyPI (by design, per OQ-C), making M8 the
+version-source-of-truth milestone for the batched publish.
+Release artefacts: `docs_cli-1.3.0-py3-none-any.whl` (sha256
+`27afbde7d1e2452c6c9e52b8a1a0e01f1ff876fcaa0543e2e1b1a34ea21898da`)
+and `docs_cli-1.3.0.tar.gz` (sha256
+`59d36ef2851141aaa92da691e22d602df56b47f3febb7ac74583ea72fa16d2dd`)
+at https://pypi.org/project/docs-cli/1.3.0/; source tag `v1.3.0`
+at https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0.
+See [m9-pypi-publish.md](m9-pypi-publish.md) for the full
+publish record.

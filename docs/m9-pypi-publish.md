@@ -1,6 +1,6 @@
 # M9 — PyPI publish 1.3.0
 
-Lifecycle: draft
+Lifecycle: active
 Role: milestone
 Project: docs
 Updated: 2026-05-25
@@ -28,7 +28,7 @@ Related:
   the v1.3.0 tag + GitHub release, and the post-publish doc
   closeouts that turn M6 / M7 / M8 / M9 rows in `status.md` and
   `plan.md` into `Complete (DATE)`.
-- Status: DRAFT — **ACTIVATED 2026-05-25 (M8 shipped locally as 1.3.0)**
+- Status: **Complete (2026-05-25)** — `docs-cli==1.3.0` live at https://pypi.org/project/docs-cli/1.3.0/
 
 ### Goal
 
@@ -120,14 +120,22 @@ public GitHub repo carries the matching `v1.3.0` tag + release.
 M9 has no TDD code phases — it is an operational milestone. The
 runbook's sections are the phases:
 
-- [ ] Operator one-time prep — accounts + 2FA + API tokens +
-      `~/.pypirc` (done in parallel with M7 / M8)
-- [ ] Pre-publish prep — version bump, CHANGELOG restructure,
-      tree state, quality gate, artifact build, local smoke
-- [ ] TestPyPI rehearsal
-- [ ] Real PyPI publish
-- [ ] Post-release — repo public, tag + GitHub release, token
-      re-scope, doc closeouts
+- [x] Operator one-time prep — accounts + 2FA + API tokens +
+      `~/.pypirc` (token re-scope deferred to post-publish — see
+      summary below)
+- [x] Pre-publish prep — versions verified `1.3.0` (pre-bumped
+      at M8 Phase 7), CHANGELOG already dated (M8 Phase 10),
+      tree state clean, quality gate green (pytest 369 passed),
+      fresh artifact build, local smoke
+- [x] TestPyPI rehearsal — ran under disambiguated dist name
+      `docs-cli-rehearsal==1.3.0` because the bare `docs-cli`
+      name was parked on TestPyPI by an unrelated user
+- [x] Real PyPI publish — `docs-cli==1.3.0` live; sha256
+      chain-of-custody from build → upload → PyPI-served wheel
+      verified bit-perfect
+- [x] Post-release — repo public, `v1.3.0` tag + GitHub release,
+      doc closeouts; token re-scope handed back to the operator
+      as out-of-band account-UI work
 
 Each ticks as the runbook's corresponding section completes.
 
@@ -190,5 +198,131 @@ M9 is complete when:
 
 ## OPEN QUESTIONS
 
-_None at draft time. Open questions surface when M9 activates
-(post-M8 ship) and the operator walks the runbook._
+_None at draft time. Open questions surfaced during the
+2026-05-25 walk (TestPyPI name parked → disambiguated rehearsal
+name; stale `gh repo edit` flag) are recorded in the
+Milestone-completion summary below._
+
+## Milestone-completion summary
+
+**Shipped 2026-05-25** — `docs-cli==1.3.0` is the first public
+release of docs-cli; the v1.1 line ships.
+
+### Published artefact
+
+- **PyPI:** https://pypi.org/project/docs-cli/1.3.0/
+- **Version:** `1.3.0` (the M8 version number; M6=1.1.0 and
+  M7=1.2.0 never reached PyPI by design)
+- **Wheel sha256:**
+  `27afbde7d1e2452c6c9e52b8a1a0e01f1ff876fcaa0543e2e1b1a34ea21898da`
+  (`docs_cli-1.3.0-py3-none-any.whl`, 76.4 KB)
+- **Sdist sha256:**
+  `59d36ef2851141aaa92da691e22d602df56b47f3febb7ac74583ea72fa16d2dd`
+  (`docs_cli-1.3.0.tar.gz`, 428.8 KB)
+- **PyPI install timestamp (UTC):** 2026-05-25T11:20:24Z (from
+  the post-publish smoke install)
+- **Source tag:**
+  https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0
+  (lightweight tag at HEAD, M8 simplify commit `6e84906`)
+- **Chain-of-custody:** the wheel pip-downloaded from PyPI
+  post-publish has sha256 byte-identical to the uploaded
+  wheel; no rebuild between TestPyPI rehearsal and real PyPI
+  publish was needed (rehearsal ran under a temporary dist
+  name, see below).
+
+### What shipped (the M6 + M7 + M8 surface)
+
+- **M6 (was 1.1.0 internal).** PyPI distribution as `docs-cli`,
+  `docs install-skill` verb, the bundled Claude Code skill as
+  package data, the `src/docs_cli/` package layout. Stays the
+  default install path; `pip install docs-cli` lands `docs` on
+  PATH via the `[project.scripts] docs = "docs_cli.cli:main"`
+  entry point.
+- **M7 (was 1.2.0 internal, breaking).** Controlled-vocab
+  field rename `Status:` → `Lifecycle:` (no backward-compat
+  alias), `docs list --status` → `--lifecycle`, JSON schema
+  field rename, `add_statuses` → `add_lifecycles`, broadened
+  role inference (suffix + H1 + section-header + sibling-set
+  defaulting, 7 new core role vocab additions, `_v\d+` /
+  `_Draft` / `_Ready` non-role suffix stripping, `_M\d+`
+  milestone-pattern), `--config-project` migrate flag, project-
+  name normalisation to lowercase-kebab, per-file mtime archive
+  moves, medium-confidence level with `docs check` exit-1
+  warnings.
+- **M8 (was 1.3.0 internal, additive).** Tree-wide `--exclude`
+  on `migrate` + `index` + `check` + `list`, `[exclude]`
+  table in `.docs.toml` (`dirs` / `globs` / `exts`), root
+  `.docsignore` parser, `--summary` / `--only ambiguous` /
+  `--group-by` triage flags on `migrate`, default plan-footer
+  summary, non-md sibling surfacing, `docs new --body-from
+  <PATH|->`, substantial bundled-skill rewrite for adoption
+  (new `references/adoption-playbook.md` + commented
+  `references/docs-toml-template.toml`).
+
+### Deviations from the runbook (recorded for v1.4+)
+
+1. **CHANGELOG date-stamp at Hand-off 3 was a no-op.** The
+   runbook expected the operator to replace
+   `## 1.3.0 — UNRELEASED` with the publish date during the
+   real-PyPI block; M8 Phase 10 had already dated it at
+   `2026-05-25`. The runbook's "replace UNRELEASED with today's
+   date" step still applies if a future release hits M9 with an
+   UNRELEASED header.
+2. **TestPyPI dist-name detour.** The bare project name
+   `docs-cli` was parked on TestPyPI by an unrelated user
+   (Paulo Guilherme Pilott, "Um toolkit para processamento e
+   avaliação de documentação", v0.1.0). The TestPyPI rehearsal
+   ran under the disambiguated dist name
+   `docs-cli-rehearsal==1.3.0`; `pyproject.toml`'s
+   `[project] name` was temporarily renamed for the rehearsal
+   build and reverted before the real PyPI build (resulting
+   real-PyPI artefacts byte-identical to the original Block B
+   build). The runbook's `## Notes` block now carries this
+   caveat for future operators.
+3. **`gh repo edit` flag `--accept-visibility-change-consequences`
+   does not exist** in the installed `gh` 2.x; `gh` prompts
+   interactively instead. Runbook patched in lockstep.
+4. **GitHub release notes are hand-augmented**, not bare-awk.
+   The CHANGELOG's `## 1.3.0` section is M8-centric (the M7 and
+   M6 detail lives in `## 1.2.0` and `## 1.1.0` respectively,
+   neither of which was published as a separate PyPI release).
+   The release-notes file at
+   `https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0`
+   prefixes the awk-extracted body with a short preamble
+   calling out first-public-release status and pointing readers
+   at the earlier CHANGELOG sections.
+5. **Token re-scope was deferred** as out-of-band operator UI
+   work. The PyPI + TestPyPI tokens currently in `~/.pypirc`
+   remain entire-account-scoped at the moment of this
+   summary's writing. Operator re-scopes to
+   project-`docs-cli` + project-`docs-cli-rehearsal` and
+   revokes the bootstrap tokens at their convenience.
+
+### Quality gate at publish
+
+- pytest **369 passed** (M6 baseline 271 + M7/M8 additions
+  98); no skipped tests, no warnings beyond pytest defaults.
+- ruff `check .`, ruff `format --check .`, mypy (34 source
+  files), `docs check docs/`, `docs index --root docs/
+  --dry-run` — all clean.
+- `twine check dist/*` PASSED on both the real and rehearsal
+  artefacts.
+
+### Open follow-ons
+
+- **Token re-scope** (operator, async).
+- **Trusted Publishing / OIDC** still parked as a future
+  iteration. Manual `twine` proved fine at v1.1; revisit at
+  v1.4 / v2 if the manual flow proves cumbersome.
+- **Re-check TestPyPI `docs-cli` ownership** at future
+  release windows. If the squatter project ever lapses, drop
+  the rehearsal-name detour. Until then, future releases
+  continue under a disambiguated TestPyPI dist name.
+- **Single-source-of-truth versioning.** Version is still
+  hardcoded in `pyproject.toml` + `src/docs_cli/cli.py`'s
+  `__version__`. Migrating to `importlib.metadata` is parked
+  as a future-iteration note (M6 plan's "What's deliberately
+  deferred").
+
+The release-runbook stays the operative reference for the
+next release (v1.4+).

@@ -17,22 +17,25 @@ Related:
 
 ## Current milestone
 
-**M6 closed 2026-05-24 as preparation only.** The 2026-05-24 scope
-reframe split the actual PyPI publish out of M6 into a new
-milestone — **M9 — PyPI publish 1.3.0** — so M6 could close
-cleanly instead of hanging at "implementation done, publish
-pending" for the M7 + M8 weeks. Two follow-on implementation
-milestones cluster the 2026-05-24 multi-tree trial's findings:
-**M7 — Migration plan accuracy** (Complete 2026-05-25;
-ship-ready locally, publish deferred to M9 batched 1.3.0) and
-**M8 — Adoption workflow** (Complete 2026-05-25; ship-ready
-locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per
-OQ-C). M9 runs next, as an operator-driven publish of the
-batched M6 + M7 + M8 surface. See `plan.md`'s v1.1 section.
+**v1.1 shipped 2026-05-25.** **M9 — PyPI publish 1.3.0** is
+complete: `docs-cli==1.3.0` is live at
+https://pypi.org/project/docs-cli/1.3.0/, batching the M6 + M7
++ M8 surface into one public release. The GitHub repo
+`ArtRichards/docs-cli` is public; source tag `v1.3.0` +
+GitHub release exist. See
+[m9-pypi-publish.md](m9-pypi-publish.md)'s
+milestone-completion summary for the published version, wheel
++ sdist sha256, publish timestamp, and the deviations from the
+runbook recorded for v1.4+ releases. The release-runbook stays
+the operative reference for future publishes.
 
-**Next action:** M9 — operator-driven PyPI publish of the
-batched M6 + M7 + M8 surface as `docs-cli==1.3.0`. The
-operative checklist is [release-runbook.md](release-runbook.md).
+**Next action:** No active milestone. v1.2 is unscoped — open
+when a concrete need surfaces. The one carried-forward
+plan-level open question (the `[vocabulary] add_fields`
+extra-field allowlist) remains parked. Day-to-day work
+continues on documentation polish, follow-on items recorded in
+each milestone-completion summary, and any incoming
+adoption-flow feedback from external users.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -48,18 +51,20 @@ fresh from the post-M8 tree at publish time. See
 [release-runbook.md](release-runbook.md) for the operative
 checklist.
 
-### M9 — PyPI publish 1.3.0 (stub, post-M8)
+### M9 — PyPI publish 1.3.0 (Complete 2026-05-25)
 
-[m9-pypi-publish.md](m9-pypi-publish.md) stub-drafted 2026-05-24.
-Activates once M8 ships. The operative checklist is
-[release-runbook.md](release-runbook.md): operator one-time prep
-(accounts, 2FA, API tokens, `~/.pypirc`) done in parallel with
-M7 / M8; then a single contiguous post-M8 session for version
-bump → CHANGELOG restructure → tree state → quality gate →
-artifact build → local smoke → TestPyPI rehearsal → real PyPI
-publish → post-release closeouts (repo public flip, tag +
-GitHub release, token re-scope, doc closeouts). M6 / M7 / M8
-ship together as `docs-cli==1.3.0`. No code work; no TDD phases.
+[m9-pypi-publish.md](m9-pypi-publish.md) walked top-to-bottom
+in one contiguous session 2026-05-25. Quality gate green
+(pytest 369), artefacts rebuilt fresh from the post-M8 tree,
+TestPyPI rehearsal ran under a disambiguated dist name
+`docs-cli-rehearsal==1.3.0` (the bare `docs-cli` was parked
+on TestPyPI by an unrelated user — real PyPI was clean), real
+PyPI upload + smoke install confirmed bit-perfect
+chain-of-custody, repo flipped public, `v1.3.0` tag pushed +
+GitHub release created, doc closeouts in lockstep. Token
+re-scope deferred as out-of-band operator UI work. Full
+record (and deviations recorded for v1.4+) in M9's
+milestone-completion summary.
 
 ### M7 + M8 — stubs drafted from the 2026-05-24 trial
 
@@ -179,18 +184,18 @@ for the milestone summary.
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
-| M9 — PyPI publish 1.3.0 | **Activated** (2026-05-25; M8 shipped locally; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
+| M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
-v1 (M1-M5) shipped 2026-05-22. **v1.1 is in flight**: M6 (PyPI
-distribution preparation) closed 2026-05-24 as preparation only
-after the scope reframe split publish out into M9; M7 (migration
-accuracy — breaking `Status:` → `Lifecycle:` rename + inference
-broadening) is the next implementation milestone to enter setup;
-M8 (adoption workflow — `--exclude` tree-wide, triage flags,
-`docs new --body-from`, skill-reference rewrite for adoption)
-follows M7; M9 (PyPI publish 1.3.0) is the operator-driven
-publish of the batched M6 + M7 + M8 surface, runs last. Per-
-milestone task plans are expanded when each milestone activates.
+v1 (M1-M5) shipped 2026-05-22. **v1.1 shipped 2026-05-25 as
+`docs-cli==1.3.0`** — M6 (PyPI distribution preparation),
+M7 (migration accuracy — breaking `Status:` → `Lifecycle:`
+rename + inference broadening), M8 (adoption workflow —
+`--exclude` tree-wide, triage flags, `docs new --body-from`,
+skill-reference rewrite for adoption) all complete locally
+over 2026-05-24 to 2026-05-25; M9 (the operator-driven publish)
+shipped them together as one batched PyPI release on
+2026-05-25. The CLI is now installable via `pip install
+docs-cli` on any Python 3.11+ host.
 
 ## TDD phase order (used per milestone)
 
@@ -234,7 +239,10 @@ If you're starting a new Claude Code session against this repo:
    ergonomics (tree-wide `--exclude`, triage flags,
    `docs new --body-from`, skill-reference rewrite).
 7a. `docs/m9-pypi-publish.md` + `docs/release-runbook.md` — M9
-   stub + operative publish checklist; activates post-M8.
+   shipped 2026-05-25 as `docs-cli==1.3.0`; the milestone-
+   completion summary in `m9-pypi-publish.md` is the canonical
+   record of what shipped + deviations; the runbook is the
+   operative reference for future releases.
 8. `docs/cli.md` — the command spec; the full eight-verb `docs`
    surface.
 9. `docs/convention.md`, `docs/architecture.md` — the on-disk
@@ -251,7 +259,7 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs-cli
-.venv/bin/python -m pytest tests/ -q          # 271 passed
+.venv/bin/python -m pytest tests/ -q          # 369 passed (M6 baseline 271 + M7/M8 additions)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)
@@ -264,16 +272,22 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M8 — execute the adoption-workflow milestone (now unblocked by M7's 2026-05-25 ship). M9 is the batched 1.3.0 publish that runs after M8.**
+**Next action:** no active milestone — v1.1 shipped 2026-05-25.
+v1.2 is unscoped; open when a concrete need surfaces.
 
-**Publish is M9** (operator decision 2026-05-24, scope-reframed
-2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
-+ M8 as one batched `docs-cli==1.3.0` artifact per
-[release-runbook.md](release-runbook.md). Intermediate versions
-`1.1.0` and `1.2.0` never reach PyPI, which is fine — no prior
-public release exists. The wheel + sdist sitting in local
-`dist/` from M6 are NOT uploaded; M9 rebuilds fresh from the
-post-M8 tree.
+**v1.1 shipped as `docs-cli==1.3.0`** on 2026-05-25, one
+batched PyPI publish covering the M6 + M7 + M8 surface per the
+operator's OQ-C split. PyPI:
+https://pypi.org/project/docs-cli/1.3.0/; source:
+https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0;
+GitHub repo public; `v1.3.0` lightweight tag at the M8 simplify
+commit. Intermediate versions `1.1.0` and `1.2.0` never reached
+PyPI (no prior public release existed; no continuity to
+preserve). Full publish record + deviations recorded for
+future releases in
+[m9-pypi-publish.md](m9-pypi-publish.md)'s milestone-completion
+summary. The [release-runbook.md](release-runbook.md) stays
+the operative reference for the next release (v1.4+).
 
 **M7 Phases 1-4 complete (2026-05-24; review-tightening 2026-05-25):**
 task plan promoted to active, OQ A–D recorded as Decisions, log +

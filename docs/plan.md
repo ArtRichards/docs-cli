@@ -90,25 +90,24 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 
 ## v1.1
 
-v1.1 is in flight as of 2026-05-23. M6 (PyPI distribution
-preparation) closed 2026-05-24 — the 2026-05-24 scope reframe
-split the actual PyPI publish out of M6 into a new milestone,
-**M9 — PyPI publish 1.3.0**, so M6 could close cleanly instead
-of hanging at "implementation done, publish pending" for the
-M7 + M8 weeks. **M7 shipped 2026-05-25** (publish deferred to
-M9); **M8 shipped 2026-05-25 locally as 1.3.0** (publish
-deferred to M9). M9 is operator-driven, runs next, and ships
-M6 + M7 + M8 as one batched `docs-cli==1.3.0` artifact per
-[release-runbook.md](release-runbook.md). Intermediate
-versions (1.1.0, 1.2.0) never appear on PyPI — fine, since
-there's no prior public release.
+**v1.1 shipped 2026-05-25 as `docs-cli==1.3.0`.** M6 (PyPI
+distribution preparation, closed 2026-05-24), M7 (migration
+accuracy + breaking `Status:` → `Lifecycle:` rename, complete
+2026-05-25), and M8 (adoption workflow, complete 2026-05-25)
+all landed locally over a two-day stretch; M9 (operator-driven
+PyPI publish, 2026-05-25) batched them into one public release
+per the OQ-C split. The package is live at
+https://pypi.org/project/docs-cli/1.3.0/ and the GitHub repo
+is public with the `v1.3.0` tag + release. Intermediate
+versions (1.1.0, 1.2.0) never reached PyPI by design — no
+prior public release existed, no continuity to preserve.
 
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [m6-pypi-distribution.md](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
-| M9 — PyPI publish 1.3.0 | stub-drafted (2026-05-24; activates post-M8; operator-driven per [release-runbook.md](release-runbook.md)) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
+| M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
 **M7** hardens `docs migrate`'s inference + introduces a breaking
 controlled-vocab rename (`Status:` → `Lifecycle:`). It targets ≥50%
@@ -129,15 +128,22 @@ rewrite of the bundled skill's reference files to cover the
 adoption flow. SKILL.md stays slim — one pointer line. Load-bearing
 gate: fresh-subagent dogfooding of the adoption loop end-to-end.
 
-**M9** is the publish milestone — operator-driven, runs post-M8,
-no code work. It bumps `pyproject.toml` + `__version__` to
-`1.3.0`, restructures `CHANGELOG.md` with M6 + M7 + M8 sections,
-rebuilds fresh artifacts, rehearses on TestPyPI, publishes to
-real PyPI, flips the GitHub repo to public, tags `v1.3.0`,
-creates a GitHub release, re-scopes API tokens, and runs the
-post-publish doc closeouts. The operative checklist is
-[release-runbook.md](release-runbook.md); M9's plan is the
-named home + exit criteria + log.
+**M9** — the publish milestone — shipped 2026-05-25. It
+verified the pre-bumped `pyproject.toml` + `__version__` at
+`1.3.0` (the bumps had pre-landed at M7 and M8 Phase 7;
+CHANGELOG dated at M8 Phase 10), rebuilt fresh artefacts from
+the post-M8 tree, rehearsed on TestPyPI under a disambiguated
+dist name `docs-cli-rehearsal` (the bare `docs-cli` was parked
+on TestPyPI by an unrelated user — real PyPI was clean),
+published to real PyPI, flipped the GitHub repo to public,
+tagged `v1.3.0` at the M8 simplify commit, and created the
+GitHub release with hand-augmented notes. Doc closeouts ran
+in lockstep. Token re-scope was deferred as out-of-band
+operator UI work. Full record + deviations in
+[m9-pypi-publish.md](m9-pypi-publish.md)'s milestone-completion
+summary; the operative checklist
+[release-runbook.md](release-runbook.md) stays the reference
+for v1.4+ releases.
 
 The parked `[vocabulary] add_fields` extra-field allowlist (see
 _Open questions_ below) carries forward to v1.1 as a separate,

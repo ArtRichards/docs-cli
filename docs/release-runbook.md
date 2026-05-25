@@ -14,10 +14,23 @@ Related:
 - pairs-with: plan.md
 
 The operator-driven checklist for shipping `docs-cli` to PyPI.
-This runbook is **M9's operative artifact** — every "operator
-runs X" bullet below is M9 work, walked top-to-bottom once M8
-ships. The bullets are scoped tight enough to copy-paste; the
-prose framing lives in [m9-pypi-publish.md](m9-pypi-publish.md).
+This runbook drove **M9 — `docs-cli==1.3.0`** (shipped
+2026-05-25); it stays the operative reference for future
+releases (v1.4+). Every "operator runs X" bullet below is the
+walked-top-to-bottom procedure. The bullets are scoped tight
+enough to copy-paste; the prose framing lives in
+[m9-pypi-publish.md](m9-pypi-publish.md).
+
+**TestPyPI rehearsal name caveat (added post-M9).** The bare
+project name `docs-cli` was parked on TestPyPI by an unrelated
+project at M9 publish time, so the TestPyPI rehearsal ran
+under a disambiguated dist name (`docs-cli-rehearsal`) — same
+wheel contents, same entry point `docs`, same `docs_cli`
+package import, only `[project] name` in `pyproject.toml`
+temporarily renamed for the rehearsal build and reverted
+before the real PyPI build. Future releases re-check
+TestPyPI's `docs-cli` ownership (the original squatter may
+move on; if so, drop the rehearsal-name detour).
 
 **Publish timing.** Per operator decision 2026-05-24, the first
 PyPI publish is **M9** — one batched release at version
@@ -254,9 +267,13 @@ TestPyPI is clean.
 
 - [ ] Flip the GitHub repo to public:
       ```sh
-      gh repo edit ArtRichards/docs-cli \
-          --visibility public --accept-visibility-change-consequences
+      gh repo edit ArtRichards/docs-cli --visibility public
       ```
+      `gh` will prompt interactively to confirm the irreversible-ish
+      visibility change. (Older runbook revisions referenced a
+      `--accept-visibility-change-consequences` flag — that flag was
+      not present in `gh` 2.x at M9 publish time 2026-05-25; the
+      interactive confirmation is the documented path.)
 - [ ] Tag and push:
       ```sh
       git tag v1.3.0

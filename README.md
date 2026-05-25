@@ -78,20 +78,21 @@ python3 -m venv .venv
 
 ## Status
 
-**v1 complete; M8 shipped locally as 1.3.0 (publish DEFERRED to M9 batched 1.3.0).** Milestone history:
+**v1.1 shipped 2026-05-25 as `docs-cli==1.3.0`** — the first public release. Install with `pip install docs-cli`. Milestone history:
 
 - M1 — Parser and `docs index` (shipped 2026-05-20)
 - M2 — Mutating verbs `new`, `archive`, `mv`, `touch` (shipped 2026-05-21)
 - M3 — Validation and query `check`, `list` (shipped 2026-05-22)
 - M4 — Migration helper `docs migrate` (shipped 2026-05-22)
 - M5 — Claude Code skill — drives the verbs automatically when an agent does documentation work in a `docs`-managed tree, with self-contained convention and CLI references bundled alongside (shipped 2026-05-22)
-- M6 — PyPI distribution preparation as `docs-cli`; relocates the CLI to a proper package at `src/docs_cli/`, ships the skill inside the wheel as package data, and adds `docs install-skill` for one-shot host materialisation (closed 2026-05-24 as preparation-only — no publish)
-- M7 — Migration accuracy: `Status:` → `Lifecycle:` controlled-vocab rename, broadened role inference (H1 / section-header / sibling-set / word-boundary / `_M\d+` / non-role-suffix strip), `medium` confidence level, project-name normalisation, per-file mtime archive dates, multi-project hints, `--config-project` override, `[migrate]`-only sidecar (closed 2026-05-25 as 1.2.0 locally; publish DEFERRED to M9)
-- M8 — Adoption workflow agent-driveable: tree-wide `--exclude` + `[exclude]` + `.docsignore`; migrate triage flags (`--summary`, `--only ambiguous`, `--group-by`); default plan footer summary; non-md sibling surfacing; `docs new --body-from` for one-call atomic doc authoring; substantial skill-reference rewrite (adoption playbook + `.docs.toml` template) (closed 2026-05-25 as 1.3.0 locally; publish DEFERRED to M9)
+- M6 — PyPI distribution preparation as `docs-cli`; relocates the CLI to a proper package at `src/docs_cli/`, ships the skill inside the wheel as package data, and adds `docs install-skill` for one-shot host materialisation (closed 2026-05-24 as preparation-only; publish landed at M9 batched 1.3.0)
+- M7 — Migration accuracy: `Status:` → `Lifecycle:` controlled-vocab rename, broadened role inference (H1 / section-header / sibling-set / word-boundary / `_M\d+` / non-role-suffix strip), `medium` confidence level, project-name normalisation, per-file mtime archive dates, multi-project hints, `--config-project` override, `[migrate]`-only sidecar (shipped 2026-05-25; the version-internal 1.2.0 was published at M9 batched 1.3.0)
+- M8 — Adoption workflow agent-driveable: tree-wide `--exclude` + `[exclude]` + `.docsignore`; migrate triage flags (`--summary`, `--only ambiguous`, `--group-by`); default plan footer summary; non-md sibling surfacing; `docs new --body-from` for one-call atomic doc authoring; substantial skill-reference rewrite (adoption playbook + `.docs.toml` template) (shipped 2026-05-25; the version-internal 1.3.0 is the published number)
+- M9 — PyPI publish (shipped 2026-05-25). `docs-cli==1.3.0` is live at [pypi.org/project/docs-cli/1.3.0/](https://pypi.org/project/docs-cli/1.3.0/); source tag at [github.com/ArtRichards/docs-cli/releases/tag/v1.3.0](https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0).
 
-**Publish strategy.** v1.1.0, v1.2.0, and v1.3.0 were never published to PyPI. M9 batches the post-M8 tree into the first PyPI release as 1.3.0 — one publish event covering M6 + M7 + M8 surface together (per operator OQ-C). The on-disk Markdown convention is otherwise stable; the M7 `Lifecycle:` rename is a one-time keyword change with no backward-compat alias.
+**Publish strategy.** v1.1.0 and v1.2.0 never reached PyPI by design; M9 batched the M6 + M7 + M8 surface into a single public release at version 1.3.0 (one publish event, per operator OQ-C). The on-disk Markdown convention is otherwise stable; the M7 `Lifecycle:` rename is a one-time keyword change with no backward-compat alias.
 
-See [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) for per-milestone summaries and [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) for the v1.x backlog. The [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) tracks every release.
+See [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) for per-milestone summaries, [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) for the roadmap, and [`docs/m9-pypi-publish.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/m9-pypi-publish.md) for the publish record (artifact sha256, deviations recorded for future releases). The [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) tracks every release.
 
 ## License
 

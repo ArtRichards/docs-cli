@@ -1206,3 +1206,19 @@ Promote to `tests/fixtures/trees/real-trees/` at milestone-setup.
 Sanitise aggressively: NO third-party product / customer /
 feature names. File shapes / sizes / metadata patterns are what
 matter, not prose content.
+
+## M9 publish flip (2026-05-25)
+
+M7's surface shipped to the public via `docs-cli==1.3.0` on
+PyPI at the M9 batched publish (2026-05-25, alongside M6 and
+M8). The 1.2.0 number M7 carried internally never reached
+PyPI by design (per M8 OQ-C); the on-disk `Lifecycle:` rename
+is now a published breaking change. Release artefacts:
+`docs_cli-1.3.0-py3-none-any.whl` (sha256
+`27afbde7d1e2452c6c9e52b8a1a0e01f1ff876fcaa0543e2e1b1a34ea21898da`)
+and `docs_cli-1.3.0.tar.gz` (sha256
+`59d36ef2851141aaa92da691e22d602df56b47f3febb7ac74583ea72fa16d2dd`)
+at https://pypi.org/project/docs-cli/1.3.0/; source tag `v1.3.0`
+at https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0.
+See [m9-pypi-publish.md](m9-pypi-publish.md) for the full
+publish record.
