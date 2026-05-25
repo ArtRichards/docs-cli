@@ -110,7 +110,7 @@ M8 ships as 1.3.0 after M7.
 | 2. Write Tests (RED) | Complete | 2026-05-25 | 5 new test files + 1 test added to `test_migrate.py` across 6 commits. Functions: `test_exclude.py` (9, F3 — 22 items with parametric expansion on tests 3, 5, 6, 7), `test_triage_flags.py` (6, F6 — 6 items), `test_non_md_surfacing.py` (3, F7 — 3 items), `test_body_from.py` (7, F9 — 8 items with parametric on test 4), `test_skill_adoption.py` (5, F8 — 5 items, per OQ6 dropped the lockstep dup), `test_migrate.py::test_summary_and_json_are_mutually_exclusive` (1, F6). All RED for intended unimplemented surface; M7's 324 stays GREEN. |
 | 3. Create Data/Fixtures | Complete | 2026-05-25 | Reused M7's 5 sanitised real-trees fixtures (kebab-tiny + snake-medium drive the triage tests; the other 3 remain Phase 9 substrate). 1 new on-disk fixture set: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`. The `.docsignore` syntax cases and `[exclude]`-bearing trees are written **inline via `tmp_path`** by the Phase-2 tests themselves (`_write(root / ".docsignore", ...)` pattern in `tests/test_exclude.py`) — established codebase convention; no on-disk fixture dirs needed. Sanitisation grep (per M7 log line 405) zero hits on the new on-disk fixtures. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 4 baseline-GREEN regression locks + 41 RED for intended reasons (45 new collected items; 369 collected total; 328 passed + 41 failed).** Per-file: test_exclude.py 20 RED + 2 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Audit round 2 tightened tests 5 + 6 in test_exclude.py — added conformant docs under build/ and nested/ so the `list` / `index` assertions pin Phase 6's exclude predicate (vs. the today-coincidence of malformed-doc walker-skipping). Fresh-eyes review then swapped test 7 case 1 from `*.tmp` to `*.draft.md` so the `.docsignore` parser path — not the markdown-only walker — is what excludes the file at Phase 6; tightened `test_default_plan_footer_shows_counts` to anchor all four footer tokens to the footer slice; deleted the unused `tests/fixtures/docsignore/sample/` and `tests/fixtures/trees/exclude-test/` directories (inline-via-tmp_path is the codebase convention). Quality gate clean tree-wide. |
-| 5. Update Base Interfaces | Pending | — | `Config` schema gains `exclude_dirs` / `exclude_globs` / `exclude_exts` / `docsignore_patterns`. `load_config` reads `[exclude]` + parses `.docsignore`. `compile_exclude_predicate` helper unifies CLI + config + ignore-file. Argparse: identical `--exclude` action on migrate/index/check/list; `--summary` / `--only` / `--group-by` / `--exclude-ext` on migrate; `--body-from` on new. Mutual exclusion: `--summary` vs `--json`. |
+| 5. Update Base Interfaces | Complete | 2026-05-25 | `Config` gained the four exclude fields; `MigrationPlan` gained 3 optional human-output-only fields (per OQ1; OMITTED from `migration_to_json`). `load_config` reads `[exclude]` + root `.docsignore`. New `_compile_docsignore_pattern` + `compile_exclude_predicate` helpers (stdlib `re` only). `predicate=` keyword threaded through `_iter_doc_texts` / `walk` / `check_tree` / `query_docs` / `_refresh_index` (per OQ2). Argparse: `--exclude PATTERN` on idx/check/list/migrate via shared `_add_exclude_flag` helper; `--summary` ⊻ `--json` mutex + `--only {ambiguous}` + `--group-by {role,confidence}` + `--exclude-ext EXTS` on migrate; `--body-from PATH` on new. `_cmd_migrate` managed-marker comment carries M8 OQ1 `[exclude]` carve-out. Quality gate clean. 340 GREEN / 29 RED — argparse-error → behaviour-RED transition complete; predicate already flips 8 index/check/list-arm REDs to GREEN. |
 | 6. Implement Offline/Core Path | Pending | — | `_iter_doc_paths` consults the exclude predicate (tree-wide). `migrate_plan` honours predicate + emits excluded-count + non-md-sibling footer. `_render_migrate_plan` handles `--summary` / `--only ambiguous` / `--group-by` + default footer summary. `_cmd_new` handles `--body-from` with stdin/file + OQ-E refusal heuristic. `.docsignore` parser (~60 lines, stdlib only). |
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Pending | — | SKILL.md: append adoption trigger phrases to description; add one-line pointer to `references/adoption-playbook.md`. New `references/adoption-playbook.md` (substantial — six numbered steps + worked example + multi-project sub-section + sidecars sub-section + pitfalls). New `references/docs-toml-template.toml` (commented starter; `[exclude]` + `[migrate]` + `[vocabulary]`). Spec updates: cli.md (new flags), convention.md (`[exclude]` + `.docsignore` syntax), architecture.md (Config schema), README.md (adoption section), CHANGELOG.md (1.3.0). pyproject + cli.py `__version__` bumped to 1.3.0. Skill-refs lockstep maintained for convention.md + cli.md. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest M7-count + ~31 = expected GREEN total; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff; `python -m build` produces 1.3.0 wheel + sdist. |
@@ -570,3 +570,135 @@ as well).
 - **No structural surprise.** Every RED's failure message was
   the assertion the test was designed to fail. No fixture
   oversight, no import accident, no off-by-one mismatch.
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Land the M8 schema + argparse surface: extend `Config` with the
+four exclude fields, extend `MigrationPlan` with three
+optional human-output-only fields (per OQ1), teach `load_config`
+to read `[exclude]` + `.docsignore`, add `_compile_docsignore_pattern`
++ `compile_exclude_predicate` helpers, thread an optional
+`predicate` parameter through `_iter_doc_texts` / `walk` /
+`check_tree` / `query_docs` / `_refresh_index` (per OQ2), add
+identical `--exclude PATTERN` to `idx` / `check_p` / `list_p` /
+`migrate_p` (via a shared `_add_exclude_flag` helper), and add
+the migrate-only `--exclude-ext` / `--summary` / `--only
+{ambiguous}` / `--group-by {role,confidence}` flags (with
+`--summary | --json` mutex), plus `--body-from` on `new`.
+Update the `_cmd_migrate` managed-marker comment to note the
+M8 (OQ1) carve-out: `[exclude]` joins `[migrate]` as a
+foreign-tree sidecar section. No business logic; that's
+Phase 6.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `src/docs_cli/cli.py` | Modify | + `Callable` import. + 4 `Config` fields (defaulted; additive). + 3 `MigrationPlan` fields (defaulted; OMITTED from `migration_to_json` per OQ1, mirroring the M7 `multi_project_hints` precedent). + `[exclude]` table + root `.docsignore` reader in `load_config`. + `_compile_docsignore_pattern` + `compile_exclude_predicate` helpers (~150 lines, stdlib only). Threaded `predicate=` through `_iter_doc_texts`, `walk`, `check_tree`, `query_docs`, `_refresh_index`. + `_add_exclude_flag` argparse helper. + `--exclude` on idx/check/list/migrate; + `--exclude-ext` / `--summary` / `--only` / `--group-by` on migrate; mutex group `--summary` ⊻ `--json`; + `--body-from` on `new`. Predicate built + threaded at the `_cmd_index` / `_cmd_check` / `_cmd_list` handler layer (the migrate-side predicate-build lands in Phase 6 once `plan_migration` exposes the surface). Managed-marker refusal comment extended with the M8 OQ1 `[exclude]` carve-out. |
+
+#### Actions taken
+
+1. Extended `Config` with `exclude_dirs` / `exclude_globs` /
+   `exclude_exts` / `docsignore_patterns` (all defaulted to
+   `()`). Docstring extended with the M8 (F3) note. No
+   `__post_init__` changes — the new fields are tuples or
+   defaulted, and `load_config` already coerces.
+2. Extended `MigrationPlan` with `excluded_count: int = 0`,
+   `excluded_breakdown: tuple[tuple[str, int], ...] = ()`,
+   `suppressed_exts: tuple[str, ...] = ()`. Docstring marks
+   all three HUMAN-OUTPUT ONLY per OQ1. `migration_to_json`
+   left untouched — the JSON schema stays flat.
+3. Extended `load_config` to read `[exclude]` table from
+   `.docs.toml` (dirs/globs/exts → tuples) and `.docsignore`
+   raw lines from the tree root if present. No nested-file
+   support — OQ-B-pinned.
+4. Authored `_compile_docsignore_pattern` (returns `None` for
+   blanks/comments; emits `(negate, regex)` for everything
+   else) and `compile_exclude_predicate` (layers dirs / globs /
+   exts / docsignore additively; returns a single
+   `Callable[[str], bool]`). The two helpers are stdlib-only
+   (`re` only; no `fnmatch` after lint cleanup — the
+   docsignore translator handles `*` / `**` / `?` uniformly).
+5. Threaded an optional `predicate: Callable[[str], bool] | None
+   = None` parameter through `_iter_doc_texts`, `walk`,
+   `check_tree`, `query_docs`, `_refresh_index`. Default
+   `None` keeps every pre-M8 caller backward-compatible.
+6. Wired the predicate at the `_cmd_index` / `_cmd_check` /
+   `_cmd_list` verb handlers via `compile_exclude_predicate(
+   config, args.exclude)`. The `_cmd_migrate` predicate-build
+   waits for Phase 6 (it depends on `plan_migration` exposing
+   `cli_excludes` / `cli_exclude_exts` keyword args).
+7. Argparse extension: `_add_exclude_flag` helper applied to
+   four subparsers (idx, check_p, list_p, migrate_p). On
+   `new_p` added `--body-from`. On `migrate_p`: moved `--json`
+   into a `--summary` ⊻ `--json` mutex group, added `--only
+   {ambiguous}`, `--group-by {role,confidence}`,
+   `--exclude-ext EXTS` (csv).
+8. Updated `_cmd_migrate` managed-marker comment with the
+   M8 (OQ1) carve-out: `[exclude]` joins `[migrate]` as an
+   allowed foreign-tree sidecar section.
+9. Quality gate clean: ruff / format / mypy / `docs check
+   docs/` all exit 0.
+
+#### Issues / decisions
+
+- **`fnmatch` import removed** after first lint pass — the
+  docsignore translator handles `*` / `**` / `?` uniformly,
+  so the standard-library `fnmatch.fnmatchcase` is redundant.
+  The plan recommended either path; rolled-our-own won.
+- **Dir-match semantic** is "any segment matches the dir name"
+  rather than "the rel path starts with `<dir>/`". Pinned by
+  test 1 of `test_exclude.py` (`--exclude build/` excludes
+  `build/a.md` at the root) AND the `**/build/**` docsignore
+  case (which expects `nested/build/y.md` to match). The
+  predicate's dir-name check on `segments[:-1]` covers both.
+- **`getattr(args, "exclude", []) or []`** in the verb handlers
+  guards against the verb not having `--exclude` registered
+  (defensive; today every verb that walks the tree does).
+- **Predicate plumbing already flipped 3 RED tests GREEN at
+  Phase 5** beyond the argparse-error → assertion-error
+  transition: the `index` / `check` / `list` arms of
+  `test_docs_toml_exclude_dirs_applies_tree_wide` and
+  `test_docs_toml_exclude_globs_apply_tree_wide`. This is
+  expected — `load_config` reads `[exclude]` regardless of
+  verb. The `migrate` arm stays RED until Phase 6 wires the
+  predicate into `plan_migration`.
+
+#### Exit criteria
+
+- [x] `Config` carries `exclude_dirs` / `exclude_globs` /
+      `exclude_exts` / `docsignore_patterns` (defaulted; M7
+      callers unchanged).
+- [x] `MigrationPlan` carries `excluded_count` /
+      `excluded_breakdown` / `suppressed_exts` (defaulted;
+      OMITTED from `migration_to_json` per OQ1).
+- [x] `load_config` reads `[exclude]` and `.docsignore`.
+- [x] `compile_exclude_predicate` exists and returns a single
+      layered predicate per OQ2.
+- [x] `_iter_doc_texts` / `walk` / `check_tree` / `query_docs`
+      / `_refresh_index` each carry a `predicate=` keyword.
+- [x] All M8 argparse flags wired; `--summary` ⊻ `--json`
+      mutex enforced by argparse.
+- [x] `_cmd_migrate` managed-marker comment carries the M8
+      OQ1 carve-out for `[exclude]`.
+- [x] Quality gate clean: ruff / ruff-format / mypy / `docs
+      check docs/`.
+- [x] **340 GREEN / 29 RED (369 total)** — argparse-error
+      REDs flipped to behaviour REDs as planned; the 12 new
+      GREEN items split between 4 mutex-now-real flips
+      (`test_summary_and_json_are_mutually_exclusive`,
+      `test_summary_and_only_ambiguous_compose`, the two
+      F7 footer-absent locks newly satisfied, …) and 8
+      predicate-already-works flips (the index/check/list arms
+      of tests 5 + 6 in `test_exclude.py`, plus
+      `test_body_from_with_missing_value_argparse_errors`,
+      `test_summary_emits_one_line_per_file`,
+      `test_group_by_role_orders_plan_by_role`,
+      `test_migrate_exclude_supports_glob_patterns[*memo*-memo]`).
+      The 29 remaining REDs are all behaviour-RED — Phase 6
+      makes them GREEN (except the 5 F8 skill-content REDs
+      which Phase 7 handles).

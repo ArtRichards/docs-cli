@@ -32,7 +32,7 @@ import re
 import shutil
 import sys
 import tomllib
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
@@ -179,6 +179,12 @@ class Config:
     `project_name` (a per-tree project override consumed by
     `plan_migration`).
 
+    M8 (F3) adds the four exclude fields below: ``exclude_dirs`` /
+    ``exclude_globs`` / ``exclude_exts`` come from the ``[exclude]``
+    table in ``.docs.toml``; ``docsignore_patterns`` carries the raw
+    line contents of a root-level ``.docsignore`` file (compilation
+    is deferred to ``compile_exclude_predicate``).
+
     Defaults when `.docs.toml` is absent:
         project = root.resolve().name or "root"
         archive_dir = "archive"
@@ -188,6 +194,10 @@ class Config:
         index_filename = INDEX_FILENAME ("INDEX.md")
         role_suffixes = {}
         project_name = None
+        exclude_dirs = ()
+        exclude_globs = ()
+        exclude_exts = ()
+        docsignore_patterns = ()
     """
 
     project: str
@@ -198,6 +208,10 @@ class Config:
     index_filename: str = INDEX_FILENAME
     role_suffixes: dict[str, str] = field(default_factory=dict)
     project_name: str | None = None
+    exclude_dirs: tuple[str, ...] = ()
+    exclude_globs: tuple[str, ...] = ()
+    exclude_exts: tuple[str, ...] = ()
+    docsignore_patterns: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.project.strip():
@@ -328,12 +342,30 @@ class MigrationPlan:
             differs meaningfully from the parent's project and covers
             ≥ 5 files. Empty tuple when no subdir triggers the heuristic
             and when a CLI override (``--config-project``) is in force.
+        excluded_count: M8 (F3) — count of ``.md`` files the exclude
+            predicate filtered out of this plan. Always 0 when no
+            ``[exclude]`` config / ``.docsignore`` / CLI ``--exclude`` is
+            in force. HUMAN-OUTPUT ONLY (per M7's ``multi_project_hints``
+            precedent): omitted from ``migration_to_json`` so the JSON
+            schema stays flat.
+        excluded_breakdown: M8 (F3) — one ``(prefix, count)`` per
+            top-level dir that the predicate excluded; the human plan
+            footer renders one ``"<count> files excluded under <prefix>"``
+            line per pair. HUMAN-OUTPUT ONLY (per the M7 precedent above).
+        suppressed_exts: M8 (F7) — extensions passed to
+            ``--exclude-ext``; used by the non-md sibling footer to drop
+            those extensions from the displayed list, and to suppress
+            the footer entirely when the displayed list ends up empty.
+            HUMAN-OUTPUT ONLY (per the M7 precedent above).
     """
 
     root: Path
     files: tuple[FileMigration, ...]
     project_original: str | None = None
     multi_project_hints: tuple[str, ...] = ()
+    excluded_count: int = 0
+    excluded_breakdown: tuple[tuple[str, int], ...] = ()
+    suppressed_exts: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -600,7 +632,11 @@ def parse(text: str, path: Path, root: Path) -> Doc:
     )
 
 
-def walk(root: Path, config: Config) -> Iterator[Doc]:
+def walk(
+    root: Path,
+    config: Config,
+    predicate: Callable[[str], bool] | None = None,
+) -> Iterator[Doc]:
     """Yield every parseable Markdown doc under root in deterministic order.
 
     Skip rules:
@@ -613,6 +649,11 @@ def walk(root: Path, config: Config) -> Iterator[Doc]:
     Order: Docs are yielded sorted by their root-relative POSIX path
     (lexicographic). The `archived` flag is set per `Doc.archived` based
     on whether the path lies under `root/config.archive_dir`.
+
+    M8 (F3): the optional ``predicate`` parameter — when provided —
+    filters out every root-relative POSIX path for which
+    ``predicate(rel)`` is True. Defaults to ``None`` (no filtering) so
+    pre-M8 callers stay backward-compatible.
     """
     archive_prefix = config.archive_dir
     yielded: list[Doc] = []
@@ -626,6 +667,8 @@ def walk(root: Path, config: Config) -> Iterator[Doc]:
             file_path = Path(dirpath) / fname
             rel = file_path.relative_to(root).as_posix()
             if rel == INDEX_FILENAME:
+                continue
+            if predicate is not None and predicate(rel):
                 continue
             text = file_path.read_text()
             doc = parse(text, file_path, root)
@@ -816,6 +859,11 @@ def load_config(root: Path) -> Config:
     - ``project_name``: a per-tree override consumed by
       ``plan_migration`` — short-circuits F11 normalisation when set.
 
+    M8 (F3) also reads the optional ``[exclude]`` section
+    (``dirs`` / ``globs`` / ``exts``) and a root-level ``.docsignore``
+    file (raw line contents) so the four ``Config`` exclude fields are
+    populated for ``compile_exclude_predicate``.
+
     Args:
         root: Docs root directory (the one that may contain `.docs.toml`).
 
@@ -831,6 +879,7 @@ def load_config(root: Path) -> Config:
     archive_section = data.get("archive", {})
     vocab_section = data.get("vocabulary", {})
     migrate_section = data.get("migrate", {})
+    exclude_section = data.get("exclude", {})
 
     project = project_section.get("name")
     if not project:
@@ -846,6 +895,19 @@ def load_config(root: Path) -> Config:
     role_suffixes = dict(migrate_section.get("role_suffixes", {}))
     project_name = migrate_section.get("project_name")
 
+    exclude_dirs = tuple(exclude_section.get("dirs", []))
+    exclude_globs = tuple(exclude_section.get("globs", []))
+    exclude_exts = tuple(exclude_section.get("exts", []))
+
+    # `.docsignore` is OQ-B-pinned to a single file at the tree root —
+    # nested files are NOT supported. Raw lines stored verbatim; the
+    # compile step in `compile_exclude_predicate` strips comments / blanks
+    # and translates patterns to regex.
+    docsignore_path = root / ".docsignore"
+    docsignore_patterns: tuple[str, ...] = (
+        tuple(docsignore_path.read_text().splitlines()) if docsignore_path.is_file() else ()
+    )
+
     return Config(
         project=project,
         archive_dir=archive_dir,
@@ -854,6 +916,10 @@ def load_config(root: Path) -> Config:
         roles=roles,
         role_suffixes=role_suffixes,
         project_name=project_name,
+        exclude_dirs=exclude_dirs,
+        exclude_globs=exclude_globs,
+        exclude_exts=exclude_exts,
+        docsignore_patterns=docsignore_patterns,
     )
 
 
@@ -991,6 +1057,198 @@ def scaffold_doc(
 
 
 # ---------------------------------------------------------------------------
+# Exclude predicate (M8 F3 — `.docs.toml [exclude]` + `.docsignore` + CLI)
+# ---------------------------------------------------------------------------
+#
+# A single layered predicate consulted by every walker (`walk` + `_iter_doc_texts`).
+# Pattern semantics (OQ-B-pinned subset, gitignore-flavoured):
+#
+# - `#`-prefixed lines are comments; blank lines are no-ops.
+# - Trailing `/` → directory match (any file under that dir).
+# - Leading `/` → root-anchored (matches the exact rel path only).
+# - `**` → any number of segments; `*` → any single segment chunk; `?` → one char.
+# - Leading `!` → re-include (last match wins, mirroring gitignore).
+# - A pattern with NO `/` matches against any path segment at any depth.
+#
+# The three "static" inputs (`config.exclude_dirs` / `exclude_globs` /
+# `exclude_exts`) are pure additions to the CLI's `--exclude` / `--exclude-ext`
+# overrides — layered, never replaced. The `.docsignore` lines are interleaved
+# with the static config but evaluated in file order so negations work.
+
+
+def _compile_docsignore_pattern(pattern: str) -> tuple[bool, re.Pattern[str]] | None:
+    """Compile one raw `.docsignore` line to ``(negate, regex)``.
+
+    Returns ``None`` for comments and blank lines. The regex matches a
+    root-relative POSIX path string. Pattern translation (OQ-B subset):
+
+    - Leading ``!`` flips the ``negate`` flag.
+    - Leading ``/`` anchors at the root (no nested matching).
+    - Trailing ``/`` marks a directory match — the regex matches paths
+      that start with ``<dir>/``.
+    - ``**`` matches any number of path segments (including zero).
+    - ``*`` matches any non-slash chunk.
+    - ``?`` matches any single non-slash character.
+    - A pattern with NO ``/`` matches any path segment at any depth
+      (gitignore semantics).
+    - Everything else is taken literally.
+
+    The compilation is intentionally narrow: no character-class brackets,
+    no escape sequences. Anything outside this subset is left as a
+    literal substring, which is the conservative outcome for an unknown
+    syntax fragment.
+    """
+    stripped = pattern.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+
+    negate = stripped.startswith("!")
+    if negate:
+        stripped = stripped[1:]
+
+    anchored = stripped.startswith("/")
+    if anchored:
+        stripped = stripped[1:]
+
+    directory_only = stripped.endswith("/")
+    if directory_only:
+        stripped = stripped[:-1]
+
+    no_slash = "/" not in stripped
+
+    # Walk char-by-char so `**`, `*`, `?` are honoured without re.escape
+    # mangling them, and every other char is literal-escaped.
+    regex_parts: list[str] = []
+    i = 0
+    while i < len(stripped):
+        if stripped[i : i + 2] == "**":
+            regex_parts.append(".*")
+            i += 2
+        elif stripped[i] == "*":
+            regex_parts.append("[^/]*")
+            i += 1
+        elif stripped[i] == "?":
+            regex_parts.append("[^/]")
+            i += 1
+        else:
+            regex_parts.append(re.escape(stripped[i]))
+            i += 1
+    body = "".join(regex_parts)
+
+    if directory_only:
+        # Match any file under <dir>/.
+        if anchored:
+            full = rf"^{body}/.*$"
+        elif no_slash:
+            # Bare `data/` matches a `data/` segment at any depth.
+            full = rf"(?:^|.*/){body}/.*$"
+        else:
+            full = rf"^(?:.*/)?{body}/.*$"
+    elif anchored:
+        full = rf"^{body}$"
+    elif no_slash:
+        # Bare `*.draft.md` style — match against any path segment.
+        full = rf"(?:^|.*/){body}$"
+    else:
+        full = rf"^{body}$"
+
+    return negate, re.compile(full)
+
+
+def compile_exclude_predicate(
+    config: Config,
+    cli_excludes: Sequence[str] = (),
+    cli_exts: Sequence[str] = (),
+) -> Callable[[str], bool]:
+    """Return ``predicate(rel_path)`` → True iff ``rel_path`` should be EXCLUDED.
+
+    Layers four sources additively (never replacing):
+
+    1. ``config.exclude_dirs`` + any ``cli_excludes`` value that is a bare
+       dir name (no glob chars, possibly trailing ``/``).
+    2. ``config.exclude_globs`` + any ``cli_excludes`` value containing
+       glob chars — translated through the same ``.docsignore`` compiler
+       so ``**/foo/**`` and ``*memo*`` work uniformly.
+    3. ``config.exclude_exts`` + ``cli_exts`` — matched against the
+       trailing extension of the path.
+    4. ``config.docsignore_patterns`` — evaluated in file order so a
+       trailing ``!keep-me.md`` can re-include a file the earlier
+       ``*.md`` line had excluded (gitignore last-match-wins).
+
+    The returned predicate takes a root-relative POSIX path (the exact
+    rel-key shape `_iter_doc_texts` and `walk` emit) and returns True
+    when the path should be filtered out. Callers default to no
+    predicate (passing ``None``) when no exclude config / CLI flag is
+    in force — keeping the existing pre-M8 walker contract intact.
+    """
+    # --- bucket 1: directory matchers ----------------------------------------
+    dir_names: list[str] = list(config.exclude_dirs)
+    glob_patterns: list[str] = list(config.exclude_globs)
+    for raw in cli_excludes:
+        token = raw.strip()
+        if not token:
+            continue
+        if any(ch in token for ch in "*?["):
+            glob_patterns.append(token)
+        else:
+            dir_names.append(token.rstrip("/"))
+
+    # --- bucket 3: extensions -------------------------------------------------
+    ext_set: set[str] = set()
+    for ext in list(config.exclude_exts) + list(cli_exts):
+        e = ext.strip().lstrip(".")
+        if e:
+            ext_set.add(e.lower())
+
+    # --- bucket 2: glob matchers (translated via the .docsignore compiler) ---
+    glob_compiled: list[re.Pattern[str]] = []
+    for raw in glob_patterns:
+        compiled = _compile_docsignore_pattern(raw)
+        if compiled is not None:
+            _negate, rgx = compiled
+            glob_compiled.append(rgx)
+
+    # --- bucket 4: docsignore (ordered; negation flips state) -----------------
+    docsignore_compiled: list[tuple[bool, re.Pattern[str]]] = []
+    for raw in config.docsignore_patterns:
+        compiled = _compile_docsignore_pattern(raw)
+        if compiled is not None:
+            docsignore_compiled.append(compiled)
+
+    def _predicate(rel_path: str) -> bool:
+        # Dir match: any prefix segment equals an excluded dir name.
+        if dir_names:
+            segments = rel_path.split("/")
+            # Match the dir at any depth, not just the root, so
+            # `[exclude] dirs = ["build"]` excludes both `build/` and
+            # `nested/build/`.
+            for d in dir_names:
+                if d in segments[:-1]:
+                    return True
+
+        # Glob match.
+        for rgx in glob_compiled:
+            if rgx.match(rel_path):
+                return True
+
+        # Extension match.
+        if ext_set:
+            ext = rel_path.rsplit(".", 1)[-1].lower() if "." in rel_path.rsplit("/", 1)[-1] else ""
+            if ext in ext_set:
+                return True
+
+        # .docsignore — last-match-wins so a trailing `!keep-me.md`
+        # re-includes a file the earlier `*.md` line had excluded.
+        excluded = False
+        for negate, rgx in docsignore_compiled:
+            if rgx.match(rel_path):
+                excluded = not negate
+        return bool(excluded)
+
+    return _predicate
+
+
+# ---------------------------------------------------------------------------
 # Validation and query (M3 — implementations land in Phases 5–7)
 # ---------------------------------------------------------------------------
 #
@@ -1001,7 +1259,11 @@ def scaffold_doc(
 # applying the same skip rules as `walk()`.
 
 
-def _iter_doc_texts(root: Path, config: Config) -> Iterator[tuple[Path, str]]:
+def _iter_doc_texts(
+    root: Path,
+    config: Config,
+    predicate: Callable[[str], bool] | None = None,
+) -> Iterator[tuple[Path, str]]:
     """Yield ``(path, text)`` for every managed Markdown doc under ``root``.
 
     Lenient counterpart to `walk()`: reads each file's raw text but does not
@@ -1009,6 +1271,11 @@ def _iter_doc_texts(root: Path, config: Config) -> Iterator[tuple[Path, str]]:
     `walk()`'s skip rules exactly — non-``.md`` files, the root-level
     ``INDEX.md``, and dotfiles / dotdirectories are skipped. Yields in
     root-relative POSIX path order, matching `walk()`.
+
+    M8 (F3): the optional ``predicate`` parameter — when provided —
+    filters out every root-relative POSIX path for which
+    ``predicate(rel)`` is True. Defaults to ``None`` (no filtering) so
+    pre-M8 callers stay backward-compatible.
     """
     collected: list[tuple[str, Path]] = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -1021,6 +1288,8 @@ def _iter_doc_texts(root: Path, config: Config) -> Iterator[tuple[Path, str]]:
             file_path = Path(dirpath) / fname
             rel = file_path.relative_to(root).as_posix()
             if rel == INDEX_FILENAME:
+                continue
+            if predicate is not None and predicate(rel):
                 continue
             collected.append((rel, file_path))
     collected.sort(key=lambda pair: pair[0])
@@ -1226,15 +1495,24 @@ def check_doc(
     return findings
 
 
-def check_tree(root: Path, config: Config, stale: int | None, today: date) -> list[Finding]:
+def check_tree(
+    root: Path,
+    config: Config,
+    stale: int | None,
+    today: date,
+    predicate: Callable[[str], bool] | None = None,
+) -> list[Finding]:
     """Validate every doc under ``root``; return all findings.
 
     Iterates `_iter_doc_texts`, applies `check_doc` to each doc, and
     concatenates the results in root-relative POSIX path order. Within a doc,
     findings keep `check_doc`'s order (errors before warnings).
+
+    M8 (F3): the optional ``predicate`` argument is threaded into
+    `_iter_doc_texts` so excluded files are skipped before validation.
     """
     findings: list[Finding] = []
-    for path, text in _iter_doc_texts(root, config):
+    for path, text in _iter_doc_texts(root, config, predicate=predicate):
         findings.extend(check_doc(path, text, root, config, stale, today))
     return findings
 
@@ -1262,6 +1540,7 @@ def query_docs(
     project: str | None,
     stale: int | None,
     today: date,
+    predicate: Callable[[str], bool] | None = None,
 ) -> list[Doc]:
     """Return the docs under ``root`` matching the filters, sorted.
 
@@ -1272,9 +1551,12 @@ def query_docs(
     keeps only docs whose ``Updated:`` is more than that many days before
     ``today``. Sorted to match the human table — by Lifecycle, then Role, then
     ``Updated`` descending.
+
+    M8 (F3): the optional ``predicate`` keyword filters out excluded
+    files before the parse / match pipeline.
     """
     docs: list[Doc] = []
-    for path, text in _iter_doc_texts(root, config):
+    for path, text in _iter_doc_texts(root, config, predicate=predicate):
         try:
             doc = parse(text, path, root)
         except (MetadataError, VocabularyError):
@@ -2233,6 +2515,26 @@ def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
 # ---------------------------------------------------------------------------
 
 
+def _add_exclude_flag(p: argparse.ArgumentParser) -> None:
+    """Attach the M8 ``--exclude`` flag to a subparser.
+
+    Repeatable; supports gitignore-flavoured patterns (``*`` / ``**`` /
+    trailing-``/`` / leading-``/``). Layered on top of any
+    ``.docs.toml [exclude]`` config and the root ``.docsignore`` file.
+    """
+    p.add_argument(
+        "--exclude",
+        action="append",
+        default=[],
+        metavar="PATTERN",
+        help=(
+            "Exclude paths matching PATTERN; repeatable; supports * / ** / "
+            "trailing-/ glob. Layered on top of `.docs.toml [exclude]` and "
+            ".docsignore."
+        ),
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="docs",
@@ -2293,6 +2595,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the would-be INDEX.md to stdout; do not write.",
     )
+    _add_exclude_flag(idx)
 
     new_p = subparsers.add_parser(
         "new",
@@ -2309,6 +2612,16 @@ def _build_parser() -> argparse.ArgumentParser:
     new_p.add_argument("slug", help="File slug, without the .md suffix.")
     new_p.add_argument("--project", help="Project slug (overrides the inferred default).")
     new_p.add_argument("--title", help="H1 title (default: title-cased slug).")
+    new_p.add_argument(
+        "--body-from",
+        metavar="PATH",
+        help=(
+            "Read body content from PATH (or `-` for stdin) and append it under "
+            "the scaffold's frontmatter. Refused (exit 2) if any of the body's "
+            "first 20 lines looks like a metadata block — pass body content "
+            "only; `docs new` owns the frontmatter."
+        ),
+    )
 
     archive_p = subparsers.add_parser(
         "archive",
@@ -2383,6 +2696,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit findings as a JSON array instead of grouped human output.",
     )
+    _add_exclude_flag(check_p)
 
     list_p = subparsers.add_parser(
         "list",
@@ -2411,6 +2725,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit an array of records instead of a human table.",
     )
+    _add_exclude_flag(list_p)
 
     # M4 migration verb. It takes neither --root nor the `common` parent: a
     # foreign tree has no `.docs.toml` for `--root` to resolve, and `migrate`
@@ -2436,10 +2751,32 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write the inferred metadata blocks and perform archive moves.",
     )
-    migrate_p.add_argument(
+    # M8 (F6): `--summary` and `--json` are mutually exclusive output modes
+    # (one human-tabular, one machine-readable). argparse renders the
+    # documented "not allowed with argument" error.
+    out_group = migrate_p.add_mutually_exclusive_group()
+    out_group.add_argument(
         "--json",
         action="store_true",
         help="Emit the migration plan as a JSON array instead of human output.",
+    )
+    out_group.add_argument(
+        "--summary",
+        action="store_true",
+        help=(
+            "Compact triage view — one line per file (path  role  conf  notes). "
+            "Mutually exclusive with --json."
+        ),
+    )
+    migrate_p.add_argument(
+        "--only",
+        choices=["ambiguous"],
+        help="Filter the per-file plan to a subset; today only `ambiguous` is supported.",
+    )
+    migrate_p.add_argument(
+        "--group-by",
+        choices=["role", "confidence"],
+        help="Group the per-file plan lines by role or by confidence (high → low).",
     )
     migrate_p.add_argument(
         "--quiet",
@@ -2458,6 +2795,17 @@ def _build_parser() -> argparse.ArgumentParser:
             "project-name normalisation and multi-project hint emission."
         ),
     )
+    migrate_p.add_argument(
+        "--exclude-ext",
+        default="",
+        metavar="EXTS",
+        help=(
+            "Comma-separated list of extensions to suppress from the non-Markdown "
+            "sibling footer (and from any exclude-predicate evaluation). Example: "
+            "`--exclude-ext xlsx,html`."
+        ),
+    )
+    _add_exclude_flag(migrate_p)
 
     install_skill_p = subparsers.add_parser(
         "install-skill",
@@ -2510,17 +2858,24 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _refresh_index(root: Path, config: Config) -> Path:
+def _refresh_index(
+    root: Path,
+    config: Config,
+    predicate: Callable[[str], bool] | None = None,
+) -> Path:
     """Walk `root`, render its INDEX.md, and write it atomically.
 
     Returns the INDEX path. Shared by `docs index` (write path) and the M2
     mutating verbs, which reindex after a successful mutation.
 
+    M8 (F3): the optional ``predicate`` is threaded into `walk` so
+    excluded files never appear in the INDEX.
+
     Raises:
         MetadataError, VocabularyError: a doc in the tree is malformed;
             callers map these to exit code 2.
     """
-    collected = list(walk(root, config))
+    collected = list(walk(root, config, predicate=predicate))
     index_path = root / config.index_filename
     existing = index_path.read_text() if index_path.is_file() else None
     output = render_index(collected, config, existing, root)
@@ -2542,13 +2897,14 @@ def _cmd_index(args: argparse.Namespace) -> int:
 
     try:
         config = load_config(root)
+        predicate = compile_exclude_predicate(config, getattr(args, "exclude", []) or [])
         if args.dry_run:
-            collected = list(walk(root, config))
+            collected = list(walk(root, config, predicate=predicate))
             index_path = root / config.index_filename
             existing = index_path.read_text() if index_path.is_file() else None
             sys.stdout.write(render_index(collected, config, existing, root))
             return 0
-        index_path = _refresh_index(root, config)
+        index_path = _refresh_index(root, config, predicate=predicate)
     except tomllib.TOMLDecodeError as exc:
         print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
         return 2
@@ -2852,7 +3208,8 @@ def _cmd_check(args: argparse.Namespace) -> int:
         print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
         return 2
 
-    findings = check_tree(root, config, args.stale, date.today())
+    predicate = compile_exclude_predicate(config, getattr(args, "exclude", []) or [])
+    findings = check_tree(root, config, args.stale, date.today(), predicate=predicate)
 
     if args.json:
         print(json.dumps([finding_to_json(f, root) for f in findings], indent=2))
@@ -2885,6 +3242,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
         print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
         return 2
 
+    predicate = compile_exclude_predicate(config, getattr(args, "exclude", []) or [])
     docs = query_docs(
         root,
         config,
@@ -2893,6 +3251,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
         project=args.project,
         stale=args.stale,
         today=date.today(),
+        predicate=predicate,
     )
 
     if args.json:
@@ -2980,6 +3339,10 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     # refusal: a sidecar `.docs.toml` containing ONLY a `[migrate]`
     # section is a foreign-tree migration hint (e.g. `[migrate]
     # project_name = "foo-bar"`) and is read without refusing.
+    # M8 (OQ1) extends the carve-out: `[exclude]` is also explicitly
+    # allowed on a foreign tree — a sidecar `.docs.toml` carrying only
+    # `[exclude]` and/or `[migrate]` is read as foreign-tree config and
+    # does not flip the tree into managed mode.
     toml_path = target / ".docs.toml"
     if toml_path.is_file():
         try:
