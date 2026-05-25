@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-05-25
 
 Related:
 - parent-of: m8-adoption-workflow-log.md

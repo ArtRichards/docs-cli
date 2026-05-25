@@ -14,8 +14,8 @@ Related:
 - Project: docs
 - Milestone: M8 — Adoption workflow (agent-driveable)
 - Started: 2026-05-24
-- Progress: **Milestone-setup phase complete; Phase 1 in
-  progress; M7 shipped 2026-05-25 — Phase 2+ now unblocked.**
+- Progress: **Milestone-setup phase complete; Phase 1 complete;
+  Phase 2 next; M7 shipped 2026-05-25 — Phase 2+ unblocked.**
   The task plan [m8-adoption-workflow.md](m8-adoption-workflow.md)
   is promoted from `draft` to `active`. M8 is the third v1.1
   milestone (after M6 packaging and M7 migration accuracy). All
@@ -104,7 +104,7 @@ M8 ships as 1.3.0 after M7.
 
 | Phase | Status | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | In progress | 2026-05-24 | Promote M8 from `draft` to `active` (done); create this log (done); record OQ A–G resolutions as Decisions in the task plan (done); update status.md "Current milestone" + milestone-table row + Next action. No code change; no convention change. Regenerate INDEX + snapshot. Phase 2 blocked on M7 ship. |
+| 1. Define Contract | Complete | 2026-05-24 | Promoted M8 from `draft` to `active`; created this log; recorded OQ A–G resolutions as Decisions in the task plan; status.md "Current milestone" + milestone-table row + Next action point at M8. No code change; no convention change. INDEX + snapshot regenerated in lockstep. M7 shipped 2026-05-25; Phase 2+ unblocked. |
 | 2. Write Tests (RED) | Pending (waits on M7 ship) | — | New test files: `test_exclude.py` (9 tests, F3), `test_triage_flags.py` (6 tests, F6), `test_non_md_surfacing.py` (3 tests, F7), `test_body_from.py` (7 tests, F9), `test_skill_adoption.py` (6 tests, F8). Extension to `test_migrate.py`: `--summary --json` mutual exclusion. All RED for intended unimplemented surface; M7's full suite stays GREEN. |
 | 3. Create Data/Fixtures | Pending | — | Reuse M7's 5 sanitised real-trees fixtures heavily. New small fixtures: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`, `docsignore/sample/` (gitignore syntax exercises), `trees/exclude-test/` (small synthetic tree with `[exclude]` in `.docs.toml`). |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture verbatim pytest output. Expected: M7's full suite GREEN + ~31 M8 RED for intended reasons (argparse errors on new flags; config KeyErrors on `[exclude]`; skill-reference FileNotFoundErrors). Quality gate clean tree-wide. |
@@ -192,3 +192,105 @@ taken / Issues / decisions / Exit criteria._
 _Phase 9 entries get special treatment — one sub-entry per
 fresh-subagent run, with transcript summary + pass/fail +
 iteration history if the playbook needed adjustment._
+
+### Phase 1 — Define Contract
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Declare the M8 surface — `--exclude` tree-wide (in `migrate`,
+`index`, `check`, `list`), `[exclude]` section in `.docs.toml`,
+`.docsignore` parser (OQ-B subset), triage flags (`--summary`,
+`--only ambiguous`, `--group-by`), non-md sibling surfacing in
+the plan footer, `docs new --body-from <-|path>` (with OQ-E
+metadata-block refusal), and the substantial skill-reference
+rewrite (`adoption-playbook.md` + `docs-toml-template.toml`;
+SKILL.md gets one pointer line only). No code change at this
+phase; no convention edits. Promote the task plan to active
+(done at milestone-setup), create this log (done), record OQ
+A–G resolutions as Decisions (done), and refresh status.md +
+this log's TDD Phase Progress table so the historical record
+reads "Phase 1 complete; Phase 2 next" rather than "Phase 1 in
+progress" at the close-out commit. The 324-test suite stays
+GREEN throughout.
+
+#### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/status.md` | Modify | M8 milestone-table row flipped from "Phase 1 in progress" to "Phase 1 complete; Phase 2 next". Narrative line carries the Phase 1 close-out commit sha (mirror of M7's "as `929e525`" pattern). The "Next action" was already pointing at M8 from the milestone-setup commit; no further edit needed. |
+| `docs/m8-adoption-workflow.md` | Modify | `Updated:` bumped to 2026-05-25 via `docs touch`. |
+| `docs/m8-adoption-workflow-log.md` | Modify | "Progress" paragraph rewritten from "Phase 1 in progress" → "Phase 1 complete; Phase 2 next". TDD Phase Progress table's Phase 1 row Status flipped In progress → Complete; row Notes tightened to reflect the close-out scope. This Phase-1 log entry appended. `Updated:` bumped to 2026-05-25. |
+| `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Re-synced in lockstep via `.venv/bin/docs index --root docs/` after the text edits, so the (already-registered) M8 plan + log carry their fresh `Updated:` line in the snapshot. |
+
+#### Actions taken
+
+- **Audit of prior commits.** Verified that the bulk of the M8
+  Phase 1 deliverables landed at milestone-setup commits
+  (`1df6ec6` — register M7 + M8 stubs; later commits that promoted
+  M8 to active, populated OQ A–G Decisions, created the log
+  skeleton, and recorded all seven milestone-setup OQ resolutions).
+  The residual delta at Phase 1 close-out is purely the
+  "row flips + log entry" wording.
+- **Doc-text edits.** Tightened `status.md`'s M8 row and this
+  log's "Progress" paragraph + TDD Phase Progress table to read
+  "Phase 1 complete; Phase 2 next". Bumped `Updated:` lines per
+  the convention (`docs touch` semantics — 2026-05-25, the day
+  M7 shipped and Phase 2+ unblocked).
+- **INDEX regen.** Ran `.venv/bin/docs index --root docs/`;
+  copied `docs/INDEX.md` over
+  `tests/fixtures/expected/docs-INDEX.md` so the dogfood
+  snapshot reflects the M8-log + plan body changes (the snapshot
+  includes each doc's first-paragraph description).
+- **Quality gate.** Ran the full gate from the project root:
+  pytest 324 green; `ruff check .` clean; `ruff format --check .`
+  clean; `mypy` Success; `.venv/bin/docs check docs/` exit 0.
+
+#### Issues / decisions
+
+- **No new code, no convention edit.** Phase 1 stays the
+  reviewable-in-isolation phase per the task plan's Phase 1
+  exit criteria. The `[exclude]` schema + argparse landings are
+  Phase 5 work; the walker + render + body-from + .docsignore
+  parser work is Phase 6; the skill rewrite is Phase 7. Confirmed
+  via `git diff` that the Phase 1 close-out commit touches only
+  `docs/status.md`, `docs/m8-adoption-workflow.md`,
+  `docs/m8-adoption-workflow-log.md`, `docs/INDEX.md`, and the
+  INDEX snapshot.
+- **All seven OQs (A–G) already resolved 2026-05-24** at
+  milestone-setup; no new questions surfaced at Phase 1 close-out.
+- **OQ1 (planning, Step 1 verification).** The `_cmd_migrate`
+  managed-marker refusal set
+  (`src/docs_cli/cli.py` ~2990–2998) is `{"project", "archive",
+  "vocabulary"}` — it does NOT include `[exclude]` or `[migrate]`,
+  which matches the Phase 5 plan ("`.docs.toml` containing only
+  `[migrate]` and/or `[exclude]` remains acceptable as a
+  foreign-tree sidecar"). Phase 5 will update the comment but
+  leave the refusal set as-is.
+- **OQ8 (planning, surfaced for Step 2).** The new skill
+  reference files (`references/adoption-playbook.md`,
+  `references/docs-toml-template.toml`) are not in
+  `_SKILL_RELATIVE_FILES` (`src/docs_cli/cli.py` ~3044–3048).
+  Step 2 / Phase 7 will need to extend the tuple so
+  `install-skill --symlink` and the no-clutter / byte-identity
+  checks cover the new files.
+
+#### Exit criteria
+
+- [x] `Lifecycle:` in `m8-adoption-workflow.md` is `active`
+      (set at milestone-setup; unchanged here).
+- [x] `docs/m8-adoption-workflow-log.md` exists; its TDD Phase
+      Progress table's Phase 1 row is Complete (2026-05-24).
+- [x] `docs/status.md` M8 milestone-table row reads "Phase 1
+      complete; Phase 2 next".
+- [x] `docs/INDEX.md` and
+      `tests/fixtures/expected/docs-INDEX.md` are byte-identical
+      after regeneration.
+- [x] `.venv/bin/python -m pytest tests/ -q` — 324 passed.
+- [x] `ruff check .`, `ruff format --check .`, `mypy` — clean.
+- [x] `.venv/bin/docs check docs/` — exit 0.
+- [x] No code change happened (no `src/` edits, no
+      `pyproject.toml` edits, no test file additions).
+- [x] No convention change happened (no `[exclude]` schema yet
+      — that's Phase 5).
