@@ -165,11 +165,13 @@ def test_docs_toml_exclude_dirs_applies_tree_wide(docs_script, tmp_path, verb):
     # Two conformant root docs.
     _write(
         root / "spec.md",
-        "# Spec\n\nLifecycle: draft\nRole: spec\nProject: exclude-tree\nUpdated: 2026-05-25\n\nBody.\n",
+        "# Spec\n\nLifecycle: draft\nRole: spec\nProject: exclude-tree\n"
+        "Updated: 2026-05-25\n\nBody.\n",
     )
     _write(
         root / "plan.md",
-        "# Plan\n\nLifecycle: draft\nRole: plan\nProject: exclude-tree\nUpdated: 2026-05-25\n\nBody.\n",
+        "# Plan\n\nLifecycle: draft\nRole: plan\nProject: exclude-tree\n"
+        "Updated: 2026-05-25\n\nBody.\n",
     )
     # A malformed file under build/ — if walker honours [exclude] dirs,
     # every verb runs clean; otherwise the malformed file surfaces.
@@ -213,7 +215,8 @@ def test_docs_toml_exclude_globs_apply_tree_wide(docs_script, tmp_path, verb):
     )
     _write(
         root / "spec.md",
-        "# Spec\n\nLifecycle: draft\nRole: spec\nProject: exclude-globs\nUpdated: 2026-05-25\n\nBody.\n",
+        "# Spec\n\nLifecycle: draft\nRole: spec\nProject: exclude-globs\n"
+        "Updated: 2026-05-25\n\nBody.\n",
     )
     # A malformed draft file that the glob should skip.
     _write(root / "nested" / "wip.draft.md", "no metadata\n# WIP\n")

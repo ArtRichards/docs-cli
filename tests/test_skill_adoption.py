@@ -22,8 +22,10 @@ import re
 import tomllib
 from pathlib import Path
 
-# Reuse the M5 oracle helpers (test_skill.py lines 49-85).
-from tests.test_skill import _parse_frontmatter, _read_skill, _split_frontmatter
+# Reuse the M5 oracle helpers (tests/test_skill.py lines 49-85). The pytest
+# rootdir adds `tests/` to sys.path during collection, so the sibling test
+# module is importable as `test_skill`.
+from test_skill import _parse_frontmatter, _read_skill, _split_frontmatter
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = REPO_ROOT / "src" / "docs_cli" / "skill"
@@ -117,7 +119,7 @@ def test_docs_toml_template_has_documented_sections():
         idx = raw.find(name)
         assert idx != -1, name
         # Read until the next `[xxx]` section or EOF.
-        tail = raw[idx + len(name):]
+        tail = raw[idx + len(name) :]
         next_section = re.search(r"^\[[a-zA-Z_-]+\]", tail, re.M)
         return tail[: next_section.start()] if next_section else tail
 

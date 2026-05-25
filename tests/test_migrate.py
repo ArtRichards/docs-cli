@@ -661,3 +661,33 @@ def test_confidence_distribution_meets_threshold(fixtures_dir):
         f"(high+medium)/total = {high_plus_medium}/{total} = {ratio:.2f} < 0.5; "
         f"M7 inference broadening must lift this above the threshold."
     )
+
+
+# --- M8 — --summary and --json are mutually exclusive (Phase 2, RED) -------
+
+
+def test_summary_and_json_are_mutually_exclusive(docs_script, tmp_path):
+    """`docs migrate --summary --json` must be rejected by argparse.
+
+    The two flags pick competing output shapes (one-line-per-file
+    human summary vs. machine-readable JSON array); allowing both
+    on a single invocation would leave the renderer to silently pick
+    one. argparse's `add_mutually_exclusive_group` enforces this at
+    parse time with exit code 2 + the "not allowed with" message.
+
+    Today neither --summary nor the mutual-exclusion group exists,
+    so argparse rejects --summary first as "unrecognized arguments"
+    (still exit 2). Phase 5 (add the group) keeps the exit code +
+    flips the stderr message to "not allowed with argument".
+    """
+    import subprocess
+    import sys
+
+    _write(tmp_path / "spec.md", "# Spec\n\nBody.\n")
+    proc = subprocess.run(
+        [sys.executable, str(docs_script), "migrate", "--summary", "--json", str(tmp_path)],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 2, (proc.returncode, proc.stderr, proc.stdout)
+    assert "not allowed with" in proc.stderr, proc.stderr
