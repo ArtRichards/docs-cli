@@ -78,7 +78,7 @@ python3 -m venv .venv
 
 ## Status
 
-**v1.1 shipped 2026-05-25 as `docs-cli==1.3.0`** — the first public release. Install with `pip install docs-cli`. Milestone history:
+**docs-cli 1.3.0 shipped 2026-05-25** — the first public release. Install with `pip install docs-cli`. (The release closes the M6 → M9 backlog grouping internally tracked as "v1.1"; M9 batched the M6 + M7 + M8 surface into one publish at version 1.3.0.) Milestone history:
 
 - M1 — Parser and `docs index` (shipped 2026-05-20)
 - M2 — Mutating verbs `new`, `archive`, `mv`, `touch` (shipped 2026-05-21)

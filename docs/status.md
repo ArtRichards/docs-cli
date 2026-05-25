@@ -17,10 +17,11 @@ Related:
 
 ## Current milestone
 
-**v1.1 shipped 2026-05-25.** **M9 — PyPI publish 1.3.0** is
-complete: `docs-cli==1.3.0` is live at
+**docs-cli 1.3.0 shipped 2026-05-25.** **M9 — PyPI publish
+1.3.0** is complete: `docs-cli==1.3.0` is live at
 https://pypi.org/project/docs-cli/1.3.0/, batching the M6 + M7
-+ M8 surface into one public release. The GitHub repo
++ M8 surface into one public release. (The release closes the
+M6 → M9 backlog grouping internally tracked as "v1.1".) The GitHub repo
 `ArtRichards/docs-cli` is public; source tag `v1.3.0` +
 GitHub release exist. See
 [m9-pypi-publish.md](m9-pypi-publish.md)'s
@@ -186,15 +187,16 @@ for the milestone summary.
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
-v1 (M1-M5) shipped 2026-05-22. **v1.1 shipped 2026-05-25 as
-`docs-cli==1.3.0`** — M6 (PyPI distribution preparation),
-M7 (migration accuracy — breaking `Status:` → `Lifecycle:`
-rename + inference broadening), M8 (adoption workflow —
-`--exclude` tree-wide, triage flags, `docs new --body-from`,
-skill-reference rewrite for adoption) all complete locally
-over 2026-05-24 to 2026-05-25; M9 (the operator-driven publish)
-shipped them together as one batched PyPI release on
-2026-05-25. The CLI is now installable via `pip install
+v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
+2026-05-25** as the first public PyPI release — M6 (PyPI
+distribution preparation), M7 (migration accuracy — breaking
+`Status:` → `Lifecycle:` rename + inference broadening), M8
+(adoption workflow — `--exclude` tree-wide, triage flags,
+`docs new --body-from`, skill-reference rewrite for adoption)
+all complete locally over 2026-05-24 to 2026-05-25; M9 (the
+operator-driven publish) shipped them together as one batched
+PyPI release on 2026-05-25, closing the M6 → M9 backlog
+grouping internally tracked as "v1.1". The CLI is now installable via `pip install
 docs-cli` on any Python 3.11+ host.
 
 ## TDD phase order (used per milestone)
@@ -272,12 +274,14 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action:** no active milestone — v1.1 shipped 2026-05-25.
-v1.2 is unscoped; open when a concrete need surfaces.
+**Next action:** no active milestone — `docs-cli 1.3.0`
+shipped 2026-05-25. The next-version line (provisionally
+"v1.4") is unscoped; open when a concrete need surfaces.
 
-**v1.1 shipped as `docs-cli==1.3.0`** on 2026-05-25, one
-batched PyPI publish covering the M6 + M7 + M8 surface per the
-operator's OQ-C split. PyPI:
+**docs-cli 1.3.0 shipped 2026-05-25** — one batched PyPI
+publish covering the M6 + M7 + M8 surface per the operator's
+OQ-C split, closing the M6 → M9 backlog grouping internally
+tracked as "v1.1". PyPI:
 https://pypi.org/project/docs-cli/1.3.0/; source:
 https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0;
 GitHub repo public; `v1.3.0` lightweight tag at the M8 simplify

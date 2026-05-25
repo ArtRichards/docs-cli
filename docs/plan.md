@@ -90,7 +90,7 @@ Exit criteria: the agent stops hand-editing INDEX.md in this repo and uses `docs
 
 ## v1.1
 
-**v1.1 shipped 2026-05-25 as `docs-cli==1.3.0`.** M6 (PyPI
+**docs-cli 1.3.0 shipped 2026-05-25** (closes the M6 → M9 backlog grouping internally tracked as "v1.1"). M6 (PyPI
 distribution preparation, closed 2026-05-24), M7 (migration
 accuracy + breaking `Status:` → `Lifecycle:` rename, complete
 2026-05-25), and M8 (adoption workflow, complete 2026-05-25)

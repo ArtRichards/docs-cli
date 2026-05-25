@@ -211,7 +211,9 @@ save, revoke the originals.
   + `pytest` count rewritten to reflect M9 shipped; M9 row in
   the Milestone progress table flipped to **Complete
   (2026-05-25, `docs-cli==1.3.0` on PyPI)**; "v1.1 is in
-  flight" rewritten to "v1.1 shipped 2026-05-25".
+  flight" rewritten to "docs-cli 1.3.0 shipped 2026-05-25"
+  (release version is 1.3.0; "v1.1" was the internal backlog
+  grouping name, not the published version).
 - `docs/plan.md`: v1.1 intro paragraph past-tense; M9 row →
   Complete; "**M9** is the publish milestone" paragraph
   rewritten past-tense with the published URL.
@@ -250,4 +252,6 @@ save, revoke the originals.
 
 All five phases complete; `docs-cli==1.3.0` published, repo
 public, `v1.3.0` tag + GitHub release live, doc closeouts
-landed. v1.1 ships.
+landed. **docs-cli 1.3.0 is live** — the first public release;
+closes the M6 → M9 backlog grouping internally tracked as
+"v1.1".
