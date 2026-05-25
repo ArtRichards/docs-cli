@@ -370,9 +370,12 @@ new collected items authored at Phase 2 across 5 new test files
 + 1 added test in `test_migrate.py`; new sanitised fixtures
 staged at `tests/fixtures/{body-from,docsignore/sample,trees/exclude-test}/`;
 RED baseline captured at `/tmp/m8-phase-4-baseline.txt`
-(**38 failed, 331 passed; 369 collected total** — M7's 324
-GREEN preserved + 7 new baseline-GREEN regression locks + 38 RED
-for intended reasons). Quality gate clean tree-wide.
+(**40 failed, 329 passed; 369 collected total** — M7's 324
+GREEN preserved + 5 new baseline-GREEN regression locks + 40 RED
+for intended reasons). Same-instance audit tightened two weak
+test_exclude.py assertions (added conformant docs under excluded
+subdirs so `list`/`index` arms pin the Phase 6 predicate
+explicitly). Quality gate clean tree-wide.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's

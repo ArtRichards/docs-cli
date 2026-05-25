@@ -174,14 +174,26 @@ def test_docs_toml_exclude_dirs_applies_tree_wide(docs_script, tmp_path, verb):
         "Updated: 2026-05-25\n\nBody.\n",
     )
     # A malformed file under build/ — if walker honours [exclude] dirs,
-    # every verb runs clean; otherwise the malformed file surfaces.
+    # `check` runs clean; otherwise the malformed file surfaces with
+    # exit 1.
     _write(root / "build" / "malformed.md", "no metadata\n# H1\n")
+    # A CONFORMANT file under build/ — pins the load-bearing contract
+    # for `list` and `index`: the verb must filter the build/ subdir
+    # even when its files would otherwise parse cleanly. Without this,
+    # the test would weakly pass today (walker silently skips the
+    # malformed file).
+    _write(
+        root / "build" / "conformant.md",
+        "# Conformant under build\n\nLifecycle: draft\nRole: notes\n"
+        "Project: exclude-tree\nUpdated: 2026-05-25\n\nBody.\n",
+    )
 
     if verb == "index":
         proc = _run(docs_script, "index", "--root", str(root))
         assert proc.returncode == 0, proc.stderr + proc.stdout
         index_text = (root / "INDEX.md").read_text()
         assert "build/malformed.md" not in index_text, index_text
+        assert "build/conformant.md" not in index_text, index_text
     elif verb == "check":
         proc = _run(docs_script, "check", str(root))
         # build/malformed.md would otherwise raise malformed/missing-meta findings
@@ -218,14 +230,24 @@ def test_docs_toml_exclude_globs_apply_tree_wide(docs_script, tmp_path, verb):
         "# Spec\n\nLifecycle: draft\nRole: spec\nProject: exclude-globs\n"
         "Updated: 2026-05-25\n\nBody.\n",
     )
-    # A malformed draft file that the glob should skip.
+    # A malformed draft file that the glob should skip (drives the
+    # `check` arm).
     _write(root / "nested" / "wip.draft.md", "no metadata\n# WIP\n")
+    # A CONFORMANT draft file — pins the contract for `list` / `index`:
+    # the glob must filter `*.draft.md` files even when they would
+    # otherwise parse cleanly.
+    _write(
+        root / "nested" / "ok.draft.md",
+        "# OK draft\n\nLifecycle: draft\nRole: notes\n"
+        "Project: exclude-globs\nUpdated: 2026-05-25\n\nBody.\n",
+    )
 
     if verb == "index":
         proc = _run(docs_script, "index", "--root", str(root))
         assert proc.returncode == 0, proc.stderr + proc.stdout
         index_text = (root / "INDEX.md").read_text()
         assert "wip.draft.md" not in index_text, index_text
+        assert "ok.draft.md" not in index_text, index_text
     elif verb == "check":
         proc = _run(docs_script, "check", str(root))
         assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -234,7 +256,7 @@ def test_docs_toml_exclude_globs_apply_tree_wide(docs_script, tmp_path, verb):
         assert proc.returncode == 0, proc.stderr
         records = json.loads(proc.stdout)
         paths = [r.get("path", "") for r in records]
-        assert not any("wip.draft.md" in p for p in paths), paths
+        assert not any("draft.md" in p for p in paths), paths
     elif verb == "migrate":
         proc = _run(docs_script, "migrate", str(root), "--json")
         assert proc.returncode == 0, proc.stderr

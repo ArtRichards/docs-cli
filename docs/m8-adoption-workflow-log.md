@@ -16,7 +16,7 @@ Related:
 - Started: 2026-05-24
 - Progress: **Milestone-setup phase complete; Phases 1-4 complete;
   Phase 5 next; M7 shipped 2026-05-25 — Phase 2+ unblocked. RED
-  baseline captured (38 RED + 7 baseline-GREEN regression locks +
+  baseline captured (40 RED + 5 baseline-GREEN regression locks +
   324 M7 GREEN preserved; 369 collected total).**
   The task plan [m8-adoption-workflow.md](m8-adoption-workflow.md)
   is promoted from `draft` to `active`. M8 is the third v1.1
@@ -109,7 +109,7 @@ M8 ships as 1.3.0 after M7.
 | 1. Define Contract | Complete | 2026-05-25 | Promoted M8 from `draft` to `active`; created this log; recorded OQ A–G resolutions as Decisions in the task plan; status.md "Current milestone" + milestone-table row + Next action point at M8. Close-out commit `ce39e85` + sha-credit follow-up `4a7b00f`. No code change; no convention change. INDEX + snapshot regenerated in lockstep. M7 shipped 2026-05-25; Phase 2+ unblocked. |
 | 2. Write Tests (RED) | Complete | 2026-05-25 | 5 new test files + 1 test added to `test_migrate.py` across 6 commits. Functions: `test_exclude.py` (9, F3 — 22 items with parametric expansion on tests 3, 5, 6, 7), `test_triage_flags.py` (6, F6 — 6 items), `test_non_md_surfacing.py` (3, F7 — 3 items), `test_body_from.py` (7, F9 — 8 items with parametric on test 4), `test_skill_adoption.py` (5, F8 — 5 items, per OQ6 dropped the lockstep dup), `test_migrate.py::test_summary_and_json_are_mutually_exclusive` (1, F6). All RED for intended unimplemented surface; M7's 324 stays GREEN. |
 | 3. Create Data/Fixtures | Complete | 2026-05-25 | Reused M7's 5 sanitised real-trees fixtures (kebab-tiny + snake-medium drive the triage tests; the other 3 remain Phase 9 substrate). 3 new fixture sets: `body-from/{with-frontmatter,clean-body,edge-case-keyword}`, `docsignore/sample/` (every OQ-B syntax case + sample files), `trees/exclude-test/` (small synthetic tree with `[exclude] dirs = ["build"]` in `.docs.toml` + a deliberately-malformed `build/generated.md`). Two `build/` subdirs force-added (-f) because the repo .gitignore has `build/` (project-output convention); the force-add is part of the contract surface. Sanitisation grep (per M7 log line 405) zero hits. |
-| 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 7 baseline-GREEN regression locks + 38 RED for intended reasons (45 new collected items; 369 collected total; 331 passed + 38 failed).** Per-file: test_exclude.py 17 RED + 5 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Quality gate clean tree-wide. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-25 | Captured verbatim at `/tmp/m8-phase-4-baseline.txt`. **324 M7 GREEN preserved + 5 baseline-GREEN regression locks + 40 RED for intended reasons (45 new collected items; 369 collected total; 329 passed + 40 failed).** Per-file: test_exclude.py 19 RED + 3 locks; test_triage_flags.py 6 RED; test_non_md_surfacing.py 2 RED + 1 lock; test_body_from.py 7 RED + 1 lock; test_skill_adoption.py 5 RED; test_migrate.py mutex 1 RED. Audit tightened tests 5 + 6 in test_exclude.py — added conformant docs under build/ and nested/ so the `list` / `index` assertions pin Phase 6's exclude predicate (vs. the today-coincidence of malformed-doc walker-skipping). Quality gate clean tree-wide. |
 | 5. Update Base Interfaces | Pending | — | `Config` schema gains `exclude_dirs` / `exclude_globs` / `exclude_exts` / `docsignore_patterns`. `load_config` reads `[exclude]` + parses `.docsignore`. `compile_exclude_predicate` helper unifies CLI + config + ignore-file. Argparse: identical `--exclude` action on migrate/index/check/list; `--summary` / `--only` / `--group-by` / `--exclude-ext` on migrate; `--body-from` on new. Mutual exclusion: `--summary` vs `--json`. |
 | 6. Implement Offline/Core Path | Pending | — | `_iter_doc_paths` consults the exclude predicate (tree-wide). `migrate_plan` honours predicate + emits excluded-count + non-md-sibling footer. `_render_migrate_plan` handles `--summary` / `--only ambiguous` / `--group-by` + default footer summary. `_cmd_new` handles `--body-from` with stdin/file + OQ-E refusal heuristic. `.docsignore` parser (~60 lines, stdlib only). |
 | 7. Update Tool/Wrapper Layer (skill rewrite) | Pending | — | SKILL.md: append adoption trigger phrases to description; add one-line pointer to `references/adoption-playbook.md`. New `references/adoption-playbook.md` (substantial — six numbered steps + worked example + multi-project sub-section + sidecars sub-section + pitfalls). New `references/docs-toml-template.toml` (commented starter; `[exclude]` + `[migrate]` + `[vocabulary]`). Spec updates: cli.md (new flags), convention.md (`[exclude]` + `.docsignore` syntax), architecture.md (Config schema), README.md (adoption section), CHANGELOG.md (1.3.0). pyproject + cli.py `__version__` bumped to 1.3.0. Skill-refs lockstep maintained for convention.md + cli.md. |
@@ -471,22 +471,25 @@ M7's 324 GREEN baseline + the quality gate.
 ```text
 $ .venv/bin/python -m pytest tests/ -q --tb=short
 ... (369 items collected) ...
-38 failed, 331 passed in 9.65s
+40 failed, 329 passed in 9.55s
 ```
 
-Captured at `/tmp/m8-phase-4-baseline.txt`.
+Captured at `/tmp/m8-phase-4-baseline.txt`. (Initial 38-failed-331-passed
+baseline was captured before the same-instance audit strengthened
+test_exclude.py tests 5 and 6 by adding conformant docs under the
+excluded subdirs; final baseline above is post-audit.)
 
 #### Per-test attribution table
 
 | Test group | Source file | RED count | GREEN-at-baseline (regression-lock) count | Failure mode → root cause |
 |---|---|---:|---:|---|
-| F3 — `--exclude` flag, `[exclude]` config, `.docsignore`, plan-footer count | `test_exclude.py` | 17 | 5 | argparse rejects `--exclude` / `--exclude-ext` on every verb (exit 2); `.docsignore` not parsed; `[exclude]` not consulted by walker; footer absent. Locks: docsignore patterns where the today-absent predicate yields the contract-correct outcome (`*.tmp` / comment-only / blank-only); `list`-verb tree-wide on `[exclude] dirs` + `[exclude] globs` (list already filters non-.md / missing-metadata). |
+| F3 — `--exclude` flag, `[exclude]` config, `.docsignore`, plan-footer count | `test_exclude.py` | 19 | 3 | argparse rejects `--exclude` / `--exclude-ext` on every verb (exit 2); `.docsignore` not parsed; `[exclude]` not consulted by walker; footer absent. Locks: docsignore patterns where the today-absent predicate yields the contract-correct outcome (`*.tmp` excludes non-.md anyway; comment-only and blank-only patterns are correctly no-ops). |
 | F6 — triage flags + default footer | `test_triage_flags.py` | 6 | 0 | argparse rejects `--summary` / `--only` / `--group-by` (exit 2); default footer doesn't emit the documented substrings. |
 | F6 — `--summary` × `--json` mutex | `test_migrate.py` | 1 | 0 | argparse rejects `--summary` as "unrecognized" today; Phase 5 flips to "not allowed with" via mutex group. |
 | F7 — non-md sibling surfacing | `test_non_md_surfacing.py` | 2 | 1 | footer line absent today. Lock: N==0 → no footer line (correctly absent today). |
 | F9 — `docs new --body-from` | `test_body_from.py` | 7 | 1 | argparse rejects `--body-from` (exit 2); OQ-E refusal absent; idempotency contract unstable today. Lock: missing-value → exit 2 (today's "unrecognized" path coincidentally matches the contract). |
 | F8 — skill adoption playbook + template | `test_skill_adoption.py` | 5 | 0 | SKILL.md description has no adoption phrases; one-line pointer absent; `references/adoption-playbook.md` and `references/docs-toml-template.toml` do not exist. |
-| **TOTAL** |  | **38** | **7** | — |
+| **TOTAL** |  | **40** | **5** | — |
 
 Function totals: 9 + 6 + 1 + 3 + 7 + 5 = 31 distinct test functions.
 Collected-item totals: 22 + 6 + 1 + 3 + 8 + 5 = 45 items.
@@ -535,13 +538,25 @@ are listed in the per-test attribution table above).
   Per OQ2 (planning resolution, binding): "9 distinct test
   functions in test_exclude.py via parametrization … Phase 4
   log notes the collected-item count vs function count." Done.
-- **7 baseline-GREEN locks vs the plan's expectation of
+- **5 baseline-GREEN locks vs the plan's expectation of
   RED-only.** The plan's Expected RED matrix anticipated only
-  RED for the new flags. The actual baseline has 7 items that
+  RED for the new flags. The actual baseline has 5 items that
   pass at baseline for the same reason F7 N==0 passes (the
   today-absent feature happens to produce the contract-correct
   outcome). These are regression locks — Phase 6 must preserve
   them. The Per-test attribution table above flags each one.
+- **Audit-time tightening** (during the same-instance consistency
+  check, between the initial Phase 4 commit and the audit-fixes
+  commit). The initial baseline had 7 baseline-GREEN locks; two
+  of them (`list` + `index` arms of test 5 and test 6 in
+  test_exclude.py) were weak — they passed today only because
+  the build/malformed.md fixture was silently skipped by the
+  walker. Added conformant docs under the excluded subdirs so
+  the assertions pin the Phase 6 exclude predicate explicitly
+  (vs. the today-coincidence). Net: 2 more proper RED tests,
+  reducing the lock count from 7 to 5. The remaining 5 locks
+  are genuine "today's missing predicate produces the
+  contract-correct outcome" cases.
 - **No structural surprise.** Every RED's failure message was
   the assertion the test was designed to fail. No fixture
   oversight, no import accident, no off-by-one mismatch.
