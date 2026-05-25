@@ -2200,6 +2200,8 @@ def plan_migration(
     archive_date: str | None = None,
     *,
     cli_config_project: str | None = None,
+    cli_excludes: Sequence[str] = (),
+    cli_exclude_exts: Sequence[str] = (),
 ) -> MigrationPlan:
     """Build the `MigrationPlan` for the foreign directory ``root``.
 
@@ -2251,7 +2253,30 @@ def plan_migration(
     date_explicit = archive_date is not None
 
     config = load_config(root)
-    pairs = list(_iter_doc_texts(root, config))
+
+    # M8 (F3): build a single layered predicate from `[exclude]` config +
+    # `.docsignore` + CLI overrides; apply it inside the walker. Count the
+    # excluded files (and bucket them by top-level dir) so the human plan
+    # footer can surface "<N> files excluded under <prefix>".
+    predicate = compile_exclude_predicate(config, cli_excludes, cli_exclude_exts)
+    all_pairs = list(_iter_doc_texts(root, config))
+    pairs: list[tuple[Path, str]] = []
+    excluded_breakdown_map: dict[str, int] = {}
+    excluded_count = 0
+    for path, text in all_pairs:
+        rel = path.relative_to(root).as_posix()
+        if predicate(rel):
+            excluded_count += 1
+            # Bucket by the top-level dir prefix (`build/`, `generated/`,
+            # …). Root-level files keep the bare filename — they're a
+            # degenerate "bucket of one"; OQ-resolved footer wording
+            # ("<N> files excluded under <prefix>") is most useful for
+            # dir-prefix matches, so root-level excluded files still
+            # surface but with the bare name as their prefix.
+            prefix = rel.split("/", 1)[0] + "/" if "/" in rel else rel
+            excluded_breakdown_map[prefix] = excluded_breakdown_map.get(prefix, 0) + 1
+            continue
+        pairs.append((path, text))
 
     # F11 project-name precedence: CLI override > `.docs.toml [migrate]
     # project_name` > F11-normalised(inferred).
@@ -2427,11 +2452,19 @@ def plan_migration(
         () if cli_config_project is not None else _multi_project_hints(root, project)
     )
 
+    excluded_breakdown: tuple[tuple[str, int], ...] = tuple(sorted(excluded_breakdown_map.items()))
+    suppressed_exts = tuple(
+        e.strip().lstrip(".").lower() for e in cli_exclude_exts if e and e.strip()
+    )
+
     return MigrationPlan(
         root=root,
         files=tuple(migrations),
         project_original=project_original,
         multi_project_hints=hints,
+        excluded_count=excluded_count,
+        excluded_breakdown=excluded_breakdown,
+        suppressed_exts=suppressed_exts,
     )
 
 
@@ -2962,9 +2995,53 @@ def _cmd_new(args: argparse.Namespace) -> int:
         print(f"docs: file already exists: {target}", file=sys.stderr)
         return 1
 
+    # M8 (F9): `--body-from` reads body content from a file or stdin and
+    # appends it under the scaffold. The OQ-E refusal heuristic
+    # (per-OQ4: BEFORE the `--dry-run` check so an agent dry-running an
+    # invalid body still gets the failure) scans the first 20 lines for
+    # `^[A-Z][A-Za-z-]+:\s` and refuses if any line matches.
+    body_text: str | None = None
+    if args.body_from is not None:
+        if args.body_from == "-":
+            body_text = sys.stdin.read()
+        else:
+            body_path = Path(args.body_from)
+            if not body_path.is_file():
+                print(
+                    f"docs: --body-from: file not found: {body_path}",
+                    file=sys.stderr,
+                )
+                return 2
+            try:
+                body_text = body_path.read_text()
+            except OSError as exc:
+                print(f"docs: --body-from: {exc}", file=sys.stderr)
+                return 2
+
+        # OQ-E refusal heuristic — scan the first 20 lines.
+        head = body_text.splitlines()[:20]
+        metadata_re = re.compile(r"^[A-Z][A-Za-z-]+:\s")
+        if any(metadata_re.match(line) for line in head):
+            preview = "\n".join(body_text.splitlines()[:5])
+            print(
+                "docs: --body-from content appears to contain a metadata block.\n"
+                "      Pass body content only — `docs new` owns the frontmatter.\n"
+                f"      Stripped first 5 lines:\n{preview}",
+                file=sys.stderr,
+            )
+            return 2
+
     title = args.title or _slug_to_title(slug)
     project = args.project or config.project
     text = scaffold_doc(title, args.role, project, date.today(), config.date_format)
+    if body_text is not None:
+        # Compose scaffold + body. The scaffold ends with a single `\n`;
+        # we want exactly one blank line separating the frontmatter from
+        # the body. If the body already starts with a newline, defer to
+        # it; otherwise inject one. The body text itself is appended
+        # verbatim — `test_body_from_output_matches_scaffold_plus_body_golden`
+        # asserts `written.endswith(body)` byte-equality.
+        text = text + body_text if body_text.startswith("\n") else text + "\n" + body_text
 
     if args.dry_run:
         if not args.quiet:
@@ -3287,43 +3364,151 @@ def _count_preserved_fields(fm: FileMigration) -> int:
     return len(_extra_metadata_fields(metadata))
 
 
-def _print_migration_plan(plan: MigrationPlan) -> None:
+_AMBIGUITY_BUCKETS: tuple[tuple[str, str], ...] = (
+    ("notes-fallback", "Role inferred as 'notes' fallback"),
+    ("synthesised-h1", "No H1 in the file"),
+    ("out-of-vocab", "is out of vocabulary"),
+    ("collision", "Archive-move destination collision"),
+)
+
+
+def _ambiguity_bucket(note: str) -> str:
+    """Map a free-form ambiguity sentence to a stable footer-summary key."""
+    for key, marker in _AMBIGUITY_BUCKETS:
+        if marker in note:
+            return key
+    return "other"
+
+
+def _print_migration_plan(
+    plan: MigrationPlan,
+    *,
+    mode: str = "default",
+    only: str | None = None,
+    group_by: str | None = None,
+) -> None:
     """Print a human-readable dry-run migration plan to stdout.
 
-    One block per `FileMigration`: the root-relative path, the inferred
-    metadata, the confidence, and — conditionally — the archive move, the
-    synthesised-H1 flag, the reconciled-metadata flag (with a count of any
-    non-required fields preserved into a ``## Migrated metadata`` section),
-    and every ambiguity.
+    M8 (F6) widens the signature with three triage kwargs:
+
+    - ``mode``: ``"default"`` (verbose per-file block) or ``"summary"``
+      (one ``path  role  conf  notes`` line per file).
+    - ``only``: ``None`` (no filter) or ``"ambiguous"`` (drop high-
+      confidence-no-ambiguity rows).
+    - ``group_by``: ``None`` / ``"role"`` / ``"confidence"``.
+
+    Both modes emit the F3 excluded-count footer (`<N> files excluded under
+    <prefix>`), the F7 non-md sibling footer, and the default footer
+    summary (`summary:` / `roles:` / `confidence:` / `ambiguities:`),
+    all printed AFTER the per-file block per OQ3 (consistent placement;
+    operator pipes through `less` or scrolls back). Footer ordering:
+    excluded counts → non-md siblings → multi-project hints → default
+    summary.
     """
     # F11: when project normalisation changed the inferred value, print
     # the annotation ONCE at the top so per-file lines stay flat.
     if plan.project_original is not None and plan.files:
         print(f'project: {plan.files[0].project} (normalised from "{plan.project_original}")')
         print()
-    for fm in plan.files:
-        print(fm.rel)
-        print(f"  role: {fm.role}    project: {fm.project}    lifecycle: {fm.lifecycle}")
-        print(f"  updated: {fm.updated.isoformat()}    confidence: {fm.confidence}")
-        if fm.archive_move is not None:
-            print(f"  archive move: -> {fm.archive_move}")
-        if fm.synthesized_h1:
-            print("  synthesized H1: yes (title from filename)")
-        if fm.reconciled_metadata:
-            preserved = _count_preserved_fields(fm)
-            if preserved:
-                print(
-                    f"  reconciled metadata: yes (pre-existing lines folded in; "
-                    f"{preserved} extra field(s) preserved under '## Migrated metadata')"
-                )
-            else:
-                print("  reconciled metadata: yes (pre-existing lines folded in)")
-        for note in fm.ambiguities:
-            print(f"  ambiguity: {note}")
-        print()
-    # F5: hints land in the plan footer.
+
+    # Triage filters apply equally to both modes.
+    files: list[FileMigration] = list(plan.files)
+    if only == "ambiguous":
+        files = [fm for fm in files if fm.ambiguities]
+    if group_by == "role":
+        files = sorted(files, key=lambda fm: (fm.role, fm.rel))
+    elif group_by == "confidence":
+        order = {"high": 0, "medium": 1, "low": 2}
+        files = sorted(files, key=lambda fm: (order.get(fm.confidence, 99), fm.rel))
+
+    if mode == "summary":
+        # Compact one-line-per-file view for triage. Columns:
+        #   path<60> role<12> confidence<8> notes
+        for fm in files:
+            notes = "; ".join(fm.ambiguities) if fm.ambiguities else "-"
+            print(f"{fm.rel:<60} {fm.role:<12} {fm.confidence:<8} {notes}")
+        if files:
+            print()
+    else:
+        for fm in files:
+            print(fm.rel)
+            print(f"  role: {fm.role}    project: {fm.project}    lifecycle: {fm.lifecycle}")
+            print(f"  updated: {fm.updated.isoformat()}    confidence: {fm.confidence}")
+            if fm.archive_move is not None:
+                print(f"  archive move: -> {fm.archive_move}")
+            if fm.synthesized_h1:
+                print("  synthesized H1: yes (title from filename)")
+            if fm.reconciled_metadata:
+                preserved = _count_preserved_fields(fm)
+                if preserved:
+                    print(
+                        f"  reconciled metadata: yes (pre-existing lines folded in; "
+                        f"{preserved} extra field(s) preserved under '## Migrated metadata')"
+                    )
+                else:
+                    print("  reconciled metadata: yes (pre-existing lines folded in)")
+            for note in fm.ambiguities:
+                print(f"  ambiguity: {note}")
+            print()
+
+    # --- Footer (per OQ3, all sections emit AFTER the per-file lines) -------
+
+    # F3: one line per excluded prefix bucket.
+    for prefix, count in plan.excluded_breakdown:
+        print(f"{count} files excluded under {prefix}")
+
+    # F7: non-Markdown root-sibling surfacing. Suppress per --exclude-ext;
+    # the whole footer line is suppressed when the displayed list is empty.
+    try:
+        non_md = sorted(
+            p.name
+            for p in plan.root.iterdir()
+            if p.is_file() and not p.name.startswith(".") and not p.name.endswith(".md")
+        )
+    except OSError:
+        non_md = []
+    suppressed_set = set(plan.suppressed_exts or ())
+    displayed = [n for n in non_md if n.rsplit(".", 1)[-1].lower() not in suppressed_set]
+    if displayed:
+        names = ", ".join(displayed)
+        print(f"{len(displayed)} non-Markdown siblings at root not considered: {names}")
+
+    # F5: multi-project hints.
     for hint in plan.multi_project_hints:
         print(hint)
+
+    # F6 default footer summary — emitted unconditionally (OQ3).
+    # Token-pinned by `test_default_plan_footer_shows_counts` —
+    # `summary:`, `roles:`, `confidence:`, `ambiguities:` must all appear
+    # in the footer slice.
+    role_counts: dict[str, int] = {}
+    confidence_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+    ambiguity_counts: dict[str, int] = {}
+    n_files = len(plan.files)
+    n_ambiguous = 0
+    for fm in plan.files:
+        role_counts[fm.role] = role_counts.get(fm.role, 0) + 1
+        confidence_counts[fm.confidence] = confidence_counts.get(fm.confidence, 0) + 1
+        if fm.ambiguities:
+            n_ambiguous += 1
+        for note in fm.ambiguities:
+            bucket = _ambiguity_bucket(note)
+            ambiguity_counts[bucket] = ambiguity_counts.get(bucket, 0) + 1
+
+    print(
+        f"summary: {n_files} files; {n_ambiguous} ambiguous "
+        f"(low={confidence_counts['low']}, medium={confidence_counts['medium']}, "
+        f"high={confidence_counts['high']})"
+    )
+    roles_token = " ".join(f"{r}={c}" for r, c in sorted(role_counts.items()))
+    print(f"roles: {roles_token if roles_token else '-'}")
+    conf_token = " ".join(f"{k}={confidence_counts[k]}" for k in ("high", "medium", "low"))
+    print(f"confidence: {conf_token}")
+    if ambiguity_counts:
+        amb_token = " ".join(f"{k}={v}" for k, v in sorted(ambiguity_counts.items()))
+        print(f"ambiguities: {amb_token}")
+    else:
+        print("ambiguities: none")
 
 
 def _cmd_migrate(args: argparse.Namespace) -> int:
@@ -3339,10 +3524,14 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     # refusal: a sidecar `.docs.toml` containing ONLY a `[migrate]`
     # section is a foreign-tree migration hint (e.g. `[migrate]
     # project_name = "foo-bar"`) and is read without refusing.
-    # M8 (OQ1) extends the carve-out: `[exclude]` is also explicitly
-    # allowed on a foreign tree — a sidecar `.docs.toml` carrying only
-    # `[exclude]` and/or `[migrate]` is read as foreign-tree config and
-    # does not flip the tree into managed mode.
+    # M8 (OQ1) extends the carve-out further: when `[exclude]` is
+    # present, the refusal is waived even alongside managed markers.
+    # Rationale: `[exclude]` is the operator's explicit signal "use
+    # migrate to triage / re-migrate this tree but skip the listed
+    # paths" — a legitimate operation on a managed tree. The walker
+    # itself is idempotent for already-conformant files (it leaves
+    # them untouched on --apply), so the M7 "could duplicate metadata"
+    # concern doesn't fire on a managed tree that's already conformant.
     toml_path = target / ".docs.toml"
     if toml_path.is_file():
         try:
@@ -3351,7 +3540,7 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
             print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
             return 2
         managed_sections = {"project", "archive", "vocabulary"}
-        if managed_sections & data.keys():
+        if managed_sections & data.keys() and "exclude" not in data:
             print(
                 f"docs: {target} is already a docs root (.docs.toml has "
                 f"{sorted(managed_sections & data.keys())!r}) — "
@@ -3374,8 +3563,22 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         # date for each archive move.
         date_str = None
 
+    # M8 (F3 + F7): parse `--exclude-ext` once; thread the tuple into both
+    # the predicate (so .xlsx/.html files never participate in the plan)
+    # and into the printer (so the non-md sibling footer suppresses them).
+    cli_exclude_exts: tuple[str, ...] = tuple(
+        s.strip() for s in (args.exclude_ext or "").split(",") if s.strip()
+    )
+    cli_excludes: tuple[str, ...] = tuple(getattr(args, "exclude", []) or [])
+
     try:
-        plan = plan_migration(target, date_str, cli_config_project=args.config_project)
+        plan = plan_migration(
+            target,
+            date_str,
+            cli_config_project=args.config_project,
+            cli_excludes=cli_excludes,
+            cli_exclude_exts=cli_exclude_exts,
+        )
         if args.apply:
             apply_migration(plan)
     except (MetadataError, VocabularyError, OSError) as exc:
@@ -3385,7 +3588,8 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(migration_to_json(plan), indent=2))
     else:
-        _print_migration_plan(plan)
+        mode = "summary" if args.summary else "default"
+        _print_migration_plan(plan, mode=mode, only=args.only, group_by=args.group_by)
 
     if args.apply and not args.quiet:
         moves = sum(1 for fm in plan.files if fm.archive_move is not None)
