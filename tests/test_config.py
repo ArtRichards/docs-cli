@@ -24,7 +24,7 @@ def test_load_config_defaults_when_toml_absent(tmp_path):
     assert isinstance(cfg, Config)
     assert cfg.archive_dir == "archive"
     assert cfg.date_format == "%Y-%m-%d"
-    assert cfg.statuses == BUILTIN_STATUSES
+    assert cfg.lifecycles == BUILTIN_STATUSES
     assert cfg.roles == BUILTIN_ROLES
     assert cfg.index_filename == INDEX_FILENAME
 
@@ -51,13 +51,13 @@ def test_load_config_reads_archive_dir(tmp_path):
 
 def test_load_config_additive_status_extension(tmp_path):
     (tmp_path / ".docs.toml").write_text(
-        '[project]\nname = "x"\n\n[vocabulary]\nadd_statuses = ["shipped"]\n'
+        '[project]\nname = "x"\n\n[vocabulary]\nadd_lifecycles = ["shipped"]\n'
     )
     cfg = load_config(tmp_path)
-    assert "shipped" in cfg.statuses
+    assert "shipped" in cfg.lifecycles
     # Built-ins are preserved.
-    assert "active" in cfg.statuses
-    assert "archived" in cfg.statuses
+    assert "active" in cfg.lifecycles
+    assert "archived" in cfg.lifecycles
 
 
 def test_load_config_additive_role_extension(tmp_path):

@@ -1,6 +1,6 @@
 # Orphan
 
-Status: blocked
+Lifecycle: blocked
 Role: idea
 Updated: 2026-03-15
 

@@ -1,6 +1,6 @@
 # Beta Notes
 
-Status: draft
+Lifecycle: draft
 Role: notes
 Project: beta
 Updated: 2026-05-10

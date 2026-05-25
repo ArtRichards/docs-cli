@@ -1,6 +1,6 @@
 # Alpha — spec
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: with-archive
 Updated: 2026-05-21

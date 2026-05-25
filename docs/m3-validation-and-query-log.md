@@ -1,6 +1,6 @@
 # M3 — Implementation Log
 
-Status: done
+Lifecycle: done
 Role: log
 Project: docs
 Updated: 2026-05-22

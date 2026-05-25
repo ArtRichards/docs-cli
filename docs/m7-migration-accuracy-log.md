@@ -1,6 +1,6 @@
 # M7 — Implementation Log
 
-Status: active
+Lifecycle: active
 Role: log
 Project: docs
 Updated: 2026-05-25
@@ -98,7 +98,7 @@ rename is the semver trigger.
 | 2. Write Tests (RED) | Complete | 2026-05-24 | Five new test files plus a confidence-distribution extension to `test_migrate.py`: `test_lifecycle_rename.py` (5 tests, F0); `test_inference.py` (21 tests, F1/F10/F12 — parametric expansion of word-boundary, suffix-strip, new vocab, `_M\d+`, H1, section-header, sibling-set); `test_project_normalisation.py` (10 tests, F11 — TitleCase/snake-upper/mixed/single-word/digit-glued parametric plus `--config-project` override + human-output "(normalised from …)" assertions); `test_archive_normalisation.py` (4 tests, F4); `test_multi_project_hints.py` (3 tests, F5). All RED for intended unimplemented surface; M6's 271 stay GREEN. Confidence assertions use the forward-compatible sentinel `("medium", "high", True)` per OQ-D / OQ-4. |
 | 3. Create Data/Fixtures | Complete | 2026-05-24 | Five sanitised real-tree fixtures under `tests/fixtures/trees/real-trees/` (kebab-tiny / snake-medium / snake-large / archive-subdir / mixed-naming) — fabricated sanitised analogs preserving the Trial-2 shape categories (TitleCase / snake_TitleCase / kebab) since `/tmp/m7-trial2/` was lost. Per-finding fixtures under `tests/fixtures/lifecycle/` (3 files), `status-prose/` (4 single-line prose fixtures; multi-line continuation deferred per OQ3), `project-names/` (7 dirs × 3 files), `sibling-defaulting/` (3 subdirs: majority-met 10 / majority-not-met 10 / sample-too-small 4). Sanitisation grep against the trial-2 product/feature names returns 0 hits. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-24 | Captured verbatim pytest output: **34 failed + 281 passed = 315 collected**. The 281 passing decomposes as M6's 271 GREEN + 10 new GREEN-at-baseline regression locks (`_M\d+`-with-`_Log` combination; sibling-not-defaulting × 2; kebab + digit-after-digit pass-through × 2; `(normalised from …)` annotation omitted-when-unchanged; archive `no-d` shape; `--date` global override; already-conformant archive no-move; multi-project hint below-threshold). The 34 failing trace to their intended unimplemented surfaces (parser-only-knows-Status, no broadened inference, no normalisation, no per-file-mtime archive date, no multi-project hint, no `--config-project` argparse flag). Quality gate clean tree-wide. |
-| 5. Update Base Interfaces | Pending | — | **The F0 rename.** Parser accepts only `Lifecycle:`; `Status:` becomes a free-form extra field. Add `Confidence.MEDIUM`. Add `Config.role_suffixes` + `Config.project_name` + rename `add_statuses` → `add_lifecycles`. Argparse adds `--config-project` to `docs migrate` (F5) and renames `docs list --status` → `--lifecycle` (single argparse site at `list_p`; `docs check` has no analogous flag). **No rename helper shipped** — sweep this project's own `docs/` (27 files) with one-off `sed -i 's/^Status: \(active\|blocked\|done\|draft\|superseded\|archived\)$/Lifecycle: \1/' docs/*.md`. Update convention.md. F0 tests flip RED → GREEN; rest stay RED for Phase 6. |
+| 5. Update Base Interfaces | Complete | 2026-05-25 | **F0 rename landed.** Parser requires `Lifecycle:`; free-form `Status:` becomes a preserved extra field. `Doc.status` → `Doc.lifecycle`; `FileMigration.status` → `FileMigration.lifecycle`; `Config.statuses` → `Config.lifecycles`; `validate_status` → `validate_lifecycle`; TOML key `add_statuses` → `add_lifecycles`. `FileMigration.confidence` extended to `{high, medium, low}` (medium requires empty ambiguities). `Config` grows `role_suffixes: dict` + `project_name: str | None` (consumed at Phase 6). `MigrationPlan` grows `project_original: str \| None` + `multi_project_hints: tuple[str, ...]` (populated at Phase 6). Argparse: `docs list --status` → `--lifecycle`; `docs migrate --config-project NAME` added (consumed at Phase 6). `insert_metadata_block` writes `Lifecycle:`; `scaffold_doc` writes `Lifecycle: draft`; `_archive_one` writes `Lifecycle: archived`. `check_doc` reads `Lifecycle:`. `_REQUIRED_METADATA_FIELDS` swaps `Status` → `Lifecycle` so a free-form `Status:` line lands in the extra-field preservation path. Sweep of `docs/*.md` (29 files) and conformant test-tree fixtures (31 files + `parser/well-formed.md`) via `^Status: <vocab>$` → `^Lifecycle: <vocab>$`. Skill refs resynced (deferred from plan to keep Phase 5 GREEN). pytest: 290 passed / 30 failed (RED for Phase 6 surface — inference broadening, project normalisation, per-file mtime, multi-project hints, medium-confidence check wiring); ruff / format / mypy / docs check / docs index --dry-run all clean. |
 | 6. Implement Offline/Core Path | Pending | — | F1 (word-boundary tolerance, H1 + section signals, sibling defaulting), F10 (vocab additions, non-role suffix stripping), F11 (project-name normalisation + override), F12 (`_M\d+` milestone suffix), F4 (archive normalisation), F5 (multi-project hint emission in `migrate_plan` + `--config-project` honoured). All M7 RED tests turn GREEN. |
 | 7. Update Tool/Wrapper Layer | Pending | — | convention.md (rename + new vocab + medium confidence + `add_statuses` → `add_lifecycles`), cli.md (F0 breaking note + `--config-project` synopsis + `docs list --status` → `--lifecycle` flag rename + project-normalisation output shape + multi-project hint footer shape + `docs check` exit-code clarification), architecture.md (Config schema), status.md ("Watch out for" entry), README.md (any `Status:` references swept to `Lifecycle:`), CHANGELOG.md (`## 1.2.0 — UNRELEASED`), pyproject.toml + cli.py `__version__` bumped to 1.2.0, src/docs_cli/skill/references/{convention,cli}.md resynced. |
 | 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest ≥ 296 passed; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff. |
@@ -653,3 +653,214 @@ Post-fix counts:
 - [x] Ready for Phase 5 (Update Base Interfaces — F0 rename +
       Confidence.MEDIUM enum extension).
 
+
+### Phase 5 — Update Base Interfaces
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Land M7's F0 rename across every base interface: parser
+(`parse()` requires `Lifecycle:` not `Status:`), dataclasses
+(`Doc.lifecycle`, `FileMigration.lifecycle`, `Config.lifecycles`),
+metadata writers (`scaffold_doc`, `insert_metadata_block`,
+`_archive_one`), validators (`validate_lifecycle`, `check_doc`),
+JSON serialisers (`doc_to_json`, `migration_to_json`), the
+`.docs.toml` reader (`add_statuses` → `add_lifecycles`), and the
+argparse CLI surface (`docs list --lifecycle`, `docs migrate
+--config-project NAME`). Extend `FileMigration.confidence` to
+accept the new `"medium"` sentinel introduced by OQ-D. Add the
+Phase-6-consumed `Config.role_suffixes`, `Config.project_name`,
+`MigrationPlan.project_original`, and
+`MigrationPlan.multi_project_hints` fields with safe defaults.
+Sweep every conformant `Lifecycle:` site in this project's own
+`docs/`, the conformant fixture trees, and the existing-test
+fabricated metadata bodies. Resync the bundled skill references
+in lockstep so `tests/test_skill_refs.py` stays GREEN.
+
+#### Files changed
+
+- **src/docs_cli/cli.py** — load-bearing F0 rename:
+  - `Doc.status` → `Doc.lifecycle`; docstring rewritten;
+    `__post_init__` error message updated.
+  - `FileMigration.status` → `FileMigration.lifecycle`;
+    `confidence` validator extended to accept `"medium"`
+    with empty ambiguities; docstring rewritten.
+  - `MigrationPlan` grows `project_original: str | None = None`
+    and `multi_project_hints: tuple[str, ...] = ()` with
+    defaults — Phase 6 populates them.
+  - `Config.statuses` → `Config.lifecycles`; new fields
+    `role_suffixes: dict[str, str]` (default `{}`) and
+    `project_name: str | None` (default `None`); error message
+    in `__post_init__` updated.
+  - `validate_status` → `validate_lifecycle`; error message
+    now `"Lifecycle: <value> not in vocabulary"`.
+  - `parse()` reads `metadata["Lifecycle"]` and the
+    required-fields tuple becomes
+    `("Lifecycle", "Role", "Updated")`; a free-form `Status:`
+    line is harvested into `Doc.extra` like any other
+    non-required label (the `known` set drops `"Status"`).
+  - `infer_status()` reads `metadata.get("Lifecycle")`
+    (function name preserved per OQ3 — Phase 10 simplify
+    candidate).
+  - `plan_migration()` ambiguity rule rewords as
+    `"In-file Lifecycle: <value> is out of vocabulary"`.
+  - `apply_migration()` passes `status=fm.lifecycle` into
+    `insert_metadata_block` (parameter name preserved).
+  - `migration_to_json()` JSON record key `"status"` →
+    `"lifecycle"`; `confidence` schema doc updated to
+    `high|medium|low`.
+  - `doc_to_json()` JSON record key `"status"` → `"lifecycle"`.
+  - `_print_migration_plan()` per-file line now prints
+    `lifecycle: <val>` (not `status:`); hint / normalisation
+    annotation hooks land at Phase 6.
+  - `_REQUIRED_METADATA_FIELDS` swaps `"Status"` → `"Lifecycle"`
+    so `_extra_metadata_fields` catches free-form `Status:`.
+  - `insert_metadata_block` writes `Lifecycle: <val>` (block
+    template rewritten; parameter still named `status` per
+    OQ3).
+  - `scaffold_doc()` writes `Lifecycle: draft`.
+  - `_archive_one()` writes `Lifecycle: archived`.
+  - `check_doc()` reads `Lifecycle:`; messages reworded;
+    docstring updated.
+  - `query_docs()` parameter `status` → `lifecycle`; sort key
+    uses `d.lifecycle`.
+  - `_cmd_list()` passes `lifecycle=args.lifecycle`; group
+    header prints `lifecycle — role`.
+  - `load_config()` reads `add_lifecycles` (no
+    `add_statuses` alias); reads the new `[migrate]` section's
+    `role_suffixes` map + `project_name`.
+  - argparse: `docs list --status` → `--lifecycle`;
+    `docs migrate --config-project NAME` added.
+- **tests/_typing/docs.pyi** — unchanged (re-exports
+  `Doc`/`Config`/`FileMigration` via `import *`; attribute
+  shapes flow through automatically).
+- **tests/test_lifecycle_rename.py** — Phase 2 RED tests
+  updated to assert `doc.lifecycle` and to construct
+  `FileMigration(..., lifecycle=...)`. All 5 baseline tests
+  flip RED → GREEN at Phase 5.
+- **tests/test_config.py** — TOML key `add_statuses` →
+  `add_lifecycles`; `cfg.statuses` → `cfg.lifecycles`.
+- **tests/test_check.py**, **tests/test_index.py**,
+  **tests/test_walker.py** — `Config(... statuses=...)`
+  keyword renamed to `lifecycles=...`.
+- **tests/test_index.py** — `_doc()` helper now constructs
+  `Doc(..., lifecycle=status, ...)`; helper param name
+  preserved.
+- **tests/test_query.py** — `_q()` helper passes `lifecycle=`
+  to `query_docs`; assertions read `d.lifecycle`.
+- **tests/test_model.py, test_check.py, test_edit.py,
+  test_cli_check.py, test_cli_new.py, test_cli_archive.py** —
+  fabricated conformant-doc bodies' `Status:` lines swapped
+  to `Lifecycle:`. Error-path tests
+  (`test_parse_missing_status`, `test_parse_unknown_status`)
+  update the regex match to `"Lifecycle"`.
+- **tests/test_migrate.py** — `infer_status` tests'
+  metadata-fabrication keys swap `Status` → `Lifecycle` (the
+  function still NAMED `infer_status` per OQ3, but reads
+  `Lifecycle:` internally). Foreign-tree `Status: wip`
+  fabrications kept verbatim (they exercise the new
+  extra-field preservation path); assertions about the
+  inserted block updated:
+  `metadata["Status"]` → `metadata["Lifecycle"]`;
+  `Migrated-Status: wip` now expected in
+  `## Migrated metadata`. `_extra_metadata_fields` set
+  assertion swaps to `{"Lifecycle", "Role", "Project",
+  "Updated"}`. `confidence in ("high", "low")` extends to
+  `("high", "medium", "low")` in cli-json schema test.
+- **tests/test_cli_list.py** — `--status` flag → `--lifecycle`;
+  JSON schema key `status` → `lifecycle`.
+- **tests/test_cli_migrate.py** — JSON expected-keys set:
+  `"status"` → `"lifecycle"`; confidence value set widens to
+  `("high", "medium", "low")`.
+- **docs/*.md** (29 files swept) — every conformant
+  `^Status: <vocab>$` metadata line renamed to
+  `^Lifecycle: <vocab>$`. Body-prose `Status:` mentions
+  (M1–M5 historical narrative) untouched per OQ10.
+- **tests/fixtures/trees/{with-archive,nested,minimal,
+  multi-project,cross-refs,drift,marker-preservation,
+  invalid}/** (31 files) — conformant metadata `Status:` →
+  `Lifecycle:` (`invalid/bad-status.md` keeps the
+  out-of-vocab value `frobnicated` but on the renamed
+  `Lifecycle:` key). Foreign fixtures
+  (`trees/foreign/`, `status-prose/`, `project-names/`,
+  `lifecycle/status-only.md`) preserved verbatim.
+- **tests/fixtures/parser/well-formed.md** — renamed in
+  lockstep.
+- **src/docs_cli/skill/references/{convention,cli}.md** —
+  resynced from `docs/{convention,cli}.md` (the byte-equality
+  test pins the lockstep; deferring this to Phase 7 would
+  leave 2 tests RED at Phase 5).
+- **docs/INDEX.md** + **tests/fixtures/expected/docs-INDEX.md** —
+  regenerated in lockstep via `docs index --root docs/`.
+
+#### Test status at Phase 5 close
+
+```text
+$ .venv/bin/python -m pytest tests/ -q
+... 30 failed, 290 passed in 7.60s ...
+```
+
+- 320 collected (unchanged).
+- 290 passed: M6's 271 + 9 new GREEN (test_lifecycle_rename's
+  5 F0 baseline tests + the 4 prose-fixture parametric F0
+  preservation cases + the `FileMigration` medium-confidence
+  anchor — count includes some test_inference.py regression
+  locks that were green at baseline). Specifically the 9 new
+  Phase-5 flips are: 5 test_lifecycle_rename tests
+  (`test_parse_accepts_lifecycle_key`,
+  `test_parse_rejects_status_as_controlled_vocab_key`,
+  `test_check_errors_on_status_without_lifecycle`,
+  `test_check_accepts_lifecycle_with_freeform_status_line`,
+  `test_file_migration_accepts_medium_confidence`); 4
+  `test_migrate_preserves_freeform_status_as_migrated_metadata`
+  parametric cases.
+- 30 failed: all Phase-6 surfaces — `test_inference.py`
+  word-boundary / suffix-strip / new-vocab / `_M\d+` /
+  H1-content / section-header / sibling defaulting (17 tests);
+  `test_project_normalisation.py` TitleCase / SNAKE_UPPER /
+  mixed underscore / single-word / digit-glued normalisation +
+  `--config-project` override + human-output "(normalised
+  from …)" annotation (7 tests);
+  `test_archive_normalisation.py` per-file mtime drives
+  archive date (1 test); `test_multi_project_hints.py`
+  emission + override (2 tests);
+  `test_lifecycle_rename.test_check_exits_1_on_medium_confidence_inference`
+  medium-confidence check-time wiring (1 test);
+  `test_migrate.test_confidence_distribution_meets_threshold`
+  ≥ 50% high+medium dogfood metric (1 test). One additional
+  inference regression-lock case
+  (`test_infer_role_strips_non_role_suffixes[MyPlan_v2.md-True]`)
+  failing for the strict-medium anchor that's still on the
+  Phase-6 surface.
+
+- Quality gate: `ruff check`, `ruff format --check`, `mypy`,
+  `docs check docs/`, `docs index --dry-run` all exit 0.
+
+#### Exit criteria
+
+- [x] Parser requires `Lifecycle:` (not `Status:`); free-form
+      `Status:` becomes a preserved extra field.
+- [x] `Doc.status` → `Doc.lifecycle`; `FileMigration.status`
+      → `FileMigration.lifecycle`;
+      `FileMigration.confidence` accepts `medium`.
+- [x] `Config.statuses` → `Config.lifecycles`; new fields
+      `role_suffixes` + `project_name` with safe defaults.
+- [x] `MigrationPlan.project_original` +
+      `multi_project_hints` fields added with safe defaults.
+- [x] `validate_status` → `validate_lifecycle`;
+      `add_statuses` → `add_lifecycles` in TOML reader.
+- [x] argparse: `docs list --lifecycle` (single rename),
+      `docs migrate --config-project NAME` added.
+- [x] All conformant `^Status: <vocab>$` lines in
+      `docs/*.md`, `tests/fixtures/trees/` and
+      `tests/fixtures/parser/` renamed; `grep -l "^Status:"
+      docs/` empty. Foreign-tree fixtures preserved verbatim.
+- [x] All existing-test conformant fabrications renamed;
+      foreign-tree fabrications preserved.
+- [x] Skill refs resynced via byte-copy.
+- [x] `docs/INDEX.md` regenerated and
+      `tests/fixtures/expected/docs-INDEX.md` byte-equal.
+- [x] pytest: 290 passed, 30 failed (every failure on the
+      Phase-6 surface). Quality gate clean. No
+      RED-for-wrong-reason.

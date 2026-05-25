@@ -98,7 +98,7 @@ def test_migrate_json_emits_pinned_record_schema(docs_script, fixtures_dir, tmp_
         "path",
         "role",
         "project",
-        "status",
+        "lifecycle",
         "updated",
         "confidence",
         "ambiguities",
@@ -113,13 +113,13 @@ def test_migrate_json_emits_pinned_record_schema(docs_script, fixtures_dir, tmp_
         assert not rec["path"].startswith("/"), f"path must be root-relative: {rec['path']!r}"
         assert rec["role"] and isinstance(rec["role"], str)
         assert rec["project"] and isinstance(rec["project"], str)
-        assert rec["status"] and isinstance(rec["status"], str)
+        assert rec["lifecycle"] and isinstance(rec["lifecycle"], str)
         # updated is an ISO YYYY-MM-DD string.
         assert isinstance(rec["updated"], str)
         assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", rec["updated"]), (
             f"updated must be ISO YYYY-MM-DD: {rec['updated']!r}"
         )
-        assert rec["confidence"] in ("high", "low")
+        assert rec["confidence"] in ("high", "medium", "low")
         assert isinstance(rec["ambiguities"], list)
         assert isinstance(rec["synthesized_h1"], bool)
         assert isinstance(rec["reconciled_metadata"], bool)
@@ -137,7 +137,7 @@ def test_migrate_apply_writes_metadata_blocks(docs_script, fixtures_dir, tmp_pat
     # Every .md file now parses with the four required fields.
     for md in root.rglob("*.md"):
         doc = parse(md.read_text(), md, root)
-        assert doc.status
+        assert doc.lifecycle
         assert doc.role
         assert doc.project
         assert doc.updated is not None
@@ -154,7 +154,7 @@ def test_migrate_apply_normalises_archive_style_subdir(docs_script, fixtures_dir
     assert moved, "archive-style docs must be relocated into archive/<date>/"
     for md in moved:
         doc = parse(md.read_text(), md, root)
-        assert doc.status == "archived"
+        assert doc.lifecycle == "archived"
 
 
 def test_migrate_apply_leaves_active_layout_unchanged(docs_script, fixtures_dir, tmp_path):
@@ -252,7 +252,7 @@ def test_migrate_apply_preserves_extra_metadata_in_a_section(docs_script, fixtur
     assert "Migrated-Related:" in migrated
     # The applied file still parses and carries the four required fields.
     doc = parse(migrated, extra, root)
-    assert doc.status and doc.role and doc.project and doc.updated is not None
+    assert doc.lifecycle and doc.role and doc.project and doc.updated is not None
     # The applied tree still passes `docs check`.
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, (check.stdout, check.stderr)

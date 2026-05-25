@@ -1,6 +1,6 @@
 # M6 — Implementation Log
 
-Status: active
+Lifecycle: active
 Role: log
 Project: docs
 Updated: 2026-05-23

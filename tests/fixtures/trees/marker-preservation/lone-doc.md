@@ -1,6 +1,6 @@
 # Marker-preservation test doc
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: marker-preservation
 Updated: 2026-05-20

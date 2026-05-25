@@ -26,7 +26,7 @@ _PATH = _ROOT / "sample.md"
 WELL_FORMED = """\
 # Sample Doc
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: docs
 Updated: 2026-05-20
@@ -61,9 +61,9 @@ def test_set_metadata_field_preserves_every_other_line():
 
 
 def test_set_metadata_field_replaces_status_without_disturbing_related():
-    out = set_metadata_field(WELL_FORMED, "Status", "archived")
-    assert "Status: archived" in out
-    assert "Status: active" not in out
+    out = set_metadata_field(WELL_FORMED, "Lifecycle", "archived")
+    assert "Lifecycle: archived" in out
+    assert "Lifecycle: active" not in out
     # The blank line before Related: and the Related block survive intact.
     assert "\nRelated:\n- pairs-with: other.md\n- implements: charter.md\n" in out
 
@@ -79,7 +79,7 @@ def test_set_metadata_field_inserts_missing_label_inside_block():
 
 def test_set_metadata_field_ignores_label_shaped_lines_in_body():
     text = (
-        "# T\n\nStatus: active\nRole: notes\nUpdated: 2026-05-20\n\n"
+        "# T\n\nLifecycle: active\nRole: notes\nUpdated: 2026-05-20\n\n"
         "## Body\n\nUpdated: this line is prose, not metadata.\n"
     )
     out = set_metadata_field(text, "Updated", "2026-05-21")
@@ -88,8 +88,8 @@ def test_set_metadata_field_ignores_label_shaped_lines_in_body():
 
 
 def test_set_metadata_field_preserves_trailing_newline_state():
-    with_nl = "# T\n\nStatus: active\nRole: notes\nUpdated: 2026-05-20\n"
-    without_nl = "# T\n\nStatus: active\nRole: notes\nUpdated: 2026-05-20"
+    with_nl = "# T\n\nLifecycle: active\nRole: notes\nUpdated: 2026-05-20\n"
+    without_nl = "# T\n\nLifecycle: active\nRole: notes\nUpdated: 2026-05-20"
     assert set_metadata_field(with_nl, "Updated", "2026-05-21").endswith("\n")
     assert not set_metadata_field(without_nl, "Updated", "2026-05-21").endswith("\n")
 
@@ -123,7 +123,7 @@ def test_rewrite_related_refs_is_noop_when_nothing_matches():
 
 def test_rewrite_related_refs_rewrites_multiple_bullets():
     text = (
-        "# T\n\nStatus: active\nRole: notes\nUpdated: 2026-05-20\n\n"
+        "# T\n\nLifecycle: active\nRole: notes\nUpdated: 2026-05-20\n\n"
         "Related:\n- child-of: dup.md\n- references: dup.md\n"
     )
     out, n = rewrite_related_refs(text, "dup.md", "moved.md")
@@ -140,7 +140,7 @@ def test_scaffold_doc_round_trips_through_parse():
     text = scaffold_doc("My Feature", "spec", "docs", date(2026, 5, 21))
     doc = parse(text, _PATH, _ROOT)
     assert doc.title == "My Feature"
-    assert doc.status == "draft"
+    assert doc.lifecycle == "draft"
     assert doc.role == "spec"
     assert doc.project == "docs"
     assert doc.updated == date(2026, 5, 21)

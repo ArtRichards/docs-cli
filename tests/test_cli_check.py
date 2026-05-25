@@ -31,12 +31,13 @@ def _stale_tree(tmp_path: Path, name: str, *, include_fresh: bool) -> Path:
     (root / ".docs.toml").write_text(f'[project]\nname = "{name}"\n')
     old = (date.today() - timedelta(days=400)).isoformat()
     (root / "ancient.md").write_text(
-        f"# Ancient\n\nStatus: active\nRole: notes\nProject: {name}\nUpdated: {old}\n\nBody.\n"
+        f"# Ancient\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: {old}\n\nBody.\n"
     )
     if include_fresh:
         fresh = date.today().isoformat()
         (root / "fresh.md").write_text(
-            f"# Fresh\n\nStatus: active\nRole: notes\nProject: {name}\nUpdated: {fresh}\n\nBody.\n"
+            f"# Fresh\n\nLifecycle: active\nRole: notes\n"
+            f"Project: {name}\nUpdated: {fresh}\n\nBody.\n"
         )
     return root
 

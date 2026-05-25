@@ -1,6 +1,6 @@
 # Alpha Charter
 
-Status: active
+Lifecycle: active
 Role: charter
 Project: alpha
 Updated: 2026-05-20

@@ -1,6 +1,6 @@
 # M7 — Migration plan accuracy
 
-Status: active
+Lifecycle: active
 Role: milestone
 Project: docs
 Updated: 2026-05-25

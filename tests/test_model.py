@@ -21,7 +21,7 @@ from docs import (
 WELL_FORMED = """\
 # Title
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: docs
 Updated: 2026-05-20
@@ -50,7 +50,7 @@ def test_parse_happy_path(tmp_path):
     doc = parse(WELL_FORMED, path, tmp_path)
     assert doc.path == path
     assert doc.title == "Title"
-    assert doc.status == "active"
+    assert doc.lifecycle == "active"
     assert doc.role == "spec"
     assert doc.project == "docs"
     assert doc.updated == date(2026, 5, 20)
@@ -68,14 +68,14 @@ def test_parse_body_starts_after_metadata_block(tmp_path):
 
 
 def test_parse_no_related_block(tmp_path):
-    text = _write_text("Status: active\nRole: spec\nUpdated: 2026-05-20")
+    text = _write_text("Lifecycle: active\nRole: spec\nUpdated: 2026-05-20")
     doc = parse(text, tmp_path / "doc.md", tmp_path)
     assert doc.related == ()
 
 
 def test_parse_no_project_field(tmp_path):
     """Project is optional; absence yields project=None."""
-    text = _write_text("Status: active\nRole: spec\nUpdated: 2026-05-20")
+    text = _write_text("Lifecycle: active\nRole: spec\nUpdated: 2026-05-20")
     doc = parse(text, tmp_path / "doc.md", tmp_path)
     assert doc.project is None
 
@@ -84,7 +84,7 @@ def test_parse_extra_labels_harvested(tmp_path):
     text = textwrap.dedent("""\
         # Title
 
-        Status: active
+        Lifecycle: active
         Role: spec
         Updated: 2026-05-20
         Owner: art
@@ -100,43 +100,43 @@ def test_parse_extra_labels_harvested(tmp_path):
 
 
 def test_parse_missing_h1(tmp_path):
-    text = "Status: active\nRole: spec\nUpdated: 2026-05-20\n\nbody\n"
+    text = "Lifecycle: active\nRole: spec\nUpdated: 2026-05-20\n\nbody\n"
     with pytest.raises(MetadataError, match="H1"):
         parse(text, tmp_path / "no-h1.md", tmp_path)
 
 
 def test_parse_missing_status(tmp_path):
     text = _write_text("Role: spec\nUpdated: 2026-05-20")
-    with pytest.raises(MetadataError, match=r"Status"):
+    with pytest.raises(MetadataError, match=r"Lifecycle"):
         parse(text, tmp_path / "no-status.md", tmp_path)
 
 
 def test_parse_missing_role(tmp_path):
-    text = _write_text("Status: active\nUpdated: 2026-05-20")
+    text = _write_text("Lifecycle: active\nUpdated: 2026-05-20")
     with pytest.raises(MetadataError, match=r"Role"):
         parse(text, tmp_path / "no-role.md", tmp_path)
 
 
 def test_parse_missing_updated(tmp_path):
-    text = _write_text("Status: active\nRole: spec")
+    text = _write_text("Lifecycle: active\nRole: spec")
     with pytest.raises(MetadataError, match=r"Updated"):
         parse(text, tmp_path / "no-updated.md", tmp_path)
 
 
 def test_parse_malformed_updated(tmp_path):
-    text = _write_text("Status: active\nRole: spec\nUpdated: not-a-date")
+    text = _write_text("Lifecycle: active\nRole: spec\nUpdated: not-a-date")
     with pytest.raises(MetadataError, match=r"Updated"):
         parse(text, tmp_path / "bad-date.md", tmp_path)
 
 
 def test_parse_unknown_status(tmp_path):
-    text = _write_text("Status: in-progress\nRole: spec\nUpdated: 2026-05-20")
-    with pytest.raises(VocabularyError, match=r"Status"):
+    text = _write_text("Lifecycle: in-progress\nRole: spec\nUpdated: 2026-05-20")
+    with pytest.raises(VocabularyError, match=r"Lifecycle"):
         parse(text, tmp_path / "bad-status.md", tmp_path)
 
 
 def test_parse_unknown_role(tmp_path):
-    text = _write_text("Status: active\nRole: nonsense\nUpdated: 2026-05-20")
+    text = _write_text("Lifecycle: active\nRole: nonsense\nUpdated: 2026-05-20")
     with pytest.raises(VocabularyError, match=r"Role"):
         parse(text, tmp_path / "bad-role.md", tmp_path)
 
@@ -146,7 +146,7 @@ def test_parse_metadata_block_terminates_at_blank_line(tmp_path):
     text = textwrap.dedent("""\
         # Title
 
-        Status: active
+        Lifecycle: active
         Role: spec
         Updated: 2026-05-20
 
@@ -172,5 +172,5 @@ def test_parse_fixture_well_formed(fixtures_dir):
     text = path.read_text()
     doc = parse(text, path, fixtures_dir / "parser")
     assert doc.title  # non-empty
-    assert doc.status in BUILTIN_STATUSES
+    assert doc.lifecycle in BUILTIN_STATUSES
     assert doc.role in BUILTIN_ROLES

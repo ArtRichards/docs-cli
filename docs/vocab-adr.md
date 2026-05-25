@@ -1,6 +1,6 @@
 # Decision: Status and Role vocabularies
 
-Status: active
+Lifecycle: active
 Role: decision
 Project: docs
 Updated: 2026-05-20

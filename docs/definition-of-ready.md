@@ -1,6 +1,6 @@
 # docs — Definition of Ready
 
-Status: active
+Lifecycle: active
 Role: reference
 Project: docs
 Updated: 2026-05-22

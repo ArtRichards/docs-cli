@@ -1,6 +1,6 @@
 # docs — CLI Spec
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: docs
 Updated: 2026-05-23

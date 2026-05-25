@@ -1,6 +1,6 @@
 # Bad Status
 
-Status: frobnicated
+Lifecycle: frobnicated
 Role: notes
 Project: invalid
 Updated: 2026-05-10

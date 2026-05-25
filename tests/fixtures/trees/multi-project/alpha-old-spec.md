@@ -1,6 +1,6 @@
 # Alpha Old Spec
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: alpha
 Updated: 2026-01-01

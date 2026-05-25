@@ -1,6 +1,6 @@
 # Core engine
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: cross-refs
 Updated: 2026-05-18

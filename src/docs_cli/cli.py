@@ -33,7 +33,7 @@ import shutil
 import sys
 import tomllib
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 
@@ -84,7 +84,7 @@ class MetadataError(Exception):
 
 
 class VocabularyError(Exception):
-    """Doc uses a Status or Role value not in the configured vocabulary.
+    """Doc uses a Lifecycle or Role value not in the configured vocabulary.
 
     Distinct from MetadataError because the metadata block parsed
     successfully — the issue is the value, not the structure.
@@ -103,7 +103,11 @@ class Doc:
     Attributes:
         path: Absolute path on disk.
         title: The H1 title (text after the leading `# `).
-        status: Lifecycle status; must be in the configured vocabulary.
+        lifecycle: Controlled-vocab lifecycle value (M7's F0 rename);
+            must be in the configured vocabulary. The on-disk metadata
+            key is ``Lifecycle:``. A free-form ``Status:`` line, if
+            present in the source, is harvested into ``extra`` like any
+            other non-required field — it is NOT vocab-checked.
         role: Doc role; must be in the configured vocabulary.
         project: Project slug, from the metadata `Project:` line or the
             `.docs.toml` default. None only if no default is configured
@@ -113,21 +117,21 @@ class Doc:
             from the `Related:` block. Paths are normalized to be
             relative to the docs root, not the doc's own directory.
         extra: Additional `Label: value` fields harvested from the
-            metadata block (e.g. Owner, Tags). Single-value labels
-            become strings; multi-value labels (those followed by a
-            bullet list) become tuples of strings.
+            metadata block (e.g. Owner, Tags, free-form Status). Single-
+            value labels become strings; multi-value labels (those
+            followed by a bullet list) become tuples of strings.
         body: Doc text after the metadata block. Used by the index
             renderer to extract a one-line description (first non-empty
             paragraph).
         archived: True iff `path` is under the configured archive
-            subtree (root/archive_dir/...). May disagree with `status`
-            if the doc was hand-edited; the `check` verb (M3) surfaces
-            such drift.
+            subtree (root/archive_dir/...). May disagree with
+            `lifecycle` if the doc was hand-edited; the `check` verb
+            (M3) surfaces such drift.
     """
 
     path: Path
     title: str
-    status: str
+    lifecycle: str
     role: str
     project: str | None
     updated: date
@@ -139,8 +143,8 @@ class Doc:
     def __post_init__(self) -> None:
         if not self.title.strip():
             raise MetadataError(f"{self.path}: empty title")
-        if not self.status:
-            raise MetadataError(f"{self.path}: empty Status")
+        if not self.lifecycle:
+            raise MetadataError(f"{self.path}: empty Lifecycle")
         if not self.role:
             raise MetadataError(f"{self.path}: empty Role")
         if not isinstance(self.updated, date):
@@ -155,24 +159,35 @@ class Config:
 
     Loaded from `.docs.toml` at the root, with built-in defaults for any
     missing fields. The vocabulary frozensets are the *union* of the
-    built-in set and any `add_statuses`/`add_roles` from the config
+    built-in set and any `add_lifecycles`/`add_roles` from the config
     (additive only — removing built-ins is not supported).
+
+    M7 (F0) renames the lifecycle vocab config key from `add_statuses`
+    to `add_lifecycles`; the `Config.lifecycles` attribute holds the
+    union. M7 (F1/F5/F11) also adds the optional `[migrate]` section
+    fields: `role_suffixes` (a custom suffix → role map) and
+    `project_name` (a per-tree project override consumed by
+    `plan_migration`).
 
     Defaults when `.docs.toml` is absent:
         project = root.resolve().name or "root"
         archive_dir = "archive"
         date_format = "%Y-%m-%d"
-        statuses = BUILTIN_STATUSES
+        lifecycles = BUILTIN_STATUSES
         roles = BUILTIN_ROLES
         index_filename = INDEX_FILENAME ("INDEX.md")
+        role_suffixes = {}
+        project_name = None
     """
 
     project: str
     archive_dir: str
     date_format: str
-    statuses: frozenset[str]
+    lifecycles: frozenset[str]
     roles: frozenset[str]
     index_filename: str = INDEX_FILENAME
+    role_suffixes: dict[str, str] = field(default_factory=dict)
+    project_name: str | None = None
 
     def __post_init__(self) -> None:
         if not self.project.strip():
@@ -183,9 +198,9 @@ class Config:
             )
         if not self.date_format:
             raise ValueError("Config.date_format must be non-empty")
-        if not self.statuses >= BUILTIN_STATUSES:
-            missing = BUILTIN_STATUSES - self.statuses
-            raise ValueError(f"Config.statuses missing built-ins: {sorted(missing)}")
+        if not self.lifecycles >= BUILTIN_STATUSES:
+            missing = BUILTIN_STATUSES - self.lifecycles
+            raise ValueError(f"Config.lifecycles missing built-ins: {sorted(missing)}")
         if not self.roles >= BUILTIN_ROLES:
             missing = BUILTIN_ROLES - self.roles
             raise ValueError(f"Config.roles missing built-ins: {sorted(missing)}")
@@ -218,8 +233,8 @@ class FileMigration:
 
     A `FileMigration` is the migration helper's complete decision for a single
     foreign `.md` file: the metadata `migrate` will insert (`role`, `project`,
-    `status`, `updated`), how confident the inference was, every ambiguity it
-    surfaced, and whether the file needs an H1 synthesised or a planned
+    `lifecycle`, `updated`), how confident the inference was, every ambiguity
+    it surfaced, and whether the file needs an H1 synthesised or a planned
     archive-normalising move.
 
     Attributes:
@@ -229,18 +244,23 @@ class FileMigration:
         role: Inferred `Role:` value. Always a built-in role (see
             `BUILTIN_ROLES`) — inference never invents an out-of-vocab role.
         project: Inferred `Project:` value.
-        status: Inferred `Status:` value. Always a built-in status (see
-            `BUILTIN_STATUSES`).
+        lifecycle: Inferred `Lifecycle:` value (M7's F0 rename). Always a
+            built-in lifecycle vocab value (see `BUILTIN_STATUSES`).
         updated: Inferred `Updated:` date.
         synthesized_h1: True iff the file has no H1 and `migrate` will
             synthesise one from the filename (via `_slug_to_title`).
         reconciled_metadata: True iff the file already carried
             metadata-shaped lines that `migrate` will reconcile into the
             inserted block rather than duplicate.
-        confidence: ``"high"`` or ``"low"``. ``"low"`` iff `ambiguities` is
-            non-empty; ``"high"`` iff it is empty — the two are kept in sync.
+        confidence: ``"high"``, ``"medium"``, or ``"low"``. ``"low"`` iff
+            ``ambiguities`` is non-empty; ``"high"`` or ``"medium"`` iff it is
+            empty. ``"medium"`` carries the derived-signal semantic (H1-content,
+            section-header pattern, sibling-set defaulting, non-role suffix
+            strip) — no ambiguity to report, but the signal is weaker than a
+            direct suffix or in-file `Role:` match.
         ambiguities: Human-readable notes, one per unresolved inference
-            question. Non-empty iff ``confidence == "low"``.
+            question. Non-empty iff ``confidence == "low"``; empty for
+            ``"high"`` and ``"medium"``.
         archive_move: The planned destination as a root-relative POSIX path
             when the file lives in a non-conformant archive-style subdir and
             will be relocated into ``archive/<date>/``; ``None`` when the file
@@ -253,7 +273,7 @@ class FileMigration:
     rel: str
     role: str
     project: str
-    status: str
+    lifecycle: str
     updated: date
     synthesized_h1: bool
     reconciled_metadata: bool
@@ -262,12 +282,16 @@ class FileMigration:
     archive_move: str | None
 
     def __post_init__(self) -> None:
-        if self.confidence not in ("high", "low"):
-            raise ValueError(f"FileMigration.confidence must be high|low, got {self.confidence!r}")
+        if self.confidence not in ("high", "medium", "low"):
+            raise ValueError(
+                f"FileMigration.confidence must be high|medium|low, got {self.confidence!r}"
+            )
         if self.confidence == "low" and not self.ambiguities:
             raise ValueError("FileMigration.confidence 'low' requires a non-empty ambiguities")
-        if self.confidence == "high" and self.ambiguities:
-            raise ValueError("FileMigration.confidence 'high' requires an empty ambiguities")
+        if self.confidence in ("high", "medium") and self.ambiguities:
+            raise ValueError(
+                f"FileMigration.confidence {self.confidence!r} requires an empty ambiguities"
+            )
 
 
 @dataclass(frozen=True)
@@ -283,10 +307,23 @@ class MigrationPlan:
         root: Absolute path of the foreign directory being migrated.
         files: One `FileMigration` per `.md` file, ordered by root-relative
             POSIX path (the same order `_iter_doc_texts` yields).
+        project_original: The raw inferred project name when M7's F11
+            normalisation changed the value (e.g. ``"FooBarBaz"`` was
+            normalised to ``"foo-bar-baz"``). ``None`` when normalisation
+            didn't change the value or when a CLI/sidecar override
+            short-circuited normalisation. Surfaced once in the human plan
+            footer as ``project: <final> (normalised from "<original>")``.
+        multi_project_hints: M7's F5 advisory hints — one per immediate
+            subdir whose ``.md`` files share a common filename prefix that
+            differs meaningfully from the parent's project and covers
+            ≥ 5 files. Empty tuple when no subdir triggers the heuristic
+            and when a CLI override (``--config-project``) is in force.
     """
 
     root: Path
     files: tuple[FileMigration, ...]
+    project_original: str | None = None
+    multi_project_hints: tuple[str, ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -307,10 +344,10 @@ def parse_date(value: str, date_format: str = "%Y-%m-%d") -> date:
         raise MetadataError(f"Updated: malformed date {value!r} (expected {date_format})") from exc
 
 
-def validate_status(value: str, statuses: frozenset[str]) -> None:
-    """Raise VocabularyError if `value` is not in `statuses`."""
-    if value not in statuses:
-        raise VocabularyError(f"Status: {value!r} not in vocabulary")
+def validate_lifecycle(value: str, lifecycles: frozenset[str]) -> None:
+    """Raise VocabularyError if `value` is not in `lifecycles`."""
+    if value not in lifecycles:
+        raise VocabularyError(f"Lifecycle: {value!r} not in vocabulary")
 
 
 def validate_role(value: str, roles: frozenset[str]) -> None:
@@ -486,7 +523,7 @@ def parse(text: str, path: Path, root: Path) -> Doc:
     Raises:
         MetadataError: structural problems (missing H1, missing
             required label, malformed Updated, etc.).
-        VocabularyError: Status or Role value not in the vocabulary.
+        VocabularyError: Lifecycle or Role value not in the vocabulary.
             Vocabulary validation is performed at parse time but
             requires a Config; in practice this means callers should
             re-validate via the walker when a Config is available.
@@ -495,20 +532,20 @@ def parse(text: str, path: Path, root: Path) -> Doc:
     """
     title, metadata, body = parse_metadata_block(text)
 
-    for required in ("Status", "Role", "Updated"):
+    for required in ("Lifecycle", "Role", "Updated"):
         if required not in metadata or not metadata[required]:
             raise MetadataError(f"{path}: missing {required}")
         if not isinstance(metadata[required], str):
             raise MetadataError(f"{path}: {required} must be a single value")
 
-    status = metadata["Status"]
+    lifecycle = metadata["Lifecycle"]
     role = metadata["Role"]
     updated_raw = metadata["Updated"]
-    assert isinstance(status, str)
+    assert isinstance(lifecycle, str)
     assert isinstance(role, str)
     assert isinstance(updated_raw, str)
 
-    validate_status(status, BUILTIN_STATUSES)
+    validate_lifecycle(lifecycle, BUILTIN_STATUSES)
     validate_role(role, BUILTIN_ROLES)
     updated = parse_date(updated_raw)
 
@@ -533,13 +570,16 @@ def parse(text: str, path: Path, root: Path) -> Doc:
             parsed_related.append((verb.strip(), target.strip()))
         related = tuple(parsed_related)
 
-    known = {"Status", "Role", "Updated", "Project", "Related"}
+    # F0: a free-form `Status:` line (if present) is no longer a known
+    # convention field — it is harvested into `extra` like any other
+    # non-required label and preserved verbatim.
+    known = {"Lifecycle", "Role", "Updated", "Project", "Related"}
     extra: dict[str, str | tuple[str, ...]] = {k: v for k, v in metadata.items() if k not in known}
 
     return Doc(
         path=path,
         title=title,
-        status=status,
+        lifecycle=lifecycle,
         role=role,
         project=project,
         updated=updated,
@@ -755,7 +795,16 @@ def load_config(root: Path) -> Config:
 
     Vocabulary additions from `.docs.toml [vocabulary]` are merged
     into the built-in sets. Removals are not supported (additive
-    only — see vocab-adr.md).
+    only — see vocab-adr.md). M7 (F0) renames the lifecycle key
+    from `add_statuses` to `add_lifecycles`; no backward-compat alias.
+
+    M7 also reads the optional `[migrate]` section for the F1/F5/F11
+    inference-broadening surface:
+
+    - ``role_suffixes``: a custom suffix → role map merged into the
+      built-in suffix mapping for this tree's ``docs migrate`` runs.
+    - ``project_name``: a per-tree override consumed by
+      ``plan_migration`` — short-circuits F11 normalisation when set.
 
     Args:
         root: Docs root directory (the one that may contain `.docs.toml`).
@@ -771,6 +820,7 @@ def load_config(root: Path) -> Config:
     project_section = data.get("project", {})
     archive_section = data.get("archive", {})
     vocab_section = data.get("vocabulary", {})
+    migrate_section = data.get("migrate", {})
 
     project = project_section.get("name")
     if not project:
@@ -780,15 +830,20 @@ def load_config(root: Path) -> Config:
     archive_dir = archive_section.get("dir", "archive")
     date_format = archive_section.get("date_format", "%Y-%m-%d")
 
-    statuses = BUILTIN_STATUSES | frozenset(vocab_section.get("add_statuses", []))
+    lifecycles = BUILTIN_STATUSES | frozenset(vocab_section.get("add_lifecycles", []))
     roles = BUILTIN_ROLES | frozenset(vocab_section.get("add_roles", []))
+
+    role_suffixes = dict(migrate_section.get("role_suffixes", {}))
+    project_name = migrate_section.get("project_name")
 
     return Config(
         project=project,
         archive_dir=archive_dir,
         date_format=date_format,
-        statuses=statuses,
+        lifecycles=lifecycles,
         roles=roles,
+        role_suffixes=role_suffixes,
+        project_name=project_name,
     )
 
 
@@ -833,7 +888,7 @@ def set_metadata_field(text: str, label: str, value: str) -> str:
     Only the metadata block is considered: a `Label:`-shaped line in the body
     is never matched. The file's trailing-newline state is preserved.
 
-    Used by `touch` (Updated), `archive` (Status, Updated, Archived-reason).
+    Used by `touch` (Updated), `archive` (Lifecycle, Updated, Archived-reason).
 
     Raises:
         MetadataError: `text` has no H1 / metadata block.
@@ -913,12 +968,12 @@ def scaffold_doc(
     """Return the full text of a freshly scaffolded doc.
 
     Produces an `# <title>` H1, a blank line, then the metadata block:
-    `Status: draft`, `Role: <role>`, `Project: <project>` (the `Project:` line
-    is omitted entirely when `project` is None), and `Updated:` formatted with
-    `date_format`. The body is empty. Output ends with a single trailing
+    `Lifecycle: draft`, `Role: <role>`, `Project: <project>` (the `Project:`
+    line is omitted entirely when `project` is None), and `Updated:` formatted
+    with `date_format`. The body is empty. Output ends with a single trailing
     newline and parses cleanly back through `parse()`. Used by `new`.
     """
-    lines = [f"# {title}", "", "Status: draft", f"Role: {role}"]
+    lines = [f"# {title}", "", "Lifecycle: draft", f"Role: {role}"]
     if project is not None:
         lines.append(f"Project: {project}")
     lines.append(f"Updated: {updated.strftime(date_format)}")
@@ -997,22 +1052,26 @@ def check_doc(
 
     Runs the rules cli.md pins for `docs check`:
 
-    - missing or empty required field (``Status``, ``Role``, ``Updated``) —
+    - missing or empty required field (``Lifecycle``, ``Role``, ``Updated``) —
       error, rule ``missing-field``.
-    - ``Status`` / ``Role`` not in the configured vocabulary — error,
+    - ``Lifecycle`` / ``Role`` not in the configured vocabulary — error,
       rule ``bad-vocab``.
     - ``Updated:`` not parseable in the configured date format — error,
       rule ``bad-date``.
     - structural breakage — a missing H1 — error, rule ``malformed``.
-    - status / location mismatch (``Status: archived`` outside the archive
-      subtree, or any other status inside it) — error, rule ``status-drift``.
+    - lifecycle / location mismatch (``Lifecycle: archived`` outside the
+      archive subtree, or any other lifecycle inside it) — error, rule
+      ``status-drift``.
     - a ``Related:`` target that does not resolve to a file under ``root`` —
       error, rule ``broken-ref``.
-    - with ``stale`` set, a ``Status: active`` doc whose ``Updated:`` is more
-      than ``stale`` days before ``today`` — warning, rule ``stale``.
+    - with ``stale`` set, a ``Lifecycle: active`` doc whose ``Updated:`` is
+      more than ``stale`` days before ``today`` — warning, rule ``stale``.
+    - M7 (Phase 6): a missing ``Role:`` whose value is resolvable at
+      medium confidence from an H1-content or section-header signal —
+      warning, rule ``medium-confidence-inference``.
 
     Built on `parse_metadata_block` (lenient — it enforces neither required
-    fields, vocabulary, nor the date format) plus `validate_status`,
+    fields, vocabulary, nor the date format) plus `validate_lifecycle`,
     `validate_role`, and `parse_date`, each guarded so a rejection becomes a
     `Finding` rather than an exception.
 
@@ -1037,20 +1096,25 @@ def check_doc(
         return len(value) == 0
 
     # --- missing or empty required fields ---
-    for field in ("Status", "Role", "Updated"):
-        if _is_empty(metadata.get(field)):
+    for required in ("Lifecycle", "Role", "Updated"):
+        if _is_empty(metadata.get(required)):
             findings.append(
-                Finding(path, "error", "missing-field", f"missing or empty required field: {field}")
+                Finding(
+                    path,
+                    "error",
+                    "missing-field",
+                    f"missing or empty required field: {required}",
+                )
             )
 
-    status = metadata.get("Status")
+    lifecycle = metadata.get("Lifecycle")
     role = metadata.get("Role")
     updated_raw = metadata.get("Updated")
 
     # --- vocabulary ---
-    if isinstance(status, str) and status.strip():
+    if isinstance(lifecycle, str) and lifecycle.strip():
         try:
-            validate_status(status.strip(), config.statuses)
+            validate_lifecycle(lifecycle.strip(), config.lifecycles)
         except VocabularyError as exc:
             findings.append(Finding(path, "error", "bad-vocab", str(exc)))
     if isinstance(role, str) and role.strip():
@@ -1067,30 +1131,30 @@ def check_doc(
         except MetadataError as exc:
             findings.append(Finding(path, "error", "bad-date", str(exc)))
 
-    # --- status / location drift ---
-    if isinstance(status, str) and status.strip():
+    # --- lifecycle / location drift ---
+    if isinstance(lifecycle, str) and lifecycle.strip():
         try:
             rel = path.resolve().relative_to(root.resolve()).as_posix()
         except ValueError:
             rel = path.name
         in_archive = rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
-        status_value = status.strip()
-        if status_value == "archived" and not in_archive:
+        lifecycle_value = lifecycle.strip()
+        if lifecycle_value == "archived" and not in_archive:
             findings.append(
                 Finding(
                     path,
                     "error",
                     "status-drift",
-                    "Status: archived but the file is outside the archive subtree",
+                    "Lifecycle: archived but the file is outside the archive subtree",
                 )
             )
-        elif status_value != "archived" and in_archive:
+        elif lifecycle_value != "archived" and in_archive:
             findings.append(
                 Finding(
                     path,
                     "error",
                     "status-drift",
-                    f"Status: {status_value!r} but the file is inside the archive subtree",
+                    f"Lifecycle: {lifecycle_value!r} but the file is inside the archive subtree",
                 )
             )
 
@@ -1113,11 +1177,11 @@ def check_doc(
                     )
                 )
 
-    # --- stale (warning; only with --stale, only Status: active) ---
+    # --- stale (warning; only with --stale, only Lifecycle: active) ---
     if (
         stale is not None
-        and isinstance(status, str)
-        and status.strip() == "active"
+        and isinstance(lifecycle, str)
+        and lifecycle.strip() == "active"
         and updated is not None
         and (today - updated).days > stale
     ):
@@ -1126,7 +1190,7 @@ def check_doc(
                 path,
                 "warning",
                 "stale",
-                f"Status: active but not updated in {(today - updated).days} days "
+                f"Lifecycle: active but not updated in {(today - updated).days} days "
                 f"(stale threshold {stale})",
             )
         )
@@ -1165,7 +1229,7 @@ def query_docs(
     root: Path,
     config: Config,
     *,
-    status: str | None,
+    lifecycle: str | None,
     role: str | None,
     project: str | None,
     stale: int | None,
@@ -1175,11 +1239,11 @@ def query_docs(
 
     Parses each doc from `_iter_doc_texts` leniently — a doc that cannot be
     parsed into a `Doc` at all is omitted (it surfaces under `docs check`, so
-    `list` can still exit 0). Filters are AND-combined: ``status`` and ``role``
-    match exactly; ``project`` matches the resolved project; ``stale`` keeps
-    only docs whose ``Updated:`` is more than that many days before ``today``.
-    Sorted to match the human table — by Status, then Role, then ``Updated``
-    descending.
+    `list` can still exit 0). Filters are AND-combined: ``lifecycle`` and
+    ``role`` match exactly; ``project`` matches the resolved project; ``stale``
+    keeps only docs whose ``Updated:`` is more than that many days before
+    ``today``. Sorted to match the human table — by Lifecycle, then Role, then
+    ``Updated`` descending.
     """
     docs: list[Doc] = []
     for path, text in _iter_doc_texts(root, config):
@@ -1195,8 +1259,8 @@ def query_docs(
             doc = replace(doc, archived=True)
         docs.append(doc)
 
-    if status is not None:
-        docs = [d for d in docs if d.status == status]
+    if lifecycle is not None:
+        docs = [d for d in docs if d.lifecycle == lifecycle]
     if role is not None:
         docs = [d for d in docs if d.role == role]
     if project is not None:
@@ -1204,7 +1268,7 @@ def query_docs(
     if stale is not None:
         docs = [d for d in docs if (today - d.updated).days > stale]
 
-    docs.sort(key=lambda d: (d.status, d.role, -d.updated.toordinal()))
+    docs.sort(key=lambda d: (d.lifecycle, d.role, -d.updated.toordinal()))
     return docs
 
 
@@ -1225,12 +1289,14 @@ def finding_to_json(finding: Finding, root: Path) -> dict[str, object]:
 def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
     """Convert ``doc`` to its `docs list --json` record.
 
-    Produces the schema cli.md pins, stable from M3 on:
-    ``{path, title, status, role, project, updated, related, extra_fields}``
-    — ``path`` the root-relative POSIX path, ``project`` the resolved project,
-    ``updated`` an ISO ``YYYY-MM-DD`` string, ``related`` an array of
-    ``{verb, target}`` objects, and ``extra_fields`` an object mapping each
-    extra label to its string or list-of-strings value.
+    Produces the schema cli.md pins (M7 renames the lifecycle field):
+    ``{path, title, lifecycle, role, project, updated, related,
+    extra_fields}`` — ``path`` the root-relative POSIX path, ``project``
+    the resolved project, ``updated`` an ISO ``YYYY-MM-DD`` string,
+    ``related`` an array of ``{verb, target}`` objects, and
+    ``extra_fields`` an object mapping each extra label (e.g. a
+    free-form ``Status:`` prose line) to its string or list-of-strings
+    value.
     """
     extra_fields: dict[str, object] = {
         label: list(value) if isinstance(value, tuple) else value
@@ -1239,7 +1305,7 @@ def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
     return {
         "path": _root_relative(doc.path, root),
         "title": doc.title,
-        "status": doc.status,
+        "lifecycle": doc.lifecycle,
         "role": doc.role,
         "project": _resolved_project(doc, config),
         "updated": doc.updated.isoformat(),
@@ -1253,7 +1319,7 @@ def doc_to_json(doc: Doc, config: Config, root: Path) -> dict[str, object]:
 # ---------------------------------------------------------------------------
 #
 # `docs migrate` adopts a non-conforming foreign directory into the convention.
-# It walks the tree, infers the metadata each file needs (`Status`, `Role`,
+# It walks the tree, infers the metadata each file needs (`Lifecycle`, `Role`,
 # `Project`, `Updated`) from filename patterns, in-file signals, and mtime,
 # and produces a `MigrationPlan` — one `FileMigration` decision per file, with
 # every ambiguity surfaced. The inference helpers below are pure; `plan_migration`
@@ -1351,14 +1417,19 @@ def infer_project(filenames: Sequence[str], dir_name: str) -> str:
 def infer_status(
     metadata: Mapping[str, str | tuple[str, ...]], in_archive: bool
 ) -> tuple[str, bool]:
-    """Infer a doc's `Status:` from in-file metadata or its archive membership.
+    """Infer a doc's `Lifecycle:` from in-file metadata or its archive membership.
 
-    An in-file ``Status:`` line wins when it carries a built-in status (see
-    `BUILTIN_STATUSES`) — confident. Otherwise the status defaults to
+    Despite the legacy name (kept to avoid a function rename ripple — Phase 10
+    simplify candidate), this helper produces the controlled-vocab
+    ``Lifecycle:`` value M7's F0 rename introduced. An in-file ``Lifecycle:``
+    line wins when it carries a built-in lifecycle value (see
+    `BUILTIN_STATUSES`) — confident. Otherwise the value defaults to
     ``archived`` when ``in_archive`` is True, ``active`` when it is False — a
     confident default for the archive case, a best-effort default for the
-    active case. An in-file ``Status:`` value outside the vocabulary is
-    rejected and the default is used instead.
+    active case. An in-file ``Lifecycle:`` value outside the vocabulary is
+    rejected and the default is used instead. A free-form ``Status:`` prose
+    line carries no controlled-vocab signal and is ignored here (it is
+    preserved as an extra field by `insert_metadata_block`).
 
     Args:
         metadata: Metadata-shaped lines already present in the file.
@@ -1366,10 +1437,10 @@ def infer_status(
             subdirectory.
 
     Returns:
-        ``(status, confident)`` — ``status`` is always a member of
+        ``(lifecycle, confident)`` — ``lifecycle`` is always a member of
         `BUILTIN_STATUSES`.
     """
-    in_file = metadata.get("Status")
+    in_file = metadata.get("Lifecycle")
     if isinstance(in_file, str) and in_file.strip() in BUILTIN_STATUSES:
         return in_file.strip(), True
     return ("archived", True) if in_archive else ("active", False)
@@ -1415,7 +1486,7 @@ def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
     - a bare ``archive/file.md`` (no dated subdir) -> ``archive/<date>/file.md``
 
     A file that is *already* at ``archive/<valid-YYYY-MM-DD>/<basename>``
-    returns ``None`` — it is conformant and only needs ``Status: archived``
+    returns ``None`` — it is conformant and only needs ``Lifecycle: archived``
     metadata, not a move. A file in the active tree (no archive-style
     ancestor) also returns ``None``.
 
@@ -1447,8 +1518,10 @@ def detect_archive_layout(rel_path: str, archive_date: str) -> str | None:
 
 # The four metadata fields the convention requires. `migrate` always writes
 # these from inferred values; any *other* metadata-shaped line a foreign doc
-# carries is "extra" and is preserved (see `_extra_metadata_fields`).
-_REQUIRED_METADATA_FIELDS: frozenset[str] = frozenset({"Status", "Role", "Project", "Updated"})
+# carries is "extra" and is preserved (see `_extra_metadata_fields`). M7 (F0)
+# replaces `Status` with `Lifecycle`; a free-form `Status:` prose line now
+# falls through to the extra-field preservation path.
+_REQUIRED_METADATA_FIELDS: frozenset[str] = frozenset({"Lifecycle", "Role", "Project", "Updated"})
 
 # Heading of the body section `insert_metadata_block` parks preserved foreign
 # metadata under. Exact string — pinned by the milestone Decisions.
@@ -1460,10 +1533,11 @@ def _extra_metadata_fields(
 ) -> list[tuple[str, str | tuple[str, ...]]]:
     """Return a foreign doc's non-required metadata fields, in file order.
 
-    The four required convention fields (``Status`` / ``Role`` / ``Project`` /
-    ``Updated``) are dropped — `migrate` supersedes them with inferred values.
-    Every *other* metadata-shaped line (``Owner:``, ``Tags:``, a ``Related:``
-    bullet block, any ``Label: value`` line) is "extra" and is returned so
+    The four required convention fields (``Lifecycle`` / ``Role`` /
+    ``Project`` / ``Updated``) are dropped — `migrate` supersedes them with
+    inferred values. Every *other* metadata-shaped line (``Owner:``,
+    ``Tags:``, a ``Related:`` bullet block, a free-form ``Status:`` prose
+    line, any ``Label: value`` line) is "extra" and is returned so
     `insert_metadata_block` can preserve it.
 
     Args:
@@ -1525,13 +1599,14 @@ def insert_metadata_block(
     - When ``text`` has an H1, the block is inserted between it and the body.
     - When ``text`` has no H1, ``# <title>`` is synthesised as the first line.
     - When ``text`` already carries metadata-shaped lines under the H1, the
-      four required fields (``Status`` / ``Role`` / ``Project`` / ``Updated``)
-      are superseded by the inserted values. Any *other* metadata-shaped line
-      (``Owner:``, ``Tags:``, a ``Related:`` block, …) is preserved into a
-      ``## Migrated metadata`` body section, placed immediately below the
-      canonical block and above the rest of the body; each preserved label is
-      renamed with a ``Migrated-`` prefix. A foreign doc with no extra fields
-      gets no such section.
+      four required fields (``Lifecycle`` / ``Role`` / ``Project`` /
+      ``Updated``) are superseded by the inserted values. Any *other*
+      metadata-shaped line (``Owner:``, ``Tags:``, a ``Related:`` block, a
+      free-form ``Status:`` prose line, …) is preserved into a ``## Migrated
+      metadata`` body section, placed immediately below the canonical block
+      and above the rest of the body; each preserved label is renamed with a
+      ``Migrated-`` prefix. A foreign doc with no extra fields gets no such
+      section.
     - The file's trailing-newline state is preserved.
 
     The result round-trips cleanly through `parse()` and is accepted by
@@ -1541,7 +1616,9 @@ def insert_metadata_block(
     Args:
         text: The foreign file's full current text.
         title: The H1 title to synthesise when the file has none.
-        status: The ``Status:`` value to write (a built-in status).
+        status: The ``Lifecycle:`` value to write (a built-in lifecycle).
+            The parameter is named ``status`` for back-compat; the on-disk
+            key is ``Lifecycle:``. Phase 10 simplify candidate.
         role: The ``Role:`` value to write (a built-in role).
         project: The ``Project:`` value to write.
         updated: The ``Updated:`` date to write.
@@ -1563,7 +1640,7 @@ def insert_metadata_block(
     block = (
         f"# {h1_title}\n"
         "\n"
-        f"Status: {status}\n"
+        f"Lifecycle: {status}\n"
         f"Role: {role}\n"
         f"Project: {project}\n"
         f"Updated: {updated.strftime(date_format)}\n"
@@ -1588,7 +1665,7 @@ def _in_archive_subdir(rel_path: str) -> bool:
 
     Recognises ``archive`` / ``archived`` / ``project-history`` — the same set
     `detect_archive_layout` normalises. Used by `plan_migration` to decide the
-    default `Status:` for a file with no in-file status line.
+    default `Lifecycle:` for a file with no in-file lifecycle line.
     """
     return rel_path.split("/")[0] in _ARCHIVE_SUBDIR_NAMES
 
@@ -1640,12 +1717,14 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
 
         # Ambiguity-flagging rule (resolved Q1): flag for exactly three
         # sources — a `notes` role fallback, a synthesised H1, and an
-        # out-of-vocab in-file `Status:` that had to be substituted. The
+        # out-of-vocab in-file `Lifecycle:` that had to be substituted. The
         # plain active-tree status default and the mtime-derived `Updated:`
         # fallback are expected best-effort defaults and are NOT flagged.
         # Preserving extra metadata fields is deterministic and lossless, so
         # it is NOT an ambiguity; an archive-move collision IS — that
-        # cross-file check is the second pass below.
+        # cross-file check is the second pass below. M7 (F0): a free-form
+        # `Status:` prose line is no longer vocab-checked; it is preserved
+        # via the extra-field pathway.
         ambiguities: list[str] = []
         if not role_conf:
             ambiguities.append(
@@ -1654,10 +1733,10 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
             )
         if synthesized_h1:
             ambiguities.append("No H1 in the file — a title was synthesised from the filename.")
-        in_file_status = metadata.get("Status")
-        if isinstance(in_file_status, str) and in_file_status.strip() not in BUILTIN_STATUSES:
+        in_file_lifecycle = metadata.get("Lifecycle")
+        if isinstance(in_file_lifecycle, str) and in_file_lifecycle.strip() not in BUILTIN_STATUSES:
             ambiguities.append(
-                f"In-file Status: {in_file_status.strip()!r} is out of vocabulary "
+                f"In-file Lifecycle: {in_file_lifecycle.strip()!r} is out of vocabulary "
                 f"— substituted with built-in {status!r}."
             )
 
@@ -1668,7 +1747,7 @@ def plan_migration(root: Path, archive_date: str | None = None) -> MigrationPlan
                 rel=rel,
                 role=role,
                 project=project,
-                status=status,
+                lifecycle=status,
                 updated=updated,
                 synthesized_h1=synthesized_h1,
                 reconciled_metadata=reconciled_metadata,
@@ -1734,7 +1813,7 @@ def apply_migration(plan: MigrationPlan) -> None:
         new_text = insert_metadata_block(
             text,
             title=_slug_to_title(fm.path.stem),
-            status=fm.status,
+            status=fm.lifecycle,
             role=fm.role,
             project=fm.project,
             updated=fm.updated,
@@ -1753,12 +1832,12 @@ def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
     """Convert a `MigrationPlan` to its `docs migrate --json` records.
 
     Produces one flat record per `FileMigration`, in plan order — the schema
-    cli.md pins, stable from M4 on:
-    ``{path, role, project, status, updated, confidence, ambiguities,
+    cli.md pins (M7 renames the lifecycle field and widens confidence):
+    ``{path, role, project, lifecycle, updated, confidence, ambiguities,
     archive_move, synthesized_h1, reconciled_metadata}`` — ``path`` the
     root-relative POSIX path, ``updated`` an ISO ``YYYY-MM-DD`` string,
-    ``ambiguities`` an array of strings, ``archive_move`` the destination
-    path string or ``null``.
+    ``confidence`` one of ``high|medium|low``, ``ambiguities`` an array of
+    strings, ``archive_move`` the destination path string or ``null``.
 
     Args:
         plan: The plan produced by `plan_migration`.
@@ -1771,7 +1850,7 @@ def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
             "path": fm.rel,
             "role": fm.role,
             "project": fm.project,
-            "status": fm.status,
+            "lifecycle": fm.lifecycle,
             "updated": fm.updated.isoformat(),
             "confidence": fm.confidence,
             "ambiguities": list(fm.ambiguities),
@@ -1855,7 +1934,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Scaffold a new doc with a correct metadata block.",
         description=(
             "Create <slug>.md in the resolved docs root with a metadata block "
-            "(Status: draft, Role, Project, Updated: today). Does not refresh "
+            "(Lifecycle: draft, Role, Project, Updated: today). Does not refresh "
             "INDEX.md. A slug may name a subdirectory (sub/foo); it may not "
             "escape the root or land under the archive subtree."
         ),
@@ -1868,9 +1947,9 @@ def _build_parser() -> argparse.ArgumentParser:
     archive_p = subparsers.add_parser(
         "archive",
         parents=[common],
-        help="Archive a doc: edit Status, move to archive/<date>/, reindex.",
+        help="Archive a doc: edit Lifecycle, move to archive/<date>/, reindex.",
         description=(
-            "Set Status: archived and bump Updated:, move the file to "
+            "Set Lifecycle: archived and bump Updated:, move the file to "
             "<archive_dir>/<YYYY-MM-DD>/, then regenerate INDEX.md. The "
             "metadata edit is atomic; the move runs only after it succeeds."
         ),
@@ -1931,7 +2010,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--stale",
         type=int,
         metavar="N",
-        help="Also warn on Status: active docs not updated in more than N days.",
+        help="Also warn on Lifecycle: active docs not updated in more than N days.",
     )
     check_p.add_argument(
         "--json",
@@ -1943,16 +2022,16 @@ def _build_parser() -> argparse.ArgumentParser:
         "list",
         help="Query the docs tree with filters; human table or JSON output.",
         description=(
-            "List docs in the tree, optionally filtered by status, role, "
+            "List docs in the tree, optionally filtered by lifecycle, role, "
             "project, or staleness. Default output is a table grouped by "
-            "Status then Role; --json emits an array of records."
+            "Lifecycle then Role; --json emits an array of records."
         ),
     )
     list_p.add_argument(
         "--root",
         help="Explicit docs root; overrides the upward .docs.toml search.",
     )
-    list_p.add_argument("--status", help="Keep only docs with this Status.")
+    list_p.add_argument("--lifecycle", help="Keep only docs with this Lifecycle.")
     list_p.add_argument("--role", help="Keep only docs with this Role.")
     list_p.add_argument("--project", help="Keep only docs with this Project.")
     list_p.add_argument(
@@ -2001,6 +2080,14 @@ def _build_parser() -> argparse.ArgumentParser:
     migrate_p.add_argument(
         "--date",
         help="Archive date YYYY-MM-DD for normalised moves (default: today).",
+    )
+    migrate_p.add_argument(
+        "--config-project",
+        metavar="NAME",
+        help=(
+            "Override the inferred project name for this run (F5). Bypasses "
+            "project-name normalisation and multi-project hint emission."
+        ),
     )
 
     install_skill_p = subparsers.add_parser(
@@ -2173,7 +2260,7 @@ _CASCADE_VERBS = ("pairs-with", "child-of")
 def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: str | None) -> Path:
     """Archive a single doc: edit metadata, then move it into the dated dir.
 
-    Sets `Status: archived`, bumps `Updated:` to `date_str`, and appends an
+    Sets `Lifecycle: archived`, bumps `Updated:` to `date_str`, and appends an
     `Archived-reason:` line when `reason` is given. The edited text is written
     back atomically *before* the move, so a failure leaves the original doc
     untouched. Returns the doc's new path.
@@ -2182,7 +2269,7 @@ def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: 
         MetadataError: the doc has no editable metadata block.
         FileExistsError: the archive destination is already occupied.
     """
-    new_text = set_metadata_field(path.read_text(), "Status", "archived")
+    new_text = set_metadata_field(path.read_text(), "Lifecycle", "archived")
     new_text = set_metadata_field(new_text, "Updated", date_str)
     if reason:
         new_text = set_metadata_field(new_text, "Archived-reason", reason)
@@ -2432,7 +2519,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
     docs = query_docs(
         root,
         config,
-        status=args.status,
+        lifecycle=args.lifecycle,
         role=args.role,
         project=args.project,
         stale=args.stale,
@@ -2446,9 +2533,9 @@ def _cmd_list(args: argparse.Namespace) -> int:
     else:
         current: tuple[str, str] | None = None
         for doc in docs:
-            group = (doc.status, doc.role)
+            group = (doc.lifecycle, doc.role)
             if group != current:
-                print(f"\n{doc.status} — {doc.role}")
+                print(f"\n{doc.lifecycle} — {doc.role}")
                 current = group
             rel = _root_relative(doc.path, root)
             updated = doc.updated.strftime(config.date_format)
@@ -2483,7 +2570,7 @@ def _print_migration_plan(plan: MigrationPlan) -> None:
     """
     for fm in plan.files:
         print(fm.rel)
-        print(f"  role: {fm.role}    project: {fm.project}    status: {fm.status}")
+        print(f"  role: {fm.role}    project: {fm.project}    lifecycle: {fm.lifecycle}")
         print(f"  updated: {fm.updated.isoformat()}    confidence: {fm.confidence}")
         if fm.archive_move is not None:
             print(f"  archive move: -> {fm.archive_move}")

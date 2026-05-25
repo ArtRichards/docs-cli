@@ -29,7 +29,7 @@ def _config() -> Config:
         project="test",
         archive_dir="archive",
         date_format="%Y-%m-%d",
-        statuses=BUILTIN_STATUSES,
+        lifecycles=BUILTIN_STATUSES,
         roles=BUILTIN_ROLES,
     )
 
@@ -43,10 +43,13 @@ def _doc(
     archived: bool = False,
     project: str | None = "test",
 ) -> Doc:
+    # The `status` parameter name is preserved at the helper signature for
+    # back-compat with existing test call sites; the Doc attribute is
+    # `lifecycle` post-M7 (F0).
     return Doc(
         path=Path(f"/fake/{name}"),
         title=name.replace(".md", "").replace("-", " ").title(),
-        status=status,
+        lifecycle=status,
         role=role,
         project=project,
         updated=updated,

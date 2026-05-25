@@ -36,13 +36,13 @@ def test_parse_accepts_lifecycle_key(fixtures_dir):
 
     Today the parser requires `Status:`; it raises `MetadataError: missing
     Status` on this fixture. Phase 5 flips the parser to require `Lifecycle:`
-    instead, after which the parse succeeds and `doc.status == "active"`
-    (the field name on `Doc` may also rename — see plan).
+    instead, after which the parse succeeds and `doc.lifecycle == "active"`
+    (the dataclass attribute is renamed in lockstep — OQ1).
     """
     fixture = fixtures_dir / "lifecycle" / "lifecycle-key.md"
     text = fixture.read_text()
     doc = parse(text, fixture, fixture.parent)
-    assert doc.status == "active"
+    assert doc.lifecycle == "active"
 
 
 def test_parse_rejects_status_as_controlled_vocab_key(fixtures_dir):
@@ -195,7 +195,7 @@ def test_file_migration_accepts_medium_confidence(tmp_path):
         rel="ambiguous.md",
         role="plan",
         project="demo",
-        status="active",
+        lifecycle="active",
         updated=date(2026, 5, 25),
         synthesized_h1=False,
         reconciled_metadata=False,

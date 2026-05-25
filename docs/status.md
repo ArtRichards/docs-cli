@@ -1,6 +1,6 @@
 # docs — Status
 
-Status: active
+Lifecycle: active
 Role: status
 Project: docs
 Updated: 2026-05-25
@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-4 complete; Phase 5 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-5 complete on 2026-05-25; Phase 6 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -254,7 +254,7 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M7 — execute Phase 5 (Update Base Interfaces — F0 `Status:` → `Lifecycle:` rename + Confidence.MEDIUM + `--config-project` argparse flag).**
+**Next action: M7 — execute Phase 6 (Implement Offline/Core Path — broadened inference F1/F10/F12 + project normalisation F11 + per-file mtime archive F4 + multi-project hints F5).**
 
 **Publish is M9** (operator decision 2026-05-24, scope-reframed
 2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
@@ -281,14 +281,36 @@ constructor + `docs check` exit-1 medium anchor) for a post-fix
 count of **39 RED + 281 passed (320 collected)**; M6's 271 still
 GREEN. Quality gate clean tree-wide.
 
-**M7 Phase 5 next:** the F0 controlled-vocab rename
-(`Status:` → `Lifecycle:`, breaking, no backward-compat),
-`Confidence.MEDIUM` enum extension, `Config.role_suffixes` +
-`Config.project_name` fields, `add_statuses` → `add_lifecycles`
-rename, `docs migrate --config-project <name>` argparse, and the
-`docs list --status` → `--lifecycle` argparse rename. F0 tests
-in `test_lifecycle_rename.py` flip RED → GREEN; rest stay RED
-for Phase 6.
+**M7 Phase 5 complete (2026-05-25):** the F0 controlled-vocab
+rename landed across parser, dataclasses, writers, validators,
+JSON serialisers, the `.docs.toml` reader, and argparse.
+`Doc.lifecycle`, `FileMigration.lifecycle`, `Config.lifecycles`,
+`validate_lifecycle`, `add_lifecycles` (TOML), `Lifecycle:` in
+the on-disk block. `FileMigration.confidence` extended to
+`high|medium|low`. `MigrationPlan` grows the
+`project_original` + `multi_project_hints` fields with safe
+defaults (populated at Phase 6). `Config` grows
+`role_suffixes` + `project_name`. argparse:
+`docs list --lifecycle` and `docs migrate --config-project NAME`.
+29 docs/*.md files swept, 31 conformant fixture files swept,
+existing-test fabrications updated. Skill refs resynced.
+pytest: **290 passed, 30 failed (320 collected)** — every
+failure on the Phase-6 surface (inference broadening,
+project normalisation, per-file mtime archive, multi-project
+hints, medium-confidence check wiring, snake-medium fixture
+high+medium ratio). Quality gate clean.
+
+**M7 Phase 6 next:** implement broadened role inference
+(F1 word-boundary + H1 + section-header + sibling-set
+defaulting), the 7 new core vocab roles + `_v\d+` / `_Draft`
+strip (F10), the `_M\d+` milestone-suffix pattern (F12),
+project-name normalisation to lowercase-kebab (F11) with
+`.docs.toml [migrate] project_name` + `--config-project`
+override precedence, per-file mtime drives archive-move date
+(F4), and multi-project hint emission in the plan footer (F5).
+Wire `check_doc` to emit medium-confidence
+inference findings as warnings (exit 1), not errors.
+All 30 remaining M7 RED tests flip GREEN; total stays 320.
 
 **M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
 ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed

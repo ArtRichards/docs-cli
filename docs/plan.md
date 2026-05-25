@@ -1,6 +1,6 @@
 # docs — Implementation Plan
 
-Status: active
+Lifecycle: active
 Role: plan
 Project: docs
 Updated: 2026-05-24

@@ -1,6 +1,6 @@
 # 2026-01-01 archive — snapshot
 
-Status: archived
+Lifecycle: archived
 Role: log
 Project: with-archive
 Updated: 2026-01-01

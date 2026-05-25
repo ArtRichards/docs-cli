@@ -1,6 +1,6 @@
 # Cross-refs overview
 
-Status: active
+Lifecycle: active
 Role: notes
 Project: cross-refs
 Updated: 2026-05-20

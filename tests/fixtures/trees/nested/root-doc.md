@@ -1,6 +1,6 @@
 # Root doc
 
-Status: active
+Lifecycle: active
 Role: notes
 Project: nested
 Updated: 2026-05-20

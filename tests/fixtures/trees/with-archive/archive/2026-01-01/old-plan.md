@@ -1,6 +1,6 @@
 # Old plan — archived
 
-Status: archived
+Lifecycle: archived
 Role: plan
 Project: with-archive
 Updated: 2025-12-31

@@ -1,6 +1,6 @@
 # M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 
-Status: active
+Lifecycle: active
 Role: milestone
 Project: docs
 Updated: 2026-05-21

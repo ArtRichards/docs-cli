@@ -150,7 +150,8 @@ def test_infer_project_single_file():
 
 
 def test_infer_status_in_file_status_wins():
-    status, confident = infer_status({"Status": "blocked"}, in_archive=False)
+    # M7 (F0): the controlled-vocab key in `metadata` is now `Lifecycle:`.
+    status, confident = infer_status({"Lifecycle": "blocked"}, in_archive=False)
     assert status == "blocked"
     assert confident is True
 
@@ -166,14 +167,18 @@ def test_infer_status_default_active_in_active_tree():
 
 
 def test_infer_status_out_of_vocab_in_file_value_rejected():
-    # "wip" is not a built-in status — it must not leak through.
-    status, confident = infer_status({"Status": "wip"}, in_archive=False)
+    # "wip" is not a built-in lifecycle — it must not leak through.
+    status, confident = infer_status({"Lifecycle": "wip"}, in_archive=False)
     assert status in BUILTIN_STATUSES
     assert status != "wip"
 
 
 def test_infer_status_always_returns_a_builtin_status():
-    for meta, in_arch in (({}, False), ({}, True), ({"Status": "nonsense"}, False)):
+    for meta, in_arch in (
+        ({}, False),
+        ({}, True),
+        ({"Lifecycle": "nonsense"}, False),
+    ):
         status, _ = infer_status(meta, in_archive=in_arch)
         assert status in BUILTIN_STATUSES
 
@@ -244,7 +249,7 @@ def test_insert_metadata_block_h1_present_inserts_between_h1_and_body():
     )
     title, metadata, body = parse_metadata_block(result)
     assert title == "Auth Spec"
-    assert metadata["Status"] == "active"
+    assert metadata["Lifecycle"] == "active"
     assert metadata["Role"] == "spec"
     assert metadata["Project"] == "proj"
     assert metadata["Updated"] == "2026-05-22"
@@ -269,8 +274,10 @@ def test_insert_metadata_block_no_h1_synthesises_one():
 
 
 def test_insert_metadata_block_reconciles_existing_metadata_lines():
-    # The file already carries Status:/Updated:-shaped lines; the block must
-    # not end up with duplicate Status: lines.
+    # The file already carries a foreign Status:/Updated: pair; M7 (F0)
+    # treats the controlled-vocab key as `Lifecycle:` and preserves the
+    # free-form `Status:` line into the `## Migrated metadata` section.
+    # The canonical block must not duplicate `Lifecycle:` or `Updated:`.
     text = "# Has Metadata\n\nStatus: wip\nUpdated: 2020-01-01\n\nBody text.\n"
     result = insert_metadata_block(
         text,
@@ -280,10 +287,12 @@ def test_insert_metadata_block_reconciles_existing_metadata_lines():
         project="proj",
         updated=date(2026, 5, 22),
     )
-    assert result.count("Status:") == 1
+    assert result.count("Lifecycle:") == 1
     assert result.count("Updated:") == 1
+    # The free-form Status: prose lands under `## Migrated metadata`.
+    assert "Migrated-Status: wip" in result
     _title, metadata, _body = parse_metadata_block(result)
-    assert metadata["Status"] == "active"
+    assert metadata["Lifecycle"] == "active"
     assert metadata["Updated"] == "2026-05-22"
 
 
@@ -312,7 +321,7 @@ def test_insert_metadata_block_result_round_trips_through_parse():
         updated=date(2026, 5, 22),
     )
     doc = parse(result, Path("/r/round-trip.md"), Path("/r"))
-    assert doc.status == "active"
+    assert doc.lifecycle == "active"
     assert doc.role == "spec"
     assert doc.project == "proj"
     assert doc.updated == date(2026, 5, 22)
@@ -349,14 +358,17 @@ _INSERT_KW = dict(
 
 def test_insert_metadata_block_preserves_extra_fields_in_a_migrated_section():
     # Owner: / Tags: are non-required metadata — they must be preserved into a
-    # `## Migrated metadata` body section, not silently dropped.
+    # `## Migrated metadata` body section, not silently dropped. M7 (F0) also
+    # treats a free-form `Status:` as a non-required preserved field (the
+    # controlled-vocab key is now `Lifecycle:`).
     text = "# Doc\n\nStatus: wip\nOwner: alice\nTags: infra, urgent\nUpdated: 2020-01-01\n\nBody.\n"
     result = insert_metadata_block(text, **_INSERT_KW)
     assert "## Migrated metadata" in result
     assert "Migrated-Owner: alice" in result
     assert "Migrated-Tags: infra, urgent" in result
-    # The required fields are NOT echoed under the Migrated- prefix.
-    assert "Migrated-Status" not in result
+    # M7 (F0): free-form `Status:` is preserved verbatim.
+    assert "Migrated-Status: wip" in result
+    # `Updated:` IS a required convention field, so it is NOT preserved.
     assert "Migrated-Updated" not in result
 
 
@@ -385,8 +397,10 @@ def test_insert_metadata_block_preserves_a_related_block():
 
 
 def test_insert_metadata_block_no_extra_fields_emits_no_section():
-    # A foreign doc whose only metadata is required fields gets NO section.
-    text = "# Doc\n\nStatus: wip\nUpdated: 2020-01-01\n\nBody.\n"
+    # A foreign doc whose only metadata is required convention fields gets
+    # NO `## Migrated metadata` section. After M7 (F0), `Lifecycle:` is the
+    # required key — `Updated:` alone has no non-required extras to park.
+    text = "# Doc\n\nLifecycle: active\nUpdated: 2020-01-01\n\nBody.\n"
     result = insert_metadata_block(text, **_INSERT_KW)
     assert "## Migrated metadata" not in result
 
@@ -397,13 +411,13 @@ def test_insert_metadata_block_with_extras_round_trips_through_parse():
     text = "# Doc\n\nStatus: wip\nOwner: alice\nTags: x\nUpdated: 2020-01-01\n\nBody.\n"
     result = insert_metadata_block(text, **_INSERT_KW)
     doc = parse(result, Path("/r/doc.md"), Path("/r"))
-    assert doc.status == "active"
+    assert doc.lifecycle == "active"
     assert doc.role == "notes"
     assert doc.updated == date(2026, 5, 22)
     # parse_metadata_block must not re-harvest the Migrated- lines into the
     # block — they sit under a `## ` heading in the body.
     _title, metadata, _body = parse_metadata_block(result)
-    assert set(metadata) == {"Status", "Role", "Project", "Updated"}
+    assert set(metadata) == {"Lifecycle", "Role", "Project", "Updated"}
     # The Migrated- lines are not convention fields, so `Doc.extra` is empty.
     assert doc.extra == {}
 
@@ -459,8 +473,10 @@ def _by_name(plan: MigrationPlan, name: str) -> FileMigration:
 def test_plan_migration_pins_low_confidence_fixture_files(fixtures_dir):
     plan = plan_migration(_foreign(fixtures_dir))
 
-    # proj-has-metadata.md carries an out-of-vocab `Status: wip` — inference
-    # must force a built-in substitution and flag it.
+    # proj-has-metadata.md has no role-suffix in its filename — role
+    # inference falls back to `notes` and flags the file low-confidence.
+    # (Post-M7-F0 the free-form `Status: wip` line is preserved, not
+    # vocab-checked, so it does not contribute an ambiguity.)
     has_metadata = _by_name(plan, "proj-has-metadata.md")
     assert has_metadata.confidence == "low"
     assert has_metadata.ambiguities
@@ -492,7 +508,7 @@ def test_plan_migration_pins_inferred_values_for_known_files(fixtures_dir):
     auth_spec = _by_name(plan, "proj-auth-spec.md")
     assert auth_spec.role == "spec"
     assert auth_spec.project == "proj"
-    assert auth_spec.status == "active"
+    assert auth_spec.lifecycle == "active"
 
     deploy_log = _by_name(plan, "proj-deploy-log.md")
     assert deploy_log.role == "log"
@@ -504,7 +520,7 @@ def test_plan_migration_pins_inferred_values_for_known_files(fixtures_dir):
 
     old_decision = _by_name(plan, "proj-old-decision.md")
     assert old_decision.role == "decision"
-    assert old_decision.status == "archived"
+    assert old_decision.lifecycle == "archived"
 
 
 # The foreign fixture files that carry pre-existing metadata-shaped lines.
@@ -548,7 +564,7 @@ def test_plan_migration_archive_subdir_file_has_archive_move(fixtures_dir):
     for fm in archived:
         assert fm.archive_move is not None
         assert fm.archive_move.startswith("archive/")
-        assert fm.status == "archived"
+        assert fm.lifecycle == "archived"
 
 
 def test_plan_migration_active_tree_files_have_no_archive_move(fixtures_dir):

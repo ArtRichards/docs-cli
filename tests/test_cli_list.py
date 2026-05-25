@@ -44,11 +44,13 @@ def test_list_exits_0(docs_script, fixtures_dir):
 
 
 def test_list_filter_by_status(docs_script, fixtures_dir):
-    proc = _run(docs_script, "list", "--root", _multi(fixtures_dir), "--status", "draft", "--json")
+    proc = _run(
+        docs_script, "list", "--root", _multi(fixtures_dir), "--lifecycle", "draft", "--json"
+    )
     assert proc.returncode == 0, proc.stderr
     data = json.loads(proc.stdout)
     assert data
-    assert all(rec["status"] == "draft" for rec in data)
+    assert all(rec["lifecycle"] == "draft" for rec in data)
 
 
 def test_list_filter_by_role(docs_script, fixtures_dir):
@@ -83,7 +85,7 @@ def test_list_json_record_schema(docs_script, fixtures_dir):
         assert set(rec) == {
             "path",
             "title",
-            "status",
+            "lifecycle",
             "role",
             "project",
             "updated",

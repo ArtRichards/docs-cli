@@ -47,7 +47,7 @@ def test_new_scaffolds_metadata_block(docs_script, fixtures_dir, tmp_path):
     proc = _run(docs_script, "new", "spec", "my-feature", "--root", str(root))
     assert proc.returncode == 0, proc.stderr
     text = (root / "my-feature.md").read_text()
-    assert "Status: draft" in text
+    assert "Lifecycle: draft" in text
     assert "Role: spec" in text
     assert f"Updated: {date.today().isoformat()}" in text
 

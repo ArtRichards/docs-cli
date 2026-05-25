@@ -1,6 +1,6 @@
 # M9 — PyPI publish 1.3.0 (log)
 
-Status: draft
+Lifecycle: draft
 Role: log
 Project: docs
 Updated: 2026-05-24

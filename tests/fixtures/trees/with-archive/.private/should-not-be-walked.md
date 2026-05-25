@@ -1,6 +1,6 @@
 # Hidden doc
 
-Status: draft
+Lifecycle: draft
 Role: notes
 Project: with-archive
 Updated: 2026-05-20

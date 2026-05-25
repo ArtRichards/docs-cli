@@ -64,8 +64,8 @@ def test_archive_sets_status_archived(docs_script, fixtures_dir, tmp_path):
     assert proc.returncode == 0, proc.stderr
     moved = root / "archive" / date.today().isoformat() / "lone-doc.md"
     text = moved.read_text()
-    assert "Status: archived" in text
-    assert "Status: active" not in text
+    assert "Lifecycle: archived" in text
+    assert "Lifecycle: active" not in text
 
 
 def test_archive_bumps_updated(docs_script, fixtures_dir, tmp_path):

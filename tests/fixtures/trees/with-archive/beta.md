@@ -1,6 +1,6 @@
 # Beta — charter
 
-Status: active
+Lifecycle: active
 Role: charter
 Project: with-archive
 Updated: 2026-05-19

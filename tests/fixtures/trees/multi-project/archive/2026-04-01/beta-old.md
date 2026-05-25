@@ -1,6 +1,6 @@
 # Beta Old
 
-Status: archived
+Lifecycle: archived
 Role: notes
 Project: beta
 Updated: 2026-04-01

@@ -28,15 +28,19 @@ def _config() -> Config:
         project="probe",
         archive_dir="archive",
         date_format="%Y-%m-%d",
-        statuses=BUILTIN_STATUSES,
+        lifecycles=BUILTIN_STATUSES,
         roles=BUILTIN_ROLES,
     )
 
 
 def _valid(status: str = "active", role: str = "spec", updated: str = "2026-05-20") -> str:
-    """A well-formed doc body with one field optionally varied."""
+    """A well-formed doc body with one field optionally varied.
+
+    The `status` parameter name is kept for back-compat with the existing
+    test helper call sites; the on-disk key is M7's `Lifecycle:`.
+    """
     return (
-        f"# Sample\n\nStatus: {status}\nRole: {role}\n"
+        f"# Sample\n\nLifecycle: {status}\nRole: {role}\n"
         f"Project: probe\nUpdated: {updated}\n\nBody paragraph.\n"
     )
 
@@ -59,18 +63,18 @@ def test_check_doc_missing_status():
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=None, today=_TODAY)
     assert [f.rule for f in findings] == ["missing-field"]
     assert findings[0].severity == "error"
-    assert "Status" in findings[0].message
+    assert "Lifecycle" in findings[0].message
 
 
 def test_check_doc_empty_required_field():
-    text = "# Sample\n\nStatus: active\nRole:\nProject: probe\nUpdated: 2026-05-20\n\nBody.\n"
+    text = "# Sample\n\nLifecycle: active\nRole:\nProject: probe\nUpdated: 2026-05-20\n\nBody.\n"
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=None, today=_TODAY)
     assert [f.rule for f in findings] == ["missing-field"]
     assert "Role" in findings[0].message
 
 
 def test_check_doc_missing_h1_is_malformed():
-    text = "Status: active\nRole: spec\nProject: probe\nUpdated: 2026-05-20\n\nBody.\n"
+    text = "Lifecycle: active\nRole: spec\nProject: probe\nUpdated: 2026-05-20\n\nBody.\n"
     findings = check_doc(Path("/r/d.md"), text, Path("/r"), _config(), stale=None, today=_TODAY)
     assert [f.rule for f in findings] == ["malformed"]
     assert findings[0].severity == "error"
@@ -155,7 +159,7 @@ def test_check_doc_archived_status_inside_archive_is_clean(tmp_path):
 def test_check_doc_broken_related_ref(tmp_path):
     (tmp_path / "exists.md").write_text(_valid())
     text = (
-        "# Sample\n\nStatus: active\nRole: spec\nProject: probe\n"
+        "# Sample\n\nLifecycle: active\nRole: spec\nProject: probe\n"
         "Updated: 2026-05-20\n\nRelated:\n- pairs-with: ghost.md\n\nBody.\n"
     )
     findings = check_doc(
@@ -168,7 +172,7 @@ def test_check_doc_broken_related_ref(tmp_path):
 def test_check_doc_resolvable_related_ref_is_clean(tmp_path):
     (tmp_path / "exists.md").write_text(_valid())
     text = (
-        "# Sample\n\nStatus: active\nRole: spec\nProject: probe\n"
+        "# Sample\n\nLifecycle: active\nRole: spec\nProject: probe\n"
         "Updated: 2026-05-20\n\nRelated:\n- pairs-with: exists.md\n\nBody.\n"
     )
     findings = check_doc(

@@ -1,6 +1,6 @@
 # docs — Convention Spec
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: docs
 Updated: 2026-05-23
@@ -47,7 +47,7 @@ The first form is for single values. The second form is for multi-valued labels 
 The metadata block may be split into groups separated by blank lines, provided each group after the first is a bare `Label:` followed by `- value` bullets (a multi-value group). This permits the common style of grouping inline metadata above and `Related:` (or any other list-valued label) below, with a visual blank line between them:
 
 ```
-Status: active
+Lifecycle: active
 Role: spec
 Updated: 2026-05-20
 

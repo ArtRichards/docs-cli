@@ -1,6 +1,6 @@
 # Alpha Plan
 
-Status: active
+Lifecycle: active
 Role: plan
 Project: alpha
 Updated: 2026-05-18

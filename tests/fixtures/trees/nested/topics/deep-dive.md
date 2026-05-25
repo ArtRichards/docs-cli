@@ -1,6 +1,6 @@
 # Deep dive
 
-Status: active
+Lifecycle: active
 Role: spec
 Project: nested
 Updated: 2026-05-21

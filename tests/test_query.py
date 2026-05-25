@@ -22,7 +22,7 @@ def _multi(fixtures_dir: Path) -> tuple[Path, Config]:
 
 def _q(fixtures_dir: Path, **kw):
     root, config = _multi(fixtures_dir)
-    kw.setdefault("status", None)
+    kw.setdefault("lifecycle", None)
     kw.setdefault("role", None)
     kw.setdefault("project", None)
     kw.setdefault("stale", None)
@@ -37,9 +37,9 @@ def test_query_no_filters_returns_all_docs(fixtures_dir):
 
 
 def test_query_filter_by_status(fixtures_dir):
-    docs = _q(fixtures_dir, status="active")
+    docs = _q(fixtures_dir, lifecycle="active")
     assert docs
-    assert all(d.status == "active" for d in docs)
+    assert all(d.lifecycle == "active" for d in docs)
 
 
 def test_query_filter_by_role(fixtures_dir):
@@ -61,9 +61,9 @@ def test_query_filter_by_project_includes_project_less_docs_under_default(fixtur
 
 
 def test_query_filters_are_and_combined(fixtures_dir):
-    docs = _q(fixtures_dir, project="beta", status="active")
+    docs = _q(fixtures_dir, project="beta", lifecycle="active")
     assert docs
-    assert all(d.project == "beta" and d.status == "active" for d in docs)
+    assert all(d.project == "beta" and d.lifecycle == "active" for d in docs)
 
 
 def test_query_stale_filter(fixtures_dir):
@@ -74,6 +74,6 @@ def test_query_stale_filter(fixtures_dir):
 
 def test_query_sorted_within_group_by_updated_descending(fixtures_dir):
     docs = _q(fixtures_dir)
-    for _key, group in groupby(docs, key=lambda d: (d.status, d.role)):
+    for _key, group in groupby(docs, key=lambda d: (d.lifecycle, d.role)):
         dates = [d.updated for d in group]
         assert dates == sorted(dates, reverse=True)

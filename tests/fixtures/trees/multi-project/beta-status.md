@@ -1,6 +1,6 @@
 # Beta Status
 
-Status: active
+Lifecycle: active
 Role: status
 Project: beta
 Updated: 2026-05-21

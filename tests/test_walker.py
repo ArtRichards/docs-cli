@@ -13,7 +13,7 @@ def _default_config(project: str = "test") -> Config:
         project=project,
         archive_dir="archive",
         date_format="%Y-%m-%d",
-        statuses=BUILTIN_STATUSES,
+        lifecycles=BUILTIN_STATUSES,
         roles=BUILTIN_ROLES,
     )
 

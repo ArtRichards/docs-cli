@@ -1,6 +1,6 @@
 # M8 — Adoption workflow (agent-driveable)
 
-Status: active
+Lifecycle: active
 Role: milestone
 Project: docs
 Updated: 2026-05-24

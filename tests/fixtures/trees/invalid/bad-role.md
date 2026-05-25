@@ -1,6 +1,6 @@
 # Bad Role
 
-Status: active
+Lifecycle: active
 Role: wizard
 Project: invalid
 Updated: 2026-05-10

@@ -1,6 +1,6 @@
 # M1 — Parser and `docs index`
 
-Status: done
+Lifecycle: done
 Role: milestone
 Project: docs
 Updated: 2026-05-20

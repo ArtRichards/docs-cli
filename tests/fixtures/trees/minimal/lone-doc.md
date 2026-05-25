@@ -1,6 +1,6 @@
 # Lone doc
 
-Status: active
+Lifecycle: active
 Role: notes
 Project: minimal
 Updated: 2026-05-20

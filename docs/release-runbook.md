@@ -1,6 +1,6 @@
 # Release Runbook
 
-Status: active
+Lifecycle: active
 Role: runbook
 Project: docs
 Updated: 2026-05-24

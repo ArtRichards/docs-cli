@@ -1,6 +1,6 @@
 # Wrongly Active
 
-Status: active
+Lifecycle: active
 Role: notes
 Project: drift
 Updated: 2026-01-01

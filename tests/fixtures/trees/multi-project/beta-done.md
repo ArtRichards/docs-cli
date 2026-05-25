@@ -1,6 +1,6 @@
 # Beta Done
 
-Status: done
+Lifecycle: done
 Role: spec
 Project: beta
 Updated: 2026-02-01

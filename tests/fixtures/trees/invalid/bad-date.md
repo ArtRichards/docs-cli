@@ -1,6 +1,6 @@
 # Bad Date
 
-Status: active
+Lifecycle: active
 Role: notes
 Project: invalid
 Updated: 2026-13-99

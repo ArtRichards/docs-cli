@@ -1,6 +1,6 @@
 # Decision: Dual-status (location + in-doc)
 
-Status: active
+Lifecycle: active
 Role: decision
 Project: docs
 Updated: 2026-05-20

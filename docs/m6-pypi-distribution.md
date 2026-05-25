@@ -1,6 +1,6 @@
 # M6 — PyPI distribution as `docs-cli`
 
-Status: active
+Lifecycle: active
 Role: milestone
 Project: docs
 Updated: 2026-05-24

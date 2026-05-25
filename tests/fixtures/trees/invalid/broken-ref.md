@@ -1,6 +1,6 @@
 # Broken Ref
 
-Status: active
+Lifecycle: active
 Role: notes
 Project: invalid
 Updated: 2026-05-10
