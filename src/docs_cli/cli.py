@@ -1822,7 +1822,7 @@ def _infer_role_from_sections(text: str) -> str | None:
 
     - plan: ``## Goal`` + ``## Scope`` + ``## Requirements`` (or
       ``## Exit criteria``).
-    - status: ``## Current state`` + ``## Progress`` (or ``## Updates``).
+    - status: ``## Current state`` + either ``## Progress`` or ``## Updates``.
     - decision (ADR): ``## Context`` + ``## Decision`` + ``## Consequences``.
     - log: at least two dated ``## YYYY-MM-DD`` headings.
     """
@@ -1833,7 +1833,10 @@ def _infer_role_from_sections(text: str) -> str | None:
         "exit criteria",
     }.issubset(headings_set):
         return "plan"
-    if {"current state", "progress"}.issubset(headings_set) or "updates" in headings_set:
+    if {"current state", "progress"}.issubset(headings_set) or {
+        "current state",
+        "updates",
+    }.issubset(headings_set):
         return "status"
     if {"context", "decision", "consequences"}.issubset(headings_set):
         return "decision"
@@ -1881,10 +1884,10 @@ def _multi_project_hints(
     filename prefix distinct from ``parent_project`` AND cover ≥
     ``threshold`` files, return one advisory ``"hint: …"`` line. M7 — F5.
 
-    The candidate name is the file-prefix per OQ6 — file naming is the
-    Trial-2-measured signal. When the file-prefix and the subdir-name
-    normalise to the same kebab value, either one names the candidate;
-    when they differ, the file-prefix wins.
+    The candidate name is the normalised longest common prefix of the
+    subdir's ``.md`` filenames (OQ6 — file naming is the Trial-2-measured
+    signal; when prefix and subdir name normalise to the same kebab value
+    they are interchangeable, and when they diverge the file-prefix wins).
     """
     hints: list[str] = []
     for child in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")):

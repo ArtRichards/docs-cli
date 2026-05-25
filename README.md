@@ -28,7 +28,7 @@ Related:
 ```
 
 - Plain `Label: value` lines under the H1; a bare-label list group (like `Related:`) may follow after a blank line.
-- `Status` and `Role` come from controlled vocabularies (extensible per-project, additive only).
+- `Lifecycle` and `Role` come from controlled vocabularies (extensible per-project, additive only).
 - `Related:` is followed by bullets in `<verb>: <path>` form.
 - No YAML frontmatter, no parser dependency, readable in any Markdown viewer.
 
@@ -39,7 +39,7 @@ See [`docs/convention.md`](https://github.com/ArtRichards/docs-cli/blob/main/doc
 ```
 docs new <role> <slug> [--project NAME]   Scaffold a doc with the right metadata.
 docs index [DIR]                          Regenerate INDEX.md from metadata in DIR.
-docs archive <file> [--reason "…"]        Archive: edit Status, move to archive/<date>/, refresh index.
+docs archive <file> [--reason "…"]        Archive: edit Lifecycle, move to archive/<date>/, refresh index.
 docs mv <old> <new>                       Move + rewrite Related: references across the tree.
 docs list [filters] [--json]              Query view of the tree.
 docs check [DIR]                          Validate metadata, refs, status/location drift.
@@ -71,18 +71,19 @@ python3 -m venv .venv
 
 ## Status
 
-**v1 complete; v1.1 in flight (M6 — PyPI distribution).** Milestone history:
+**v1 complete; M7 shipped locally as 1.2.0 (publish DEFERRED to M9 batched 1.3.0).** Milestone history:
 
 - M1 — Parser and `docs index` (shipped 2026-05-20)
 - M2 — Mutating verbs `new`, `archive`, `mv`, `touch` (shipped 2026-05-21)
 - M3 — Validation and query `check`, `list` (shipped 2026-05-22)
 - M4 — Migration helper `docs migrate` (shipped 2026-05-22)
 - M5 — Claude Code skill — drives the verbs automatically when an agent does documentation work in a `docs`-managed tree, with self-contained convention and CLI references bundled alongside (shipped 2026-05-22)
-- M6 — PyPI distribution as `docs-cli`; relocates the CLI to a proper package at `src/docs_cli/`, ships the skill inside the wheel as package data, and adds `docs install-skill` for one-shot host materialisation (in flight 2026-05-23)
+- M6 — PyPI distribution preparation as `docs-cli`; relocates the CLI to a proper package at `src/docs_cli/`, ships the skill inside the wheel as package data, and adds `docs install-skill` for one-shot host materialisation (closed 2026-05-24 as preparation-only — no publish)
+- M7 — Migration accuracy: `Status:` → `Lifecycle:` controlled-vocab rename, broadened role inference (H1 / section-header / sibling-set / word-boundary / `_M\d+` / non-role-suffix strip), `medium` confidence level, project-name normalisation, per-file mtime archive dates, multi-project hints, `--config-project` override, `[migrate]`-only sidecar (closed 2026-05-25 as 1.2.0 locally; publish DEFERRED to M9)
 
-**v1.1 release notes.** v1.1.0 is the first PyPI release: same eight v1 verbs, plus the new `install-skill` verb, plus packaging surface. The on-disk Markdown convention is unchanged; only the distribution name (`docs-cli`) and the install path (`pip install`) differ.
+**Publish strategy.** v1.1.0 and v1.2.0 were never published to PyPI. M9 batches the post-M8 tree into the first PyPI release as 1.3.0 — one publish event covering M6 + M7 + M8 surface together (per operator OQ-C). The on-disk Markdown convention is otherwise stable; the M7 `Lifecycle:` rename is a one-time keyword change with no backward-compat alias.
 
-See [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) for per-milestone summaries and [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) for the v1.1 backlog. The [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) tracks every release.
+See [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) for per-milestone summaries and [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) for the v1.x backlog. The [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) tracks every release.
 
 ## License
 
