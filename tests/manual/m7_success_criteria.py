@@ -56,14 +56,9 @@ def main(paths: list[str]) -> int:
         return 2
 
     high_plus_medium = sum(
-        1
-        for recs in per_tree.values()
-        for r in recs
-        if r.get("confidence") in ("high", "medium")
+        1 for recs in per_tree.values() for r in recs if r.get("confidence") in ("high", "medium")
     )
-    notes_count = sum(
-        1 for recs in per_tree.values() for r in recs if r.get("role") == "notes"
-    )
+    notes_count = sum(1 for recs in per_tree.values() for r in recs if r.get("role") == "notes")
     distinct_projects = {
         r.get("project") for recs in per_tree.values() for r in recs if r.get("project")
     }
@@ -86,10 +81,11 @@ def main(paths: list[str]) -> int:
     print("Per-tree archive proposals (criterion 4):")
     archive_ok = True
     for tree, recs in per_tree.items():
+        archive_prefixes = {"archive", "archived", "project-history"}
         in_archive = [
             r
             for r in recs
-            if isinstance(r.get("path"), str) and r["path"].split("/")[0] in {"archive", "archived", "project-history"}
+            if isinstance(r.get("path"), str) and r["path"].split("/")[0] in archive_prefixes
         ]
         moves = sum(1 for r in in_archive if r.get("archive_move"))
         if in_archive:

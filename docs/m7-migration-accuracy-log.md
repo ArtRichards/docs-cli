@@ -103,7 +103,7 @@ rename is the semver trigger.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-25 | **Specs + CHANGELOG rewritten; v1.2.0 bumped.** convention.md: Required-fields table swaps `Status:` → `Lifecycle:` with a breaking-change callout; new "Status" optional-field row (free-form prose, preserved-not-vocab-checked); Lifecycle section header renamed; Role table gains 7 M7 additions; new "Inference and confidence" section documenting high/medium/low semantics; new "Per-tree `[migrate]` config" section documenting `project_name` and `role_suffixes`; archive subtree rules updated. cli.md: F0 breaking-change callout at top of `docs migrate`; `docs list --status` → `--lifecycle`; `--json` schema field `status` → `lifecycle` in both `docs list` and `docs migrate`; expanded Inference rules (5 passes + word-boundary + case-transition + medium signals + sibling-set); F11 normalisation section with `(normalised from "X")` annotation; F5 multi-project hint section with the literal hint line shape; `--config-project NAME` synopsis added; `docs check` rule list gains `medium-confidence-inference`; exit-code matrix updated. architecture.md: new `config` module section (Config dataclass + `validate_lifecycle` rename + new `[migrate]` fields); `model` Doc.status → Doc.lifecycle; INDEX role-order updated with 7 new roles; `migrate` module — every new inference helper (`normalise_project_name`, `_infer_role_from_h1`, `_infer_role_from_sections`, `_sibling_default`, `_multi_project_hints`) documented; FileMigration.lifecycle / confidence widens; MigrationPlan.project_original / multi_project_hints documented; `__version__ = "1.2.0"`. status.md: "Watch out for" entry for M7's breaking rename + skill-refs lockstep. README.md: lone `Status:` swapped to `Lifecycle:`. CHANGELOG.md: new `## 1.2.0 — UNRELEASED` section above 1.1.0 with Changed (breaking) + Added blocks documenting every M7 feature. pyproject.toml + `__version__` → 1.2.0. Bundled skill refs (`src/docs_cli/skill/references/{convention,cli}.md`) resynced from `docs/`. Updated dates on touched docs bumped to 2026-05-25. `tests/test_packaging.py` version expectations bumped (1.1.0 → 1.2.0; function name `test_a3_project_version_is_1_1_0` → `_1_2_0`). pytest: **320 / 320 GREEN**; `docs --version` → `docs 1.2.0`. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-25 | **GREEN gate captured verbatim at `/tmp/m7-phase-8-green.txt`.** pytest: `320 passed in 7.67s`; ruff check + ruff format --check: clean; mypy: `Success: no issues found in 28 source files`; `docs check docs/`: `no violations found`; `docs index --root docs/ --dry-run` diff against `docs/INDEX.md`: empty (exit 0); `docs --version`: `docs 1.2.0`. |
 | 9. Implement Online/Integration | Complete | 2026-05-25 | **All 5 success criteria PASS.** New `tests/manual/m7_success_criteria.py` (stdlib-only; lives under `tests/manual/` so pytest does NOT auto-collect it). Per-fixture `docs migrate --json` dumps captured at `/tmp/m7-phase-9/*.json` (5 trees, 117 files total). Measured: **high+medium = 103/117 = 88.0%** (≥ 50%); **notes = 16/117 = 13.7%** (≤ 30%); **archive-subdir fixture archive_move = 5/5 = 100%** (≥ 80%); **distinct project values = 3/3 normalised** (≥ 90%); **free-form `Status:` preservation = 4/4 = 100%** (criterion 3 verified via spot-apply against `tests/fixtures/status-prose/`). pytest still 320/320 GREEN. |
-| 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M7 → Complete; CHANGELOG dated; `v1.2.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6; `gh release create v1.2.0`. |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-25 | **M7 ship-ready locally; publish DEFERRED to M9 batched 1.3.0 per OQ-C.** Milestone-completion summary appended to `docs/m7-migration-accuracy.md` covering F0/F1/F4/F5/F10/F11/F12 + medium confidence + `--config-project` + sidecar narrow-refusal + open follow-ons. `docs/status.md` M7 row flipped to Complete. `CHANGELOG.md` 1.2.0 dated 2026-05-25. `python -m build` produced `dist/docs_cli-1.2.0.tar.gz` + `dist/docs_cli-1.2.0-py3-none-any.whl`; `twine check dist/*` PASSED both. **NO `twine upload`, NO `git tag v1.2.0`, NO `gh release create` — M9 rebuilds fresh post-M8 and publishes 1.3.0.** pytest still 320 / 320 GREEN; quality gate clean tree-wide. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-24)
 
@@ -1370,3 +1370,91 @@ All 5 quantitative success criteria PASS:
 - [x] All 5 quantitative success criteria PASS with
       measured values inside the milestone log.
 - [x] pytest 320 / 320 GREEN; quality gate clean.
+
+### Phase 10 — Quality, Docs, Refactor
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Closeout the milestone. Append the milestone-completion summary
+to `docs/m7-migration-accuracy.md`. Flip M7's row in
+`docs/status.md` to Complete. Date the
+`## 1.2.0 — UNRELEASED` CHANGELOG section. Build the local
+dist artefacts and verify with `twine check` — **NO upload,
+NO tag, NO GitHub release** (M9 publishes the batched 1.3.0
+post-M8 per OQ-C).
+
+#### Files changed
+
+- **docs/m7-migration-accuracy.md:**
+  * Phase Checklist all 10 boxes ticked.
+  * New "Milestone-completion summary" section appended with:
+    Surface delivered (F0/F1/F4/F5/F10/F11/F12 + medium +
+    `--config-project` + OQ5 sidecar); Tests (320/320 + Phase
+    2's 5 new files + the `tests/manual/` helper);
+    Trial-2 dogfood table (all 5 criteria PASS with measured
+    values); Quality gate (ruff/format/mypy/docs check/dry-run
+    INDEX); Ship surface (DEFERRED to M9); Open follow-ons
+    (multi-line `Status:` continuation, LLM-assisted
+    classification, Phase-10 simplify candidates); Open
+    questions (none — all resolved or deferred).
+
+- **docs/status.md:**
+  * M7 row → **Complete** (2026-05-25; ship-ready locally,
+    publish DEFERRED to M9 batched 1.3.0 per OQ-C).
+  * "Next action" pointer flipped to M8.
+  * Last-paragraph narrative updated for Phase 10 close.
+
+- **CHANGELOG.md:** `## 1.2.0 — UNRELEASED` → `## 1.2.0 —
+  2026-05-25` (the M7 ship date; M9 will reset the 1.3.0
+  date when it batches the publish).
+
+#### Build artefacts (LOCAL ONLY — publish DEFERRED to M9)
+
+```text
+$ rm -rf dist/ && .venv/bin/python -m build
+... Successfully built docs_cli-1.2.0.tar.gz and docs_cli-1.2.0-py3-none-any.whl
+
+$ .venv/bin/twine check dist/*
+Checking dist/docs_cli-1.2.0-py3-none-any.whl: PASSED
+Checking dist/docs_cli-1.2.0.tar.gz: PASSED
+```
+
+`dist/` contains the wheel + sdist; both PASS `twine check`.
+**NO `twine upload`, NO `git tag v1.2.0`, NO `gh release
+create` were run.** The M9 milestone rebuilds fresh artefacts
+from the post-M8 tree and publishes the batched 1.3.0 release.
+
+#### Stale-`Status:` sweep
+
+```text
+$ grep -rn "^Status:" docs/
+(no hits)
+```
+
+Confirms the Phase 5 sed swept every conformant metadata-key
+occurrence; body-prose mentions of `Status:` inside M1-M5
+log narratives are intentionally preserved verbatim (the OQ10
+contract: the sed regex is anchored to start-of-line +
+literal vocab value + end-of-line; prose mentions like
+"the `Status:` field" are not matched).
+
+#### Exit criteria
+
+- [x] `docs/m7-migration-accuracy.md` carries the
+      milestone-completion summary.
+- [x] `docs/m7-migration-accuracy-log.md` Phase 10 entry
+      appended.
+- [x] `docs/status.md` M7 row → Complete.
+- [x] `CHANGELOG.md` 1.2.0 dated 2026-05-25.
+- [x] `dist/docs_cli-1.2.0-py3-none-any.whl` +
+      `dist/docs_cli-1.2.0.tar.gz` exist and `twine check`
+      PASS.
+- [x] This project's own `docs/*.md` carry no `^Status:`
+      metadata-key lines (historical-prose mentions
+      preserved).
+- [x] pytest 320 / 320 GREEN; ruff / format / mypy / docs
+      check / docs index --dry-run all exit 0.
+- [x] **No `twine upload`, no `git tag v1.2.0`, no GitHub
+      release.**

@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-9 complete on 2026-05-25; Phase 10 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -254,7 +254,7 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M7 — execute Phase 10 (Closeout — milestone-completion summary, status.md M7 → Complete, CHANGELOG date, local `python -m build` + `twine check` ONLY; publish DEFERRED to M9 batched 1.3.0).**
+**Next action: M8 — execute the adoption-workflow milestone (which blocked on M7 ship). M9 is the batched 1.3.0 publish runs after M8.**
 
 **Publish is M9** (operator decision 2026-05-24, scope-reframed
 2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
@@ -343,12 +343,14 @@ project normalisation = 3/3 = 100% ≥ 90%.
 `tests/manual/m7_success_criteria.py` aggregates; per-fixture
 JSON dumps at `/tmp/m7-phase-9/*.json`.
 
-**M7 Phase 10 next:** milestone-completion summary on
-`m7-migration-accuracy.md`; flip M7 status to Complete on this
-file; date CHANGELOG; build artefacts locally via
-`python -m build` + `twine check` (LOCAL ONLY — no upload,
-no tag, no GitHub release; publish deferred to the post-M8
-batched M9 release as v1.3.0 per the operator OQ-C split).
+**M7 Phase 10 complete (2026-05-25)**: milestone-completion
+summary appended to `m7-migration-accuracy.md`; M7 row in
+this file flipped to Complete; CHANGELOG `## 1.2.0 —
+UNRELEASED` dated; local dist artefacts produced via
+`python -m build` and verified with `twine check` (NO upload,
+NO tag, NO GitHub release). M7 is ship-ready locally; the
+public PyPI release ships as v1.3.0 batched with M6 + M8 at
+the M9 milestone per the operator OQ-C split.
 
 **M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
 ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed

@@ -1009,12 +1009,169 @@ the plan quality.)
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Core
-- [ ] Phase 7 — Update Wrappers
-- [ ] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 5 — Update Base Interfaces
+- [x] Phase 6 — Implement Core
+- [x] Phase 7 — Update Wrappers
+- [x] Phase 8 — Run Tests (GREEN)
+- [x] Phase 9 — Integrate
+- [x] Phase 10 — Quality, Docs, Refactor
+
+## Milestone-completion summary
+
+**Completed 2026-05-25** — M7 v1.2.0 ship-ready; publish
+deferred to the post-M8 batched M9 release (v1.3.0) per the
+operator OQ-C split.
+
+### Surface delivered
+
+- **F0 — controlled-vocab rename `Status:` → `Lifecycle:`.**
+  Breaking change, no backward-compat alias. The parser,
+  every metadata writer (`scaffold_doc`,
+  `insert_metadata_block`, `_archive_one`), `check_doc`'s
+  vocabulary validator, the `query_docs` filter (`docs list
+  --lifecycle`), and both JSON schemas (`docs list`,
+  `docs migrate`) all reference `Lifecycle:` exclusively.
+  A free-form `Status:` prose line on a foreign doc is
+  harvested into `Doc.extra` and preserved through
+  `docs migrate` as `Migrated-Status:` in the body's
+  `## Migrated metadata` section. `Doc.status` →
+  `Doc.lifecycle`, `FileMigration.status` →
+  `FileMigration.lifecycle`, `Config.statuses` →
+  `Config.lifecycles`, `validate_status` →
+  `validate_lifecycle`, TOML key `add_statuses` →
+  `add_lifecycles`.
+- **F1 / F10 / F12 — broadened role inference.**
+  `infer_role` tokenises on `-`/`_`/whitespace AND
+  case-transition boundaries (`MyPlan` → suffix `plan`);
+  recognises the 7 new core vocab role suffixes
+  (`-implementation`, `-sketch`, `-outline`, `-memo`,
+  `-brief`, `-template`, `-example`); recognises trailing
+  `_M\d+` (case-insensitive, leading zeros allowed) as
+  `milestone` at medium confidence; strips
+  `_v\d+`/`_Draft`/`_Ready` non-role suffixes and re-tries
+  at medium confidence. New plan-layer signals: H1
+  trailing-word match (longest-match wins; whitespace
+  boundary required), top-level `##` section-header
+  patterns (plan/status/decision/log shapes), and modal
+  sibling-set defaulting at ≥ 60% over ≥ 5 same-subdir
+  suffix-confident files.
+- **F11 — project-name normalisation to lowercase-kebab.**
+  Splits on case boundaries (`FooBar`), letter↔digit
+  boundaries (`Abc5Mig`), and underscores (`SNAKE_UPPER`);
+  preserves digit-after-digit so `bugs-2026-01-26` survives
+  intact. Precedence chain: CLI `--config-project NAME` >
+  `.docs.toml [migrate] project_name` > F11-normalised
+  (inferred). The pre-normalisation name surfaces once at
+  the top of the human plan as `project: <final>
+  (normalised from "<original>")` when normalisation
+  changed it (via `MigrationPlan.project_original`).
+- **F4 — per-file mtime / Updated:-driven archive moves.**
+  When `--date` is absent, each file's archive-move date
+  comes from the resolved `Updated:` (or mtime fall-back)
+  per file; the explicit `--date` continues to override
+  globally. A foreign tree's mixed archival history maps
+  to mixed `archive/<date>/` buckets.
+- **F5 — multi-project hints in the plan footer.** For each
+  immediate subdir whose `.md` files share a common
+  filename prefix distinct from the parent project AND
+  cover ≥ 5 files, `migrate` emits one advisory `hint:` line
+  in the plan footer (suppressed when `--config-project` is
+  set). Carried on `MigrationPlan.multi_project_hints`.
+- **F5 — `docs migrate --config-project NAME` CLI flag.**
+  Pins the project name for every plan record; bypasses
+  F11 normalisation and hint emission. The persistent
+  equivalent is `[migrate] project_name = "NAME"` in
+  `.docs.toml`. M7 (OQ5) also narrows the `.docs.toml`
+  refusal — a `.docs.toml` containing ONLY a `[migrate]`
+  section is read as a foreign-tree migration sidecar.
+- **Medium confidence + `docs check` exit-1 wiring (OQ-D).**
+  `FileMigration.confidence` widens to `{high, medium,
+  low}`; medium requires empty `ambiguities` by contract.
+  `docs check` emits a `medium-confidence-inference`
+  warning (exit 1) when a missing `Role:` is resolvable via
+  H1 or section pattern, instead of the hard
+  `missing-field` error (exit 2).
+
+### Tests
+
+- pytest: **320 / 320 GREEN** at every TDD phase boundary
+  Phase 5 onward (Phase 5 close: 290 GREEN by design with
+  30 RED for Phase 6 surface; Phase 6 onward: 320 GREEN
+  unbroken).
+- New test files at Phase 2 (5): `test_lifecycle_rename.py`
+  (10 tests including F0 baseline + medium-confidence
+  constructor + check-exit-1 anchor); `test_inference.py`
+  (21 tests — word-boundary, `_M\d+`, suffix-strip, new
+  vocab, H1, section, sibling); `test_project_normalisation.py`
+  (10 tests — TitleCase/SNAKE_UPPER/mixed/digit-glued
+  parametric + `--config-project` override +
+  `(normalised from …)` annotation); `test_archive_normalisation.py`
+  (4 tests); `test_multi_project_hints.py` (3 tests).
+- Confidence-distribution success-criterion test at
+  `test_migrate.py::test_confidence_distribution_meets_threshold`
+  passes (88% on the `snake-medium` sanitised Trial-2
+  fixture, well above the 50% threshold).
+- New helper at `tests/manual/m7_success_criteria.py` (Phase
+  9) — stdlib-only aggregator; lives under `tests/manual/`
+  so pytest auto-collection does NOT pick it up.
+
+### Trial 2 dogfood — measured 2026-05-25 against 5 sanitised
+real-tree fixtures (117 files total)
+
+| # | Criterion | Threshold | Measured |
+|---|---|---|---|
+| 1 | (high + medium) / total | ≥ 50% | **88.0%** (103/117) |
+| 2 | notes / total | ≤ 30% | **13.7%** (16/117) |
+| 3 | free-form `Status:` preservation | 100% | **100%** (4/4) |
+| 4 | archive-subdir archive_move rate | ≥ 80% | **100%** (5/5) |
+| 5 | distinct project values lowercase-kebab | ≥ 90% | **100%** (3/3) |
+
+### Quality gate
+
+- `ruff check .` clean.
+- `ruff format --check .` clean.
+- `mypy` Success (28 source files).
+- `docs check docs/` clean.
+- `docs index --root docs/ --dry-run` byte-equals
+  `docs/INDEX.md`.
+- `docs --version` prints `docs 1.2.0`.
+
+### Ship surface (DEFERRED to M9)
+
+- Local build artefacts produced at Phase 10 via
+  `python -m build` + `twine check dist/*` and verified
+  clean — NOT uploaded, NOT tagged, NOT released. The
+  post-M8 M9 milestone batches the M6 + M7 + M8 surface
+  into a single PyPI 1.3.0 release per the operator OQ-C
+  split.
+
+### Open follow-ons
+
+- **OQ3 — multi-line `Status:` continuation.** Out of M7
+  scope per the operator decision (Trial 2 surfaced only
+  single-line `Status:` prose). If a future tree carries
+  multi-line `Status:` continuations, they currently
+  collapse to the first line; the rest is body.
+- **LLM-assisted classification.** Out of M7 scope — the
+  local-only auto-filer pattern (per the operator's
+  paperless-auto-filer project) is the intended future
+  vehicle, NOT a hosted-model fallback.
+- **Phase 10 simplify candidates** (carried forward to
+  M8 / future): `infer_status` function name (still reads
+  `Lifecycle:` internally — OQ3 carry-over);
+  `BUILTIN_STATUSES` constant name (still references the
+  lifecycle vocab — OQ4 carry-over); `insert_metadata_block`
+  parameter named `status` (still writes `Lifecycle:` —
+  OQ3 carry-over); `Confidence` enum vs. string sentinels
+  (currently string `high|medium|low`; enum is a future
+  cleanup per OQ7). None of these affect the on-disk
+  surface; all are internal-naming nits.
+
+### Open questions
+
+None — every OQ raised during M7 setup (A-D) and Step 2
+(OQ1-10) is resolved or explicitly deferred. The M9 batched
+publish is the only outstanding ship-surface item.
 
 ## Trial-run artefacts
 
