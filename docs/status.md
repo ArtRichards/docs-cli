@@ -361,7 +361,7 @@ the M9 milestone per the operator OQ-C split.
 **M8** is in flight (Phase 1 complete; **Phase 2+ unblocked by
 M7 ship 2026-05-25**). All 7 OQs (A–G) resolved 2026-05-24.
 Setup committed 2026-05-24 as `929e525`; Phase 1 close-out
-committed 2026-05-25 as `8c180d8`.
+committed 2026-05-25 as `ce39e85`.
 
 **Watch out for** (durable gotchas, still current):
 - The CLI module lives at `src/docs_cli/cli.py`. After Phase 6's
