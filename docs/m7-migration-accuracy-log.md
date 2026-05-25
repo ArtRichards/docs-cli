@@ -101,7 +101,7 @@ rename is the semver trigger.
 | 5. Update Base Interfaces | Complete | 2026-05-25 | **F0 rename landed.** Parser requires `Lifecycle:`; free-form `Status:` becomes a preserved extra field. `Doc.status` → `Doc.lifecycle`; `FileMigration.status` → `FileMigration.lifecycle`; `Config.statuses` → `Config.lifecycles`; `validate_status` → `validate_lifecycle`; TOML key `add_statuses` → `add_lifecycles`. `FileMigration.confidence` extended to `{high, medium, low}` (medium requires empty ambiguities). `Config` grows `role_suffixes: dict` + `project_name: str | None` (consumed at Phase 6). `MigrationPlan` grows `project_original: str \| None` + `multi_project_hints: tuple[str, ...]` (populated at Phase 6). Argparse: `docs list --status` → `--lifecycle`; `docs migrate --config-project NAME` added (consumed at Phase 6). `insert_metadata_block` writes `Lifecycle:`; `scaffold_doc` writes `Lifecycle: draft`; `_archive_one` writes `Lifecycle: archived`. `check_doc` reads `Lifecycle:`. `_REQUIRED_METADATA_FIELDS` swaps `Status` → `Lifecycle` so a free-form `Status:` line lands in the extra-field preservation path. Sweep of `docs/*.md` (29 files) and conformant test-tree fixtures (31 files + `parser/well-formed.md`) via `^Status: <vocab>$` → `^Lifecycle: <vocab>$`. Skill refs resynced (deferred from plan to keep Phase 5 GREEN). pytest: 290 passed / 30 failed (RED for Phase 6 surface — inference broadening, project normalisation, per-file mtime, multi-project hints, medium-confidence check wiring); ruff / format / mypy / docs check / docs index --dry-run all clean. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-25 | **F1 / F10 / F11 / F12 / F4 / F5 landed.** `infer_role` now: word-boundary tolerance (splits on `-` / `_` / whitespace / case-transition); 7 new core vocab role suffixes (`_implementation`, `_sketch`, `_outline`, `_memo`, `_brief`, `_template`, `_example`); `_M\d+` milestone-number pattern (medium); `_v\d+`/`_Draft`/`_Ready` non-role suffix strip + re-match (medium). New `normalise_project_name()` splits on case + letter↔digit boundaries; `plan_migration` consults precedence (CLI `--config-project` > `.docs.toml [migrate] project_name` > F11-normalised) and surfaces the `(normalised from "X")` annotation via `MigrationPlan.project_original`. New `_multi_project_hints()` emits one `hint:` line per immediate subdir whose `.md` common prefix differs from the parent project AND covers ≥ 5 files; surfaced through `MigrationPlan.multi_project_hints` and printed in the human plan footer (suppressed when `--config-project` is set). New H1-content / section-header / sibling-set inference helpers run a medium-confidence upgrade pass over `notes`-fallback files. `check_doc` emits a `medium-confidence-inference` warning (exit 1) instead of a `missing-field` error when the missing `Role:` is resolvable via the H1 or section signal. `_cmd_migrate` narrows the `.docs.toml` refusal to managed-root markers (`[project]`, `[archive]`, `[vocabulary]`) so a `[migrate]`-only sidecar is readable; threads `args.config_project` into `plan_migration`; F4 per-file mtime/Updated: drives archive-move dates when `--date` is absent. pytest: **320 / 320 GREEN**. Quality gate clean. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-25 | **Specs + CHANGELOG rewritten; v1.2.0 bumped.** convention.md: Required-fields table swaps `Status:` → `Lifecycle:` with a breaking-change callout; new "Status" optional-field row (free-form prose, preserved-not-vocab-checked); Lifecycle section header renamed; Role table gains 7 M7 additions; new "Inference and confidence" section documenting high/medium/low semantics; new "Per-tree `[migrate]` config" section documenting `project_name` and `role_suffixes`; archive subtree rules updated. cli.md: F0 breaking-change callout at top of `docs migrate`; `docs list --status` → `--lifecycle`; `--json` schema field `status` → `lifecycle` in both `docs list` and `docs migrate`; expanded Inference rules (5 passes + word-boundary + case-transition + medium signals + sibling-set); F11 normalisation section with `(normalised from "X")` annotation; F5 multi-project hint section with the literal hint line shape; `--config-project NAME` synopsis added; `docs check` rule list gains `medium-confidence-inference`; exit-code matrix updated. architecture.md: new `config` module section (Config dataclass + `validate_lifecycle` rename + new `[migrate]` fields); `model` Doc.status → Doc.lifecycle; INDEX role-order updated with 7 new roles; `migrate` module — every new inference helper (`normalise_project_name`, `_infer_role_from_h1`, `_infer_role_from_sections`, `_sibling_default`, `_multi_project_hints`) documented; FileMigration.lifecycle / confidence widens; MigrationPlan.project_original / multi_project_hints documented; `__version__ = "1.2.0"`. status.md: "Watch out for" entry for M7's breaking rename + skill-refs lockstep. README.md: lone `Status:` swapped to `Lifecycle:`. CHANGELOG.md: new `## 1.2.0 — UNRELEASED` section above 1.1.0 with Changed (breaking) + Added blocks documenting every M7 feature. pyproject.toml + `__version__` → 1.2.0. Bundled skill refs (`src/docs_cli/skill/references/{convention,cli}.md`) resynced from `docs/`. Updated dates on touched docs bumped to 2026-05-25. `tests/test_packaging.py` version expectations bumped (1.1.0 → 1.2.0; function name `test_a3_project_version_is_1_1_0` → `_1_2_0`). pytest: **320 / 320 GREEN**; `docs --version` → `docs 1.2.0`. |
-| 8. Run Tests (GREEN) | Pending | — | Full quality gate verbatim: pytest ≥ 296 passed; ruff / format / mypy clean; `docs check docs/` exit 0; `docs index --dry-run` no diff. |
+| 8. Run Tests (GREEN) | Complete | 2026-05-25 | **GREEN gate captured verbatim at `/tmp/m7-phase-8-green.txt`.** pytest: `320 passed in 7.67s`; ruff check + ruff format --check: clean; mypy: `Success: no issues found in 28 source files`; `docs check docs/`: `no violations found`; `docs index --root docs/ --dry-run` diff against `docs/INDEX.md`: empty (exit 0); `docs --version`: `docs 1.2.0`. |
 | 9. Implement Online/Integration | Pending | — | Mapped to dogfooding against Trial 2 fixtures. Confirm 5 quantitative success criteria (confidence ≥ 50%, notes ≤ 30%, status preservation 100%, archive proposals ≥ 80%, normalisation ≥ 90%). Helper script at `tests/manual/m7_success_criteria.py` aggregates and reports. |
 | 10. Quality, Docs, Refactor | Pending | — | Dogfood consistency sweep; milestone-completion summary; status.md M7 → Complete; CHANGELOG dated; `v1.2.0` tag pushed; (operator-driven) `python -m build` + `twine upload` per the runbook same as M6; `gh release create v1.2.0`. |
 
@@ -1208,3 +1208,58 @@ $ .venv/bin/python -m pytest tests/ -q
       equal to `docs/`.
 - [x] docs/INDEX.md regenerated; fixture snapshot byte-equal.
 - [x] pytest 320 / 320 GREEN; quality gate clean.
+
+### Phase 8 — Run Tests (GREEN)
+
+**Completed:** 2026-05-25
+
+#### Objective
+
+Capture the GREEN gate verbatim at `/tmp/m7-phase-8-green.txt`
+so the implementation log carries a reproducible artefact of
+M7's clean-tree state, then commit a thin log-only commit
+marking the gate.
+
+#### Verbatim quality-gate output (`/tmp/m7-phase-8-green.txt`)
+
+```text
+=== pytest tests/ -q ===
+........................................................................ [ 22%]
+........................................................................ [ 45%]
+........................................................................ [ 67%]
+........................................................................ [ 90%]
+................................                                         [100%]
+320 passed in 7.67s
+
+=== ruff check . ===
+All checks passed!
+
+=== ruff format --check . ===
+27 files already formatted
+
+=== mypy ===
+Success: no issues found in 28 source files
+
+=== docs check docs/ ===
+docs: no violations found
+
+=== docs index --root docs/ --dry-run | diff - docs/INDEX.md ===
+exit=0
+
+=== docs --version ===
+docs 1.2.0
+```
+
+#### Exit criteria
+
+- [x] pytest 320 / 320 GREEN.
+- [x] `ruff check .` clean.
+- [x] `ruff format --check .` clean.
+- [x] `mypy` Success.
+- [x] `docs check docs/` exit 0.
+- [x] `docs index --root docs/ --dry-run` byte-equals
+      `docs/INDEX.md`.
+- [x] `docs --version` prints `docs 1.2.0`.
+- [x] Verbatim output captured at
+      `/tmp/m7-phase-8-green.txt`; the count reproduced in
+      this log entry.

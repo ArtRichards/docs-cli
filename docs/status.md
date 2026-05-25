@@ -167,7 +167,7 @@ for the milestone summary.
 | M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
 | M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
 | M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-7 complete on 2026-05-25; Phase 8 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
+| M7 — Migration plan accuracy | _in flight_ (started 2026-05-24; Phases 1-8 complete on 2026-05-25; Phase 9 next; all 4 milestone-setup OQs resolved) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | _in flight_ (started 2026-05-24; Phase 1 in progress; Phase 2+ blocked on M7 ship; all 7 milestone-setup OQs resolved) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | _stub-drafted_ (2026-05-24; activates post-M8 ship; operator-driven per [release-runbook.md](release-runbook.md)) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 
@@ -254,7 +254,7 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action: M7 — execute Phase 8 (Run Tests GREEN — capture verbatim quality-gate output at `/tmp/m7-phase-8-green.txt`).**
+**Next action: M7 — execute Phase 9 (Dogfood Trial 2 fixtures; verify 5 quantitative success criteria via `tests/manual/m7_success_criteria.py`).**
 
 **Publish is M9** (operator decision 2026-05-24, scope-reframed
 2026-05-24): a dedicated milestone, runs post-M8, ships M6 + M7
@@ -330,10 +330,18 @@ a new `config` module section. pyproject.toml +
 fixture snapshot byte-equal. pytest: 320 / 320 GREEN.
 Quality gate clean tree-wide.
 
-**M7 Phase 8 next:** capture verbatim quality-gate output
-at `/tmp/m7-phase-8-green.txt` (pytest, ruff check, ruff
-format --check, mypy, docs check, docs index --dry-run).
-No code change.
+**M7 Phase 8 complete (2026-05-25):** verbatim quality gate
+captured at `/tmp/m7-phase-8-green.txt`. pytest 320 / 320
+GREEN; ruff / format / mypy / docs check / docs index
+--dry-run all clean; `docs --version` prints `docs 1.2.0`.
+
+**M7 Phase 9 next:** create `tests/manual/m7_success_criteria.py`
+(stdlib-only helper), run `docs migrate --json` against every
+sanitised real-tree fixture under
+`tests/fixtures/trees/real-trees/`, and verify the 5
+quantitative success criteria (high+medium ≥ 50%, notes ≤
+30%, free-form `Status:` preservation = 100%, archive
+proposals ≥ 80%, normalisation ≥ 90%).
 
 **M8** is in flight (Phase 1 complete; Phase 2+ blocks on M7
 ship). All 7 OQs (A–G) resolved 2026-05-24. Setup committed
