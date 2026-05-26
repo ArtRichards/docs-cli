@@ -490,6 +490,37 @@ docs: no violations found
 - [x] `check_doc` `unknown-field` rule fires only when `config.fields` is non-empty; emits the OQ-F exact-message shape; built-in always-allowed set + `add_fields` allowlist cover the expected vocabulary.
 - [x] 400/400 GREEN; quality gate clean tree-wide.
 
+### Post-review fix (2026-05-27)
+
+Fresh-eyes review of the Phase-6 surface caught one real bug + one
+cosmetic nit. Applied as a single follow-on commit
+(`m10(phase-6-review): F11 announcement gates on --apply --quiet;
+sidecar separator normalised`).
+
+- **SF1 — F11 announcement leaked under `--apply --quiet`.**
+  `_print_migration_plan` printed the `project: <final> (normalised
+  from "<original>")` annotation BEFORE the `if quiet: return`
+  guard, so any tree whose project name normalised
+  (e.g. `FooBar-plan.md` → `foo-bar`) emitted the announcement + a
+  trailing blank line on `--apply --quiet` — violating OQ-B's "byte-
+  empty stdout on `--apply --quiet`". Fix: move the F11 print block
+  BELOW the `quiet` guard so EVERY downstream print is gated.
+  Regression-lock pinned by
+  `test_migrate_apply_quiet_suppresses_f11_normalisation_announcement`
+  in `tests/test_cli_migrate.py` (inline `tmp_path` tree with
+  `FooBar-{plan,spec,status}.md` filenames). Suite: 400 prior + 1
+  new = 401 GREEN.
+- **N3 — sidecar separator off-by-one.** `_ensure_docs_toml`'s
+  `if/elif/else` ladder produced double-blank separators on two
+  edge cases (existing sidecar with `\n\n\n` tail; zero-byte
+  existing sidecar). Collapsed to one line:
+  `existing_text.rstrip("\n") + "\n\n" + new_block`. Existing
+  `test_migrate_apply_extends_sidecar_without_overwriting_project`
+  still GREEN (doesn't pin trailing-newline counts).
+
+Quality gate still clean tree-wide (ruff / ruff format --check /
+mypy / `docs check docs --stale 14`).
+
 ## Phase 7 — Update Tool/Wrapper Layer (Complete 2026-05-27)
 
 ### Objective
@@ -780,6 +811,21 @@ Pytest after the fixture refresh: **400/400 GREEN.**
 - [x] One INDEX regen (operator's `docs index`).
 - [x] Adopted-state fixture updated in lockstep for the M10 auto-emitted shape; behaviour-delta noted above.
 - [x] 400/400 pytest GREEN after the fixture refresh.
+
+### Lesson for future dogfoods
+
+kebab-tiny does NOT exercise the F11 normalisation path,
+[exclude]-only-sidecar-extension, opportunistic-rmdir, or
+multi-file `docs touch` surfaces; its three files all share a
+`foo-bar` prefix that is already kebab-lower (no normalisation
+delta) and there is no archive-style subdir or pre-existing
+sidecar to extend. Future M-N dogfoods should rotate through
+trees that exercise more of the migrate / touch surface — at
+minimum a CamelCase / digit-tail filename pattern (F11), an
+archive-style subdir (`_opportunistic_rmdir`), a pre-existing
+`[exclude]`-only sidecar (`_ensure_docs_toml` extend-path), and
+a multi-file `docs touch` invocation — to avoid masking bugs
+of the kind SF1 caught here at fresh-eyes review.
 
 ## Phase 10 — Quality, Docs, Refactor (closeout) (Complete 2026-05-27)
 

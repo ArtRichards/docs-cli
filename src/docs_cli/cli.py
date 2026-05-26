@@ -2624,15 +2624,12 @@ def _ensure_docs_toml(plan: MigrationPlan) -> None:
         # OQ-A never-overwrite: an existing `[project]` block wins.
         return
 
-    # Append the new block. Separator logic guarantees exactly one
-    # blank line between existing content and the provenance comment.
-    if existing_text.endswith("\n\n"):
-        separator = ""
-    elif existing_text.endswith("\n"):
-        separator = "\n"
-    else:
-        separator = "\n\n"
-    atomic_write(sidecar, existing_text + separator + new_block)
+    # Append the new block. Strip every trailing newline off the
+    # existing content and reattach exactly two — guarantees exactly
+    # one blank line between existing content and the provenance
+    # comment in every case (empty file, single `\n` tail, double-blank
+    # tail, or jagged `\n\n\n` tail all collapse to the same shape).
+    atomic_write(sidecar, existing_text.rstrip("\n") + "\n\n" + new_block)
 
 
 def apply_migration(plan: MigrationPlan) -> None:
@@ -3633,18 +3630,20 @@ def _print_migration_plan(
     excluded counts → non-md siblings → multi-project hints → default
     summary.
     """
+    # M10 (OQ-B): `--apply --quiet` suppresses the per-file body entirely.
+    # Footer / per-file output are both gated; caller picks `_cmd_migrate`'s
+    # default branch only. JSON / summary modes are requested outputs and
+    # never call this with quiet=True. The guard sits above EVERY downstream
+    # print (including the F11 normalisation announcement) so `--apply
+    # --quiet` is byte-empty on stdout for every tree shape.
+    if quiet:
+        return
+
     # F11: when project normalisation changed the inferred value, print
     # the annotation ONCE at the top so per-file lines stay flat.
     if plan.project_original is not None and plan.files:
         print(f'project: {plan.files[0].project} (normalised from "{plan.project_original}")')
         print()
-
-    # M10 (OQ-B): `--apply --quiet` suppresses the per-file body entirely.
-    # Footer / per-file output are both gated; caller picks `_cmd_migrate`'s
-    # default branch only. JSON / summary modes are requested outputs and
-    # never call this with quiet=True.
-    if quiet:
-        return
 
     # Triage filters apply equally to both modes.
     files: list[FileMigration] = list(plan.files)

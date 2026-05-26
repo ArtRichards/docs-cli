@@ -459,6 +459,40 @@ def test_migrate_apply_quiet_suppresses_per_file_output(docs_script, fixtures_di
     )
 
 
+def test_migrate_apply_quiet_suppresses_f11_normalisation_announcement(docs_script, tmp_path):
+    """OQ-B regression-lock for the F11 normalisation path: `--apply
+    --quiet` against a tree whose `infer_project` raw output normalises
+    (`FooBar` -> `foo-bar`) must NOT leak the `project: <final>
+    (normalised from "<original>")` announcement onto stdout.
+
+    Pre-fix, `_print_migration_plan` printed the F11 annotation BEFORE
+    the `if quiet: return` guard, leaking the announcement + a trailing
+    blank line on `--apply --quiet`. This test pins the OQ-B contract
+    against the F11 codepath specifically, so future refactors cannot
+    silently re-introduce the leak.
+    """
+    # FooBar-{plan,spec,status}.md -> infer_project basename "FooBar"
+    # -> normalise_project_name -> "foo-bar" (distinct from the raw
+    # value, so the F11 announcement fires on the non-quiet branch).
+    root = tmp_path / "foo-bar-foreign"
+    root.mkdir()
+    (root / "FooBar-plan.md").write_text("# Plan\n\nBody.\n")
+    (root / "FooBar-spec.md").write_text("# Spec\n\nBody.\n")
+    (root / "FooBar-status.md").write_text("# Status\n\nBody.\n")
+
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--quiet", "--date", "2026-05-27")
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert proc.stdout == "", (
+        f"--apply --quiet must produce empty stdout even when F11 "
+        f"normalisation fires; got stdout: {proc.stdout!r}"
+    )
+    assert proc.stderr == "", (
+        f"--apply --quiet must produce empty stderr even when F11 "
+        f"normalisation fires; got stderr: {proc.stderr!r}"
+    )
+
+
 def test_migrate_apply_quiet_does_not_suppress_dry_run_or_summary_or_json(
     docs_script, fixtures_dir, tmp_path
 ):
