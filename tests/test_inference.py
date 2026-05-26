@@ -33,14 +33,12 @@ from __future__ import annotations
 
 import pytest
 
-from docs import infer_role, plan_migration
+from docs import Confidence, infer_role, plan_migration
 
-# Forward-compatible confidence sentinel set (OQ4, 2026-05-24): once Phase 5
-# adds the third level `medium`, tests reading "medium" via membership keep
-# passing if implementers map to either the new string `medium` or — for the
-# function-level `(role, confident)` tuple — the legacy `True` shape kept for
-# back-compat.
-_CONFIDENCE_OK = ("medium", "high", True)
+# M10 (OQ-E): `infer_role` returns a `Confidence` enum member.
+# `_CONFIDENCE_OK` is the {HIGH, MEDIUM} positive set — tests that pin
+# strict-medium use `is Confidence.MEDIUM` directly.
+_CONFIDENCE_OK = (Confidence.HIGH, Confidence.MEDIUM)
 
 
 def _write(path, text: str) -> None:
@@ -91,7 +89,7 @@ def test_infer_role_strips_non_role_suffixes(filename, strict_medium):
     role, conf = infer_role(filename, {})
     assert role == "plan", f"stripping failed for {filename}: got {role!r}"
     if strict_medium:
-        assert conf == "medium", (
+        assert conf is Confidence.MEDIUM, (
             f"non-role-suffix strip must return medium confidence (OQ-D); "
             f"got {conf!r} for {filename}"
         )
@@ -128,7 +126,7 @@ def test_infer_role_new_core_vocab_roles(filename, expected_role):
     """
     role, conf = infer_role(filename, {})
     assert role == expected_role, f"{filename}: expected {expected_role}, got {role!r}"
-    assert conf in ("high", True), (
+    assert conf is Confidence.HIGH, (
         f"new core vocab roles are direct suffix matches → high confidence (OQ-A); "
         f"got {conf!r} for {filename}"
     )
@@ -189,7 +187,7 @@ def test_infer_role_h1_content_inference(tmp_path):
     plan = plan_migration(tmp_path)
     fm = next(f for f in plan.files if f.rel == "foo.md")
     assert fm.role == "plan"
-    assert fm.confidence == "medium", (
+    assert fm.confidence is Confidence.MEDIUM, (
         f"H1-content inference must return medium confidence (OQ-D); got {fm.confidence!r}"
     )
 
@@ -220,7 +218,7 @@ def test_infer_role_section_header_pattern_plan(tmp_path):
     plan = plan_migration(tmp_path)
     fm = next(f for f in plan.files if f.rel == "ambiguous.md")
     assert fm.role == "plan"
-    assert fm.confidence == "medium", (
+    assert fm.confidence is Confidence.MEDIUM, (
         f"section-header inference must return medium confidence (OQ-D); got {fm.confidence!r}"
     )
 
@@ -247,7 +245,7 @@ def test_infer_role_section_header_pattern_status_current_state_plus_updates(tmp
     assert fm.role == "status", (
         f"`## Current state` + `## Updates` must infer status; got {fm.role!r}"
     )
-    assert fm.confidence == "medium", (
+    assert fm.confidence is Confidence.MEDIUM, (
         f"section-header inference must return medium confidence (OQ-D); got {fm.confidence!r}"
     )
 
@@ -271,7 +269,7 @@ def test_infer_role_section_header_bare_updates_does_NOT_infer_status(tmp_path):
         f"a bare `## Updates` heading must NOT infer status (spec requires "
         f"`## Current state` + (`## Progress` OR `## Updates`)); got {fm.role!r}"
     )
-    assert fm.confidence in ("low", False), (
+    assert fm.confidence is Confidence.LOW, (
         f"with no inference signal, the file lands in notes/low; got {fm.confidence!r}"
     )
 
@@ -302,7 +300,7 @@ def test_sibling_set_defaulting_fires_when_majority_met(fixtures_dir):
     assert defaulted, "fixture must contain no-suffix files"
     for fm in defaulted:
         assert fm.role == "spec", f"{fm.rel}: expected spec via defaulting, got {fm.role!r}"
-        assert fm.confidence == "medium", (
+        assert fm.confidence is Confidence.MEDIUM, (
             f"{fm.rel}: sibling-set defaulting must return medium confidence (OQ-D); "
             f"got {fm.confidence!r}"
         )
@@ -320,7 +318,7 @@ def test_sibling_set_NOT_defaulting_when_sample_too_small(fixtures_dir):
     assert no_suffix, "fixture must contain a no-suffix file"
     for fm in no_suffix:
         assert fm.role == "notes"
-        assert fm.confidence in ("low", False)
+        assert fm.confidence is Confidence.LOW
 
 
 def test_sibling_set_NOT_defaulting_when_no_majority(fixtures_dir):
@@ -335,4 +333,4 @@ def test_sibling_set_NOT_defaulting_when_no_majority(fixtures_dir):
     assert no_suffix, "fixture must contain no-suffix files"
     for fm in no_suffix:
         assert fm.role == "notes"
-        assert fm.confidence in ("low", False)
+        assert fm.confidence is Confidence.LOW

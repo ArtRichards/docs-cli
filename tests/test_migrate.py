@@ -19,6 +19,7 @@ from pathlib import Path
 from docs import (
     BUILTIN_ROLES,
     BUILTIN_STATUSES,
+    Confidence,
     FileMigration,
     MigrationPlan,
     apply_migration,
@@ -46,68 +47,68 @@ def _foreign(fixtures_dir: Path) -> Path:
 def test_infer_role_spec_suffix():
     role, confident = infer_role("auth-spec.md", {})
     assert role == "spec"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_plan_suffix():
     role, confident = infer_role("release-plan.md", {})
     assert role == "plan"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_adr_suffix_maps_to_decision():
     role, confident = infer_role("db-adr.md", {})
     assert role == "decision"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_log_suffix():
     role, confident = infer_role("deploy-log.md", {})
     assert role == "log"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_status_suffix():
     role, confident = infer_role("project-status.md", {})
     assert role == "status"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_charter_suffix():
     role, confident = infer_role("product-charter.md", {})
     assert role == "charter"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_guide_suffix():
     role, confident = infer_role("setup-guide.md", {})
     assert role == "guide"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_runbook_suffix():
     role, confident = infer_role("incident-runbook.md", {})
     assert role == "runbook"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_reference_suffix():
     role, confident = infer_role("api-reference.md", {})
     assert role == "reference"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_no_suffix_falls_back_to_notes_low_confidence():
     role, confident = infer_role("random.md", {})
     assert role == "notes"
-    assert confident is False
+    assert confident is Confidence.LOW
 
 
 def test_infer_role_in_file_role_wins_over_suffix():
     # The filename suffix says spec; the in-file Role says guide — Role wins.
     role, confident = infer_role("auth-spec.md", {"Role": "guide"})
     assert role == "guide"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_trailing_token_that_is_a_builtin_role_resolves_directly():
@@ -116,7 +117,7 @@ def test_infer_role_trailing_token_that_is_a_builtin_role_resolves_directly():
     # documented extension (cli.md), previously without coverage.
     role, confident = infer_role("m5-skill-milestone.md", {})
     assert role == "milestone"
-    assert confident is True
+    assert confident is Confidence.HIGH
 
 
 def test_infer_role_always_returns_a_builtin_role():
@@ -457,10 +458,10 @@ def test_plan_migration_files_in_root_relative_path_order(fixtures_dir):
 def test_plan_migration_confidence_and_ambiguities_are_consistent(fixtures_dir):
     plan = plan_migration(_foreign(fixtures_dir))
     for fm in plan.files:
-        if fm.confidence == "high":
+        if fm.confidence is Confidence.HIGH:
             assert fm.ambiguities == ()
         else:
-            assert fm.confidence == "low"
+            assert fm.confidence is Confidence.LOW
             assert fm.ambiguities
 
 
@@ -478,18 +479,18 @@ def test_plan_migration_pins_low_confidence_fixture_files(fixtures_dir):
     # (Post-M7-F0 the free-form `Status: wip` line is preserved, not
     # vocab-checked, so it does not contribute an ambiguity.)
     has_metadata = _by_name(plan, "proj-has-metadata.md")
-    assert has_metadata.confidence == "low"
+    assert has_metadata.confidence is Confidence.LOW
     assert has_metadata.ambiguities
 
     # proj-no-h1.md has no H1 — a synthesised title is an ambiguity.
     no_h1 = _by_name(plan, "proj-no-h1.md")
-    assert no_h1.confidence == "low"
+    assert no_h1.confidence is Confidence.LOW
     assert no_h1.ambiguities
 
     # proj-overview.md has no role suffix — Role falls back to `notes`,
     # which is a flagged, low-confidence inference.
     overview = _by_name(plan, "proj-overview.md")
-    assert overview.confidence == "low"
+    assert overview.confidence is Confidence.LOW
     assert overview.ambiguities
 
 
@@ -498,7 +499,7 @@ def test_plan_migration_pins_a_high_confidence_fixture_file(fixtures_dir):
     # proj-auth-spec.md has a clean `-spec` suffix, an H1, and no
     # pre-existing metadata — every field infers unambiguously.
     auth_spec = _by_name(plan, "proj-auth-spec.md")
-    assert auth_spec.confidence == "high"
+    assert auth_spec.confidence is Confidence.HIGH
     assert auth_spec.ambiguities == ()
 
 
@@ -603,7 +604,7 @@ def test_plan_migration_flags_archive_move_destination_collision(tmp_path):
     assert len(colliding) == 2
     for fm in colliding:
         assert fm.archive_move == "archive/2026-05-22/dup.md"
-        assert fm.confidence == "low"
+        assert fm.confidence is Confidence.LOW
         assert any("collision" in note for note in fm.ambiguities)
 
 
@@ -655,7 +656,9 @@ def test_confidence_distribution_meets_threshold(fixtures_dir):
     plan = plan_migration(fixture)
     assert plan.files, "fixture must have at least one file"
     total = len(plan.files)
-    high_plus_medium = sum(1 for fm in plan.files if fm.confidence in ("high", "medium"))
+    high_plus_medium = sum(
+        1 for fm in plan.files if fm.confidence in (Confidence.HIGH, Confidence.MEDIUM)
+    )
     ratio = high_plus_medium / total
     assert ratio >= 0.5, (
         f"(high+medium)/total = {high_plus_medium}/{total} = {ratio:.2f} < 0.5; "

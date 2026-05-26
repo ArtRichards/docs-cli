@@ -259,10 +259,7 @@ def test_check_tree_findings_sorted_by_path(fixtures_dir):
 
 
 def _config_with_fields(fields: frozenset[str]) -> Config:
-    # M10 Phase 2 (RED): `Config.fields` lands at Phase 5 — the call-arg
-    # is intentionally untyped today so mypy stays clean at the RED
-    # baseline. Phase 5 removes the ignore.
-    return Config(  # type: ignore[call-arg]
+    return Config(
         project="probe",
         archive_dir="archive",
         date_format="%Y-%m-%d",

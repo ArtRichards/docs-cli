@@ -25,6 +25,7 @@ from __future__ import annotations
 __version__ = "1.3.0"
 
 import argparse
+import enum
 import importlib.resources
 import json
 import os
@@ -73,6 +74,36 @@ CANONICAL_ROLE_ORDER: tuple[str, ...] = (
     "notes",
 )
 BUILTIN_ROLES: frozenset[str] = frozenset(CANONICAL_ROLE_ORDER)
+
+# M10 (OQ-O + OQ-P): metadata labels the `unknown-field` check rule
+# treats as built-in — always allowed regardless of the
+# `[vocabulary] add_fields` configuration. Covers the required fields
+# (`Lifecycle`, `Role`, `Project`, `Updated`), the relationship label
+# (`Related:`, a bare-label-with-bullet container that is structurally
+# required by parts of the convention), and the documented
+# archive-time hint label (`Archived-reason:`, written by
+# `docs archive --reason`). User-extensible metadata vocabulary lives
+# on `Config.fields` (sourced from `[vocabulary] add_fields`).
+_BUILTIN_METADATA_FIELDS: frozenset[str] = frozenset(
+    {"Lifecycle", "Role", "Project", "Updated", "Related", "Archived-reason"}
+)
+
+
+class Confidence(enum.Enum):
+    """Confidence level for a per-file migration decision (M10 — OQ-E / OQ-N).
+
+    The enum replaces the M4-era ``bool | str`` tri-value (``True``,
+    ``"medium"``, ``False``) used by `infer_role` and `FileMigration`.
+    The string values match the M4 JSON wire format byte-for-byte:
+    ``migration_to_json`` serialises ``confidence`` via ``enum.value`` so
+    existing consumers see ``"high" | "medium" | "low"`` strings
+    unchanged.
+    """
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
 
 # Filenames and markers — exact strings.
 INDEX_FILENAME = "INDEX.md"
@@ -185,6 +216,15 @@ class Config:
     line contents of a root-level ``.docsignore`` file (compilation
     is deferred to ``compile_exclude_predicate``).
 
+    M10 (OQ-H) adds ``fields`` — the metadata label allowlist sourced
+    from ``[vocabulary] add_fields``. Matching is case-sensitive exact
+    match (mirroring how ``add_lifecycles`` / ``add_roles`` already
+    work; the on-disk convention is ``Capital:``, so ``owner:`` is
+    malformed and rejected by the parser). ``check_doc``'s
+    ``unknown-field`` rule consults this set together with
+    ``_BUILTIN_METADATA_FIELDS`` to decide which extra metadata labels
+    are allowed.
+
     Defaults when `.docs.toml` is absent:
         project = root.resolve().name or "root"
         archive_dir = "archive"
@@ -198,6 +238,7 @@ class Config:
         exclude_globs = ()
         exclude_exts = ()
         docsignore_patterns = ()
+        fields = frozenset()
     """
 
     project: str
@@ -212,6 +253,7 @@ class Config:
     exclude_globs: tuple[str, ...] = ()
     exclude_exts: tuple[str, ...] = ()
     docsignore_patterns: tuple[str, ...] = ()
+    fields: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         if not self.project.strip():
@@ -276,15 +318,17 @@ class FileMigration:
         reconciled_metadata: True iff the file already carried
             metadata-shaped lines that `migrate` will reconcile into the
             inserted block rather than duplicate.
-        confidence: ``"high"``, ``"medium"``, or ``"low"``. ``"low"`` iff
-            ``ambiguities`` is non-empty; ``"high"`` or ``"medium"`` iff it is
-            empty. ``"medium"`` carries the derived-signal semantic (H1-content,
+        confidence: A `Confidence` enum member (HIGH / MEDIUM / LOW).
+            LOW iff ``ambiguities`` is non-empty; HIGH or MEDIUM iff it is
+            empty. MEDIUM carries the derived-signal semantic (H1-content,
             section-header pattern, sibling-set defaulting, non-role suffix
-            strip) — no ambiguity to report, but the signal is weaker than a
-            direct suffix or in-file `Role:` match.
+            strip) — no ambiguity to report, but the signal is weaker than
+            a direct suffix or in-file `Role:` match. The JSON wire format
+            crosses back to a string via ``Confidence.value`` so existing
+            consumers see ``"high" | "medium" | "low"`` unchanged.
         ambiguities: Human-readable notes, one per unresolved inference
-            question. Non-empty iff ``confidence == "low"``; empty for
-            ``"high"`` and ``"medium"``.
+            question. Non-empty iff ``confidence is Confidence.LOW``;
+            empty for HIGH and MEDIUM.
         archive_move: The planned destination as a root-relative POSIX path
             when the file lives in a non-conformant archive-style subdir and
             will be relocated into ``archive/<date>/``; ``None`` when the file
@@ -301,18 +345,19 @@ class FileMigration:
     updated: date
     synthesized_h1: bool
     reconciled_metadata: bool
-    confidence: str
+    confidence: Confidence
     ambiguities: tuple[str, ...]
     archive_move: str | None
 
     def __post_init__(self) -> None:
-        if self.confidence not in ("high", "medium", "low"):
+        if not isinstance(self.confidence, Confidence):
             raise ValueError(
-                f"FileMigration.confidence must be high|medium|low, got {self.confidence!r}"
+                f"FileMigration.confidence must be a Confidence enum member, "
+                f"got {type(self.confidence).__name__}: {self.confidence!r}"
             )
-        if self.confidence == "low" and not self.ambiguities:
-            raise ValueError("FileMigration.confidence 'low' requires a non-empty ambiguities")
-        if self.confidence in ("high", "medium") and self.ambiguities:
+        if self.confidence is Confidence.LOW and not self.ambiguities:
+            raise ValueError("FileMigration.confidence LOW requires a non-empty ambiguities")
+        if self.confidence is not Confidence.LOW and self.ambiguities:
             raise ValueError(
                 f"FileMigration.confidence {self.confidence!r} requires an empty ambiguities"
             )
@@ -342,16 +387,14 @@ class MigrationPlan:
             differs meaningfully from the parent's project and covers
             ≥ 5 files. Empty tuple when no subdir triggers the heuristic
             and when a CLI override (``--config-project``) is in force.
-        excluded_count: M8 (F3) — count of ``.md`` files the exclude
-            predicate filtered out of this plan. Always 0 when no
-            ``[exclude]`` config / ``.docsignore`` / CLI ``--exclude`` is
-            in force. HUMAN-OUTPUT ONLY (per M7's ``multi_project_hints``
-            precedent): omitted from ``migration_to_json`` so the JSON
-            schema stays flat.
         excluded_breakdown: M8 (F3) — one ``(prefix, count)`` per
             top-level dir that the predicate excluded; the human plan
             footer renders one ``"<count> files excluded under <prefix>"``
             line per pair. HUMAN-OUTPUT ONLY (per the M7 precedent above).
+            The aggregate count is no longer carried as a separate field
+            (M10 / OQ-D removed the unused ``excluded_count``); consumers
+            who need the total compute ``sum(c for _, c in
+            excluded_breakdown)``.
         suppressed_exts: M8 (F7) — extensions passed to
             ``--exclude-ext``; used by the non-md sibling footer to drop
             those extensions from the displayed list, and to suppress
@@ -363,7 +406,6 @@ class MigrationPlan:
     files: tuple[FileMigration, ...]
     project_original: str | None = None
     multi_project_hints: tuple[str, ...] = ()
-    excluded_count: int = 0
     excluded_breakdown: tuple[tuple[str, int], ...] = ()
     suppressed_exts: tuple[str, ...] = ()
 
@@ -891,6 +933,9 @@ def load_config(root: Path) -> Config:
 
     lifecycles = BUILTIN_STATUSES | frozenset(vocab_section.get("add_lifecycles", []))
     roles = BUILTIN_ROLES | frozenset(vocab_section.get("add_roles", []))
+    # M10 (OQ-H): `[vocabulary] add_fields` widens the `unknown-field`
+    # check rule's allowlist; case-sensitive exact match.
+    fields = frozenset(vocab_section.get("add_fields", []))
 
     role_suffixes = dict(migrate_section.get("role_suffixes", {}))
     project_name = migrate_section.get("project_name")
@@ -920,6 +965,7 @@ def load_config(root: Path) -> Config:
         exclude_globs=exclude_globs,
         exclude_exts=exclude_exts,
         docsignore_patterns=docsignore_patterns,
+        fields=fields,
     )
 
 
@@ -1668,24 +1714,24 @@ def infer_role(
     filename: str,
     metadata: Mapping[str, str | tuple[str, ...]],
     config: Config | None = None,
-) -> tuple[str, bool | str]:
+) -> tuple[str, Confidence]:
     """Infer a doc's `Role:` from its filename and any in-file metadata.
 
-    Inference passes (M7 — F1 / F10 / F12):
+    Inference passes (M7 — F1 / F10 / F12; M10 — OQ-E):
 
     1. An in-file ``Role:`` metadata line, when it carries a built-in role
-       (see `BUILTIN_ROLES`), wins outright — confidence ``True``.
+       (see `BUILTIN_ROLES`), wins outright — ``Confidence.HIGH``.
     2. The filename's trailing token (split on ``-`` / ``_`` / whitespace,
        with the ``.md`` suffix dropped) is mapped to a role via
        ``_ROLE_SUFFIXES`` (extended with ``config.role_suffixes`` when
-       given) or by ``BUILTIN_ROLES`` membership — confidence ``True``.
+       given) or by ``BUILTIN_ROLES`` membership — ``Confidence.HIGH``.
     3. A trailing ``_M\\d+`` (case-insensitive, leading zeros allowed) is the
        Trial-2 milestone-task-plan shape — returns ``("milestone",
-       "medium")``.
+       Confidence.MEDIUM)``.
     4. ``_v\\d+`` / ``_Draft`` / ``_Ready`` non-role suffixes are stripped
        (case-insensitive) and pass 2 is re-tried on the stripped stem —
-       confidence ``"medium"`` (derived signal).
-    5. Otherwise the role falls back to ``"notes"`` — confidence ``False``.
+       ``Confidence.MEDIUM`` (derived signal).
+    5. Otherwise the role falls back to ``"notes"`` — ``Confidence.LOW``.
 
     Args:
         filename: The file's basename (e.g. ``auth-spec.md``).
@@ -1698,14 +1744,11 @@ def infer_role(
 
     Returns:
         ``(role, confidence)`` — ``role`` is always a member of
-        `BUILTIN_ROLES`. ``confidence`` is ``True`` for a direct suffix or
-        in-file ``Role:`` match, the string ``"medium"`` for the derived
-        ``_M\\d+`` / non-role-suffix-strip signals, and ``False`` for the
-        ``notes`` fallback.
+        `BUILTIN_ROLES`. ``confidence`` is a `Confidence` enum member.
     """
     in_file = metadata.get("Role")
     if isinstance(in_file, str) and in_file.strip() in BUILTIN_ROLES:
-        return in_file.strip(), True
+        return in_file.strip(), Confidence.HIGH
 
     suffix_map: dict[str, str] = (
         dict(_ROLE_SUFFIXES) if config is None else {**_ROLE_SUFFIXES, **config.role_suffixes}
@@ -1732,20 +1775,20 @@ def infer_role(
     # Pass 2: direct suffix match (high confidence).
     direct = _match_direct(stem)
     if direct is not None:
-        return direct, True
+        return direct, Confidence.HIGH
 
     # Pass 3: trailing `_M\d+` milestone-number pattern (medium).
     if re.search(r"_M\d+$", stem, flags=re.IGNORECASE):
-        return "milestone", "medium"
+        return "milestone", Confidence.MEDIUM
 
     # Pass 4: strip non-role suffixes and re-try (medium).
     stripped = re.sub(r"_(?:Draft|Ready|v\d+)$", "", stem, flags=re.IGNORECASE)
     if stripped != stem:
         retried = _match_direct(stripped)
         if retried is not None:
-            return retried, "medium"
+            return retried, Confidence.MEDIUM
 
-    return "notes", False
+    return "notes", Confidence.LOW
 
 
 def infer_project(filenames: Sequence[str], dir_name: str) -> str:
@@ -2262,11 +2305,9 @@ def plan_migration(
     all_pairs = list(_iter_doc_texts(root, config))
     pairs: list[tuple[Path, str]] = []
     excluded_breakdown_map: dict[str, int] = {}
-    excluded_count = 0
     for path, text in all_pairs:
         rel = path.relative_to(root).as_posix()
         if predicate(rel):
-            excluded_count += 1
             # Bucket by the top-level dir prefix (`build/`, `generated/`,
             # …). Root-level files keep the bare filename — they're a
             # degenerate "bucket of one"; OQ-resolved footer wording
@@ -2332,8 +2373,8 @@ def plan_migration(
         # `Status:` prose line is no longer vocab-checked; it is preserved
         # via the extra-field pathway.
         ambiguities: list[str] = []
-        # `role_conf` is a tri-value: True (high), "medium" (derived), False (notes fallback).
-        notes_fallback = role_conf is False
+        # `role_conf` is a Confidence enum member (M10 — OQ-E).
+        notes_fallback = role_conf is Confidence.LOW
         if notes_fallback:
             ambiguities.append(
                 f"Role inferred as 'notes' fallback — no filename suffix or "
@@ -2349,11 +2390,11 @@ def plan_migration(
             )
 
         if ambiguities:
-            confidence: str = "low"
-        elif role_conf == "medium":
-            confidence = "medium"
+            confidence: Confidence = Confidence.LOW
+        elif role_conf is Confidence.MEDIUM:
+            confidence = Confidence.MEDIUM
         else:
-            confidence = "high"
+            confidence = Confidence.HIGH
         migrations.append(
             FileMigration(
                 path=path,
@@ -2380,14 +2421,14 @@ def plan_migration(
     for fm in migrations:
         # Only suffix-confident files seed the sibling pool so the
         # defaulting is not self-reinforcing across notes-fallback files.
-        if fm.confidence == "high":
+        if fm.confidence is Confidence.HIGH:
             subdir = "/".join(fm.rel.split("/")[:-1])
             sibling_roles.setdefault(subdir, []).append(fm.role)
 
     upgraded: list[FileMigration] = []
     notes_fallback_note = "Role inferred as 'notes' fallback"
     for fm in migrations:
-        if fm.role != "notes" or fm.confidence != "low":
+        if fm.role != "notes" or fm.confidence is not Confidence.LOW:
             upgraded.append(fm)
             continue
         # Only consider files whose low-confidence rationale includes the
@@ -2412,7 +2453,7 @@ def plan_migration(
         # Drop the now-resolved notes-fallback note; remaining ambiguities
         # (synthesised H1, out-of-vocab Lifecycle:) keep the file at low.
         remaining = tuple(a for a in fm.ambiguities if notes_fallback_note not in a)
-        new_confidence: str = "medium" if not remaining else "low"
+        new_confidence: Confidence = Confidence.MEDIUM if not remaining else Confidence.LOW
         upgraded.append(
             replace(fm, role=new_role, confidence=new_confidence, ambiguities=remaining)
         )
@@ -2432,7 +2473,7 @@ def plan_migration(
         migrations = [
             replace(
                 fm,
-                confidence="low",
+                confidence=Confidence.LOW,
                 ambiguities=fm.ambiguities
                 + (
                     f"Archive-move destination collision — {dest_counts[fm.archive_move]} "
@@ -2462,7 +2503,6 @@ def plan_migration(
         files=tuple(migrations),
         project_original=project_original,
         multi_project_hints=hints,
-        excluded_count=excluded_count,
         excluded_breakdown=excluded_breakdown,
         suppressed_exts=suppressed_exts,
     )
@@ -2533,7 +2573,9 @@ def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
             "project": fm.project,
             "lifecycle": fm.lifecycle,
             "updated": fm.updated.isoformat(),
-            "confidence": fm.confidence,
+            # OQ-E: serialise the Confidence enum as its string value so
+            # the documented wire format stays byte-stable.
+            "confidence": fm.confidence.value,
             "ambiguities": list(fm.ambiguities),
             "archive_move": fm.archive_move,
             "synthesized_h1": fm.synthesized_h1,
@@ -2691,10 +2733,15 @@ def _build_parser() -> argparse.ArgumentParser:
     touch_p = subparsers.add_parser(
         "touch",
         parents=[common],
-        help="Bump a doc's Updated: field to today and reindex.",
-        description=("Set Updated: to today in <file>. No other change. Regenerates INDEX.md."),
+        help="Bump one or more docs' Updated: fields to today and reindex.",
+        description=(
+            "Set Updated: to today in each <file>. No other change. All paths "
+            "must resolve under the same docs root; the batch is atomic "
+            "(all-or-nothing on errors) and INDEX.md is refreshed exactly "
+            "once at end."
+        ),
     )
-    touch_p.add_argument("file", help="Path to the doc to touch.")
+    touch_p.add_argument("files", nargs="+", help="Path(s) to the doc(s) to touch.")
 
     # M3 read-only verbs. They take neither --dry-run nor the `common` parent
     # (it carries --dry-run, meaningless when nothing is mutated).
@@ -3236,7 +3283,10 @@ def _cmd_mv(args: argparse.Namespace) -> int:
 
 
 def _cmd_touch(args: argparse.Namespace) -> int:
-    file_path = Path(args.file)
+    # Phase 5 scaffold: keep single-file legacy behaviour by reading the
+    # first arg from the nargs="+" list. Phase 6 rewrites this to walk the
+    # full list with atomic semantics + a single end-of-batch INDEX refresh.
+    file_path = Path(args.files[0])
     if not file_path.is_file():
         print(f"docs: file not found: {file_path}", file=sys.stderr)
         return 1
@@ -3390,6 +3440,7 @@ def _print_migration_plan(
     mode: str = "default",
     only: str | None = None,
     group_by: str | None = None,
+    quiet: bool = False,
 ) -> None:
     """Print a human-readable dry-run migration plan to stdout.
 
@@ -3415,6 +3466,13 @@ def _print_migration_plan(
         print(f'project: {plan.files[0].project} (normalised from "{plan.project_original}")')
         print()
 
+    # M10 (OQ-B): `--apply --quiet` suppresses the per-file body entirely.
+    # Footer / per-file output are both gated; caller picks `_cmd_migrate`'s
+    # default branch only. JSON / summary modes are requested outputs and
+    # never call this with quiet=True.
+    if quiet:
+        return
+
     # Triage filters apply equally to both modes.
     files: list[FileMigration] = list(plan.files)
     if only == "ambiguous":
@@ -3422,7 +3480,11 @@ def _print_migration_plan(
     if group_by == "role":
         files = sorted(files, key=lambda fm: (fm.role, fm.rel))
     elif group_by == "confidence":
-        order = {"high": 0, "medium": 1, "low": 2}
+        order: dict[Confidence, int] = {
+            Confidence.HIGH: 0,
+            Confidence.MEDIUM: 1,
+            Confidence.LOW: 2,
+        }
         files = sorted(files, key=lambda fm: (order.get(fm.confidence, 99), fm.rel))
 
     if mode == "summary":
@@ -3430,14 +3492,14 @@ def _print_migration_plan(
         #   path<60> role<12> confidence<8> notes
         for fm in files:
             notes = "; ".join(fm.ambiguities) if fm.ambiguities else "-"
-            print(f"{fm.rel:<60} {fm.role:<12} {fm.confidence:<8} {notes}")
+            print(f"{fm.rel:<60} {fm.role:<12} {fm.confidence.value:<8} {notes}")
         if files:
             print()
     else:
         for fm in files:
             print(fm.rel)
             print(f"  role: {fm.role}    project: {fm.project}    lifecycle: {fm.lifecycle}")
-            print(f"  updated: {fm.updated.isoformat()}    confidence: {fm.confidence}")
+            print(f"  updated: {fm.updated.isoformat()}    confidence: {fm.confidence.value}")
             if fm.archive_move is not None:
                 print(f"  archive move: -> {fm.archive_move}")
             if fm.synthesized_h1:
@@ -3486,7 +3548,11 @@ def _print_migration_plan(
     # `summary:`, `roles:`, `confidence:`, `ambiguities:` must all appear
     # in the footer slice.
     role_counts: dict[str, int] = {}
-    confidence_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+    confidence_counts: dict[Confidence, int] = {
+        Confidence.HIGH: 0,
+        Confidence.MEDIUM: 0,
+        Confidence.LOW: 0,
+    }
     ambiguity_counts: dict[str, int] = {}
     n_files = len(plan.files)
     n_ambiguous = 0
@@ -3501,12 +3567,16 @@ def _print_migration_plan(
 
     print(
         f"summary: {n_files} files; {n_ambiguous} ambiguous "
-        f"(low={confidence_counts['low']}, medium={confidence_counts['medium']}, "
-        f"high={confidence_counts['high']})"
+        f"(low={confidence_counts[Confidence.LOW]}, "
+        f"medium={confidence_counts[Confidence.MEDIUM]}, "
+        f"high={confidence_counts[Confidence.HIGH]})"
     )
     roles_token = " ".join(f"{r}={c}" for r, c in sorted(role_counts.items()))
     print(f"roles: {roles_token if roles_token else '-'}")
-    conf_token = " ".join(f"{k}={confidence_counts[k]}" for k in ("high", "medium", "low"))
+    conf_token = " ".join(
+        f"{c.value}={confidence_counts[c]}"
+        for c in (Confidence.HIGH, Confidence.MEDIUM, Confidence.LOW)
+    )
     print(f"confidence: {conf_token}")
     if ambiguity_counts:
         amb_token = " ".join(f"{k}={v}" for k, v in sorted(ambiguity_counts.items()))
@@ -3590,10 +3660,23 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
         return 2
 
     if args.json:
+        # JSON is a requested output — `--quiet` never suppresses it.
         print(json.dumps(migration_to_json(plan), indent=2))
+    elif args.summary:
+        # `--summary` is a requested output — `--quiet` does not suppress
+        # the compact block (OQ-B's scope is per-file plan chatter only).
+        _print_migration_plan(plan, mode="summary", only=args.only, group_by=args.group_by)
     else:
-        mode = "summary" if args.summary else "default"
-        _print_migration_plan(plan, mode=mode, only=args.only, group_by=args.group_by)
+        # Default (verbose) plan is per-file chatter — gated by
+        # `--apply --quiet` per OQ-B. Dry-run + `--quiet` still emits the
+        # plan because the plan IS the requested output.
+        _print_migration_plan(
+            plan,
+            mode="default",
+            only=args.only,
+            group_by=args.group_by,
+            quiet=(args.apply and args.quiet),
+        )
 
     if args.apply and not args.quiet:
         moves = sum(1 for fm in plan.files if fm.archive_move is not None)

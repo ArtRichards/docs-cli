@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-05-26
+Updated: 2026-05-27
 
 Related:
 - child-of: m10-adoption-polish.md
@@ -31,7 +31,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 2. Write Tests (RED) | Complete | 2026-05-26 | 27 new test items added across `tests/test_cli_touch.py` (5 multi-file/atomic/INDEX-refresh-and-idempotency), `tests/test_cli_migrate.py` (6 `--apply` writes/extends `.docs.toml` + `--quiet` + OQ-G rmdir), `tests/test_check.py` (5 `unknown-field` rule incl. OQ-O Related-never-flagged lock), `tests/test_cli_check.py` (2 CLI `unknown-field`), `tests/test_config.py` (3 `add_fields` schema), `tests/test_migrate.py` (5 `Confidence` enum + 1 `excluded_count` removal). 23 RED + 4 GREEN regression-locks; M9's 369 GREEN preserved (no existing test regressed). Test count: 396 collected (369 + 27). **Review-fix tighten 2026-05-26**: per fresh-eyes review, 4 additional tests added (+1 OQ-G `OSError`-swallow sibling, +1 OQ-O `Archived-reason:` sibling, +1 Pass-4 `_v\d+`-strip Confidence.MEDIUM, +1 `--apply --quiet --summary`/`--json` requested-output coverage) and 6 in-place tightenings (SF1 [exclude]-waiver so no-overwrite body runs; SF2 immediately-above ordering; SF3 exact OQ-F message + path; SF5 content-idempotence over mtime; SF6 stderr success-line token; N3 resolved-project-name pin). Net: 25 RED + 6 GREEN-locks; total 400 collected (369 + 31). |
 | 3. Create Data/Fixtures | Complete | 2026-05-26 | No-op per the Phase-3 recommendation in the milestone plan: every Phase-2 test that needed a real tree on disk built it inline via `tmp_path` (multi-file touch trees, vocab trees, OQ-G rmdir tree) so the test files own their setup and Phase 3 had no fixtures to stage. Sign-off folded into the Phase 4 commit. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-26 | Verbatim baseline captured at `/tmp/m10-phase-4-baseline.txt`: **23 failed, 373 passed (396 collected)**. Per-deliverable attribution table below; every RED traces to an intended unimplemented Phase-5/6 surface (no fixture FNF, no unintended ImportError outside the documented `Confidence` import, no flaky assertion). M9's 369 GREEN baseline preserved + 4 GREEN regression-locks added. Quality gate clean. **Post-review-fix (2026-05-26)**: with 4 added tests + 6 in-place tightenings, the partition is **25 failed, 375 passed (400 collected)** — net +2 REDs (N2 sibling `Archived-reason:`, N6 Pass-4 derived MEDIUM), +2 GREEN-locks (N1 sibling OQ-G `OSError`-swallow, SF7 `--apply --quiet --summary`/`--json` requested-output coverage). M9 369 baseline still GREEN; quality gate still clean. |
-| 5. Update Base Interfaces | Pending | — | |
+| 5. Update Base Interfaces | Complete | 2026-05-27 | `Confidence` enum + `Config.fields` + `MigrationPlan.excluded_count` removal + `touch` `nargs="+"` + `unknown-field` scaffold + `--apply --quiet` plumbed. 16 of the 25 RED tests flipped GREEN by scaffolding; 9 behaviour-side REDs remain for Phase 6 (3 multi-file touch body, 3 `apply_migration` writes, 3 `unknown-field` rule body). Pytest 9F/391P; ruff / ruff format / mypy / `docs check` all clean. M9 369-baseline tests re-expressed against `Confidence.HIGH`/`MEDIUM`/`LOW` enum identity (no test deleted; contract coverage preserved). |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
 | 8. Run Tests (GREEN) | Pending | — | |
@@ -291,3 +291,117 @@ baseline-GREEN regression locks are pinned in the same table.
       (regression-lock); #26 RED (the field exists today). Planning
       agent's "possibly #26" guess was inverted — RED at baseline,
       GREEN after Phase 5 removal.
+
+## Phase 5 — Update Base Interfaces (Complete 2026-05-27)
+
+### Objective
+
+Land the M10 schema + argparse scaffolding so the Phase-2 REDs that
+trace to interface gaps flip green by construction, leaving only the
+behaviour-side REDs (multi-file atomic touch, `.docs.toml` writer,
+`--apply --quiet` suppression body, `unknown-field` rule body) for
+Phase 6.
+
+### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `src/docs_cli/cli.py` | Modify | Add `import enum`; introduce `Confidence(enum.Enum)` with `HIGH`/`MEDIUM`/`LOW` string values that match the JSON wire format (`enum.value`); introduce `_BUILTIN_METADATA_FIELDS = frozenset({"Lifecycle","Role","Project","Updated","Related","Archived-reason"})` (OQ-O + OQ-P); add `Config.fields: frozenset[str] = frozenset()` with case-sensitive docstring (OQ-H); thread `fields = frozenset(vocab_section.get("add_fields", []))` through `load_config`; retype `FileMigration.confidence: Confidence` + rewrite `__post_init__` per OQ-N (isinstance check; LOW requires non-empty ambiguities; HIGH/MEDIUM require empty); drop `MigrationPlan.excluded_count` + local counter; retype `infer_role -> tuple[str, Confidence]` and replace tri-value literals (`True | "medium" | False`) with `Confidence.HIGH/MEDIUM/LOW` at every call site (inference passes, plan_migration tri-value dispatch + notes-fallback-medium upgrade + collision pass); cross enum→string at JSON boundary in `migration_to_json` via `fm.confidence.value`; rewrite `_print_migration_plan`'s `confidence_counts` to `dict[Confidence, int]` + stringify for display; add `quiet: bool = False` kwarg with early-return at the top of `_print_migration_plan`; rewrite `_cmd_migrate` dispatch matrix to thread `quiet=(args.apply and args.quiet)` only into the default branch (JSON / summary are requested outputs); switch `touch_p` argparse to `nargs="+"` + update help/description; scaffold `_cmd_touch` to read `args.files[0]` (Phase 6 rewrites the full multi-file flow). |
+| `tests/_typing/docs.pyi` | Modify | Re-export `Confidence as Confidence` so mypy sees it. |
+| `tests/test_check.py` | Modify | Remove the `# type: ignore[call-arg]` in `_config_with_fields` now that `Config.fields` exists. |
+| `tests/test_migrate.py` | Modify | Update existing M9 infer_role tests + plan_migration confidence assertions from bool/string tri-value to `Confidence` enum identity comparisons (`is Confidence.HIGH` etc.). Add `Confidence` import. |
+| `tests/test_inference.py` | Modify | Convert `_CONFIDENCE_OK` from `("medium","high",True)` strings to `(Confidence.HIGH, Confidence.MEDIUM)` enum tuple; convert every `== "medium"`, `in ("low", False)` assertion to enum identity. Add `Confidence` import. |
+| `tests/test_lifecycle_rename.py` | Modify | `test_file_migration_accepts_medium_confidence` now constructs with `Confidence.MEDIUM` + asserts `is Confidence.MEDIUM`. |
+
+### Actions taken
+
+- Audited every Phase-2 RED test for the "scaffolding-flips" attribution
+  in the planning plan; confirmed the partial-GREEN target (16 RED →
+  GREEN by Phase 5 scaffolding; 9 RED remain for Phase 6).
+- Updated the M9-baseline `infer_role` + `plan_migration` tests that
+  asserted on the legacy `bool | str` tri-value confidence. The change
+  is forced by the OQ-E enum replacement: those tests still pin the
+  same semantics, just expressed against the new return type. The
+  M9 GREEN baseline (369 tests) was preserved through the rewrite —
+  no test was deleted or weakened, only re-expressed.
+- Kept the `_print_migration_plan(quiet=False)` body untouched in
+  every other respect — only the early-return guard at the top is new
+  scaffolding. Phase 6 lands the dispatch matrix in `_cmd_migrate`
+  that actually computes `quiet=True` from the args.
+- `Confidence` is now exported from `docs_cli.cli` directly; the
+  `pyi` re-export keeps mypy happy. The runtime import works from
+  `from docs import Confidence` through the conftest `sys.modules`
+  alias and from `from docs_cli.cli import Confidence` directly.
+
+### Issues / decisions
+
+- **Existing M9 tests forced an update.** The planning agent noted
+  "M9 baseline + several Phase-2 GREENs flip green by scaffolding".
+  Strictly, 30+ existing tests asserted on the `bool | str` tri-value
+  shape of `infer_role`'s second return — those are testing the
+  contract Phase 5 just rewrote. The choice is: weaken the existing
+  tests (lose contract coverage) OR retarget them at the enum
+  (preserve coverage at the new shape). I chose retargeting. The
+  edits are mechanical (`is True` → `is Confidence.HIGH`; `is False`
+  → `is Confidence.LOW`; `== "medium"` → `is Confidence.MEDIUM`).
+- **`infer_lifecycle` / `infer_updated` kept their `bool` returns.**
+  Their tests still assert `is True/False`. The OQ-E enum replacement
+  is scoped to `infer_role` (the only inference call site that has
+  a three-level confidence; the other two only need a binary
+  "confident vs. fell-back" signal). No regression.
+
+### Test results
+
+After Phase 5:
+
+```text
+$ .venv/bin/python -m pytest tests/ -q --tb=no
+... (400 items collected) ...
+9 failed, 391 passed in 10.80s
+```
+
+Failing tests (intentional — all Phase 6 behaviour-side surfaces):
+
+- `tests/test_cli_touch.py::test_touch_multi_file_bumps_all_three_to_today` — multi-file atomic body not written yet.
+- `tests/test_cli_touch.py::test_touch_atomic_failure_leaves_every_file_unchanged` — atomic validate-all-first not implemented yet.
+- `tests/test_cli_touch.py::test_touch_atomic_failure_does_not_write_index` — same.
+- `tests/test_cli_migrate.py::test_migrate_apply_writes_docs_toml_when_absent` — `_ensure_docs_toml` writer not implemented yet.
+- `tests/test_cli_migrate.py::test_migrate_apply_extends_sidecar_without_overwriting_project` — same writer not extending sidecar yet.
+- `tests/test_cli_migrate.py::test_migrate_apply_removes_empty_archive_parent_directory` — `_opportunistic_rmdir` not implemented yet.
+- `tests/test_check.py::test_check_doc_unknown_field_warning_when_allowlist_set` — `unknown-field` rule body not implemented yet.
+- `tests/test_check.py::test_check_doc_allowlist_is_case_sensitive` — same.
+- `tests/test_cli_check.py::test_check_cli_unknown_field_exits_1` — same.
+
+Net Phase 5 scaffolding flips: 25 RED → 9 RED (16 flipped to GREEN).
+M9 369 baseline preserved (re-expressed; no contract weakened).
+
+### Quality gate (verbatim)
+
+```text
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+33 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 34 source files
+
+$ .venv/bin/docs check docs --stale 14
+docs: no violations found
+```
+
+### Exit criteria
+
+- [x] `Confidence(enum.Enum)` lands with HIGH/MEDIUM/LOW string values matching JSON wire format.
+- [x] `Config.fields: frozenset[str] = frozenset()` field added; `load_config` reads `[vocabulary] add_fields` into it.
+- [x] `MigrationPlan.excluded_count` removed (field + local counter + constructor).
+- [x] `FileMigration.confidence: Confidence` + validator rewritten per OQ-N.
+- [x] `infer_role` retypes to `tuple[str, Confidence]`; every tri-value call site uses the enum.
+- [x] `migration_to_json` crosses enum→string at the JSON boundary via `fm.confidence.value` — JSON wire format byte-stable.
+- [x] `_print_migration_plan` accepts `quiet: bool = False`; early-return guards the body; `_cmd_migrate` dispatch threads quiet only into the default branch.
+- [x] `touch` argparse `nargs="+"`; `_cmd_touch` scaffolded to `args.files[0]`.
+- [x] `tests/_typing/docs.pyi` re-exports `Confidence`.
+- [x] `# type: ignore[call-arg]` removed from `tests/test_check.py`.
+- [x] M9 369-baseline tests re-expressed against the enum; no contract weakened.
+- [x] Quality gate clean tree-wide; 9 RED remain for Phase 6 (all behaviour-side).

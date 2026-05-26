@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pytest
 
-from docs import FileMigration, MetadataError, apply_migration, parse, plan_migration
+from docs import Confidence, FileMigration, MetadataError, apply_migration, parse, plan_migration
 
 # --- Parser-level: accept Lifecycle:, reject Status: as the controlled key ---
 
@@ -199,11 +199,11 @@ def test_file_migration_accepts_medium_confidence(tmp_path):
         updated=date(2026, 5, 25),
         synthesized_h1=False,
         reconciled_metadata=False,
-        confidence="medium",
+        confidence=Confidence.MEDIUM,
         ambiguities=(),
         archive_move=None,
     )
-    assert fm.confidence == "medium"
+    assert fm.confidence is Confidence.MEDIUM
     assert fm.ambiguities == ()
 
 

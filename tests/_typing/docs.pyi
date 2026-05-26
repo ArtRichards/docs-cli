@@ -12,6 +12,7 @@ from docs_cli.cli import (
     BUILTIN_ROLES as BUILTIN_ROLES,
     BUILTIN_STATUSES as BUILTIN_STATUSES,
     CANONICAL_ROLE_ORDER as CANONICAL_ROLE_ORDER,
+    Confidence as Confidence,
     Config as Config,
     Doc as Doc,
     FileMigration as FileMigration,

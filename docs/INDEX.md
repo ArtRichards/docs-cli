@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-26. 31 docs active, 0 archived._
+_Generated 2026-05-27. 31 docs active, 0 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-26.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-27.
 
 ### Active — Charter
 
@@ -28,7 +28,7 @@ _Generated 2026-05-26. 31 docs active, 0 archived._
 
 ### Active — Milestone
 
-- [m10-adoption-polish.md](m10-adoption-polish.md) — _milestone_ — - Milestone: M10 (v1.4.0) - Title: Adoption-flow polish + 1.3.0 carry-overs - Surface: two new CLI features (`docs…. Updated 2026-05-26.
+- [m10-adoption-polish.md](m10-adoption-polish.md) — _milestone_ — - Milestone: M10 (v1.4.0) - Title: Adoption-flow polish + 1.3.0 carry-overs - Surface: two new CLI features (`docs…. Updated 2026-05-27.
 - [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
 - [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
 - [m9-pypi-publish.md](m9-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-24, post M6 scope reframe.** M9 enters > active state once M8 ships. The operative checklist…. Updated 2026-05-25.
@@ -41,7 +41,7 @@ _Generated 2026-05-26. 31 docs active, 0 archived._
 
 ### Active — Log
 
-- [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-26.
+- [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-27.
 - [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
 - [m8-adoption-workflow-log.md](m8-adoption-workflow-log.md) — _log_ — - Project: docs - Milestone: M8 — Adoption workflow (agent-driveable) - Started: 2026-05-24 - Progress: **All 10 TDD…. Updated 2026-05-25.
 - [m9-pypi-publish-log.md](m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries appended as the operator walked [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-25.

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-05-26
+Updated: 2026-05-27
 
 Related:
 - parent-of: m10-adoption-polish-impl.md
@@ -175,7 +175,7 @@ Surfaced 2026-05-25 while drafting M10. Operator-resolution requested before Pha
 - [x] Phase 2 — Write Tests (RED) (2026-05-26)
 - [x] Phase 3 — Create Data/Fixtures (2026-05-26 — no-op; tests use inline `tmp_path`)
 - [x] Phase 4 — Run Tests (RED Baseline) (2026-05-26)
-- [ ] Phase 5 — Update Base Interfaces
+- [x] Phase 5 — Update Base Interfaces (2026-05-27)
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
