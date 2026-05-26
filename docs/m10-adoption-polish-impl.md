@@ -6,8 +6,8 @@ Project: docs
 Updated: 2026-05-27
 
 Related:
-- child-of: m10-adoption-polish.md
-- pairs-with: m10-adoption-polish.md
+- child-of: archive/2026-05-27/m10-adoption-polish.md
+- pairs-with: archive/2026-05-27/m10-adoption-polish.md
 - pairs-with: status.md
 
 ## Overview
@@ -36,7 +36,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-27 | Spec sweep across cli.md / convention.md / architecture.md / README.md / CHANGELOG.md + adoption-playbook restructure (OQ-I, 4 steps) + skill-references resync (byte-equal); 1.3.0 → 1.4.0 bump in pyproject.toml, `__version__`, `tests/test_packaging.py`. Wheel + sdist built at 1.4.0; twine check PASSED. 400/400 GREEN; quality gate clean tree-wide. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-27 | Verbatim GREEN gate at `/tmp/m10-phase-8-green.txt`: 400 passed (pytest), ruff / ruff format / mypy / `docs check docs --stale 14` clean, `docs --version` prints `docs 1.4.0`, `twine check` PASSED on `dist/docs_cli-1.4.0-{py3-none-any.whl,tar.gz}`. |
 | 9. Implement Online/Integration | Complete | 2026-05-27 | kebab-tiny dogfood PASS — 1.4.0 wheel installed in /tmp/docs-m10-venv; adoption playbook (Plan → Apply → Verify, Step 2 triage skipped on a clean plan) reads end-to-end with `--apply --quiet` truly silent (empty stdout AND empty stderr) + auto-emitted `.docs.toml` (OQ-A) + `docs check` exit 0 immediately. Adopted-state fixture updated in lockstep for the M10 auto-emitted shape (`[archive] date_format` block + provenance header). |
-| 10. Quality, Docs, Refactor | Pending | — | |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-27 | Closeout. CHANGELOG dated; milestone-completion summary on milestone doc; status.md + plan.md M10 → Complete; dist/ rebuilt from closeout state + twine check PASS; milestone doc archived (impl log stays active per M8/M9 pattern). Publish deferred to M11. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-25)
 
@@ -780,3 +780,79 @@ Pytest after the fixture refresh: **400/400 GREEN.**
 - [x] One INDEX regen (operator's `docs index`).
 - [x] Adopted-state fixture updated in lockstep for the M10 auto-emitted shape; behaviour-delta noted above.
 - [x] 400/400 pytest GREEN after the fixture refresh.
+
+## Phase 10 — Quality, Docs, Refactor (closeout) (Complete 2026-05-27)
+
+### Objective
+
+Close M10 out: tick the Phase Checklist 5-10, append the
+milestone-completion summary to the milestone doc, date the
+CHANGELOG, rebuild final 1.4.0 dist artefacts, regen INDEX +
+snapshot, archive the milestone doc only (impl log stays
+Lifecycle: active per the M8/M9 pattern). No PyPI publish —
+deferred to M11.
+
+### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `CHANGELOG.md` | Modify | `## 1.4.0 — UNRELEASED` → `## 1.4.0 — 2026-05-27 (LOCAL; not on PyPI)`. |
+| `docs/m10-adoption-polish.md` | Modify | Phase Checklist 5-10 all ticked; milestone-completion summary appended. |
+| `docs/m10-adoption-polish-impl.md` | Modify | Phase 10 entry (this section). |
+| `docs/status.md` | Modify | M10 row → Complete; Current milestone block updated; Next action → M11 (PyPI publish). |
+| `docs/plan.md` | Modify | M10 row → Complete. |
+| `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Lockstep refresh after the closeout edits + the milestone-doc archive. |
+| `dist/docs_cli-1.4.0-*` | Rebuild | Rebuilt from the closeout-commit state; `twine check` PASSED. |
+
+### Actions taken
+
+- Dated the CHANGELOG entry.
+- Wrote the milestone-completion summary on the milestone doc.
+- Archived `docs/m10-adoption-polish.md` via
+  `docs archive` (impl log stays active per the M8/M9 pattern;
+  it remains the operational record of what shipped).
+- Rebuilt the wheel + sdist from the closeout-commit state and
+  re-ran `twine check`: both PASSED.
+- Regenerated `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+  in lockstep.
+
+### Milestone-completion summary
+
+- **Version**: 1.4.0 (ready locally; not on PyPI — publish
+  deferred to M11).
+- **Surface delivered**: multi-file atomic `docs touch
+  <file>...`; `docs migrate --apply` writes/extends `.docs.toml`
+  + opportunistic-rmdir; `docs migrate --apply --quiet`
+  suppresses per-file output; `[vocabulary] add_fields`
+  allowlist + `docs check` `unknown-field` warning rule;
+  `Confidence` enum (M4 wire-format byte-stable);
+  `MigrationPlan.excluded_count` removed; adoption playbook
+  restructured to 4 steps.
+- **Test count**: 400 passing (369 M9 baseline + 31 M10
+  additions + 0 deletions).
+- **Quality gate at closeout**: ruff / ruff format / mypy /
+  `docs check docs --stale 14` all clean tree-wide.
+- **Dogfood result**: kebab-tiny end-to-end on the 1.4.0
+  wheel — `--apply --quiet` truly silent; auto-emitted
+  `.docs.toml` carries the OQ-A `[project]` + OQ-M
+  `[archive]` blocks; `docs check` exit 0 immediately.
+- **Carry-overs absorbed**: M3 (`[vocabulary] add_fields` —
+  the long-parked Open question), M7 NIT 1 (`Confidence`
+  enum), M8 (`MigrationPlan.excluded_count` removal,
+  `--quiet` per-file output suppression, playbook polish),
+  M4 (empty-archive-parent rmdir).
+- **Deferred** (not in M10 scope): PyPI publish (M11);
+  `docs project rename` verb (the project-rename TODO at the
+  bottom of the milestone doc).
+
+### Exit criteria
+
+- [x] CHANGELOG dated.
+- [x] Milestone-completion summary on the milestone doc.
+- [x] Phase Checklist 5-10 ticked.
+- [x] status.md M10 → Complete; Next action → M11.
+- [x] docs/plan.md M10 → Complete.
+- [x] dist/docs_cli-1.4.0-* rebuilt from closeout state; twine check PASSED.
+- [x] INDEX + snapshot lockstep refresh.
+- [x] Milestone doc archived via `docs archive`; impl log stays Lifecycle: active.
+- [x] 400/400 GREEN at closeout.

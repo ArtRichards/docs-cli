@@ -1,9 +1,10 @@
 # M10 — Adoption-flow polish + 1.3.0 carry-overs
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-27
+Archived-reason: M10 complete (1.4.0 ready locally)
 
 Related:
 - parent-of: m10-adoption-polish-impl.md
@@ -36,16 +37,16 @@ Close the highest-leverage follow-ons from M1-M9 so the M8 adoption loop ships t
 
 ### Deliverables
 
-- [ ] `docs touch` accepts `file...` positional (`nargs="+"`); atomic semantics; single end-of-batch INDEX refresh.
-- [ ] `docs migrate --apply` writes / extends `.docs.toml` at the resolved root.
-- [ ] `docs migrate --apply --quiet` suppresses per-file plan output.
-- [ ] `[vocabulary] add_fields` allowlist + `check_doc` `unknown-field` warning rule.
-- [ ] `Confidence` enum + `infer_role` return-type tightening.
-- [ ] `MigrationPlan.excluded_count` removed.
-- [ ] `references/adoption-playbook.md` rewritten for the new `--apply` semantics.
-- [ ] `cli.md`, `convention.md`, `architecture.md`, README updated; CHANGELOG `## 1.4.0` entry.
-- [ ] Bundled skill references resynced.
-- [ ] M10 dogfooded against the M7/M8 sanitised fixtures end-to-end (Phase 9) — confirm a fresh subagent adopts `kebab-tiny` without any manual `.docs.toml` write.
+- [x] `docs touch` accepts `file...` positional (`nargs="+"`); atomic semantics; single end-of-batch INDEX refresh.
+- [x] `docs migrate --apply` writes / extends `.docs.toml` at the resolved root.
+- [x] `docs migrate --apply --quiet` suppresses per-file plan output.
+- [x] `[vocabulary] add_fields` allowlist + `check_doc` `unknown-field` warning rule.
+- [x] `Confidence` enum + `infer_role` return-type tightening.
+- [x] `MigrationPlan.excluded_count` removed.
+- [x] `references/adoption-playbook.md` rewritten for the new `--apply` semantics.
+- [x] `cli.md`, `convention.md`, `architecture.md`, README updated; CHANGELOG `## 1.4.0` entry.
+- [x] Bundled skill references resynced.
+- [x] M10 dogfooded against the M7/M8 sanitised fixtures end-to-end (Phase 9) — confirm a fresh subagent adopts `kebab-tiny` without any manual `.docs.toml` write.
 
 ## OPEN QUESTIONS
 
@@ -180,7 +181,7 @@ Surfaced 2026-05-25 while drafting M10. Operator-resolution requested before Pha
 - [x] Phase 7 — Update Tool/Wrapper Layer (2026-05-27)
 - [x] Phase 8 — Run Tests (GREEN) (2026-05-27)
 - [x] Phase 9 — Implement Online/Integration (2026-05-27)
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor (2026-05-27)
 
 ## Decisions
 
@@ -210,6 +211,44 @@ _Recorded as the milestone progresses. Initial decisions inherited from the OPEN
 - M10's dogfood subagent (Phase 9) adopts `kebab-tiny` end-to-end with zero manual `.docs.toml` editing.
 - `CHANGELOG.md` `## 1.4.0` entry covers every M10 surface change.
 - All bundled skill references byte-equal to source after Phase 7.
+
+## Milestone-completion summary (2026-05-27)
+
+- **Version**: 1.4.0 — ready locally; not on PyPI (publish
+  deferred to M11 per the M7/M8 pattern).
+- **All Deliverables checked.** Multi-file atomic `docs touch
+  <file>...`; `docs migrate --apply` writes / extends
+  `.docs.toml` (OQ-A) + opportunistic empty-archive-parent
+  rmdir (OQ-G); `docs migrate --apply --quiet` suppresses
+  per-file plan output (OQ-B); `[vocabulary] add_fields`
+  allowlist + `docs check` `unknown-field` warning rule (OQ-F
+  + OQ-H); `Confidence` enum replacing the M4 `bool | str`
+  tri-value (OQ-E; JSON wire format byte-stable);
+  `MigrationPlan.excluded_count` removed (OQ-D); adoption
+  playbook restructured to 4 steps (OQ-I); cli.md /
+  convention.md / architecture.md / README / CHANGELOG
+  updated in lockstep; bundled skill references byte-equal
+  to source.
+- **All Success Criteria met.** 400/400 pytest; ruff / ruff
+  format / mypy / `docs check docs --stale 14` clean
+  tree-wide; multi-file `docs touch` writes all-or-nothing
+  + single INDEX refresh; foreign-tree `--apply` produces a
+  tree `docs check` accepts with zero manual steps; `--apply
+  --quiet` empty stdout + empty stderr; `unknown-field` rule
+  is opt-in (clean by default; case-sensitive exact match
+  against `add_fields`); Phase 9 kebab-tiny dogfood PASS.
+- **Carry-overs absorbed**: M3 (`[vocabulary] add_fields` —
+  the long-parked Open question now closes); M7 NIT 1
+  (`Confidence` enum); M8 (`MigrationPlan.excluded_count`
+  removal, `--quiet` per-file output, playbook polish);
+  M4 (empty-archive-parent rmdir under OQ-G).
+- **Conscious deferrals**: PyPI publish (M11); `docs project
+  rename` verb (the project-rename TODO at the bottom of
+  this doc); + the 16 items in the Decisions block's
+  "Conscious deferrals" list. None block the 1.4.0 local
+  ship.
+- **Artefacts**: `dist/docs_cli-1.4.0-py3-none-any.whl` +
+  `dist/docs_cli-1.4.0.tar.gz` both pass `twine check`.
 
 ## Follow-on TODOs
 

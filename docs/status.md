@@ -11,32 +11,38 @@ Related:
 - pairs-with: m7-migration-accuracy.md
 - pairs-with: m8-adoption-workflow.md
 - pairs-with: m9-pypi-publish.md
-- pairs-with: m10-adoption-polish.md
+- pairs-with: archive/2026-05-27/m10-adoption-polish.md
 - pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
 
-**M10 — Adoption-flow polish + 1.3.0 carry-overs** is **Active**
-(Phases 1-9 complete 2026-05-27; Phase 10 closeout next). It
-bundles the two user-surfaced agent-driveability features (`docs
-touch <file...>`, `docs migrate --apply` writes `.docs.toml`)
-with the carry-overs from M3 (`[vocabulary] add_fields`
-allowlist), M7 (`Confidence` enum), and M8 (`--quiet` per-file
-output suppression, `MigrationPlan.excluded_count` removal,
-adoption-playbook restructure). Ships as 1.4.0. The full
-deliverable list and 9 OPEN QUESTIONS (A-I, all
-operator-confirmed 2026-05-26 and promoted to Decisions) live
-in [m10-adoption-polish.md](m10-adoption-polish.md);
-implementation log in
-[m10-adoption-polish-impl.md](m10-adoption-polish-impl.md).
-Phase 9 (kebab-tiny dogfood) confirmed `--apply --quiet`
-produces empty stdout + empty stderr, the auto-emitted
-`.docs.toml` carries OQ-A's `[project]` + OQ-M's `[archive]
-date_format` block under the provenance header, and `docs
-check` exits 0 immediately with zero manual operator action.
-400/400 GREEN; `docs --version` prints `docs 1.4.0`.
+**M10 — Adoption-flow polish + 1.3.0 carry-overs** is
+**Complete (2026-05-27)** — 1.4.0 ready locally; publish
+deferred to M11. The milestone bundled the two user-surfaced
+agent-driveability features (`docs touch <file...>` with
+multi-file atomic semantics, `docs migrate --apply` writes
+`.docs.toml` automatically + opportunistic empty-archive-
+parent rmdir) with the carry-overs from M3 (`[vocabulary]
+add_fields` allowlist + `unknown-field` check rule), M7
+(`Confidence` enum replacing the `bool | str` tri-value), and
+M8 (`--apply --quiet` per-file output suppression,
+`MigrationPlan.excluded_count` removal, adoption-playbook
+restructured to 4 steps). 400/400 pytest GREEN; ruff /
+ruff format / mypy / `docs check docs --stale 14` clean
+tree-wide; `dist/docs_cli-1.4.0-*` artefacts pass
+`twine check`. Phase 9 kebab-tiny dogfood (in
+`/tmp/m10-dogfood` against the 1.4.0 wheel in
+`/tmp/docs-m10-venv`) confirmed `--apply --quiet` produces
+empty stdout + empty stderr, the auto-emitted `.docs.toml`
+carries OQ-A's `[project]` + OQ-M's `[archive] date_format`
+under the provenance header, and `docs check` exits 0
+immediately. See
+[m10-adoption-polish-impl.md](m10-adoption-polish-impl.md)
+for the per-phase log; the milestone doc was archived at
+Phase 10 closeout per the M8/M9 pattern (impl log stays
+Lifecycle: active).
 
 **docs-cli 1.3.0 shipped 2026-05-25.** **M9 — PyPI publish
 1.3.0** is complete: `docs-cli==1.3.0` is live at
@@ -51,10 +57,13 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** M10 Phase 10 (closeout — date the CHANGELOG;
-archive the milestone doc only via `docs archive`; flip status.md
-M10 → Complete; build final 1.4.0 artefacts; `twine check`).
-No PyPI publish — that's M11.
+**Next action:** **M11 — PyPI publish 1.4.0.** The
+`dist/docs_cli-1.4.0-*` artefacts are ready locally and
+pass `twine check`. M11 will be a release-runbook-driven
+publish milestone (mirroring M9 for 1.3.0): one publish
+event, a `v1.4.0` git tag, a GitHub release with the
+artefacts attached, and a closeout log capturing the
+upload sha256 + any deviations from the runbook.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -204,7 +213,7 @@ for the milestone summary.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-9 complete 2026-05-27; kebab-tiny dogfood PASS; 400/400 GREEN at 1.4.0; Phase 10 closeout next) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; 1.4.0 ready locally — publish DEFERRED to M11; kebab-tiny dogfood PASS; 400/400 GREEN; `twine check` PASS on `dist/docs_cli-1.4.0-*`) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
