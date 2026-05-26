@@ -179,7 +179,7 @@ Surfaced 2026-05-25 while drafting M10. Operator-resolution requested before Pha
 - [x] Phase 6 — Implement Offline/Core Path (2026-05-27)
 - [x] Phase 7 — Update Tool/Wrapper Layer (2026-05-27)
 - [x] Phase 8 — Run Tests (GREEN) (2026-05-27)
-- [ ] Phase 9 — Implement Online/Integration
+- [x] Phase 9 — Implement Online/Integration (2026-05-27)
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions

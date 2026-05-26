@@ -35,7 +35,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 6. Implement Offline/Core Path | Complete | 2026-05-27 | `_cmd_touch` rewritten with atomic multi-file semantics + single-root sanity check + single end-of-batch INDEX refresh; `apply_migration` augmented with `_opportunistic_rmdir` (post-move) + `_ensure_docs_toml` (post-file-loop); `check_doc` `unknown-field` rule lands as opt-in (fires only when `config.fields` is non-empty). 400/400 GREEN; quality gate clean tree-wide. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-27 | Spec sweep across cli.md / convention.md / architecture.md / README.md / CHANGELOG.md + adoption-playbook restructure (OQ-I, 4 steps) + skill-references resync (byte-equal); 1.3.0 → 1.4.0 bump in pyproject.toml, `__version__`, `tests/test_packaging.py`. Wheel + sdist built at 1.4.0; twine check PASSED. 400/400 GREEN; quality gate clean tree-wide. |
 | 8. Run Tests (GREEN) | Complete | 2026-05-27 | Verbatim GREEN gate at `/tmp/m10-phase-8-green.txt`: 400 passed (pytest), ruff / ruff format / mypy / `docs check docs --stale 14` clean, `docs --version` prints `docs 1.4.0`, `twine check` PASSED on `dist/docs_cli-1.4.0-{py3-none-any.whl,tar.gz}`. |
-| 9. Implement Online/Integration | Pending | — | |
+| 9. Implement Online/Integration | Complete | 2026-05-27 | kebab-tiny dogfood PASS — 1.4.0 wheel installed in /tmp/docs-m10-venv; adoption playbook (Plan → Apply → Verify, Step 2 triage skipped on a clean plan) reads end-to-end with `--apply --quiet` truly silent (empty stdout AND empty stderr) + auto-emitted `.docs.toml` (OQ-A) + `docs check` exit 0 immediately. Adopted-state fixture updated in lockstep for the M10 auto-emitted shape (`[archive] date_format` block + provenance header). |
 | 10. Quality, Docs, Refactor | Pending | — | |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-25)
@@ -673,3 +673,110 @@ Full log at `/tmp/m10-phase-8-green.txt`.
 - [x] ruff / ruff format --check / mypy / `docs check` clean tree-wide.
 - [x] `docs --version` prints `docs 1.4.0`.
 - [x] `dist/docs_cli-1.4.0-*` built locally; `twine check` PASSED on both artefacts.
+
+## Phase 9 — Implement Online/Integration (kebab-tiny dogfood) (Complete 2026-05-27)
+
+### Objective
+
+Re-run the M8 fresh-subagent gate's kebab-tiny scenario against
+the freshly-built 1.4.0 wheel. Confirm the adoption playbook
+reads end-to-end with zero manual operator action — empty
+`--apply --quiet` output AND auto-emitted `.docs.toml` AND
+`docs check` exit 0 AND single INDEX regen.
+
+### Actions taken
+
+Per the M8 precedent at `docs/m8-adoption-workflow-log.md`,
+Phase 9 cannot spawn a fresh Agent — same-instance role-play
+runs the playbook end-to-end:
+
+```text
+$ rm -rf /tmp/docs-m10-venv /tmp/m10-dogfood
+$ /home/user/opt/docs-cli/.venv/bin/python -m venv /tmp/docs-m10-venv
+$ /tmp/docs-m10-venv/bin/pip install --quiet \
+    /home/user/opt/docs-cli/dist/docs_cli-1.4.0-py3-none-any.whl
+$ /tmp/docs-m10-venv/bin/docs --version
+docs 1.4.0
+
+$ cp -r tests/fixtures/trees/real-trees/kebab-tiny /tmp/m10-dogfood
+$ ls /tmp/m10-dogfood/
+foo-bar-plan.md  foo-bar-spec.md  foo-bar-status.md
+
+# Step 1 — Plan
+$ /tmp/docs-m10-venv/bin/docs migrate /tmp/m10-dogfood
+foo-bar-plan.md
+  role: plan    project: foo-bar    lifecycle: active
+  updated: 2026-05-27    confidence: high
+... (3 files; all high-confidence; ambiguities: none)
+
+# Step 2 — Triage: skipped (clean plan).
+
+# Step 3 — Apply
+$ /tmp/docs-m10-venv/bin/docs migrate /tmp/m10-dogfood --apply --quiet
+$ echo $?
+0
+# stdout: (empty), stderr: (empty)
+
+$ cat /tmp/m10-dogfood/.docs.toml
+# Added by docs migrate --apply
+[project]
+name = "foo-bar"
+
+[archive]
+date_format = "%Y-%m-%d"
+
+# Step 4 — Verify
+$ /tmp/docs-m10-venv/bin/docs check /tmp/m10-dogfood
+docs: no violations found
+$ /tmp/docs-m10-venv/bin/docs index --root /tmp/m10-dogfood
+docs: wrote /tmp/m10-dogfood/INDEX.md
+```
+
+Every M10 deliverable surfaces on the dogfooded tree:
+
+- `--apply --quiet` is **truly silent**: exit 0, empty stdout,
+  empty stderr.
+- The auto-emitted `.docs.toml` carries the OQ-A provenance
+  header + `[project] name = "foo-bar"` (the `infer_project`
+  output) + `[archive] date_format = "%Y-%m-%d"`. No
+  `dir = "archive"` line (OQ-M compliant).
+- `docs check` exit 0 immediately after `--apply` — zero
+  manual operator steps between apply and a clean check.
+- One INDEX regen (the operator's `docs index` after the
+  apply; `--apply` itself doesn't refresh the INDEX because
+  the migration root may not yet be the docs root in
+  general).
+
+### Adopted-fixture delta
+
+The `tests/fixtures/trees/real-trees-adopted/kebab-tiny/`
+fixture pre-dated M10's auto-emitted `.docs.toml`. Pre-M10
+the fixture carried a hand-authored `[project] name = "foo-bar"`
+sidecar (the M8-era subagent's manual Step-5 write). M10's
+auto-emitted version differs in three small ways:
+
+- `# Added by docs migrate --apply` provenance header
+- Trailing `[archive] date_format = "%Y-%m-%d"` block
+- (date metadata is always current-run-relative)
+
+Updated the fixture (`.docs.toml`, the three `.md` files, and
+`INDEX.md`) to the M10 auto-emitted shape. No tests consume the
+fixture directly (`grep -rln real-trees-adopted tests/` is
+empty), so the fixture update is purely a snapshot refresh.
+The source fixture
+(`tests/fixtures/trees/real-trees/kebab-tiny/`) is unchanged.
+
+### Test results
+
+Pytest after the fixture refresh: **400/400 GREEN.**
+
+### Exit criteria
+
+- [x] 1.4.0 wheel installed in /tmp/docs-m10-venv; `docs --version` prints `docs 1.4.0`.
+- [x] Adoption playbook reads end-to-end on /tmp/m10-dogfood: plan → apply → verify.
+- [x] `--apply --quiet` produces empty stdout AND empty stderr.
+- [x] `.docs.toml` auto-written with `[project] name = "foo-bar"` + `[archive] date_format`; no `dir =` line; provenance header present (OQ-A + OQ-L + OQ-M).
+- [x] `docs check /tmp/m10-dogfood` exit 0 after `--apply` with zero manual operator action.
+- [x] One INDEX regen (operator's `docs index`).
+- [x] Adopted-state fixture updated in lockstep for the M10 auto-emitted shape; behaviour-delta noted above.
+- [x] 400/400 pytest GREEN after the fixture refresh.

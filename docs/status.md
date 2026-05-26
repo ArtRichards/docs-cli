@@ -19,22 +19,24 @@ Related:
 ## Current milestone
 
 **M10 — Adoption-flow polish + 1.3.0 carry-overs** is **Active**
-(Phases 1-7 complete 2026-05-27; Phase 8 next). It bundles the two
-user-surfaced agent-driveability features (`docs touch
-<file...>`, `docs migrate --apply` writes `.docs.toml`) with the
-carry-overs from M3 (`[vocabulary] add_fields` allowlist), M7
-(`Confidence` enum), and M8 (`--quiet` per-file output
-suppression, `MigrationPlan.excluded_count` removal,
+(Phases 1-9 complete 2026-05-27; Phase 10 closeout next). It
+bundles the two user-surfaced agent-driveability features (`docs
+touch <file...>`, `docs migrate --apply` writes `.docs.toml`)
+with the carry-overs from M3 (`[vocabulary] add_fields`
+allowlist), M7 (`Confidence` enum), and M8 (`--quiet` per-file
+output suppression, `MigrationPlan.excluded_count` removal,
 adoption-playbook restructure). Ships as 1.4.0. The full
 deliverable list and 9 OPEN QUESTIONS (A-I, all
-operator-confirmed 2026-05-26 and promoted to Decisions) live in
-[m10-adoption-polish.md](m10-adoption-polish.md); implementation
-log in [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md).
-Phase 7 completes the spec sweep + 1.4.0 version bump + adoption
-playbook restructure + skill-references resync; the
-`dist/docs_cli-1.4.0-*` artefacts build cleanly and pass `twine
-check`. 400/400 GREEN; quality gate clean tree-wide;
-`docs --version` prints `docs 1.4.0`.
+operator-confirmed 2026-05-26 and promoted to Decisions) live
+in [m10-adoption-polish.md](m10-adoption-polish.md);
+implementation log in
+[m10-adoption-polish-impl.md](m10-adoption-polish-impl.md).
+Phase 9 (kebab-tiny dogfood) confirmed `--apply --quiet`
+produces empty stdout + empty stderr, the auto-emitted
+`.docs.toml` carries OQ-A's `[project]` + OQ-M's `[archive]
+date_format` block under the provenance header, and `docs
+check` exits 0 immediately with zero manual operator action.
+400/400 GREEN; `docs --version` prints `docs 1.4.0`.
 
 **docs-cli 1.3.0 shipped 2026-05-25.** **M9 — PyPI publish
 1.3.0** is complete: `docs-cli==1.3.0` is live at
@@ -49,12 +51,10 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** M10 Phase 8 (Run Tests — GREEN gate capture) — verbatim
-capture of pytest, ruff, ruff format --check, mypy, `docs check`,
-`docs index --dry-run`, wheel/sdist build, `twine check` to
-`/tmp/m10-phase-8-green.txt`; then Phase 9 (kebab-tiny fresh-subagent
-dogfood) and Phase 10 (closeout — date CHANGELOG; archive milestone
-doc; publish deferred to M11).
+**Next action:** M10 Phase 10 (closeout — date the CHANGELOG;
+archive the milestone doc only via `docs archive`; flip status.md
+M10 → Complete; build final 1.4.0 artefacts; `twine check`).
+No PyPI publish — that's M11.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -204,7 +204,7 @@ for the milestone summary.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-7 complete 2026-05-27; 400/400 GREEN at 1.4.0; Phase 8 next) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-9 complete 2026-05-27; kebab-tiny dogfood PASS; 400/400 GREEN at 1.4.0; Phase 10 closeout next) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

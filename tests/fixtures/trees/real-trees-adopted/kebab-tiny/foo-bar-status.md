@@ -3,6 +3,6 @@
 Lifecycle: active
 Role: status
 Project: foo-bar
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 A document for foo bar status.

@@ -1,2 +1,6 @@
+# Added by docs migrate --apply
 [project]
 name = "foo-bar"
+
+[archive]
+date_format = "%Y-%m-%d"
