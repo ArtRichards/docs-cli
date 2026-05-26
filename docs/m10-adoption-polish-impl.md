@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-26
 
 Related:
 - child-of: m10-adoption-polish.md
@@ -98,4 +98,4 @@ N/A — Phase 1 has no code change. 369 tests still GREEN (M9 baseline preserved
 - [x] `docs/status.md` "Current milestone" rewritten to point at M10; M10 row appended to the milestone progress table; `Related:` pairs-with extended.
 - [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated in lockstep.
 - [x] Quality gate green: pytest 369 passed, ruff / ruff format --check / mypy clean tree-wide, `docs check docs --stale 14` exit 0.
-- [ ] **AWAITING OPERATOR** for Phase 2 kick-off: confirm OQ-A through OQ-I in [m10-adoption-polish.md](m10-adoption-polish.md). Defaults / recommendations are in brackets; operator may override any.
+- [x] OPERATOR CONFIRMED 2026-05-26 — OQ-A through OQ-I resolved per recommendations; recorded as Decisions in the milestone doc.

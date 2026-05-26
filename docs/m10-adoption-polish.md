@@ -186,6 +186,15 @@ Surfaced 2026-05-25 while drafting M10. Operator-resolution requested before Pha
 
 _Recorded as the milestone progresses. Initial decisions inherited from the OPEN QUESTIONS block above will be promoted here as the operator confirms each one._
 
+- **OQ-A — `migrate --apply` sidecar handling** (operator-confirmed 2026-05-26): append `[project]` in place after any existing sections; prefix with comment header `# Added by docs migrate --apply`; never overwrite an existing `[project]`.
+- **OQ-B — `--quiet` scope** (operator-confirmed 2026-05-26): `migrate --apply --quiet` suppresses per-file plan block AND trailing success line. `--dry-run` / `--summary` / `--json` unaffected.
+- **OQ-C — `docs touch` atomic semantics** (operator-confirmed 2026-05-26): validate all paths first, exit 1 + named-bad-path if any fail, then mutate; single end-of-batch INDEX refresh.
+- **OQ-D — `MigrationPlan.excluded_count` removal** (operator-confirmed 2026-05-26): removed at 1.4.0; CHANGELOG entry under Changed.
+- **OQ-E — `Confidence` enum + JSON wire format** (operator-confirmed 2026-05-26): `Confidence(HIGH, MEDIUM, LOW)` enum internally; JSON wire format keeps strings via `enum.value`.
+- **OQ-F — `unknown-field` rule shape** (operator-confirmed 2026-05-26): `Finding(severity="warning", rule="unknown-field", message="metadata field '<Label>:' not in [vocabulary] add_fields allowlist", path=<rel>)`. Exit 1 only.
+- **OQ-G — `apply_migration` empty-archive rmdir** (operator-confirmed 2026-05-26): opportunistically `rmdir`s the now-empty parent after each archive move.
+- **OQ-H — `[vocabulary] add_fields` matching** (operator-confirmed 2026-05-26): case-sensitive exact match.
+- **OQ-I — `references/adoption-playbook.md` rewrite** (operator-confirmed 2026-05-26): restructured to 4 steps (plan / triage / apply / verify); three-pattern ordering note dropped.
 - **Carries from prior milestones:** M3 (`unknown-field` allowlist), M7 NIT 1 (`Confidence` enum), M8 (`--quiet` behaviour fix, `MigrationPlan.excluded_count` tidy, playbook polish), M4 (empty-archive-subdir rmdir under OQ-G).
 - **Conscious deferrals (NOT in M10):** LLM-assisted classification (M7), `--propose-excludes` heuristic (M8 OQ-A), `docs init --template` verb (M8 OQ-D), per-verb file split (M2), Trusted Publishing OIDC (M6), `importlib.metadata` `__version__` (M6 Q1), mechanical test-file rewrite from `docs` alias (M6), multi-line `Status:` prose continuation (M7 OQ-3), `Migrated-<Label>` rename rule review (M4), mtime-derived `Updated:` snapshot test (M4), M3 `malformed` rule expansion, M1 `Vocab` dataclass, M1 empty-body description cosmetics, PyPI token re-scope (M9), `explainer`/`architecture` roles into core vocab (M7).
 - **Version**: 1.4.0 — minor bump. `MigrationPlan.excluded_count` removal called out in CHANGELOG under Changed; no known external consumers.

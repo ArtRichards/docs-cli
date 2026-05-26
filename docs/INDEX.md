@@ -41,7 +41,7 @@ _Generated 2026-05-26. 31 docs active, 0 archived._
 
 ### Active — Log
 
-- [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-25.
+- [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-26.
 - [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
 - [m8-adoption-workflow-log.md](m8-adoption-workflow-log.md) — _log_ — - Project: docs - Milestone: M8 — Adoption workflow (agent-driveable) - Started: 2026-05-24 - Progress: **All 10 TDD…. Updated 2026-05-25.
 - [m9-pypi-publish-log.md](m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries appended as the operator walked [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-25.
