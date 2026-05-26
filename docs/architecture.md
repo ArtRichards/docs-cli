@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 Related:
 - implements: charter.md
@@ -24,7 +24,7 @@ inside the same wheel as package data.
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
 ├── cli.py                               ─ the CLI module (~3.8k lines)
-│   ├── dunder version                   (__version__ = "1.3.0")
+│   ├── dunder version                   (__version__ = "1.4.0")
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
 │   │                   `[exclude]` + `.docsignore` (M8)
@@ -201,7 +201,11 @@ the marker block and the derived content.
     (low). Word-boundary tolerance: tokeniser splits on `-`/`_`/whitespace
     AND case-transition (`MyPlan` → suffix `plan`). Optional `config`
     extends the built-in suffix map with `config.role_suffixes`.
-    Confidence is `True`/`"medium"`/`False`.
+    Confidence is a `Confidence(enum.Enum)` member (`HIGH | MEDIUM |
+    LOW`) — M10 replaces the legacy `True | "medium" | False` tri-value.
+    The enum's `value` strings (`"high"`/`"medium"`/`"low"`) match the
+    M4 JSON wire format byte-for-byte; `migration_to_json` crosses
+    enum→string via `fm.confidence.value` at the boundary.
   - `infer_project(filenames, dir_name) -> str` — the longest common
     `-`/`_`-delimited filename prefix, or the directory name.
   - `normalise_project_name(name) -> str` (M7 — F11) — splits on case
@@ -254,20 +258,41 @@ the marker block and the derived content.
   (F5) emits `MigrationPlan.multi_project_hints` via
   `_multi_project_hints` unless `cli_config_project` is set.
   `apply_migration(plan)` executes it: `insert_metadata_block` +
-  `atomic_write` per file, plus the archive moves.
+  `atomic_write` per file, plus the archive moves. After each
+  archive-move it calls `_opportunistic_rmdir(old_parent, plan.root)`
+  to clear the now-empty source dir (M10 — OQ-G; swallows OSError on
+  a non-empty parent so non-migrating siblings survive). After the
+  file loop it calls `_ensure_docs_toml(plan)` which writes (or
+  extends) the root `.docs.toml` sidecar so the adopted tree is
+  immediately self-describing — absent sidecar gets a minimal
+  `[project] name = "<resolved>"` + `[archive] date_format` block;
+  existing sidecar without `[project]` gets the new block appended
+  under a `# Added by docs migrate --apply` provenance comment;
+  existing `[project]` is never overwritten (M10 — OQ-A).
   `migration_to_json(plan)` serialises the whole plan to the `--json`
   schema pinned in [cli.md](cli.md).
 - **Models** — `FileMigration` (frozen) carries one per-file decision: the
   inferred `role`/`project`/`lifecycle` (M7-renamed)/`updated`,
-  `confidence` (`"high"|"medium"|"low"` — M7 widens to three values per
-  OQ-D; `medium` requires empty `ambiguities`), `ambiguities`,
-  `synthesized_h1`, `reconciled_metadata`, and an optional
-  `archive_move` destination. `MigrationPlan` (frozen) holds the `root`,
-  the tuple of `FileMigration`s in root-relative path order,
-  `project_original: str | None` (M7 — the pre-normalisation project
-  name when F11 changed the value, else `None`), and
-  `multi_project_hints: tuple[str, ...]` (M7 — F5 advisory hints, empty
-  when none apply or when the CLI override is in force).
+  `confidence: Confidence` (a `Confidence` enum member — M10 replaces
+  the M7 tri-string with the enum; `Confidence.MEDIUM` requires empty
+  `ambiguities`), `ambiguities`, `synthesized_h1`,
+  `reconciled_metadata`, and an optional `archive_move` destination.
+  `MigrationPlan` (frozen) holds the `root`, the tuple of
+  `FileMigration`s in root-relative path order, `project_original:
+  str | None` (M7 — the pre-normalisation project name when F11
+  changed the value, else `None`), and `multi_project_hints:
+  tuple[str, ...]` (M7 — F5 advisory hints, empty when none apply or
+  when the CLI override is in force). M10 — OQ-D — drops the unused
+  `excluded_count: int` field (set in `plan_migration` but read
+  nowhere in shipped code); consumers that need the total compute it
+  from `excluded_breakdown`.
+- **Config** — `Config` (frozen) carries the resolved configuration
+  for a docs root. M10 — OQ-H — adds `fields: frozenset[str]` (sourced
+  from `[vocabulary] add_fields`, case-sensitive exact match;
+  defaults to the empty set) which widens the `unknown-field` check's
+  allowlist on top of the built-in always-allowed metadata labels
+  (`_BUILTIN_METADATA_FIELDS`). The rule is opt-in: an empty
+  `Config.fields` switches the warning OFF entirely.
 - **Scope boundary** — the active-tree directory layout is left untouched;
   `--apply` adds metadata in place and only ever moves docs out of detected
   archive-style subdirs. No role-bucket flattening or project re-foldering.

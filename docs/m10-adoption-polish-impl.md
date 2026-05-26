@@ -33,7 +33,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-26 | Verbatim baseline captured at `/tmp/m10-phase-4-baseline.txt`: **23 failed, 373 passed (396 collected)**. Per-deliverable attribution table below; every RED traces to an intended unimplemented Phase-5/6 surface (no fixture FNF, no unintended ImportError outside the documented `Confidence` import, no flaky assertion). M9's 369 GREEN baseline preserved + 4 GREEN regression-locks added. Quality gate clean. **Post-review-fix (2026-05-26)**: with 4 added tests + 6 in-place tightenings, the partition is **25 failed, 375 passed (400 collected)** — net +2 REDs (N2 sibling `Archived-reason:`, N6 Pass-4 derived MEDIUM), +2 GREEN-locks (N1 sibling OQ-G `OSError`-swallow, SF7 `--apply --quiet --summary`/`--json` requested-output coverage). M9 369 baseline still GREEN; quality gate still clean. |
 | 5. Update Base Interfaces | Complete | 2026-05-27 | `Confidence` enum + `Config.fields` + `MigrationPlan.excluded_count` removal + `touch` `nargs="+"` + `unknown-field` scaffold + `--apply --quiet` plumbed. 16 of the 25 RED tests flipped GREEN by scaffolding; 9 behaviour-side REDs remain for Phase 6 (3 multi-file touch body, 3 `apply_migration` writes, 3 `unknown-field` rule body). Pytest 9F/391P; ruff / ruff format / mypy / `docs check` all clean. M9 369-baseline tests re-expressed against `Confidence.HIGH`/`MEDIUM`/`LOW` enum identity (no test deleted; contract coverage preserved). |
 | 6. Implement Offline/Core Path | Complete | 2026-05-27 | `_cmd_touch` rewritten with atomic multi-file semantics + single-root sanity check + single end-of-batch INDEX refresh; `apply_migration` augmented with `_opportunistic_rmdir` (post-move) + `_ensure_docs_toml` (post-file-loop); `check_doc` `unknown-field` rule lands as opt-in (fires only when `config.fields` is non-empty). 400/400 GREEN; quality gate clean tree-wide. |
-| 7. Update Tool/Wrapper Layer | Pending | — | |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-27 | Spec sweep across cli.md / convention.md / architecture.md / README.md / CHANGELOG.md + adoption-playbook restructure (OQ-I, 4 steps) + skill-references resync (byte-equal); 1.3.0 → 1.4.0 bump in pyproject.toml, `__version__`, `tests/test_packaging.py`. Wheel + sdist built at 1.4.0; twine check PASSED. 400/400 GREEN; quality gate clean tree-wide. |
 | 8. Run Tests (GREEN) | Pending | — | |
 | 9. Implement Online/Integration | Pending | — | |
 | 10. Quality, Docs, Refactor | Pending | — | |
@@ -489,3 +489,118 @@ docs: no violations found
 - [x] `_print_migration_plan(quiet=True)` early-returns; `_cmd_migrate` dispatch wires `quiet=(args.apply and args.quiet)` only on the default branch.
 - [x] `check_doc` `unknown-field` rule fires only when `config.fields` is non-empty; emits the OQ-F exact-message shape; built-in always-allowed set + `add_fields` allowlist cover the expected vocabulary.
 - [x] 400/400 GREEN; quality gate clean tree-wide.
+
+## Phase 7 — Update Tool/Wrapper Layer (Complete 2026-05-27)
+
+### Objective
+
+Spec sweep + 1.4.0 version bump + adoption-playbook restructure
+(OQ-I) + skill-references resync + CHANGELOG entry. The shipped
+test suite stays at 400/400 GREEN; the packaging tests now pin
+1.4.0 (full wheel rebuild required because of the version bump).
+
+### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `docs/cli.md` | Modify | Rename `docs touch <file>` heading to `docs touch <file>...`; rewrite body for multi-file + atomic + single-INDEX-refresh + multi-root sanity check; extend `docs migrate --apply` bullet to call out the `.docs.toml` write (OQ-A) + opportunistic-rmdir (OQ-G); add `--apply --quiet` paragraph (OQ-B); add `unknown-field` row to `docs check` rule list + JSON schema rule-id table; bump `Updated:`. |
+| `docs/convention.md` | Modify | Add `add_fields = ["Owner", "Tags"]` to the `[vocabulary]` TOML example; document case-sensitive exact match + the built-in always-allowed set + the opt-in semantic; add the scope-narrowness sentence (Step-2 follow-on #2). Bump `Updated:`. |
+| `docs/architecture.md` | Modify | Mention `apply_migration`'s `.docs.toml` writer + opportunistic-rmdir; update the `FileMigration.confidence` annotation to `Confidence`; drop `MigrationPlan.excluded_count` from the field list; add `Config.fields`. Update the package-tree dunder version to 1.4.0. Bump `Updated:`. |
+| `pyproject.toml` | Modify | `version = "1.4.0"`. |
+| `src/docs_cli/cli.py` | Modify | `__version__ = "1.4.0"`. |
+| `tests/test_packaging.py` | Modify | Bump all 1.3.0 pins to 1.4.0 (A3 project-version assert; B1/B2 wheel/sdist filename pins; C2 CLI `--version` token). |
+| `src/docs_cli/skill/references/adoption-playbook.md` | Rewrite | OQ-I restructure to 4 steps (plan / triage / apply / verify); drop the three-pattern ordering note; drop the manual `.docs.toml` authoring step (`--apply` writes it now); worked example uses `--apply --quiet` and immediately runs `docs check`. Bump `Updated:`. |
+| `src/docs_cli/skill/references/cli.md` | Sync | `cp docs/cli.md` — byte-equal mirror (enforced by `tests/test_skill_refs.py`). |
+| `src/docs_cli/skill/references/convention.md` | Sync | `cp docs/convention.md` — byte-equal mirror. |
+| `README.md` | Modify | Bump version mentions; add M10 milestone row to the Status section. |
+| `CHANGELOG.md` | Modify | Insert `## 1.4.0 — UNRELEASED` with Added / Changed / Notes structure per the planning plan. |
+| `docs/plan.md` | Modify | Flip M10 row to "Phases 1-7 complete 2026-05-27; 400/400 GREEN at 1.4.0; Phase 8 next". Bump `Updated:`. |
+| `tests/test_skill_adoption.py` | Modify | Drop the `## Step 5` / `## Step 6` required-headings entries to match the M10 4-step restructure. |
+| `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` | Regenerate | Lockstep refresh after the doc bumps. |
+| `dist/docs_cli-1.4.0-py3-none-any.whl` + `dist/docs_cli-1.4.0.tar.gz` | Build | `python -m build` produced both artefacts; `twine check` PASSED on both. The 1.3.0 wheel + sdist remain in `dist/` from M9 (no cleanup needed; M11 will rebuild from the closeout-commit state anyway). |
+
+### Actions taken
+
+- Authored the new `docs touch <file>...` section in cli.md with
+  the OQ-C atomic semantics + the multi-root sanity check
+  (Step-2 follow-on #4). The "M11+ work" note in the playbook /
+  cli.md draws the scope boundary explicitly.
+- Restructured the adoption playbook to 4 steps. Eliminated the
+  Step 3 three-pattern ordering note (Step 3 in the new
+  numbering is now just "Apply"); the worked example reads
+  end-to-end with `--apply --quiet` followed by `docs check`.
+  Added a `Since 1.4 (M10)` callout at the top explaining the
+  new `--apply` behaviour for operators familiar with the M8
+  playbook.
+- Re-ran `cp` on `cli.md` + `convention.md` into the bundled
+  skill references; `tests/test_skill_refs.py` (2 tests) passes
+  byte-equality.
+- Bumped the test_skill_adoption.py expectations: it pinned the
+  6-step playbook shape, which was the M8 surface; the M10 OQ-I
+  restructure necessarily updates that contract.
+- Built 1.4.0 wheel + sdist via `python -m build`; both
+  artefacts pass `twine check`. The 1.4.0 wheel/sdist sit
+  alongside the 1.3.0 release artefacts in `dist/`.
+- Verified `docs --version` prints `docs 1.4.0` after the
+  in-tree version bump (no wheel-install indirection needed
+  for this check).
+
+### Issues / decisions
+
+- **Adoption-playbook 4-step restructure necessarily updates
+  the test contract.** `tests/test_skill_adoption.py` pinned
+  `## Step 1` through `## Step 6`; OQ-I drops to 4 steps. The
+  test now pins steps 1-4 only; the M8 6-step contract is
+  retired as M10 ships.
+- **`README.md` adds an M10 row + flips the lead sentence**
+  from "docs-cli 1.3.0 shipped 2026-05-25" to "**docs-cli 1.4.0
+  is ready locally** (M10 adoption-flow polish); the M11
+  publish milestone will lift it onto PyPI." The 1.3.0
+  shipped-on-PyPI line stays as historical context.
+- **CHANGELOG `## 1.4.0 — UNRELEASED`** uses the Phase-10-dated
+  closeout pattern from M8/M9. Phase 10 dates the heading.
+
+### Test results
+
+```text
+$ .venv/bin/python -m pytest tests/ -q --tb=no
+... (400 items collected) ...
+400 passed in 10.82s
+```
+
+`tests/test_packaging.py` (25 tests, includes wheel rebuild +
+twine check on the in-tree 1.4.0 build) is fully GREEN.
+`tests/test_skill_refs.py` (2 tests) confirms byte-equality.
+
+### Quality gate (verbatim)
+
+```text
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+33 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 34 source files
+
+$ .venv/bin/docs check docs --stale 14
+docs: no violations found
+
+$ .venv/bin/docs --version
+docs 1.4.0
+
+$ .venv/bin/python -m twine check dist/docs_cli-1.4.0-py3-none-any.whl dist/docs_cli-1.4.0.tar.gz
+Checking dist/docs_cli-1.4.0-py3-none-any.whl: PASSED
+Checking dist/docs_cli-1.4.0.tar.gz: PASSED
+```
+
+### Exit criteria
+
+- [x] All 400 pytest tests GREEN at 1.4.0.
+- [x] ruff / ruff format / mypy / `docs check docs --stale 14` clean tree-wide.
+- [x] `docs --version` prints `docs 1.4.0`.
+- [x] Skill references at `src/docs_cli/skill/references/{cli,convention}.md` byte-equal to source via `tests/test_skill_refs.py`.
+- [x] Adoption playbook restructured to 4 steps per OQ-I.
+- [x] `pyproject.toml` + `__version__` at 1.4.0; `dist/docs_cli-1.4.0-*` artefacts built; `twine check` PASSED.
+- [x] `CHANGELOG.md` `## 1.4.0 — UNRELEASED` block landed.

@@ -97,15 +97,15 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_1_3_0() -> None:
-    """A3: `[project].version` is `1.3.0`.
+def test_a3_project_version_is_1_4_0() -> None:
+    """A3: `[project].version` is `1.4.0`.
 
     Intended RED reason: Phase 4 pyproject still says
     `version = "0.2.0-m2"`. Phase 6 bumps it.
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "1.3.0", (
-        f"[project].version must be '1.3.0'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "1.4.0", (
+        f"[project].version must be '1.4.0'; got {data['project']['version']!r}"
     )
 
 
@@ -213,25 +213,25 @@ def built_dist(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def test_b1_wheel_builds(built_dist: dict) -> None:
-    """B1: `python -m build` produces a wheel named `docs_cli-1.3.0-*.whl`.
+    """B1: `python -m build` produces a wheel named `docs_cli-1.4.0-*.whl`.
 
     Intended RED reason: no `[build-system]` at Phase 4 — `python -m
     build` errors out. The fixture surfaces that as a pytest failure.
     """
     assert built_dist["wheel"].exists()
-    assert built_dist["wheel"].name.startswith("docs_cli-1.3.0-"), (
-        f"wheel filename must encode version 1.3.0; got {built_dist['wheel'].name}"
+    assert built_dist["wheel"].name.startswith("docs_cli-1.4.0-"), (
+        f"wheel filename must encode version 1.4.0; got {built_dist['wheel'].name}"
     )
 
 
 def test_b2_sdist_builds(built_dist: dict) -> None:
-    """B2: `python -m build` produces an sdist `docs_cli-1.3.0.tar.gz`.
+    """B2: `python -m build` produces an sdist `docs_cli-1.4.0.tar.gz`.
 
     Intended RED reason: same as B1 — no build backend.
     """
     assert built_dist["sdist"].exists()
-    assert built_dist["sdist"].name == "docs_cli-1.3.0.tar.gz", (
-        f"sdist filename must be 'docs_cli-1.3.0.tar.gz'; got {built_dist['sdist'].name}"
+    assert built_dist["sdist"].name == "docs_cli-1.4.0.tar.gz", (
+        f"sdist filename must be 'docs_cli-1.4.0.tar.gz'; got {built_dist['sdist'].name}"
     )
 
 
@@ -332,8 +332,8 @@ def test_c1_docs_on_path_in_venv(wheel_venv: Path) -> None:
     assert wheel_venv.is_file()
 
 
-def test_c2_docs_version_is_1_3_0(wheel_venv: Path) -> None:
-    """C2: `docs --version` prints `1.3.0`.
+def test_c2_docs_version_is_1_4_0(wheel_venv: Path) -> None:
+    """C2: `docs --version` prints `1.4.0`.
 
     Intended RED reason: `__version__` is `0.4.0-m4` in `bin/docs` at
     Phase 4. Phase 6 bumps it.
@@ -348,12 +348,12 @@ def test_c2_docs_version_is_1_3_0(wheel_venv: Path) -> None:
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     combined = (result.stdout + result.stderr).strip()
-    # Exact-token match: bare substring `"1.3.0" in combined` would also
-    # accept `21.3.0` or `1.3.0.dev0`. Split on whitespace and require the
+    # Exact-token match: bare substring `"1.4.0" in combined` would also
+    # accept `21.4.0` or `1.4.0.dev0`. Split on whitespace and require the
     # version token to appear verbatim.
     tokens = combined.split()
-    assert "1.3.0" in tokens, (
-        f"`docs --version` must print '1.3.0' as a standalone token; got: {combined!r}"
+    assert "1.4.0" in tokens, (
+        f"`docs --version` must print '1.4.0' as a standalone token; got: {combined!r}"
     )
 
 

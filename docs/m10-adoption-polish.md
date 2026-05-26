@@ -177,7 +177,7 @@ Surfaced 2026-05-25 while drafting M10. Operator-resolution requested before Pha
 - [x] Phase 4 — Run Tests (RED Baseline) (2026-05-26)
 - [x] Phase 5 — Update Base Interfaces (2026-05-27)
 - [x] Phase 6 — Implement Offline/Core Path (2026-05-27)
-- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 7 — Update Tool/Wrapper Layer (2026-05-27)
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Implement Online/Integration
 - [ ] Phase 10 — Quality, Docs, Refactor

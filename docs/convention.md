@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 Related:
 - pairs-with: cli.md
@@ -137,13 +137,33 @@ Any additional `Label:` fields are harvested and exposed under `docs list --json
 
 ### Extending vocabularies
 
-`.docs.toml` may **add** lifecycles and roles via `[vocabulary]` — never remove or rename built-ins. Additions are local to that docs root. Cross-project queries collapse to the built-in set; per-project queries see the union.
+`.docs.toml` may **add** lifecycles, roles, and extra-metadata-label
+allowlist entries via `[vocabulary]` — never remove or rename built-ins.
+Additions are local to that docs root. Cross-project queries collapse
+to the built-in set; per-project queries see the union.
 
 ```toml
 [vocabulary]
-add_lifecycles = ["shipped"]   # M7: renamed from `add_statuses` (no alias)
+add_lifecycles = ["shipped"]            # M7: renamed from `add_statuses` (no alias)
 add_roles      = ["adr", "rfc"]
+add_fields     = ["Owner", "Tags"]      # M10: opt-in extra-field allowlist
 ```
+
+`add_fields` (M10) widens the `docs check` `unknown-field` rule's
+allowlist. Matching is **case-sensitive exact match** — `add_fields =
+["Owner"]` allows `Owner:` but not `owner:` (mirroring how
+`add_lifecycles` and `add_roles` already work; the on-disk convention
+is `Capital:`, so `owner:` is malformed and rejected by the parser
+upstream). The rule is opt-in: an absent or empty `add_fields`
+switches the `unknown-field` warning OFF entirely. The built-in
+always-allowed metadata labels (`Lifecycle`, `Role`, `Project`,
+`Updated`, `Related`, `Archived-reason`) are never affected by
+`add_fields` — they are always permitted.
+
+Scope: `add_fields` widens the `unknown-field` check's allowlist
+only; it does **not** change `docs list --json` or INDEX rendering
+of extra fields. Those continue to surface every extra field
+verbatim (`extra_fields` in JSON; opaque to the human INDEX).
 
 ### Inference and confidence (M7 — F1 / F10 / F12 / OQ-D)
 

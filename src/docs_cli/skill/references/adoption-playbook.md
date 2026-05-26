@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: guide
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 Related:
 - child-of: SKILL.md
@@ -34,50 +34,39 @@ Skip this playbook when:
 - The user wants only a one-off file rename or metadata bump.
   Use `docs new` / `docs touch` / `docs archive` directly.
 
-## Step 1 — Dry-run plan (`docs migrate --json <dir>`)
+> **Since 1.4 (M10).** `docs migrate --apply` now writes (or
+> extends) the root `.docs.toml` sidecar automatically — an
+> absent sidecar gets a minimal `[project] name = "<resolved>"`
+> + `[archive] date_format` block; an existing sidecar without
+> `[project]` gets the new block appended under a
+> `# Added by docs migrate --apply` provenance comment header;
+> an existing `[project]` is never overwritten. The old "decide
+> when to write `.docs.toml`" ordering note is gone. `--apply
+> --quiet` now suppresses the per-file plan block on stdout in
+> addition to the trailing success line on stderr.
 
-Run the migration helper in **dry-run JSON mode** to inspect
-every per-file decision before changing anything:
+## Step 1 — Plan (`docs migrate <dir>`)
+
+Run the migration helper in **dry-run mode** (the default) to
+inspect every per-file decision before changing anything. Start
+with the verbose plan to understand the tree, then switch to the
+triage views for larger trees:
 
 ```
-docs migrate path/to/dir --json | jq '. | length'      # how many files
+docs migrate path/to/dir                       # full per-file plan + footer
+docs migrate path/to/dir --summary             # path  role  conf  notes per file
+docs migrate path/to/dir --json | jq '. | length'           # how many files
 docs migrate path/to/dir --json | jq '[.[] | .role] | unique'
 docs migrate path/to/dir --json | jq '[.[] | select(.confidence == "low")]'
 ```
 
-Each record carries `path` / `role` / `project` / `lifecycle` /
-`updated` / `confidence` / `ambiguities` / `archive_move` /
-`synthesized_h1` / `reconciled_metadata`. The schema is pinned by
-[`references/cli.md`](cli.md) (`docs migrate --json` section).
+Each JSON record carries `path` / `role` / `project` /
+`lifecycle` / `updated` / `confidence` / `ambiguities` /
+`archive_move` / `synthesized_h1` / `reconciled_metadata`. The
+schema is pinned by [`references/cli.md`](cli.md) (`docs migrate
+--json` section).
 
-Sanity checks:
-
-- The `project` field on every record matches the directory's
-  intended slug (kebab-case). If not, plan for the
-  `--config-project NAME` flag in Step 4 or a `[migrate]
-  project_name = "..."` sidecar.
-- The set of unique roles is a subset of the configured
-  vocabulary. Unknown roles surface as `notes` with a low-
-  confidence ambiguity flag.
-- The count of low-confidence records is small relative to the
-  total. A large low-confidence pile usually means the suffix
-  convention isn't being recognised — plan for a
-  `[migrate] role_suffixes = { ... }` mapping in Step 3.
-
-## Step 2 — Triage the plan (`--summary`, `--only ambiguous`, `--group-by`)
-
-For a directory with > 20 files, the verbose per-file plan
-scrolls past usefulness. Drive triage with M8's triage flags:
-
-```
-docs migrate path/to/dir --summary                       # path  role  conf  notes
-docs migrate path/to/dir --summary --only ambiguous      # only the rows needing attention
-docs migrate path/to/dir --summary --group-by confidence # high → medium → low
-docs migrate path/to/dir --summary --group-by role       # cluster by role
-```
-
-The default plan footer (`docs migrate path/to/dir` with no
-flags) carries a four-line summary block:
+The default plan footer carries a four-line summary block:
 
 ```
 summary: <N> files; <M> ambiguous (low=<x>, medium=<y>, high=<z>)
@@ -86,53 +75,47 @@ confidence: high=<n> medium=<n> low=<n>
 ambiguities: notes-fallback=<n1> synthesised-h1=<n2> out-of-vocab=<n3> collision=<n4>
 ```
 
-Read it as a 30-second snapshot. If `ambiguities` shows
-`collision=N>0`, two foreign files would normalise to the same
-`archive/<date>/` destination — fix in Step 3 / Step 4 before
-running `--apply`.
+Read it as a 30-second snapshot. The four tokens (`summary:`,
+`roles:`, `confidence:`, `ambiguities:`) are stable so an agent
+parser can rely on them.
 
-If the footer also surfaces a `N non-Markdown siblings at root
-not considered: ...` line, the migration root has non-`.md` files
-(HTML / XLSX / ODT / etc.). Decide:
+Sanity checks:
 
-- Keep referenced via a Markdown sidecar? Write the sidecar via
-  `docs new <role> <slug> --body-from -` (see Step 5; this is
-  M8's F9 ergonomics) and link the binary via
-  `Related: artifact-of: <binary>`.
-- Suppress noise via `--exclude-ext html,xlsx,odt` (one-off) or
-  `[exclude] exts = [...]` (persistent).
+- The `project` field on every record matches the directory's
+  intended slug (kebab-case). If not, plan for the
+  `--config-project NAME` flag in Step 3 or a `[migrate]
+  project_name = "..."` sidecar in Step 2.
+- The set of unique roles is a subset of the configured
+  vocabulary. Unknown roles surface as `notes` with a
+  low-confidence ambiguity flag.
+- The count of low-confidence records is small relative to the
+  total. A large low-confidence pile usually means the suffix
+  convention isn't being recognised — plan for a `[migrate]
+  role_suffixes = { ... }` mapping in Step 2.
+- If `ambiguities` shows `collision=N>0`, two foreign files
+  would normalise to the same `archive/<date>/` destination —
+  fix in Step 2 (rename one before `--apply`) or accept that
+  `--apply` will exit 2 to refuse the run.
 
-## Step 3 — Decide on excludes (write a sidecar `.docs.toml` ONLY if persistent)
+## Step 2 — Triage (optional — only if Step 1 surfaced friction)
 
-> **IMPORTANT ordering note.** `docs migrate --apply` refuses a
-> tree whose `.docs.toml` carries `[project]` / `[archive]` /
-> `[vocabulary]` **unless** that `.docs.toml` also carries an
-> `[exclude]` section. The M8 carve-out (OQ1) is the operator's
-> explicit signal "use migrate on this managed tree but skip
-> the listed paths". The practical consequence:
->
-> - **If the tree needs NO persistent excludes** (small kebab-
->   tiny-style trees), DO NOT write a `.docs.toml` before
->   `--apply`. Run `--apply` first; write the `.docs.toml`
->   carrying `[project]` (and any other managed-marker config)
->   AFTER `--apply`. See Step 5 / Step 6 below.
-> - **If the tree needs persistent excludes** (build dirs,
->   draft files, etc.), write a sidecar `.docs.toml` with ONLY
->   `[exclude]` (no `[project]`/`[archive]`/`[vocabulary]`) and
->   run `--apply`. After `--apply`, extend the same `.docs.toml`
->   with `[project]` etc. for the persistent managed state.
-> - **If the tree needs one-off excludes** (a single migration
->   run), skip writing `.docs.toml` here entirely; pass
->   `--exclude PATTERN` and/or `--exclude-ext EXTS` on the
->   `--apply` command line.
+Reach for this step only when Step 1 surfaced friction worth
+fixing before `--apply`. For a clean tree (high-confidence
+everywhere, no collisions, no spurious non-Markdown siblings,
+no project-name override needed), skip directly to Step 3.
 
-The bundled template at
+Triage flags drive iteration on the dry-run plan:
+
+```
+docs migrate path/to/dir --summary --only ambiguous          # only rows needing attention
+docs migrate path/to/dir --summary --group-by confidence     # high → medium → low
+docs migrate path/to/dir --summary --group-by role           # cluster by role
+```
+
+Persistent tuning lives in a sidecar `.docs.toml` at the
+migration root. The bundled template at
 [`references/docs-toml-template.toml`](docs-toml-template.toml)
-carries every section M8 reads — `[exclude]`, `[migrate]`,
-`[vocabulary]`, plus the M7 `[project]` / `[archive]` defaults
-— with every example line commented out. Read it once, then
-copy the relevant snippets into a `.docs.toml` at the migration
-root:
+carries every section with examples commented out:
 
 ```
 cat references/docs-toml-template.toml > path/to/dir/.docs.toml
@@ -162,11 +145,13 @@ The four sections most likely to need tuning during adoption:
   project_name = "foo-bar"
   ```
 - **`[vocabulary]`** when the tree carries Role or Lifecycle
-  values outside the built-in set:
+  values outside the built-in set, or extra metadata labels
+  beyond the required four:
   ```toml
   [vocabulary]
   add_roles      = ["explainer"]
   add_lifecycles = ["experimental"]
+  add_fields     = ["Owner", "Tags"]   # M10: opt-in unknown-field allowlist
   ```
 
 A root-level `.docsignore` file (one pattern per line,
@@ -175,48 +160,50 @@ gitignore-flavoured) is consulted at the same layer as
 ignore-pattern data outside the TOML file or compose it with
 existing `.gitignore`-style tooling.
 
-## Step 4 — Iterate (re-run migrate; tune excludes + config)
+One-off excludes (a single migration run) skip the sidecar
+entirely and pass `--exclude PATTERN` / `--exclude-ext EXTS` on
+the `--apply` command line. The persistent vs. one-off choice is
+the operator's; both work.
 
 Re-run `docs migrate <dir> --summary` after each `.docs.toml`
-edit. The triage loop:
+edit. The loop is bounded — every iteration changes only the
+sidecar / CLI flags, not the source files. Three to five rounds
+is typical for a 100-file tree; iterate until `--only ambiguous`
+shows only the rows that are *intentionally* ambiguous (files
+the operator really does want to land as `notes`).
 
-1. Add / remove `[exclude]` entries until the per-file count
-   matches the operator's expectation.
-2. Inspect `--only ambiguous` until every remaining low-
-   confidence record is *intentionally* ambiguous (e.g. files
-   the operator really does want to land as `notes`).
-3. Decide on `--config-project NAME` if the inferred project
-   slug isn't right and a sidecar `[migrate] project_name`
-   isn't what you want for this run.
-4. Check the `multi_project_hints` footer lines. Each hint
-   surfaces a subdir whose `.md` files look like a separate
-   project (≥ 5 files with a distinct shared prefix). Migrate
-   each subdir independently with its own `--config-project`.
-
-The loop is bounded — every iteration changes only the
-`.docs.toml` / CLI flags, not the source files. Repeat until the
-plan reads cleanly. Three to five rounds is typical for a 100-
-file tree.
-
-## Step 5 — Apply (`docs migrate --apply <dir>`)
+## Step 3 — Apply (`docs migrate --apply --quiet <dir>`)
 
 Once the dry-run plan is clean:
 
 ```
-docs migrate path/to/dir --apply
+docs migrate path/to/dir --apply --quiet
 ```
 
-`--apply` writes the inferred metadata block into every file
-the plan covers (atomic edit — never partial), then moves any
+`--apply` writes the inferred metadata block into every file the
+plan covers (atomic edit — never partial), moves any
 archive-style subdirs into `archive/<date>/<name>` per the M7
-detection. Already-conformant files are left untouched.
+detection, opportunistically removes the now-empty source parent
+dirs (M10 — OQ-G; non-migrating siblings survive), and writes (or
+extends) the root `.docs.toml` sidecar (M10 — OQ-A):
 
-(`--quiet` is available but only suppresses the trailing
-stderr success line — per-file edit output still prints.)
+- Absent sidecar → minimal `[project] name = "<resolved>"` +
+  `[archive] date_format = "%Y-%m-%d"` block.
+- Existing sidecar without `[project]` → new block appended at
+  the bottom under a `# Added by docs migrate --apply`
+  provenance comment header.
+- Existing `[project]` → no-op (operator-authored config wins).
 
-**Ordering reminder (per Step 3).** If you authored a
-`.docs.toml` carrying `[project]`/`[archive]`/`[vocabulary]`
-WITHOUT also adding `[exclude]`, `--apply` will refuse with:
+`--quiet` (M10 — OQ-B) suppresses the per-file plan block on
+stdout in addition to the trailing
+`docs: migrated <N> file(s) ...` success line on stderr. A clean
+`--apply --quiet` run produces empty stdout + empty stderr —
+ideal for unattended adoption. Drop `--quiet` if you want the
+per-file plan echoed for debug visibility.
+
+If the operator authored a `.docs.toml` in Step 2 with
+`[project]` / `[archive]` / `[vocabulary]` but no `[exclude]`,
+`--apply` refuses with the carve-out message:
 
 ```
 docs: <dir> is already a docs root (.docs.toml has [...]) —
@@ -224,14 +211,14 @@ migrate is for foreign trees; use index / check / list instead.
 ```
 
 The fix: either remove the managed-marker sections from the
-sidecar `.docs.toml` (keeping ONLY `[exclude]` + `[migrate]`),
-or add an `[exclude]` section (even an empty one — `[exclude]`
-on its own line is enough to waive the refusal). The
-recommended pattern for trees that don't need persistent
-excludes is to write the `[project]`-bearing `.docs.toml` AFTER
-`--apply` (Step 6).
+sidecar (keeping ONLY `[exclude]` and/or `[migrate]`), or add an
+`[exclude]` section (even an empty one — `[exclude]` on its own
+line is enough to waive the refusal). Step 2's sidecar template
+already exhibits the right shape (`[exclude]` + `[migrate]`
+only); the managed `[project]` block is the M10 auto-write's
+responsibility.
 
-## Step 6 — Verify (`docs check <dir>` exit 0; write final `.docs.toml`; commit)
+## Step 4 — Verify (`docs check <dir>`; commit)
 
 The acceptance gate is `docs check` exit 0 on the adopted tree:
 
@@ -239,25 +226,13 @@ The acceptance gate is `docs check` exit 0 on the adopted tree:
 docs check path/to/dir       # exit 0 clean / 1 warnings / 2 errors
 ```
 
-If the tree has no `.docs.toml` yet (because Step 3 deferred
-writing one), this is the moment to author it. The simplest
-form for a project that needs no persistent excludes:
-
-```toml
-[project]
-name = "my-project"
-```
-
-(Per Step 3's note, writing this BEFORE `--apply` would have
-triggered the carve-out refusal; writing it AFTER `--apply` is
-fine because the metadata is already in place and `check` /
-`index` consult `.docs.toml` without the refusal logic.)
-
 If `check` surfaces warnings (most commonly `stale` on docs the
-tree hasn't touched in > 90 days), decide whether to age them
-out via `docs touch` per file or accept the warnings and ship.
+tree hasn't touched in > 90 days, or `medium-confidence-inference`
+on derived-signal Role: inferences), decide whether to age them
+out via `docs touch <file> <file>...` per file or accept the
+warnings and ship.
 
-Smoke the index regeneration:
+Smoke the INDEX regeneration:
 
 ```
 docs index --root path/to/dir
@@ -266,7 +241,13 @@ git -C path/to/dir diff INDEX.md
 
 The diff should be small and non-surprising. If you see large
 blocks of churn, an `[exclude]` entry is probably missing — go
-back to Step 3.
+back to Step 2.
+
+Commit:
+
+```
+git -C path/to/dir add -A && git commit -m "adopt <project> specs"
+```
 
 ## Worked example
 
@@ -274,6 +255,8 @@ Adopting `~/old-specs/` — a 22-file directory with `Foo_Plan.md`,
 `Foo_Spec.md`, `Foo_Strategy_v2.md`, a `build/` subdir holding 5
 generated HTML-extracted Markdown files, and a top-level
 `Foo-2024-deck.xlsx` slide deck.
+
+**Step 1 — Plan:**
 
 ```
 $ docs migrate ~/old-specs --summary
@@ -296,13 +279,12 @@ ambiguities: notes-fallback=7
 Decision: the `build/` subdir is generated data; the
 `Foo-2024-deck.xlsx` is a referenced binary; the `_v2` suffix on
 `Foo_Strategy_v2.md` looks like a draft revision marker, not a
-role suffix. Adopt as follows:
+role suffix.
+
+**Step 2 — Triage (write a sidecar `.docs.toml` for the excludes):**
 
 ```
 cat > ~/old-specs/.docs.toml <<'EOF'
-[project]
-name = "foo"
-
 [exclude]
 dirs = ["build"]
 exts = ["xlsx"]
@@ -331,15 +313,31 @@ Five `build/*` files excluded; the xlsx is silently dropped from
 the non-md sibling footer. Two genuine ambiguities remain (the
 `Foo_Architecture` + `Foo_Strategy_v2` files inferring as `notes`
 fallback) — acceptable; the operator confirms those should land
-as `notes` and runs:
+as `notes`.
+
+**Step 3 — Apply:**
 
 ```
-docs migrate ~/old-specs --apply
-docs check ~/old-specs
-git -C ~/old-specs add -A && git commit -m "adopt foo specs"
+$ docs migrate ~/old-specs --apply --quiet
+$ echo $?
+0
 ```
 
-Done in three commands + one config edit. `docs check` exit 0.
+Empty stdout + empty stderr — the apply landed cleanly. The
+sidecar `.docs.toml` is now extended with the auto-emitted
+`[project] name = "foo"` + `[archive] date_format` block under a
+`# Added by docs migrate --apply` header; the operator's
+`[exclude]` block is preserved verbatim.
+
+**Step 4 — Verify + commit:**
+
+```
+$ docs check ~/old-specs
+docs: no violations found
+$ git -C ~/old-specs add -A && git commit -m "adopt foo specs"
+```
+
+Done in four commands + one config edit. `docs check` exit 0.
 
 ## Pitfalls
 
@@ -380,3 +378,10 @@ Done in three commands + one config edit. `docs check` exit 0.
   files with a shared prefix distinct from the parent's), do
   NOT force-migrate the whole tree under one project — migrate
   the subdir independently with its own `--config-project`.
+- **`[vocabulary] add_fields` is opt-in (M10 — OQ-H).** The
+  `unknown-field` check rule fires only when the tree's
+  `.docs.toml` carries `[vocabulary] add_fields = [...]` with
+  at least one entry. Trees without the allowlist see no change
+  — extra metadata labels are opaque to the rule. Matching is
+  case-sensitive exact match (`add_fields = ["Owner"]` allows
+  `Owner:` but not `owner:`).

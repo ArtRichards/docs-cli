@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 Related:
 - pairs-with: convention.md
@@ -122,6 +122,15 @@ Validate the tree. Reports (and exits nonzero on) any of:
   trailing-word signal or a section-header pattern produces a
   medium-confidence inference — `severity: warning`, rule
   `medium-confidence-inference`, exit code 1.
+- (M10 — OQ-F + OQ-H) An extra metadata label that is neither on the
+  built-in always-allowed set (`Lifecycle` / `Role` / `Project` /
+  `Updated` / `Related` / `Archived-reason`) NOR on the
+  `[vocabulary] add_fields = [...]` allowlist in `.docs.toml`
+  produces `severity: warning`, rule `unknown-field`, exit code 1.
+  The rule is **opt-in**: an absent or empty `add_fields` switches
+  it off entirely (trees without the allowlist see no change).
+  Matching is case-sensitive exact match — `add_fields = ["Owner"]`
+  allows `Owner:` but not `owner:`.
 
 Output is grouped by file; one line per finding. `--json` emits an array of records, one per finding. Schema — **stable from M3 onward**:
 
@@ -129,17 +138,38 @@ Output is grouped by file; one line per finding. `--json` emits an array of reco
 |---|---|---|
 | `path` | string | Root-relative POSIX path of the doc. |
 | `severity` | string | `error` or `warning`. |
-| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, or `medium-confidence-inference` (M7). |
+| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), or `unknown-field` (M10). |
 | `message` | string | Human-readable description of the finding. |
 
 Exit codes:
 - 0 — clean.
-- 1 — warnings only (stale docs; medium-confidence inferences).
+- 1 — warnings only (stale docs; medium-confidence inferences; unknown-field warnings).
 - 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs).
 
-### `docs touch <file>`
+### `docs touch <file>...`
 
-Bump `Updated:` to today in `<file>`. No other changes. INDEX regenerated.
+Bump `Updated:` to today in one or more docs. Accepts one or more
+positional file paths. INDEX regenerated **exactly once** at end of
+batch, not once per file.
+
+The batch is **atomic** (M10 — OQ-C). `touch` validates every input
+path first — if any path is missing, isn't a regular file, or resolves
+outside the resolved docs root, the command exits 1 + a named-bad-path
+message on stderr and writes nothing. Otherwise every rewrite is
+prepared in memory (any `MetadataError` aborts the batch before any
+disk write), then `atomic_write` is run per file followed by a single
+end-of-batch INDEX refresh. A failure during the validate-or-prepare
+phase leaves every file byte-identical to its pre-call state.
+
+`--dry-run` prints one `docs: would touch <path>` per file on stderr
+(gated on `not --quiet`) and writes nothing. The success run prints
+one `docs: touched <path>` per file on stderr (gated on `not
+--quiet`).
+
+Multi-root invocation (`docs touch a.md b.md` where `a.md` and `b.md`
+resolve to different docs roots) is **undefined behaviour and out of
+M10 scope** — the validate-all-first pass refuses with exit 1 + an
+"outside the resolved docs root" message.
 
 ### `docs install-skill [--dest DIR] [--copy|--symlink] [--force] [--quiet]`
 
@@ -218,8 +248,23 @@ see before it runs.)
 - Without `--apply`, `migrate` writes nothing — it prints the plan (human, or
   `--json`) and exits.
 - With `--apply`, `migrate` inserts the inferred metadata block into each file
-  atomically and performs any archive-normalising moves. The result is a tree
-  `docs check` accepts.
+  atomically and performs any archive-normalising moves. After the file loop
+  it also writes (or extends) the root `.docs.toml` sidecar (M10 — OQ-A): an
+  absent sidecar gets a minimal `[project] name = "<resolved>"` + `[archive]
+  date_format = "%Y-%m-%d"` block (no redundant `dir = "archive"`); a sidecar
+  that already carries a `[migrate]` or `[exclude]` block but no `[project]`
+  gets `[project]` appended at the bottom under a
+  `# Added by docs migrate --apply` provenance comment header; a sidecar that
+  already carries `[project]` is left untouched. After every archive-move the
+  now-empty source parent directory is opportunistically removed (M10 — OQ-G;
+  swallows `OSError(ENOTEMPTY)` so a non-migrating sibling survives). The
+  result is a tree `docs check` accepts with no further operator action
+  required.
+- With `--apply --quiet` (M10 — OQ-B), the per-file plan block on stdout is
+  suppressed in addition to the trailing `docs: migrated <N> file(s) …`
+  success line on stderr. Empty stdout + empty stderr on a clean run. The
+  dry-run plan, `--summary` output, and `--json` array are **requested
+  outputs** and are NEVER suppressed — `--quiet` is scoped to chatter only.
 - `--date YYYY-MM-DD` sets the archive date used when normalising
   archive-style subdirectories into `archive/<date>/`. When set, the
   flag overrides every per-file date globally (M4 semantics

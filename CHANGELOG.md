@@ -5,6 +5,98 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.0 — UNRELEASED
+
+M10: adoption-flow polish + 1.3.0 carry-overs. Bundles two
+agent-driveability features (multi-file atomic `docs touch`;
+`docs migrate --apply` writes the `.docs.toml` sidecar
+automatically) with the carry-overs from M3
+(`[vocabulary] add_fields` allowlist + `unknown-field` check
+warning), M7 (`Confidence` enum replacing the `bool | str`
+tri-value), and M8 (`--apply --quiet` per-file output
+suppression, `MigrationPlan.excluded_count` removal,
+adoption-playbook restructure). 1.4.0 is ready locally; the
+PyPI publish is deferred to M11.
+
+### Added
+
+- **`docs touch <file>...`** (M10 — OQ-C) — multi-file atomic
+  touch. Accepts one or more positional file paths. Validates
+  every path first (existence + same-docs-root); aborts the
+  whole batch on any failure (named-bad-path on stderr, exit
+  1, no on-disk mutation); refreshes the INDEX exactly once
+  at end-of-batch.
+- **`docs migrate --apply` writes `.docs.toml` automatically**
+  (M10 — OQ-A / OQ-L / OQ-M). Absent sidecar gets a minimal
+  `[project] name = "<resolved>"` + `[archive] date_format`
+  block. Existing sidecar without `[project]` gets the new
+  block appended under a `# Added by docs migrate --apply`
+  provenance comment header. Existing `[project]` is never
+  overwritten. No `dir = "archive"` line is emitted (the
+  default is stable).
+- **Opportunistic empty-parent rmdir after archive-move**
+  (M10 — OQ-G / OQ-Q). After `--apply` moves a foreign
+  archive-style file into `archive/<date>/`, the now-empty
+  source parent dir is removed. `OSError(ENOTEMPTY)` is
+  swallowed so non-migrating siblings survive.
+- **`[vocabulary] add_fields` allowlist + `unknown-field`
+  check rule** (M10 — OQ-F / OQ-H / OQ-O / OQ-P). Opt-in
+  warning (exit 1) for extra metadata labels not on the
+  built-in always-allowed set
+  (`Lifecycle` / `Role` / `Project` / `Updated` / `Related` /
+  `Archived-reason`) and not on `add_fields`. The rule is
+  OFF by default — trees without the allowlist see no
+  change. Matching is case-sensitive exact match.
+- **`Confidence` enum** (M10 — OQ-E / OQ-N) replacing the
+  M4-era `bool | str` tri-value for `infer_role` and
+  `FileMigration.confidence`. The enum's `value` strings
+  (`"high"` / `"medium"` / `"low"`) match the M4 JSON wire
+  format byte-for-byte; `migration_to_json` crosses
+  enum→string via `enum.value` at the boundary.
+
+### Changed
+
+- **`docs migrate --apply --quiet`** (M10 — OQ-B) now
+  suppresses the per-file plan block on stdout in addition
+  to the trailing `docs: migrated <N> file(s) ...` success
+  line on stderr. Empty stdout + empty stderr on a clean
+  `--apply --quiet` run. `--dry-run` / `--summary` /
+  `--json` are requested outputs and never suppressed.
+- **`docs touch <file>` is now `docs touch <file>...`**
+  (M10 — OQ-C). Single-file invocation continues to work;
+  the argparse spec is `nargs="+"`.
+- **Adoption playbook restructured to 4 steps** (M10 — OQ-I)
+  — plan / triage / apply / verify. The three-pattern
+  ordering note in Step 3 (about when to write `.docs.toml`
+  before vs. after `--apply`) is gone now that `--apply`
+  writes the sidecar automatically. The worked example runs
+  end-to-end with `--apply --quiet` and immediately runs
+  `docs check`.
+- **`MigrationPlan.excluded_count` removed** (M10 — OQ-D)
+  as a breaking change. The field was set in
+  `plan_migration` but never read in shipped code. The
+  human plan footer iterates `excluded_breakdown` directly;
+  `migration_to_json` omitted the field already. Consumers
+  who need the total compute `sum(c for _, c in
+  excluded_breakdown)`. No known external consumer.
+
+### Notes
+
+- **Version bump.** 1.4.0 (minor); SemVer-compliant since
+  the only breaking surface (`MigrationPlan.excluded_count`)
+  has no known external consumer.
+- **JSON wire format byte-stable.** Despite the internal
+  `Confidence` enum replacement, every JSON record's
+  `confidence` field still emits a string
+  (`"high"|"medium"|"low"`) via `Confidence.value`. No
+  consumer should break.
+- **`docs touch` exit-code semantics unchanged.** Atomic
+  multi-file failure exits 1 (any bad path) or 2 (malformed
+  `.docs.toml`); a successful multi-file batch exits 0. The
+  single-file behaviour is unchanged from 1.3.0 — the
+  new contract surface is purely additive for multi-file
+  invocations.
+
 ## 1.3.0 — 2026-05-25
 
 M8: the adoption workflow becomes agent-driveable. A single

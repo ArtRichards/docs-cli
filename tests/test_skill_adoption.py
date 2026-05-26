@@ -71,14 +71,14 @@ def test_skill_md_contains_one_line_adoption_pointer():
 def test_adoption_playbook_exists_with_required_sections():
     assert ADOPTION_PLAYBOOK.exists(), f"{ADOPTION_PLAYBOOK} does not exist"
     body = ADOPTION_PLAYBOOK.read_text(encoding="utf-8")
+    # M10 (OQ-I) — the playbook restructured to 4 steps
+    # (plan / triage / apply / verify). Previously 6 steps (M8).
     required_h2s = [
         "## When this applies",
         "## Step 1",
         "## Step 2",
         "## Step 3",
         "## Step 4",
-        "## Step 5",
-        "## Step 6",
         "## Worked example",
         "## Pitfalls",
     ]
