@@ -30,7 +30,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 1. Define Contract | Complete | 2026-05-25; OQ closeout 2026-05-26 | Milestone pair authored + paired (`Related:` edges both directions); milestone-doc flipped `Lifecycle: draft` → `active`; M10 row added to plan.md (and parked `add_fields` Open question scheduled into M10 item #8); status.md "Current milestone" rewritten + M10 row appended to milestone progress table; OPEN QUESTIONS A-I surfaced for operator review before Phase 2; INDEX + dogfood snapshot regenerated in lockstep; full quality gate green (369 pytest, ruff/format/mypy/`docs check` all clean). **OQ closeout 2026-05-26**: operator-confirmed OQ-A through OQ-I recorded as 9 Decisions bullets in the milestone doc; AWAITING-OPERATOR checkbox flipped in the impl log; INDEX + snapshot regenerated. |
 | 2. Write Tests (RED) | Complete | 2026-05-26 | 26 new test items added across `tests/test_cli_touch.py` (5 multi-file/atomic/single-INDEX), `tests/test_cli_migrate.py` (6 `--apply` writes/extends `.docs.toml` + `--quiet` + OQ-G rmdir), `tests/test_check.py` (4 `unknown-field` rule), `tests/test_cli_check.py` (2 CLI `unknown-field`), `tests/test_config.py` (3 `add_fields` schema), `tests/test_migrate.py` (5 `Confidence` enum + 1 `excluded_count` removal). 22 RED + 4 GREEN regression-locks; M9's 369 GREEN preserved (no existing test regressed). Test count: 395 collected (369 + 26). |
 | 3. Create Data/Fixtures | Complete | 2026-05-26 | No-op per the Phase-3 recommendation in the milestone plan: every Phase-2 test that needed a real tree on disk built it inline via `tmp_path` (multi-file touch trees, vocab trees, OQ-G rmdir tree) so the test files own their setup and Phase 3 had no fixtures to stage. Sign-off folded into the Phase 4 commit. |
-| 4. Run Tests (RED Baseline) | Pending | — | |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-26 | Verbatim baseline captured at `/tmp/m10-phase-4-baseline.txt`: **22 failed, 373 passed (395 collected)**. Per-deliverable attribution table below; every RED traces to an intended unimplemented Phase-5/6 surface (no fixture FNF, no unintended ImportError outside the documented `Confidence` import, no flaky assertion). M9's 369 GREEN baseline preserved + 4 GREEN regression-locks added. Quality gate clean. |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
@@ -143,3 +143,117 @@ test names + assertions become the precise target for Phase 5/6.
 - [x] 4 GREEN regression-locks pinned at baseline (#8, #10, #17, #25).
 - [x] M9's 369 GREEN preserved.
 - [x] Quality gate clean tree-wide.
+
+## Phase 3 — Create Data/Fixtures (No-op, signed off with Phase 4)
+
+Per the planning agent's Phase 3 recommendation: every M10 RED test that
+needs a multi-file tree on disk builds it inline via `tmp_path` (the
+multi-file `touch` tree builder, the `[vocabulary] add_fields` vocab
+trees, the OQ-G rmdir tree). No new on-disk fixtures landed for M10.
+
+This is a deliberate choice over staging new `tests/fixtures/` subdirs:
+
+- The contract anchors are tiny (2–3 files per scenario) and self-explanatory
+  in the test bodies.
+- Inline construction keeps the per-test setup honest about exactly what
+  goes into the tree (especially for the rmdir test, where the OQ-Q
+  blast-radius guard is exact-control of the parent-dir contents).
+- No sanitisation-grep risk; nothing to commit; nothing to maintain.
+
+## Phase 4 — Run Tests (RED Baseline) (Complete 2026-05-26)
+
+### Objective
+
+Capture the verbatim RED baseline before any implementation. Confirm
+every new RED traces to its intended unimplemented Phase-5/6 surface;
+surface the 4 GREEN-at-baseline regression-locks; pin M9's 369 GREEN
+baseline + the full quality gate.
+
+### Verbatim pytest output
+
+```text
+$ .venv/bin/python -m pytest -q tests/
+... (395 items collected) ...
+22 failed, 373 passed in 10.91s
+```
+
+Captured verbatim at `/tmp/m10-phase-4-baseline.txt`.
+
+### Per-deliverable attribution table
+
+| Deliverable | Source file(s) | RED count | GREEN-at-baseline (regression-lock) | Failure mode → root cause |
+|---|---|---:|---:|---|
+| D1 — `docs touch` multi-file + atomic + single-INDEX | `test_cli_touch.py` | 5 | 0 | argparse rejects positional `nargs="+"` today (single `file` only); rest of contract follows once nargs lands. |
+| D2 — `migrate --apply` writes/extends `.docs.toml` + `--quiet` + OQ-G rmdir | `test_cli_migrate.py` | 4 | 2 | `apply_migration` never writes `.docs.toml`; `--quiet` only suppresses success line (not per-file plan); `archived/` parent never `rmdir`'d. Locks: #8 (existing `[project]` not overwritten — refused today by carve-out matrix); #10 (`--quiet` doesn't touch dry-run/`--summary`/`--json` today — desired contract). |
+| D3 — `unknown-field` rule (unit) | `test_check.py` | 4 | 0 | `Config` has no `fields` kwarg → TypeError at construction time (#13, #14, #15); the rule itself does not exist (#12 also TypeErrors). All four will turn GREEN once Phase 5 lands `Config.fields` + Phase 6 wires the rule. |
+| D3 — `unknown-field` rule (CLI) | `test_cli_check.py` | 1 | 1 | CLI mismatch test exits 0 today (no rule emits the warning). Lock: #17 (allowlist-match → exit 0 trivially today). |
+| D4 — `Config.fields` + `add_fields` TOML | `test_config.py` | 3 | 0 | `Config` instance has no `fields` attribute → AttributeError; `load_config` doesn't read `add_fields` from `[vocabulary]`. |
+| D5 — `Confidence` enum | `test_migrate.py` | 4 | 1 | `from docs import Confidence` raises ImportError → 4 enum-identity tests fail at import; identity assertions (`is Confidence.X`) are the intended target. Lock: #25 (JSON wire format strings — already strings today, stays GREEN after the enum lands via `enum.value`). |
+| D6 — `MigrationPlan.excluded_count` removal | `test_migrate.py` | 1 | 0 | `hasattr(plan, "excluded_count") == True` today; Phase 5 removes the field. |
+| **TOTAL** |  | **22** | **4** | — |
+
+Function totals: 5 + 6 + 4 + 2 + 3 + 5 + 1 = 26 new test functions / 26 collected items
+(none parametrised). 22 RED + 4 GREEN regression-locks.
+
+### Quality gate (verbatim)
+
+```text
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+33 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 34 source files
+
+$ .venv/bin/docs check docs --stale 14
+docs: no violations found
+```
+
+### Attestation — no RED-for-wrong-reason
+
+Every RED test was inspected via `--tb=line` against
+`/tmp/m10-phase-4-baseline.txt`:
+
+- **No `FileNotFoundError`** / no fixture-not-found failures. Every
+  test that needed an on-disk tree built it inline via `tmp_path`;
+  the only on-disk fixture path consulted is `tests/fixtures/trees/foreign/`
+  (already staged at M4), used by the JSON wire-format regression lock.
+- **One intended `ImportError`** — `from docs import Confidence` —
+  scoped to the 4 D5 enum-identity tests. Phase 5 lands the enum at
+  module scope and converts those to assertion REDs (the enum-identity
+  contract becomes the actual surface). The 5th D5 test
+  (`test_filemigration_confidence_field_accepts_enum`) also triggers
+  this ImportError at function scope; it'll flip the same way.
+- **TypeError / AttributeError on `Config.fields`** is the intended
+  RED surface for D3 + D4 — `Config` doesn't yet accept / expose
+  `fields`. Phase 5 lands the kwarg + attribute, then the assertion
+  contracts become the real RED.
+- **argparse "unrecognized arguments" on `docs touch a b c`** is the
+  intended D1 RED — `nargs="+"` not wired today.
+- **`apply_migration` behavioural REDs** (no `.docs.toml` written, no
+  rmdir, `--quiet` still emits per-file output) all hit assertion
+  failures naming the exact contract Phase 6 will satisfy.
+- **No flaky / time-sensitive assertion** — date-relative checks
+  use `date.today().isoformat()` which is stable within a test run.
+
+The 22 REDs partition cleanly: 5 D1 + 4 D2 + 4 D3-unit + 1 D3-CLI +
+3 D4 + 4 D5 + 1 D6 = 22 (matches the attribution table); the 4
+baseline-GREEN regression locks are pinned in the same table.
+
+### Exit criteria
+
+- [x] Verbatim RED baseline captured at `/tmp/m10-phase-4-baseline.txt`.
+- [x] Per-deliverable attribution table written (mirrors the M8 Phase 4
+      pattern at `docs/m8-adoption-workflow-log.md`).
+- [x] Quality gate clean tree-wide: pytest 22F/373P, ruff / ruff format /
+      mypy / `docs check docs --stale 14` all clean.
+- [x] Attestation that no RED is for the wrong reason.
+- [x] Tests #12 (with-no-allowlist clean), #25 (JSON wire format strings),
+      and #26 (`hasattr` removal) baseline status confirmed: #12 is RED
+      at baseline (TypeError on `fields=`) — intended for #12 to flip
+      to GREEN once Phase 5 lands the kwarg; #25 already GREEN
+      (regression-lock); #26 RED (the field exists today). Planning
+      agent's "possibly #26" guess was inverted — RED at baseline,
+      GREEN after Phase 5 removal.
