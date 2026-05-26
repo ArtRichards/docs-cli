@@ -2561,11 +2561,7 @@ def _opportunistic_rmdir(old_parent: Path, root: Path) -> None:
     root_resolved = root.resolve()
     if old_resolved == root_resolved:
         return
-    try:
-        old_resolved.relative_to(root_resolved / "archive")
-    except ValueError:
-        pass
-    else:
+    if old_resolved.is_relative_to(root_resolved / "archive"):
         return
     # ENOTEMPTY (non-migrating sibling), ENOENT (already gone),
     # EBUSY (locked), … — every reason to keep the directory.

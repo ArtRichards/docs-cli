@@ -902,3 +902,84 @@ deferred to M11.
 - [x] INDEX + snapshot lockstep refresh.
 - [x] Milestone doc archived via `docs archive`; impl log stays Lifecycle: active.
 - [x] 400/400 GREEN at closeout.
+
+## Simplify pass
+
+**Completed:** 2026-05-27 (branch `m10/simplify`)
+
+One minimal edit landed on the simplify branch. The M10
+surface — `_opportunistic_rmdir`, `_ensure_docs_toml`, the
+multi-file `_cmd_touch` rewrite, the `unknown-field` rule
+branch in `check_doc`, the `_print_migration_plan(quiet=…)`
+plumbing, the `Confidence` enum propagation through
+`plan_migration` / `migration_to_json` / `_print_migration_plan`,
+the `MigrationPlan.excluded_count` removal, and the
+`Config.fields` + `load_config` `add_fields` parsing — was
+walked end-to-end; the Phase-6 fresh-eyes review + Phase-6-review
+fix (separator-ladder collapse, F11 announcement gate) had
+already pruned the obvious nits, so the only residual
+opportunity was one clever-vs-obvious swap.
+
+- **`_opportunistic_rmdir`: `try/except-relative_to/else: return`
+  → `if is_relative_to(...): return`.** The pre-edit check for
+  "is `old_resolved` under `root/archive/`?" used
+  `Path.relative_to` purely for its side-effect of raising
+  `ValueError` on a non-prefix path — a try/except/else triple
+  reading "try the side-effect; on ValueError fall through; on
+  no exception bail out." Python 3.9 introduced
+  `Path.is_relative_to`, which is the obvious form of the same
+  boolean test. The pyproject `requires-python = ">=3.11"` makes
+  it available unconditionally. Bytes-on-disk semantics
+  unchanged; the existing
+  `test_migrate_apply_keeps_archive_parent_with_remaining_siblings`
+  + `test_migrate_apply_removes_empty_archive_parent_directory`
+  + the OQ-G archive-guard tests still GREEN (401/401).
+
+**Other M10 regions reviewed — no changes warranted.**
+`_ensure_docs_toml` is a linear absent → write / parse →
+malformed-warn / has-`[project]`-noop / append-with-collapsed-
+separator ladder; the Phase-6-review separator simplification
+already brought it to the cleanest shape. `_cmd_touch` is a
+strictly linear three-pass: validate-paths → resolve-root +
+config → build-rewrites → write-and-reindex. Each pass earns
+its keep (atomicity guarantee). The `check_doc` `unknown-field`
+branch is a 14-line opt-in block guarded by `if config.fields:`;
+collapsing it loses the `# M10` comment block that documents
+OQ-F + OQ-H + OQ-O + OQ-P. The `Confidence` enum +
+`migration_to_json` cross via `enum.value` is already the
+minimum viable boundary translation. `load_config`'s
+`add_fields` line is a one-liner. The `_print_migration_plan
+(quiet=…)` plumbing has one guard at the top of the function
+(post Phase-6-review fix) — already minimal. Doc paragraphs
+(cli.md / convention.md / architecture.md / README.md /
+CHANGELOG.md / adoption-playbook.md) were skimmed; each
+M10 paragraph carries one OQ reference + one
+concrete behavioural promise — tightening further would lose
+the OQ traceability that makes the spec auditable.
+
+**`Confidence.__post_init__` defensive `notes_fallback` local
+— DEFERRED (no change).** The `notes_fallback = role_conf is
+Confidence.LOW` local on line 2402 (then read once on the
+next line) is documentary naming inherited from M7 — the
+M10 edit only updated the comparison side. Inlining the
+expression would marginally shorten the block but lose a
+self-documenting name, and the line is outside M10's
+genuine simplify scope (M7 code touched by M10).
+
+**`Path.is_relative_to` in `_cmd_touch` — DEFERRED (no
+change).** Lines 3449-3457 use the same
+`try/except-relative_to-ValueError` pattern as a
+"is-under-root" boolean test. Replacing it would mirror
+`_opportunistic_rmdir`'s simplification, but the same pattern
+appears in pre-M10 sites (`_root_relative` line 1363,
+`_cmd_mv` line 3390). Touching only the M10 site would
+introduce an inconsistency mid-file; a sweeping change is
+out of M10's simplify scope.
+
+#### Test count + quality gate
+
+- pytest: **401 / 401 GREEN** at each commit boundary (the
+  Phase-6-review fix's regression-lock test for F11-
+  announcement-under-`--apply --quiet` is included).
+- ruff check / ruff format --check / mypy / `docs check docs
+  --stale 14` all exit 0 at each commit boundary.
