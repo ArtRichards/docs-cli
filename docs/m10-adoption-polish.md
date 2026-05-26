@@ -171,10 +171,10 @@ Surfaced 2026-05-25 while drafting M10. Operator-resolution requested before Pha
 
 ## Phase Checklist
 
-- [x] Phase 1 — Define Contract (2026-05-25)
-- [ ] Phase 2 — Write Tests (RED)
-- [ ] Phase 3 — Create Data/Fixtures
-- [ ] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 1 — Define Contract (2026-05-25; OQ closeout 2026-05-26)
+- [x] Phase 2 — Write Tests (RED) (2026-05-26)
+- [x] Phase 3 — Create Data/Fixtures (2026-05-26 — no-op; tests use inline `tmp_path`)
+- [x] Phase 4 — Run Tests (RED Baseline) (2026-05-26)
 - [ ] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer

@@ -354,3 +354,27 @@ def test_check_doc_allowlist_is_case_sensitive():
     unknown = [f for f in findings if f.rule == "unknown-field"]
     assert len(unknown) == 1, "case-sensitive match: 'owner' ≠ 'Owner'"
     assert "Owner" in unknown[0].message
+
+
+def test_check_doc_related_is_never_flagged_by_unknown_field():
+    """OQ-O + OQ-P: the built-in always-allowed set
+    `{"Lifecycle","Role","Project","Updated","Related","Archived-reason"}`
+    must NEVER trip `unknown-field`, regardless of the `add_fields`
+    configuration. The classic risk: `Related:` is a required-shape
+    bullet container that lives in the metadata block but isn't on
+    `add_fields`. An empty allowlist + a `Related:` block must still
+    produce zero `unknown-field` findings.
+    """
+    cfg = _config_with_fields(frozenset({"Tags"}))  # an allowlist that doesn't cover Related
+    text = (
+        "# Sample\n\nLifecycle: active\nRole: spec\nProject: probe\n"
+        "Updated: 2026-05-20\n\nRelated:\n- pairs-with: exists.md\n\nBody.\n"
+    )
+    # Set up the Related: target so we don't also get a `broken-ref`.
+    findings = check_doc(Path("/r/sample.md"), text, Path("/r"), cfg, stale=None, today=_TODAY)
+    # Allow any other rule fire (e.g. broken-ref if the file doesn't exist),
+    # but Related: itself must not show up as `unknown-field`.
+    unknown_related = [f for f in findings if f.rule == "unknown-field" and "Related" in f.message]
+    assert unknown_related == [], (
+        f"OQ-O: Related: must never trip unknown-field, got {unknown_related!r}"
+    )

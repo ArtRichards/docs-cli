@@ -331,8 +331,10 @@ def test_migrate_apply_refuses_an_archive_move_collision(docs_script, tmp_path):
 
 
 def test_migrate_apply_writes_docs_toml_when_absent(docs_script, fixtures_dir, tmp_path):
-    """OQ-A: `--apply` on a tree without `.docs.toml` writes a minimal one
-    carrying `[project] name = "<resolved>"` and `[archive] date_format`.
+    """OQ-A + OQ-M: `--apply` on a tree without `.docs.toml` writes a
+    minimal one carrying `[project] name = "<resolved>"` and `[archive]
+    date_format`. Per OQ-M, the `[archive]` block emits ONLY
+    `date_format` (no redundant `dir = "archive"` — that's the default).
     """
     root = _foreign_copy(fixtures_dir, tmp_path)
     assert not (root / ".docs.toml").exists(), "fixture must not have a pre-existing sidecar"
@@ -346,6 +348,8 @@ def test_migrate_apply_writes_docs_toml_when_absent(docs_script, fixtures_dir, t
     assert "name =" in text, ".docs.toml must carry a project name"
     assert "[archive]" in text, ".docs.toml must declare an [archive] block"
     assert 'date_format = "%Y-%m-%d"' in text, "[archive] must carry date_format"
+    # OQ-M: only date_format under [archive]; dir is omitted (default is stable).
+    assert "dir =" not in text, "OQ-M: [archive] dir must NOT be emitted (default is stable)"
 
 
 def test_migrate_apply_extends_sidecar_without_overwriting_project(

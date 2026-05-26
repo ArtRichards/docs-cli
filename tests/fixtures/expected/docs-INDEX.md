@@ -11,7 +11,7 @@ _Generated 2026-05-26. 31 docs active, 0 archived._
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-25.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-26.
 
 ### Active — Charter
 
@@ -19,7 +19,7 @@ _Generated 2026-05-26. 31 docs active, 0 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-05-25.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-05-26.
 
 ### Active — Spec
 

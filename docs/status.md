@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-26
 
 Related:
 - pairs-with: plan.md
@@ -19,16 +19,19 @@ Related:
 ## Current milestone
 
 **M10 — Adoption-flow polish + 1.3.0 carry-overs** is **Active**
-(Phase 1 in progress, 2026-05-25). It bundles the two
+(Phases 1-4 complete 2026-05-26; Phase 5 next). It bundles the two
 user-surfaced agent-driveability features (`docs touch
 <file...>`, `docs migrate --apply` writes `.docs.toml`) with the
 carry-overs from M3 (`[vocabulary] add_fields` allowlist), M7
 (`Confidence` enum), and M8 (`--quiet` per-file output
 suppression, `MigrationPlan.excluded_count` removal,
 adoption-playbook restructure). Ships as 1.4.0. The full
-deliverable list and 9 OPEN QUESTIONS (A-I) live in
+deliverable list and 9 OPEN QUESTIONS (A-I, all
+operator-confirmed 2026-05-26 and promoted to Decisions) live in
 [m10-adoption-polish.md](m10-adoption-polish.md); implementation
 log in [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md).
+Phase 4 RED baseline: 23 failed, 373 passed (396 collected) —
+M9's 369 GREEN preserved + 4 GREEN regression-locks.
 
 **docs-cli 1.3.0 shipped 2026-05-25.** **M9 — PyPI publish
 1.3.0** is complete: `docs-cli==1.3.0` is live at
@@ -43,12 +46,14 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** Operator review of M10 OPEN QUESTIONS A-I in
-[m10-adoption-polish.md](m10-adoption-polish.md). Once
-confirmed, Phase 2 (Write Tests RED) begins. The previously
-parked `[vocabulary] add_fields` extra-field allowlist is now
-scheduled as M10 item #8; it is no longer carried forward
-separately in plan.md.
+**Next action:** M10 Phase 5 (Update Base Interfaces) — land the
+`Confidence` enum, `Config.fields` schema, `MigrationPlan.excluded_count`
+removal, multi-file `touch` argparse, `migrate --quiet` plumbing, and
+the `unknown-field` rule scaffolding. The previously parked
+`[vocabulary] add_fields` extra-field allowlist is now scheduled
+as M10 item #8 (no longer carried forward separately in plan.md).
+OQ-A through OQ-I were operator-confirmed 2026-05-26 and promoted to
+the milestone-doc Decisions section.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -198,7 +203,7 @@ for the milestone summary.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phase 1 in progress, 2026-05-25; OPEN QUESTIONS A-I surfaced) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-4 complete 2026-05-26; OQ-A through OQ-I resolved; Phase 5 next) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

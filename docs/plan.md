@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: plan
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-26
 
 Related:
 - implements: charter.md
@@ -108,7 +108,7 @@ prior public release existed, no continuity to preserve.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phase 1 in progress, 2026-05-25; OPEN QUESTIONS A-I surfaced) | [m10-adoption-polish.md](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-4 complete 2026-05-26; OQ-A through OQ-I resolved; Phase 5 next) | [m10-adoption-polish.md](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 
 **M10** bundles the two user-surfaced agent-driveability features
 (`docs touch <file...>`, `docs migrate --apply` writes `.docs.toml`)
@@ -116,8 +116,8 @@ with the carry-overs from M3 (`[vocabulary] add_fields` allowlist —
 moved out of Open questions below), M7 (`Confidence` enum), and M8
 (`--quiet` per-file output suppression, `MigrationPlan.excluded_count`
 removal, adoption-playbook restructure). Ships as 1.4.0. The M10
-deliverable list and the 9 OPEN QUESTIONS (A-I) live in the milestone
-doc.
+deliverable list and the 9 resolved Decisions (OQ-A through OQ-I,
+operator-confirmed 2026-05-26) live in the milestone doc.
 
 **M7** hardens `docs migrate`'s inference + introduces a breaking
 controlled-vocab rename (`Status:` → `Lifecycle:`). It targets ≥50%
@@ -180,9 +180,10 @@ longer carried forward separately.
 _v1 (M1-M5) shipped 2026-05-20…2026-05-22 and v1.3.0 (M6-M9) shipped
 2026-05-25. The previously-parked `[vocabulary] add_fields` extra-field
 allowlist was scheduled into **M10** (v1.4.0) as item #8 — see the M10
-milestone doc and the OPEN QUESTIONS block (OQ-F, OQ-H) there for the
-final rule-message shape and case-sensitivity decisions._
+milestone doc's Decisions section (OQ-F, OQ-H) for the final
+rule-message shape and case-sensitivity decisions._
 
-_No plan-level open questions are currently outstanding. M10's open
-questions (OQ-A through OQ-I) are scoped to M10 and live in
-[m10-adoption-polish.md](m10-adoption-polish.md)._
+_No plan-level open questions are currently outstanding. M10's
+milestone-scoped questions (OQ-A through OQ-I) were
+operator-confirmed 2026-05-26 and promoted to the Decisions section
+of [m10-adoption-polish.md](m10-adoption-polish.md)._
