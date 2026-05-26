@@ -32,7 +32,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 3. Create Data/Fixtures | Complete | 2026-05-26 | No-op per the Phase-3 recommendation in the milestone plan: every Phase-2 test that needed a real tree on disk built it inline via `tmp_path` (multi-file touch trees, vocab trees, OQ-G rmdir tree) so the test files own their setup and Phase 3 had no fixtures to stage. Sign-off folded into the Phase 4 commit. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-26 | Verbatim baseline captured at `/tmp/m10-phase-4-baseline.txt`: **23 failed, 373 passed (396 collected)**. Per-deliverable attribution table below; every RED traces to an intended unimplemented Phase-5/6 surface (no fixture FNF, no unintended ImportError outside the documented `Confidence` import, no flaky assertion). M9's 369 GREEN baseline preserved + 4 GREEN regression-locks added. Quality gate clean. **Post-review-fix (2026-05-26)**: with 4 added tests + 6 in-place tightenings, the partition is **25 failed, 375 passed (400 collected)** — net +2 REDs (N2 sibling `Archived-reason:`, N6 Pass-4 derived MEDIUM), +2 GREEN-locks (N1 sibling OQ-G `OSError`-swallow, SF7 `--apply --quiet --summary`/`--json` requested-output coverage). M9 369 baseline still GREEN; quality gate still clean. |
 | 5. Update Base Interfaces | Complete | 2026-05-27 | `Confidence` enum + `Config.fields` + `MigrationPlan.excluded_count` removal + `touch` `nargs="+"` + `unknown-field` scaffold + `--apply --quiet` plumbed. 16 of the 25 RED tests flipped GREEN by scaffolding; 9 behaviour-side REDs remain for Phase 6 (3 multi-file touch body, 3 `apply_migration` writes, 3 `unknown-field` rule body). Pytest 9F/391P; ruff / ruff format / mypy / `docs check` all clean. M9 369-baseline tests re-expressed against `Confidence.HIGH`/`MEDIUM`/`LOW` enum identity (no test deleted; contract coverage preserved). |
-| 6. Implement Offline/Core Path | Pending | — | |
+| 6. Implement Offline/Core Path | Complete | 2026-05-27 | `_cmd_touch` rewritten with atomic multi-file semantics + single-root sanity check + single end-of-batch INDEX refresh; `apply_migration` augmented with `_opportunistic_rmdir` (post-move) + `_ensure_docs_toml` (post-file-loop); `check_doc` `unknown-field` rule lands as opt-in (fires only when `config.fields` is non-empty). 400/400 GREEN; quality gate clean tree-wide. |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
 | 8. Run Tests (GREEN) | Pending | — | |
 | 9. Implement Online/Integration | Pending | — | |
@@ -405,3 +405,87 @@ docs: no violations found
 - [x] `# type: ignore[call-arg]` removed from `tests/test_check.py`.
 - [x] M9 369-baseline tests re-expressed against the enum; no contract weakened.
 - [x] Quality gate clean tree-wide; 9 RED remain for Phase 6 (all behaviour-side).
+
+## Phase 6 — Implement Offline/Core Path (Complete 2026-05-27)
+
+### Objective
+
+Write the business-logic body for every Phase-5-scaffolded surface so
+the suite reaches 400/400 GREEN. No new public surface added — only
+the bodies behind the Phase-5 schema land here.
+
+### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `src/docs_cli/cli.py` | Modify | Rewrite `_cmd_touch` per OQ-C atomic semantics (validate every path is a real file, then validate every path resolves under the same docs root, then build every rewrite in memory catching `MetadataError` before any write, then write atomically + a single end-of-batch `_refresh_index`; named-bad-path messaging on each fail). Add `_DOCS_TOML_HEADER` module-level constant for the OQ-A provenance comment. Add `_opportunistic_rmdir(old_parent, root)` with the OQ-Q safety guards (never the plan root; never under the conformant `archive/` subtree; swallow `OSError` for the ENOTEMPTY-sibling-arm via `contextlib.suppress`). Add `_ensure_docs_toml(plan)` per OQ-A — absent sidecar gets a minimal `[project] name = "<resolved>"` + `[archive] date_format` (OQ-M: no `dir =` line); existing sidecar with `[project]` is a no-op; existing sidecar without `[project]` gets the new block appended at the bottom under the provenance header with separator logic guaranteeing exactly one blank line. Rewrite `apply_migration` to capture `old_parent` BEFORE the archive-move, call `_opportunistic_rmdir(old_parent, plan.root)` AFTER, and call `_ensure_docs_toml(plan)` after the file loop. Implement the `check_doc` `unknown-field` rule: opt-in (fires only when `config.fields` is non-empty); `allowed = _BUILTIN_METADATA_FIELDS | config.fields`; emits a `warning` `Finding` with the OQ-F exact message shape for every label not on the allowed set. |
+
+### Actions taken
+
+- Authored `_cmd_touch`, `_opportunistic_rmdir`, `_ensure_docs_toml`,
+  `apply_migration` overhaul, and `check_doc` `unknown-field` rule
+  per the planning agent's 6.1-6.4 spec exactly.
+- Discovered + fixed an opt-in semantic delta in 6.4: the planning
+  agent's example body emits a finding for every non-allowed label,
+  but the OQ-H + milestone-doc Deliverable wording is "trees without
+  the section see no change" — the rule must NOT fire when
+  `config.fields` is empty (the "no allowlist" GREEN regression-
+  lock #12 pins this). Gated the rule behind `if config.fields:` —
+  flipped both #12 and the M9-baseline
+  `test_check_accepts_lifecycle_with_freeform_status_line` to
+  GREEN (the latter relied on `Status:` being opaque to checks
+  when no `add_fields` is configured).
+- The `_ensure_docs_toml` resolved-project-name pin uses
+  `plan.files[0].project` (which is the plan's `project` — already
+  normalised + override-aware per F11). Falls back to
+  `plan.root.resolve().name` only on a zero-file plan (the
+  degenerate "no .md files to migrate" case).
+
+### Issues / decisions
+
+- **`unknown-field` rule is opt-in, not opt-out.** Per the milestone
+  doc wording "Trees without the section see no change" and the
+  Phase-2 test contract `test_check_doc_unknown_field_with_no_allowlist_is_clean`,
+  the rule is gated on `config.fields` being non-empty. This is
+  also what kept the M9-baseline `Status:`-as-prose test GREEN
+  through the rule landing.
+- **OQ-Q swallow gates.** `_opportunistic_rmdir`'s two early-return
+  guards (root identity + already-under-`archive/`) are above the
+  OSError-swallow so the ENOTEMPTY-sibling test's `archived/`
+  parent survives even on systems where `Path.rmdir` quirks
+  differ — the OSError catch is the third gate, not the only one.
+
+### Test results
+
+```text
+$ .venv/bin/python -m pytest tests/ -q --tb=no
+... (400 items collected) ...
+400 passed in 10.99s
+```
+
+Every Phase-2 RED now GREEN; every M9 baseline test still GREEN.
+
+### Quality gate (verbatim)
+
+```text
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+33 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 34 source files
+
+$ .venv/bin/docs check docs --stale 14
+docs: no violations found
+```
+
+### Exit criteria
+
+- [x] `_cmd_touch` atomic multi-file body lands with OQ-C semantics + single-root sanity check (Step-2 follow-on #4).
+- [x] `_ensure_docs_toml` writes when absent + extends when present + never overwrites `[project]` (OQ-A) + emits no `dir =` line (OQ-M) + uses provenance header immediately above `[project]` (OQ-L).
+- [x] `_opportunistic_rmdir` runs after every archive-move; never tree-walks; swallows `OSError` on a non-empty parent (OQ-G + OQ-Q).
+- [x] `_print_migration_plan(quiet=True)` early-returns; `_cmd_migrate` dispatch wires `quiet=(args.apply and args.quiet)` only on the default branch.
+- [x] `check_doc` `unknown-field` rule fires only when `config.fields` is non-empty; emits the OQ-F exact-message shape; built-in always-allowed set + `add_fields` allowlist cover the expected vocabulary.
+- [x] 400/400 GREEN; quality gate clean tree-wide.

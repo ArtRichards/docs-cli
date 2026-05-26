@@ -19,7 +19,7 @@ Related:
 ## Current milestone
 
 **M10 — Adoption-flow polish + 1.3.0 carry-overs** is **Active**
-(Phases 1-5 complete 2026-05-27; Phase 6 next). It bundles the two
+(Phases 1-6 complete 2026-05-27; Phase 7 next). It bundles the two
 user-surfaced agent-driveability features (`docs touch
 <file...>`, `docs migrate --apply` writes `.docs.toml`) with the
 carry-overs from M3 (`[vocabulary] add_fields` allowlist), M7
@@ -30,12 +30,8 @@ deliverable list and 9 OPEN QUESTIONS (A-I, all
 operator-confirmed 2026-05-26 and promoted to Decisions) live in
 [m10-adoption-polish.md](m10-adoption-polish.md); implementation
 log in [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md).
-Phase 4 RED baseline: 25 failed, 375 passed (400 collected) —
-M9's 369 GREEN preserved + 6 GREEN regression-locks. Phase 5
-flipped 16 of those 25 REDs by interface scaffolding (Confidence
-enum, Config.fields, MigrationPlan.excluded_count removal, touch
-nargs="+", _print_migration_plan quiet kwarg, unknown-field
-scaffold); 9 behaviour-side REDs remain for Phase 6.
+Phase 6 closes the suite at 400/400 GREEN; quality gate clean
+tree-wide; every M10 deliverable's business-logic body has landed.
 
 **docs-cli 1.3.0 shipped 2026-05-25.** **M9 — PyPI publish
 1.3.0** is complete: `docs-cli==1.3.0` is live at
@@ -50,12 +46,12 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** M10 Phase 6 (Implement Offline/Core Path) — write
-the multi-file atomic `_cmd_touch` body, the `apply_migration`
-`.docs.toml` writer + opportunistic-rmdir, the `--apply --quiet`
-suppression dispatch, and the `check_doc` `unknown-field` rule body.
-9 RED tests remain at end of Phase 5; Phase 6 brings the suite to
-400/400 GREEN.
+**Next action:** M10 Phase 7 (Update Tool/Wrapper Layer) — sweep
+docs/cli.md, docs/convention.md, docs/architecture.md, README.md,
+CHANGELOG.md for the M10 surface; bump pyproject.toml +
+src/docs_cli/cli.py `__version__` to 1.4.0; restructure the bundled
+adoption playbook to the 4-step shape (OQ-I); resync skill
+references byte-for-byte; bump packaging version pins.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -205,7 +201,7 @@ for the milestone summary.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-5 complete 2026-05-27; OQ-A through OQ-I resolved; Phase 6 next) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phases 1-6 complete 2026-05-27; 400/400 GREEN; Phase 7 next) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

@@ -25,6 +25,7 @@ from __future__ import annotations
 __version__ = "1.3.0"
 
 import argparse
+import contextlib
 import enum
 import importlib.resources
 import json
@@ -1538,6 +1539,30 @@ def check_doc(
             )
         )
 
+    # --- M10 unknown-field (OQ-F + OQ-H + OQ-O + OQ-P) -------------------
+    # The rule is opt-in: it only fires when the tree has set
+    # `[vocabulary] add_fields = [...]` (i.e. `config.fields` is non-
+    # empty). Trees without the allowlist see no `unknown-field`
+    # findings — extra metadata labels (`Owner:`, `Tags:`, free-form
+    # `Status:` …) are simply opaque to this rule. Once the allowlist
+    # is configured, any label not on the built-in always-allowed set
+    # AND not on `config.fields` drives a warning. The built-in set
+    # carries the required labels + `Related:` + `Archived-reason:`
+    # so structural metadata is never flagged.
+    if config.fields:
+        allowed = _BUILTIN_METADATA_FIELDS | config.fields
+        for label in metadata:
+            if label in allowed:
+                continue
+            findings.append(
+                Finding(
+                    path,
+                    "warning",
+                    "unknown-field",
+                    f"metadata field '{label}:' not in [vocabulary] add_fields allowlist",
+                )
+            )
+
     return findings
 
 
@@ -2508,15 +2533,122 @@ def plan_migration(
     )
 
 
+# M10 (OQ-A): provenance header for the auto-written `.docs.toml` block.
+# Sits immediately above the `[project]` section so an operator
+# inspecting the file knows the block was added by `docs migrate
+# --apply` (not hand-authored).
+_DOCS_TOML_HEADER = "# Added by docs migrate --apply"
+
+
+def _opportunistic_rmdir(old_parent: Path, root: Path) -> None:
+    """Remove `old_parent` if it is now empty after an archive-move.
+
+    Called only after an archive-move; never tree-walks (Step-2
+    follow-on #3 — pin the scope tight). The rmdir is opportunistic:
+    we swallow `OSError` (typically `ENOTEMPTY` when a non-migrating
+    sibling lives in the dir) so the M4 normalisation never destroys
+    operator content (OQ-Q).
+
+    Two guards on top of the OSError-swallow:
+
+    - Never remove the plan root itself (a degenerate case where the
+      whole tree was a single archive-style dir).
+    - Never remove a directory that is itself under the new conformant
+      `archive/` subtree (those land at `archive/<date>/` and must
+      survive future runs).
+    """
+    old_resolved = old_parent.resolve()
+    root_resolved = root.resolve()
+    if old_resolved == root_resolved:
+        return
+    try:
+        old_resolved.relative_to(root_resolved / "archive")
+    except ValueError:
+        pass
+    else:
+        return
+    # ENOTEMPTY (non-migrating sibling), ENOENT (already gone),
+    # EBUSY (locked), … — every reason to keep the directory.
+    with contextlib.suppress(OSError):
+        old_parent.rmdir()
+
+
+def _ensure_docs_toml(plan: MigrationPlan) -> None:
+    """Write or extend the `.docs.toml` sidecar at the plan root (OQ-A).
+
+    Layered protection: this is the OQ-A safety net layered on top of
+    the M7 carve-out. The existing-`[project]` early-return inside
+    this function is the second gate; the first gate is the
+    `_cmd_migrate` carve-out matrix that refuses apply when the
+    sidecar carries `[project]` without `[migrate]` / `[exclude]`.
+
+    When the sidecar is absent, writes a minimal `.docs.toml` carrying
+    `[project] name = "<resolved-project>"` + `[archive] date_format`
+    (per OQ-M, no redundant `dir = "archive"` — the default is
+    stable). When the sidecar exists but does NOT carry a `[project]`
+    block, appends the new block at the bottom under the
+    `# Added by docs migrate --apply` provenance header (OQ-L). When
+    `[project]` is already present, this is a no-op (OQ-A
+    never-overwrite).
+    """
+    sidecar = plan.root / ".docs.toml"
+    project_name = plan.files[0].project if plan.files else plan.root.resolve().name
+
+    new_block = (
+        f"{_DOCS_TOML_HEADER}\n"
+        f"[project]\n"
+        f'name = "{project_name}"\n'
+        f"\n"
+        f"[archive]\n"
+        f'date_format = "%Y-%m-%d"\n'
+    )
+
+    if not sidecar.is_file():
+        atomic_write(sidecar, new_block)
+        return
+
+    try:
+        existing_text = sidecar.read_text()
+        parsed = tomllib.loads(existing_text)
+    except tomllib.TOMLDecodeError:
+        # Surfacing here is best-effort — the file mutations already
+        # happened; log to stderr and leave the malformed sidecar
+        # alone rather than overwrite it.
+        print(
+            f"docs: warning: malformed .docs.toml at {sidecar}; not extending",
+            file=sys.stderr,
+        )
+        return
+
+    if "project" in parsed:
+        # OQ-A never-overwrite: an existing `[project]` block wins.
+        return
+
+    # Append the new block. Separator logic guarantees exactly one
+    # blank line between existing content and the provenance comment.
+    if existing_text.endswith("\n\n"):
+        separator = ""
+    elif existing_text.endswith("\n"):
+        separator = "\n"
+    else:
+        separator = "\n\n"
+    atomic_write(sidecar, existing_text + separator + new_block)
+
+
 def apply_migration(plan: MigrationPlan) -> None:
-    """Execute a `MigrationPlan`: insert metadata blocks and normalise archives.
+    """Execute a `MigrationPlan`: insert metadata blocks, normalise archives, write `.docs.toml`.
 
     For each `FileMigration` in ``plan``: inserts the decided metadata block
     via `insert_metadata_block`, writes it back atomically (`atomic_write`),
     and — when ``archive_move`` is set — moves the file to its conformant
     ``archive/<date>/`` destination. The metadata edit happens before the
     move, mirroring `_archive_one`, so a failure leaves the original
-    untouched.
+    untouched. After every archive-move, the now-empty archive-style parent
+    dir is opportunistically removed (M10 / OQ-G).
+
+    After the file loop, writes or extends the root `.docs.toml` sidecar
+    (M10 / OQ-A) so the adopted tree is immediately self-describing — a
+    fresh agent / operator never has to hand-author the sidecar.
 
     An archive-move whose destination is already occupied raises
     `FileExistsError` rather than silently overwriting it — mirroring the
@@ -2546,7 +2678,17 @@ def apply_migration(plan: MigrationPlan) -> None:
             if dest.exists():
                 raise FileExistsError(dest)
             dest.parent.mkdir(parents=True, exist_ok=True)
+            # M10 / OQ-G: capture the now-empty source parent BEFORE the
+            # move so the rmdir target is unambiguous even if the move
+            # changes the tree shape.
+            old_parent = fm.path.parent
             fm.path.replace(dest)
+            _opportunistic_rmdir(old_parent, plan.root)
+
+    # M10 / OQ-A: write / extend the `.docs.toml` sidecar after the file
+    # loop so an in-flight failure does not leave a half-adopted tree
+    # with a fresh sidecar pointing at no migrated files.
+    _ensure_docs_toml(plan)
 
 
 def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
@@ -3283,41 +3425,72 @@ def _cmd_mv(args: argparse.Namespace) -> int:
 
 
 def _cmd_touch(args: argparse.Namespace) -> int:
-    # Phase 5 scaffold: keep single-file legacy behaviour by reading the
-    # first arg from the nargs="+" list. Phase 6 rewrites this to walk the
-    # full list with atomic semantics + a single end-of-batch INDEX refresh.
-    file_path = Path(args.files[0])
-    if not file_path.is_file():
-        print(f"docs: file not found: {file_path}", file=sys.stderr)
-        return 1
+    # M10 (OQ-C): atomic multi-file touch. Validate every path first; if
+    # any path is missing or any rewrite would raise, exit 1 + name the
+    # bad path BEFORE any on-disk mutation. Otherwise: write every rewrite
+    # via `atomic_write`, then refresh the INDEX exactly once at end-of-
+    # batch. Single-INDEX-refresh, all-or-nothing semantics.
+    file_paths = [Path(p) for p in args.files]
 
-    root = Path(args.root) if args.root else find_root(file_path.parent)
+    # First pass: every path must exist + be a real file.
+    for fp in file_paths:
+        if not fp.is_file():
+            print(f"docs: file not found: {fp}", file=sys.stderr)
+            return 1
+
+    # Resolve the docs root from the first path; every subsequent path
+    # must resolve under the same root (Step-2 follow-on #4: multi-root
+    # touch is undefined behaviour, out of M10 scope).
+    root = Path(args.root) if args.root else find_root(file_paths[0].parent)
     try:
         config = load_config(root)
     except tomllib.TOMLDecodeError as exc:
         print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
         return 2
 
+    root_resolved = root.resolve()
+    for fp in file_paths:
+        try:
+            fp.resolve().relative_to(root_resolved)
+        except ValueError:
+            print(
+                f"docs: {fp} is outside the resolved docs root ({root_resolved})",
+                file=sys.stderr,
+            )
+            return 1
+
+    # Second pass: build every rewrite in memory, catching MetadataError
+    # before any disk write so a malformed sibling does not partially
+    # mutate the batch.
     today = date.today().strftime(config.date_format)
-    try:
-        new_text = set_metadata_field(file_path.read_text(), "Updated", today)
-    except MetadataError as exc:
-        print(f"docs: {exc}", file=sys.stderr)
-        return 1
+    rewrites: list[tuple[Path, str]] = []
+    for fp in file_paths:
+        try:
+            new_text = set_metadata_field(fp.read_text(), "Updated", today)
+        except MetadataError as exc:
+            print(f"docs: {fp}: {exc}", file=sys.stderr)
+            return 1
+        rewrites.append((fp, new_text))
 
     if args.dry_run:
         if not args.quiet:
-            print(f"docs: would touch {file_path} (Updated: {today})", file=sys.stderr)
+            for fp, _ in rewrites:
+                print(f"docs: would touch {fp} (Updated: {today})", file=sys.stderr)
         return 0
 
-    atomic_write(file_path, new_text)
+    for fp, new_text in rewrites:
+        atomic_write(fp, new_text)
+
+    # OQ-C: single end-of-batch INDEX refresh.
     try:
         _refresh_index(root, config)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
         return 2
+
     if not args.quiet:
-        print(f"docs: touched {file_path}", file=sys.stderr)
+        for fp, _ in rewrites:
+            print(f"docs: touched {fp}", file=sys.stderr)
     return 0
 
 
