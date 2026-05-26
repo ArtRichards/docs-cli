@@ -27,9 +27,9 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Complete | 2026-05-25 | Milestone pair authored + paired (`Related:` edges both directions); milestone-doc flipped `Lifecycle: draft` → `active`; M10 row added to plan.md (and parked `add_fields` Open question scheduled into M10 item #8); status.md "Current milestone" rewritten + M10 row appended to milestone progress table; OPEN QUESTIONS A-I surfaced for operator review before Phase 2; INDEX + dogfood snapshot regenerated in lockstep; full quality gate green (369 pytest, ruff/format/mypy/`docs check` all clean). |
-| 2. Write Tests (RED) | Pending | — | |
-| 3. Create Data/Fixtures | Pending | — | |
+| 1. Define Contract | Complete | 2026-05-25; OQ closeout 2026-05-26 | Milestone pair authored + paired (`Related:` edges both directions); milestone-doc flipped `Lifecycle: draft` → `active`; M10 row added to plan.md (and parked `add_fields` Open question scheduled into M10 item #8); status.md "Current milestone" rewritten + M10 row appended to milestone progress table; OPEN QUESTIONS A-I surfaced for operator review before Phase 2; INDEX + dogfood snapshot regenerated in lockstep; full quality gate green (369 pytest, ruff/format/mypy/`docs check` all clean). **OQ closeout 2026-05-26**: operator-confirmed OQ-A through OQ-I recorded as 9 Decisions bullets in the milestone doc; AWAITING-OPERATOR checkbox flipped in the impl log; INDEX + snapshot regenerated. |
+| 2. Write Tests (RED) | Complete | 2026-05-26 | 26 new test items added across `tests/test_cli_touch.py` (5 multi-file/atomic/single-INDEX), `tests/test_cli_migrate.py` (6 `--apply` writes/extends `.docs.toml` + `--quiet` + OQ-G rmdir), `tests/test_check.py` (4 `unknown-field` rule), `tests/test_cli_check.py` (2 CLI `unknown-field`), `tests/test_config.py` (3 `add_fields` schema), `tests/test_migrate.py` (5 `Confidence` enum + 1 `excluded_count` removal). 22 RED + 4 GREEN regression-locks; M9's 369 GREEN preserved (no existing test regressed). Test count: 395 collected (369 + 26). |
+| 3. Create Data/Fixtures | Complete | 2026-05-26 | No-op per the Phase-3 recommendation in the milestone plan: every Phase-2 test that needed a real tree on disk built it inline via `tmp_path` (multi-file touch trees, vocab trees, OQ-G rmdir tree) so the test files own their setup and Phase 3 had no fixtures to stage. Sign-off folded into the Phase 4 commit. |
 | 4. Run Tests (RED Baseline) | Pending | — | |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
@@ -99,3 +99,47 @@ N/A — Phase 1 has no code change. 369 tests still GREEN (M9 baseline preserved
 - [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated in lockstep.
 - [x] Quality gate green: pytest 369 passed, ruff / ruff format --check / mypy clean tree-wide, `docs check docs --stale 14` exit 0.
 - [x] OPERATOR CONFIRMED 2026-05-26 — OQ-A through OQ-I resolved per recommendations; recorded as Decisions in the milestone doc.
+
+## Phase 2 — Write Tests (RED) (Complete 2026-05-26)
+
+### Objective
+
+Express every M10 deliverable as a failing test on `m10/phases-1-4` before any
+implementation lands. Each deliverable maps to a specific contract anchor; the
+test names + assertions become the precise target for Phase 5/6.
+
+### Files changed
+
+| File | Action | Notes |
+|---|---|---|
+| `tests/test_cli_touch.py` | Modify | +5 tests — multi-file happy path, single-INDEX-refresh observation, atomic-failure body preservation, atomic-failure INDEX preservation, multi-file `--dry-run`. Inline `tmp_path` multi-file tree builder. |
+| `tests/test_cli_migrate.py` | Modify | +6 tests — `--apply` writes `.docs.toml` when absent (OQ-A); `--apply` extends sidecar without overwriting `[project]` (OQ-L); `--apply` does NOT overwrite existing `[project]` (OQ-A safety-net); `--apply --quiet` suppresses per-file output (OQ-B); `--quiet` does NOT suppress dry-run/`--summary`/`--json` outputs (OQ-B scope); empty-archive-parent rmdir (OQ-G + OQ-Q). |
+| `tests/test_check.py` | Modify | +4 tests — `unknown-field` rule clean-when-no-allowlist (OQ-H); `unknown-field` warning shape (OQ-F); allowlist-match clean (OQ-H); case-sensitivity (OQ-H exact match). |
+| `tests/test_cli_check.py` | Modify | +2 tests — CLI `unknown-field` mismatch exits 1; CLI allowlist-match exits 0. |
+| `tests/test_config.py` | Modify | +3 tests — `add_fields` parses into `Config.fields`; default empty frozenset; case preserved verbatim. |
+| `tests/test_migrate.py` | Modify | +5 tests — `Confidence` enum identity for HIGH/MEDIUM/LOW returns; `FileMigration.confidence` accepts enum + invariant; JSON wire format still emits strings (regression lock). +1 test — `MigrationPlan.excluded_count` removal (`not hasattr`). |
+
+### Actions taken
+
+- Authored the 26 new test items per the planning agent's per-deliverable contract anchors. Each maps 1:1 to a Deliverable in the milestone doc (D1-D6).
+- Built per-test setup inline via `tmp_path` rather than committing new fixtures (per the Phase 3 recommendation in the planning plan). The multi-file touch tree, the vocab trees for `unknown-field`, and the OQ-G rmdir tree are all constructed from primitives in the test body.
+- Used `# type: ignore[call-arg]` ONE place (`tests/test_check.py::_config_with_fields`) to keep mypy clean at the RED baseline while the `fields` kwarg doesn't exist yet on `Config`. The ignore will be removed at Phase 5 once `Config.fields` lands.
+- Held the line on identity (`is`) for Confidence enum assertions, not equality — the enum's value matches the existing string literal, so equality would still pass against the pre-enum implementation and not catch the regression.
+
+### Issues / decisions
+
+- **Regression-lock count drift.** The planning agent expected ~24 RED + 2 GREEN regression-locks. Actual at baseline: 22 RED + 4 GREEN regression-locks (the 2 extra are #8 — defensive sidecar-with-`[project]` behavior already locked by current carve-out matrix; and #10 — `--quiet` already not suppressing dry-run/`--summary`/`--json`). Both are intended GREEN-from-baseline locks; the RED count drift is an artefact of the contract being narrower than expected at points where M8 already enforced the behavior.
+- **`test_check_doc_unknown_field_with_no_allowlist_is_clean` baseline status.** The planning agent expected this test to be GREEN at baseline (an empty allowlist implies "no rule emits, suite is clean"). Actually it is RED at baseline because the test passes `fields=` to `Config(...)`, which TypeErrors today. This is RED for the intended reason — the contract anchor is "once `fields` exists, an empty allowlist must not emit `unknown-field` findings" — Phase 5 lands the kwarg, Phase 6 lands the rule, and both this test + #14 turn GREEN.
+
+### Test results
+
+- pytest: **22 failed, 373 passed (395 collected)** — exact RED count expected for Phase 4 baseline; M9's 369 GREEN preserved + 4 new GREEN regression-locks.
+- ruff / ruff format --check / mypy / `docs check docs --stale 14`: all clean.
+
+### Exit criteria
+
+- [x] 26 new test items collected.
+- [x] 22 RED for intended reasons (no import errors, no fixture FNF, every failure traces to a Phase-5/6 deliverable surface).
+- [x] 4 GREEN regression-locks pinned at baseline (#8, #10, #17, #25).
+- [x] M9's 369 GREEN preserved.
+- [x] Quality gate clean tree-wide.

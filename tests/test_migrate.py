@@ -691,3 +691,107 @@ def test_summary_and_json_are_mutually_exclusive(docs_script, tmp_path):
     )
     assert proc.returncode == 2, (proc.returncode, proc.stderr, proc.stdout)
     assert "not allowed with" in proc.stderr, proc.stderr
+
+
+# --- M10 D5 — `Confidence` enum (replacing the bool|str return) -----------
+
+
+def test_infer_role_returns_confidence_enum():
+    """OQ-E + OQ-N: `infer_role` returns a `Confidence` enum member.
+    Identity assertion (`is`) — not equality — pins the enum.
+    """
+    from docs import Confidence
+
+    _role, conf = infer_role("auth-spec.md", {})
+    assert conf is Confidence.HIGH
+
+
+def test_infer_role_confidence_enum_for_medium_signal():
+    """OQ-E: a derived-signal pass returns Confidence.MEDIUM."""
+    from docs import Confidence
+
+    # `_M\d+` milestone-pattern is the canonical medium-confidence path
+    # surfaced in M7's word-boundary tolerance work.
+    _role, conf = infer_role("my-thing-plan_M3.md", {})
+    assert conf is Confidence.MEDIUM
+
+
+def test_infer_role_confidence_enum_for_notes_fallback():
+    """OQ-E: the `notes`-fallback path returns Confidence.LOW."""
+    from docs import Confidence
+
+    _role, conf = infer_role("random.md", {})
+    assert conf is Confidence.LOW
+
+
+def test_filemigration_confidence_field_accepts_enum():
+    """OQ-N: `FileMigration.confidence` stores the enum directly; the
+    HIGH + non-empty-ambiguities invariant still raises ValueError.
+    """
+    from docs import Confidence
+
+    # Happy path: HIGH + empty ambiguities is allowed.
+    fm = FileMigration(
+        path=Path("/r/x.md"),
+        rel="x.md",
+        role="spec",
+        project="proj",
+        lifecycle="active",
+        updated=date(2026, 5, 22),
+        synthesized_h1=False,
+        reconciled_metadata=False,
+        confidence=Confidence.HIGH,
+        ambiguities=(),
+        archive_move=None,
+    )
+    assert fm.confidence is Confidence.HIGH
+
+    # Invariant: HIGH + non-empty ambiguities is illegal.
+    import pytest
+
+    with pytest.raises(ValueError):
+        FileMigration(
+            path=Path("/r/x.md"),
+            rel="x.md",
+            role="spec",
+            project="proj",
+            lifecycle="active",
+            updated=date(2026, 5, 22),
+            synthesized_h1=False,
+            reconciled_metadata=False,
+            confidence=Confidence.HIGH,
+            ambiguities=("some note",),
+            archive_move=None,
+        )
+
+
+def test_migrate_json_wire_format_still_emits_strings(fixtures_dir):
+    """OQ-E: the JSON boundary stays string-valued so the documented
+    wire format is byte-stable. Every `rec["confidence"]` is one of
+    `"high" | "medium" | "low"` (a `str`, not an enum repr).
+    """
+    from docs import migration_to_json
+
+    plan = plan_migration(_foreign(fixtures_dir))
+    records = migration_to_json(plan)
+    assert records, "expected at least one record"
+    for rec in records:
+        kind = type(rec["confidence"]).__name__
+        assert isinstance(rec["confidence"], str), (
+            f"confidence must serialise to str at the JSON boundary, got {kind}"
+        )
+        assert rec["confidence"] in ("high", "medium", "low")
+
+
+# --- M10 D6 — `MigrationPlan.excluded_count` removed (1.4.0 breaking) -----
+
+
+def test_migration_plan_has_no_excluded_count_attribute(fixtures_dir):
+    """OQ-D: 1.4.0 removes `MigrationPlan.excluded_count` (set, never
+    read in shipped code). The human-plan footer iterates
+    `excluded_breakdown` directly; `migration_to_json` omits it.
+    """
+    plan = plan_migration(_foreign(fixtures_dir))
+    assert not hasattr(plan, "excluded_count"), (
+        "MigrationPlan.excluded_count must be removed in 1.4.0 (OQ-D)"
+    )

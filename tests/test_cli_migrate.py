@@ -325,3 +325,154 @@ def test_migrate_apply_refuses_an_archive_move_collision(docs_script, tmp_path):
     # A colliding --apply must fail (exit 2) rather than silently overwrite.
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
     assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+
+
+# --- M10 D2 — `docs migrate --apply` writes/extends `.docs.toml` -----------
+
+
+def test_migrate_apply_writes_docs_toml_when_absent(docs_script, fixtures_dir, tmp_path):
+    """OQ-A: `--apply` on a tree without `.docs.toml` writes a minimal one
+    carrying `[project] name = "<resolved>"` and `[archive] date_format`.
+    """
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    assert not (root / ".docs.toml").exists(), "fixture must not have a pre-existing sidecar"
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    sidecar = root / ".docs.toml"
+    assert sidecar.is_file(), "migrate --apply must write a .docs.toml when absent"
+    text = sidecar.read_text()
+    assert "[project]" in text, ".docs.toml must declare a [project] block"
+    assert "name =" in text, ".docs.toml must carry a project name"
+    assert "[archive]" in text, ".docs.toml must declare an [archive] block"
+    assert 'date_format = "%Y-%m-%d"' in text, "[archive] must carry date_format"
+
+
+def test_migrate_apply_extends_sidecar_without_overwriting_project(
+    docs_script, fixtures_dir, tmp_path
+):
+    """OQ-A + OQ-L: a pre-existing sidecar carrying ONLY `[migrate]` (or
+    `[exclude]`) gets `[project]` appended at the bottom under a
+    `# Added by docs migrate --apply` comment header; existing sections
+    survive verbatim.
+    """
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    sidecar = root / ".docs.toml"
+    pre_existing = '[migrate]\nproject_name = "from-sidecar"\n\n[exclude]\ndirs = ["vendor"]\n'
+    sidecar.write_text(pre_existing)
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    text = sidecar.read_text()
+    # Existing sections preserved.
+    assert "[migrate]" in text
+    assert 'project_name = "from-sidecar"' in text
+    assert "[exclude]" in text
+    assert 'dirs = ["vendor"]' in text
+    # New [project] appended at the bottom under a provenance comment header.
+    assert "# Added by docs migrate --apply" in text
+    assert "[project]" in text
+    project_idx = text.index("[project]")
+    header_idx = text.index("# Added by docs migrate --apply")
+    migrate_idx = text.index("[migrate]")
+    exclude_idx = text.index("[exclude]")
+    assert migrate_idx < project_idx, "existing [migrate] must precede appended [project]"
+    assert exclude_idx < project_idx, "existing [exclude] must precede appended [project]"
+    assert header_idx < project_idx, "comment header must sit immediately above appended [project]"
+
+
+def test_migrate_apply_does_not_overwrite_existing_project_block(
+    docs_script, fixtures_dir, tmp_path
+):
+    """OQ-A: a sidecar that already carries `[project]` is left alone —
+    no new `[project]` block, no `# Added by docs migrate --apply` line.
+    """
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    sidecar = root / ".docs.toml"
+    pre_existing = '[project]\nname = "preserve-me"\n\n[migrate]\nproject_name = "ignored"\n'
+    sidecar.write_text(pre_existing)
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    # The carve-out matrix allows [migrate]-only-with-[project] (an existing
+    # docs root that operator explicitly threaded through migrate via
+    # [migrate]). Exit code can be 0 (allowed) or 2 (refused as managed) —
+    # the contract this test pins is "if migrate runs, it does NOT
+    # overwrite [project] and does NOT append a duplicate" — so we only
+    # check the file when the run succeeded.
+    if proc.returncode == 0:
+        text = sidecar.read_text()
+        assert 'name = "preserve-me"' in text, "existing [project] name must be preserved verbatim"
+        assert text.count("[project]") == 1, "must not append a duplicate [project] block"
+        assert "# Added by docs migrate --apply" not in text, (
+            "no provenance header when [project] already exists"
+        )
+
+
+def test_migrate_apply_quiet_suppresses_per_file_output(docs_script, fixtures_dir, tmp_path):
+    """OQ-B: `--apply --quiet` produces empty stdout (per-file plan block
+    suppressed); `--apply` alone produces non-empty stdout.
+    """
+    root = _foreign_copy(fixtures_dir, tmp_path)
+    loud = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (loud.stdout + loud.stderr)
+    assert loud.returncode == 0, (loud.stdout, loud.stderr)
+    assert loud.stdout.strip(), "--apply alone must print the per-file plan to stdout"
+
+    root2 = tmp_path / "foreign2"
+    shutil.copytree(fixtures_dir / "trees" / "foreign", root2)
+    quiet = _run(docs_script, "migrate", str(root2), "--apply", "--quiet", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (quiet.stdout + quiet.stderr)
+    assert quiet.returncode == 0, (quiet.stdout, quiet.stderr)
+    assert quiet.stdout == "", f"--apply --quiet must produce empty stdout, got {quiet.stdout!r}"
+
+
+def test_migrate_apply_quiet_does_not_suppress_dry_run_or_summary_or_json(
+    docs_script, fixtures_dir, tmp_path
+):
+    """OQ-B: `--quiet` is scoped to `--apply` chatter only. Dry-run
+    (`--quiet` alone), `--quiet --summary`, and `--quiet --json` all keep
+    their requested outputs.
+    """
+    # Dry-run + --quiet — the dry-run plan IS the requested output.
+    root1 = _foreign_copy(fixtures_dir, tmp_path)
+    dry_quiet = _run(docs_script, "migrate", str(root1), "--quiet")
+    assert "NotImplementedError" not in (dry_quiet.stdout + dry_quiet.stderr)
+    assert dry_quiet.returncode == 0, (dry_quiet.stdout, dry_quiet.stderr)
+    assert dry_quiet.stdout.strip(), "--quiet alone (dry-run) must keep the plan on stdout"
+
+    # --quiet --summary — summary IS the requested output.
+    root2 = tmp_path / "foreign2"
+    shutil.copytree(fixtures_dir / "trees" / "foreign", root2)
+    summary_quiet = _run(docs_script, "migrate", str(root2), "--quiet", "--summary")
+    assert "NotImplementedError" not in (summary_quiet.stdout + summary_quiet.stderr)
+    assert summary_quiet.returncode == 0, (summary_quiet.stdout, summary_quiet.stderr)
+    assert summary_quiet.stdout.strip(), "--quiet --summary must keep the summary on stdout"
+
+    # --quiet --json — JSON IS the requested output.
+    root3 = tmp_path / "foreign3"
+    shutil.copytree(fixtures_dir / "trees" / "foreign", root3)
+    json_quiet = _run(docs_script, "migrate", str(root3), "--quiet", "--json")
+    assert "NotImplementedError" not in (json_quiet.stdout + json_quiet.stderr)
+    assert json_quiet.returncode == 0, (json_quiet.stdout, json_quiet.stderr)
+    parsed = json.loads(json_quiet.stdout)
+    assert isinstance(parsed, list) and parsed, "--quiet --json must keep the JSON array on stdout"
+
+
+def test_migrate_apply_removes_empty_archive_parent_directory(docs_script, tmp_path):
+    """OQ-G + OQ-Q: after `--apply`, the now-empty archive-style parent
+    directory is removed; the file is at archive/<date>/<basename>.
+    Built inline (not on-disk fixture) per the planning agent's call —
+    full control over what lives under archived/ so the rmdir guard
+    blast radius is exact.
+    """
+    root = tmp_path / "rmdir-tree"
+    archived = root / "archived"
+    archived.mkdir(parents=True)
+    (archived / "old.md").write_text("# Old\n\nBody.\n")
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert "NotImplementedError" not in (proc.stdout + proc.stderr)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The file moved to archive/2026-05-22/old.md
+    moved = root / "archive" / "2026-05-22" / "old.md"
+    assert moved.is_file(), f"file did not land at the conformant archive destination: {moved}"
+    # The empty archive-style parent is gone (OQ-G).
+    assert not archived.exists(), "now-empty archived/ parent must be removed after --apply"

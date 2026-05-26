@@ -124,3 +124,35 @@ def test_load_config_invalid_toml_raises(tmp_path):
     (tmp_path / ".docs.toml").write_text("this is = not [valid toml")
     with pytest.raises(tomllib.TOMLDecodeError):
         load_config(tmp_path)
+
+
+# --- M10 D4 — `[vocabulary] add_fields` -> Config.fields ------------------
+
+
+def test_load_config_add_fields_extension(tmp_path):
+    """`[vocabulary] add_fields = ["Owner", "Tags"]` parses into
+    `Config.fields == frozenset({"Owner", "Tags"})`.
+    """
+    (tmp_path / ".docs.toml").write_text(
+        '[project]\nname = "x"\n\n[vocabulary]\nadd_fields = ["Owner", "Tags"]\n'
+    )
+    cfg = load_config(tmp_path)
+    assert cfg.fields == frozenset({"Owner", "Tags"})
+
+
+def test_load_config_fields_defaults_to_empty_frozenset(tmp_path):
+    """Empty tree (no `.docs.toml`) ⇒ `Config.fields == frozenset()`."""
+    cfg = load_config(tmp_path)
+    assert cfg.fields == frozenset()
+
+
+def test_load_config_fields_preserves_case(tmp_path):
+    """OQ-H: case-sensitive ⇒ both `"Owner"` and `"owner"` are retained
+    verbatim (no case-folding by `load_config`).
+    """
+    (tmp_path / ".docs.toml").write_text(
+        '[project]\nname = "x"\n\n[vocabulary]\nadd_fields = ["Owner", "owner"]\n'
+    )
+    cfg = load_config(tmp_path)
+    assert "Owner" in cfg.fields
+    assert "owner" in cfg.fields

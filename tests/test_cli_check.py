@@ -105,3 +105,45 @@ def test_check_dogfood_repo_docs_is_clean(docs_script):
     """`docs check` on this repo's own docs/ must be clean — the M3 exit criterion."""
     proc = _run(docs_script, "check", str(REPO_ROOT / "docs"))
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+# --- M10 D3 — `unknown-field` rule wired through the CLI ------------------
+
+
+def _vocab_tree(tmp_path: Path, name: str, add_fields: list[str]) -> Path:
+    """Build a tiny docs root with a `[vocabulary] add_fields = [...]`
+    sidecar and one doc carrying an `Owner:` extra metadata line.
+    """
+    root = tmp_path / name
+    root.mkdir()
+    fields_token = ", ".join(f'"{f}"' for f in add_fields)
+    (root / ".docs.toml").write_text(
+        f'[project]\nname = "{name}"\n\n[vocabulary]\nadd_fields = [{fields_token}]\n'
+    )
+    today = date.today().isoformat()
+    (root / "doc.md").write_text(
+        f"# Doc\n\nLifecycle: active\nRole: notes\nProject: {name}\n"
+        f"Updated: {today}\nOwner: alice\n\nBody.\n"
+    )
+    return root
+
+
+def test_check_cli_unknown_field_exits_1(docs_script, tmp_path):
+    """OQ-F + OQ-H: allowlist = `["Tags"]` + doc with `Owner:` ⇒ exit 1
+    + `unknown-field` token in stdout.
+    """
+    root = _vocab_tree(tmp_path, "uf-mismatch", add_fields=["Tags"])
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "unknown-field" in proc.stdout, proc.stdout
+    assert "Owner" in proc.stdout, proc.stdout
+
+
+def test_check_cli_allowlist_match_exits_0(docs_script, tmp_path):
+    """OQ-H: allowlist = `["Owner"]` + doc with `Owner:` ⇒ exit 0; no
+    `unknown-field` mention.
+    """
+    root = _vocab_tree(tmp_path, "uf-match", add_fields=["Owner"])
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "unknown-field" not in proc.stdout, proc.stdout

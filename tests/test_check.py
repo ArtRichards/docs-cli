@@ -253,3 +253,104 @@ def test_check_tree_findings_sorted_by_path(fixtures_dir):
     findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
     paths = [f.path.as_posix() for f in findings]
     assert paths == sorted(paths)
+
+
+# --- M10 D3 — `unknown-field` rule (gated by [vocabulary] add_fields) ------
+
+
+def _config_with_fields(fields: frozenset[str]) -> Config:
+    # M10 Phase 2 (RED): `Config.fields` lands at Phase 5 — the call-arg
+    # is intentionally untyped today so mypy stays clean at the RED
+    # baseline. Phase 5 removes the ignore.
+    return Config(  # type: ignore[call-arg]
+        project="probe",
+        archive_dir="archive",
+        date_format="%Y-%m-%d",
+        lifecycles=BUILTIN_STATUSES,
+        roles=BUILTIN_ROLES,
+        fields=fields,
+    )
+
+
+def _doc_with_extra_field(label: str, value: str) -> str:
+    """A well-formed doc body that ALSO carries an extra inline metadata
+    line under the metadata block.
+    """
+    return (
+        f"# Sample\n\n"
+        f"Lifecycle: active\nRole: spec\nProject: probe\nUpdated: 2026-05-20\n"
+        f"{label}: {value}\n\nBody paragraph.\n"
+    )
+
+
+def test_check_doc_unknown_field_with_no_allowlist_is_clean():
+    """OQ-H + OQ-O: with empty Config.fields, an `Owner:` extra metadata
+    line is opaque to `unknown-field` — no finding.
+    """
+    cfg = _config_with_fields(frozenset())
+    findings = check_doc(
+        Path("/r/sample.md"),
+        _doc_with_extra_field("Owner", "alice"),
+        Path("/r"),
+        cfg,
+        stale=None,
+        today=_TODAY,
+    )
+    assert [f.rule for f in findings if f.rule == "unknown-field"] == [], (
+        "no allowlist set ⇒ no unknown-field finding"
+    )
+
+
+def test_check_doc_unknown_field_warning_when_allowlist_set():
+    """OQ-F shape: `Finding(severity="warning", rule="unknown-field",
+    message="metadata field '<Label>:' not in [vocabulary] add_fields
+    allowlist", path=<rel>)`. Allowlist = {"Tags"}; doc carries Owner:.
+    """
+    cfg = _config_with_fields(frozenset({"Tags"}))
+    findings = check_doc(
+        Path("/r/sample.md"),
+        _doc_with_extra_field("Owner", "alice"),
+        Path("/r"),
+        cfg,
+        stale=None,
+        today=_TODAY,
+    )
+    unknown = [f for f in findings if f.rule == "unknown-field"]
+    assert len(unknown) == 1, f"expected exactly one unknown-field finding, got {findings!r}"
+    f = unknown[0]
+    assert f.severity == "warning"
+    assert f.rule == "unknown-field"
+    assert "Owner" in f.message
+    assert "add_fields allowlist" in f.message
+
+
+def test_check_doc_allowed_field_is_clean():
+    """OQ-H: `fields={'Owner','Tags'}` + doc carrying both → clean."""
+    cfg = _config_with_fields(frozenset({"Owner", "Tags"}))
+    text = (
+        "# Sample\n\n"
+        "Lifecycle: active\nRole: spec\nProject: probe\nUpdated: 2026-05-20\n"
+        "Owner: alice\nTags: infra, urgent\n\nBody.\n"
+    )
+    findings = check_doc(Path("/r/sample.md"), text, Path("/r"), cfg, stale=None, today=_TODAY)
+    assert [f.rule for f in findings if f.rule == "unknown-field"] == [], (
+        "Owner: + Tags: are both on the allowlist; no unknown-field findings"
+    )
+
+
+def test_check_doc_allowlist_is_case_sensitive():
+    """OQ-H: exact-match, case-sensitive — `fields={'owner'}` does NOT
+    cover `Owner:`.
+    """
+    cfg = _config_with_fields(frozenset({"owner"}))
+    findings = check_doc(
+        Path("/r/sample.md"),
+        _doc_with_extra_field("Owner", "alice"),
+        Path("/r"),
+        cfg,
+        stale=None,
+        today=_TODAY,
+    )
+    unknown = [f for f in findings if f.rule == "unknown-field"]
+    assert len(unknown) == 1, "case-sensitive match: 'owner' ≠ 'Owner'"
+    assert "Owner" in unknown[0].message
