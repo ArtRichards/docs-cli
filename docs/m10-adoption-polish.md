@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-26
 
 Related:
 - parent-of: m10-adoption-polish-impl.md
@@ -201,3 +201,20 @@ _Recorded as the milestone progresses. Initial decisions inherited from the OPEN
 - M10's dogfood subagent (Phase 9) adopts `kebab-tiny` end-to-end with zero manual `.docs.toml` editing.
 - `CHANGELOG.md` `## 1.4.0` entry covers every M10 surface change.
 - All bundled skill references byte-equal to source after Phase 7.
+
+## Follow-on TODOs
+
+### Project rename (deferred — likely M11)
+
+Surfaced 2026-05-26 while adopting an existing tree into the docs convention.
+
+**Gap.** Renaming a docs-managed tree's `[project] name` today requires a re-`migrate` with a `[migrate] project_name = "..."` sidecar **plus** an `[exclude]` section in `.docs.toml` to waive the managed-tree refusal (the M8 carve-out). That is currently the only way to rewrite an already-conformant file's `Project:` line without hand-editing. Operators (and sub-agents) re-invent this sidecar dance each time.
+
+**Recommendation.** Build a first-class `docs project rename <new-name>` verb (or equivalent) that:
+- Rewrites `[project] name` in `.docs.toml`.
+- Rewrites every conformant `Project:` line across the tree atomically.
+- Refreshes the INDEX once at end.
+- Does **not** require the operator to add an `[exclude]` carve-out or a `[migrate]` sidecar.
+- Errors out cleanly if any path can't be rewritten (atomic semantics, mirroring `migrate --apply` and `touch`).
+
+**Why deferred from M10:** M10 scope is locked on adoption-flow polish + 1.3.0 carry-overs; a `project rename` verb is new surface, not polish. Captured here so it does not get lost.
