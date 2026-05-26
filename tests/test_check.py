@@ -307,8 +307,9 @@ def test_check_doc_unknown_field_warning_when_allowlist_set():
     allowlist", path=<rel>)`. Allowlist = {"Tags"}; doc carries Owner:.
     """
     cfg = _config_with_fields(frozenset({"Tags"}))
+    doc_path = Path("/r/sample.md")
     findings = check_doc(
-        Path("/r/sample.md"),
+        doc_path,
         _doc_with_extra_field("Owner", "alice"),
         Path("/r"),
         cfg,
@@ -320,8 +321,11 @@ def test_check_doc_unknown_field_warning_when_allowlist_set():
     f = unknown[0]
     assert f.severity == "warning"
     assert f.rule == "unknown-field"
-    assert "Owner" in f.message
-    assert "add_fields allowlist" in f.message
+    # OQ-F: pin the exact message + path shape, not just substrings.
+    assert f.message == "metadata field 'Owner:' not in [vocabulary] add_fields allowlist", (
+        f"unexpected message: {f.message!r}"
+    )
+    assert f.path == doc_path, f"unexpected path: {f.path!r}"
 
 
 def test_check_doc_allowed_field_is_clean():
@@ -377,4 +381,31 @@ def test_check_doc_related_is_never_flagged_by_unknown_field():
     unknown_related = [f for f in findings if f.rule == "unknown-field" and "Related" in f.message]
     assert unknown_related == [], (
         f"OQ-O: Related: must never trip unknown-field, got {unknown_related!r}"
+    )
+
+
+def test_check_doc_archived_reason_is_never_flagged_by_unknown_field(tmp_path):
+    """OQ-O + OQ-P (sibling to the Related: lock): `Archived-reason:` is
+    the documented archive-time hint label (see archive.md / convention.md).
+    It is part of the built-in always-allowed set — an `add_fields = []`
+    allowlist (empty) MUST NOT trip `unknown-field` on it.
+
+    Tests the convention's M4 archive flow: an archived doc carries an
+    `Archived-reason:` line and lives under archive/<date>/. The status
+    is `archived` and the location is correct (so no status-drift),
+    `add_fields=[]` means nothing extra is allowed, yet
+    `Archived-reason:` is built-in-permitted.
+    """
+    cfg = _config_with_fields(frozenset())  # empty allowlist
+    doc = tmp_path / "archive" / "2026-01-01" / "retired.md"
+    text = (
+        "# Retired\n\nLifecycle: archived\nRole: spec\nProject: probe\n"
+        "Updated: 2026-01-01\nArchived-reason: superseded by new-spec.md\n\nBody.\n"
+    )
+    findings = check_doc(doc, text, tmp_path, cfg, stale=None, today=_TODAY)
+    unknown_archived_reason = [
+        f for f in findings if f.rule == "unknown-field" and "Archived-reason" in f.message
+    ]
+    assert unknown_archived_reason == [], (
+        f"OQ-O: Archived-reason: must never trip unknown-field, got {unknown_archived_reason!r}"
     )

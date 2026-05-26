@@ -28,9 +28,9 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-25; OQ closeout 2026-05-26 | Milestone pair authored + paired (`Related:` edges both directions); milestone-doc flipped `Lifecycle: draft` → `active`; M10 row added to plan.md (and parked `add_fields` Open question scheduled into M10 item #8); status.md "Current milestone" rewritten + M10 row appended to milestone progress table; OPEN QUESTIONS A-I surfaced for operator review before Phase 2; INDEX + dogfood snapshot regenerated in lockstep; full quality gate green (369 pytest, ruff/format/mypy/`docs check` all clean). **OQ closeout 2026-05-26**: operator-confirmed OQ-A through OQ-I recorded as 9 Decisions bullets in the milestone doc; AWAITING-OPERATOR checkbox flipped in the impl log; INDEX + snapshot regenerated. |
-| 2. Write Tests (RED) | Complete | 2026-05-26 | 27 new test items added across `tests/test_cli_touch.py` (5 multi-file/atomic/single-INDEX), `tests/test_cli_migrate.py` (6 `--apply` writes/extends `.docs.toml` + `--quiet` + OQ-G rmdir), `tests/test_check.py` (5 `unknown-field` rule incl. OQ-O Related-never-flagged lock), `tests/test_cli_check.py` (2 CLI `unknown-field`), `tests/test_config.py` (3 `add_fields` schema), `tests/test_migrate.py` (5 `Confidence` enum + 1 `excluded_count` removal). 23 RED + 4 GREEN regression-locks; M9's 369 GREEN preserved (no existing test regressed). Test count: 396 collected (369 + 27). |
+| 2. Write Tests (RED) | Complete | 2026-05-26 | 27 new test items added across `tests/test_cli_touch.py` (5 multi-file/atomic/INDEX-refresh-and-idempotency), `tests/test_cli_migrate.py` (6 `--apply` writes/extends `.docs.toml` + `--quiet` + OQ-G rmdir), `tests/test_check.py` (5 `unknown-field` rule incl. OQ-O Related-never-flagged lock), `tests/test_cli_check.py` (2 CLI `unknown-field`), `tests/test_config.py` (3 `add_fields` schema), `tests/test_migrate.py` (5 `Confidence` enum + 1 `excluded_count` removal). 23 RED + 4 GREEN regression-locks; M9's 369 GREEN preserved (no existing test regressed). Test count: 396 collected (369 + 27). **Review-fix tighten 2026-05-26**: per fresh-eyes review, 4 additional tests added (+1 OQ-G `OSError`-swallow sibling, +1 OQ-O `Archived-reason:` sibling, +1 Pass-4 `_v\d+`-strip Confidence.MEDIUM, +1 `--apply --quiet --summary`/`--json` requested-output coverage) and 6 in-place tightenings (SF1 [exclude]-waiver so no-overwrite body runs; SF2 immediately-above ordering; SF3 exact OQ-F message + path; SF5 content-idempotence over mtime; SF6 stderr success-line token; N3 resolved-project-name pin). Net: 25 RED + 6 GREEN-locks; total 400 collected (369 + 31). |
 | 3. Create Data/Fixtures | Complete | 2026-05-26 | No-op per the Phase-3 recommendation in the milestone plan: every Phase-2 test that needed a real tree on disk built it inline via `tmp_path` (multi-file touch trees, vocab trees, OQ-G rmdir tree) so the test files own their setup and Phase 3 had no fixtures to stage. Sign-off folded into the Phase 4 commit. |
-| 4. Run Tests (RED Baseline) | Complete | 2026-05-26 | Verbatim baseline captured at `/tmp/m10-phase-4-baseline.txt`: **23 failed, 373 passed (396 collected)**. Per-deliverable attribution table below; every RED traces to an intended unimplemented Phase-5/6 surface (no fixture FNF, no unintended ImportError outside the documented `Confidence` import, no flaky assertion). M9's 369 GREEN baseline preserved + 4 GREEN regression-locks added. Quality gate clean. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-26 | Verbatim baseline captured at `/tmp/m10-phase-4-baseline.txt`: **23 failed, 373 passed (396 collected)**. Per-deliverable attribution table below; every RED traces to an intended unimplemented Phase-5/6 surface (no fixture FNF, no unintended ImportError outside the documented `Confidence` import, no flaky assertion). M9's 369 GREEN baseline preserved + 4 GREEN regression-locks added. Quality gate clean. **Post-review-fix (2026-05-26)**: with 4 added tests + 6 in-place tightenings, the partition is **25 failed, 375 passed (400 collected)** — net +2 REDs (N2 sibling `Archived-reason:`, N6 Pass-4 derived MEDIUM), +2 GREEN-locks (N1 sibling OQ-G `OSError`-swallow, SF7 `--apply --quiet --summary`/`--json` requested-output coverage). M9 369 baseline still GREEN; quality gate still clean. |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
@@ -112,12 +112,17 @@ test names + assertions become the precise target for Phase 5/6.
 
 | File | Action | Notes |
 |---|---|---|
-| `tests/test_cli_touch.py` | Modify | +5 tests — multi-file happy path, single-INDEX-refresh observation, atomic-failure body preservation, atomic-failure INDEX preservation, multi-file `--dry-run`. Inline `tmp_path` multi-file tree builder. |
+| `tests/test_cli_touch.py` | Modify | +5 tests — multi-file happy path, INDEX-refresh-and-idempotency observation (per SF5: pins INDEX content idempotence on a same-day re-touch, not mtime equality; "exactly once" deferred per SF4), atomic-failure body preservation, atomic-failure INDEX preservation, multi-file `--dry-run`. Inline `tmp_path` multi-file tree builder. |
 | `tests/test_cli_migrate.py` | Modify | +6 tests — `--apply` writes `.docs.toml` when absent (OQ-A); `--apply` extends sidecar without overwriting `[project]` (OQ-L); `--apply` does NOT overwrite existing `[project]` (OQ-A safety-net); `--apply --quiet` suppresses per-file output (OQ-B); `--quiet` does NOT suppress dry-run/`--summary`/`--json` outputs (OQ-B scope); empty-archive-parent rmdir (OQ-G + OQ-Q). |
 | `tests/test_check.py` | Modify | +5 tests — `unknown-field` rule clean-when-no-allowlist (OQ-H); `unknown-field` warning shape (OQ-F); allowlist-match clean (OQ-H); case-sensitivity (OQ-H exact match); OQ-O Related-never-flagged regression-lock. |
 | `tests/test_cli_check.py` | Modify | +2 tests — CLI `unknown-field` mismatch exits 1; CLI allowlist-match exits 0. |
 | `tests/test_config.py` | Modify | +3 tests — `add_fields` parses into `Config.fields`; default empty frozenset; case preserved verbatim. |
 | `tests/test_migrate.py` | Modify | +5 tests — `Confidence` enum identity for HIGH/MEDIUM/LOW returns; `FileMigration.confidence` accepts enum + invariant; JSON wire format still emits strings (regression lock). +1 test — `MigrationPlan.excluded_count` removal (`not hasattr`). |
+| `tests/test_cli_touch.py` | Modify (review-fix tighten) | **SF5** swap mtime-equality → content-equality on the second-run pin (the contract is idempotent INDEX bytes, not a content-aware-skip in `_refresh_index`); **N4** cosmetic — annotate the intentional `_c` placeholder on the atomic-failure test. |
+| `tests/test_cli_migrate.py` | Modify (review-fix tighten) | **SF1** add `[exclude]` to the pre-existing sidecar so the M8 OQ1 carve-out actually waives the refusal — the no-overwrite body assertions now fire (and the `if proc.returncode == 0:` guard becomes a hard assert); **SF2** tighten OQ-A byte ordering via "split on header → next non-blank line == `[project]`"; **SF6** add stderr "migrated" suppression check to `--apply --quiet`; **SF7** new sibling `test_migrate_apply_quiet_keeps_summary_and_json_outputs` pinning OQ-B "summary/JSON survive `--apply --quiet`"; **N1** new sibling `test_migrate_apply_keeps_archive_parent_with_remaining_siblings` pinning the OQ-G `OSError`-swallow arm; **N3** add `name = "proj"` resolved-name assertion to the absent-sidecar test. |
+| `tests/test_check.py` | Modify (review-fix tighten) | **SF3** replace the OQ-F substring checks with an exact `f.message == "metadata field 'Owner:' not in [vocabulary] add_fields allowlist"` + `f.path == doc_path` pin; **N2** new sibling `test_check_doc_archived_reason_is_never_flagged_by_unknown_field` pinning the built-in-allowlist `Archived-reason:` carve-out. |
+| `tests/test_migrate.py` | Modify (review-fix tighten) | **N6** new sibling `test_infer_role_confidence_enum_for_medium_via_pass4_non_role_suffix_strip` pinning the Pass-4 `_v\d+`-strip Confidence.MEDIUM path (the existing MEDIUM test exercises Pass-3 `_M\d+` only). |
+| `docs/m10-adoption-polish-impl.md` | Modify (N5) | Soften "single-INDEX-refresh observation" narrative to "INDEX-refresh-and-idempotency observation" matching what the test actually pins post-SF5. |
 
 ### Actions taken
 
@@ -133,14 +138,15 @@ test names + assertions become the precise target for Phase 5/6.
 
 ### Test results
 
-- pytest: **23 failed, 373 passed (396 collected)** — RED count for Phase 4 baseline; M9's 369 GREEN preserved + 4 new GREEN regression-locks.
-- ruff / ruff format --check / mypy / `docs check docs --stale 14`: all clean.
+- pytest (initial Phase 2/4 baseline): **23 failed, 373 passed (396 collected)** — M9's 369 GREEN preserved + 4 new GREEN regression-locks.
+- pytest (post-review-fix tighten, 2026-05-26): **25 failed, 375 passed (400 collected)** — net +2 REDs (N2, N6), +2 GREEN-locks (N1 sibling, SF7 sibling). M9's 369 baseline still GREEN.
+- ruff / ruff format --check / mypy / `docs check docs --stale 14`: all clean (both baseline and post-review-fix).
 
 ### Exit criteria
 
-- [x] 27 new test items collected.
-- [x] 23 RED for intended reasons (no import errors, no fixture FNF, every failure traces to a Phase-5/6 deliverable surface).
-- [x] 4 GREEN regression-locks pinned at baseline (#8, #10, #17, #25).
+- [x] 27 new test items collected (initial Phase 2). Post-review-fix tighten: 31 new items (added: N1 sibling, N2 sibling, N6, SF7 sibling).
+- [x] 23 RED at baseline / 25 RED post-review-fix — all for intended reasons (no import errors outside documented `Confidence` ImportError; no fixture FNF; every failure traces to a Phase-5/6 deliverable surface).
+- [x] 4 GREEN regression-locks at baseline (#8, #10, #17, #25); post-review-fix: 6 (added N1 sibling OQ-G `OSError`-swallow + SF7 sibling `--apply --quiet --summary`/`--json`).
 - [x] M9's 369 GREEN preserved.
 - [x] Quality gate clean tree-wide.
 
@@ -194,6 +200,34 @@ Captured verbatim at `/tmp/m10-phase-4-baseline.txt`.
 
 Function totals: 5 + 6 + 5 + 2 + 3 + 5 + 1 = 27 new test functions / 27 collected items
 (none parametrised). 23 RED + 4 GREEN regression-locks.
+
+### Review-fix delta (2026-05-26)
+
+A fresh-eyes review of Phases 1-4 surfaced 6 in-place test tightenings
+(SF1-SF3, SF5-SF7) and 3 contract-coverage additions (N1 sibling, N2
+sibling, N6 Pass-4 derived MEDIUM). SF4 (the "exactly once" INDEX-refresh
+pin) is deferred to the Phase 9 dogfood per reviewer judgment; N4 is
+cosmetic (kept in-place with an explanatory comment); N5 softens this
+log's narrative ("INDEX-refresh-and-idempotency" replaces
+"single-INDEX-refresh observation").
+
+Post-review pytest partition (verbatim):
+
+```text
+$ .venv/bin/python -m pytest -q tests/ --tb=no
+... (400 items collected) ...
+25 failed, 375 passed in 10.82s
+```
+
+Per-deliverable delta:
+
+| Deliverable | RED Δ | GREEN-lock Δ | Notes |
+|---|---:|---:|---|
+| D1 — `docs touch` | 0 | 0 | SF5 swap (mtime→content idempotence) keeps the RED; N4 cosmetic only. |
+| D2 — `migrate --apply` | 0 | +2 | N1 sibling OQ-G `OSError`-swallow (GREEN-lock: impl doesn't rmdir today, so the sibling-survives invariant holds vacuously); SF7 new `test_migrate_apply_quiet_keeps_summary_and_json_outputs` (GREEN-lock: today's `_print_migration_plan` ignores `args.quiet`, so summary/JSON already land). SF1 (now GREEN-lock with [exclude]-waiver), SF2 (tightened ordering), SF6 (added stderr-token check) all still RED for the same root cause. N3 (resolved name pin) still RED for the same root cause. |
+| D3 — `unknown-field` (unit) | +1 | 0 | N2 sibling `Archived-reason:` RED at baseline via `Config.fields` TypeError — flips GREEN once Phase 5 lands the kwarg. SF3 tightens existing #13 to exact message + path; still RED for the same root cause. |
+| D5 — `Confidence` enum | +1 | 0 | N6 Pass-4 derived MEDIUM RED via `ImportError: Confidence` — flips GREEN once Phase 5 lands the enum. |
+| **TOTAL Δ** | **+2** | **+2** | 25 RED + 6 GREEN-locks; 31 total new items. |
 
 ### Quality gate (verbatim)
 

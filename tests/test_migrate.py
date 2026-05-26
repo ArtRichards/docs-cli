@@ -707,12 +707,28 @@ def test_infer_role_returns_confidence_enum():
 
 
 def test_infer_role_confidence_enum_for_medium_signal():
-    """OQ-E: a derived-signal pass returns Confidence.MEDIUM."""
+    """OQ-E: a derived-signal pass returns Confidence.MEDIUM.
+
+    The `_M\\d+` milestone-pattern is the Pass-3 canonical medium-confidence
+    path surfaced in M7's word-boundary tolerance work.
+    """
     from docs import Confidence
 
-    # `_M\d+` milestone-pattern is the canonical medium-confidence path
-    # surfaced in M7's word-boundary tolerance work.
     _role, conf = infer_role("my-thing-plan_M3.md", {})
+    assert conf is Confidence.MEDIUM
+
+
+def test_infer_role_confidence_enum_for_medium_via_pass4_non_role_suffix_strip():
+    """OQ-E (sibling): exercises Pass 4 — the `_v\\d+` / `_Draft` / `_Ready`
+    non-role suffix strip + re-try path. `auth-spec_v2.md` strips to
+    `auth-spec`, which matches the `spec` role via the suffix map; the
+    derived signal returns Confidence.MEDIUM (not HIGH, because the
+    direct match needed the strip to succeed).
+    """
+    from docs import Confidence
+
+    role, conf = infer_role("auth-spec_v2.md", {})
+    assert role == "spec"
     assert conf is Confidence.MEDIUM
 
 
