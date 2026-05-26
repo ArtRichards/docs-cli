@@ -11,11 +11,24 @@ Related:
 - pairs-with: m7-migration-accuracy.md
 - pairs-with: m8-adoption-workflow.md
 - pairs-with: m9-pypi-publish.md
+- pairs-with: m10-adoption-polish.md
 - pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
+
+**M10 — Adoption-flow polish + 1.3.0 carry-overs** is **Active**
+(Phase 1 in progress, 2026-05-25). It bundles the two
+user-surfaced agent-driveability features (`docs touch
+<file...>`, `docs migrate --apply` writes `.docs.toml`) with the
+carry-overs from M3 (`[vocabulary] add_fields` allowlist), M7
+(`Confidence` enum), and M8 (`--quiet` per-file output
+suppression, `MigrationPlan.excluded_count` removal,
+adoption-playbook restructure). Ships as 1.4.0. The full
+deliverable list and 9 OPEN QUESTIONS (A-I) live in
+[m10-adoption-polish.md](m10-adoption-polish.md); implementation
+log in [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md).
 
 **docs-cli 1.3.0 shipped 2026-05-25.** **M9 — PyPI publish
 1.3.0** is complete: `docs-cli==1.3.0` is live at
@@ -30,13 +43,12 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** No active milestone. v1.2 is unscoped — open
-when a concrete need surfaces. The one carried-forward
-plan-level open question (the `[vocabulary] add_fields`
-extra-field allowlist) remains parked. Day-to-day work
-continues on documentation polish, follow-on items recorded in
-each milestone-completion summary, and any incoming
-adoption-flow feedback from external users.
+**Next action:** Operator review of M10 OPEN QUESTIONS A-I in
+[m10-adoption-polish.md](m10-adoption-polish.md). Once
+confirmed, Phase 2 (Write Tests RED) begins. The previously
+parked `[vocabulary] add_fields` extra-field allowlist is now
+scheduled as M10 item #8; it is no longer carried forward
+separately in plan.md.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -186,6 +198,7 @@ for the milestone summary.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phase 1 in progress, 2026-05-25; OPEN QUESTIONS A-I surfaced) | [Plan](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

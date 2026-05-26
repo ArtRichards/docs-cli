@@ -108,6 +108,16 @@ prior public release existed, no continuity to preserve.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Active** (Phase 1 in progress, 2026-05-25; OPEN QUESTIONS A-I surfaced) | [m10-adoption-polish.md](m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+
+**M10** bundles the two user-surfaced agent-driveability features
+(`docs touch <file...>`, `docs migrate --apply` writes `.docs.toml`)
+with the carry-overs from M3 (`[vocabulary] add_fields` allowlist —
+moved out of Open questions below), M7 (`Confidence` enum), and M8
+(`--quiet` per-file output suppression, `MigrationPlan.excluded_count`
+removal, adoption-playbook restructure). Ships as 1.4.0. The M10
+deliverable list and the 9 OPEN QUESTIONS (A-I) live in the milestone
+doc.
 
 **M7** hardens `docs migrate`'s inference + introduces a breaking
 controlled-vocab rename (`Status:` → `Lifecycle:`). It targets ≥50%
@@ -146,8 +156,8 @@ summary; the operative checklist
 for v1.4+ releases.
 
 The parked `[vocabulary] add_fields` extra-field allowlist (see
-_Open questions_ below) carries forward to v1.1 as a separate,
-unscheduled entry. It is unrelated to M6/M7/M8/M9.
+_Open questions_ below) was scheduled into M10 as item #8 and is no
+longer carried forward separately.
 
 ## Out of scope for v1
 
@@ -167,9 +177,12 @@ unscheduled entry. It is unrelated to M6/M7/M8/M9.
 
 ## Open questions
 
-_**v1 is complete** — all five milestones (M1-M5) shipped 2026-05-20…2026-05-22.
-The one open question below — the `[vocabulary] add_fields` extra-field
-allowlist — is unresolved and carries forward to **v1.1**; M5 opened no new
-plan-level open question (resolved OQ3)._
+_v1 (M1-M5) shipped 2026-05-20…2026-05-22 and v1.3.0 (M6-M9) shipped
+2026-05-25. The previously-parked `[vocabulary] add_fields` extra-field
+allowlist was scheduled into **M10** (v1.4.0) as item #8 — see the M10
+milestone doc and the OPEN QUESTIONS block (OQ-F, OQ-H) there for the
+final rule-message shape and case-sensitivity decisions._
 
-- Should `docs check` validate **extra metadata fields**? The convention harvests every non-standard `Label: value` line into `Doc.extra` (`Owner:`, `Tags:`, `Archived-reason:`, …) but defines no notion of a *known* extra field, so `check` leaves them all unflagged (decided in M3, 2026-05-22 — `cli.md`'s earlier "unknown extra fields" warning was unimplementable as written and was removed). A future change could add an opt-in allowlist: a `[vocabulary] add_fields = [...]` key in `.docs.toml`, merged into a new `Config.fields` set exactly as `add_lifecycles` / `add_roles` already extend the vocabulary (note: `add_statuses` is renamed to `add_lifecycles` by M7's F0 — pre-M7 docs and code use `add_statuses`); `check_doc` would then emit an `unknown-field` **warning** (exit 1 — never an error) for any extra label outside that set. Scope is small — one rule in `check_doc`, one `Config` field, one `load_config` branch, one `cli.md` schema note — but it is not tied to a milestone. Revisit post-v1 if real trees accumulate typo'd field labels worth catching.
+_No plan-level open questions are currently outstanding. M10's open
+questions (OQ-A through OQ-I) are scoped to M10 and live in
+[m10-adoption-polish.md](m10-adoption-polish.md)._
