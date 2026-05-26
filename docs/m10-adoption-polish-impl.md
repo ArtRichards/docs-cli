@@ -34,7 +34,7 @@ Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. A
 | 5. Update Base Interfaces | Complete | 2026-05-27 | `Confidence` enum + `Config.fields` + `MigrationPlan.excluded_count` removal + `touch` `nargs="+"` + `unknown-field` scaffold + `--apply --quiet` plumbed. 16 of the 25 RED tests flipped GREEN by scaffolding; 9 behaviour-side REDs remain for Phase 6 (3 multi-file touch body, 3 `apply_migration` writes, 3 `unknown-field` rule body). Pytest 9F/391P; ruff / ruff format / mypy / `docs check` all clean. M9 369-baseline tests re-expressed against `Confidence.HIGH`/`MEDIUM`/`LOW` enum identity (no test deleted; contract coverage preserved). |
 | 6. Implement Offline/Core Path | Complete | 2026-05-27 | `_cmd_touch` rewritten with atomic multi-file semantics + single-root sanity check + single end-of-batch INDEX refresh; `apply_migration` augmented with `_opportunistic_rmdir` (post-move) + `_ensure_docs_toml` (post-file-loop); `check_doc` `unknown-field` rule lands as opt-in (fires only when `config.fields` is non-empty). 400/400 GREEN; quality gate clean tree-wide. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-27 | Spec sweep across cli.md / convention.md / architecture.md / README.md / CHANGELOG.md + adoption-playbook restructure (OQ-I, 4 steps) + skill-references resync (byte-equal); 1.3.0 → 1.4.0 bump in pyproject.toml, `__version__`, `tests/test_packaging.py`. Wheel + sdist built at 1.4.0; twine check PASSED. 400/400 GREEN; quality gate clean tree-wide. |
-| 8. Run Tests (GREEN) | Pending | — | |
+| 8. Run Tests (GREEN) | Complete | 2026-05-27 | Verbatim GREEN gate at `/tmp/m10-phase-8-green.txt`: 400 passed (pytest), ruff / ruff format / mypy / `docs check docs --stale 14` clean, `docs --version` prints `docs 1.4.0`, `twine check` PASSED on `dist/docs_cli-1.4.0-{py3-none-any.whl,tar.gz}`. |
 | 9. Implement Online/Integration | Pending | — | |
 | 10. Quality, Docs, Refactor | Pending | — | |
 
@@ -604,3 +604,72 @@ Checking dist/docs_cli-1.4.0.tar.gz: PASSED
 - [x] Adoption playbook restructured to 4 steps per OQ-I.
 - [x] `pyproject.toml` + `__version__` at 1.4.0; `dist/docs_cli-1.4.0-*` artefacts built; `twine check` PASSED.
 - [x] `CHANGELOG.md` `## 1.4.0 — UNRELEASED` block landed.
+
+## Phase 8 — Run Tests (GREEN gate captured) (Complete 2026-05-27)
+
+### Objective
+
+Verbatim capture of the full M10 GREEN gate at
+`/tmp/m10-phase-8-green.txt`: pytest, ruff, ruff format --check,
+mypy, `docs check`, `docs index --dry-run`, `docs --version`,
+wheel/sdist build state, `twine check`.
+
+### Verbatim output (excerpt)
+
+```text
+=== pytest -q tests/ ===
+... (400 items, no failures) ...
+400 passed in 10.91s
+
+=== ruff check . ===
+All checks passed!
+
+=== ruff format --check . ===
+33 files already formatted
+
+=== mypy ===
+Success: no issues found in 34 source files
+
+=== docs check docs --stale 14 ===
+docs: no violations found
+
+=== docs index --root docs/ --dry-run ===
+# docs — Documentation
+...
+<!-- docs:generated start -->
+_Generated 2026-05-27. 31 docs active, 0 archived._
+...
+
+=== docs --version ===
+docs 1.4.0
+
+=== twine check (1.4.0 wheel + sdist) ===
+Checking dist/docs_cli-1.4.0-py3-none-any.whl: PASSED
+Checking dist/docs_cli-1.4.0.tar.gz: PASSED
+```
+
+Full log at `/tmp/m10-phase-8-green.txt`.
+
+### Test results
+
+- pytest: **400 passed, 0 failed (400 collected)** — full M10
+  contract surface GREEN at 1.4.0.
+- ruff: all checks passed.
+- ruff format --check: 33 files already formatted.
+- mypy: clean (34 source files).
+- `docs check docs --stale 14`: clean (no violations).
+- `docs index --root docs/ --dry-run`: regenerates cleanly
+  (31 docs active, 0 archived; matches the in-tree
+  `docs/INDEX.md` byte-for-byte through the dogfood snapshot
+  at `tests/fixtures/expected/docs-INDEX.md`).
+- `docs --version`: `docs 1.4.0`.
+- `twine check` on both `dist/docs_cli-1.4.0-py3-none-any.whl`
+  and `dist/docs_cli-1.4.0.tar.gz`: PASSED.
+
+### Exit criteria
+
+- [x] Verbatim GREEN gate captured at `/tmp/m10-phase-8-green.txt`.
+- [x] 400/400 pytest GREEN at 1.4.0.
+- [x] ruff / ruff format --check / mypy / `docs check` clean tree-wide.
+- [x] `docs --version` prints `docs 1.4.0`.
+- [x] `dist/docs_cli-1.4.0-*` built locally; `twine check` PASSED on both artefacts.
