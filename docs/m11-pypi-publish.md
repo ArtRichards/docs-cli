@@ -161,9 +161,16 @@ runbook's sections are the phases (mirrors M9 exactly):
       stderr 0 bytes / `.docs.toml` auto-emitted) passed against
       TestPyPI-served wheel. Temporary `pyproject.toml` rename
       reverted cleanly. Rehearsal whl sha256 `3693b9f7…`.
-- [ ] Real PyPI publish — `docs-cli==1.4.0` live; sha256
-      chain-of-custody from build → upload → PyPI-served wheel
-      verified bit-perfect
+- [x] Real PyPI publish — `docs-cli==1.4.0` LIVE on PyPI at
+      `https://pypi.org/project/docs-cli/1.4.0/`. Fresh Phase 4
+      build under canonical `name = "docs-cli"`; both artefacts
+      twine-check PASS; upload PASS (PyPI token validated).
+      Chain-of-custody **bit-perfect** — PyPI-served whl sha256
+      `7af7eb5c…` byte-identical to local Phase 4 build.
+      Throwaway-venv install from PyPI succeeded; full smoke +
+      M10 headline contract (`migrate --apply --quiet` → exit 0
+      / stdout 0 bytes / stderr 0 bytes / `.docs.toml`
+      auto-emitted) PASS against PyPI-served wheel.
 - [ ] Post-release — `v1.4.0` tag + GitHub release; doc closeouts
       (M10 + M11); token re-scope rolls forward as M9 open follow-on
       (operator UI work, async)

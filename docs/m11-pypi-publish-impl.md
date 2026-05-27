@@ -39,7 +39,7 @@ distinct.)
 | 1. Operator one-time prep | In progress | 2026-05-27 | Session-verifiable state captured; account login + 2FA + token-validity await operator confirmation or Phase 3 upload surfacing |
 | 2. Pre-publish prep | Complete | 2026-05-27 | 401 passed; ruff/format/mypy clean; docs check exit 0; fresh artefacts twine-check PASS; local-install smoke + M10 headline contract (--apply --quiet truly silent) verified against the wheel |
 | 3. TestPyPI rehearsal | Complete | 2026-05-27 | docs-cli-rehearsal==1.4.0 uploaded; throwaway-venv install PASS; full smoke + M10 headline contract PASS against TestPyPI-served wheel; pyproject.toml rename reverted cleanly |
-| 4. Real PyPI publish | Pending | — | |
+| 4. Real PyPI publish | Complete | 2026-05-27 | docs-cli==1.4.0 LIVE on PyPI; chain-of-custody bit-perfect (PyPI-served whl sha256 = local Phase 4 build sha256); headline M10 contract verified against PyPI artefact |
 | 5. Post-release | Pending | — | |
 
 (M11 has no TDD code phases — it is an operational milestone.
@@ -357,7 +357,122 @@ on operator go-ahead — Phase 4 is **irreversible**.
 
 ## Phase 4 — Real PyPI publish
 
-_Not started._
+**Completed 2026-05-27.** Objective: drop CHANGELOG LOCAL
+suffix, fresh rebuild under `name = "docs-cli"`, upload to
+real PyPI, install from PyPI into a throwaway venv, smoke the
+PyPI-served wheel including the M10 headline contract, verify
+chain-of-custody bit-perfect (PyPI-served wheel sha256 ==
+local Phase 4 build sha256).
+
+### CHANGELOG amend
+
+`CHANGELOG.md` line 8:
+`## 1.4.0 — 2026-05-27 (LOCAL; not on PyPI)` →
+`## 1.4.0 — 2026-05-27`. Committed as `e79d69f` on
+`m11/milestone-setup` so the cleaned-up CHANGELOG ships in
+the sdist that gets uploaded.
+
+### Fresh build under `name = "docs-cli"`
+
+`rm -rf dist/` + `.venv/bin/python -m build`. Resulting
+artefacts:
+
+| Artefact | Size (bytes) | sha256 |
+|---|---|---|
+| `docs_cli-1.4.0-py3-none-any.whl` | 83 856 | `7af7eb5cb67a860e16d34fb6e8084207e4d3abf2d81fb013fef3b1721c4ec050` |
+| `docs_cli-1.4.0.tar.gz` | 498 536 | `0b0dd2ce1302b59cc862549a0d55fadf7210e27cfcd2e38b5f5f9ad31350c05b` |
+
+**Comparison to Phase 2 build:**
+- **whl sha256 byte-identical to Phase 2** (`7af7eb5c…`).
+  Confirms `src/` is unchanged across Phases 1-4 (only `docs/`
+  touched by the per-phase log commits and the CHANGELOG amend).
+- tar.gz sha256 differs from Phase 2 (`292219d4…` → `0b0dd2ce…`)
+  as expected — the sdist captures `docs/`, which evolved across
+  the Phase 1, 2, 3, and 4 commits, and `CHANGELOG.md`, which
+  lost the LOCAL suffix.
+
+`twine check dist/*` — both PASSED.
+
+### Real PyPI upload (IRREVERSIBLE)
+
+```sh
+.venv/bin/twine upload dist/*
+```
+
+Both files uploaded successfully — **PyPI token validity
+confirmed**. PyPI returns:
+
+> `View at: https://pypi.org/project/docs-cli/1.4.0/`
+
+`docs-cli==1.4.0` is now permanently consumed on the PyPI
+version namespace.
+
+### Throwaway venv install from real PyPI
+
+```sh
+python3 -m venv /tmp/docs-real-venv
+/tmp/docs-real-venv/bin/pip install docs-cli==1.4.0
+```
+
+Install succeeded first attempt; `docs --version` →
+`docs 1.4.0`. (Same JSON-cache-lag pattern as TestPyPI: the
+PyPI JSON metadata API still reported `latest: 1.3.0` at
+upload+seconds, but the simple index pip uses was current
+and the install went through cleanly.)
+
+### Chain-of-custody verification (bit-perfect)
+
+`pip download --no-deps --dest /tmp/m11-pypi-served
+docs-cli==1.4.0` to capture the actual PyPI-served wheel, then
+sha256-compare to the local Phase 4 build:
+
+| File | sha256 |
+|---|---|
+| Local Phase 4 build (`dist/docs_cli-1.4.0-py3-none-any.whl`) | `7af7eb5cb67a860e16d34fb6e8084207e4d3abf2d81fb013fef3b1721c4ec050` |
+| PyPI-served (`/tmp/m11-pypi-served/docs_cli-1.4.0-py3-none-any.whl`) | `7af7eb5cb67a860e16d34fb6e8084207e4d3abf2d81fb013fef3b1721c4ec050` |
+| Match | **✓ identical — chain of custody intact** |
+
+### Smoke set against PyPI-served artefact
+
+| Step | Result |
+|---|---|
+| `docs --version` | `docs 1.4.0` ✓ |
+| `docs --help` (verb list) | All 9 verbs registered ✓ |
+| `install-skill --dest /tmp/docs-real-skill` (fresh) | Byte-identical to `src/docs_cli/skill/` ✓ |
+| `install-skill --dest /tmp/docs-real-skill` (re-run) | "already matches… no-op"; exit 0 ✓ |
+| `install-skill --dest /tmp/docs-real-skill --symlink` | Rejected with educational message; exit 2 ✓ |
+| `docs check tests/fixtures/trees/minimal/` | exit 0 ✓ |
+
+### M10 headline contract against PyPI-served artefact
+
+Synthetic foreign tree `/tmp/m11-pypi-foreign/`
+(`thing-plan.md`, `thing-spec.md`, `thing-status.md`):
+
+```sh
+docs migrate /tmp/m11-pypi-foreign --apply --quiet --config-project thing
+```
+
+| Assertion | Result |
+|---|---|
+| Exit code | 0 ✓ |
+| stdout bytes | **0** ✓ |
+| stderr bytes | **0** ✓ |
+| `.docs.toml` auto-emitted | `[project] name = "thing"` + `[archive]` ✓ |
+| `docs check /tmp/m11-pypi-foreign` | exit 0 ✓ |
+
+**M11's headline Success Criterion** (per milestone doc):
+"`docs migrate --apply --quiet <foreign-tree>` from the
+PyPI-installed wheel produces empty stdout + empty stderr
+(the headline M10 contract — re-verified against the
+published artefact, not just the local build)" —
+**VERIFIED** against `docs-cli==1.4.0` pulled from PyPI.
+
+### Phase 4 outcome
+
+`docs-cli==1.4.0` is live on PyPI. Chain-of-custody bit-perfect.
+Headline M10 contract holds against the PyPI-served wheel. No
+1.4.1 bump needed. Phase 5 (post-release) ready: git tag
+`v1.4.0`, `gh release create`, doc closeouts.
 
 ## Phase 5 — Post-release
 
