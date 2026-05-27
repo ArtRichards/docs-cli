@@ -38,7 +38,7 @@ distinct.)
 |---|---|---|---|
 | 1. Operator one-time prep | In progress | 2026-05-27 | Session-verifiable state captured; account login + 2FA + token-validity await operator confirmation or Phase 3 upload surfacing |
 | 2. Pre-publish prep | Complete | 2026-05-27 | 401 passed; ruff/format/mypy clean; docs check exit 0; fresh artefacts twine-check PASS; local-install smoke + M10 headline contract (--apply --quiet truly silent) verified against the wheel |
-| 3. TestPyPI rehearsal | Pending | — | |
+| 3. TestPyPI rehearsal | Complete | 2026-05-27 | docs-cli-rehearsal==1.4.0 uploaded; throwaway-venv install PASS; full smoke + M10 headline contract PASS against TestPyPI-served wheel; pyproject.toml rename reverted cleanly |
 | 4. Real PyPI publish | Pending | — | |
 | 5. Post-release | Pending | — | |
 
@@ -257,7 +257,103 @@ go-ahead.
 
 ## Phase 3 — TestPyPI rehearsal
 
-_Not started._
+**Completed 2026-05-27.** Objective: per M9 detour, upload to
+TestPyPI under disambiguated dist name `docs-cli-rehearsal`,
+install from TestPyPI into a throwaway venv, smoke the wheel
+including the M10 headline contract, revert the temporary rename.
+
+### Rehearsal build (under `name = "docs-cli-rehearsal"`)
+
+Working-tree edit to `pyproject.toml` (not committed):
+`name = "docs-cli"` → `name = "docs-cli-rehearsal"`. `rm -rf
+dist/` + `.venv/bin/python -m build`:
+
+| Artefact | Size (bytes) | sha256 |
+|---|---|---|
+| `docs_cli_rehearsal-1.4.0-py3-none-any.whl` | 83 975 | `3693b9f7ed997912db0c5c6136ab8ad8277a925f9c6f6eb3eebb14ed9a6cadbf` |
+| `docs_cli_rehearsal-1.4.0.tar.gz` | 498 006 | `5f2181e28f98331b62859c4c474bdce26a839ef2ed0fb08be410c7dbb2748dc5` |
+
+`twine check dist/*` — both PASSED.
+
+### Upload to TestPyPI
+
+```sh
+.venv/bin/twine upload --repository testpypi dist/*
+```
+
+- Both files uploaded successfully — token validity confirmed.
+- TestPyPI returns `View at:
+  https://test.pypi.org/project/docs-cli-rehearsal/1.4.0/`.
+- **Cache-lag note for future runs.** Immediately post-upload
+  the TestPyPI JSON metadata API
+  (`/pypi/docs-cli-rehearsal/json`) still reported `latest:
+  1.3.0` and `releases: ['1.3.0']` — but the simple index
+  (`/simple/docs-cli-rehearsal/`, which is what `pip` uses)
+  was current and served the 1.4.0 wheel correctly. The JSON
+  cache TTL is on the order of a minute or two. Don't gate
+  the install attempt on the JSON metadata catching up.
+
+### Throwaway venv install from TestPyPI
+
+```sh
+python3 -m venv /tmp/docs-test-venv
+/tmp/docs-test-venv/bin/pip install --index-url https://test.pypi.org/simple/ \
+    --extra-index-url https://pypi.org/simple/ \
+    docs-cli-rehearsal==1.4.0
+```
+
+Install succeeded on first attempt:
+`Successfully installed docs-cli-rehearsal-1.4.0` (pulled
+`docs_cli_rehearsal-1.4.0-py3-none-any.whl` straight from
+`test-files.pythonhosted.org`).
+
+### Smoke set against TestPyPI-served artefact
+
+| Step | Result |
+|---|---|
+| `docs --version` | `docs 1.4.0` ✓ |
+| `docs --help` (verb list) | All 9 verbs registered ✓ |
+| `install-skill --dest /tmp/docs-test-skill` (fresh) | Byte-identical to `src/docs_cli/skill/` ✓ |
+| `install-skill --dest /tmp/docs-test-skill` (re-run) | "already matches… no-op"; exit 0 ✓ |
+| `install-skill --dest /tmp/docs-test-skill --symlink` | Rejected with educational message; exit 2 ✓ |
+| `docs check tests/fixtures/trees/minimal/` | exit 0 ✓ |
+| `docs index --root docs/ --dry-run` | exit 0 ✓ |
+
+### M10 headline contract against TestPyPI-served artefact
+
+Synthetic foreign tree `/tmp/m11-testpypi-foreign/` (`gizmo-plan.md`,
+`gizmo-spec.md`, `gizmo-status.md` — none with metadata):
+
+```sh
+docs migrate /tmp/m11-testpypi-foreign --apply --quiet --config-project gizmo
+```
+
+| Assertion | Result |
+|---|---|
+| Exit code | 0 ✓ |
+| stdout bytes | **0** ✓ |
+| stderr bytes | **0** ✓ |
+| `.docs.toml` auto-emitted | Yes — `[project] name = "gizmo"` + `[archive]` ✓ |
+| `docs check /tmp/m11-testpypi-foreign` | exit 0 ✓ |
+| Metadata insertion (`gizmo-plan.md`) | `Lifecycle: active` / `Role: plan` / `Project: gizmo` / `Updated: 2026-05-27` ✓ |
+
+### Revert temporary rename
+
+`pyproject.toml`: `name = "docs-cli-rehearsal"` → `name =
+"docs-cli"`. `git diff pyproject.toml` empty after revert
+(tree clean; no inadvertent additional changes). The
+`dist/docs_cli_rehearsal-1.4.0-*` files remain in local `dist/`
+but `dist/` is gitignored — they are scratch artefacts.
+
+### Phase 3 outcome
+
+TestPyPI rehearsal passes. The published `docs-cli` 1.4.0
+artefacts that will go to real PyPI are byte-identical to the
+Phase 2 build (since the only diff between the rehearsal and
+real builds is the `pyproject.toml` `name =` line, which the
+Phase 4 rebuild will pick up correctly). No bugs surfaced;
+no `1.4.1` bump needed. Ready for Phase 4 (real PyPI publish)
+on operator go-ahead — Phase 4 is **irreversible**.
 
 ## Phase 4 — Real PyPI publish
 

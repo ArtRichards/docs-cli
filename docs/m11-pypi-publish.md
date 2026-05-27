@@ -153,10 +153,14 @@ runbook's sections are the phases (mirrors M9 exactly):
       `twine check` PASS), local-install smoke + M10 headline
       contract (`migrate --apply --quiet` truly silent; `.docs.toml`
       auto-emitted) verified against the wheel.
-- [ ] TestPyPI rehearsal — under disambiguated dist name
-      `docs-cli-rehearsal==1.4.0` unless TestPyPI ownership of the
-      bare name changed; smoke set MUST include `docs migrate --apply
-      --quiet` against a synthetic foreign tree
+- [x] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.4.0`
+      (squatter detour continues; bare `docs-cli` on TestPyPI still
+      at 0.1.0/no-author). Throwaway-venv install from TestPyPI
+      succeeded; full smoke including M10 headline contract
+      (`migrate --apply --quiet` → exit 0 / stdout 0 bytes /
+      stderr 0 bytes / `.docs.toml` auto-emitted) passed against
+      TestPyPI-served wheel. Temporary `pyproject.toml` rename
+      reverted cleanly. Rehearsal whl sha256 `3693b9f7…`.
 - [ ] Real PyPI publish — `docs-cli==1.4.0` live; sha256
       chain-of-custody from build → upload → PyPI-served wheel
       verified bit-perfect
