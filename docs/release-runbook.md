@@ -3,10 +3,11 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-05-27
 
 Related:
 - pairs-with: m9-pypi-publish.md
+- pairs-with: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: m6-pypi-distribution.md
 - pairs-with: m7-migration-accuracy.md
 - pairs-with: m8-adoption-workflow.md
@@ -15,38 +16,59 @@ Related:
 
 The operator-driven checklist for shipping `docs-cli` to PyPI.
 This runbook drove **M9 — `docs-cli==1.3.0`** (shipped
-2026-05-25); it stays the operative reference for future
-releases (v1.4+). Every "operator runs X" bullet below is the
+2026-05-25) and **M11 — `docs-cli==1.4.0`** (shipped
+2026-05-27); it stays the operative reference for future
+releases (v1.5+). Every "operator runs X" bullet below is the
 walked-top-to-bottom procedure. The bullets are scoped tight
-enough to copy-paste; the prose framing lives in
-[m9-pypi-publish.md](m9-pypi-publish.md).
+enough to copy-paste; the prose framing for each release lives
+in its milestone doc
+([m9-pypi-publish.md](m9-pypi-publish.md),
+[archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md)).
 
-**TestPyPI rehearsal name caveat (added post-M9).** The bare
-project name `docs-cli` was parked on TestPyPI by an unrelated
-project at M9 publish time, so the TestPyPI rehearsal ran
-under a disambiguated dist name (`docs-cli-rehearsal`) — same
-wheel contents, same entry point `docs`, same `docs_cli`
-package import, only `[project] name` in `pyproject.toml`
-temporarily renamed for the rehearsal build and reverted
-before the real PyPI build. Future releases re-check
-TestPyPI's `docs-cli` ownership (the original squatter may
-move on; if so, drop the rehearsal-name detour).
+**Before driving a new release, read the
+[Cumulative lessons + deviations](#cumulative-lessons--deviations)
+section at the bottom of this file.** It captures the
+M9 + M11 walkthrough surprises (CHANGELOG amend timing, JSON
+metadata cache lag, what-to-skip-after-first-publish) that
+the body-of-runbook steps are too tactical to flag in passing.
 
-**Publish timing.** Per operator decision 2026-05-24, the first
-PyPI publish is **M9** — one batched release at version
-**`1.3.0`** that ships the M6 + M7 + M8 surface together.
-Intermediate versions (`1.1.0`, `1.2.0`) never reach PyPI; no
-prior public release exists, so there is no continuity to
-preserve. **M6's wheel + sdist sitting in local `dist/` from
-2026-05-23 are not uploaded** — fresh artifacts are built at M9
-start (post-M8 ship). The Trusted-Publishing/OIDC path remains
+**TestPyPI rehearsal name caveat (still applies as of
+M11 publish 2026-05-27).** The bare project name `docs-cli`
+was parked on TestPyPI by an unrelated project at M9 publish
+time, and the squatter was still unchanged (`latest: 0.1.0`,
+no author surface) at M11 re-check. The TestPyPI rehearsal
+therefore runs under a disambiguated dist name
+(`docs-cli-rehearsal`) — same wheel contents, same entry
+point `docs`, same `docs_cli` package import, only
+`[project] name` in `pyproject.toml` temporarily renamed for
+the rehearsal build and reverted before the real PyPI build.
+Every release re-checks TestPyPI's `docs-cli` ownership at
+the operator-prep step (the original squatter may move on;
+if so, drop the rehearsal-name detour).
+
+**Publish-milestone cadence (M9 + M11 confirmed pattern).** Each
+implementation milestone with code or version-bumping changes
+lands its `pyproject.toml` / `__version__` / `CHANGELOG.md`
+bump inline at its own Phase 7 (and dates the CHANGELOG entry
+at its own Phase 10). The actual PyPI publish is then a
+separate operator-driven milestone that re-runs this runbook
+top to bottom — M9 published M6+M7+M8 as 1.3.0 (batched per
+the M9 OQ-C split); M11 published M10 as 1.4.0 (one-to-one).
+**Fresh artifacts are always built at the publish milestone's
+start** — never reused from the implementation milestone's
+local `dist/`. The Trusted-Publishing / OIDC path remains
 parked as a future-iteration note at the bottom of this file.
 
-## Operator one-time prep (do BEFORE M8 ships)
+## Operator one-time prep (do BEFORE the first publish)
 
-Administrative and independent of code work — do these in
-parallel with M7 / M8 so the publish window itself is purely
-`twine upload`.
+Administrative and independent of code work. This block is
+**one-time per host** — once `~/.pypirc` carries valid tokens
+and both accounts have 2FA, future releases skip straight to
+"Pre-publish prep" below. Re-verify at every release start
+that the bootstrap state hasn't rotted (tokens revoked,
+account locked, ownership changes); the
+[per-release re-verification](#per-release-re-verification)
+section below the body lists the actual probes.
 
 ### Account registration
 
@@ -101,66 +123,76 @@ Re-confirm at publish time — `curl -sI https://pypi.org/simple/docs-cli/`
 should return 404 (or the equivalent "no such project" response)
 right up until the first successful upload.
 
-## Pre-publish prep (M9 start, after M8 ships — operator runs)
+## Pre-publish prep (publish-milestone start — operator runs)
 
-Once M8 is merged to `main`, the operator drives this block from
-`/home/user/opt/docs-cli/`. The impl agent finishing M8 does
-**not** run this — M8 closes at its own Phase 10 commits.
+Once the implementation milestone(s) being shipped are merged
+to `main`, the operator drives this block from
+`/home/user/opt/docs-cli/`. The impl agent finishing the
+implementation milestone does **not** run this — that milestone
+closes at its own Phase 10 commits and the publish is a
+separate operator-driven milestone.
 
-### Version + changelog
+### Per-release re-verification
 
-**Status as of M8 close (2026-05-25):** The version + CHANGELOG
-bumps the original runbook predicted for M9 already landed
-inline at the M7 + M8 Phase 7 commits. M9's job at this block
-shrinks to **verification** rather than authoring.
+Cheap probes that catch token rot / ownership drift before
+the network-mutating phases:
 
-- [x] `pyproject.toml` `version` is `1.3.0` (bumped at M8
-      Phase 7).
-- [x] `__version__` in `src/docs_cli/cli.py` is `1.3.0`
-      (bumped at M8 Phase 7).
-- [x] `CHANGELOG.md` carries `## 1.3.0 — 2026-05-25` at the
-      top (dated at M8 Phase 10). The 1.3.0 entry body covers
-      the M6 + M7 + M8 surface together; the M7 breaking
-      `Lifecycle:` rename is called out in the M7 entry below.
+- [ ] `~/.pypirc` mode is 600 and carries `[pypi]` +
+      `[testpypi]` sections with `username = __token__` and
+      `password = pypi-…` token values. (Sanity-check token
+      *prefixes* — never print values into logs.)
+- [ ] PyPI registry HTTP status for `docs-cli`:
+      `curl -sI https://pypi.org/simple/docs-cli/` → 200; JSON
+      `releases` array does **not** contain the about-to-publish
+      version. (M9 + M11 both verified the slot was free
+      pre-upload; PyPI rejects re-uploads even after yank.)
+- [ ] TestPyPI registry: `docs-cli-rehearsal` slot for the
+      about-to-publish version is free; bare `docs-cli`
+      TestPyPI ownership re-checked (squatter may have lapsed
+      → drop the rehearsal-name detour; if unchanged → detour
+      continues).
+- [ ] PyPI + TestPyPI account login + 2FA — passive
+      confirmation is fine; positive proof surfaces at the
+      first `twine upload`.
 
-If the operator needs to amend any of these before the publish
-session (e.g. last-minute additions to the CHANGELOG entry),
-do so as a regular commit on `main`; the runbook below
-proceeds from a clean working tree at HEAD.
+### Version + CHANGELOG verification
 
-Original-spec authoring steps (now mostly historical):
+The version + CHANGELOG bumps land at the implementation
+milestone's Phase 7 (typically) + Phase 10 (date) commits. The
+publish milestone's job at this block is **verification**:
 
-- [ ] (Historical — done at M8 Phase 7.) Bump `pyproject.toml`
-      `version` from `1.1.0` to `1.3.0`.
-- [ ] (Historical — done at M8 Phase 7.) Bump `__version__` in
-      `src/docs_cli/cli.py` from `1.1.0` to `1.3.0`.
-- [ ] (Historical — done at M8 Phase 7 + dated at M8 Phase 10.)
-      Restructure `CHANGELOG.md`:
-      - Rename the `## 1.1.0 — UNRELEASED` header to
-        `## 1.3.0 — UNRELEASED`.
-      - Rewrite the entry-body intro ("The first PyPI release …")
-        to describe a M6 + M7 + M8 batched release; note that
-        the implementation milestones each landed on `main`
-        separately but ship together as 1.3.0.
-      - Add an `### M7 — Migration plan accuracy (breaking)`
-        block under Changed: the `Status:` → `Lifecycle:`
-        controlled-vocab rename (no backward compat), broadened
-        role inference (suffix matching, H1 + section signals,
-        sibling defaulting), project-name normalisation to
-        lowercase-kebab, archive-style subdir normalisation
-        (`archived/` → `archive/YYYY-MM-DD/`), expanded role
-        vocab (`implementation`, `sketch`, `outline`, `memo`,
-        `brief`). `add_statuses` config key renamed to
-        `add_lifecycles`. **Breaking** — call it out at the top
-        of the 1.3.0 entry.
-      - Add an `### M8 — Adoption workflow` block under Added:
-        tree-wide `--exclude` (in `migrate` + `index` + `check`
-        + `list`), `.docs.toml` `[exclude]` section,
-        `--summary` and `--only ambiguous` triage flags,
-        `docs new --body-from <-|path>`, and the bundled skill's
-        rewritten adoption-flow references.
-      - Leave `UNRELEASED` in the header until the moment of
-        upload (replaced with the actual publish date below).
+- [ ] `pyproject.toml` `version` matches the about-to-publish
+      version.
+- [ ] `__version__` in `src/docs_cli/cli.py` matches.
+- [ ] `tests/test_packaging.py` A3 assertion is pinned at the
+      about-to-publish version.
+- [ ] `CHANGELOG.md` `## <VERSION>` header dated correctly for
+      publish day (one-line bump if implementation-milestone
+      date and publish-milestone date differ).
+
+**Lesson from M11 (2026-05-27):** the M10-authored CHANGELOG
+entry carried a parenthetical suffix `(LOCAL; not on PyPI)`
+that needed dropping at publish-milestone Phase 4 (before
+fresh artefact rebuild + upload). For future releases:
+either author the implementation-milestone CHANGELOG entry
+with publish-survival wording (no "ready locally" / "deferred
+to MX" phrasing) or plan for a Phase-4 CHANGELOG amend before
+build. See
+[Cumulative lessons + deviations](#cumulative-lessons--deviations)
+for the full M11 deviation record.
+
+**M9 worked example (historical reference):**
+M6 + M7 + M8 batched into a single 1.3.0 entry per the OQ-C
+split; `## 1.1.0 — UNRELEASED` got renamed to `## 1.3.0 — UNRELEASED`
+at M8 Phase 7 (intermediate 1.1.0 / 1.2.0 never reached PyPI);
+the breaking `Status:` → `Lifecycle:` rename (M7) and the
+adoption workflow (M8) each got their own sub-block; date was
+filled in at the moment of upload (Phase 4).
+
+**M11 worked example:** straight 1.3.0 → 1.4.0 carrying just
+M10's surface; CHANGELOG header dated at M10 Phase 10 with the
+trailing `(LOCAL; not on PyPI)` marker that got stripped at
+M11 Phase 4 before fresh build.
 
 ### Tree state
 
@@ -174,9 +206,10 @@ Original-spec authoring steps (now mostly historical):
 ### Quality gate (tree-wide)
 
 - [ ] `.venv/bin/python -m pytest tests/ -q` — full suite green.
-      Baseline at M6 ship was **271 passed**; M7 + M8 will raise
-      that. Record the post-M8 count into this checklist before
-      uploading so reviewers can spot a missing-test regression.
+      Baseline counts: M6 ship 271; M9 ship 369; M11 ship 401.
+      Record the current count into the publish-milestone's
+      impl log Phase 2 entry so reviewers can spot a
+      missing-test regression.
 - [ ] `.venv/bin/ruff check .` — clean.
 - [ ] `.venv/bin/ruff format --check .` — clean.
 - [ ] `.venv/bin/mypy` — clean.
@@ -185,26 +218,36 @@ Original-spec authoring steps (now mostly historical):
 
 ### Artifact build
 
-- [ ] Rebuild artifacts cleanly. The May 23 M6 wheel is stale —
-      `pyproject.toml` `version` and the CLI surface have moved:
+- [ ] Rebuild artifacts cleanly — never reuse the
+      implementation milestone's local `dist/`. Different
+      tree state, different bytes:
       ```sh
       rm -rf dist/
       .venv/bin/python -m build
       ```
-      Expected output: `dist/docs_cli-1.3.0-py3-none-any.whl` +
-      `dist/docs_cli-1.3.0.tar.gz`.
+      Expected output:
+      `dist/docs_cli-<VERSION>-py3-none-any.whl` +
+      `dist/docs_cli-<VERSION>.tar.gz`.
+- [ ] **Capture the sha256 of both artefacts.** They are the
+      chain-of-custody anchors for Phase 4's PyPI-served-vs-local
+      verification: `sha256sum dist/*` into the impl log. The
+      wheel sha256 will typically be byte-identical to a
+      previous pre-publish build of the same `src/` (M11
+      confirmed this — Phase 2 build sha matched Phase 4 build
+      sha because only `docs/` evolved); the sdist sha differs
+      because it captures `docs/` + `CHANGELOG.md`.
 - [ ] `.venv/bin/pip install --quiet twine` (if not already
       present; `twine 6.2.0` was the version smoke-tested at M6
-      ship).
+      ship and re-used unchanged through M11).
 - [ ] `.venv/bin/twine check dist/*` — both artifacts PASS.
 
 ### Local-install smoke (no PyPI involvement)
 
 ```sh
 python3 -m venv /tmp/docs-local-smoke
-/tmp/docs-local-smoke/bin/pip install dist/docs_cli-1.3.0-py3-none-any.whl
-/tmp/docs-local-smoke/bin/docs --version          # → "docs 1.3.0"
-/tmp/docs-local-smoke/bin/docs --help             # lists install-skill + every M7/M8 verb addition
+/tmp/docs-local-smoke/bin/pip install dist/docs_cli-<VERSION>-py3-none-any.whl
+/tmp/docs-local-smoke/bin/docs --version          # → "docs <VERSION>"
+/tmp/docs-local-smoke/bin/docs --help             # lists install-skill + every implementation-milestone verb addition
 /tmp/docs-local-smoke/bin/docs install-skill --dest /tmp/skill-smoke
 diff -ru src/docs_cli/skill /tmp/skill-smoke      # empty (byte-identical)
 /tmp/docs-local-smoke/bin/docs install-skill --dest /tmp/skill-smoke   # exit 0 (no-op)
@@ -212,24 +255,41 @@ diff -ru src/docs_cli/skill /tmp/skill-smoke      # empty (byte-identical)
 /tmp/docs-local-smoke/bin/docs check tests/fixtures/trees/minimal/    # exit 0
 ```
 
+Each release adds a headline-contract probe against the local
+wheel here. M11 added `docs migrate --apply --quiet
+/tmp/<foreign-tree>` and asserted exit 0 / stdout 0 bytes /
+stderr 0 bytes / `.docs.toml` auto-emitted — the M10 contract
+under test. Future releases should add their own headline
+probe in this same block before TestPyPI upload.
+
 ## TestPyPI rehearsal (operator runs)
+
+**If the TestPyPI `docs-cli` ownership re-check (per-release
+re-verification, above) showed the squatter unchanged:**
+temporarily rename `pyproject.toml` `[project] name` to
+`docs-cli-rehearsal`, rebuild `dist/`, then upload. Revert the
+rename and rebuild *cleanly* before Phase 4 — the real PyPI
+build must go out under `docs-cli`.
 
 - [ ] Upload to TestPyPI:
       ```sh
       .venv/bin/twine upload --repository testpypi dist/*
       ```
-- [ ] Artifact visible at `https://test.pypi.org/project/docs-cli/1.3.0/`.
+- [ ] Artifact visible at
+      `https://test.pypi.org/project/docs-cli-rehearsal/<VERSION>/`
+      (or `…/docs-cli/<VERSION>/` if the squatter ever lapses
+      and the rename-detour is dropped).
 - [ ] Throwaway venv install from TestPyPI:
       ```sh
       python3 -m venv /tmp/docs-test-venv
       /tmp/docs-test-venv/bin/pip install --index-url https://test.pypi.org/simple/ \
           --extra-index-url https://pypi.org/simple/ \
-          docs-cli==1.3.0
+          docs-cli-rehearsal==<VERSION>
       ```
       (The `--extra-index-url` lets pip resolve `docs-cli`'s
       well-formed dist-info even though we have no runtime deps;
       it also prevents a future-day surprise if a dep is added.)
-- [ ] `/tmp/docs-test-venv/bin/docs --version` → `docs 1.3.0`.
+- [ ] `/tmp/docs-test-venv/bin/docs --version` → `docs <VERSION>`.
 - [ ] `/tmp/docs-test-venv/bin/docs install-skill --dest /tmp/docs-test-skill`
       → bundled tree appears byte-identical to `src/docs_cli/skill/`.
 - [ ] `/tmp/docs-test-venv/bin/docs install-skill --dest /tmp/docs-test-skill --symlink`
@@ -239,81 +299,161 @@ diff -ru src/docs_cli/skill /tmp/skill-smoke      # empty (byte-identical)
       → exit 0.
 - [ ] `/tmp/docs-test-venv/bin/docs index --root docs/ --dry-run`
       → exit 0.
+- [ ] Re-run the headline-contract probe from the local-install
+      smoke block above, this time against the TestPyPI-served
+      wheel.
 
-If anything fails: **stop**, fix the issue, bump to `1.3.1`
-(TestPyPI also rejects re-uploads of the same version), and
-rerun from "Artifact build". Do not proceed to real PyPI until
-TestPyPI is clean.
+**JSON metadata cache lag.** Immediately post-upload, the
+TestPyPI JSON metadata API (`/pypi/<pkg>/json`) lags the simple
+index by ~60-120s. `pip install` reads the simple index and
+works first try; `curl … /json` may still show the
+previous-version `releases` array for a minute or two. Don't
+gate verification on JSON refresh — `pip install` is the
+authoritative signal. (M9 + M11 both hit this.)
+
+If anything fails: **stop**, fix the issue, bump to the next
+patch version (TestPyPI also rejects re-uploads of the same
+version), and rerun from "Artifact build". Do not proceed to
+real PyPI until TestPyPI is clean.
+
+**Revert the rename** before continuing to Phase 4:
+`pyproject.toml` `[project] name = "docs-cli-rehearsal"` →
+`name = "docs-cli"`. Confirm `git diff pyproject.toml` is
+empty.
 
 ## Real PyPI publish (operator runs after TestPyPI passes)
 
-- [ ] Replace `## 1.3.0 — UNRELEASED` in `CHANGELOG.md` with
-      `## 1.3.0 — <today's date>`; commit on `main`.
+- [ ] CHANGELOG state for publish day:
+      - If the header still carries an `UNRELEASED` placeholder
+        (M9 pattern): replace with `## <VERSION> — <today's date>`.
+      - If the header carries a stale "ready locally" / "deferred
+        to MX" suffix from the implementation milestone (M11
+        pattern): drop the suffix.
+      - Commit on `main` **before** the fresh rebuild below; this
+        commit's CHANGELOG.md ships in the sdist.
+- [ ] Fresh rebuild under canonical `[project] name = "docs-cli"`:
+      ```sh
+      rm -rf dist/
+      .venv/bin/python -m build
+      .venv/bin/twine check dist/*
+      ```
+      Capture sha256 of both artefacts — these are the
+      chain-of-custody anchors compared back to the
+      PyPI-served wheel below.
 - [ ] Upload to PyPI:
       ```sh
       .venv/bin/twine upload dist/*
       ```
-- [ ] Artifact visible at `https://pypi.org/project/docs-cli/1.3.0/`.
+- [ ] Artifact visible at
+      `https://pypi.org/project/docs-cli/<VERSION>/`.
+      (JSON metadata cache lag applies here too; trust the
+      simple index / `pip install`.)
 - [ ] Throwaway venv install from PyPI:
       ```sh
       python3 -m venv /tmp/docs-real-venv
-      /tmp/docs-real-venv/bin/pip install docs-cli==1.3.0
+      /tmp/docs-real-venv/bin/pip install docs-cli==<VERSION>
       ```
-- [ ] Re-run the smoke subset (`docs --version`, `docs install-skill --dest …`,
-      `docs check tests/fixtures/trees/minimal/`) against the
-      real artifact.
+- [ ] **Chain-of-custody check:** pull the PyPI-served wheel
+      and sha256-compare against the local Phase 4 build:
+      ```sh
+      mkdir /tmp/docs-pypi-served
+      /tmp/docs-real-venv/bin/pip download --no-deps \
+          --dest /tmp/docs-pypi-served docs-cli==<VERSION>
+      sha256sum /tmp/docs-pypi-served/*.whl dist/*.whl
+      ```
+      Both wheel sha256s **must** be byte-identical. (M11
+      confirmed bit-perfect; any mismatch is an immediate
+      stop-and-investigate signal.)
+- [ ] Re-run the smoke subset (`docs --version`,
+      `docs install-skill --dest …`,
+      `docs check tests/fixtures/trees/minimal/`) and the
+      headline-contract probe against the PyPI-served wheel.
 
 ## Post-release (operator)
 
-- [ ] Flip the GitHub repo to public:
+- [ ] **Flip the GitHub repo to public** — *only on first
+      publish*. The flip happened at M9 (2026-05-25); for v1.4+
+      releases this step is N/A (repo already public).
+      Reference command for the first-publish run:
       ```sh
       gh repo edit ArtRichards/docs-cli --visibility public
       ```
-      `gh` will prompt interactively to confirm the irreversible-ish
-      visibility change. (Older runbook revisions referenced a
-      `--accept-visibility-change-consequences` flag — that flag was
-      not present in `gh` 2.x at M9 publish time 2026-05-25; the
+      `gh` prompts interactively to confirm the
+      irreversible-ish visibility change.
+      (`--accept-visibility-change-consequences` was not
+      present in `gh` 2.x at M9 publish time 2026-05-25; the
       interactive confirmation is the documented path.)
-- [ ] Tag and push:
+- [ ] Merge the publish-milestone branch stack into `main`
+      (typically fast-forward), push `main`:
       ```sh
-      git tag v1.3.0
-      git push origin v1.3.0
+      git checkout main
+      git merge --ff-only <publish-milestone-branch>
+      git push origin main
       ```
+- [ ] Tag at the publish-milestone's Phase 4 commit (the one
+      whose tree state matches what's in PyPI) and push:
+      ```sh
+      git tag -a v<VERSION> -m "docs-cli <VERSION> — <one-line summary>"
+      git push origin v<VERSION>
+      ```
+      M9 used a lightweight tag; M11 used an annotated tag.
+      Annotated is preferred for the message + author metadata;
+      both are accepted.
 - [ ] Create the GitHub release:
       ```sh
-      gh release create v1.3.0 \
-          --title "docs-cli 1.3.0" \
-          --notes "$(awk '/^## 1.3.0 —/{flag=1; next} /^## /{flag=0} flag' CHANGELOG.md)"
+      gh release create v<VERSION> \
+          --title "docs-cli <VERSION>" \
+          --notes "$(awk '/^## <VERSION> —/{flag=1; next} /^## /{flag=0} flag' CHANGELOG.md)"
       ```
-      (Or hand-author the notes referencing the M6 / M7 / M8
-      milestone-completion summaries.)
-- [ ] **Re-scope the PyPI API token** to project `docs-cli` (now
-      that the project exists). Account settings → API tokens →
-      add a project-scoped token, swap it into `~/.pypirc`,
-      revoke the original entire-account token. Same drill on
-      TestPyPI.
+      If the CHANGELOG entry needed a post-publish accuracy
+      amend (M11 pattern: stale "deferred to MX" wording), apply
+      it as a separate `main` commit *and* push corrected notes
+      to the GitHub release with
+      `gh release edit v<VERSION> --notes "..."`. The
+      PyPI-served sdist's CHANGELOG.md is immutable; the
+      GitHub release notes are not — keep them aligned with the
+      post-publish narrative.
+- [ ] **Re-scope the PyPI API token** to project `docs-cli`.
+      Account settings → API tokens → add a project-scoped
+      token, swap it into `~/.pypirc`, revoke the original
+      entire-account token. Same drill on TestPyPI. *Status as
+      of M11 close: rolled forward from M9 — still
+      entire-account scoped. Operator UI work, async; not a
+      release blocker.*
 - [ ] Doc closeouts:
-      - `docs/status.md`: M6 / M7 / M8 / M9 rows →
-        `Complete (DATE)`; "Current milestone" rewritten
-        (next milestone, or "v1.1 shipped" if M9 is the last
-        v1.1 entry); "Next action" rewritten.
-      - `docs/plan.md`: M6 / M7 / M8 / M9 rows → shipped.
-      - `docs/m9-pypi-publish.md`: Phase Checklist boxes ticked;
-        milestone-completion summary appended (which `1.3.x`
-        actually shipped, sha256 of published wheel + sdist,
-        publish timestamp, any runbook deviations).
-      - `docs/m9-pypi-publish-log.md`: per-phase entries
-        appended with what actually happened.
-      - `docs/m7-migration-accuracy.md` +
-        `docs/m8-adoption-workflow.md`: equivalent Phase 10 /
-        completion-summary updates (these milestones close on
-        their own implementation; the publish flip is M9's
-        responsibility).
+      - `docs/status.md`: implementation milestone(s) + this
+        publish milestone rows → `Complete (DATE)`; "Current
+        milestone" rewritten ("docs-cli <VERSION> shipped" +
+        next milestone, or unscoped); "Next action" rewritten.
+      - `docs/plan.md`: rows finalised + Sequencing timeline
+        grew the new line.
+      - `docs/m<N>-pypi-publish.md`: Phase Checklist all
+        ticked; Success Criteria all ticked with evidence;
+        milestone-completion summary appended (sha256 of
+        published wheel + sdist, publish timestamp,
+        chain-of-custody result, every deviation).
+      - `docs/m<N>-pypi-publish-impl.md`: per-phase entries
+        appended; impl-log milestone-completion summary
+        (longer than the milestone-doc one — full deviation
+        prose).
+      - Implementation milestone doc(s): equivalent Phase 10 /
+        completion-summary updates if the publish flips state
+        they record.
       - `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
         regenerated in lockstep.
+- [ ] `docs archive docs/m<N>-pypi-publish.md --reason
+      "Milestone M<N> complete; docs-cli==<VERSION> shipped to
+      PyPI <DATE>"`. The impl log stays at root with
+      `Lifecycle: active` per the M8 / M9 / M10 / M11 pattern.
+      After archive, update referring `Related:` edges in
+      `status.md` and the impl log to point at the
+      `archive/<DATE>/` path (the archive verb doesn't rewrite
+      referring edges; that's `docs mv` territory — see the
+      [Cumulative lessons + deviations](#cumulative-lessons--deviations)
+      enhancement candidate).
 - [ ] Clean up scratch dirs:
       ```sh
-      rm -rf /tmp/docs-*-venv /tmp/docs-*-skill /tmp/skill-smoke
+      rm -rf /tmp/docs-*-venv /tmp/docs-*-skill /tmp/skill-smoke* /tmp/docs-pypi-served /tmp/<foreign-tree>
       ```
 
 ## Notes
@@ -324,16 +464,16 @@ TestPyPI is clean.
   package-data globs, bad classifier values, and README
   rendering errors caught there cost nothing; caught on PyPI
   they burn the version number.
-- **Manual twine vs Trusted Publishing.** The 1.3.0 release
-  ships via manual twine (continuing the M6 stance). For a
-  future iteration, GitHub Actions Trusted Publishing (OIDC)
-  would replace the API tokens entirely: configure the PyPI
-  Trusted Publisher binding once, then a tag-triggered
+- **Manual twine vs Trusted Publishing.** The 1.3.0 + 1.4.0
+  releases ship via manual twine (continuing the M6 stance).
+  For a future iteration, GitHub Actions Trusted Publishing
+  (OIDC) would replace the API tokens entirely: configure the
+  PyPI Trusted Publisher binding once, then a tag-triggered
   `.github/workflows/release.yml` exchanges a short-lived OIDC
   token for upload rights. Trade-off: no long-lived secret in
   the repo, at the cost of carrying a workflow file and
   depending on PyPI's OIDC provider behaviour. Track as a
-  follow-up if the manual flow proves cumbersome at v1.4 / v2.
+  follow-up if the manual flow proves cumbersome at v1.5+ / v2.
 - **Throwaway venvs.** Every smoke step builds a fresh venv at
   `/tmp/docs-<purpose>-venv` so a previous failed install can't
   pollute the next attempt. Always clean up after success.
@@ -342,3 +482,86 @@ TestPyPI is clean.
   `importlib.metadata` for single-source-of-truth is parked as
   a future-iteration note (recorded in the M6 plan's "What's
   deliberately deferred" section).
+
+## Cumulative lessons + deviations
+
+Per-release surprises that the body-of-runbook steps are too
+tactical to flag in passing. Append to this section at every
+release closeout; do **not** rewrite past entries.
+
+### From M9 (2026-05-25, `docs-cli==1.3.0`)
+
+- **TestPyPI `docs-cli` was parked by a squatter.** Discovered
+  at M9 publish time; M9 + M11 both ran the rehearsal under
+  `docs-cli-rehearsal` with a temporary `pyproject.toml`
+  rename. Real PyPI `docs-cli` was always clean.
+- **Token re-scope deferred as async operator UI work.** M9
+  bootstrap tokens are "Entire account" scoped because PyPI
+  doesn't offer project-scoped tokens until the project exists.
+  Re-scoping to project-`docs-cli` is operator UI work that
+  hasn't blocked any release; rolls forward indefinitely.
+- **First-publish repo-visibility flip.** Repo went public at
+  M9. Subsequent releases skip — see Post-release section
+  guidance.
+- **`gh` 2.x has no `--accept-visibility-change-consequences`
+  flag.** Older runbook drafts referenced it; the actual path
+  is interactive confirmation.
+
+### From M11 (2026-05-27, `docs-cli==1.4.0`)
+
+- **JSON metadata cache lag at both registries.** Immediately
+  post-`twine upload`, both TestPyPI's and PyPI's
+  `/pypi/<pkg>/json` endpoints reported the *previous* version
+  as `latest` and a `releases` array missing the freshly-uploaded
+  version. The simple index that `pip install` uses was current
+  on both. **Do not** gate post-upload verification on JSON
+  refresh — `pip install` is the authoritative signal. Cache TTL
+  observed at ~60–120 s.
+- **CHANGELOG amend at publish-milestone Phase 4 + Phase 5.**
+  The M10-authored 1.4.0 CHANGELOG entry carried a parenthetical
+  `(LOCAL; not on PyPI)` header suffix + a body sentence "1.4.0
+  is ready locally; the PyPI publish is deferred to M11." Both
+  needed editing at publish time:
+  - Phase 4 stripped the header suffix before fresh build (so
+    the sdist that ships carries clean text).
+  - Phase 5 (post-publish) amended the body sentence and
+    pushed corrected text to the GitHub release with
+    `gh release edit --notes …`. The sdist's CHANGELOG.md is
+    immutable on PyPI; the GitHub release notes are mutable
+    and were brought into alignment.
+  - **Future-release prevention:** author the
+    implementation-milestone CHANGELOG entry with
+    publish-survival wording — describe what the version
+    *contains*, not its publish state. Avoid `(LOCAL;
+    not on PyPI)` markers and "deferred to MX" sentences.
+- **TestPyPI squatter rolls forward.** Re-checked at M11
+  Phase 1 — still `latest: 0.1.0`, no author. Detour stays
+  active until ownership lapses.
+- **Chain-of-custody proof via `pip download` + sha256sum.**
+  M11 added this as an explicit Phase 4 step: pull the
+  PyPI-served wheel back, sha256-compare to the local build.
+  Bit-perfect match expected (`src/` is the only thing that
+  ends up in the wheel, and `src/` is unchanged across a
+  publish milestone). Bake this check into every future
+  release.
+- **`docs touch` on non-docs-root files is a footgun.** Calling
+  `docs touch CHANGELOG.md` from the repo root (no `.docs.toml`
+  above the file) inserted an unintended `Updated:` line into
+  CHANGELOG.md and then crashed the post-touch INDEX refresh on
+  `README.md: missing Lifecycle`. Caught and reverted at M11
+  Phase 5. **Future-feature candidate:** `docs touch` should
+  refuse gracefully when the target is outside a docs root, not
+  modify the file. Logged as an M11 open follow-on.
+- **`docs archive` does not rewrite referring `Related:`
+  edges.** Archiving the milestone doc moved
+  `docs/m11-pypi-publish.md` → `docs/archive/2026-05-27/`, but
+  `status.md` + the impl log still pointed at the old path
+  until manually fixed. **Future-feature candidate:** archive
+  should call into the same machinery `docs mv` uses to rewrite
+  referring `Related:` bullets atomically. Logged as an M11
+  open follow-on.
+- **Tokens validated by use.** Token validity probes correctly
+  at the *first* `twine upload` (Phase 3 TestPyPI). M11 chose
+  not to add an active pre-upload token probe — the false-alarm
+  surface of "check tokens are valid" tooling isn't worth it
+  when the upload itself is the cheapest definitive test.
