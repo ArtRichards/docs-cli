@@ -36,7 +36,7 @@ distinct.)
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Operator one-time prep | Pending | — | |
+| 1. Operator one-time prep | In progress | 2026-05-27 | Session-verifiable state captured; account login + 2FA + token-validity await operator confirmation or Phase 3 upload surfacing |
 | 2. Pre-publish prep | Pending | — | |
 | 3. TestPyPI rehearsal | Pending | — | |
 | 4. Real PyPI publish | Pending | — | |
@@ -79,7 +79,79 @@ _Captured before Phase 1; historical._
 
 ## Phase 1 — Operator one-time prep
 
-_Not started._
+**Started 2026-05-27.** Objective: re-verify M9-era account /
+token / `~/.pypirc` state still current; re-check whether the
+TestPyPI `docs-cli` squatter project lapsed since 2026-05-25.
+
+### Session-verifiable state (captured 2026-05-27)
+
+- **`~/.pypirc` intact.** Mode `-rw-------` (600), 543 bytes,
+  dated 2026-05-25. Sections present: `[distutils]`,
+  `[pypi]` (`username = __token__`), `[testpypi]`
+  (`username = __token__`, `repository =
+  https://test.pypi.org/legacy/`). Token prefixes
+  `pypi-AgEIcHl…` (PyPI) and `pypi-AgENdGV…` (TestPyPI)
+  match the canonical PyPI / TestPyPI scoped-token shape.
+  Token *values* not printed.
+- **PyPI `docs-cli`** — HTTP 200 at
+  `https://pypi.org/simple/docs-cli/`; JSON metadata reports
+  `latest: 1.3.0`, `releases: ['1.3.0']`. M9's release intact;
+  1.4.0 slot is free for M11 to publish into.
+- **TestPyPI `docs-cli`** — HTTP 200 at
+  `https://test.pypi.org/simple/docs-cli/`; JSON metadata
+  reports `latest: 0.1.0`, `author: None`, `releases:
+  ['0.1.0']`. **Squatter has NOT lapsed since 2026-05-25** —
+  same `0.1.0` placeholder, no author surface. M11 continues
+  M9's disambiguated-dist-name detour: TestPyPI rehearsal
+  uploads under `docs-cli-rehearsal==1.4.0`. The
+  rehearsal-name-drop is a follow-on for a future release.
+- **TestPyPI `docs-cli-rehearsal`** — JSON metadata reports
+  `latest: 1.3.0`, `releases: ['1.3.0']`. M9's rehearsal
+  artefact intact; 1.4.0 slot under this name is free.
+- **Local tooling.** `twine 6.2.0` (matches M9 baseline;
+  identical version smoke-tested at M6 ship),
+  `python 3.12.3`, `build 1.5.0`. Both installed under
+  `.venv/`.
+- **Local `dist/`.** Holds M9's `docs_cli-1.3.0-{whl,tar.gz}`
+  (2026-05-25, the actually-shipped artefacts) plus M10
+  Phase 10's `docs_cli-1.4.0-{whl,tar.gz}` (2026-05-27, the
+  pre-merge build). Phase 2 will `rm -rf dist/` and rebuild
+  from post-merge-to-`main` HEAD per the milestone-doc
+  Requirements.
+
+### Operator-confirmation items (cannot verify from session)
+
+- PyPI account login + 2FA active.
+- TestPyPI account login + 2FA active.
+- Tokens not rotated / revoked since M9 (no negative signal so
+  far; positive confirmation surfaces at Phase 3 first
+  `twine upload --repository testpypi`).
+
+These are not blockers — token validity gets validated by
+the actual upload at Phase 3. If a token rotted, that's where
+the failure surfaces and Phase 1 re-opens for an operator
+token-refresh round-trip.
+
+### Decisions recorded at Phase 1
+
+- **TestPyPI rehearsal under `docs-cli-rehearsal==1.4.0`**
+  confirmed (squatter unchanged).
+- **No token re-scope inside M11.** The M9 follow-on to
+  re-scope the bootstrap "Entire account" tokens to
+  project-`docs-cli` remains async operator UI work; M11
+  publishes with whatever scope the tokens currently carry.
+  If the re-scope happened between M9 close and M11 start,
+  the publish is a no-op; if not, the follow-on rolls forward
+  to a post-M11 close.
+- **Local `main` is at `8998747`** (M10 stack merged + pushed
+  to `origin/main` at M11 Phase 1 start). The fresh artefact
+  build at Phase 2 will run from this commit.
+
+### Phase 1 outcome
+
+Session-side state green. Operator confirmation requested for
+the three login / 2FA / token-rotation items above before
+Phase 2 fresh build runs.
 
 ## Phase 2 — Pre-publish prep
 
