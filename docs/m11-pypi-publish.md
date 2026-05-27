@@ -134,14 +134,25 @@ matching `v1.4.0` tag + release.
 M11 has no TDD code phases — it is an operational milestone. The
 runbook's sections are the phases (mirrors M9 exactly):
 
-- [ ] Operator one-time prep — verify M9-era state (accounts + 2FA +
-      tokens + `~/.pypirc`) still current; re-check TestPyPI
-      `docs-cli` ownership in case the squatter lapsed since
-      2026-05-25
-- [ ] Pre-publish prep — versions verified `1.4.0`, CHANGELOG date
-      matches publish day, tree state clean (post-merge-to-main),
-      quality gate green (pytest 401 at M10 closeout), fresh
-      artifact build, local smoke
+- [x] Operator one-time prep — session-verifiable state captured
+      2026-05-27 (`~/.pypirc` intact mode 600; PyPI `docs-cli` at
+      1.3.0, 1.4.0 slot free; TestPyPI `docs-cli` squatter
+      unchanged at 0.1.0, rehearsal continues under
+      `docs-cli-rehearsal`; TestPyPI `docs-cli-rehearsal` at
+      1.3.0, 1.4.0 slot free; twine 6.2.0 + python 3.12.3 + build
+      1.5.0 ready). Operator-side login + 2FA + token-rotation
+      surface at Phase 3 first upload.
+- [x] Pre-publish prep — versions verified `1.4.0` (M10 Phase 7),
+      CHANGELOG header `## 1.4.0 — 2026-05-27 (LOCAL; not on PyPI)`
+      (LOCAL suffix to drop at Phase 4), tree at `e319e7b` on
+      `m11/milestone-setup` (`main`/`origin/main` at `8998747`),
+      quality gate green tree-wide (**401 passed**; ruff /
+      format / mypy clean; `docs check docs/` exit 0; `docs index
+      --dry-run` exit 0), fresh artefacts rebuilt
+      (whl sha256 `7af7eb5c…`, tar.gz sha256 `292219d4…`; both
+      `twine check` PASS), local-install smoke + M10 headline
+      contract (`migrate --apply --quiet` truly silent; `.docs.toml`
+      auto-emitted) verified against the wheel.
 - [ ] TestPyPI rehearsal — under disambiguated dist name
       `docs-cli-rehearsal==1.4.0` unless TestPyPI ownership of the
       bare name changed; smoke set MUST include `docs migrate --apply

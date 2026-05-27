@@ -37,7 +37,7 @@ distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Operator one-time prep | In progress | 2026-05-27 | Session-verifiable state captured; account login + 2FA + token-validity await operator confirmation or Phase 3 upload surfacing |
-| 2. Pre-publish prep | Pending | — | |
+| 2. Pre-publish prep | Complete | 2026-05-27 | 401 passed; ruff/format/mypy clean; docs check exit 0; fresh artefacts twine-check PASS; local-install smoke + M10 headline contract (--apply --quiet truly silent) verified against the wheel |
 | 3. TestPyPI rehearsal | Pending | — | |
 | 4. Real PyPI publish | Pending | — | |
 | 5. Post-release | Pending | — | |
@@ -155,7 +155,105 @@ Phase 2 fresh build runs.
 
 ## Phase 2 — Pre-publish prep
 
-_Not started._
+**Completed 2026-05-27.** Objective: verify version pins +
+CHANGELOG + tree state, run the tree-wide quality gate, rebuild
+artefacts fresh from post-merge-to-`main` HEAD, smoke the
+locally-installed wheel including the headline M10 contract.
+
+### Version pins verified
+
+- `pyproject.toml`: `version = "1.4.0"` ✓
+- `src/docs_cli/cli.py`: `__version__ = "1.4.0"` ✓
+- `tests/test_packaging.py`: A3 assertion pinned at `1.4.0` ✓
+
+(All three landed at M10 Phase 7; M11 Phase 2 only verifies.)
+
+### CHANGELOG state
+
+- Header at line 8: `## 1.4.0 — 2026-05-27 (LOCAL; not on PyPI)`.
+- Date matches today's M11 publish day. No date bump needed.
+- The `(LOCAL; not on PyPI)` suffix is the M10-closeout marker;
+  it will be dropped at Phase 4 (Real PyPI publish) as the
+  CHANGELOG-amend commit that announces the actual upload.
+
+### Tree position
+
+- HEAD `e319e7b` on `m11/milestone-setup` (Phase 1 commit).
+- `main` = `origin/main` = `8998747` (M10 closeout, M11 Phase 1
+  pushed to remote).
+- `docs/INDEX.md` ↔ `tests/fixtures/expected/docs-INDEX.md`:
+  `diff` exit 0 (byte-identical) ✓
+
+### Quality gate (tree-wide)
+
+| Check | Result |
+|---|---|
+| `pytest tests/ -q` | **401 passed** in 11.02s |
+| `ruff check .` | All checks passed |
+| `ruff format --check .` | 33 files already formatted |
+| `mypy` | Success: no issues found in 34 source files |
+| `docs check docs/` | no violations; exit 0 |
+| `docs index --root docs/ --dry-run` | exit 0 (idempotent) |
+
+### Fresh artefact build
+
+`rm -rf dist/` + `python -m build` rebuilt cleanly from HEAD
+`e319e7b`. Resulting artefacts:
+
+| Artefact | Size (bytes) | sha256 |
+|---|---|---|
+| `docs_cli-1.4.0-py3-none-any.whl` | 83 856 | `7af7eb5cb67a860e16d34fb6e8084207e4d3abf2d81fb013fef3b1721c4ec050` |
+| `docs_cli-1.4.0.tar.gz` | 495 727 | `292219d4b335819c89acd5cf05111f544d6df1a7ec6d077334a1c8577e0a49c7` |
+
+(Both differ from the M10 Phase 10 pre-merge build — expected:
+the post-Phase-10 stack added the m10-simplify, m10-audit, and
+m10-phase-6-review commits, all of which touch `src/`. These
+M11 Phase 2 bytes are the chain-of-custody anchor for the rest
+of M11; Phase 3 and Phase 4 upload these exact files, the
+PyPI-served wheel sha256 gets compared back to this row at
+Phase 4 close.)
+
+`twine check dist/*` — both artefacts **PASSED**.
+
+### Local-install smoke
+
+Throwaway venv at `/tmp/docs-local-smoke`; `pip install
+dist/docs_cli-1.4.0-py3-none-any.whl`:
+
+| Step | Result |
+|---|---|
+| `docs --version` | `docs 1.4.0` ✓ |
+| `docs --help` | Lists 9 verbs (`index, new, archive, mv, touch, check, list, migrate, install-skill`) ✓ |
+| `install-skill --dest /tmp/skill-smoke-m11` (fresh) | Byte-identical to `src/docs_cli/skill/` ✓ |
+| `install-skill --dest /tmp/skill-smoke-m11` (re-run) | "already matches… no-op"; exit 0 ✓ |
+| `install-skill --dest /tmp/skill-smoke-m11 --symlink` | Rejected with educational message; exit 2 ✓ |
+| `docs check tests/fixtures/trees/minimal/` | exit 0 ✓ |
+
+### M10 headline contract smoke (against the 1.4.0 wheel)
+
+Synthetic foreign tree `/tmp/m11-foreign-tree/` with three docs
+(`widget-plan.md`, `widget-spec.md`, `widget-status.md`,
+none carrying metadata). Then:
+
+```sh
+docs migrate /tmp/m11-foreign-tree --apply --quiet --config-project widget
+```
+
+| Assertion | Result |
+|---|---|
+| Exit code | 0 ✓ |
+| stdout bytes | **0** ✓ (genuinely silent — the M10 F11 fix in commit `5778c44` is live in the wheel) |
+| stderr bytes | **0** ✓ |
+| `.docs.toml` auto-emitted | Yes — `[project] name = "widget"` + `[archive] date_format = "%Y-%m-%d"` ✓ |
+| `docs check /tmp/m11-foreign-tree` exit | 0 (adopted tree passes) ✓ |
+| Sample doc metadata insertion | `widget-plan.md` got `Lifecycle: active` / `Role: plan` / `Project: widget` / `Updated: 2026-05-27` ✓ |
+
+### Phase 2 outcome
+
+Pre-publish prep complete. Local artefacts ready. Local smoke
+proves the wheel installs cleanly and the headline M10 contract
+holds. Ready for Phase 3 (TestPyPI rehearsal) on operator
+go-ahead.
 
 ## Phase 3 — TestPyPI rehearsal
 
