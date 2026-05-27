@@ -171,9 +171,18 @@ runbook's sections are the phases (mirrors M9 exactly):
       M10 headline contract (`migrate --apply --quiet` → exit 0
       / stdout 0 bytes / stderr 0 bytes / `.docs.toml`
       auto-emitted) PASS against PyPI-served wheel.
-- [ ] Post-release — `v1.4.0` tag + GitHub release; doc closeouts
-      (M10 + M11); token re-scope rolls forward as M9 open follow-on
-      (operator UI work, async)
+- [x] Post-release — `m11/milestone-setup` ff-merged into `main`
+      and pushed (`8998747..b8d8af3`); annotated `v1.4.0` tag
+      (tag-object `4de329b9…` → commit `b8d8af3`) pushed to
+      `origin`; GitHub release live at
+      `https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0`;
+      release notes amended post-create to drop stale "deferred
+      to M11" wording; doc closeouts (plan/status/INDEX +
+      dogfood snapshot) landed; `docs archive --cascade` ran
+      (milestone doc archived, impl log stays
+      `Lifecycle: active` per M8/M9/M10 pattern, release-runbook
+      + status declined). Token re-scope rolls forward as M9
+      open follow-on.
 
 Each ticks as the runbook's corresponding section completes.
 
@@ -230,28 +239,34 @@ truly silent; `.docs.toml` auto-emitted; `docs check` exit 0).
 
 M11 is complete when:
 
-- [ ] `pip install docs-cli==1.4.0` works from PyPI on a clean
+- [x] `pip install docs-cli==1.4.0` works from PyPI on a clean
       host with Python 3.11+ and produces a working `docs` command.
-- [ ] `docs --version` from the PyPI-installed wheel prints
-      `docs 1.4.0`.
-- [ ] `docs migrate --apply --quiet <foreign-tree>` from the
+      (Phase 4: throwaway venv `/tmp/docs-real-venv` install
+      succeeded first attempt.)
+- [x] `docs --version` from the PyPI-installed wheel prints
+      `docs 1.4.0`. (Phase 4 smoke.)
+- [x] `docs migrate --apply --quiet <foreign-tree>` from the
       PyPI-installed wheel produces empty stdout + empty stderr
       (the headline M10 contract — re-verified against the
-      published artefact, not just the local build).
-- [ ] `docs install-skill` from the PyPI-installed wheel places a
+      published artefact, not just the local build). (Phase 4
+      against synthetic `/tmp/m11-pypi-foreign/`: exit 0 / stdout
+      0 bytes / stderr 0 bytes.)
+- [x] `docs install-skill` from the PyPI-installed wheel places a
       host-correct skill that drives the verbs identically to the
-      in-repo install.
-- [ ] The `v1.4.0` tag and GitHub release exist at
+      in-repo install. (Phase 4: fresh / no-op / `--symlink`-
+      rejected cycle all behaved correctly.)
+- [x] The `v1.4.0` tag and GitHub release exist at
       `https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0`.
-- [ ] All Phase Checklist items above are ticked.
-- [ ] `docs/status.md` reflects M10 + M11 as Complete with the
-      actual publish date.
-- [ ] `docs/m11-pypi-publish-impl.md` carries a
-      milestone-completion summary describing what actually
-      happened (which `1.4.x` shipped — if TestPyPI surfaced a
-      bug forcing a `1.4.1` rebuild, the published version, the
-      sha256 of the published wheel + sdist, the publish
-      timestamp, any deviations from the runbook).
+- [x] All Phase Checklist items above are ticked.
+- [x] `docs/status.md` reflects M10 + M11 as Complete with the
+      actual publish date 2026-05-27.
+- [x] `docs/m11-pypi-publish-impl.md` carries a
+      milestone-completion summary with the published version
+      (`1.4.0` — no TestPyPI-surfaced regression forced a
+      `1.4.x` bump), wheel + sdist sha256, publish timestamp, and
+      deviations (CHANGELOG amend at Phase 5; JSON metadata
+      cache lag at both registries; TestPyPI squatter detour
+      rolled forward).
 
 ## OPEN QUESTIONS
 
@@ -260,3 +275,58 @@ walk (TestPyPI ownership status; token re-scope status; any
 runbook-deviation needed for v1.4 specifically) will be recorded
 in the Milestone-completion summary as they surface, mirroring
 the M9 pattern._
+
+_At milestone close (2026-05-27): no plan-level open questions
+emerged. TestPyPI ownership status was re-confirmed
+(squatter unchanged; detour rolls forward). Token re-scope
+status was passively confirmed (M9-era tokens still drove M11
+unchanged; re-scope remains the M9 async follow-on). One
+runbook-deviation surfaced (CHANGELOG amend at Phase 5 to
+update the M10-authored "deferred" wording) — see the impl
+log's milestone-completion summary for the full deviation
+list, deduplicated for future-release reference._
+
+## Milestone-completion summary
+
+**Complete 2026-05-27.** `docs-cli==1.4.0` is live on PyPI at
+`https://pypi.org/project/docs-cli/1.4.0/`. Annotated tag
+`v1.4.0` at commit `b8d8af3` pushed to `origin`. GitHub release
+at `https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0`.
+
+| | sha256 |
+|---|---|
+| `docs_cli-1.4.0-py3-none-any.whl` | `7af7eb5cb67a860e16d34fb6e8084207e4d3abf2d81fb013fef3b1721c4ec050` |
+| `docs_cli-1.4.0.tar.gz` | `0b0dd2ce1302b59cc862549a0d55fadf7210e27cfcd2e38b5f5f9ad31350c05b` |
+
+Chain-of-custody bit-perfect: the PyPI-served wheel sha256
+matches the local Phase 4 build byte-for-byte (verified via
+`pip download --no-deps`). Headline M10 contract verified
+against the PyPI-served wheel: `docs migrate --apply --quiet`
+against a synthetic foreign tree produced exit 0 / stdout 0
+bytes / stderr 0 bytes / `.docs.toml` auto-emitted / adopted
+tree passes `docs check`.
+
+Deviations recorded for v1.5+ releases:
+
+1. **CHANGELOG amend at Phase 5.** The M10-authored 1.4.0
+   entry said "deferred to M11"; M11 Phase 5 amended to
+   "Published to PyPI 2026-05-27 via M11" and `gh release edit`
+   pushed the corrected text into the public release notes
+   (the PyPI-served sdist's CHANGELOG carries the original
+   wording — immutable).
+2. **JSON metadata cache lag at TestPyPI + PyPI.** Both
+   `/pypi/<pkg>/json` endpoints lagged the simple index by
+   60-120s post-upload. Don't gate post-upload verification
+   on JSON refresh — `pip install` is the authoritative signal.
+3. **TestPyPI squatter detour rolls forward.** Bare `docs-cli`
+   on TestPyPI still parked at `0.1.0` (no author). M11
+   continued M9's `docs-cli-rehearsal` rehearsal-name detour.
+4. **Repo visibility flip N/A.** Already public from M9.
+5. **Token re-scope rolls forward.** M9 follow-on; bootstrap
+   "Entire account" tokens drove M11 unchanged.
+
+The release-runbook.md remains the operative reference for
+v1.5+ — augmented in spirit by these five deviations
+(deviation 1 in particular suggests authoring future
+implementation-milestone CHANGELOG entries with wording
+that survives the eventual publish event unchanged).

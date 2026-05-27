@@ -19,11 +19,14 @@ Related:
 
 Three milestones to v1, then a migration helper, then a Claude Code
 skill wrapper. v1.1 picks up with packaging, then migration
-hardening + adoption workflow.
+hardening + adoption workflow. v1.4 adds adoption-flow polish +
+1.3.0 carry-overs (M10) and ships them as a publish-only
+milestone (M11).
 
 ```
 v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)
 v1.1:  M6 (PyPI distribution prep)  →  M7 (migration accuracy)  →  M8 (adoption workflow)  →  M9 (PyPI publish 1.3.0)
+v1.4:  M10 (adoption-flow polish + 1.3.0 carry-overs)  →  M11 (PyPI publish 1.4.0)
 ```
 
 ## M1 — Parser, walker, and `docs index`
@@ -108,17 +111,27 @@ prior public release existed, no continuity to preserve.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; 1.4.0 ready locally; publish DEFERRED to M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
-| M11 — PyPI publish 1.4.0 | **Active** (2026-05-27; mirrors M9 — publish-only milestone for the M10-built 1.4.0 artefacts) | [m11-pypi-publish.md](m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 
-**M11** is the publish-only counterpart to M10, mirroring how M9
-followed M8. M10 built and locally smoke-tested `docs-cli` 1.4.0;
-M11 runs the release-runbook (operator prep verify → fresh artefact
-rebuild → TestPyPI rehearsal under `docs-cli-rehearsal==1.4.0` →
-real PyPI publish → `v1.4.0` tag + GitHub release → post-publish
-doc closeouts). No code work; no new verbs. The project-rename verb
-flagged as a follow-on TODO at M10 closeout is **out of scope** and
-stays deferred to a later feature milestone.
+**M11 — `docs-cli==1.4.0` shipped 2026-05-27.** The publish-only
+counterpart to M10, mirroring how M9 followed M8. M11 ran the
+[release-runbook.md](release-runbook.md) end-to-end:
+operator-state inventory (`~/.pypirc` intact, PyPI 1.4.0 slot
+free, TestPyPI squatter unchanged) → fresh artefact rebuild under
+canonical `name = "docs-cli"` (whl sha256 `7af7eb5c…`, tar.gz
+sha256 `0b0dd2ce…`) → TestPyPI rehearsal under
+`docs-cli-rehearsal==1.4.0` (squatter detour continues) → real
+PyPI upload (chain-of-custody bit-perfect — PyPI-served wheel
+sha256 byte-identical to local Phase 4 build) → smoke + headline
+M10 contract against PyPI-served wheel → `v1.4.0` annotated tag
+at the Phase 4 commit + GitHub release → doc closeouts. No code
+work; no new verbs. The project-rename verb flagged as a
+follow-on TODO at M10 closeout stays deferred to a later feature
+milestone (leading candidate for v1.5). Full publish record +
+deviations live in
+[m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md)'s
+milestone-completion summary.
 
 **M10** bundles the two user-surfaced agent-driveability features
 (`docs touch <file...>`, `docs migrate --apply` writes `.docs.toml`)

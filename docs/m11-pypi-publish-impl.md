@@ -40,7 +40,7 @@ distinct.)
 | 2. Pre-publish prep | Complete | 2026-05-27 | 401 passed; ruff/format/mypy clean; docs check exit 0; fresh artefacts twine-check PASS; local-install smoke + M10 headline contract (--apply --quiet truly silent) verified against the wheel |
 | 3. TestPyPI rehearsal | Complete | 2026-05-27 | docs-cli-rehearsal==1.4.0 uploaded; throwaway-venv install PASS; full smoke + M10 headline contract PASS against TestPyPI-served wheel; pyproject.toml rename reverted cleanly |
 | 4. Real PyPI publish | Complete | 2026-05-27 | docs-cli==1.4.0 LIVE on PyPI; chain-of-custody bit-perfect (PyPI-served whl sha256 = local Phase 4 build sha256); headline M10 contract verified against PyPI artefact |
-| 5. Post-release | Pending | — | |
+| 5. Post-release | Complete | 2026-05-27 | m11/milestone-setup ff-merged to main + pushed; v1.4.0 annotated tag pushed; GitHub release created + notes updated to drop stale "deferred to M11" wording; doc closeouts (plan/status/INDEX) committed; CHANGELOG amend committed; m11-pypi-publish.md cascade-archived |
 
 (M11 has no TDD code phases — it is an operational milestone.
 The five rows above mirror the [release-runbook.md](release-runbook.md)
@@ -476,4 +476,203 @@ Headline M10 contract holds against the PyPI-served wheel. No
 
 ## Phase 5 — Post-release
 
-_Not started._
+**Completed 2026-05-27.** Objective: merge the M11 stack into
+`main`, tag `v1.4.0` at the resulting HEAD, push the tag,
+create the GitHub release, update GitHub release notes to
+reflect the published state (the CHANGELOG entry sealed into
+the sdist still said "deferred to M11"), do tree-wide doc
+closeouts (plan/status/INDEX), `docs archive --cascade` the
+milestone doc, cleanup scratch dirs.
+
+### Merge + push + tag
+
+| Step | Result |
+|---|---|
+| `git checkout main && git merge --ff-only m11/milestone-setup` | Fast-forward `8998747..b8d8af3`; 6 commits replayed onto `main` |
+| `git push origin main` | `8998747..b8d8af3  main -> main` |
+| `git tag -a v1.4.0 -m "docs-cli 1.4.0 — M10 adoption-flow polish + 1.3.0 carry-overs, published to PyPI 2026-05-27"` | Annotated tag created locally |
+| `git push origin v1.4.0` | `[new tag] v1.4.0 -> v1.4.0` (tag object SHA `4de329b9…` pointing at `b8d8af3`) |
+
+### GitHub release
+
+`gh release create v1.4.0 --title "docs-cli 1.4.0" --notes
+"$(awk '/^## 1.4.0 —/{flag=1; next} /^## /{flag=0} flag' CHANGELOG.md)"`
+→ live at `https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0`.
+
+### CHANGELOG amend (post-publish accuracy)
+
+The 1.4.0 entry was authored at M10 closeout and still said
+"1.4.0 is ready locally; the PyPI publish is deferred to M11."
+That wording was correct then but stale at publish time. M11
+Phase 5 edited it to "Published to PyPI 2026-05-27 via M11
+(operator-driven publish milestone mirroring M9's relationship
+to M8)." Commit landed in the doc-closeout batch below.
+
+The CHANGELOG.md frozen inside the M11-published sdist
+(`docs_cli-1.4.0.tar.gz` on PyPI) carries the original
+"deferred" wording — the sdist is immutable once on PyPI.
+`gh release edit v1.4.0 --notes …` updated the public GitHub
+release notes to the corrected wording so the visible-world
+narrative matches reality.
+
+### Doc closeouts
+
+- **`status.md`** — "Current milestone" block rewritten:
+  "docs-cli 1.4.0 shipped 2026-05-27 / M11 Complete";
+  M10 paragraph updated to drop "publish deferred to M11"
+  and read "shipped to PyPI as 1.4.0 via M11 on 2026-05-27";
+  "Next action" → "no active milestone — v1.5 unscoped,
+  project-rename verb leading candidate"; milestone-progress
+  table M10 + M11 rows finalised; bottom-of-file 1.3.0
+  narrative joined by a 1.4.0 narrative.
+- **`plan.md`** — Sequencing timeline grew a v1.4 line;
+  intro acknowledged v1.4 explicitly; v1.1 narrative grew an
+  M11 closeout paragraph with the published sha256s;
+  milestone-progress-table M10 + M11 rows finalised.
+- **`docs/INDEX.md`** + **`tests/fixtures/expected/docs-INDEX.md`**
+  regenerated in lockstep via `docs index --root docs/` →
+  `cp`.
+- **`docs touch`** bumped every modified doc's `Updated:`
+  date to 2026-05-27.
+- **`docs check docs --stale 14`** exit 0 throughout.
+
+### `docs archive --cascade`
+
+`docs archive m11-pypi-publish.md --cascade --reason
+"Milestone M11 complete; docs-cli==1.4.0 shipped to PyPI"`:
+
+- Milestone doc moved `docs/m11-pypi-publish.md` →
+  `docs/archive/2026-05-27/m11-pypi-publish.md`;
+  `Lifecycle: archived` set; `archived_reason` field added.
+- Cascade prompt for `m11-pypi-publish-impl.md`: **accepted**.
+  Impl log stayed `Lifecycle: active` per the M8/M9/M10
+  pattern (impl log is a permanent record; only the milestone
+  doc is archived).
+  *Edit, post-run:* whatever the cascade prompt asked, the
+  impl log remains `Lifecycle: active` — the cascade-and-keep
+  pattern from M9/M10 holds.
+- Cascade prompt for `release-runbook.md`: **declined**.
+  Runbook is long-lived and stays the operative reference for
+  v1.5+.
+- Cascade prompt for `status.md`: **declined**. Always active.
+- Cascade prompt for `archive/2026-05-27/m10-adoption-polish.md`:
+  N/A (already archived).
+- INDEX regenerated automatically.
+
+### Cleanup
+
+`rm -rf /tmp/docs-local-smoke /tmp/skill-smoke-m11
+/tmp/m11-foreign-tree /tmp/docs-test-venv /tmp/docs-test-skill
+/tmp/m11-testpypi-foreign /tmp/docs-real-venv /tmp/docs-real-skill
+/tmp/m11-pypi-served /tmp/m11-pypi-foreign /tmp/m11-skill-diff.txt
+/tmp/m11-test-skill-diff.txt /tmp/m11-real-skill-diff.txt
+/tmp/m11-index-diff.txt /tmp/m11-quiet-stdout.txt
+/tmp/m11-quiet-stderr.txt /tmp/m11-testpypi-stdout.txt
+/tmp/m11-testpypi-stderr.txt /tmp/m11-pypi-stdout.txt
+/tmp/m11-pypi-stderr.txt`.
+
+### Phase 5 outcome
+
+M11 complete. `docs-cli==1.4.0` live on PyPI; `v1.4.0` tag +
+GitHub release live; `main` carries the M11 stack; milestone
+doc archived; impl log stays `Lifecycle: active` as the
+permanent per-phase record.
+
+## Milestone-completion summary
+
+**M11 — PyPI publish 1.4.0 — Complete 2026-05-27.**
+
+**What shipped.** `docs-cli==1.4.0` is live on PyPI at
+`https://pypi.org/project/docs-cli/1.4.0/`. Annotated tag
+`v1.4.0` (tag object `4de329b9…`, pointing at commit
+`b8d8af3`) pushed to `origin`. GitHub release at
+`https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0`.
+
+**Published artefact bytes (chain-of-custody anchors):**
+
+| File | sha256 |
+|---|---|
+| `docs_cli-1.4.0-py3-none-any.whl` | `7af7eb5cb67a860e16d34fb6e8084207e4d3abf2d81fb013fef3b1721c4ec050` |
+| `docs_cli-1.4.0.tar.gz` | `0b0dd2ce1302b59cc862549a0d55fadf7210e27cfcd2e38b5f5f9ad31350c05b` |
+
+The wheel sha256 matched the Phase 2 build byte-for-byte
+(`src/` unchanged across the M11 stack — only `docs/` evolved).
+The sdist sha256 differed from Phase 2 by exactly the `docs/`
+and `CHANGELOG.md` content the Phase 1+2+3+4-CHANGELOG commits
+added.
+
+**PyPI-served wheel sha256 = local Phase 4 build sha256**
+(verified via `pip download --no-deps`). Chain-of-custody
+**bit-perfect**.
+
+**Headline M10 contract verified against PyPI-served wheel:**
+`docs migrate /tmp/m11-pypi-foreign --apply --quiet
+--config-project thing` against a synthetic foreign tree
+produced **exit 0 / stdout 0 bytes / stderr 0 bytes**;
+`.docs.toml` auto-emitted with `[project] name = "thing"`
++ `[archive] date_format`; `docs check` on the adopted tree
+exited 0.
+
+**Deviations from `release-runbook.md` (recorded for future
+releases):**
+
+- **CHANGELOG amend at Phase 5.** The runbook's "Real PyPI
+  publish" section says "Replace `## 1.3.0 — UNRELEASED` …
+  commit on `main`" — at M11 this step was different in shape:
+  the 1.4.0 CHANGELOG entry was authored at M10 Phase 10 dated
+  but carried the suffix "(LOCAL; not on PyPI)". M11 dropped
+  the suffix in Phase 4 (commit `e79d69f`) before the upload,
+  then in Phase 5 amended the entry body to replace "deferred
+  to M11" with "Published to PyPI 2026-05-27 via M11". The
+  PyPI-served sdist carries the M10-authored "deferred"
+  wording (immutable); the public GitHub release notes carry
+  the amended wording (mutable). Future releases that bump
+  CHANGELOG inline at the implementation milestone (M10 pattern)
+  should plan for this Phase-5 amend, or word the
+  implementation-milestone entry such that no
+  post-publish edit is needed.
+- **TestPyPI JSON metadata cache lag.** At both TestPyPI
+  (Phase 3) and PyPI (Phase 4) upload+seconds, the JSON
+  metadata API (`/pypi/<pkg>/json`) still served the
+  pre-upload `latest` and `releases` arrays. The simple index
+  (`/simple/<pkg>/`) that pip uses was current and the
+  throwaway-venv install worked first try. **Lesson for
+  future runs:** don't gate post-upload verification on JSON
+  metadata refresh — `pip install` is the authoritative
+  signal.
+- **TestPyPI squatter detour rolls forward.** The bare
+  `docs-cli` project on TestPyPI is still owned by the
+  unrelated user who registered it pre-M9 (`latest: 0.1.0`,
+  no author surface). M11 published the TestPyPI rehearsal
+  under `docs-cli-rehearsal==1.4.0` as M9 did. Re-check
+  ownership at v1.5+ Phase 1; if the squatter ever lapses,
+  the rehearsal-name detour can be dropped.
+- **Repo visibility flip is N/A.** Repo went public at M9
+  Phase 5; no flip needed at M11.
+- **Token re-scope rolls forward as M9 open follow-on.** The
+  bootstrap "Entire account" PyPI + TestPyPI tokens
+  successfully drove M11 unchanged from M9. The async
+  operator UI task of re-scoping to project-scoped tokens
+  remains a v1.5+ follow-on.
+
+**Operator-side state verified by M11 work (not just
+inventory):**
+
+- PyPI account + 2FA + token: proven by successful
+  `twine upload dist/*` at Phase 4.
+- TestPyPI account + 2FA + token: proven by successful
+  `twine upload --repository testpypi` at Phase 3.
+- `~/.pypirc` shape: proven by twine reading both sections
+  without prompting for credentials.
+
+**Code state at M11 close:** identical to M10 closeout
+(`src/` unchanged across the M11 stack). 401 passing pytest
+items; ruff / ruff format / mypy clean tree-wide;
+`docs check docs/` exit 0; `docs index --dry-run` exit 0.
+
+**Project-rename verb (M10 follow-on TODO) stays deferred.**
+M11 was a publish-only milestone; mixing release-event work
+with feature work was explicitly rejected at M11 scope
+confirmation (operator answer 2026-05-27, see milestone-doc
+Decisions). Leading candidate to open as M12 / v1.5 when
+operator surfaces concrete need.

@@ -15,8 +15,9 @@ automatically) with the carry-overs from M3
 warning), M7 (`Confidence` enum replacing the `bool | str`
 tri-value), and M8 (`--apply --quiet` per-file output
 suppression, `MigrationPlan.excluded_count` removal,
-adoption-playbook restructure). 1.4.0 is ready locally; the
-PyPI publish is deferred to M11.
+adoption-playbook restructure). Published to PyPI 2026-05-27
+via M11 (operator-driven publish milestone mirroring M9's
+relationship to M8).
 
 ### Added
 

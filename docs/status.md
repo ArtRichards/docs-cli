@@ -19,25 +19,33 @@ Related:
 
 ## Current milestone
 
-**M11 — PyPI publish 1.4.0** is **Active (2026-05-27)** — the
-publish-only counterpart to M10, mirroring M9 for 1.3.0. The
-milestone doc + impl log live at
-[m11-pypi-publish.md](m11-pypi-publish.md) +
-[m11-pypi-publish-impl.md](m11-pypi-publish-impl.md); the
-operative checklist is
-[release-runbook.md](release-runbook.md). The five operational
-phases (Operator prep → Pre-publish prep → TestPyPI rehearsal →
-Real PyPI publish → Post-release) await the operator's publish
-window. No code work; the M10 wheel + sdist already pass
-`twine check` locally, and M11 will rebuild fresh from
-post-merge-to-main HEAD at publish time per discipline. The
-project-rename verb flagged as a follow-on TODO at M10 closeout
-is **out of scope** for M11 and stays deferred to a later
-feature milestone.
+**docs-cli 1.4.0 shipped 2026-05-27.** **M11 — PyPI publish
+1.4.0** is complete: `docs-cli==1.4.0` is live at
+https://pypi.org/project/docs-cli/1.4.0/, the publish-only
+counterpart to M10 (mirroring M9's relationship to M8). The
+`v1.4.0` tag points at the M11 Phase 4 commit; the GitHub
+release lives at
+https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0.
+Chain-of-custody verified **bit-perfect** — the PyPI-served
+wheel sha256 (`7af7eb5c…`) is byte-identical to the local
+Phase 4 build. The headline M10 contract
+(`docs migrate --apply --quiet` produces empty stdout + empty
+stderr; `.docs.toml` auto-emitted with `[project]` +
+`[archive]`) was re-verified against the PyPI-served wheel
+during Phase 4 smoke against a synthetic foreign tree. The
+TestPyPI rehearsal again ran under the disambiguated dist
+name `docs-cli-rehearsal==1.4.0` (the bare `docs-cli` on
+TestPyPI is still parked by the M9-era squatter at 0.1.0; the
+detour rolls forward to v1.5+). See
+[m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md)'s
+milestone-completion summary for the full publish record +
+deviations; the
+[release-runbook.md](release-runbook.md) stays the operative
+reference for future releases.
 
 **M10 — Adoption-flow polish + 1.3.0 carry-overs** is
-**Complete (2026-05-27)** — 1.4.0 ready locally; publish
-deferred to M11. The milestone bundled the two user-surfaced
+**Complete (2026-05-27)** — shipped to PyPI as 1.4.0 via M11
+on 2026-05-27. The milestone bundled the two user-surfaced
 agent-driveability features (`docs touch <file...>` with
 multi-file atomic semantics, `docs migrate --apply` writes
 `.docs.toml` automatically + opportunistic empty-archive-
@@ -46,10 +54,9 @@ add_fields` allowlist + `unknown-field` check rule), M7
 (`Confidence` enum replacing the `bool | str` tri-value), and
 M8 (`--apply --quiet` per-file output suppression,
 `MigrationPlan.excluded_count` removal, adoption-playbook
-restructured to 4 steps). 400/400 pytest GREEN; ruff /
-ruff format / mypy / `docs check docs --stale 14` clean
-tree-wide; `dist/docs_cli-1.4.0-*` artefacts pass
-`twine check`. Phase 9 kebab-tiny dogfood (in
+restructured to 4 steps). 400/400 pytest GREEN at M10 close
+(401/401 across M11 phases — Phase 1 added the `~/.pypirc`
++ ownership inventory). Phase 9 kebab-tiny dogfood (in
 `/tmp/m10-dogfood` against the 1.4.0 wheel in
 `/tmp/docs-m10-venv`) confirmed `--apply --quiet` produces
 empty stdout + empty stderr, the auto-emitted `.docs.toml`
@@ -74,13 +81,13 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M11 — PyPI publish 1.4.0.** The
-`dist/docs_cli-1.4.0-*` artefacts are ready locally and
-pass `twine check`. M11 will be a release-runbook-driven
-publish milestone (mirroring M9 for 1.3.0): one publish
-event, a `v1.4.0` git tag, a GitHub release with the
-artefacts attached, and a closeout log capturing the
-upload sha256 + any deviations from the runbook.
+**Next action:** no active milestone — **docs-cli 1.4.0
+shipped 2026-05-27** as M11 (operator-driven publish
+milestone for the M10-built artefacts). The next-version
+line (provisionally "v1.5") is unscoped; open when a concrete
+need surfaces (the M10 follow-on TODO for a first-class
+`docs project rename <new-name>` verb is the leading
+candidate).
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -230,8 +237,8 @@ for the milestone summary.
 | M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; 1.4.0 ready locally — publish DEFERRED to M11; kebab-tiny dogfood PASS; 400/400 GREEN; `twine check` PASS on `dist/docs_cli-1.4.0-*`) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
-| M11 — PyPI publish 1.4.0 | **Active** (2026-05-27; mirrors M9 — publish-only milestone for the M10-built 1.4.0 artefacts; release-runbook-driven; awaits operator publish window) | [Plan](m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI via M11; 400/400 GREEN at M10 close; kebab-tiny dogfood PASS) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
@@ -320,9 +327,28 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action:** no active milestone — `docs-cli 1.3.0`
-shipped 2026-05-25. The next-version line (provisionally
-"v1.4") is unscoped; open when a concrete need surfaces.
+**Next action:** no active milestone — **docs-cli 1.4.0
+shipped 2026-05-27** as M11. The next-version line
+(provisionally "v1.5") is unscoped; open when a concrete need
+surfaces (the M10 follow-on TODO for a first-class
+`docs project rename <new-name>` verb is the leading
+candidate).
+
+**docs-cli 1.4.0 shipped 2026-05-27** as M11 — the
+operator-driven publish milestone for the M10-built artefacts,
+mirroring M9's relationship to M8. PyPI:
+https://pypi.org/project/docs-cli/1.4.0/; source:
+https://github.com/ArtRichards/docs-cli/releases/tag/v1.4.0;
+`v1.4.0` annotated tag at the M11 Phase 4 commit. M11 ran the
+[release-runbook.md](release-runbook.md) end-to-end:
+operator-state inventory → fresh artefact build → TestPyPI
+rehearsal under `docs-cli-rehearsal==1.4.0` (squatter detour
+continues) → real PyPI upload → chain-of-custody verified
+bit-perfect → smoke + M10 headline contract against the
+PyPI-served wheel → tag + GitHub release → doc closeouts.
+Full publish record + deviations in
+[m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md)'s
+milestone-completion summary.
 
 **docs-cli 1.3.0 shipped 2026-05-25** — one batched PyPI
 publish covering the M6 + M7 + M8 surface per the operator's
@@ -337,7 +363,7 @@ preserve). Full publish record + deviations recorded for
 future releases in
 [m9-pypi-publish.md](m9-pypi-publish.md)'s milestone-completion
 summary. The [release-runbook.md](release-runbook.md) stays
-the operative reference for the next release (v1.4+).
+the operative reference for the next release (v1.5+).
 
 **M7 Phases 1-4 complete (2026-05-24; review-tightening 2026-05-25):**
 task plan promoted to active, OQ A–D recorded as Decisions, log +
