@@ -6,8 +6,8 @@ Project: docs
 Updated: 2026-05-27
 
 Related:
-- child-of: m11-pypi-publish.md
-- pairs-with: m11-pypi-publish.md
+- child-of: archive/2026-05-27/m11-pypi-publish.md
+- pairs-with: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 

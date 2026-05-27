@@ -12,7 +12,7 @@ Related:
 - pairs-with: m8-adoption-workflow.md
 - pairs-with: m9-pypi-publish.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
-- pairs-with: m11-pypi-publish.md
+- pairs-with: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**

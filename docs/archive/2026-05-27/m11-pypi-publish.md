@@ -1,9 +1,10 @@
 # M11 — PyPI publish 1.4.0
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-27
+Archived-reason: Milestone M11 complete; docs-cli==1.4.0 shipped to PyPI 2026-05-27
 
 Related:
 - parent-of: m11-pypi-publish-impl.md
