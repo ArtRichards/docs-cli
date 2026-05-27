@@ -109,6 +109,16 @@ prior public release existed, no continuity to preserve.
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; 1.4.0 ready locally; publish DEFERRED to M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M11 — PyPI publish 1.4.0 | **Active** (2026-05-27; mirrors M9 — publish-only milestone for the M10-built 1.4.0 artefacts) | [m11-pypi-publish.md](m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
+
+**M11** is the publish-only counterpart to M10, mirroring how M9
+followed M8. M10 built and locally smoke-tested `docs-cli` 1.4.0;
+M11 runs the release-runbook (operator prep verify → fresh artefact
+rebuild → TestPyPI rehearsal under `docs-cli-rehearsal==1.4.0` →
+real PyPI publish → `v1.4.0` tag + GitHub release → post-publish
+doc closeouts). No code work; no new verbs. The project-rename verb
+flagged as a follow-on TODO at M10 closeout is **out of scope** and
+stays deferred to a later feature milestone.
 
 **M10** bundles the two user-surfaced agent-driveability features
 (`docs touch <file...>`, `docs migrate --apply` writes `.docs.toml`)

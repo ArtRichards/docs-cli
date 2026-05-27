@@ -12,11 +12,28 @@ Related:
 - pairs-with: m8-adoption-workflow.md
 - pairs-with: m9-pypi-publish.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
+- pairs-with: m11-pypi-publish.md
 - pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
+
+**M11 — PyPI publish 1.4.0** is **Active (2026-05-27)** — the
+publish-only counterpart to M10, mirroring M9 for 1.3.0. The
+milestone doc + impl log live at
+[m11-pypi-publish.md](m11-pypi-publish.md) +
+[m11-pypi-publish-impl.md](m11-pypi-publish-impl.md); the
+operative checklist is
+[release-runbook.md](release-runbook.md). The five operational
+phases (Operator prep → Pre-publish prep → TestPyPI rehearsal →
+Real PyPI publish → Post-release) await the operator's publish
+window. No code work; the M10 wheel + sdist already pass
+`twine check` locally, and M11 will rebuild fresh from
+post-merge-to-main HEAD at publish time per discipline. The
+project-rename verb flagged as a follow-on TODO at M10 closeout
+is **out of scope** for M11 and stays deferred to a later
+feature milestone.
 
 **M10 — Adoption-flow polish + 1.3.0 carry-overs** is
 **Complete (2026-05-27)** — 1.4.0 ready locally; publish
@@ -214,6 +231,7 @@ for the milestone summary.
 | M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; 1.4.0 ready locally — publish DEFERRED to M11; kebab-tiny dogfood PASS; 400/400 GREEN; `twine check` PASS on `dist/docs_cli-1.4.0-*`) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
+| M11 — PyPI publish 1.4.0 | **Active** (2026-05-27; mirrors M9 — publish-only milestone for the M10-built 1.4.0 artefacts; release-runbook-driven; awaits operator publish window) | [Plan](m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
