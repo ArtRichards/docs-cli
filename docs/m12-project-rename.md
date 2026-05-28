@@ -202,7 +202,7 @@ implementation milestone, M13 is the publish):
       kebab-tiny copy; touch outside-root in a synthetic
       no-`.docs.toml` directory; archive of a fixture milestone
       with referring docs)
-- [ ] Phase 10 — Quality, Docs, Refactor (1.5.0 artefact build
+- [x] Phase 10 — Quality, Docs, Refactor (1.5.0 artefact build
       + `twine check` PASS; CHANGELOG date; milestone-completion
       summaries; status + plan finalisation; INDEX lockstep)
 
@@ -324,6 +324,128 @@ Plus the M12-specific dogfood at Phase 9:
   `status.md`), each with `Related:` edges to the others; run
   `docs archive milestone.md`; assert `impl.md` + `status.md`
   now reference the archive path.
+
+## Milestone-completion summary (2026-05-28)
+
+M12 is **Complete** as a local-build-only milestone (M13 will
+publish). All four feature threads shipped per spec; quality
+gate green tree-wide; dogfood PASS on all four exercises.
+
+### What shipped
+
+1. **`docs project rename <new-name>`** — new verb in the
+   `docs project` namespace. Atomic semantics (validate-all-
+   first, commit-then-INDEX-once). Auto-normalises the operator-
+   supplied name via M7's `normalise_project_name()`; empty
+   post-normalised input exits 2. Multi-project trees tolerated:
+   non-matching docs reported in the footer, never mutated.
+   Archive subtree read-only (skipped + reported in the footer).
+   `--dry-run` prints the plan without writing. INDEX refreshed
+   exactly once at end-of-batch with the reloaded config (so the
+   new project name renders).
+2. **`docs touch <file>` outside-root refusal** — exits 2 with
+   `docs: touch: <path> is not under a docs root with .docs.toml;
+   refusing`. No file mutation; no INDEX refresh. `--root <dir>`
+   bypasses the refusal only when `<dir>/.docs.toml` exists,
+   otherwise exits 2 with the `--root` refusal wording.
+3. **`docs archive <doc>` referring-edge rewrite** — after the
+   archive move, every active-tree `Related: <verb>: <old-rel>`
+   bullet is rewritten to `archive/<YYYY-MM-DD>/<basename>`,
+   atomically with the move + lifecycle edit. `--cascade`
+   extends to all docs moved by the cascade in one atomic batch
+   with one INDEX refresh at end. Pre-flight `walk()` validate
+   catches malformed referring docs BEFORE the move. Prose
+   markdown references are deliberately untouched (M2 stance).
+4. **`__version__` sourced from `importlib.metadata`** —
+   `pyproject.toml [project] version` is the single source of
+   truth. `docs_cli.cli.__version__` reads via
+   `importlib.metadata.version("docs-cli")` at import time with
+   a `PackageNotFoundError` fallback to `0.0.0+local`. The
+   hardcoded `__version__ = "1.4.0"` literal is gone.
+
+Build artifacts ready: `dist/docs_cli-1.5.0-py3-none-any.whl`
++ `dist/docs_cli-1.5.0.tar.gz`; `twine check` PASS on both.
+CHANGELOG `## 1.5.0 — UNRELEASED` entry stays UNRELEASED until
+M13 publish.
+
+### Resolution recap — OQ-1 through OQ-11 (scope-decision OQs from Phase 1)
+
+All eleven auto-resolved per operator recommendation:
+
+- **OQ-1 — No-`.docs.toml` refusal on `docs project rename`:**
+  exit 2 + `docs: project rename: <cwd> is not under a docs
+  root with .docs.toml; refusing`. (Implemented in
+  `_resolve_project_root`.)
+- **OQ-2 — Footer format:** single human-readable stderr line;
+  empty clauses dropped when their counts are 0; suppressed
+  under `--quiet`; no `--json` mode in M12. (Implemented in
+  `_print_project_rename_footer`.)
+- **OQ-3 — No double-normalisation:** the operator's
+  `<new-name>` is normalised once; the sidecar's
+  `[project] name` is read as written for the no-op compare.
+- **OQ-4 — `PackageNotFoundError` fallback to `0.0.0+local`.**
+- **OQ-5 — No additional decision.** Existing INDEX renderer
+  handles the new project name automatically.
+- **OQ-6 — Cascade-archive per-doc forgiveness preserved:**
+  failed / declined cascade-archives contribute nothing to the
+  moves list, so their referring edges are not rewritten.
+- **OQ-7 — No `--json` mode in M12.**
+- **OQ-8 — Skill bundle resync deferred to Phase 7** (and
+  done there: `cp docs/{cli,convention}.md
+  src/docs_cli/skill/references/`).
+- **OQ-9 — Empty-name rejection:** post-normalisation empty
+  / whitespace-only input → exit 2 + the pinned wording.
+- **OQ-10 — Cascade INDEX-refresh timing unchanged:** one
+  end-of-batch refresh.
+- **OQ-11 — `docs touch --root <dir>` bypass:** only when
+  `<dir>/.docs.toml` exists; otherwise exit 2 + the
+  `--root`-named refusal.
+
+### Resolution recap — OQ-α through OQ-ι (Step 2 implementation OQs)
+
+All ten auto-resolved per the planning agent's recommended answer
+within frozen scope:
+
+- **OQ-α — Editable-install refresh:** ran
+  `pip install -e . --no-deps --force-reinstall --quiet` after
+  the pyproject 1.5.0 bump so `importlib.metadata.version`
+  reports 1.5.0.
+- **OQ-β — Touch refusal placement:** AFTER first-pass file-
+  existence check, preserving `test_touch_missing_file_exits_1`.
+- **OQ-γ — `_cascade_archive` return-type widening:** private
+  helper; single callsite; proceeded.
+- **OQ-δ — Cascade old-relpath access:** built
+  `(target, dest_relpath)` per successful `_archive_one` call.
+- **OQ-γ-bis — Docs without explicit `Project:` line:** treated
+  as implicitly matching via `_resolved_project(doc, config)`;
+  `set_metadata_field` inserts a new `Project:` line on rewrite.
+- **OQ-ε — Repo-own docs dogfood cleanup:** unconditional
+  `git checkout -- docs/ src/docs_cli/skill/references/`
+  after 9.D.
+- **OQ-ζ — CHANGELOG header:** `## 1.5.0 — UNRELEASED`
+  (em-dash + literal UNRELEASED, no parens).
+- **OQ-η — Project rename refusal stderr:** mirrors touch's
+  OQ-11 split (`--root` named when set; cwd/start named when
+  not).
+- **OQ-θ — Refactor `_cmd_mv` to use
+  `_rewrite_referring_edges`:** NO — deferred to Step 3
+  simplify pass.
+- **OQ-ι — Build vs editable interaction:** clean, no
+  interaction.
+
+### Follow-ons surfaced during 5–9
+
+- `_cmd_mv` still uses an inline walker; Step 3 (simplify pass)
+  may unify it with `_rewrite_referring_edges`.
+- `_find_malformed_doc` exists because `parse_metadata_block`
+  raises a bare `MetadataError("missing H1 ...")` without the
+  path. The cleaner long-term fix is to make
+  `parse_metadata_block` accept the path; not done in M12 to
+  keep the diff surgical.
+- The regex in `_rewrite_sidecar_project_name` uses `[ \t]*$`
+  rather than `\s*$` because `\s` matches newlines in MULTILINE
+  mode and was eating the blank line between TOML sections.
+  Recorded as a gotcha for future TOML-rewriter helpers.
 
 ## Success Criteria
 

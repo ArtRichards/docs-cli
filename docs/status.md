@@ -20,10 +20,13 @@ Related:
 
 ## Current milestone
 
-**M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
-is **Active (2026-05-28)** — operator-chosen kitchen-sink scope
-2026-05-28 over a focused project-rename-only milestone. M12
-bundles four threads in one TDD cycle:
+**v1.5.0 ready locally, M13 next.** **M12 — Project rename +
+M11 wart fixes + version SoT (v1.5.0)** is **Complete
+(2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl` +
+`dist/docs_cli-1.5.0.tar.gz` built locally, twine check PASS,
+432/432 pytest GREEN; PyPI publish is M13's scope (mirroring
+the M10 → M11, M8 → M9 cadence). M12 bundled four threads in
+one TDD cycle:
 
 1. **`docs project rename <new-name>`** — operator-facing
    headline; the M10 follow-on TODO captured at
@@ -56,25 +59,20 @@ bundles four threads in one TDD cycle:
    hardcode (and the corresponding lockstep-bump discipline) at
    every implementation milestone.
 
-M12 ships locally as 1.5.0; M13 is the publish counterpart
-(release-runbook-driven, will mirror M11 with the M11 lessons
-already folded into the runbook). **Scope frozen 2026-05-28.**
-OQ-A through OQ-D were triaged into Decisions per operator
-recommendations: (A) auto-normalise the new name via M7's
-`normalise_project_name()` with a stderr note on transformation;
-(B) rewrite only `Project:`-matching docs in multi-project
-trees, report non-matching count in footer; (C) outside-root
-`docs touch` exits 2 with stderr
-`docs: touch: <path> is not under a docs root with .docs.toml;
-refusing`; (D) cascade-archive referring-edge rewrite is a
-single atomic batch with one INDEX refresh at end. The Decisions
-block also carries the seven sub-decisions auto-resolved at
-draft time (verb syntax = `docs project rename <new-name>`;
-atomic semantics across all four features; Related-only / not
-prose; archive subtree read-only; CHANGELOG publish-survival
-wording per M11 lesson; importlib.metadata at import-time;
-version = 1.5.0 minor bump; no publish in M12). **Phase 1
-(Contract) opens in the next session via `/ship-milestone M12`.**
+M12 shipped locally as 1.5.0 on 2026-05-28. The four features
+(`docs project rename`, `docs touch` outside-root refusal,
+`docs archive` referring-edge rewrite, `importlib.metadata`
+version SoT) all landed atomically; the validate-all-first
+pattern proved robust across the 17 project-rename + 4 touch +
+6 archive new tests. Phase 9 dogfood PASS on all four
+exercises (kebab-tiny round-trip byte-identical; orphan touch
+refused; archive referring-edge rewrite atomic; repo's own
+docs/ round-tripped byte-identical). OQ-1 through OQ-11
+(Phase 1 scope decisions) + OQ-α through OQ-ι (Step 2
+implementation decisions) all auto-resolved per operator
+recommendation. M13 is the publish counterpart
+(release-runbook-driven, mirrors M11 with the M11 lessons
+already folded into the runbook).
 
 **docs-cli 1.4.0 shipped 2026-05-27.** **M11 — PyPI publish
 1.4.0** is complete: `docs-cli==1.4.0` is live at
@@ -138,18 +136,16 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M12 — Project rename + M11 wart fixes +
-version SoT (v1.5.0).** Active 2026-05-28. The milestone doc
-+ impl log live at
+**Next action:** **M13 — PyPI publish 1.5.0.** The publish-only
+counterpart to M12 (mirroring M11 → M10 and M9 → M8 cadences).
+Build artifacts ready at `dist/docs_cli-1.5.0-py3-none-any.whl`
++ `dist/docs_cli-1.5.0.tar.gz`; the operative checklist lives
+at [release-runbook.md](release-runbook.md) which already
+folds in the M11 cumulative lessons + deviations. The M12
+milestone doc + impl log carry the milestone-completion
+summaries at
 [m12-project-rename.md](m12-project-rename.md) +
-[m12-project-rename-impl.md](m12-project-rename-impl.md);
-Phase 1 (Contract) opens after operator triages OQ-A through
-OQ-D into Decisions. After M12 closes locally as 1.5.0, M13
-will be the publish-only milestone mirroring M11 — the M11
-lessons are already folded into the
-[release-runbook.md](release-runbook.md) Cumulative
-lessons + deviations section so M13 inherits them
-automatically.
+[m12-project-rename-impl.md](m12-project-rename-impl.md).
 
 ### M6 — preparation complete (2026-05-24)
 

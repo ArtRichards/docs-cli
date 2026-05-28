@@ -117,34 +117,39 @@ prior public release existed, no continuity to preserve.
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
-| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; bundles M10 follow-on `docs project rename` headline with M11 wart fixes for `docs touch` outside-root refusal + `docs archive` referring-edge rewrite + `importlib.metadata` version SoT — operator-chosen kitchen-sink scope 2026-05-28; **scope frozen 2026-05-28** — OQ-A through OQ-D promoted to Decisions; Phase 1 opens via `/ship-milestone M12`) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 432/432 pytest GREEN; PyPI publish is M13's scope) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
+| M13 — PyPI publish 1.5.0 | **Active** (2026-05-28; publish-only counterpart to M12, mirrors M11 → M10 / M9 → M8 cadences; release-runbook is the operative checklist with M11 cumulative lessons + deviations folded in) | _TBD (milestone doc opens with `/ship-milestone M13`)_ | _TBD_ |
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
-is **Active** (2026-05-28). The operator-chosen kitchen-sink scope
-bundles four threads: (1) the `docs project rename <new-name>`
-verb deferred from M10 (the leading candidate the M11 closeout
-flagged for v1.5) — atomic semantics matching `docs touch` +
+is **Complete (2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl`
++ `dist/docs_cli-1.5.0.tar.gz` built locally, `twine check` PASS,
+432/432 pytest GREEN, full quality gate clean tree-wide. The
+operator-chosen kitchen-sink scope landed all four threads in one
+TDD cycle: (1) `docs project rename <new-name>` verb deferred
+from M10 — atomic semantics matching `docs touch` +
 `docs migrate --apply`, rewriting `.docs.toml` `[project] name`
 + every conformant `Project:` line across the tree, INDEX refresh
-once at end; (2) `docs touch <path>` outside any docs root now
-refuses cleanly with exit 2 instead of inserting a stray
-`Updated:` line and crashing the downstream INDEX refresh (M11
-Phase 5 wart); (3) `docs archive <doc>` atomically rewrites
-referring `Related:` edges across the tree (M11 Phase 5 wart —
-operator currently runs a manual cleanup post-archive); (4)
-`__version__` sourced from `importlib.metadata.version("docs-cli")`,
-eliminating the two-place version hardcode parked since M6. Ships
-locally as 1.5.0; M13 is the publish counterpart. **Scope frozen
-2026-05-28** — OQ-A through OQ-D were triaged per operator
-recommendations: (A) auto-normalise the new name via M7's
-`normalise_project_name()` with a stderr note on transformation;
-(B) rewrite only `Project:`-matching docs in multi-project trees
-and report the non-matching count in a footer line; (C)
-`docs: touch: <path> is not under a docs root with .docs.toml;
-refusing` for the outside-root error wording; (D)
-cascade-archive referring-edge rewrite runs as a single atomic
-batch with one INDEX refresh at end. Phase 1 (Contract) opens
-in the next session via `/ship-milestone M12`.
+once at end, archive subtree skipped + reported, non-matching-
+project docs reported in the footer; (2) `docs touch <path>`
+outside any docs root refuses cleanly with exit 2 (M11 wart);
+(3) `docs archive <doc>` atomically rewrites referring `Related:`
+edges across the tree (M11 wart, cascade-aware); (4) `__version__`
+sourced from `importlib.metadata.version("docs-cli")`. Phase 9
+dogfood PASS on all four exercises (kebab-tiny round-trip
+byte-identical; orphan-dir touch refused; archive referring-edge
+rewrite atomic; repo's own docs/ round-tripped byte-identical).
+OQ-1 through OQ-11 (scope decisions) + OQ-α through OQ-ι (Step 2
+implementation decisions) all resolved per operator recommendation
+— see [m12-project-rename-impl.md](m12-project-rename-impl.md)'s
+milestone-completion summary for the full resolution log. **PyPI
+publish is M13's scope** — mirrors the M10 → M11, M8 → M9
+cadence.
+
+**M13 — PyPI publish 1.5.0** is **Active (2026-05-28)** — the
+publish-only counterpart to M12. The
+[release-runbook.md](release-runbook.md) is the operative
+checklist; the M11 cumulative lessons + deviations are already
+folded in, so M13 inherits them automatically.
 
 **M11 — `docs-cli==1.4.0` shipped 2026-05-27.** The publish-only
 counterpart to M10, mirroring how M9 followed M8. M11 ran the

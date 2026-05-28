@@ -46,7 +46,7 @@ progress, which is distinct.)
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-28 | pyproject.toml 1.4.0 → 1.5.0 (OQ-α: `pip install -e . --no-deps --force-reinstall --quiet` refreshed the editable install so `importlib.metadata.version("docs-cli")` reports 1.5.0); CHANGELOG.md `## 1.5.0 — UNRELEASED` entry (OQ-ζ format: em-dash + literal UNRELEASED, no parens; no "ready locally" / "deferred to M13" wording per the M11 lesson); skill refs cli.md / convention.md resynced from docs/ (OQ-8); spec drift sweep — every stderr message matches cli.md pins. All 432 tests GREEN. |
 | 8. Run Tests (GREEN) + quality gate | Complete | 2026-05-28 | 432/432 GREEN; ruff / ruff format --check / mypy / docs check / docs index --dry-run all clean; `dist/docs_cli-1.5.0-py3-none-any.whl` + `dist/docs_cli-1.5.0.tar.gz` built; twine check PASS on both. |
 | 9. Dogfood | Complete | 2026-05-28 | All four exercises PASS: 9.A kebab-tiny round-trip byte-identical (foo-bar → gizmo → foo-bar); 9.B touch outside-docs-root exits 2 with the pinned wording, file unchanged, no INDEX.md created; 9.C archive synthetic milestone trio rewrites Related: edges in impl.md + status.md to point at archive/2026-05-28/milestone.md; 9.D repo's own docs/ tree round-trip (docs → docs-renamed → docs) restored byte-identical, cleanup via `git checkout` verified clean. |
-| 10. Quality, Docs, Refactor | Pending | — | |
+| 10. Quality, Docs, Refactor | Complete | 2026-05-28 | Milestone-completion summary appended to both milestone doc + impl log; status.md + plan.md reflect M12 Complete + M13 Active (publish-only); INDEX regenerated in lockstep; final quality gate (pytest 432/432 GREEN; ruff / ruff format --check / mypy / docs check / docs index --dry-run all clean; twine check PASS) confirmed clean. CHANGELOG date stays UNRELEASED until M13 publish. |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-28)
 
@@ -644,4 +644,69 @@ All four dogfood exercises PASS.
 
 ## Phase 10 — Quality, Docs, Refactor
 
-_Not started._
+**Completed 2026-05-28.**
+
+### Edits
+
+- **`docs/m12-project-rename.md`** — appended a "Milestone-
+  completion summary (2026-05-28)" section before "Success
+  Criteria" with: what shipped (the four feature threads);
+  OQ-1 through OQ-11 (Phase 1 scope-decision OQs) resolution
+  recap; OQ-α through OQ-ι (Step 2 implementation OQs)
+  resolution recap; follow-ons surfaced during 5–9 (mv refactor
+  candidate for Step 3 simplify; `parse_metadata_block` could
+  accept a path; the TOML rewriter regex gotcha).
+- **`docs/m12-project-rename-impl.md`** — Phase 5–10 bodies
+  filled in with implementation details + test counts +
+  decisions; Phase Progress table marked Complete with today's
+  date for rows 5–10.
+- **`docs/status.md`** — "Current milestone" section rewritten
+  to "v1.5.0 ready locally, M13 next"; M12 Complete (2026-05-28);
+  "Next action" rewritten to point at M13 (publish-only,
+  release-runbook-driven).
+- **`docs/plan.md`** — M12 row marked **Complete** (2026-05-28);
+  new M13 row added as **Active** (2026-05-28); the "Current
+  milestone" paragraph block rewritten to summarise M12 as
+  complete (with dogfood PASS + OQ-resolution pointer) and
+  introduce M13 as the publish-only counterpart.
+
+### CHANGELOG date
+
+Per the M11 lesson, CHANGELOG `## 1.5.0 — UNRELEASED` stays
+UNRELEASED until M13 dates it at publish time. No edit here.
+
+### Frozen snapshot
+
+`tests/fixtures/expected/docs-INDEX.md` did not drift during
+Phases 5–10 (the touch/index cycle preserves marker-block
+bytes when the underlying entries do not change in title or
+description). Verified by `test_index_output_matches_frozen_snapshot`
+staying GREEN throughout.
+
+### Final quality gate
+
+```
+$ .venv/bin/python -m pytest tests/ -q
+432 passed
+
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+35 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 36 source files
+
+$ .venv/bin/docs check docs/
+docs: no violations found
+
+$ .venv/bin/docs index --root docs/ --dry-run | diff - docs/INDEX.md
+(no diff)
+
+$ .venv/bin/twine check dist/*
+Checking dist/docs_cli-1.5.0-py3-none-any.whl: PASSED
+Checking dist/docs_cli-1.5.0.tar.gz: PASSED
+```
+
+All green. M12 closed.
