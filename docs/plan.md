@@ -117,7 +117,7 @@ prior public release existed, no continuity to preserve.
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
-| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; bundles M10 follow-on `docs project rename` headline with M11 wart fixes for `docs touch` outside-root refusal + `docs archive` referring-edge rewrite + `importlib.metadata` version SoT — operator-chosen kitchen-sink scope 2026-05-28; OQ-A through OQ-D pending triage) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; bundles M10 follow-on `docs project rename` headline with M11 wart fixes for `docs touch` outside-root refusal + `docs archive` referring-edge rewrite + `importlib.metadata` version SoT — operator-chosen kitchen-sink scope 2026-05-28; **scope frozen 2026-05-28** — OQ-A through OQ-D promoted to Decisions; Phase 1 opens via `/ship-milestone M12`) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
 is **Active** (2026-05-28). The operator-chosen kitchen-sink scope
@@ -134,11 +134,17 @@ referring `Related:` edges across the tree (M11 Phase 5 wart —
 operator currently runs a manual cleanup post-archive); (4)
 `__version__` sourced from `importlib.metadata.version("docs-cli")`,
 eliminating the two-place version hardcode parked since M6. Ships
-locally as 1.5.0; M13 is the publish counterpart. OQ-A through
-OQ-D in the milestone doc capture the four sub-decision forks
-that need operator triage before Phase 1 opens (new-name validation
-behaviour; multi-project tree handling; `docs touch` error-message
-shape; cascade-archive referring-edge rewrite scope).
+locally as 1.5.0; M13 is the publish counterpart. **Scope frozen
+2026-05-28** — OQ-A through OQ-D were triaged per operator
+recommendations: (A) auto-normalise the new name via M7's
+`normalise_project_name()` with a stderr note on transformation;
+(B) rewrite only `Project:`-matching docs in multi-project trees
+and report the non-matching count in a footer line; (C)
+`docs: touch: <path> is not under a docs root with .docs.toml;
+refusing` for the outside-root error wording; (D)
+cascade-archive referring-edge rewrite runs as a single atomic
+batch with one INDEX refresh at end. Phase 1 (Contract) opens
+in the next session via `/ship-milestone M12`.
 
 **M11 — `docs-cli==1.4.0` shipped 2026-05-27.** The publish-only
 counterpart to M10, mirroring how M9 followed M8. M11 ran the

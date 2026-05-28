@@ -38,8 +38,9 @@ Related:
   CHANGELOG `## 1.5.0` entry authored with publish-survival
   wording per the M11 lesson; version bumps `pyproject.toml` +
   `tests/test_packaging.py` to 1.5.0.
-- Status: Active (Phase 1 opens immediately after operator
-  finalises the four OPEN QUESTIONS below)
+- Status: Active (scope frozen 2026-05-28; OQ-A through OQ-D
+  promoted to Decisions; Phase 1 opens in the next session
+  via `/ship-milestone M12`)
 
 ### Goal
 
@@ -205,7 +206,7 @@ implementation milestone, M13 is the publish):
       + `twine check` PASS; CHANGELOG date; milestone-completion
       summaries; status + plan finalisation; INDEX lockstep)
 
-## Decisions (auto-resolved at draft time)
+## Decisions
 
 - **Verb syntax: `docs project rename <new-name>`** —
   sub-command form, with `project` as the first nested verb
@@ -244,63 +245,55 @@ implementation milestone, M13 is the publish):
   refactor with no API change. SemVer-compliant.
 - **No publish in M12.** Mirrors M7/M8/M10 → M9/M11/M13
   cadence. M13 is the publish-only milestone.
+- **OQ-A — New-name validation in `project rename`:
+  auto-normalise** (operator decision 2026-05-28). The verb
+  invokes M7's `normalise_project_name()` (the same machinery
+  `docs migrate` already uses) and emits a stderr note when
+  the operator-supplied name differs from the normalised
+  form: `docs: project rename: normalised "<input>" to
+  "<output>"`. Consistent with `docs migrate`'s tolerance —
+  rejected (a) would create false friction for operators who
+  pass a mixed-case or underscored name; (c) would let
+  non-conformant `Project:` lines back into the tree the
+  rename verb is supposed to make consistent.
+- **OQ-B — Multi-project tree behaviour: rewrite only
+  matches, report others** (operator decision 2026-05-28).
+  `docs project rename A → B` rewrites *only* docs whose
+  `Project: A` matches; docs with `Project: <other>` are
+  reported in a footer line (`<N> doc(s) with non-matching
+  Project: left untouched: <project-name-list>`) but not
+  modified. Atomic semantics still hold for the matching
+  subset. Operator can resolve the cross-project
+  inconsistency separately (or accept it as a multi-project
+  docs root — M7 tolerates this shape). Rejected: (b) refuse
+  is too aggressive for tolerated-but-non-uniform trees; (c)
+  rewrite-all would silently swallow distinct project
+  identifiers.
+- **OQ-C — `docs touch` outside-docs-root error wording**
+  (operator decision 2026-05-28). Exit 2 (config error) with
+  stderr message
+  `docs: touch: <path> is not under a docs root with .docs.toml; refusing`.
+  Names the path *and* the underlying reason; mirrors the
+  existing `docs check` error-message style. File must not
+  be modified; no downstream INDEX refresh.
+- **OQ-D — `docs archive --cascade` referring-edge rewrite:
+  single atomic batch** (operator decision 2026-05-28). When
+  `docs archive A --cascade` cascades into archiving B
+  (because B `pairs-with: A`), the referring-edge rewrite
+  step rewrites edges-pointing-at-A *and* edges-pointing-at-B
+  in the same atomic batch, with a single INDEX refresh at
+  end. The cascade already happens in one operator
+  invocation; splitting the referring-edge rewrite would
+  surface inconsistent intermediate state (referring docs
+  briefly pointing at half-archived destinations).
 
 ## OPEN QUESTIONS
 
-Genuine forks for operator triage before Phase 1 opens.
-
-**OQ-A — New-name validation in `project rename`.** Should the
-verb (a) reject non-lowercase-kebab names with an explicit
-error, (b) auto-normalise to lowercase-kebab via M7's
-`normalise_project_name()` (the same machinery `docs migrate`
-already uses), or (c) accept any string the operator passes?
-
-Recommendation: **(b) auto-normalise** with a stderr note
-when the input differs from the normalised form. Consistent
-with `docs migrate`'s tolerance.
-
-**OQ-B — Multi-project tree behaviour.** A docs root might
-hold docs whose `Project:` lines don't all match the
-`.docs.toml` `[project] name` value (this is technically
-non-conformant per M7 normalisation, but tolerated). When
-`docs project rename A → B` runs:
-- (a) Rewrite *only* docs whose `Project:` matches `A`; leave
-  the other-project docs alone; report the count.
-- (b) Refuse the rename and surface the inconsistency.
-- (c) Rewrite every doc's `Project:` line to `B` regardless
-  of current value.
-
-Recommendation: **(a) rewrite only matches, report others** —
-operator can resolve the inconsistency separately. Atomic
-semantics still hold for the matching subset.
-
-**OQ-C — `docs touch` outside-docs-root error wording.**
-Exit 2 is settled; the stderr message shape is the question:
-- (a) `docs: touch: <path> is not under a docs root with .docs.toml; refusing`
-- (b) `docs: touch: no .docs.toml found in any ancestor of <path>; refusing to modify`
-- (c) Just `docs: touch: <path>: not a docs file`
-
-Recommendation: **(a)** — names the path *and* the
-underlying reason. Mirrors the existing `docs check`
-error-message style.
-
-**OQ-D — `docs archive` referring-edge rewrite scope on
-`--cascade`.** When `docs archive A --cascade` cascades into
-archiving B (because B `pairs-with: A`), should the
-referring-edge rewrite step:
-- (a) Rewrite edges that pointed at A to point at
-  `archive/<date>/A`, *and* rewrite edges that pointed at B
-  to point at `archive/<date>/B`, in the same atomic batch.
-- (b) Process A's archive (including referring-edge rewrite)
-  first, *then* process B's archive as a separate atomic
-  step, refreshing INDEX between them.
-- (c) Treat cascade as out-of-scope for referring-edge
-  rewrite — only rewrite for the top-level archive target.
-
-Recommendation: **(a) single atomic batch** — the cascade
-already happens in one operator invocation, splitting the
-referring-edge rewrite would surface inconsistent
-intermediate state.
+_None outstanding — OQ-A through OQ-D were triaged and
+promoted to the Decisions block above on 2026-05-28; the
+seven additional sub-decisions auto-resolved at draft time
+are also there. Scope is frozen; Phase 1 (Contract) opens
+in the next session via `/ship-milestone M12`._
 
 ## Testing / Quality Gate
 

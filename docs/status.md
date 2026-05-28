@@ -58,17 +58,23 @@ bundles four threads in one TDD cycle:
 
 M12 ships locally as 1.5.0; M13 is the publish counterpart
 (release-runbook-driven, will mirror M11 with the M11 lessons
-already folded into the runbook). The milestone doc carries
-**OQ-A through OQ-D** as genuine scope forks for operator
-triage before Phase 1 opens (new-name validation behaviour;
-multi-project tree handling; `docs touch` error-message shape;
-cascade-archive referring-edge rewrite scope). The doc-level
-auto-resolved Decisions block records the seven sub-decisions
-already settled at draft time (verb syntax = `docs project
-rename <new-name>`; atomic semantics across all four features;
-Related-only / not prose; archive subtree read-only; CHANGELOG
-publish-survival wording per M11 lesson; importlib.metadata at
-import-time; version = 1.5.0 minor bump; no publish in M12).
+already folded into the runbook). **Scope frozen 2026-05-28.**
+OQ-A through OQ-D were triaged into Decisions per operator
+recommendations: (A) auto-normalise the new name via M7's
+`normalise_project_name()` with a stderr note on transformation;
+(B) rewrite only `Project:`-matching docs in multi-project
+trees, report non-matching count in footer; (C) outside-root
+`docs touch` exits 2 with stderr
+`docs: touch: <path> is not under a docs root with .docs.toml;
+refusing`; (D) cascade-archive referring-edge rewrite is a
+single atomic batch with one INDEX refresh at end. The Decisions
+block also carries the seven sub-decisions auto-resolved at
+draft time (verb syntax = `docs project rename <new-name>`;
+atomic semantics across all four features; Related-only / not
+prose; archive subtree read-only; CHANGELOG publish-survival
+wording per M11 lesson; importlib.metadata at import-time;
+version = 1.5.0 minor bump; no publish in M12). **Phase 1
+(Contract) opens in the next session via `/ship-milestone M12`.**
 
 **docs-cli 1.4.0 shipped 2026-05-27.** **M11 — PyPI publish
 1.4.0** is complete: `docs-cli==1.4.0` is live at
@@ -295,7 +301,7 @@ for the milestone summary.
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI via M11; 400/400 GREEN at M10 close; kebab-tiny dogfood PASS) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
-| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; operator-chosen kitchen-sink scope; OQ-A through OQ-D pending triage; ships locally as 1.5.0; M13 publishes) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; operator-chosen kitchen-sink scope; **scope frozen 2026-05-28** — OQ-A through OQ-D promoted to Decisions per operator recommendations; Phase 1 opens via `/ship-milestone M12` in next session; ships locally as 1.5.0; M13 publishes) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
@@ -392,9 +398,10 @@ kitchen-sink scope). Headline feature: the M10 follow-on
 target spec) — plus three carry-overs: `docs touch` outside-
 docs-root refusal (M11 wart), `docs archive` referring-edge
 rewrite (M11 wart), and `importlib.metadata` version SoT (M6
-parked). OQ-A through OQ-D in
-[m12-project-rename.md](m12-project-rename.md) await operator
-triage before Phase 1 opens. M13 will publish 1.5.0 to PyPI.
+parked). **Scope frozen 2026-05-28** — OQ-A through OQ-D
+triaged into Decisions per operator recommendations. Phase 1
+(Contract) opens in the next session via `/ship-milestone M12`.
+M13 will publish 1.5.0 to PyPI.
 
 **docs-cli 1.4.0 shipped 2026-05-27** as M11 — the
 operator-driven publish milestone for the M10-built artefacts,

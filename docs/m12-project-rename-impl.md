@@ -24,8 +24,10 @@ Refactor) with objective, actions, results, decisions.
 - Milestone: M12 — Project rename verb + M11 wart fixes +
   version SoT (v1.5.0)
 - Started: 2026-05-28
-- Progress: **Phase 1 (Contract) opens after operator triages
-  OQ-A through OQ-D from the milestone doc.**
+- Progress: **Scope frozen 2026-05-28** (OQ-A through OQ-D
+  promoted to Decisions per operator recommendations). Phase 1
+  (Contract) opens in the next session via
+  `/ship-milestone M12`.
 
 (Note: doc-lifecycle status is in the front-matter `Lifecycle:`
 field above. This section tracks milestone-implementation
@@ -91,8 +93,9 @@ _Captured before Phase 1; historical._
 
 ## Phase 1 — Define Contract
 
-_Not started. Opens after OQ-A through OQ-D are triaged into
-Decisions._
+_Not started. Scope frozen 2026-05-28 (OQ-A through OQ-D
+promoted to Decisions per operator recommendations); Phase 1
+opens in the next session via `/ship-milestone M12`._
 
 ## Phase 2 — Write Tests (RED)
 
