@@ -179,7 +179,7 @@ to touch two files in lockstep.
 Standard 10-phase TDD cycle (no operational phases — M12 is an
 implementation milestone, M13 is the publish):
 
-- [ ] Phase 1 — Define Contract (the four-feature contract +
+- [x] Phase 1 — Define Contract (the four-feature contract +
       OPEN-QUESTION resolution into Decisions)
 - [ ] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures (project-rename test

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-05-28
 
 Related:
 - pairs-with: cli.md
@@ -84,7 +84,7 @@ The block terminates at the first blank line whose next non-empty line is *not* 
 
 | Field | Type | Meaning |
 |---|---|---|
-| `Project` | kebab-case slug | project this doc belongs to; defaults to `project.name` in `.docs.toml` if absent |
+| `Project` | kebab-case slug | project this doc belongs to; defaults to `project.name` in `.docs.toml` if absent. The CLI surface `docs project rename` rewrites this slug in lockstep across the sidecar and every doc that names it (M12). |
 | `Related` | list of `<verb>: <path>` | typed cross-references to other docs |
 | `Owner` | free-form | the human or team accountable for this doc |
 | `Tags` | comma-separated | free-form tags for filtering |

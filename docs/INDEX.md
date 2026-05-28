@@ -23,8 +23,8 @@ _Generated 2026-05-28. 33 docs active, 2 archived._
 
 ### Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-05-27.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-05-27.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-05-28.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-05-28.
 
 ### Active — Milestone
 
@@ -65,7 +65,7 @@ _Generated 2026-05-28. 33 docs active, 2 archived._
 
 ### Active — Reference
 
-- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-05-27.
+- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-05-28.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 - [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-05-20.
 

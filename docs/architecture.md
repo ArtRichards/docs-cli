@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-05-28
 
 Related:
 - implements: charter.md
@@ -24,20 +24,22 @@ inside the same wheel as package data.
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
 ├── cli.py                               ─ the CLI module (~3.8k lines)
-│   ├── dunder version                   (__version__ = "1.4.0")
+│   ├── dunder version                   (__version__ = importlib.metadata.version("docs-cli"))
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
 │   │                   `[exclude]` + `.docsignore` (M8)
 │   ├── model         — Doc dataclass; metadata block parser + editors
 │   ├── walker        — directory traversal, filter, archive detection
 │   ├── index         — INDEX.md render with marker-block preservation
-│   ├── archive       — atomic move + lifecycle edit (M2; M7 rename)
+│   ├── archive       — atomic move + lifecycle edit (M2; M7 rename;
+│   │                   M12 referring-edge rewrite)
 │   ├── mv            — rename + Related: rewrite across tree (M2)
 │   ├── new           — scaffolded doc creation (M2)
-│   ├── touch         — Updated: bump (M2)
+│   ├── touch         — Updated: bump (M2; M12 outside-root refusal)
 │   ├── check         — validation rules + exit-code matrix (M3)
 │   ├── list          — query view, human + --json (M3)
 │   ├── migrate       — foreign-tree inference + plan/apply (M4)
+│   ├── project       — rename verb (M12)
 │   ├── install-skill — materialise the bundled skill onto a host (M6)
 │   └── cli           — argparse dispatch, exit codes, --root resolution
 └── skill/                               ─ bundled Claude Code skill (M5)
@@ -49,6 +51,13 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
         ├── adoption-playbook.md          (M8 F8; bundle-only, no mirror)
         └── docs-toml-template.toml       (M8 F8; bundle-only starter)
 ```
+
+> Pinned by `tests/test_packaging.py` A3 to the bumping-target literal;
+> runtime read goes through stdlib `importlib.metadata` so a single
+> `pyproject.toml` version bump propagates to `docs --version`
+> automatically (M12). Fallback to `0.0.0+local` (M12 — OQ-4) if
+> `importlib.metadata.PackageNotFoundError` is raised — protects
+> fresh-clone runs without `pip install -e .`.
 
 **Sibling artifact: the Claude Code skill.** The Claude Code skill at
 `src/docs_cli/skill/` (M5) is **not** a `cli.py` module and adds no
