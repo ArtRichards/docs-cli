@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: plan
 Project: docs
-Updated: 2026-05-28
+Updated: 2026-05-29
 
 Related:
 - implements: charter.md
@@ -15,6 +15,7 @@ Related:
 - parent-of: m8-adoption-workflow.md
 - parent-of: m9-pypi-publish.md
 - parent-of: m12-project-rename.md
+- parent-of: m13-pypi-publish.md
 
 ## Sequencing
 
@@ -118,7 +119,7 @@ prior public release existed, no continuity to preserve.
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 432/432 pytest GREEN; PyPI publish is M13's scope) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
-| M13 — PyPI publish 1.5.0 | **Active** (2026-05-28; publish-only counterpart to M12, mirrors M11 → M10 / M9 → M8 cadences; release-runbook is the operative checklist with M11 cumulative lessons + deviations folded in) | _TBD (milestone doc opens with `/ship-milestone M13`)_ | _TBD_ |
+| M13 — PyPI publish 1.5.0 | **Active** (2026-05-29; publish-only counterpart to M12, mirrors M11 → M10 / M9 → M8 cadences; release-runbook is the operative checklist with M11 cumulative lessons + deviations folded in) | [m13-pypi-publish.md](m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
 is **Complete (2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl`
