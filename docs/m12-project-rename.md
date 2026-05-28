@@ -197,7 +197,7 @@ implementation milestone, M13 is the publish):
       cli.md / convention.md / architecture.md updates; skill
       ref resync; pyproject.toml `version = "1.5.0"`;
       test_packaging.py A3 pin)
-- [ ] Phase 8 — Run Tests (GREEN) + tree-wide quality gate
+- [x] Phase 8 — Run Tests (GREEN) + tree-wide quality gate
 - [ ] Phase 9 — Dogfood (project rename against a throwaway
       kebab-tiny copy; touch outside-root in a synthetic
       no-`.docs.toml` directory; archive of a fixture milestone
