@@ -41,7 +41,7 @@ progress, which is distinct.)
 | 2. Write Tests (RED) | Complete | 2026-05-28 | 17 project-rename + 5 touch + 6 archive + 3 version-SoT tests; test_packaging A3/B1/B2/C2 bumped to 1.5.0. |
 | 3. Create Data/Fixtures | Complete | 2026-05-28 | 4 new fixture trees (multi-project-alpha-sidecar, rename-with-archive, rename-with-malformed, archive-with-incoming-refs); first three pass `docs check`, fourth is deliberately malformed. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-28 | 32 RED / 400 GREEN; categorised across 6 expected M12-feature buckets + 2 lockstep buckets (skill_refs drift + a fresh-eyes snapshot bump from the touched-cli/convention/architecture dates). |
-| 5. Update Base Interfaces | Pending | — | |
+| 5. Update Base Interfaces | Complete | 2026-05-28 | importlib.metadata version SoT (with PackageNotFoundError fallback to `0.0.0+local`); `_find_root_strict` helper; `_resolve_touch_root` + `_resolve_project_root` refusal helpers (OQ-η split); `project` argparse namespace + `rename` sub-parser; main() dispatch; `_cmd_project_rename` stub. SKILL.md table row added for `docs project rename` to keep `test_every_named_verb_is_a_real_subcommand` GREEN. 29 RED / 403 GREEN. |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
 | 8. Run Tests (GREEN) + quality gate | Pending | — | |
@@ -332,7 +332,62 @@ edit) and kept the suite at 32 RED / 400 GREEN.
 
 ## Phase 5 — Update Base Interfaces
 
-_Not started._
+**Completed 2026-05-28.**
+
+### Code edits (cli.py)
+
+- **`__version__` is now sourced from `importlib.metadata`.** Removed
+  the hardcoded `__version__ = "1.4.0"` literal at the top of cli.py;
+  imports moved (`importlib.metadata` joined `importlib.resources` in
+  the stdlib block); `__version__ = importlib.metadata.version("docs-cli")`
+  wrapped in a `try` / `except importlib.metadata.PackageNotFoundError`
+  block that falls back to `"0.0.0+local"` (M12 — OQ-4). The
+  `^__version__\s*=\s*["\']\d` literal-refusal regex stays anchored at
+  line start with no leading whitespace, so the indented fallback
+  inside the `except` block does not match.
+- **`_find_root_strict(start: Path) -> Path | None`** added next to
+  `find_root`. Same walk-up loop, but returns `None` when no
+  `.docs.toml` ancestor is found. Used by M12 verbs that must refuse
+  rather than silently treat a non-managed dir as a docs root.
+- **`_resolve_touch_root(args, start)`** + **`_resolve_project_root(args, start)`**
+  free helpers, both returning `Path | int` (the int is an exit code
+  with the refusal message already printed to stderr). Both honour
+  the OQ-η split — `--root` named in stderr when set; the start path
+  named when not.
+- **`project` argparse sub-parser added between `touch_p` and
+  `check_p`** with a required `project_command` subparsers dest.
+  `project rename` carries `parents=[common]`, a positional `new_name`
+  (metavar `new-name`), and inherits `--root`, `--quiet`, `--dry-run`.
+- **`main()` dispatch** extended with an `if args.command == "project"`
+  branch routing `project rename` to `_cmd_project_rename`.
+- **`_cmd_project_rename` Phase-5 stub** (`return 2`) so `--help` works
+  but behaviour tests stay RED.
+
+### Skill bundle (one-line edit)
+
+- **`src/docs_cli/skill/SKILL.md`** — added a `Rename the project`
+  row to "The verbs" table:
+  `Rename the project | docs project rename <new-name> | rewrites .docs.toml + every Project: line; --dry-run`.
+  Keeps `test_every_named_verb_is_a_real_subcommand` GREEN now that
+  `project` exists as a real subcommand. The bundled cli.md /
+  convention.md mirrors are NOT resynced here — Phase 7 does that
+  (OQ-8).
+
+### Test results
+
+- `test_project_rename_help`, `test_project_rename_subcommand_registered`,
+  `test_cli_py_has_no_hardcoded_version_literal`,
+  `test_version_is_sourced_from_importlib_metadata` all flipped GREEN.
+- Suite: **29 failed, 403 passed.** Phase-4 baseline was 32 RED / 400
+  GREEN; Phase 5 flipped 4 tests GREEN, and `test_version_matches_pyproject`
+  flipped GREEN-to-RED (pyproject still 1.4.0 but `__version__` now
+  reports the editable-install version) — net (-2 RED, +0 GREEN-to-RED for
+  the version_matches test that was already counted differently).
+- The 29 remaining RED are: 17 project-rename, 4 touch outside-root, 3
+  archive referring-edge, 4 packaging (A3 / B1 / B2 / C2), 2 skill_refs
+  drift, 1 version_matches_pyproject.
+- `ruff check .` / `ruff format --check .` / `mypy` / `docs check docs/`
+  all clean.
 
 ## Phase 6 — Implement Offline/Core Path
 

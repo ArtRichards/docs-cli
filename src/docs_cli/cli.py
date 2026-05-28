@@ -22,11 +22,10 @@ CLI as `docs-cli` on PyPI and adds the `install-skill` verb.
 
 from __future__ import annotations
 
-__version__ = "1.4.0"
-
 import argparse
 import contextlib
 import enum
+import importlib.metadata
 import importlib.resources
 import json
 import os
@@ -34,6 +33,16 @@ import re
 import shutil
 import sys
 import tomllib
+
+# M12 — version SoT. `pyproject.toml`'s `[project] version` is the single
+# source of truth; `__version__` is read at import time via
+# `importlib.metadata.version("docs-cli")`. PackageNotFoundError (e.g. a
+# fresh-clone run that hasn't `pip install -e`'d yet) falls back to
+# `0.0.0+local` (M12 — OQ-4).
+try:
+    __version__ = importlib.metadata.version("docs-cli")
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "0.0.0+local"
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
@@ -985,6 +994,24 @@ def find_root(start: Path) -> Path:
         parent = current.parent
         if parent == current:
             return start.resolve()
+        current = parent
+
+
+def _find_root_strict(start: Path) -> Path | None:
+    """Walk up from `start` looking for `.docs.toml`; return None if absent.
+
+    M12: variant of `find_root` used by verbs that must refuse rather
+    than silently treat a non-managed dir as a docs root (`docs touch`
+    outside-root refusal; `docs project rename` no-`.docs.toml`
+    refusal).
+    """
+    current = start.resolve()
+    while True:
+        if (current / ".docs.toml").is_file():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
         current = parent
 
 
@@ -2878,6 +2905,41 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     touch_p.add_argument("files", nargs="+", help="Path(s) to the doc(s) to touch.")
 
+    # M12: `docs project` verb namespace. Today the only nested verb is
+    # `rename`; the namespace is reserved for future per-project verbs
+    # (`show`, `validate`, ...).
+    project_p = subparsers.add_parser(
+        "project",
+        help="Project-namespace verbs (rename, ...).",
+        description=(
+            "Project-namespace verbs (M12). Today: `rename`. Reserved for "
+            "future per-project verbs (show, validate, ...)."
+        ),
+    )
+    project_sub = project_p.add_subparsers(dest="project_command", required=True)
+
+    project_rename_p = project_sub.add_parser(
+        "rename",
+        parents=[common],
+        help="Rename the docs root's project across .docs.toml + every Project: line.",
+        description=(
+            "Rename the docs root's project (M12). Rewrites `.docs.toml`'s "
+            '`[project] name = "<old>"` to `name = "<new>"` and every '
+            "conformant `Project: <old>` line in every active doc, "
+            "atomically, with a single end-of-batch INDEX refresh. "
+            "`<new-name>` is auto-normalised via `normalise_project_name()`; "
+            "empty post-normalised input exits 2. `--dry-run` prints the "
+            "plan without writing. Archived docs are skipped + reported; "
+            "docs whose `Project:` does not match the old name are reported "
+            "in the success footer but not mutated."
+        ),
+    )
+    project_rename_p.add_argument(
+        "new_name",
+        metavar="new-name",
+        help="The new project slug. Auto-normalised; rejected if empty.",
+    )
+
     # M3 read-only verbs. They take neither --dry-run nor the `common` parent
     # (it carries --dry-run, meaningless when nothing is mutated).
     check_p = subparsers.add_parser(
@@ -3074,6 +3136,60 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _resolve_touch_root(args: argparse.Namespace, start: Path) -> Path | int:
+    """M12: resolve a docs root for `docs touch`, or print a refusal + exit code.
+
+    When `--root` is set, the directory must contain a `.docs.toml`;
+    otherwise return 2 with the `--root`-named refusal. When `--root` is
+    absent, walk up from `start`; if no `.docs.toml` ancestor is found,
+    return 2 with the start-path-named refusal (M12 — OQ-C / OQ-11 /
+    OQ-η).
+    """
+    if args.root:
+        root = Path(args.root).resolve()
+        if not (root / ".docs.toml").is_file():
+            print(
+                f"docs: touch: --root {args.root} does not contain .docs.toml; refusing",
+                file=sys.stderr,
+            )
+            return 2
+        return root
+    found = _find_root_strict(start)
+    if found is None:
+        print(
+            f"docs: touch: {start} is not under a docs root with .docs.toml; refusing",
+            file=sys.stderr,
+        )
+        return 2
+    return found
+
+
+def _resolve_project_root(args: argparse.Namespace, start: Path) -> Path | int:
+    """M12: resolve a docs root for `docs project rename`, or print a refusal.
+
+    Mirrors `_resolve_touch_root`'s split (`--root` named when set; the
+    start path named when not) for the `docs project rename` no-root
+    refusal (M12 — OQ-1 / OQ-η).
+    """
+    if args.root:
+        root = Path(args.root).resolve()
+        if not (root / ".docs.toml").is_file():
+            print(
+                f"docs: project rename: --root {args.root} does not contain .docs.toml; refusing",
+                file=sys.stderr,
+            )
+            return 2
+        return root
+    found = _find_root_strict(start)
+    if found is None:
+        print(
+            f"docs: project rename: {start} is not under a docs root with .docs.toml; refusing",
+            file=sys.stderr,
+        )
+        return 2
+    return found
 
 
 def _refresh_index(
@@ -3485,6 +3601,11 @@ def _cmd_touch(args: argparse.Namespace) -> int:
         for fp, _ in rewrites:
             print(f"docs: touched {fp}", file=sys.stderr)
     return 0
+
+
+def _cmd_project_rename(args: argparse.Namespace) -> int:
+    # Phase 5: stub. Behaviour lands in Phase 6.
+    return 2
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
@@ -4037,6 +4158,10 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_migrate(args)
     if args.command == "install-skill":
         return _cmd_install_skill(args)
+    if args.command == "project":
+        if args.project_command == "rename":
+            return _cmd_project_rename(args)
+        return 2
     return 2
 
 

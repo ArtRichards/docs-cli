@@ -186,7 +186,7 @@ implementation milestone, M13 is the publish):
       trees + touch-outside-root fixtures + archive
       referring-edge fixtures)
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces (parser / dataclass /
+- [x] Phase 5 — Update Base Interfaces (parser / dataclass /
       validator additions; importlib.metadata wire-up)
 - [ ] Phase 6 — Implement Offline/Core Path (project-rename
       walker + writer; touch-outside-root refusal; archive
