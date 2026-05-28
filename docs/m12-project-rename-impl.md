@@ -45,7 +45,7 @@ progress, which is distinct.)
 | 6. Implement Offline/Core Path | Complete | 2026-05-28 | `_cmd_project_rename` core (validate-all-first walk → sidecar+doc rewrite → INDEX); `_rewrite_sidecar_project_name` regex helper (`[ \t]*` boundary, not `\s*` — `\s` eats the trailing blank line in MULTILINE mode); `_print_project_rename_footer` with empty-clause drop; `_rewrite_referring_edges` shared walker (skips archived); `_find_malformed_doc` rescan helper to surface offending path when `parse_metadata_block` raises bare; `_cmd_touch` outside-root refusal inserted AFTER first-pass existence check (OQ-β); `_cmd_archive` adds pre-flight `walk()` validate + post-move `_rewrite_referring_edges` + cascade-batched moves; `_cascade_archive` returns `list[tuple[str, str]]` of moves (OQ-γ / OQ-δ). All 32 originally-RED M12 feature tests GREEN. 7 RED remain (Phase 7 targets: 4 packaging + 2 skill_refs + 1 version_matches_pyproject). |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-05-28 | pyproject.toml 1.4.0 → 1.5.0 (OQ-α: `pip install -e . --no-deps --force-reinstall --quiet` refreshed the editable install so `importlib.metadata.version("docs-cli")` reports 1.5.0); CHANGELOG.md `## 1.5.0 — UNRELEASED` entry (OQ-ζ format: em-dash + literal UNRELEASED, no parens; no "ready locally" / "deferred to M13" wording per the M11 lesson); skill refs cli.md / convention.md resynced from docs/ (OQ-8); spec drift sweep — every stderr message matches cli.md pins. All 432 tests GREEN. |
 | 8. Run Tests (GREEN) + quality gate | Complete | 2026-05-28 | 432/432 GREEN; ruff / ruff format --check / mypy / docs check / docs index --dry-run all clean; `dist/docs_cli-1.5.0-py3-none-any.whl` + `dist/docs_cli-1.5.0.tar.gz` built; twine check PASS on both. |
-| 9. Dogfood | Pending | — | |
+| 9. Dogfood | Complete | 2026-05-28 | All four exercises PASS: 9.A kebab-tiny round-trip byte-identical (foo-bar → gizmo → foo-bar); 9.B touch outside-docs-root exits 2 with the pinned wording, file unchanged, no INDEX.md created; 9.C archive synthetic milestone trio rewrites Related: edges in impl.md + status.md to point at archive/2026-05-28/milestone.md; 9.D repo's own docs/ tree round-trip (docs → docs-renamed → docs) restored byte-identical, cleanup via `git checkout` verified clean. |
 | 10. Quality, Docs, Refactor | Pending | — | |
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-28)
@@ -557,7 +557,90 @@ Local artifacts ready. M13 will publish to PyPI.
 
 ## Phase 9 — Dogfood
 
-_Not started._
+**Completed 2026-05-28.**
+
+### 9.A — Project rename round-trip against kebab-tiny copy
+
+Tree: `/tmp/m12-dogfood-rename/` (copied from
+`tests/fixtures/trees/real-trees-adopted/kebab-tiny/`; the
+fixture's actual `[project] name` is `foo-bar`, three docs
+`foo-bar-{plan,spec,status}.md`).
+
+```
+$ docs project rename gizmo --root /tmp/m12-dogfood-rename
+docs: project rename: foo-bar -> gizmo (rewrote .docs.toml + 3 doc(s))
+
+(verify: 3 docs now carry `Project: gizmo`; 0 still say `Project: foo-bar`;
+ .docs.toml `[project] name = "gizmo"`.)
+
+$ docs project rename foo-bar --root /tmp/m12-dogfood-rename
+docs: project rename: gizmo -> foo-bar (rewrote .docs.toml + 3 doc(s))
+```
+
+Post-round-trip sha256 sums (excluding `INDEX.md`, whose
+`_Generated <date>` line bumps): **byte-identical** to pre-state.
+
+### 9.B — Touch outside root refusal
+
+Tree: `/tmp/m12-dogfood-touch/` (a freshly-created dir with no
+`.docs.toml` and one `random.md` carrying valid metadata).
+
+```
+$ cd /tmp/m12-dogfood-touch
+$ docs touch /tmp/m12-dogfood-touch/random.md
+docs: touch: /tmp/m12-dogfood-touch/random.md is not under a docs root with .docs.toml; refusing
+EXIT=2
+```
+
+`random.md` is byte-identical to its pre-call state. No `INDEX.md`
+created in the orphan dir. PASS.
+
+### 9.C — Archive referring-edge rewrite
+
+Tree: `/tmp/m12-dogfood-archive/` (synthetic milestone trio —
+`milestone.md` (`pairs-with: impl.md`, `pairs-with: status.md`);
+`impl.md` (`pairs-with: milestone.md`); `status.md`
+(`references: milestone.md`)).
+
+```
+$ docs archive /tmp/m12-dogfood-archive/milestone.md --date 2026-05-28
+docs: archived milestone.md -> /tmp/m12-dogfood-archive/archive/2026-05-28/milestone.md
+```
+
+Verification:
+- `impl.md`: `Related:\n- pairs-with: archive/2026-05-28/milestone.md`
+- `status.md`: `Related:\n- references: archive/2026-05-28/milestone.md`
+
+Both referring edges rewritten atomically with the move. PASS.
+
+### 9.D — Repo's own docs/ tree round-trip
+
+Pre-snapshot: 33 active `.md` files + `.docs.toml` (INDEX.md
+excluded for the dogfood guard). Working tree clean before the
+dogfood.
+
+```
+$ docs project rename docs-renamed --root docs/
+docs: project rename: docs -> docs-renamed (rewrote .docs.toml + 33 doc(s); 2 archived skipped)
+
+(33 active docs carry Project: docs-renamed; 0 still carry Project: docs.
+ 2 archived docs untouched as expected.)
+
+$ docs project rename docs --round-trip... --root docs/
+docs: project rename: docs-renamed -> docs (rewrote .docs.toml + 33 doc(s); 2 archived skipped)
+```
+
+Post-round-trip sha256 sums (excluding INDEX.md): **byte-identical
+to pre-state across all 33 docs + sidecar.**
+
+**Cleanup (OQ-ε, unconditional):**
+```
+$ git checkout -- docs/ src/docs_cli/skill/references/
+$ git status -s docs/ src/docs_cli/skill/references/
+(empty — clean)
+```
+
+All four dogfood exercises PASS.
 
 ## Phase 10 — Quality, Docs, Refactor
 

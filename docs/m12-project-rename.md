@@ -198,7 +198,7 @@ implementation milestone, M13 is the publish):
       ref resync; pyproject.toml `version = "1.5.0"`;
       test_packaging.py A3 pin)
 - [x] Phase 8 — Run Tests (GREEN) + tree-wide quality gate
-- [ ] Phase 9 — Dogfood (project rename against a throwaway
+- [x] Phase 9 — Dogfood (project rename against a throwaway
       kebab-tiny copy; touch outside-root in a synthetic
       no-`.docs.toml` directory; archive of a fixture milestone
       with referring docs)
