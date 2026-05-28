@@ -280,6 +280,56 @@ real docs evolve, the snapshot is regenerated lockstep. Done by copying
 overwriting the expected file with the result. Re-run of the snapshot
 test is GREEN; no contract change.
 
+### Post-review tightening (fresh-eyes review, 2026-05-28)
+
+A fresh-eyes review of the Phase-2 RED tests surfaced six contract-pinning
+assertions that hedged with `or` or substring fragments where cli.md
+pinned an exact literal. All six tightenings are test-only (no source
+edit) and kept the suite at 32 RED / 400 GREEN.
+
+- **Fix 1 — footer non-matching count (`test_project_rename_footer_reports_non_matching_count`).**
+  Replaced `"non-matching" in proc.stderr and "beta" in proc.stderr` with
+  literal `"non-matching project(s) untouched:"` + `"beta" appears after
+  the marker"` + count assertion `"3 non-matching project(s) untouched:"`
+  (the multi-project-alpha-sidecar fixture has 3 beta docs in the active
+  subtree). Matches cli.md OQ-2.
+- **Fix 2 — empty/whitespace-name (`test_project_rename_rejects_empty_input`, `_rejects_whitespace_only_input`).**
+  Replaced `"normalises to empty string" or "must be non-empty"` with the
+  full-message literal `"normalises to empty string; project name must
+  be non-empty"`. Matches cli.md OQ-9.
+- **Fix 3 — dry-run sidecar (`test_project_rename_dry_run_makes_no_change`).**
+  Added the per-doc literal `"would rewrite Project: in"` plus the
+  sidecar literal `"would rewrite [project] name in .docs.toml"` plus the
+  quoted-name pair `'"minimal" -> "foo"'`. Matches cli.md dry-run pins.
+- **Fix 4 — exit code 1 on referring-doc malformed (`test_archive_referring_edge_rewrite_is_atomic`).**
+  Replaced `proc.returncode != 0` with `proc.returncode == 1` per the
+  M12 archive exit-code row in cli.md (`MetadataError → return 1`,
+  consistent with existing cli.py:3346 branch).
+- **Fix 5 — byte-identity INDEX idempotency (`test_project_rename_refreshes_index_once`, `test_archive_referring_edge_rewrite_refreshes_index_once`).**
+  Replaced "exactly one refresh" mtime-only check with a follow-up
+  `docs index` no-op + byte-identical INDEX assertion — proves the verb
+  left INDEX fully refreshed at end-of-batch (more robust on fast
+  filesystems than mtime-equality with sleep).
+- **Fix 6 (nit) — archive-subtree footer (`test_project_rename_skips_archive_subtree`).**
+  Replaced `"1 archived" or "archived skipped"` with literal
+  `"1 archived skipped"` per cli.md OQ-2.
+
+### Post-review skipped findings (recorded as decisions, no test changes)
+
+- **Skipped (nit-6, archive-subtree-not-rewritten second direction):** the
+  M12 rewrite walker only targets the moved doc's old path; a `Related:`
+  edge from a separately-archived doc never matches the rewrite target.
+  Existing test coverage is sufficient.
+- **Skipped (nit-8, help-test smoke):** `test_project_rename_help` /
+  `test_project_rename_subcommand_registered` are intentional
+  registration guards (not contract-shape assertions). Keep as-is.
+- **Skipped (nit-9, `alpha-old-spec.md` Lifecycle: active naming):**
+  fixture intent — an old-but-still-active spec exercises the within-
+  group `Updated:` sort. No fixture rename.
+- **Skipped (nit-10, legacy `add_statuses` TOML key in multi-project
+  trees):** pre-existing in the `multi-project/` fixture; out of M12
+  scope.
+
 ## Phase 5 — Update Base Interfaces
 
 _Not started._

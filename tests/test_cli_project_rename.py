@@ -128,14 +128,18 @@ def test_project_rename_rejects_empty_input(docs_script, fixtures_dir, tmp_path)
     root = _minimal_tree(fixtures_dir, tmp_path)
     proc = _run(docs_script, "project", "rename", "", "--root", str(root))
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
-    assert "normalises to empty string" in proc.stderr or "must be non-empty" in proc.stderr
+    # cli.md OQ-9 pins the full message:
+    #   "docs: project rename: <input> normalises to empty string;
+    #    project name must be non-empty"
+    assert "normalises to empty string; project name must be non-empty" in proc.stderr
 
 
 def test_project_rename_rejects_whitespace_only_input(docs_script, fixtures_dir, tmp_path):
     root = _minimal_tree(fixtures_dir, tmp_path)
     proc = _run(docs_script, "project", "rename", "   ", "--root", str(root))
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
-    assert "normalises to empty string" in proc.stderr or "must be non-empty" in proc.stderr
+    # Same full-message pin as the empty-string test (cli.md OQ-9).
+    assert "normalises to empty string; project name must be non-empty" in proc.stderr
 
 
 # --- Dry-run / normalisation / quiet ----------------------------------------
@@ -151,7 +155,13 @@ def test_project_rename_dry_run_makes_no_change(docs_script, fixtures_dir, tmp_p
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert (root / ".docs.toml").read_text() == before[".docs.toml"]
     assert (root / "lone-doc.md").read_text() == before["lone-doc.md"]
-    assert "would rewrite" in proc.stderr
+    # cli.md pins two dry-run line shapes:
+    #   per-doc: "docs: would rewrite Project: in <rel-path>"
+    #   sidecar: 'docs: would rewrite [project] name in .docs.toml: "<old>" -> "<new>"'
+    assert "would rewrite Project: in" in proc.stderr, proc.stderr
+    assert "would rewrite [project] name in .docs.toml" in proc.stderr, proc.stderr
+    # The sidecar line carries the old + new quoted names.
+    assert '"minimal" -> "foo"' in proc.stderr, proc.stderr
 
 
 def test_project_rename_normalises_input(docs_script, fixtures_dir, tmp_path):
@@ -232,6 +242,18 @@ def test_project_rename_refreshes_index_once(docs_script, fixtures_dir, tmp_path
     # The new project name is in the INDEX body.
     assert "foo" in index.read_text()
 
+    # Byte-identity idempotency check: a follow-up `docs index` must be a
+    # no-op if the rename refreshed INDEX correctly at end-of-batch.
+    # Equivalent to "exactly one refresh, correctly placed" — cheaper than
+    # mtime equality with sleep and robust on fast filesystems.
+    index_after_rename = index.read_bytes()
+    noop = _run(docs_script, "index", "--root", str(root))
+    assert noop.returncode == 0, noop.stderr
+    assert index.read_bytes() == index_after_rename, (
+        "INDEX changed on a follow-up `docs index` — the rename did not "
+        "leave INDEX in a fully-refreshed state."
+    )
+
 
 # --- Archive subtree --------------------------------------------------------
 
@@ -250,8 +272,8 @@ def test_project_rename_skips_archive_subtree(docs_script, fixtures_dir, tmp_pat
     # byte-identical to its pre-call state.
     assert archived.read_text() == archived_before
     assert "Project: rename-target" in archived.read_text()
-    # The footer reports the archive count.
-    assert "1 archived" in proc.stderr or "archived skipped" in proc.stderr
+    # cli.md OQ-2 pins the footer clause "<M> archived skipped".
+    assert "1 archived skipped" in proc.stderr
 
 
 # --- Multi-project footer ---------------------------------------------------
@@ -261,10 +283,18 @@ def test_project_rename_footer_reports_non_matching_count(docs_script, fixtures_
     root = _multi_project_alpha_tree(fixtures_dir, tmp_path)
     proc = _run(docs_script, "project", "rename", "gamma", "--root", str(root))
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
-    # The success line mentions non-matching project(s) untouched. The
-    # multi-project-alpha-sidecar fixture has three beta-named docs.
-    assert "non-matching" in proc.stderr
-    assert "beta" in proc.stderr
+    # cli.md OQ-2 pins the success footer literal:
+    #   "<K> non-matching project(s) untouched: <list>"
+    # The multi-project-alpha-sidecar fixture has three beta-named docs in
+    # the active subtree (beta-status.md Lifecycle:active,
+    # beta-notes.md Lifecycle:draft, beta-done.md Lifecycle:done — all
+    # outside archive/, so all three are walked).
+    marker = "non-matching project(s) untouched:"
+    assert marker in proc.stderr, proc.stderr
+    after_marker = proc.stderr.split(marker, 1)[1]
+    assert "beta" in after_marker, proc.stderr
+    # The count number (3) appears in the footer.
+    assert "3 non-matching project(s) untouched:" in proc.stderr, proc.stderr
 
 
 # --- Prose is not touched ---------------------------------------------------

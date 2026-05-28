@@ -213,7 +213,10 @@ def test_archive_referring_edge_rewrite_is_atomic(docs_script, fixtures_dir, tmp
         "--date",
         "2026-05-28",
     )
-    assert proc.returncode != 0, (proc.stdout, proc.stderr)
+    # cli.md's M12 exit-code matrix pins exit 1 for "referring doc has
+    # malformed metadata (move aborts)". Matches the existing
+    # _cmd_archive MetadataError -> return 1 branch (cli.py:3346).
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
     # The original core.md was NOT moved.
     assert (root / "core.md").is_file()
     assert (root / "core.md").read_text() == before_core
@@ -223,8 +226,10 @@ def test_archive_referring_edge_rewrite_is_atomic(docs_script, fixtures_dir, tmp
 
 def test_archive_referring_edge_rewrite_refreshes_index_once(docs_script, fixtures_dir, tmp_path):
     """Pre-build INDEX.md; archive a doc with referring edges; verify the
-    INDEX file's mtime advances exactly once (the archive verb refreshes
-    the INDEX end-of-batch, not per referring-doc rewrite)."""
+    INDEX file's mtime advances and that a follow-up `docs index` is a
+    no-op (byte-identity idempotency) — proves the archive verb refreshed
+    INDEX once, correctly, at end-of-batch (not per referring-doc rewrite
+    nor missing the refresh)."""
     root = _crossrefs_tree(fixtures_dir, tmp_path)
     pre = _run(docs_script, "index", "--root", str(root))
     assert pre.returncode == 0, pre.stderr
@@ -242,6 +247,16 @@ def test_archive_referring_edge_rewrite_refreshes_index_once(docs_script, fixtur
     assert proc.returncode == 0, proc.stderr
     mtime_after = index.stat().st_mtime_ns
     assert mtime_after > mtime_before
+
+    # Byte-identity idempotency check: a follow-up `docs index` must be a
+    # no-op if the archive refreshed INDEX correctly at end-of-batch.
+    index_after_archive = index.read_bytes()
+    noop = _run(docs_script, "index", "--root", str(root))
+    assert noop.returncode == 0, noop.stderr
+    assert index.read_bytes() == index_after_archive, (
+        "INDEX changed on a follow-up `docs index` — the archive did not "
+        "leave INDEX in a fully-refreshed state."
+    )
 
 
 def test_archive_cascade_rewrites_edges_for_both_moves_atomically(
