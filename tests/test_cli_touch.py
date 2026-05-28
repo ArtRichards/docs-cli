@@ -193,3 +193,73 @@ def test_touch_multi_file_dry_run_modifies_nothing(docs_script, tmp_path):
     for p in (a, b, c):
         assert p.read_text() == before[p.name], f"{p.name} body changed on --dry-run"
     assert index.read_bytes() == index_before, "INDEX must not refresh on --dry-run"
+
+
+# --- M12 — outside-docs-root refusal (OQ-C) ---------------------------------
+
+
+def _orphan_doc(tmp_path: Path) -> tuple[Path, Path]:
+    """Build `tmp_path/no_docs_toml/random.md` with valid metadata but NO
+    `.docs.toml` anywhere on the upward chain.
+
+    Returns `(parent_dir, doc_path)`. The parent dir is suitable for use as
+    `cwd=...` in `_run` so the upward `.docs.toml` walk surfaces nothing.
+    """
+    parent = tmp_path / "no_docs_toml"
+    parent.mkdir()
+    doc = parent / "random.md"
+    doc.write_text(
+        "# Random\n\nLifecycle: active\nRole: notes\nProject: random\n"
+        "Updated: 2026-01-01\n\nBody.\n"
+    )
+    return parent, doc
+
+
+def test_touch_outside_docs_root_exits_2(docs_script, tmp_path):
+    parent, doc = _orphan_doc(tmp_path)
+    before = doc.read_text()
+    proc = _run(docs_script, "touch", str(doc), cwd=parent)
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "is not under a docs root with .docs.toml" in proc.stderr
+    assert "refusing" in proc.stderr
+    # File byte-identical to its pre-call state.
+    assert doc.read_text() == before
+
+
+def test_touch_outside_docs_root_no_index_refresh(docs_script, tmp_path):
+    parent, doc = _orphan_doc(tmp_path)
+    proc = _run(docs_script, "touch", str(doc), cwd=parent)
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # No INDEX.md created in the orphan directory.
+    assert not (parent / "INDEX.md").exists()
+
+
+def test_touch_outside_docs_root_names_the_path(docs_script, tmp_path):
+    parent, doc = _orphan_doc(tmp_path)
+    proc = _run(docs_script, "touch", str(doc), cwd=parent)
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # The doc path appears verbatim somewhere in stderr.
+    assert str(doc) in proc.stderr or "random.md" in proc.stderr
+
+
+def test_touch_outside_docs_root_explicit_root_bypasses_refusal(docs_script, tmp_path):
+    """`docs touch --root <valid-root> <file>` succeeds when <root>/.docs.toml
+    exists, even if the file resolution would otherwise have triggered the
+    outside-root refusal."""
+    valid_root, _doc = _multi_file_tree(tmp_path)[:2]
+    # Use one of the multi_file_tree docs (already inside the valid root)
+    # with an explicit --root.
+    a = valid_root / "a.md"
+    proc = _run(docs_script, "touch", "--root", str(valid_root), str(a))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_touch_root_without_docs_toml_refuses(docs_script, tmp_path):
+    """`docs touch --root <dir>` with <dir>/.docs.toml missing refuses with
+    exit 2 + the `--root` refusal message."""
+    parent, doc = _orphan_doc(tmp_path)
+    proc = _run(docs_script, "touch", "--root", str(parent), str(doc))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "--root" in proc.stderr
+    assert "does not contain .docs.toml" in proc.stderr
+    assert "refusing" in proc.stderr

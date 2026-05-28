@@ -97,15 +97,15 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_1_4_0() -> None:
-    """A3: `[project].version` is `1.4.0`.
+def test_a3_project_version_is_1_5_0() -> None:
+    """A3: `[project].version` is `1.5.0` (M12).
 
-    Intended RED reason: Phase 4 pyproject still says
-    `version = "0.2.0-m2"`. Phase 6 bumps it.
+    Intended RED reason: M12 has not bumped the pyproject `version`
+    string yet; Phase 7 bumps it.
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "1.4.0", (
-        f"[project].version must be '1.4.0'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "1.5.0", (
+        f"[project].version must be '1.5.0'; got {data['project']['version']!r}"
     )
 
 
@@ -213,25 +213,26 @@ def built_dist(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def test_b1_wheel_builds(built_dist: dict) -> None:
-    """B1: `python -m build` produces a wheel named `docs_cli-1.4.0-*.whl`.
+    """B1: `python -m build` produces a wheel named `docs_cli-1.5.0-*.whl`.
 
-    Intended RED reason: no `[build-system]` at Phase 4 — `python -m
-    build` errors out. The fixture surfaces that as a pytest failure.
+    Intended RED reason: M12 has not bumped the pyproject `version` to
+    1.5.0 yet, so the build still produces a 1.4.0 wheel.
     """
     assert built_dist["wheel"].exists()
-    assert built_dist["wheel"].name.startswith("docs_cli-1.4.0-"), (
-        f"wheel filename must encode version 1.4.0; got {built_dist['wheel'].name}"
+    assert built_dist["wheel"].name.startswith("docs_cli-1.5.0-"), (
+        f"wheel filename must encode version 1.5.0; got {built_dist['wheel'].name}"
     )
 
 
 def test_b2_sdist_builds(built_dist: dict) -> None:
-    """B2: `python -m build` produces an sdist `docs_cli-1.4.0.tar.gz`.
+    """B2: `python -m build` produces an sdist `docs_cli-1.5.0.tar.gz`.
 
-    Intended RED reason: same as B1 — no build backend.
+    Intended RED reason: same as B1 — M12 has not bumped pyproject to
+    1.5.0 yet.
     """
     assert built_dist["sdist"].exists()
-    assert built_dist["sdist"].name == "docs_cli-1.4.0.tar.gz", (
-        f"sdist filename must be 'docs_cli-1.4.0.tar.gz'; got {built_dist['sdist'].name}"
+    assert built_dist["sdist"].name == "docs_cli-1.5.0.tar.gz", (
+        f"sdist filename must be 'docs_cli-1.5.0.tar.gz'; got {built_dist['sdist'].name}"
     )
 
 
@@ -332,11 +333,11 @@ def test_c1_docs_on_path_in_venv(wheel_venv: Path) -> None:
     assert wheel_venv.is_file()
 
 
-def test_c2_docs_version_is_1_4_0(wheel_venv: Path) -> None:
-    """C2: `docs --version` prints `1.4.0`.
+def test_c2_docs_version_is_1_5_0(wheel_venv: Path) -> None:
+    """C2: `docs --version` prints `1.5.0` (M12).
 
-    Intended RED reason: `__version__` is `0.4.0-m4` in `bin/docs` at
-    Phase 4. Phase 6 bumps it.
+    Intended RED reason: M12 has not bumped `__version__` (now sourced
+    from `importlib.metadata`) to 1.5.0 yet. Phase 7 bumps it.
     """
     result = subprocess.run(
         [str(wheel_venv), "--version"],
@@ -348,12 +349,12 @@ def test_c2_docs_version_is_1_4_0(wheel_venv: Path) -> None:
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     combined = (result.stdout + result.stderr).strip()
-    # Exact-token match: bare substring `"1.4.0" in combined` would also
-    # accept `21.4.0` or `1.4.0.dev0`. Split on whitespace and require the
+    # Exact-token match: bare substring `"1.5.0" in combined` would also
+    # accept `21.5.0` or `1.5.0.dev0`. Split on whitespace and require the
     # version token to appear verbatim.
     tokens = combined.split()
-    assert "1.4.0" in tokens, (
-        f"`docs --version` must print '1.4.0' as a standalone token; got: {combined!r}"
+    assert "1.5.0" in tokens, (
+        f"`docs --version` must print '1.5.0' as a standalone token; got: {combined!r}"
     )
 
 
