@@ -132,46 +132,46 @@ to touch two files in lockstep.
 
 ### Deliverables
 
-- [ ] `docs project rename <new-name>` verb landed; rewrites
+- [x] `docs project rename <new-name>` verb landed; rewrites
       `.docs.toml` `[project] name` + every `Project:` line in
       every active doc; atomic semantics; `--dry-run` supported;
       INDEX refresh once at end.
-- [ ] `docs touch <path>` outside a docs root refuses with
+- [x] `docs touch <path>` outside a docs root refuses with
       exit 2 + clear stderr; file not modified; no downstream
       INDEX refresh.
-- [ ] `docs archive <doc>` rewrites referring `Related:` edges
+- [x] `docs archive <doc>` rewrites referring `Related:` edges
       across the tree atomically with the move. `--cascade`
       semantics unchanged.
-- [ ] `src/docs_cli/cli.py`: `__version__ =
+- [x] `src/docs_cli/cli.py`: `__version__ =
       importlib.metadata.version("docs-cli")`. Hardcoded
       version string removed.
-- [ ] `pyproject.toml` `version` bumped to `1.5.0`.
-- [ ] `tests/test_packaging.py` A3 expected version updated to
+- [x] `pyproject.toml` `version` bumped to `1.5.0`.
+- [x] `tests/test_packaging.py` A3 expected version updated to
       `1.5.0`.
-- [ ] `CHANGELOG.md` `## 1.5.0 — UNRELEASED` entry added,
+- [x] `CHANGELOG.md` `## 1.5.0 — UNRELEASED` entry added,
       authored with publish-survival wording (no "ready
       locally" / "deferred" markers per the M11 lesson).
-- [ ] `dist/docs_cli-1.5.0-py3-none-any.whl` + `dist/docs_cli-1.5.0.tar.gz`
+- [x] `dist/docs_cli-1.5.0-py3-none-any.whl` + `dist/docs_cli-1.5.0.tar.gz`
       built locally; `twine check` PASS.
-- [ ] Phase 9 dogfood: run `docs project rename` against a
+- [x] Phase 9 dogfood: run `docs project rename` against a
       throwaway dogfood tree (e.g. a copy of `kebab-tiny` under
       `/tmp/m12-dogfood`); verify atomic semantics + INDEX
       consistency.
-- [ ] `docs/cli.md` documents `docs project rename` + the
+- [x] `docs/cli.md` documents `docs project rename` + the
       updated `touch` + `archive` semantics.
-- [ ] `docs/convention.md` updated if the convention's wording
+- [x] `docs/convention.md` updated if the convention's wording
       on `Project:` needs clarification post-rename verb.
-- [ ] `docs/architecture.md` notes the `importlib.metadata`
+- [x] `docs/architecture.md` notes the `importlib.metadata`
       version-SoT decision + the new `project` verb namespace.
-- [ ] Bundled skill references resynced
+- [x] Bundled skill references resynced
       (`src/docs_cli/skill/references/{cli,convention}.md` ↔
       `docs/{cli,convention}.md`); `tests/test_skill_refs.py`
       GREEN.
-- [ ] `docs/status.md` + `docs/plan.md` finalised: M12 row
+- [x] `docs/status.md` + `docs/plan.md` finalised: M12 row
       Complete; M11 row stays Complete; "Current milestone"
       → "v1.5.0 ready locally, M13 next"; INDEX + dogfood
       snapshot regenerated lockstep.
-- [ ] Milestone-completion summary appended to
+- [x] Milestone-completion summary appended to
       `m12-project-rename.md` + `m12-project-rename-impl.md`.
 
 ## Phase Checklist
@@ -451,24 +451,24 @@ within frozen scope:
 
 M12 is complete when:
 
-- [ ] `docs project rename <new>` works against the repo's own
+- [x] `docs project rename <new>` works against the repo's own
       docs root: rename docs → docs-renamed → docs round-trips
       to byte-identical state; INDEX + dogfood snapshot
       regenerated in lockstep.
-- [ ] `docs touch /tmp/no-docs-root/random.md` exits 2 + leaves
+- [x] `docs touch /tmp/no-docs-root/random.md` exits 2 + leaves
       `random.md` unchanged.
-- [ ] `docs archive` of a doc with referring `Related:` edges
+- [x] `docs archive` of a doc with referring `Related:` edges
       rewrites the referring docs atomically (one INDEX refresh,
       no dangling edges).
-- [ ] `python -c "from docs_cli.cli import __version__; print(__version__)"`
+- [x] `python -c "from docs_cli.cli import __version__; print(__version__)"`
       prints `1.5.0` via `importlib.metadata`.
-- [ ] `tests/test_packaging.py` A3 asserts and PASSES against
+- [x] `tests/test_packaging.py` A3 asserts and PASSES against
       the literal `"1.5.0"`.
-- [ ] Full quality gate green tree-wide.
-- [ ] `dist/docs_cli-1.5.0-*` built; `twine check` PASS.
-- [ ] All Phase Checklist items above ticked.
-- [ ] `docs/status.md` reflects M12 Complete + M13 next.
-- [ ] `docs/m12-project-rename-impl.md` carries a
+- [x] Full quality gate green tree-wide.
+- [x] `dist/docs_cli-1.5.0-*` built; `twine check` PASS.
+- [x] All Phase Checklist items above ticked.
+- [x] `docs/status.md` reflects M12 Complete + M13 next.
+- [x] `docs/m12-project-rename-impl.md` carries a
       milestone-completion summary describing what shipped,
       which OPEN QUESTIONS resolved which way, and any new
       open follow-ons surfaced during implementation.

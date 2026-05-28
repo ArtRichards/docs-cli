@@ -266,8 +266,10 @@ line per matching doc, plus
 plus the footer. Exits 0; writes nothing.
 
 **No-op.** When the normalised `<new-name>` equals the sidecar's
-current `[project] name` **and** no active doc carries a non-matching
-`Project:` line, prints (gated on `not --quiet`):
+current `[project] name`, the verb is a no-op regardless of whether
+the active tree carries non-matching `Project:` docs (the rename has
+nothing to rewrite — non-matching docs hold a different project name
+and remain untouched). Prints (gated on `not --quiet`):
 
 ```
 docs: project rename: <new> already current — no rewrites needed
