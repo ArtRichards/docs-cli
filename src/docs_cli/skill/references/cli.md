@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-05-28
 
 Related:
 - pairs-with: convention.md
@@ -70,6 +70,22 @@ Atomically archive a doc.
 `--cascade` walks `Related: pairs-with` and `Related: child-of` and prompts to archive each related doc to the same dated directory. One hop only — no transitive cascade. Without `--cascade`, related docs are left in place (potential drift surfaced by `docs check`).
 
 Atomicity: the metadata edit happens in a tmp file, fsync'd, renamed; the move happens only after the edit succeeds; the index regen runs last. A failure leaves the original file untouched.
+
+**Referring-edge rewrite (M12).** After the move, `docs archive`
+rewrites every `Related: <verb>: <old-rel>` bullet across the active
+tree to point at `archive/<YYYY-MM-DD>/<basename>`. Mirrors `docs mv`'s
+walker (`rewrite_related_refs`) — only the `Related:` field is
+considered; prose markdown references are deliberately left alone.
+Archive-subtree docs are read-only and are NOT updated. The rewrite
+is part of the same atomic batch as the move + lifecycle edit: a
+single end-of-batch INDEX refresh covers everything.
+
+`--cascade` (M12 — OQ-D) extends this — when the cascade archives
+related docs B, C, …, the referring-edge rewrites for every moved doc
+run as a single atomic batch with one INDEX refresh at the end.
+Per-doc cascade-archive failures still surface but only docs that
+actually moved get their referring edges rewritten. Cascade remains
+one-hop only (M2 decision unchanged).
 
 Exits 1 on metadata-edit failure; 2 on archive-dir creation failure.
 
@@ -170,6 +186,123 @@ Multi-root invocation (`docs touch a.md b.md` where `a.md` and `b.md`
 resolve to different docs roots) is **undefined behaviour and out of
 M10 scope** — the validate-all-first pass refuses with exit 1 + an
 "outside the resolved docs root" message.
+
+**Outside-docs-root refusal (M12 — OQ-C).** If `--root` is not given
+and no `.docs.toml` exists in the cwd's ancestor chain, `docs touch`
+refuses with exit 2 + stderr message
+`docs: touch: <path> is not under a docs root with .docs.toml; refusing`.
+The file is left unchanged and no INDEX refresh runs (avoiding the M11
+cascade-crash where a downstream walk failed on the first non-managed
+sibling). An explicit `--root <dir>` bypasses the refusal **only when**
+`<dir>/.docs.toml` exists; if `--root` is set but its `.docs.toml` is
+missing, `touch` refuses with
+`docs: touch: --root <root> does not contain .docs.toml; refusing`
+(exit 2) (M12 — OQ-11).
+
+### `docs project rename <new-name>`
+
+Rename the docs root's project (M12). Rewrites `.docs.toml`'s
+`[project] name = "<old>"` to `name = "<new>"` **and** every
+conformant `Project: <old>` line in every active doc, atomically, with
+a single end-of-batch INDEX refresh.
+
+```
+docs project rename <new-name> [--dry-run] [--quiet] [--root DIR]
+```
+
+`<new-name>` is required. A missing positional triggers argparse's
+default exit 2.
+
+**Resolution.** Operates on the docs root resolved from cwd via the
+standard upward `.docs.toml` walk, unless `--root` overrides it
+(M12 — OQ-1). If the resolved root has no `.docs.toml`, exits 2 with
+stderr `docs: project rename: <cwd> is not under a docs root with .docs.toml; refusing`.
+
+**Auto-normalisation (M12 — OQ-A).** The operator-supplied `<new-name>`
+is run through M7's `normalise_project_name()` (the same machinery
+`docs migrate` already uses). When the normalised form differs from
+the input, stderr carries one line (gated on `not --quiet`):
+
+```
+docs: project rename: normalised "<input>" to "<normalised>"
+```
+
+before the rewrite proceeds with the normalised value. The current
+`.docs.toml` `[project] name` value is read **as written** for the
+no-op comparison — no double-normalisation (M12 — OQ-3).
+
+**Empty-name rejection (M12 — OQ-9).** If post-normalisation
+`<new-name>` is empty or whitespace-only, refuses with exit 2 + stderr
+`docs: project rename: <input> normalises to empty string; project name must be non-empty`.
+
+**What gets rewritten** (success path):
+
+- `.docs.toml`'s `[project] name = "<old>"` line → `name = "<new>"`.
+- Every conformant `Project: <old>` line in every **active-tree** doc
+  → `Project: <new>`.
+- `INDEX.md` regenerated once at end of batch.
+
+**Multi-project tolerance (M12 — OQ-B).** A tree whose active docs
+carry mixed `Project:` values (the M7-tolerated multi-project shape)
+is walked completely: docs whose `Project:` matches `<old>` are
+rewritten; docs with a non-matching `Project:` are reported in the
+success footer but never mutated.
+
+**Archive-subtree skip.** Docs under the configured `archive_dir` are
+read-only by convention (M3); `project rename` skips them and reports
+the count in the footer.
+
+**Atomic semantics.** Validate-all-first: parse every active doc,
+build the rewrite tuple + the sidecar plan; if any step in
+validate-and-prepare raises, exits 1 (or 2 for a malformed
+`.docs.toml`) with the offending path named on stderr and no on-disk
+mutation. After validation passes, every rewrite is committed via
+`atomic_write`, then `.docs.toml` is rewritten, then `INDEX.md` is
+refreshed exactly once.
+
+**`--dry-run`.** Prints one `docs: would rewrite Project: in <rel-path>`
+line per matching doc, plus
+`docs: would rewrite [project] name in .docs.toml: "<old>" -> "<new>"`,
+plus the footer. Exits 0; writes nothing.
+
+**No-op.** When the normalised `<new-name>` equals the sidecar's
+current `[project] name` **and** no active doc carries a non-matching
+`Project:` line, prints (gated on `not --quiet`):
+
+```
+docs: project rename: <new> already current — no rewrites needed
+```
+
+to stderr; exits 0; no disk mutation; no INDEX refresh.
+
+**Success output (M12 — OQ-2).** A single human-readable stderr line
+(gated on `not --quiet`):
+
+```
+docs: project rename: <old> -> <new> (rewrote .docs.toml + <N> doc(s); <M> archived skipped; <K> non-matching project(s) untouched: <list>)
+```
+
+When `K == 0` **and** `M == 0`, the empty clauses are dropped to:
+
+```
+docs: project rename: <old> -> <new> (rewrote .docs.toml + <N> doc(s))
+```
+
+No `--json` mode in M12 (M12 — OQ-7).
+
+**What does NOT change.**
+
+- Prose markdown text mentioning the old name. Only the metadata
+  `Project:` field is rewritten — never `Related:` edges (which carry
+  no project signal) and never body prose. (Consistent with M2's
+  `docs mv` "Related: only, not prose" stance.)
+- Files outside the docs root.
+- Archive-subtree docs.
+
+**Exit codes.** 0 success / no-op / dry-run; 1 recoverable error
+(e.g. a doc with no editable metadata block); 2 hard error (malformed
+`.docs.toml`, no `.docs.toml` ancestor, empty post-normalised
+`<new-name>`).
 
 ### `docs install-skill [--dest DIR] [--copy|--symlink] [--force] [--quiet]`
 
@@ -523,5 +656,13 @@ total excluded count per top-level dir prefix
 | 0 | Success (or warnings-only on `check`) |
 | 1 | Recoverable error (file conflict, validation warning, missing input) |
 | 2 | Hard error (invalid vocab, atomic operation failure, validation errors) |
+
+M12-specific exit-code shape:
+
+| Verb | 0 | 1 | 2 |
+|---|---|---|---|
+| `project rename` | success / no-op / dry-run | doc lacks editable metadata block | malformed `.docs.toml`; no `.docs.toml` ancestor; empty post-normalised `<new-name>` |
+| `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
+| `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure |
 
 CI integration: `docs check` returning 2 should fail the build.

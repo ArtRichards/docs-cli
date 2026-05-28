@@ -43,7 +43,7 @@ progress, which is distinct.)
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-28 | 32 RED / 400 GREEN; categorised across 6 expected M12-feature buckets + 2 lockstep buckets (skill_refs drift + a fresh-eyes snapshot bump from the touched-cli/convention/architecture dates). |
 | 5. Update Base Interfaces | Complete | 2026-05-28 | importlib.metadata version SoT (with PackageNotFoundError fallback to `0.0.0+local`); `_find_root_strict` helper; `_resolve_touch_root` + `_resolve_project_root` refusal helpers (OQ-η split); `project` argparse namespace + `rename` sub-parser; main() dispatch; `_cmd_project_rename` stub. SKILL.md table row added for `docs project rename` to keep `test_every_named_verb_is_a_real_subcommand` GREEN. 29 RED / 403 GREEN. |
 | 6. Implement Offline/Core Path | Complete | 2026-05-28 | `_cmd_project_rename` core (validate-all-first walk → sidecar+doc rewrite → INDEX); `_rewrite_sidecar_project_name` regex helper (`[ \t]*` boundary, not `\s*` — `\s` eats the trailing blank line in MULTILINE mode); `_print_project_rename_footer` with empty-clause drop; `_rewrite_referring_edges` shared walker (skips archived); `_find_malformed_doc` rescan helper to surface offending path when `parse_metadata_block` raises bare; `_cmd_touch` outside-root refusal inserted AFTER first-pass existence check (OQ-β); `_cmd_archive` adds pre-flight `walk()` validate + post-move `_rewrite_referring_edges` + cascade-batched moves; `_cascade_archive` returns `list[tuple[str, str]]` of moves (OQ-γ / OQ-δ). All 32 originally-RED M12 feature tests GREEN. 7 RED remain (Phase 7 targets: 4 packaging + 2 skill_refs + 1 version_matches_pyproject). |
-| 7. Update Tool/Wrapper Layer | Pending | — | |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-05-28 | pyproject.toml 1.4.0 → 1.5.0 (OQ-α: `pip install -e . --no-deps --force-reinstall --quiet` refreshed the editable install so `importlib.metadata.version("docs-cli")` reports 1.5.0); CHANGELOG.md `## 1.5.0 — UNRELEASED` entry (OQ-ζ format: em-dash + literal UNRELEASED, no parens; no "ready locally" / "deferred to M13" wording per the M11 lesson); skill refs cli.md / convention.md resynced from docs/ (OQ-8); spec drift sweep — every stderr message matches cli.md pins. All 432 tests GREEN. |
 | 8. Run Tests (GREEN) + quality gate | Pending | — | |
 | 9. Dogfood | Pending | — | |
 | 10. Quality, Docs, Refactor | Pending | — | |
@@ -483,7 +483,33 @@ edit) and kept the suite at 32 RED / 400 GREEN.
 
 ## Phase 7 — Update Tool/Wrapper Layer
 
-_Not started._
+**Completed 2026-05-28.**
+
+### Edits
+
+- **`pyproject.toml`** — `version = "1.4.0"` → `"1.5.0"`.
+- **Editable install refresh (OQ-α)** —
+  `.venv/bin/pip install -e . --no-deps --force-reinstall --quiet`
+  so `importlib.metadata.version("docs-cli")` reports 1.5.0 in the
+  Python session pytest spawns.
+- **`CHANGELOG.md`** — prepended `## 1.5.0 — UNRELEASED` entry
+  (OQ-ζ format: em-dash + literal UNRELEASED, no parens) with
+  Added / Changed / Notes sections describing the four M12
+  features. NO `(LOCAL; not on PyPI)` suffix; NO "ready locally"
+  / "deferred to M13" wording (M11 lesson). Date stays UNRELEASED
+  until M13 publish.
+- **Skill refs resynced (OQ-8)** —
+  `cp docs/cli.md src/docs_cli/skill/references/cli.md` and
+  `cp docs/convention.md src/docs_cli/skill/references/convention.md`.
+  `test_skill_refs.py` flipped GREEN.
+- **Spec drift sweep** — re-read cli.md's `### docs project
+  rename`, `### docs touch`, `### docs archive` sections; every
+  Phase 6 stderr message matches the pinned wording.
+
+### Test results
+
+- All 432 tests GREEN.
+- ruff / ruff format --check / mypy / `docs check docs/` clean.
 
 ## Phase 8 — Run Tests (GREEN) + quality gate
 

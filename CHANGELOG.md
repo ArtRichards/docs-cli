@@ -5,6 +5,71 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.5.0 — UNRELEASED
+
+M12: project rename verb + M11 wart fixes + version SoT.
+Bundles the operator-facing `docs project rename` headline
+deferred from M10 with burn-down of two M11-surfaced warts
+(`docs touch` outside-root refusal; `docs archive` referring-
+edge rewrite) and a small packaging refactor
+(`__version__` sourced from `importlib.metadata`).
+
+### Added
+
+- **`docs project rename <new-name>`** (M12) — new operator
+  verb in the `docs project` namespace. Rewrites
+  `.docs.toml`'s `[project] name` and every conformant
+  `Project: <old>` line in every active doc, atomically,
+  with a single end-of-batch INDEX refresh. Validates the
+  whole batch up-front; any malformed doc aborts before any
+  write. The operator-supplied `<new-name>` is auto-
+  normalised via M7's `normalise_project_name()`; empty
+  post-normalised input exits 2. `--dry-run` prints the
+  plan without writing. Multi-project trees are tolerated:
+  docs whose `Project:` does not match the old name are
+  reported in the success footer but not mutated. The
+  archive subtree is read-only (skipped + reported).
+
+### Changed
+
+- **`docs touch <file>` outside a docs root now refuses
+  cleanly** (M12 — OQ-C). When no `.docs.toml` exists in
+  the resolved ancestor chain, `docs touch` exits 2 with
+  `docs: touch: <path> is not under a docs root with
+  .docs.toml; refusing` and leaves the file unchanged. No
+  downstream INDEX refresh runs (closes the M11 cascade-
+  crash where a sibling failed its Lifecycle check). An
+  explicit `--root <dir>` bypasses the refusal only when
+  `<dir>/.docs.toml` exists; otherwise exit 2 with
+  `docs: touch: --root <root> does not contain .docs.toml;
+  refusing` (M12 — OQ-11).
+- **`docs archive <doc>` now rewrites referring `Related:`
+  edges** (M12). After the move, every `Related: <verb>:
+  <old-rel>` bullet across the active tree is rewritten to
+  point at `archive/<YYYY-MM-DD>/<basename>`, atomically
+  with the move and lifecycle edit. `--cascade` extends
+  this to all docs moved by the cascade in a single atomic
+  batch with one end-of-batch INDEX refresh. Prose
+  markdown references to the old path are deliberately left
+  alone (consistent with M2's `docs mv` "Related: only, not
+  prose" stance).
+- **`__version__` sourced from `importlib.metadata`** (M12).
+  `pyproject.toml`'s `[project] version` is the single
+  source of truth; `docs_cli.cli.__version__` reads via
+  `importlib.metadata.version("docs-cli")` at import time
+  with a `PackageNotFoundError` fallback to `0.0.0+local`
+  for fresh-clone runs that haven't `pip install -e`'d yet
+  (M12 — OQ-4). The hardcoded `__version__ = "1.4.0"`
+  literal in `src/docs_cli/cli.py` is gone.
+
+### Notes
+
+- **Version bump.** 1.5.0 (minor) — SemVer-compliant: the
+  new verb is additive; the M11 wart fixes are bug fixes;
+  the `importlib.metadata` refactor has no API change.
+- **`Project:` row of `convention.md` updated** to mention
+  `docs project rename` as the in-lockstep rewriter.
+
 ## 1.4.0 — 2026-05-27
 
 M10: adoption-flow polish + 1.3.0 carry-overs. Bundles two

@@ -191,7 +191,7 @@ implementation milestone, M13 is the publish):
 - [x] Phase 6 — Implement Offline/Core Path (project-rename
       walker + writer; touch-outside-root refusal; archive
       referring-edge rewrite walker)
-- [ ] Phase 7 — Update Tool/Wrapper Layer (argparse: new
+- [x] Phase 7 — Update Tool/Wrapper Layer (argparse: new
       `project rename` sub-command; updated touch / archive
       messages; CHANGELOG.md `## 1.5.0 — UNRELEASED` entry;
       cli.md / convention.md / architecture.md updates; skill
