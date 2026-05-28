@@ -171,9 +171,7 @@ def test_archive_rewrites_referring_edges_in_other_docs(docs_script, fixtures_di
     assert "references: core.md" not in overview
 
 
-def test_archive_does_not_touch_prose_references_to_old_path(
-    docs_script, fixtures_dir, tmp_path
-):
+def test_archive_does_not_touch_prose_references_to_old_path(docs_script, fixtures_dir, tmp_path):
     """A doc whose body prose mentions `core.md` is not rewritten by the
     archive referring-edge walker — `Related:` only."""
     root = _crossrefs_tree(fixtures_dir, tmp_path)
@@ -223,9 +221,7 @@ def test_archive_referring_edge_rewrite_is_atomic(docs_script, fixtures_dir, tmp
     assert not (root / "archive" / "2026-05-28").exists()
 
 
-def test_archive_referring_edge_rewrite_refreshes_index_once(
-    docs_script, fixtures_dir, tmp_path
-):
+def test_archive_referring_edge_rewrite_refreshes_index_once(docs_script, fixtures_dir, tmp_path):
     """Pre-build INDEX.md; archive a doc with referring edges; verify the
     INDEX file's mtime advances exactly once (the archive verb refreshes
     the INDEX end-of-batch, not per referring-doc rewrite)."""
@@ -274,9 +270,7 @@ def test_archive_cascade_rewrites_edges_for_both_moves_atomically(
     assert "archive/2026-05-28/sidekick.md" in witness
 
 
-def test_archive_does_not_rewrite_archive_subtree_edges(
-    docs_script, fixtures_dir, tmp_path
-):
+def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_dir, tmp_path):
     """A doc that already lives under archive/ that references `core.md`
     via `Related:` is read-only and must NOT be rewritten when `core.md`
     is archived."""

@@ -64,7 +64,7 @@ def test_cli_py_has_no_hardcoded_version_literal() -> None:
     # Refuse a literal `__version__ = "<digit>...` form.
     hardcoded_re = re.compile(r'^__version__\s*=\s*["\']\d', re.MULTILINE)
     assert not hardcoded_re.search(source), (
-        "cli.py contains a hardcoded `__version__ = \"<literal>\"` line; "
+        'cli.py contains a hardcoded `__version__ = "<literal>"` line; '
         "M12 sources the dunder from `importlib.metadata.version('docs-cli')` "
         "with a `PackageNotFoundError` fallback to `'0.0.0+local'`."
     )

@@ -40,7 +40,7 @@ progress, which is distinct.)
 | 1. Define Contract | Complete | 2026-05-28 | cli.md / convention.md / architecture.md pinned for `docs project rename`, `docs touch` outside-root refusal, `docs archive` referring-edge rewrite, and `importlib.metadata` version SoT. |
 | 2. Write Tests (RED) | Complete | 2026-05-28 | 17 project-rename + 5 touch + 6 archive + 3 version-SoT tests; test_packaging A3/B1/B2/C2 bumped to 1.5.0. |
 | 3. Create Data/Fixtures | Complete | 2026-05-28 | 4 new fixture trees (multi-project-alpha-sidecar, rename-with-archive, rename-with-malformed, archive-with-incoming-refs); first three pass `docs check`, fourth is deliberately malformed. |
-| 4. Run Tests (RED Baseline) | Pending | — | |
+| 4. Run Tests (RED Baseline) | Complete | 2026-05-28 | 32 RED / 400 GREEN; categorised across 6 expected M12-feature buckets + 2 lockstep buckets (skill_refs drift + a fresh-eyes snapshot bump from the touched-cli/convention/architecture dates). |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
@@ -222,7 +222,63 @@ condition the atomic-validate-failure test exercises).
 
 ## Phase 4 — Run Tests (RED Baseline)
 
-_Not started._
+**Completed 2026-05-28.**
+
+Full suite: **32 failed, 400 passed**. Quality gate
+(ruff check / ruff format --check / mypy / `docs check docs/`)
+GREEN tree-wide.
+
+### RED categorisation (32 total)
+
+1. **`docs project rename` not yet a verb (17 tests in
+   `test_cli_project_rename.py`)** — argparse rejects `project` as an
+   invalid choice:
+   > `argument {…,migrate,install-skill}: invalid choice: 'project' (choose from 'index', 'new', 'archive', 'mv', 'touch', 'check', 'list', 'migrate', 'install-skill')`
+2. **`docs touch` outside-root refusal not implemented (4 tests in
+   `test_cli_touch.py`)** — `docs touch` against an orphan file
+   currently succeeds (corrupting it), exit 0:
+   > `AssertionError: ('', 'docs: touched /tmp/.../no_docs_toml/random.md\n') / assert 0 == 2`
+3. **`docs archive` referring-edge rewrite not implemented (3 tests in
+   `test_cli_archive.py`)** — referring docs still carry the
+   pre-archive path:
+   > `AssertionError: assert 'pairs-with: archive/2026-05-28/core.md' in '<helper.md text still naming core.md>'`
+4. **Packaging A3 / B1 / B2 / C2 still pinned to 1.4.0 (4 tests in
+   `test_packaging.py`)** — pyproject still reads `1.4.0`:
+   > `AssertionError: [project].version must be '1.5.0'; got '1.4.0'`
+5. **`__version__` still hardcoded (2 tests in `test_version_metadata.py`)** —
+   `importlib.metadata.version("docs-cli")` returns the installed
+   editable distribution's version (`1.1.0` on this venv), while the
+   hardcoded literal says `1.4.0`:
+   > `AssertionError: assert '1.4.0' == '1.1.0'`
+   The hardcoded-literal-refusal test trips on:
+   > `AssertionError: cli.py contains a hardcoded \`__version__ = "<literal>"\` line; M12 sources the dunder from importlib.metadata.version('docs-cli')`
+6. **Skill-bundle drift expected (2 tests in `test_skill_refs.py`)** —
+   per the Phase-1 plan, the bundled mirrors at
+   `src/docs_cli/skill/references/{cli,convention}.md` were NOT resynced
+   in Phase 1; Phase 7 resyncs the bundle:
+   > `AssertionError: src/docs_cli/skill/references/cli.md has drifted from docs/cli.md`
+
+### `test_version_matches_pyproject` (1 test) is GREEN
+
+The third version_metadata test currently passes because both
+`__version__` (hardcoded `1.4.0` in cli.py) and `pyproject.toml`'s
+`version` (also `1.4.0`) currently match. After Phase 6 swaps cli.py to
+the `importlib.metadata` runtime lookup, the test temporarily flips RED
+on a fresh editable-install venv (where `importlib.metadata.version` may
+yield a different installed version), then flips back GREEN at Phase 7
+once `pyproject.toml` is bumped to `1.5.0` and the editable install is
+refreshed.
+
+### Audit fix (frozen-snapshot regeneration)
+
+The Phase 1 `Updated: 2026-05-28` bumps on cli.md / convention.md /
+architecture.md caused `tests/test_cli_index.py::test_index_output_matches_frozen_snapshot`
+to RED on the new dates. The snapshot at
+`tests/fixtures/expected/docs-INDEX.md` is a dogfood guard — when the
+real docs evolve, the snapshot is regenerated lockstep. Done by copying
+`docs/` to a tmpdir, running `docs index --root <tmpdir>`, and
+overwriting the expected file with the result. Re-run of the snapshot
+test is GREEN; no contract change.
 
 ## Phase 5 — Update Base Interfaces
 

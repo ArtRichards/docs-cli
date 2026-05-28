@@ -185,7 +185,7 @@ implementation milestone, M13 is the publish):
 - [x] Phase 3 — Create Data/Fixtures (project-rename test
       trees + touch-outside-root fixtures + archive
       referring-edge fixtures)
-- [ ] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces (parser / dataclass /
       validator additions; importlib.metadata wire-up)
 - [ ] Phase 6 — Implement Offline/Core Path (project-rename

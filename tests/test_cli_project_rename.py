@@ -73,9 +73,7 @@ def test_project_rename_rewrites_docs_toml(docs_script, fixtures_dir, tmp_path):
     assert before_lines == after_lines
 
 
-def test_project_rename_rewrites_every_matching_project_line(
-    docs_script, fixtures_dir, tmp_path
-):
+def test_project_rename_rewrites_every_matching_project_line(docs_script, fixtures_dir, tmp_path):
     # Three docs all named Project: minimal. After rename, all three read
     # Project: foo.
     root = _minimal_tree(fixtures_dir, tmp_path)
@@ -168,9 +166,7 @@ def test_project_rename_normalises_input(docs_script, fixtures_dir, tmp_path):
 
 def test_project_rename_normalisation_quiet_under_quiet(docs_script, fixtures_dir, tmp_path):
     root = _minimal_tree(fixtures_dir, tmp_path)
-    proc = _run(
-        docs_script, "project", "rename", "FooBarBaz", "--root", str(root), "--quiet"
-    )
+    proc = _run(docs_script, "project", "rename", "FooBarBaz", "--root", str(root), "--quiet")
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert "normalised" not in proc.stderr
 
@@ -261,9 +257,7 @@ def test_project_rename_skips_archive_subtree(docs_script, fixtures_dir, tmp_pat
 # --- Multi-project footer ---------------------------------------------------
 
 
-def test_project_rename_footer_reports_non_matching_count(
-    docs_script, fixtures_dir, tmp_path
-):
+def test_project_rename_footer_reports_non_matching_count(docs_script, fixtures_dir, tmp_path):
     root = _multi_project_alpha_tree(fixtures_dir, tmp_path)
     proc = _run(docs_script, "project", "rename", "gamma", "--root", str(root))
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
