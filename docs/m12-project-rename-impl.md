@@ -38,8 +38,8 @@ progress, which is distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-05-28 | cli.md / convention.md / architecture.md pinned for `docs project rename`, `docs touch` outside-root refusal, `docs archive` referring-edge rewrite, and `importlib.metadata` version SoT. |
-| 2. Write Tests (RED) | Pending | — | |
-| 3. Create Data/Fixtures | Pending | — | |
+| 2. Write Tests (RED) | Complete | 2026-05-28 | 17 project-rename + 5 touch + 6 archive + 3 version-SoT tests; test_packaging A3/B1/B2/C2 bumped to 1.5.0. |
+| 3. Create Data/Fixtures | Complete | 2026-05-28 | 4 new fixture trees (multi-project-alpha-sidecar, rename-with-archive, rename-with-malformed, archive-with-incoming-refs); first three pass `docs check`, fourth is deliberately malformed. |
 | 4. Run Tests (RED Baseline) | Pending | — | |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
@@ -169,11 +169,56 @@ _Captured before Phase 1; historical._
 
 ## Phase 2 — Write Tests (RED)
 
-_Not started._
+**Completed 2026-05-28.**
+
+- **`tests/test_cli_project_rename.py`** — created (17 tests).
+  Covers: help / sub-command registration, `.docs.toml` rewrite, every-
+  matching-Project-line rewrite, non-matching-project skip, no-`.docs.toml`
+  refusal, empty + whitespace-only input rejection, `--dry-run`,
+  normalisation, normalisation `--quiet` suppression, atomic validate-
+  failure leaves tree unchanged, no-op, single end-of-batch INDEX
+  refresh, archive-subtree skip, non-matching-count footer, prose-not-
+  touched.
+- **`tests/test_cli_touch.py`** — appended 5 tests (M12 OQ-C + OQ-11):
+  outside-docs-root refusal exits 2; no INDEX refresh; path-named in
+  stderr; `--root <valid-root>` bypass succeeds; `--root <dir-without-
+  toml>` refuses.
+- **`tests/test_cli_archive.py`** — appended 6 tests (M12 referring-
+  edge rewrite + cascade-atomicity + archive-subtree-read-only).
+- **`tests/test_packaging.py`** — renamed `test_a3_project_version_is_
+  1_4_0` → `_1_5_0`, `test_c2_docs_version_is_1_4_0` → `_1_5_0`; bumped
+  every `1.4.0` literal in A3 / B1 / B2 / C2 to `1.5.0`.
+- **`tests/test_version_metadata.py`** — created (3 tests): version
+  sourced from `importlib.metadata`; matches pyproject.toml; cli.py has
+  no hardcoded `__version__ = "<digit>...` literal.
+
+55 new + edited tests; collection clean.
 
 ## Phase 3 — Create Data/Fixtures
 
-_Not started._
+**Completed 2026-05-28.**
+
+Four new fixture trees under `tests/fixtures/trees/`:
+
+- **`multi-project-alpha-sidecar/`** — copy of `multi-project/` with
+  `.docs.toml` `[project] name` patched from `multi-project` to `alpha`
+  (so a rename of alpha → gamma rewrites only the alpha-named docs and
+  reports the beta docs in the non-matching footer).
+- **`rename-with-archive/`** — `[project] name = "rename-target"`;
+  one active `live.md` and one archived `archive/2026-04-01/old.md`,
+  both carrying `Project: rename-target`. Exercises the archive-
+  subtree skip + footer count.
+- **`rename-with-malformed/`** — `[project] name = "minimal"`; two
+  well-formed `good-{a,b}.md` docs + one `broken.md` with no H1.
+  Exercises the atomic validate-all-first abort path.
+- **`archive-with-incoming-refs/`** — three docs (`master.md`,
+  `sidekick.md`, `witness.md`); master ↔ sidekick are
+  `pairs-with`, and witness carries two `references:` edges.
+  Exercises cascade-archive's atomic referring-edge rewrite.
+
+`docs check` is clean on all three well-formed trees; the malformed
+tree intentionally reports the `[malformed]` error on `broken.md` (the
+condition the atomic-validate-failure test exercises).
 
 ## Phase 4 — Run Tests (RED Baseline)
 

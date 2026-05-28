@@ -1,0 +1,6 @@
+[project]
+name = "cascade-refs"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

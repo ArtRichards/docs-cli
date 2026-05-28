@@ -1,0 +1,6 @@
+[project]
+name = "rename-target"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

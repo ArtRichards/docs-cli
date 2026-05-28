@@ -181,8 +181,8 @@ implementation milestone, M13 is the publish):
 
 - [x] Phase 1 — Define Contract (the four-feature contract +
       OPEN-QUESTION resolution into Decisions)
-- [ ] Phase 2 — Write Tests (RED)
-- [ ] Phase 3 — Create Data/Fixtures (project-rename test
+- [x] Phase 2 — Write Tests (RED)
+- [x] Phase 3 — Create Data/Fixtures (project-rename test
       trees + touch-outside-root fixtures + archive
       referring-edge fixtures)
 - [ ] Phase 4 — Run Tests (RED Baseline)
