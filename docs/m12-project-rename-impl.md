@@ -760,3 +760,83 @@ focused commit (`m12(phase-10-review): ...`):
 - **Fix C (N-4)** — Removed the spurious `--round-trip...` token from
   the 9.D dogfood transcript (the actual command was
   `docs project rename docs --root docs/`).
+
+## Step 3 simplify (2026-05-28)
+
+Post-implementation simplify pass on top of the phase-10-review commit
+(`0bf4799`). Applied two candidates; skipped six. Net diff: **+22 / -52
+in `src/docs_cli/cli.py`** (no other files touched). Quality gate (433
+tests + ruff + mypy + `docs check` + INDEX-dry-run) re-verified GREEN
+end-to-end.
+
+### Applied
+
+- **SF-1 (a narrower variant) + path-prefix fix** — `parse()` now
+  catches the bare `MetadataError` from `parse_metadata_block` and the
+  bare errors from `validate_lifecycle` / `validate_role` /
+  `parse_date`, and re-raises them with a `path:` prefix. This honours
+  the `MetadataError` class docstring's explicit promise ("includes the
+  file path") that previously held only for `parse()`'s own raises, not
+  for its delegated helpers. Net effect: every doc-validation error that
+  bubbles out of `walk()` is self-locating. `_find_malformed_doc` (30
+  lines, M12-introduced) deleted — no caller needs to re-scan the tree
+  any more. `_cmd_project_rename` 's malformed-doc branch collapses
+  from a re-scan + two-branch print to one `print(f"docs: {exc}")`. Test
+  suite still 433 GREEN; the `match=...` regex pins in
+  `tests/test_model.py` (`H1`, `Lifecycle`, `Role`, `Updated`) still
+  match because the new prefix is on the left.
+- **N-2** — `_cmd_project_rename` 's validate-all-first walk replaced
+  the `while True: next(walker)` pattern with `for doc in walk(...)`.
+  Equivalent semantics (the outer `try/except` catches identically
+  whether the iterator step is explicit or implicit) and four lines
+  shorter.
+
+### Skipped (with reason)
+
+- **SF-2** (pre-flight `walk()` blocks on malformed archived doc) —
+  this would be a behaviour change (more permissive), not a
+  simplification; the conservative-by-design pre-flight is what the
+  current contract pins. Add only if a user-reported defect demands it.
+- **N-1** (sidecar regex not scoped to `[project]` section) — scoping
+  with a multi-line/section-aware regex is strictly *more* complex than
+  the single-line pattern that exists. The conformant-input-only
+  assumption is fine: `_rewrite_sidecar_project_name` is called only
+  after `load_config` has parsed the sidecar via tomllib, so a stray
+  outside-section `name = "<old>"` line would already have failed
+  config load.
+- **N-3** (referring-edge rewrite reads each doc twice) — proposed
+  fixes (cache text on `Doc`, lower-level walker) all add state or
+  parallel iteration machinery for a single re-read on a small set of
+  active docs. Not a simplification.
+- **N-5** (helper placement) — moving four helpers between two
+  unrelated spots in `cli.py` is pure churn; the current ordering
+  (top-down: rewriters/printers/finders → caller) reads cleanly.
+- **`_cmd_mv` unification with `_rewrite_referring_edges`** —
+  `_cmd_mv` walks the *full* tree (rewrites references inside
+  archived docs too) and surfaces a `rewrites` count in its success
+  message; `_rewrite_referring_edges` skips archived docs by design
+  and discards the count. Unifying would require either a behaviour
+  change (mv stops touching archive) or an extra return value plumbed
+  through; either way, more complex than the inline four-line loop.
+
+### Quality gate after simplify
+
+```
+$ .venv/bin/python -m pytest tests/ -q
+433 passed
+
+$ .venv/bin/ruff check .
+All checks passed!
+
+$ .venv/bin/ruff format --check .
+35 files already formatted
+
+$ .venv/bin/mypy
+Success: no issues found in 36 source files
+
+$ .venv/bin/docs check docs/
+docs: no violations found
+
+$ .venv/bin/docs index --root docs/ --dry-run | diff - docs/INDEX.md
+(no diff)
+```

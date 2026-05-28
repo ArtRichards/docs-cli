@@ -624,7 +624,16 @@ def parse(text: str, path: Path, root: Path) -> Doc:
             For the bare `parse()` call (used in tests), validation
             uses BUILTIN_STATUSES and BUILTIN_ROLES.
     """
-    title, metadata, body = parse_metadata_block(text)
+    # `parse_metadata_block`, `validate_lifecycle`, `validate_role`, and
+    # `parse_date` all raise without a path prefix (they're path-agnostic
+    # helpers). Honour MetadataError's docstring ("includes the file path")
+    # by tagging any bare message with `path:` here, so every caller gets
+    # a self-locating error and no caller needs to re-scan the tree to
+    # recover the offending file.
+    try:
+        title, metadata, body = parse_metadata_block(text)
+    except MetadataError as exc:
+        raise MetadataError(f"{path}: {exc}") from exc
 
     for required in ("Lifecycle", "Role", "Updated"):
         if required not in metadata or not metadata[required]:
@@ -639,9 +648,14 @@ def parse(text: str, path: Path, root: Path) -> Doc:
     assert isinstance(role, str)
     assert isinstance(updated_raw, str)
 
-    validate_lifecycle(lifecycle, BUILTIN_STATUSES)
-    validate_role(role, BUILTIN_ROLES)
-    updated = parse_date(updated_raw)
+    try:
+        validate_lifecycle(lifecycle, BUILTIN_STATUSES)
+        validate_role(role, BUILTIN_ROLES)
+        updated = parse_date(updated_raw)
+    except MetadataError as exc:
+        raise MetadataError(f"{path}: {exc}") from exc
+    except VocabularyError as exc:
+        raise VocabularyError(f"{path}: {exc}") from exc
 
     project_raw = metadata.get("Project")
     project: str | None
@@ -3679,37 +3693,6 @@ def _print_project_rename_footer(
     print(f"docs: project rename: {old_name} -> {new_name} ({body})", file=sys.stderr)
 
 
-def _find_malformed_doc(root: Path, config: Config) -> Path | None:
-    """Locate the first `.md` file under `root` that fails `parse(...)`.
-
-    Used by M12 verbs (`docs project rename`, `docs archive` with
-    referring-edge rewrite) to recover the offending path when
-    `walk()` propagates a bare `MetadataError` from
-    `parse_metadata_block` (no path prefix). Returns `None` if every
-    file parses cleanly (the caller falls back to the bare message).
-    """
-    archive_prefix = config.archive_dir
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
-        for fname in filenames:
-            if fname.startswith(".") or not fname.endswith(".md"):
-                continue
-            file_path = Path(dirpath) / fname
-            try:
-                rel = file_path.relative_to(root).as_posix()
-            except ValueError:
-                continue
-            if rel == INDEX_FILENAME:
-                continue
-            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
-                continue
-            try:
-                parse(file_path.read_text(), file_path, root)
-            except (MetadataError, VocabularyError):
-                return file_path
-    return None
-
-
 def _rewrite_referring_edges(root: Path, config: Config, moves: list[tuple[str, str]]) -> None:
     """Walk active tree once; rewrite `Related:` bullets per (old, new) move.
 
@@ -3776,19 +3759,13 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
     # Validate-all-first walk: parse every active doc, bucket into
     # matching vs. non-matching, count archived. A MetadataError or
     # VocabularyError on any doc aborts the whole batch before any
-    # write. The walker is called via a generator, so to surface the
-    # offending path when `parse_metadata_block` raises without one,
-    # we drive `walk` step-by-step inside the try block.
+    # write. `parse()` prefixes the offending path on every error it
+    # bubbles, so `exc` is self-locating.
     matching: list[Path] = []
     archived_count = 0
     non_matching: dict[str, int] = {}
     try:
-        walker = walk(root, config)
-        while True:
-            try:
-                doc = next(walker)
-            except StopIteration:
-                break
+        for doc in walk(root, config):
             if doc.archived:
                 archived_count += 1
                 continue
@@ -3801,14 +3778,7 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
             else:
                 non_matching[resolved] = non_matching.get(resolved, 0) + 1
     except (MetadataError, VocabularyError) as exc:
-        # The walker may raise a bare MetadataError from
-        # `parse_metadata_block` (no path prefix). Re-scan the tree
-        # to find the offending file and name it in stderr.
-        offender = _find_malformed_doc(root, config)
-        if offender is not None:
-            print(f"docs: {offender}: {exc}", file=sys.stderr)
-        else:
-            print(f"docs: {exc}", file=sys.stderr)
+        print(f"docs: {exc}", file=sys.stderr)
         return 1
 
     # No-op test: new equals old AND no rewrites planned (the latter
