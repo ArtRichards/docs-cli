@@ -626,7 +626,7 @@ docs: project rename: docs -> docs-renamed (rewrote .docs.toml + 33 doc(s); 2 ar
 (33 active docs carry Project: docs-renamed; 0 still carry Project: docs.
  2 archived docs untouched as expected.)
 
-$ docs project rename docs --round-trip... --root docs/
+$ docs project rename docs --root docs/
 docs: project rename: docs-renamed -> docs (rewrote .docs.toml + 33 doc(s); 2 archived skipped)
 ```
 
@@ -710,3 +710,53 @@ Checking dist/docs_cli-1.5.0.tar.gz: PASSED
 ```
 
 All green. M12 closed.
+
+## Step 3 simplify candidates surfaced by fresh-eyes review
+
+Fresh-eyes review (2026-05-28) recommended ship-as-is and split its
+findings into "actionable now" (handled in the phase-10-review commit
+on top of Step 2) and "defer to Step 3 simplify". The deferred items:
+
+- **SF-1**: `_cmd_archive` pre-flight `MetadataError` does not name the
+  offending path; `_cmd_project_rename` solves the same problem via
+  `_find_malformed_doc`. Cleaner long-term: thread `path` through
+  `parse_metadata_block` and delete `_find_malformed_doc`. Step 3
+  candidate.
+- **SF-2**: Pre-flight `walk()` reads the archive subtree, so a
+  malformed archived doc blocks an otherwise safe rewrite.
+  Conservative-by-design accepted; Step 3 may add a predicate to skip
+  archive on pre-flight.
+- **SF-5**: cli.md M12 exit-code matrix folds "missing/unparseable
+  name = line" into the catch-all "malformed .docs.toml". Acceptable
+  umbrella wording.
+- **N-1**: `_rewrite_sidecar_project_name` regex not scoped to
+  `[project]` section. Step 3 candidate.
+- **N-2**: `_cmd_project_rename` validate-all-first uses
+  `while True / next()` instead of `for ... in walker:`. Step 3
+  candidate.
+- **N-3**: `_rewrite_referring_edges` reads each doc twice (walk
+  parses, then `read_text()` for edit). Step 3 candidate.
+- **N-5**: Helper placement could be more logical (sidecar rewriter
+  near `set_metadata_field`, etc.). Step 3 candidate.
+- **N-6**: No test pins multi-project footer's sort order. Minor;
+  defer.
+- **N-7**: cascade single-INDEX-refresh not directly tested.
+  Acceptable gap.
+
+## Phase-10-review fixes (2026-05-28)
+
+Applied on top of Step 2's seven commits (fd68e27 → 7068d11) in one
+focused commit (`m12(phase-10-review): ...`):
+
+- **Fix A (SF-3)** — Documented OQ-γ-bis in `docs/cli.md` "What gets
+  rewritten" bullet list: docs with no explicit `Project:` line have
+  one inserted on rename (consistent with M2's `set_metadata_field`
+  missing-field behaviour). Resynced
+  `src/docs_cli/skill/references/cli.md` mirror.
+- **Fix B (SF-4)** — Added `test_project_rename_inserts_project_line_when_absent`
+  in `tests/test_cli_project_rename.py`, pinning OQ-γ-bis against the
+  existing `multi-project-alpha-sidecar/topics/orphan.md` fixture
+  (which carries no `Project:` line). New total: 433 GREEN.
+- **Fix C (N-4)** — Removed the spurious `--round-trip...` token from
+  the 9.D dogfood transcript (the actual command was
+  `docs project rename docs --root docs/`).

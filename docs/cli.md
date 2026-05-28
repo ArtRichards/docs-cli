@@ -240,6 +240,10 @@ no-op comparison — no double-normalisation (M12 — OQ-3).
 - `.docs.toml`'s `[project] name = "<old>"` line → `name = "<new>"`.
 - Every conformant `Project: <old>` line in every **active-tree** doc
   → `Project: <new>`.
+- Docs that have no explicit `Project:` line implicitly resolve to the
+  docs-root project; on rename, a `Project: <new>` line is inserted
+  into those docs (consistent with M2's `set_metadata_field` behaviour
+  for missing-field cases).
 - `INDEX.md` regenerated once at end of batch.
 
 **Multi-project tolerance (M12 — OQ-B).** A tree whose active docs

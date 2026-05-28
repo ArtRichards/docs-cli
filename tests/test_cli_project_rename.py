@@ -297,6 +297,42 @@ def test_project_rename_footer_reports_non_matching_count(docs_script, fixtures_
     assert "3 non-matching project(s) untouched:" in proc.stderr, proc.stderr
 
 
+# --- Implicit Project: line insertion (OQ-γ-bis) ----------------------------
+
+
+def test_project_rename_inserts_project_line_when_absent(docs_script, fixtures_dir, tmp_path):
+    # Docs with no explicit `Project:` line implicitly resolve to the docs-root
+    # project; on rename, a `Project: <new>` line must be inserted (consistent
+    # with M2's set_metadata_field behaviour for missing-field cases).
+    #
+    # The multi-project-alpha-sidecar fixture has `topics/orphan.md` with no
+    # `Project:` line in its metadata block; after `docs project rename alpha
+    # -> alpha-renamed`, that doc must carry `Project: alpha-renamed`.
+    root = _multi_project_alpha_tree(fixtures_dir, tmp_path)
+    orphan = root / "topics" / "orphan.md"
+
+    # Pre-state: no Project: line in the orphan doc.
+    pre_text = orphan.read_text()
+    assert not any(line.startswith("Project:") for line in pre_text.splitlines()), (
+        "fixture invariant: topics/orphan.md must carry no Project: line"
+    )
+
+    proc = _run(docs_script, "project", "rename", "alpha-renamed", "--root", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    # Post-state: a Project: alpha-renamed line was inserted.
+    post_text = orphan.read_text()
+    assert "Project: alpha-renamed" in post_text, post_text
+
+    # The alpha-named docs were rewritten in the usual way.
+    for name in ("alpha-charter.md", "alpha-plan.md", "alpha-spec.md", "alpha-old-spec.md"):
+        text = (root / name).read_text()
+        assert "Project: alpha-renamed" in text, f"{name} alpha rewrite missing"
+
+    # The sidecar was renamed.
+    assert 'name = "alpha-renamed"' in (root / ".docs.toml").read_text()
+
+
 # --- Prose is not touched ---------------------------------------------------
 
 
