@@ -3386,7 +3386,9 @@ def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: 
     return dest
 
 
-def _cascade_archive(doc: Doc, root: Path, config: Config, date_str: str, quiet: bool) -> None:
+def _cascade_archive(
+    doc: Doc, root: Path, config: Config, date_str: str, quiet: bool
+) -> list[tuple[str, str]]:
     """Prompt to archive each one-hop `pairs-with` / `child-of` relation of `doc`.
 
     Each related doc that still exists prompts for a y/N confirmation on stdin;
@@ -3394,7 +3396,14 @@ def _cascade_archive(doc: Doc, root: Path, config: Config, date_str: str, quiet:
     docs whose archive fails — are left in place (drift `docs check` surfaces).
     The cascade is one hop only: the related docs' own relations are not
     followed.
+
+    M12 (OQ-D / OQ-δ): returns a list of `(old_rel, new_rel)` moves —
+    one entry per successful cascade archive — so the caller can hand
+    them to `_rewrite_referring_edges` for the single atomic batch
+    rewrite. Failed / declined archives contribute nothing.
     """
+    root_resolved = root.resolve()
+    moves: list[tuple[str, str]] = []
     for verb, target in doc.related:
         if verb not in _CASCADE_VERBS:
             continue
@@ -3411,8 +3420,11 @@ def _cascade_archive(doc: Doc, root: Path, config: Config, date_str: str, quiet:
         except (MetadataError, FileExistsError, OSError) as exc:
             print(f"docs: could not archive {target}: {exc}", file=sys.stderr)
             continue
+        new_rel = dest.resolve().relative_to(root_resolved).as_posix()
+        moves.append((target, new_rel))
         if not quiet:
             print(f"docs: archived {target} -> {dest}", file=sys.stderr)
+    return moves
 
 
 def _cmd_archive(args: argparse.Namespace) -> int:
@@ -3455,6 +3467,19 @@ def _cmd_archive(args: argparse.Namespace) -> int:
                 print(f"docs: --cascade would prompt for: {', '.join(cascadable)}", file=sys.stderr)
         return 0
 
+    # M12: pre-flight validation walk — catches malformed referring
+    # docs BEFORE the archive move, so a referring-edge rewrite that
+    # would later fail does not leave a half-archived tree. Mirrors
+    # the project-rename validate-all-first pattern.
+    try:
+        list(walk(root, config))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 1
+
+    root_resolved = root.resolve()
+    old_rel = file_path.resolve().relative_to(root_resolved).as_posix()
+
     try:
         dest = _archive_one(file_path, root, config, date_str, args.reason)
     except MetadataError as exc:
@@ -3467,10 +3492,15 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         print(f"docs: could not create archive directory: {exc}", file=sys.stderr)
         return 2
 
+    moves: list[tuple[str, str]] = [(old_rel, dest.resolve().relative_to(root_resolved).as_posix())]
     if args.cascade:
-        _cascade_archive(doc, root, config, date_str, args.quiet)
+        moves.extend(_cascade_archive(doc, root, config, date_str, args.quiet))
 
+    # M12: rewrite every active-tree referring Related: edge to point
+    # at the new archive path, atomically with the move. Archive
+    # subtree is skipped by _rewrite_referring_edges (read-only).
     try:
+        _rewrite_referring_edges(root, config, moves)
         _refresh_index(root, config)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
@@ -3547,10 +3577,19 @@ def _cmd_touch(args: argparse.Namespace) -> int:
             print(f"docs: file not found: {fp}", file=sys.stderr)
             return 1
 
-    # Resolve the docs root from the first path; every subsequent path
-    # must resolve under the same root (Step-2 follow-on #4: multi-root
-    # touch is undefined behaviour, out of M10 scope).
-    root = Path(args.root) if args.root else find_root(file_paths[0].parent)
+    # M12 (OQ-C / OQ-11): refuse outside any docs root. Resolution
+    # happens AFTER the file-existence check (OQ-β) so the existing
+    # missing-file → exit 1 contract is preserved; an explicit
+    # `--root` is validated against `.docs.toml` presence in
+    # `_resolve_touch_root`. The first file's path (not its parent)
+    # is named in the refusal message so the operator sees the
+    # offending doc.
+    start = file_paths[0] if file_paths else Path.cwd()
+    root_or_exit = _resolve_touch_root(args, start)
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
+
     try:
         config = load_config(root)
     except tomllib.TOMLDecodeError as exc:
@@ -3603,9 +3642,252 @@ def _cmd_touch(args: argparse.Namespace) -> int:
     return 0
 
 
+def _rewrite_sidecar_project_name(text: str, old: str, new: str) -> str:
+    """Rewrite the `.docs.toml` `[project] name = "<old>"` line to `name = "<new>"`.
+
+    Surgical, minimal-diff rewrite: only the matching line is touched
+    (single replacement; the rest of the file is byte-identical). If
+    the expected `name = "<old>"` line is absent, returns `text`
+    unchanged; the caller treats that as a malformed-sidecar error.
+    """
+    pattern = rf'^name[ \t]*=[ \t]*"{re.escape(old)}"[ \t]*$'
+    return re.sub(pattern, f'name = "{new}"', text, count=1, flags=re.MULTILINE)
+
+
+def _print_project_rename_footer(
+    old_name: str,
+    new_name: str,
+    rewrites: int,
+    archived_count: int,
+    non_matching: dict[str, int],
+    dry_run: bool,
+) -> None:
+    """Print the M12 (OQ-2) single-line project-rename success footer.
+
+    Drops empty clauses when their counts are 0. `dry_run` is accepted
+    so callers can suppress; today it is always passed True/False but
+    the footer text is the same shape — the caller decides emission.
+    """
+    clauses = [f"rewrote .docs.toml + {rewrites} doc(s)"]
+    if archived_count:
+        clauses.append(f"{archived_count} archived skipped")
+    if non_matching:
+        total = sum(non_matching.values())
+        names = ", ".join(sorted(non_matching.keys()))
+        clauses.append(f"{total} non-matching project(s) untouched: {names}")
+    body = "; ".join(clauses)
+    print(f"docs: project rename: {old_name} -> {new_name} ({body})", file=sys.stderr)
+
+
+def _find_malformed_doc(root: Path, config: Config) -> Path | None:
+    """Locate the first `.md` file under `root` that fails `parse(...)`.
+
+    Used by M12 verbs (`docs project rename`, `docs archive` with
+    referring-edge rewrite) to recover the offending path when
+    `walk()` propagates a bare `MetadataError` from
+    `parse_metadata_block` (no path prefix). Returns `None` if every
+    file parses cleanly (the caller falls back to the bare message).
+    """
+    archive_prefix = config.archive_dir
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fname in filenames:
+            if fname.startswith(".") or not fname.endswith(".md"):
+                continue
+            file_path = Path(dirpath) / fname
+            try:
+                rel = file_path.relative_to(root).as_posix()
+            except ValueError:
+                continue
+            if rel == INDEX_FILENAME:
+                continue
+            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+                continue
+            try:
+                parse(file_path.read_text(), file_path, root)
+            except (MetadataError, VocabularyError):
+                return file_path
+    return None
+
+
+def _rewrite_referring_edges(root: Path, config: Config, moves: list[tuple[str, str]]) -> None:
+    """Walk active tree once; rewrite `Related:` bullets per (old, new) move.
+
+    Skips archived docs (`Doc.archived`). Reuses `rewrite_related_refs`
+    per (old_rel, new_rel) pair; atomic-writes touched docs. M12 helper
+    shared by `_cmd_archive` (single-move) and `_cmd_archive --cascade`
+    (batch).
+    """
+    if not moves:
+        return
+    for doc in walk(root, config):
+        if doc.archived:
+            continue
+        text = doc.path.read_text()
+        original = text
+        for old_rel, new_rel in moves:
+            text, _n = rewrite_related_refs(text, old_rel, new_rel)
+        if text != original:
+            atomic_write(doc.path, text)
+
+
 def _cmd_project_rename(args: argparse.Namespace) -> int:
-    # Phase 5: stub. Behaviour lands in Phase 6.
-    return 2
+    # M12 — atomic project rename across .docs.toml + every conformant
+    # `Project:` line in every active doc. Validate-then-commit-then-
+    # INDEX-once, mirroring `_cmd_touch`. OQ-α through OQ-ι decisions
+    # apply throughout.
+
+    # OQ-1: refuse cleanly when no .docs.toml ancestor.
+    root_or_exit = _resolve_project_root(args, Path.cwd())
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    # OQ-A — auto-normalise the operator-supplied input via M7's
+    # `normalise_project_name()`. Empty / whitespace input rejected
+    # post-normalisation (OQ-9). Normalisation note gated on `not
+    # --quiet`.
+    raw = args.new_name
+    normalised = normalise_project_name(raw)
+    if not normalised.strip():
+        print(
+            f"docs: project rename: {raw} normalises to empty string; "
+            "project name must be non-empty",
+            file=sys.stderr,
+        )
+        return 2
+    if normalised != raw and not args.quiet:
+        print(
+            f'docs: project rename: normalised "{raw}" to "{normalised}"',
+            file=sys.stderr,
+        )
+    new_name = normalised
+
+    # OQ-3: compare normalised-new against the sidecar `[project] name`
+    # as written. No double-normalisation.
+    old_name = config.project
+
+    # Validate-all-first walk: parse every active doc, bucket into
+    # matching vs. non-matching, count archived. A MetadataError or
+    # VocabularyError on any doc aborts the whole batch before any
+    # write. The walker is called via a generator, so to surface the
+    # offending path when `parse_metadata_block` raises without one,
+    # we drive `walk` step-by-step inside the try block.
+    matching: list[Path] = []
+    archived_count = 0
+    non_matching: dict[str, int] = {}
+    try:
+        walker = walk(root, config)
+        while True:
+            try:
+                doc = next(walker)
+            except StopIteration:
+                break
+            if doc.archived:
+                archived_count += 1
+                continue
+            # OQ-γ-bis: docs without explicit Project: resolve to
+            # config.project; treated as implicitly matching, so
+            # set_metadata_field inserts a Project: line.
+            resolved = _resolved_project(doc, config)
+            if resolved == old_name:
+                matching.append(doc.path)
+            else:
+                non_matching[resolved] = non_matching.get(resolved, 0) + 1
+    except (MetadataError, VocabularyError) as exc:
+        # The walker may raise a bare MetadataError from
+        # `parse_metadata_block` (no path prefix). Re-scan the tree
+        # to find the offending file and name it in stderr.
+        offender = _find_malformed_doc(root, config)
+        if offender is not None:
+            print(f"docs: {offender}: {exc}", file=sys.stderr)
+        else:
+            print(f"docs: {exc}", file=sys.stderr)
+        return 1
+
+    # No-op test: new equals old AND no rewrites planned (the latter
+    # is implicit — if matching list is empty, the only writes would
+    # be a sidecar self-rewrite that produces byte-identical output).
+    if new_name == old_name:
+        if not args.quiet:
+            print(
+                f"docs: project rename: {new_name} already current — no rewrites needed",
+                file=sys.stderr,
+            )
+        return 0
+
+    # Build the doc rewrite plan. `set_metadata_field` inserts a
+    # Project: line for docs that did not have one (OQ-γ-bis).
+    doc_writes: list[tuple[Path, str]] = []
+    for path in matching:
+        try:
+            new_text = set_metadata_field(path.read_text(), "Project", new_name)
+        except MetadataError as exc:
+            print(f"docs: {exc}", file=sys.stderr)
+            return 1
+        doc_writes.append((path, new_text))
+
+    # Build the sidecar rewrite. An absent / unparseable `name =
+    # "<old>"` line is a malformed sidecar.
+    sidecar_path = root / ".docs.toml"
+    sidecar_text = sidecar_path.read_text()
+    new_sidecar = _rewrite_sidecar_project_name(sidecar_text, old_name, new_name)
+    if new_sidecar == sidecar_text:
+        print(
+            f'docs: malformed .docs.toml: missing or unparseable name = "{old_name}" line',
+            file=sys.stderr,
+        )
+        return 2
+
+    root_resolved = root.resolve()
+
+    if args.dry_run:
+        if not args.quiet:
+            for path, _ in doc_writes:
+                rel = path.resolve().relative_to(root_resolved).as_posix()
+                print(f"docs: would rewrite Project: in {rel}", file=sys.stderr)
+            print(
+                f'docs: would rewrite [project] name in .docs.toml: "{old_name}" -> "{new_name}"',
+                file=sys.stderr,
+            )
+            _print_project_rename_footer(
+                old_name,
+                new_name,
+                len(doc_writes),
+                archived_count,
+                non_matching,
+                dry_run=True,
+            )
+        return 0
+
+    # Commit phase: every doc, then the sidecar.
+    for path, new_text in doc_writes:
+        atomic_write(path, new_text)
+    atomic_write(sidecar_path, new_sidecar)
+
+    # INDEX refresh: reload config so the new project name renders.
+    try:
+        _refresh_index(root, load_config(root))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        return 2
+
+    if not args.quiet:
+        _print_project_rename_footer(
+            old_name,
+            new_name,
+            len(doc_writes),
+            archived_count,
+            non_matching,
+            dry_run=False,
+        )
+    return 0
 
 
 def _cmd_check(args: argparse.Namespace) -> int:

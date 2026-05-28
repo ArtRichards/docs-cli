@@ -188,7 +188,7 @@ implementation milestone, M13 is the publish):
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces (parser / dataclass /
       validator additions; importlib.metadata wire-up)
-- [ ] Phase 6 — Implement Offline/Core Path (project-rename
+- [x] Phase 6 — Implement Offline/Core Path (project-rename
       walker + writer; touch-outside-root refusal; archive
       referring-edge rewrite walker)
 - [ ] Phase 7 — Update Tool/Wrapper Layer (argparse: new

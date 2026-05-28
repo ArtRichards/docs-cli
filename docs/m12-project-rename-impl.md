@@ -42,7 +42,7 @@ progress, which is distinct.)
 | 3. Create Data/Fixtures | Complete | 2026-05-28 | 4 new fixture trees (multi-project-alpha-sidecar, rename-with-archive, rename-with-malformed, archive-with-incoming-refs); first three pass `docs check`, fourth is deliberately malformed. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-05-28 | 32 RED / 400 GREEN; categorised across 6 expected M12-feature buckets + 2 lockstep buckets (skill_refs drift + a fresh-eyes snapshot bump from the touched-cli/convention/architecture dates). |
 | 5. Update Base Interfaces | Complete | 2026-05-28 | importlib.metadata version SoT (with PackageNotFoundError fallback to `0.0.0+local`); `_find_root_strict` helper; `_resolve_touch_root` + `_resolve_project_root` refusal helpers (OQ-η split); `project` argparse namespace + `rename` sub-parser; main() dispatch; `_cmd_project_rename` stub. SKILL.md table row added for `docs project rename` to keep `test_every_named_verb_is_a_real_subcommand` GREEN. 29 RED / 403 GREEN. |
-| 6. Implement Offline/Core Path | Pending | — | |
+| 6. Implement Offline/Core Path | Complete | 2026-05-28 | `_cmd_project_rename` core (validate-all-first walk → sidecar+doc rewrite → INDEX); `_rewrite_sidecar_project_name` regex helper (`[ \t]*` boundary, not `\s*` — `\s` eats the trailing blank line in MULTILINE mode); `_print_project_rename_footer` with empty-clause drop; `_rewrite_referring_edges` shared walker (skips archived); `_find_malformed_doc` rescan helper to surface offending path when `parse_metadata_block` raises bare; `_cmd_touch` outside-root refusal inserted AFTER first-pass existence check (OQ-β); `_cmd_archive` adds pre-flight `walk()` validate + post-move `_rewrite_referring_edges` + cascade-batched moves; `_cascade_archive` returns `list[tuple[str, str]]` of moves (OQ-γ / OQ-δ). All 32 originally-RED M12 feature tests GREEN. 7 RED remain (Phase 7 targets: 4 packaging + 2 skill_refs + 1 version_matches_pyproject). |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
 | 8. Run Tests (GREEN) + quality gate | Pending | — | |
 | 9. Dogfood | Pending | — | |
@@ -391,7 +391,95 @@ edit) and kept the suite at 32 RED / 400 GREEN.
 
 ## Phase 6 — Implement Offline/Core Path
 
-_Not started._
+**Completed 2026-05-28.**
+
+### Code edits
+
+- **`_cmd_touch` outside-root refusal** inserted between the
+  first-pass file-existence check (which preserves the
+  missing-file → exit-1 contract — OQ-β) and the existing
+  `load_config(root)` call. Calls `_resolve_touch_root(args,
+  start)` where `start` is the FIRST FILE'S PATH (not its parent
+  dir) so the refusal stderr names the offending doc per cli.md's
+  pin. `_find_root_strict` walks up from a file path; the
+  `.is_file()` check on `<file>/.docs.toml` fails as expected, so
+  the walk moves to the file's parent on the next iteration.
+- **`_cmd_project_rename`** replaces the Phase-5 stub with the
+  full validate-then-commit-then-INDEX-once flow:
+  1. OQ-1 refusal via `_resolve_project_root(args, Path.cwd())`.
+  2. `load_config(root)` wrapped in `try / except
+     tomllib.TOMLDecodeError → exit 2`.
+  3. Auto-normalise via `normalise_project_name` (OQ-A); empty
+     post-normalisation → exit 2 with the OQ-9 wording. Normalisation
+     note gated on `not args.quiet`.
+  4. `old_name = config.project` (no double-normalisation — OQ-3).
+  5. Validate-all-first walk: drives `walk()` with `next(walker)`
+     in a `while True` loop so we can re-raise the offending path
+     via `_find_malformed_doc` when `parse_metadata_block` raises
+     a bare `MetadataError`. Buckets each doc into `matching`
+     (resolved-project == old) or `non_matching[resolved] += 1`;
+     `doc.archived` increments `archived_count`. OQ-γ-bis: docs
+     without an explicit `Project:` line resolve to `config.project`
+     via `_resolved_project`, so they implicitly match (and
+     `set_metadata_field` will INSERT a `Project:` line).
+  6. No-op test: `new_name == old_name` emits the cli.md no-op
+     stderr (gated on `not args.quiet`); exit 0; no writes.
+  7. Build doc-rewrite plan: `set_metadata_field(path.read_text(),
+     "Project", new_name)` per matching path.
+  8. Build sidecar rewrite via `_rewrite_sidecar_project_name`;
+     no-change result → exit 2 with the
+     "malformed .docs.toml: missing or unparseable name = "<old>" line"
+     wording.
+  9. `--dry-run` branch: per-doc `would rewrite Project: in <rel>`
+     + sidecar `would rewrite [project] name in .docs.toml:
+     "<old>" -> "<new>"` + footer.
+  10. Commit phase: every doc, then the sidecar (`atomic_write`).
+  11. INDEX refresh with reloaded config (so the new project name
+      renders).
+  12. Footer emission.
+- **`_rewrite_sidecar_project_name(text, old, new)`** —
+  regex-surgical, minimal-diff sidecar rewrite. Initial draft used
+  `\s*$` for the trailing-whitespace anchor, but `\s` matches
+  newlines in MULTILINE mode — the regex was eating the blank
+  line between `[project]` and `[archive]` sections. Switched to
+  `[ \t]*$`. If no match: returns text unchanged; caller treats
+  that as a malformed sidecar.
+- **`_print_project_rename_footer`** — single human-readable
+  stderr line (OQ-2 wording); empty clauses are dropped when
+  their counts are 0.
+- **`_find_malformed_doc(root, config)`** — re-scans the active
+  subtree file-by-file to recover the offending path when
+  `walk()` raises a bare `MetadataError` from
+  `parse_metadata_block` (which raises without the path prefix
+  that `parse()` would add). Mirrors `walk`'s skip rules
+  (dotfiles, `INDEX.md`, archive subtree).
+- **`_cascade_archive`** widened to return `list[tuple[str, str]]`
+  — `(old_rel, dest_rel)` per successful cascade-archive (OQ-γ /
+  OQ-δ). Failed / declined archives contribute nothing.
+- **`_rewrite_referring_edges(root, config, moves)`** — single
+  active-tree walk; per `(old_rel, new_rel)` pair, applies
+  `rewrite_related_refs`; atomic-writes touched docs only.
+  Archive subtree is read-only (skipped).
+- **`_cmd_archive`** now (a) does a pre-flight `list(walk(root,
+  config))` validate-all-first BEFORE the move, mapping
+  `MetadataError`/`VocabularyError` to exit 1 (so a broken
+  referring doc no longer leaves a half-archived tree); (b)
+  captures `old_rel` BEFORE `_archive_one` runs (post-move
+  the source file no longer exists); (c) initial `moves =
+  [(old_rel, dest_rel)]`, extended by the cascade list; (d)
+  calls `_rewrite_referring_edges(root, config, moves)` before
+  `_refresh_index`. INDEX still refreshes exactly once at
+  end-of-batch.
+
+### Test results
+
+- All 17 project-rename + 4 touch outside-root + 6 archive
+  referring-edge tests GREEN.
+- Pre-existing touch, archive, mv tests still GREEN.
+- 7 RED remain: 4 packaging (`A3` / `B1` / `B2` / `C2`) + 2
+  skill_refs drift + 1 `test_version_matches_pyproject` — all
+  Phase 7 targets.
+- ruff / ruff format --check / mypy / `docs check docs/` clean.
 
 ## Phase 7 — Update Tool/Wrapper Layer
 
