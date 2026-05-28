@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-05-28
 
 Related:
 - pairs-with: plan.md
@@ -13,11 +13,62 @@ Related:
 - pairs-with: m9-pypi-publish.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
 - pairs-with: archive/2026-05-27/m11-pypi-publish.md
+- pairs-with: m12-project-rename.md
 - pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
+
+**M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
+is **Active (2026-05-28)** — operator-chosen kitchen-sink scope
+2026-05-28 over a focused project-rename-only milestone. M12
+bundles four threads in one TDD cycle:
+
+1. **`docs project rename <new-name>`** — operator-facing
+   headline; the M10 follow-on TODO captured at
+   [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md)
+   lines 261-268. Atomic semantics (validate up-front, fail the
+   whole batch on any error, commit only after validation pass,
+   refresh INDEX once at end) mirroring `docs touch` (M2) +
+   `docs migrate --apply` (M10). Rewrites `.docs.toml`
+   `[project] name` + every conformant `Project:` line across
+   active docs. Archive subtree is read-only (M3 stance).
+2. **`docs touch <path>` outside any docs root → exit 2.**
+   Burn-down of the M11 Phase 5 wart: `docs touch` on a file
+   outside any `.docs.toml`-rooted tree currently inserts an
+   unwanted `Updated:` line and then crashes the downstream
+   INDEX refresh on whatever sibling first fails its Lifecycle
+   check (M11 caught this when accidentally touching
+   `CHANGELOG.md` from the repo root). M12 refuses cleanly with
+   exit 2 + clear stderr; file unchanged; no INDEX refresh.
+3. **`docs archive <doc>` rewrites referring `Related:` edges.**
+   Burn-down of the M11 Phase 5 wart: archiving a doc moves
+   the file but leaves referring `Related:` edges in other docs
+   pointing at the pre-archive path (M11 Phase 5 ran a manual
+   cleanup for `status.md` + impl log). M12 makes the rewrite
+   atomic with the move — same machinery `docs mv` already
+   uses (M2 Phase 6).
+4. **`importlib.metadata` version single-source-of-truth.**
+   Parked since M6. `src/docs_cli/cli.py` `__version__` becomes
+   `importlib.metadata.version("docs-cli")`; `pyproject.toml`
+   `version` is the single SoT. Eliminates the two-place version
+   hardcode (and the corresponding lockstep-bump discipline) at
+   every implementation milestone.
+
+M12 ships locally as 1.5.0; M13 is the publish counterpart
+(release-runbook-driven, will mirror M11 with the M11 lessons
+already folded into the runbook). The milestone doc carries
+**OQ-A through OQ-D** as genuine scope forks for operator
+triage before Phase 1 opens (new-name validation behaviour;
+multi-project tree handling; `docs touch` error-message shape;
+cascade-archive referring-edge rewrite scope). The doc-level
+auto-resolved Decisions block records the seven sub-decisions
+already settled at draft time (verb syntax = `docs project
+rename <new-name>`; atomic semantics across all four features;
+Related-only / not prose; archive subtree read-only; CHANGELOG
+publish-survival wording per M11 lesson; importlib.metadata at
+import-time; version = 1.5.0 minor bump; no publish in M12).
 
 **docs-cli 1.4.0 shipped 2026-05-27.** **M11 — PyPI publish
 1.4.0** is complete: `docs-cli==1.4.0` is live at
@@ -81,13 +132,18 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** no active milestone — **docs-cli 1.4.0
-shipped 2026-05-27** as M11 (operator-driven publish
-milestone for the M10-built artefacts). The next-version
-line (provisionally "v1.5") is unscoped; open when a concrete
-need surfaces (the M10 follow-on TODO for a first-class
-`docs project rename <new-name>` verb is the leading
-candidate).
+**Next action:** **M12 — Project rename + M11 wart fixes +
+version SoT (v1.5.0).** Active 2026-05-28. The milestone doc
++ impl log live at
+[m12-project-rename.md](m12-project-rename.md) +
+[m12-project-rename-impl.md](m12-project-rename-impl.md);
+Phase 1 (Contract) opens after operator triages OQ-A through
+OQ-D into Decisions. After M12 closes locally as 1.5.0, M13
+will be the publish-only milestone mirroring M11 — the M11
+lessons are already folded into the
+[release-runbook.md](release-runbook.md) Cumulative
+lessons + deviations section so M13 inherits them
+automatically.
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -239,6 +295,7 @@ for the milestone summary.
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI via M11; 400/400 GREEN at M10 close; kebab-tiny dogfood PASS) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; operator-chosen kitchen-sink scope; OQ-A through OQ-D pending triage; ships locally as 1.5.0; M13 publishes) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
@@ -327,12 +384,17 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action:** no active milestone — **docs-cli 1.4.0
-shipped 2026-05-27** as M11. The next-version line
-(provisionally "v1.5") is unscoped; open when a concrete need
-surfaces (the M10 follow-on TODO for a first-class
-`docs project rename <new-name>` verb is the leading
-candidate).
+**Next action:** **M12 — Project rename + M11 wart fixes +
+version SoT (v1.5.0)** is **Active 2026-05-28** (operator-chosen
+kitchen-sink scope). Headline feature: the M10 follow-on
+`docs project rename <new-name>` verb (the M10 archive doc's
+"deferred TODO" block at lines 261-268 carries the full
+target spec) — plus three carry-overs: `docs touch` outside-
+docs-root refusal (M11 wart), `docs archive` referring-edge
+rewrite (M11 wart), and `importlib.metadata` version SoT (M6
+parked). OQ-A through OQ-D in
+[m12-project-rename.md](m12-project-rename.md) await operator
+triage before Phase 1 opens. M13 will publish 1.5.0 to PyPI.
 
 **docs-cli 1.4.0 shipped 2026-05-27** as M11 — the
 operator-driven publish milestone for the M10-built artefacts,

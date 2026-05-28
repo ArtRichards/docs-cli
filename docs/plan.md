@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: plan
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-05-28
 
 Related:
 - implements: charter.md
@@ -14,6 +14,7 @@ Related:
 - parent-of: m7-migration-accuracy.md
 - parent-of: m8-adoption-workflow.md
 - parent-of: m9-pypi-publish.md
+- parent-of: m12-project-rename.md
 
 ## Sequencing
 
@@ -21,12 +22,15 @@ Three milestones to v1, then a migration helper, then a Claude Code
 skill wrapper. v1.1 picks up with packaging, then migration
 hardening + adoption workflow. v1.4 adds adoption-flow polish +
 1.3.0 carry-overs (M10) and ships them as a publish-only
-milestone (M11).
+milestone (M11). v1.5 adds the operator-facing `docs project
+rename` verb plus burn-down of the M11 warts and a packaging
+SoT refactor (M12), then a publish milestone (M13).
 
 ```
 v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)
 v1.1:  M6 (PyPI distribution prep)  →  M7 (migration accuracy)  →  M8 (adoption workflow)  →  M9 (PyPI publish 1.3.0)
 v1.4:  M10 (adoption-flow polish + 1.3.0 carry-overs)  →  M11 (PyPI publish 1.4.0)
+v1.5:  M12 (project rename + M11 wart fixes + version SoT)  →  M13 (PyPI publish 1.5.0)
 ```
 
 ## M1 — Parser, walker, and `docs index`
@@ -113,6 +117,28 @@ prior public release existed, no continuity to preserve.
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Active** (2026-05-28; bundles M10 follow-on `docs project rename` headline with M11 wart fixes for `docs touch` outside-root refusal + `docs archive` referring-edge rewrite + `importlib.metadata` version SoT — operator-chosen kitchen-sink scope 2026-05-28; OQ-A through OQ-D pending triage) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
+
+**M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
+is **Active** (2026-05-28). The operator-chosen kitchen-sink scope
+bundles four threads: (1) the `docs project rename <new-name>`
+verb deferred from M10 (the leading candidate the M11 closeout
+flagged for v1.5) — atomic semantics matching `docs touch` +
+`docs migrate --apply`, rewriting `.docs.toml` `[project] name`
++ every conformant `Project:` line across the tree, INDEX refresh
+once at end; (2) `docs touch <path>` outside any docs root now
+refuses cleanly with exit 2 instead of inserting a stray
+`Updated:` line and crashing the downstream INDEX refresh (M11
+Phase 5 wart); (3) `docs archive <doc>` atomically rewrites
+referring `Related:` edges across the tree (M11 Phase 5 wart —
+operator currently runs a manual cleanup post-archive); (4)
+`__version__` sourced from `importlib.metadata.version("docs-cli")`,
+eliminating the two-place version hardcode parked since M6. Ships
+locally as 1.5.0; M13 is the publish counterpart. OQ-A through
+OQ-D in the milestone doc capture the four sub-decision forks
+that need operator triage before Phase 1 opens (new-name validation
+behaviour; multi-project tree handling; `docs touch` error-message
+shape; cascade-archive referring-edge rewrite scope).
 
 **M11 — `docs-cli==1.4.0` shipped 2026-05-27.** The publish-only
 counterpart to M10, mirroring how M9 followed M8. M11 ran the

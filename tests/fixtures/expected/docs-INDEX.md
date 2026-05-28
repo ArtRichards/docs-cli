@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-27. 31 docs active, 2 archived._
+_Generated 2026-05-28. 33 docs active, 2 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-27.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-28.
 
 ### Active — Charter
 
@@ -19,7 +19,7 @@ _Generated 2026-05-27. 31 docs active, 2 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-05-27.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-05-28.
 
 ### Active — Spec
 
@@ -28,6 +28,7 @@ _Generated 2026-05-27. 31 docs active, 2 archived._
 
 ### Active — Milestone
 
+- [m12-project-rename.md](m12-project-rename.md) — _milestone_ — > **Stub-drafted 2026-05-28** following M11 closeout. M12 bundles > one operator-facing headline feature (`docs project…. Updated 2026-05-28.
 - [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
 - [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
 - [m9-pypi-publish.md](m9-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-24, post M6 scope reframe.** M9 enters > active state once M8 ships. The operative checklist…. Updated 2026-05-25.
@@ -40,6 +41,7 @@ _Generated 2026-05-27. 31 docs active, 2 archived._
 
 ### Active — Log
 
+- [m12-project-rename-impl.md](m12-project-rename-impl.md) — _log_ — Chronological log of work on M12 — Project rename verb + M11 wart fixes + version SoT (v1.5.0). Append a section per…. Updated 2026-05-28.
 - [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-27.
 - [m11-pypi-publish-impl.md](m11-pypi-publish-impl.md) — _log_ — Chronological log of work on M11 — PyPI publish `docs-cli` 1.4.0. Append a section per phase (Operator prep →…. Updated 2026-05-27.
 - [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
