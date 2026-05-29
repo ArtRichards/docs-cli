@@ -396,7 +396,7 @@ If you're starting a new Claude Code session against this repo:
 **Verify environment** before doing any work:
 ```sh
 cd ~/opt/docs-cli
-.venv/bin/python -m pytest tests/ -q          # 369 passed (M6 baseline 271 + M7/M8 additions)
+.venv/bin/python -m pytest tests/ -q          # 433 passed (current suite, as of 1.5.0 / M13)
 .venv/bin/ruff check .                        # All checks passed!
 .venv/bin/ruff format --check .               # all files formatted
 .venv/bin/mypy                                # Success (tree-wide)

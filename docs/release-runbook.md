@@ -16,27 +16,31 @@ Related:
 
 The operator-driven checklist for shipping `docs-cli` to PyPI.
 This runbook drove **M9 — `docs-cli==1.3.0`** (shipped
-2026-05-25) and **M11 — `docs-cli==1.4.0`** (shipped
-2026-05-27); it stays the operative reference for future
-releases (v1.5+). Every "operator runs X" bullet below is the
-walked-top-to-bottom procedure. The bullets are scoped tight
-enough to copy-paste; the prose framing for each release lives
-in its milestone doc
+2026-05-25), **M11 — `docs-cli==1.4.0`** (shipped 2026-05-27),
+and **M13 — `docs-cli==1.5.0`** (shipped 2026-05-29); it stays
+the operative reference for future releases (v1.6+). Every
+"operator runs X" bullet below is the walked-top-to-bottom
+procedure. The bullets are scoped tight enough to copy-paste;
+the prose framing for each release lives in its milestone doc
 ([m9-pypi-publish.md](m9-pypi-publish.md),
-[archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md)).
+[archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md),
+[archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md)).
 
 **Before driving a new release, read the
 [Cumulative lessons + deviations](#cumulative-lessons--deviations)
 section at the bottom of this file.** It captures the
-M9 + M11 walkthrough surprises (CHANGELOG amend timing, JSON
-metadata cache lag, what-to-skip-after-first-publish) that
-the body-of-runbook steps are too tactical to flag in passing.
+M9 + M11 + M13 walkthrough surprises (CHANGELOG amend timing,
+JSON metadata cache lag, what-to-skip-after-first-publish, and
+the M13 findings — the rehearsal-wheel `0.0.0+local` artifact
+under the rename detour and `CHANGELOG.md` not shipping inside
+the sdist) that the body-of-runbook steps are too tactical to
+flag in passing.
 
 **TestPyPI rehearsal name caveat (still applies as of
-M11 publish 2026-05-27).** The bare project name `docs-cli`
+M13 publish 2026-05-29).** The bare project name `docs-cli`
 was parked on TestPyPI by an unrelated project at M9 publish
 time, and the squatter was still unchanged (`latest: 0.1.0`,
-no author surface) at M11 re-check. The TestPyPI rehearsal
+no author surface) at the M11 and M13 re-checks. The TestPyPI rehearsal
 therefore runs under a disambiguated dist name
 (`docs-cli-rehearsal`) — same wheel contents, same entry
 point `docs`, same `docs_cli` package import, only
@@ -46,14 +50,15 @@ Every release re-checks TestPyPI's `docs-cli` ownership at
 the operator-prep step (the original squatter may move on;
 if so, drop the rehearsal-name detour).
 
-**Publish-milestone cadence (M9 + M11 confirmed pattern).** Each
-implementation milestone with code or version-bumping changes
-lands its `pyproject.toml` / `__version__` / `CHANGELOG.md`
-bump inline at its own Phase 7 (and dates the CHANGELOG entry
-at its own Phase 10). The actual PyPI publish is then a
-separate operator-driven milestone that re-runs this runbook
-top to bottom — M9 published M6+M7+M8 as 1.3.0 (batched per
-the M9 OQ-C split); M11 published M10 as 1.4.0 (one-to-one).
+**Publish-milestone cadence (M9 + M11 + M13 confirmed pattern).**
+Each implementation milestone with code or version-bumping
+changes lands its `pyproject.toml` / `__version__` /
+`CHANGELOG.md` bump inline at its own Phase 7 (and dates the
+CHANGELOG entry at its own Phase 10). The actual PyPI publish
+is then a separate operator-driven milestone that re-runs this
+runbook top to bottom — M9 published M6+M7+M8 as 1.3.0 (batched
+per the M9 OQ-C split); M11 published M10 as 1.4.0 (one-to-one);
+M13 published M12 as 1.5.0 (one-to-one).
 **Fresh artifacts are always built at the publish milestone's
 start** — never reused from the implementation milestone's
 local `dist/`. The Trusted-Publishing / OIDC path remains
