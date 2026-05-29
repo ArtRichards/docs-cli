@@ -156,18 +156,29 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** none scoped. **docs-cli 1.5.0 is shipped**
-(M13 complete) — the v1.1+ publish backlog is clear through
-1.5.0. The next implementation milestone (M14) is unscoped;
-start it via `create-milestones` / `/ship-milestone next
-milestone` once a feature or fix is chosen.
+**Next action:** **M14 — Robustness + agent-native surface
+(v1.6)** is **scaffolded (Draft, 2026-05-29)** on branch
+`m14/milestone-setup`. The milestone pair
+[m14-robustness-agent-native.md](m14-robustness-agent-native.md)
++ [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md)
+is in place; scope folds the post-1.5.0 multi-agent review
+(the `docs mv` atomicity blocker, `docs new` strict-root
+refusal, slug/`OSError` guards, skill/packaging fixes) and the
+[agent-native-invocation.md](agent-native-invocation.md)
+proposal (non-interactive `archive --cascade`; `docs project
+set`). Phase 1 (Define Contract) opens via `/ship-milestone
+M14`. M14 builds 1.6.0 locally; M15 publishes it (M12→M13
+cadence). The broader agent-native surface (global `--json`,
+`docs context`/`capabilities`, hooks, MCP) is deferred — see
+the M14 Decisions.
+
 [release-runbook.md](release-runbook.md) remains the operative
-reference for the eventual publish, now with M13's cumulative
-lessons folded in (TestPyPI rehearsal prints `0.0.0+local`
-under the rename detour because the M12 `importlib.metadata`
-SoT can't resolve the renamed distribution — verify the
-version string against the canonical-name local + PyPI wheels;
-and `CHANGELOG.md` is not shipped inside the sdist).
+publish reference, with M13's cumulative lessons folded in
+(TestPyPI rehearsal prints `0.0.0+local` under the rename
+detour because the M12 `importlib.metadata` SoT can't resolve
+the renamed distribution — verify the version string against
+the canonical-name local + PyPI wheels; and `CHANGELOG.md` is
+not shipped inside the sdist).
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -321,6 +332,7 @@ for the milestone summary.
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
+| M14 — Robustness + agent-native surface (v1.6.0) | **Draft** (2026-05-29; scaffolded from the post-1.5.0 review + agent-native proposal; `mv` atomicity, `project set`, non-interactive `--cascade`, skill/packaging fixes; builds 1.6.0 locally, publish is M15) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

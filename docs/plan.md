@@ -32,6 +32,7 @@ v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON
 v1.1:  M6 (PyPI distribution prep)  →  M7 (migration accuracy)  →  M8 (adoption workflow)  →  M9 (PyPI publish 1.3.0)
 v1.4:  M10 (adoption-flow polish + 1.3.0 carry-overs)  →  M11 (PyPI publish 1.4.0)
 v1.5:  M12 (project rename + M11 wart fixes + version SoT)  →  M13 (PyPI publish 1.5.0)
+v1.6:  M14 (robustness + agent-native surface)  →  M15 (PyPI publish 1.6.0)
 ```
 
 ## M1 — Parser, walker, and `docs index`
@@ -120,6 +121,7 @@ prior public release existed, no continuity to preserve.
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
+| M14 — Robustness + agent-native surface (v1.6.0) | **Draft** (2026-05-29; scaffolded from the post-1.5.0 multi-agent review + the agent-native-invocation proposal; `docs mv` atomicity fix, `docs project set`, non-interactive `archive --cascade`, skill/packaging fixes; builds 1.6.0 locally, publish is M15) | [m14-robustness-agent-native.md](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
 is **Complete (2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl`
