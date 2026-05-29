@@ -78,22 +78,13 @@ python3 -m venv .venv
 
 ## Status
 
-**docs-cli 1.3.0 shipped 2026-05-25** — the first public release. Install with `pip install docs-cli`. **docs-cli 1.4.0 is ready locally** (M10 adoption-flow polish); the M11 publish milestone will lift it onto PyPI. Milestone history:
+Released on PyPI — `pip install docs-cli`. The on-disk Markdown convention is stable; the only breaking keyword change to date is the one-time `Status:` → `Lifecycle:` rename (no backward-compat alias).
 
-- M1 — Parser and `docs index` (shipped 2026-05-20)
-- M2 — Mutating verbs `new`, `archive`, `mv`, `touch` (shipped 2026-05-21)
-- M3 — Validation and query `check`, `list` (shipped 2026-05-22)
-- M4 — Migration helper `docs migrate` (shipped 2026-05-22)
-- M5 — Claude Code skill — drives the verbs automatically when an agent does documentation work in a `docs`-managed tree, with self-contained convention and CLI references bundled alongside (shipped 2026-05-22)
-- M6 — PyPI distribution preparation as `docs-cli`; relocates the CLI to a proper package at `src/docs_cli/`, ships the skill inside the wheel as package data, and adds `docs install-skill` for one-shot host materialisation (closed 2026-05-24 as preparation-only; publish landed at M9 batched 1.3.0)
-- M7 — Migration accuracy: `Status:` → `Lifecycle:` controlled-vocab rename, broadened role inference (H1 / section-header / sibling-set / word-boundary / `_M\d+` / non-role-suffix strip), `medium` confidence level, project-name normalisation, per-file mtime archive dates, multi-project hints, `--config-project` override, `[migrate]`-only sidecar (shipped 2026-05-25; the version-internal 1.2.0 was published at M9 batched 1.3.0)
-- M8 — Adoption workflow agent-driveable: tree-wide `--exclude` + `[exclude]` + `.docsignore`; migrate triage flags (`--summary`, `--only ambiguous`, `--group-by`); default plan footer summary; non-md sibling surfacing; `docs new --body-from` for one-call atomic doc authoring; substantial skill-reference rewrite (adoption playbook + `.docs.toml` template) (shipped 2026-05-25; the version-internal 1.3.0 is the published number)
-- M9 — PyPI publish (shipped 2026-05-25). `docs-cli==1.3.0` is live at [pypi.org/project/docs-cli/1.3.0/](https://pypi.org/project/docs-cli/1.3.0/); source tag at [github.com/ArtRichards/docs-cli/releases/tag/v1.3.0](https://github.com/ArtRichards/docs-cli/releases/tag/v1.3.0).
-- M10 — Adoption-flow polish + 1.3.0 carry-overs (ready locally as 1.4.0): multi-file atomic `docs touch <file>...`; `docs migrate --apply` writes/extends `.docs.toml` automatically + opportunistically removes empty archive-style parents; `docs migrate --apply --quiet` suppresses the per-file plan block; `[vocabulary] add_fields` allowlist + `docs check` `unknown-field` warning; `Confidence` enum replacing the M4 `bool | str` tri-value (JSON wire format byte-stable); `MigrationPlan.excluded_count` removed (set but never read); adoption playbook restructured to 4 steps (plan / triage / apply / verify). Publish deferred to M11.
+For current state, see the canonical sources — kept in sync by the tooling rather than duplicated here:
 
-**Publish strategy.** v1.1.0 and v1.2.0 never reached PyPI by design; M9 batched the M6 + M7 + M8 surface into a single public release at version 1.3.0 (one publish event, per operator OQ-C). The on-disk Markdown convention is otherwise stable; the M7 `Lifecycle:` rename is a one-time keyword change with no backward-compat alias.
-
-See [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) for per-milestone summaries, [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) for the roadmap, and [`docs/m9-pypi-publish.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/m9-pypi-publish.md) for the publish record (artifact sha256, deviations recorded for future releases). The [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) tracks every release.
+- [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) — the current version and full release history.
+- [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) — development progress.
+- [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) — the roadmap.
 
 ## License
 
