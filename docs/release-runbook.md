@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-05-29
 
 Related:
 - pairs-with: m9-pypi-publish.md
@@ -234,8 +234,14 @@ M11 Phase 4 before fresh build.
       wheel sha256 will typically be byte-identical to a
       previous pre-publish build of the same `src/` (M11
       confirmed this — Phase 2 build sha matched Phase 4 build
-      sha because only `docs/` evolved); the sdist sha differs
-      because it captures `docs/` + `CHANGELOG.md`.
+      sha because only `docs/` evolved). The sdist captures
+      `docs/` (and `tests/`) but **not** `CHANGELOG.md` (M13
+      verified: `tar tzf dist/*.tar.gz | grep -c CHANGELOG` →
+      0) — so within one publish milestone the Phase 2 and
+      Phase 4 sdist shas are byte-identical when `docs/` is
+      untouched between them, even though the CHANGELOG is
+      dated in between (M13 confirmed). Across milestones the
+      sdist sha moves because `docs/` evolves.
 - [ ] `.venv/bin/pip install --quiet twine` (if not already
       present; `twine 6.2.0` was the version smoke-tested at M6
       ship and re-used unchanged through M11).
@@ -289,7 +295,16 @@ build must go out under `docs-cli`.
       (The `--extra-index-url` lets pip resolve `docs-cli`'s
       well-formed dist-info even though we have no runtime deps;
       it also prevents a future-day surprise if a dep is added.)
-- [ ] `/tmp/docs-test-venv/bin/docs --version` → `docs <VERSION>`.
+- [ ] `/tmp/docs-test-venv/bin/docs --version` — **caveat
+      (M13+):** under the rehearsal-name rename this prints
+      `docs 0.0.0+local`, NOT `docs <VERSION>`, because
+      `__version__` reads `importlib.metadata.version("docs-cli")`
+      (M12 SoT) and the rehearsal installs as
+      `docs-cli-rehearsal`, so the lookup misses and hits the
+      `PackageNotFoundError` fallback. This is expected, not a
+      failure. Verify the version-string contract against the
+      canonical-name **local** wheel (pre-publish smoke) and
+      the **PyPI** wheel (Phase 4) — never the rehearsal wheel.
 - [ ] `/tmp/docs-test-venv/bin/docs install-skill --dest /tmp/docs-test-skill`
       → bundled tree appears byte-identical to `src/docs_cli/skill/`.
 - [ ] `/tmp/docs-test-venv/bin/docs install-skill --dest /tmp/docs-test-skill --symlink`
@@ -565,3 +580,46 @@ release closeout; do **not** rewrite past entries.
   not to add an active pre-upload token probe — the false-alarm
   surface of "check tokens are valid" tooling isn't worth it
   when the upload itself is the cheapest definitive test.
+
+### From M13 (2026-05-29, `docs-cli==1.5.0`)
+
+- **The TestPyPI rehearsal can no longer verify `docs
+  --version` after the M12 `importlib.metadata` SoT refactor.**
+  `__version__` now reads
+  `importlib.metadata.version("docs-cli")`; the rehearsal
+  installs the distribution as `docs-cli-rehearsal`, so the
+  lookup raises `PackageNotFoundError` and falls back to the
+  documented `0.0.0+local`. The rehearsal wheel therefore
+  prints `docs 0.0.0+local`, not the real version. This is
+  **expected**, not a regression — M9/M11 never hit it because
+  `__version__` was a hardcoded literal back then. The
+  version-string contract is verified against the
+  canonical-name local wheel and the PyPI wheel instead (both
+  print the real version). Caveat folded into the TestPyPI
+  block's `docs --version` step above.
+- **`CHANGELOG.md` is not shipped in the sdist.** The hatchling
+  sdist carries `src/`, `docs/`, `tests/`, `README.md`,
+  `LICENSE`, `pyproject.toml` — verified `tar tzf dist/*.tar.gz
+  | grep -c CHANGELOG` → 0. Earlier runbook wording ("the sdist
+  captures docs/ + CHANGELOG.md") was wrong on the CHANGELOG
+  part; corrected in the Artifact-build section. Consequence:
+  the "commit the dated CHANGELOG before the fresh rebuild so it
+  ships in the sdist" instinct is moot — the dated CHANGELOG
+  reaches users via the git repo and the GitHub release notes,
+  not the PyPI sdist. (Still commit it before the build so the
+  tag points at a tree with the dated CHANGELOG.)
+- **Chain-of-custody bit-perfect again.** PyPI-served wheel
+  sha256 byte-identical to the local Phase 4 build — third
+  release running (M11 + M13 confirmed; the `pip download` +
+  `sha256sum` check stays in the runbook).
+- **Squatter still parked.** TestPyPI bare `docs-cli` re-checked
+  at M13 Phase 1 — unchanged (`latest: 0.1.0`, author None).
+  The `docs-cli-rehearsal` detour continues.
+- **Fully-autonomous publish.** M13 was driven by
+  `/ship-milestone M13` end-to-end (operator authorized the
+  irreversible PyPI upload + `main` push up front). The
+  conductor walked this runbook directly rather than the
+  10-phase TDD step stack, since a publish milestone has no
+  code phases. The runbook's internal hard gates (twine check,
+  clean rehearsal, bit-perfect chain-of-custody) remained the
+  go/no-go conditions.

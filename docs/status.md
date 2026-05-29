@@ -14,21 +14,32 @@ Related:
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
 - pairs-with: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: m12-project-rename.md
-- pairs-with: m13-pypi-publish.md
+- pairs-with: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: release-runbook.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
 
-**M13 — PyPI publish 1.5.0** is **Active (2026-05-29)** — the
-publish-only counterpart to M12. The milestone pair is
-[m13-pypi-publish.md](m13-pypi-publish.md) +
+**docs-cli 1.5.0 shipped 2026-05-29.** **M13 — PyPI publish
+1.5.0** is **Complete (2026-05-29)** — `docs-cli==1.5.0` is
+live at https://pypi.org/project/docs-cli/1.5.0/, the
+publish-only counterpart to M12 (mirroring M11 → M10 and
+M9 → M8). The `v1.5.0` annotated tag points at the M13 Phase 4
+commit; the GitHub release carries the `## 1.5.0` CHANGELOG
+notes. Chain-of-custody verified bit-perfect (PyPI-served
+wheel sha256 byte-identical to the local Phase 4 build); all
+four M12 headline contracts (project rename round-trip; touch
+outside-root refusal; archive referring-edge rewrite;
+`importlib.metadata` version SoT) hold against the PyPI-served
+wheel. The milestone pair is
+[m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md)
+(archived at closeout) +
 [m13-pypi-publish-impl.md](m13-pypi-publish-impl.md); the
-operative checklist remains
-[release-runbook.md](release-runbook.md), which already folds
-in the M11 cumulative lessons + deviations. Phase 1 (operator
-one-time prep) opens via `/ship-milestone M13`.
+operative checklist was
+[release-runbook.md](release-runbook.md). Full publish record
++ deviations live in the impl log's milestone-completion
+summary.
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
 is **Complete (2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl`
@@ -145,15 +156,18 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M13 — PyPI publish 1.5.0** is **Active
-(2026-05-29)**. The milestone pair
-[m13-pypi-publish.md](m13-pypi-publish.md) +
-[m13-pypi-publish-impl.md](m13-pypi-publish-impl.md) is in
-place; Phase 1 (operator one-time prep) opens via
-`/ship-milestone M13`. The operative checklist remains
-[release-runbook.md](release-runbook.md) which already folds
-in the M11 cumulative lessons + deviations, so M13 inherits
-them automatically.
+**Next action:** none scoped. **docs-cli 1.5.0 is shipped**
+(M13 complete) — the v1.1+ publish backlog is clear through
+1.5.0. The next implementation milestone (M14) is unscoped;
+start it via `create-milestones` / `/ship-milestone next
+milestone` once a feature or fix is chosen.
+[release-runbook.md](release-runbook.md) remains the operative
+reference for the eventual publish, now with M13's cumulative
+lessons folded in (TestPyPI rehearsal prints `0.0.0+local`
+under the rename detour because the M12 `importlib.metadata`
+SoT can't resolve the renamed distribution — verify the
+version string against the canonical-name local + PyPI wheels;
+and `CHANGELOG.md` is not shipped inside the sdist).
 
 ### M6 — preparation complete (2026-05-24)
 
@@ -305,8 +319,8 @@ for the milestone summary.
 | M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
 | M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI via M11; 400/400 GREEN at M10 close; kebab-tiny dogfood PASS) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
-| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; PyPI publish is M13's scope) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
-| M13 — PyPI publish 1.5.0 | **Active** (2026-05-29; publish-only counterpart to M12; runbook-driven, mirrors M11 → M10 / M9 → M8 cadences; M11 cumulative lessons + deviations already folded into the runbook) | [Plan](m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
+| M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
@@ -395,18 +409,15 @@ rm -rf .venv && python3 -m venv .venv         # needs python3-venv on Debian/Ubu
 .venv/bin/pip install -e ".[dev]"             # lands `docs` on PATH via the entry point
 ```
 
-**Next action:** **M12 — Project rename + M11 wart fixes +
-version SoT (v1.5.0)** is **Active 2026-05-28** (operator-chosen
-kitchen-sink scope). Headline feature: the M10 follow-on
-`docs project rename <new-name>` verb (the M10 archive doc's
-"deferred TODO" block at lines 261-268 carries the full
-target spec) — plus three carry-overs: `docs touch` outside-
-docs-root refusal (M11 wart), `docs archive` referring-edge
-rewrite (M11 wart), and `importlib.metadata` version SoT (M6
-parked). **Scope frozen 2026-05-28** — OQ-A through OQ-D
-triaged into Decisions per operator recommendations. Phase 1
-(Contract) opens in the next session via `/ship-milestone M12`.
-M13 will publish 1.5.0 to PyPI.
+**Next action:** none scoped — **M12 shipped to PyPI as
+`docs-cli==1.5.0` via M13 on 2026-05-29** (M12 built the four
+features locally; M13 published them, mirroring M11 → M10).
+Both milestones are Complete. The next implementation
+milestone (M14) is unscoped; pick it up via
+`create-milestones` / `/ship-milestone next milestone`. The
+authoritative current state lives in the "Current milestone"
+and top "Next action" sections above; this resume-snapshot
+block is historical.
 
 **docs-cli 1.4.0 shipped 2026-05-27** as M11 — the
 operator-driven publish milestone for the M10-built artefacts,

@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-29. 35 docs active, 2 archived._
+_Generated 2026-05-29. 34 docs active, 3 archived._
 
 ## Project — docs
 
@@ -28,7 +28,6 @@ _Generated 2026-05-29. 35 docs active, 2 archived._
 
 ### Active — Milestone
 
-- [m13-pypi-publish.md](m13-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-29, post M12 closeout.** M13 enters > active state immediately — the M12 wheel + sdist already…. Updated 2026-05-29.
 - [m12-project-rename.md](m12-project-rename.md) — _milestone_ — > **Stub-drafted 2026-05-28** following M11 closeout. M12 bundles > one operator-facing headline feature (`docs project…. Updated 2026-05-28.
 - [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
 - [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
@@ -63,7 +62,7 @@ _Generated 2026-05-29. 35 docs active, 2 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-05-27.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-05-29.
 
 ### Active — Reference
 
@@ -73,6 +72,7 @@ _Generated 2026-05-29. 35 docs active, 2 archived._
 
 ## Archived
 
+- [archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-29, post M12 closeout.** M13 enters > active state immediately — the M12 wheel + sdist already…. Updated 2026-05-29.
 - [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) — _milestone_ — - Milestone: M10 (v1.4.0) - Title: Adoption-flow polish + 1.3.0 carry-overs - Surface: two new CLI features (`docs…. Updated 2026-05-27.
 - [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-27, post M10 closeout.** M11 enters > active state immediately — the M10 wheel + sdist already…. Updated 2026-05-27.
 <!-- docs:generated end -->

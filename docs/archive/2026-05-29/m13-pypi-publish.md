@@ -1,9 +1,10 @@
 # M13 — PyPI publish 1.5.0
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-29
+Archived-reason: Milestone M13 complete; docs-cli==1.5.0 shipped to PyPI 2026-05-29
 
 Related:
 - parent-of: m13-pypi-publish-impl.md
@@ -117,30 +118,30 @@ public GitHub repo carries the matching `v1.5.0` tag + release.
 
 ### Deliverables
 
-- [ ] PyPI release `docs-cli` 1.5.0 published; project page
+- [x] PyPI release `docs-cli` 1.5.0 published; project page
       live at `https://pypi.org/project/docs-cli/1.5.0/`.
-- [ ] TestPyPI release `docs-cli-rehearsal` 1.5.0 published as
+- [x] TestPyPI release `docs-cli-rehearsal` 1.5.0 published as
       the rehearsal artifact at
       `https://test.pypi.org/project/docs-cli-rehearsal/1.5.0/`
       (continues the M9/M11 disambiguated dist-name detour).
-- [ ] `pyproject.toml` `version` confirmed at `1.5.0` (already
+- [x] `pyproject.toml` `version` confirmed at `1.5.0` (already
       landed at M12 Phase 7; `__version__` flows through
       `importlib.metadata` per M12 SoT refactor).
-- [ ] `CHANGELOG.md` `## 1.5.0 — UNRELEASED` section dated to
+- [x] `CHANGELOG.md` `## 1.5.0 — UNRELEASED` section dated to
       publish day; surrounding body re-verified accurate.
-- [ ] `v1.5.0` git tag pushed; GitHub release created with
+- [x] `v1.5.0` git tag pushed; GitHub release created with
       notes sourced from the CHANGELOG `## 1.5.0` section.
-- [ ] `docs/status.md`: M12 + M13 rows finalised; "Current
+- [x] `docs/status.md`: M12 + M13 rows finalised; "Current
       milestone" + "Next action" rewritten post-publish.
-- [ ] `docs/plan.md`: M12 + M13 rows finalised.
-- [ ] `docs/m13-pypi-publish.md` (this file): Phase Checklist
+- [x] `docs/plan.md`: M12 + M13 rows finalised.
+- [x] `docs/m13-pypi-publish.md` (this file): Phase Checklist
       ticked; milestone-completion summary appended; lifecycle
       archived via `docs archive --cascade`.
-- [ ] `docs/m13-pypi-publish-impl.md`: per-phase log entries +
+- [x] `docs/m13-pypi-publish-impl.md`: per-phase log entries +
       final milestone-completion summary; stays `Lifecycle:
       active` after milestone-doc archive (per the
       M8/M9/M10/M11 pattern).
-- [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
       regenerated in lockstep.
 
 ## Phase Checklist
@@ -148,33 +149,33 @@ public GitHub repo carries the matching `v1.5.0` tag + release.
 M13 has no TDD code phases — it is an operational milestone.
 The runbook's sections are the phases (mirrors M9/M11 exactly):
 
-- [ ] Operator one-time prep — session-verifiable state
+- [x] Operator one-time prep — session-verifiable state
       captured at M13 start (`~/.pypirc` intact mode 600; PyPI
       `docs-cli` at 1.4.0, 1.5.0 slot free; TestPyPI
       `docs-cli` squatter status re-checked; TestPyPI
       `docs-cli-rehearsal` at 1.4.0, 1.5.0 slot free; twine +
       build tool versions ready).
-- [ ] Pre-publish prep — versions verified `1.5.0` (M12
+- [x] Pre-publish prep — versions verified `1.5.0` (M12
       Phase 7 landed `pyproject.toml`; M12 SoT refactor flows
       `__version__` through `importlib.metadata`), CHANGELOG
       header `## 1.5.0 — UNRELEASED`, tree at the M13 setup
       commit, quality gate green tree-wide, fresh artefacts
       rebuilt, local-install smoke + M12 headline contracts
       verified against the wheel.
-- [ ] TestPyPI rehearsal — uploaded as
+- [x] TestPyPI rehearsal — uploaded as
       `docs-cli-rehearsal==1.5.0`; throwaway-venv install from
       TestPyPI succeeded; full smoke including the four M12
       headline contracts (project rename round-trip; touch
       outside-root refusal; archive referring-edge rewrite;
       version SoT via `importlib.metadata`) passed against
       TestPyPI-served wheel.
-- [ ] Real PyPI publish — `docs-cli==1.5.0` LIVE on PyPI;
+- [x] Real PyPI publish — `docs-cli==1.5.0` LIVE on PyPI;
       both artefacts twine-check PASS; upload PASS;
       chain-of-custody bit-perfect (PyPI-served wheel sha256
       byte-identical to local Phase 4 build); throwaway-venv
       install from PyPI succeeded; full smoke + M12 headline
       contracts PASS against PyPI-served wheel.
-- [ ] Post-release — `m13/milestone-setup` ff-merged into
+- [x] Post-release — `m13/milestone-setup` ff-merged into
       `main` and pushed; annotated `v1.5.0` tag pushed to
       `origin`; GitHub release live with notes sourced from
       `## 1.5.0`; doc closeouts (plan/status/INDEX + dogfood
@@ -254,30 +255,30 @@ SoT via `importlib.metadata`).
 
 M13 is complete when:
 
-- [ ] `pip install docs-cli==1.5.0` works from PyPI on a clean
+- [x] `pip install docs-cli==1.5.0` works from PyPI on a clean
       host with Python 3.11+ and produces a working `docs`
       command.
-- [ ] `docs --version` from the PyPI-installed wheel prints
+- [x] `docs --version` from the PyPI-installed wheel prints
       `docs 1.5.0`.
-- [ ] `docs project rename` against a copied fixture tree
+- [x] `docs project rename` against a copied fixture tree
       round-trips byte-identical (the headline M12 contract —
       re-verified against the published artefact, not just the
       local build).
-- [ ] `docs touch <path>` outside any `.docs.toml`-rooted tree
+- [x] `docs touch <path>` outside any `.docs.toml`-rooted tree
       refuses with exit 2 and leaves the file unchanged (M12
       wart fix — re-verified against the PyPI-served wheel).
-- [ ] `docs archive <doc>` rewrites referring `Related:`
+- [x] `docs archive <doc>` rewrites referring `Related:`
       edges atomically across the active tree (M12 wart fix —
       re-verified against the PyPI-served wheel).
-- [ ] `docs install-skill` from the PyPI-installed wheel
+- [x] `docs install-skill` from the PyPI-installed wheel
       places a host-correct skill that drives the verbs
       identically to the in-repo install.
-- [ ] The `v1.5.0` tag and GitHub release exist at
+- [x] The `v1.5.0` tag and GitHub release exist at
       `https://github.com/ArtRichards/docs-cli/releases/tag/v1.5.0`.
-- [ ] All Phase Checklist items above are ticked.
-- [ ] `docs/status.md` reflects M12 + M13 as Complete with the
+- [x] All Phase Checklist items above are ticked.
+- [x] `docs/status.md` reflects M12 + M13 as Complete with the
       actual publish date.
-- [ ] `docs/m13-pypi-publish-impl.md` carries a
+- [x] `docs/m13-pypi-publish-impl.md` carries a
       milestone-completion summary with the published version
       (`1.5.0` — assuming no TestPyPI-surfaced regression
       forces a `1.5.x` bump), wheel + sdist sha256, publish
@@ -294,3 +295,69 @@ ownership status; token re-scope status; any runbook-deviation
 needed for v1.5 specifically) will be recorded in the
 Milestone-completion summary as they surface, mirroring the
 M9/M11 pattern._
+
+## Milestone-completion summary
+
+**M13 complete — `docs-cli==1.5.0` shipped to PyPI 2026-05-29.**
+Driven end-to-end via `/ship-milestone M13` walking
+[release-runbook.md](release-runbook.md) (M13 has no TDD code
+phases; the runbook sections are the phases).
+
+- **PyPI:** https://pypi.org/project/docs-cli/1.5.0/
+- **TestPyPI rehearsal:**
+  https://test.pypi.org/project/docs-cli-rehearsal/1.5.0/
+- **Published artefact sha256 (chain-of-custody anchors):**
+  - wheel `docs_cli-1.5.0-py3-none-any.whl`:
+    `b8023fffb3393aeff5ac85943164a414916e06ea85e68502e167f0948e85b70b`
+  - sdist `docs_cli-1.5.0.tar.gz`:
+    `c5f83c6d57c63c7116e06a777eb0f0394968b0233fe15f0a084c2ab2c61f9c39`
+- **Chain-of-custody:** PyPI-served wheel sha256 byte-identical
+  to the local Phase 4 build — bit-perfect (matches M11).
+- **Quality gate at publish:** 433 passed; ruff / ruff format /
+  mypy clean tree-wide; `docs check docs/` exit 0;
+  `docs index --root docs/ --dry-run` idempotent.
+- **Smoke + four M12 headline contracts** verified against the
+  PyPI-served wheel: `docs --version` → `docs 1.5.0`;
+  `docs project rename` round-trips byte-identical;
+  `docs touch` outside any docs root refuses with exit 2 and
+  leaves the file unchanged; `docs archive` rewrites referring
+  `Related:` edges atomically; version flows through
+  `importlib.metadata`. `install-skill` byte-identical /
+  no-op / `--symlink` exit 2.
+- **`v1.5.0`** annotated tag at the M13 Phase 4 commit
+  (the dated-CHANGELOG commit whose tree matches PyPI); GitHub
+  release live with notes sourced from the `## 1.5.0` CHANGELOG
+  section.
+
+### Deviations (recorded for v1.6+)
+
+1. **TestPyPI rehearsal wheel prints `docs 0.0.0+local`, not
+   `docs 1.5.0`.** New since M12: `__version__` reads
+   `importlib.metadata.version("docs-cli")`, but the rehearsal
+   detour installs the distribution as `docs-cli-rehearsal`, so
+   the lookup misses and falls back to the documented
+   `0.0.0+local`. This is *not* a regression — the version
+   string is genuinely verified against the canonical-name
+   local wheel (Phase 2) and the real PyPI wheel (Phase 4),
+   both of which print `docs 1.5.0`. M9/M11 never hit this
+   because `__version__` was hardcoded pre-M12. **Runbook
+   action taken:** the version probe in the TestPyPI block now
+   carries a caveat; verify `docs --version` against the
+   canonical-name wheels, never the rehearsal wheel.
+2. **`CHANGELOG.md` is not shipped inside the sdist.** The
+   hatchling sdist captures `src/`, `docs/`, `tests/`,
+   `README.md`, `LICENSE`, `pyproject.toml` — but not
+   `CHANGELOG.md` (verified: `tar tzf … | grep -c CHANGELOG`
+   → 0). This corrects the runbook's "the sdist captures
+   docs/ + CHANGELOG.md" claim and explains why the Phase 2
+   and Phase 4 sdist sha256 were byte-identical despite the
+   CHANGELOG date edit between them (only `docs/`, unchanged,
+   affects the sdist). Harmless: the dated CHANGELOG ships via
+   the git repo and the GitHub release notes.
+
+No version bump was forced — the TestPyPI rehearsal surfaced no
+packaging regression (the `0.0.0+local` print is the
+rename-detour artifact above, not a defect), so `1.5.0`
+published as-is. Token re-scope to project-`docs-cli` continues
+to roll forward as the M9 open follow-on (async operator UI
+work; not a release blocker).
