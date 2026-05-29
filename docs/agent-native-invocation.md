@@ -262,6 +262,80 @@ them:
   1D's gate and MCP schemas are generated truth, not
   hand-maintained prose.
 
+#### 5E — `docs project set`: reassign one doc's project (NOT `migrate`)
+
+- **The gap (how this idea surfaced).** Changing a single
+  doc's `Project:` has no verb. To file *this* doc under
+  `ideas` we deleted it and recreated it with
+  `docs new --project ideas` — destructive: it drops the
+  doc's `Related:` edges, re-runs scaffolding, and (for a
+  *tracked* doc) breaks history continuity. `docs new --project`
+  covers project-at-creation; `docs project rename` covers the
+  *whole root*; the post-hoc single-doc case falls in the gap.
+  An agent recreating a doc to change one field is exactly the
+  clunky, error-prone move the rest of this doc argues against.
+- **Should it be `docs migrate`? No.** `migrate` adopts
+  *foreign, unmanaged* markdown into the convention:
+  inference-driven (it guesses `Role`/`Project`), dry-run by
+  default, a one-shot import of external files. Reassigning a
+  field on an already-managed doc is the inverse — a precise,
+  known mutation inside the tree. Routing it through `migrate`
+  would overload that verb's "import external" model and blur a
+  clean boundary. Reject.
+- **Where it belongs: the `docs project` namespace.**
+  `docs project --help` already reserves the namespace for
+  "future per-project verbs (show, validate, …)". `rename` is
+  the *whole-root* operation (rewrite `.docs.toml` `[project]
+  name` + every matching `Project:` line); **`project set`** is
+  its *single-doc* counterpart. Same concept, two scopes,
+  co-located — most discoverable, least surprising.
+- **Proposed shape:**
+  ```
+  docs project set <doc>... <new-project>
+      [--root DIR] [--quiet] [--dry-run] [--new-project]
+  ```
+  - Reassigns `Project:` on one or more docs; **one**
+    end-of-batch INDEX refresh; atomic all-or-nothing on
+    validation failure (mirrors `touch` / `project rename`).
+  - `<new-project>` normalised via M7's
+    `normalise_project_name()` — same as `rename`; empty
+    post-normalised input → exit 2.
+  - Archived docs are read-only (skip + report), matching
+    `rename`'s stance.
+  - **No path change ⇒ no `Related:`-edge rewrite** (unlike
+    `rename`/`archive`/`mv`). It only edits the `Project:` line
+    and the doc's INDEX grouping — strictly simpler than those.
+- **The interesting design decision — a typo guard.** The way
+  an agent silently fragments the INDEX is a typo
+  (`idea` vs `ideas` → two project groups). Rather than prompt
+  (we never prompt — see the non-interactive invariant above),
+  **refuse a project value new to the tree unless `--new-project`
+  is passed**, with a prescriptive, did-you-mean error (this is
+  proposal P0-3 dogfooded):
+  ```
+  docs: project set: 'idea' is not a project in this tree; refusing
+    → did you mean 'ideas'? to create a new project group, pass --new-project
+  ```
+  An *existing* project value needs no flag. Creating a new
+  group (as we just did for `ideas`) is a deliberate act the
+  flag acknowledges — catching typos without a blocking prompt.
+- **Composes with `rename`.** `project rename` only rewrites
+  docs matching the *old* root name, so docs already reassigned
+  by `set` are correctly left alone (its existing
+  "non-matching docs reported, not mutated" behaviour). `set`
+  and `rename` are orthogonal halves that don't fight.
+- **Rejected alternative — a generic `docs set <doc> <field>
+  <value>`.** Too broad: it would let an agent poke arbitrary
+  metadata and bypass the controlled vocab (`Role`/`Lifecycle`
+  have constrained transitions; `Project` is the one
+  identifier-like free field). Keep it a focused
+  `project set`.
+- **TDD sketch.** Counterpart tests to `project rename`'s set:
+  single-doc set; multi-doc atomic batch; `--dry-run` plan;
+  archived-skip; empty-name → exit 2; unknown-project-without-
+  `--new-project` → exit 2 with did-you-mean; INDEX regrouping;
+  idempotent re-set reports no change.
+
 ## Explicitly *not* worth porting
 
 - **Hook command-*rewriting*** (silently injecting `--dry-run`):
