@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-29. 34 docs active, 3 archived._
+_Generated 2026-05-29. 35 docs active, 3 archived._
 
 ## Project — docs
 
@@ -69,6 +69,12 @@ _Generated 2026-05-29. 34 docs active, 3 archived._
 - [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-05-28.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 - [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-05-20.
+
+## Project — ideas
+
+### Active — Plan
+
+- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-05-29.
 
 ## Archived
 
