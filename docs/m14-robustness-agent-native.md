@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-05-29
+Updated: 2026-06-02
 
 Related:
 - child-of: plan.md
@@ -16,9 +16,10 @@ Related:
 
 - Milestone: M14 (v1.6)
 - Title: Robustness + agent-native surface
-- Surface: hardening fixes to existing verbs + two new agent-facing
-  affordances (`docs project set`, non-interactive `archive --cascade`)
-  + agent-skill/packaging corrections. No publish — M14 builds 1.6.0
+- Surface: hardening fixes to existing verbs + three new agent-facing
+  affordances (`docs project set`, non-interactive `archive --cascade`,
+  single-file `docs stamp`) + `--body-from`/`docs touch` robustness +
+  agent-skill/packaging corrections. No publish — M14 builds 1.6.0
   locally; a separate publish milestone (M15) ships it, per the
   M12→M13 / M10→M11 / M8→M9 cadence.
 - Status: Draft (scaffolded 2026-05-29 from the post-1.5.0 multi-agent
@@ -69,6 +70,18 @@ and immediate payoff.
   is "fsync'd" — it isn't (`cli.py:584-592`). Either add `os.fsync`
   before `replace` or drop the claim. Tighten `_archive_one`'s
   atomicity docstring (`cli.py:3382-3399`).
+- **A6 — `docs touch` reindex ignores excludes (same family as A1/A4).**
+  `_cmd_touch` (`cli.py:3648`) calls `_refresh_index(root, config)` with
+  no predicate, so the end-of-batch reindex walks the *whole* tree —
+  including `[exclude]`-d files. The dates are written first, so a single
+  malformed excluded file (e.g. a bundled plugin `README.md`) makes the
+  post-mutation walk raise: dates land but the INDEX refresh fails →
+  partial, non-atomic. `_refresh_index` already accepts a `predicate`
+  and `_cmd_index` (`cli.py:3248`) builds one via
+  `compile_exclude_predicate`; thread it into `touch` too. Add a test:
+  `touch` over a tree whose `[exclude]` set holds a malformed file leaves
+  that file out of the INDEX and the refresh succeeds. (Surfaced by the
+  M16 bundled-skill dogfood — see impl-log provenance.)
 
 **Thread B — agent-native surface (from agent-native-invocation.md).**
 
@@ -88,6 +101,18 @@ and immediate payoff.
   that refuses a project value new to the tree (with a did-you-mean)
   rather than prompting. Composes with `rename` (which already leaves
   non-matching-project docs untouched).
+- **B3 — single-file write-then-stamp (`docs stamp <file>`).** The friction
+  the M16 bundled-skill dogfood hit: an agent's natural move is to *write
+  the whole document* with ordinary tools, then bring it under convention —
+  but `docs new --body-from` owns the frontmatter and fights bodies that
+  contain `Label:`-shaped prose (see C4). `docs migrate` already
+  infers/inserts a metadata block, but only tree-wide; the gap is the
+  single file. Add `docs stamp <file>...` (alias/extension of `migrate`):
+  infer `# H1` → title, take `--role`/`--project` (else fall back to
+  `.docs.toml`), insert a valid metadata block on top, idempotently
+  (re-stamping a doc that already has a block is a no-op bar an `Updated:`
+  refresh). Removes the body-content restriction *class* rather than
+  tuning the heuristic. Verb name + migrate-vs-new-verb shape is an Open Q.
 
 **Thread C — agent skill + packaging (from the review).**
 
@@ -106,6 +131,19 @@ and immediate payoff.
   which only matches a pyproject *comment*, not a real directive.
   Replace with an assertion on the actual `packages` glob, or fold into
   the real guard `test_b3` (`tests/test_packaging.py:239`).
+- **C4 — `--body-from` refuses real prose, not just frontmatter.** The
+  OQ-E heuristic (`cli.py:3336-3347`) rejects a body if *any* of its first
+  20 lines matches `^[A-Z][A-Za-z-]+:\s` — so a legitimate spec/test-matrix
+  body line like `Reason: …` or `Plan: …` is refused (this is exactly the
+  dogfood failure: a test-matrix body starting `## Risk level` was rejected
+  on its `Reason:` line). Replace the any-`Label:` match with detection of
+  an *actual* metadata block: a leading `---` YAML fence, or a contiguous
+  run carrying the required-field cluster (`Lifecycle`/`Role`/`Updated`)
+  at/near the top (after an optional `# H1`). Preserves the footgun guard
+  (a whole doc-with-frontmatter pasted as a body still refuses) while
+  letting prose through. NB: this flips the pinned `edge-case-keyword.md`
+  expectation in `tests/test_body_from.py` (the `Plan:` body now passes) —
+  update that fixture/assertion as part of the change.
 
 ## Deliverables
 
@@ -114,12 +152,19 @@ and immediate payoff.
 - [ ] A3 empty-segment slug rejected.
 - [ ] A4 `OSError` in mv/archive edge-rewrite → clean exit 2.
 - [ ] A5 `atomic_write` fsync claim reconciled; archive docstring fixed.
+- [ ] A6 `docs touch` reindex threads the exclude predicate; malformed-
+      excluded-file atomicity test added.
 - [ ] B1 `archive --cascade` non-interactive flag set; prompt removed
       (or behind `--interactive`); `cli.md` updated.
 - [ ] B2 `docs project set` verb shipped + spec'd in `cli.md` + skill.
+- [ ] B3 single-file `docs stamp <file>` (write-then-stamp) shipped +
+      spec'd in `cli.md` + skill; idempotent re-stamp.
 - [ ] C1 bundled reference links host-resolvable.
 - [ ] C2 `--body-from` in SKILL table; frontmatter description refreshed.
 - [ ] C3 `test_a6` replaced with a real package-data assertion.
+- [ ] C4 `--body-from` refusal detects a real metadata block (`---` fence
+      or required-field cluster), not any `Label:` line; `edge-case-keyword`
+      expectation flipped.
 - [ ] `pyproject.toml` `version` → `1.6.0`; `CHANGELOG.md`
       `## 1.6.0 — UNRELEASED` authored (publish-survival wording).
 - [ ] `docs/cli.md` + `convention.md` reflect every behavior change;
@@ -131,14 +176,19 @@ and immediate payoff.
 - [ ] 1. Define Contract — `cli.md` deltas for `project set`, the
       `--cascade` flag set, the `new` strict-refusal exit codes.
 - [ ] 2. Write Tests (RED) — pin every A/B/C behavior, incl. the
-      mv malformed-sibling atomicity test and the cascade-no-prompt test.
+      mv malformed-sibling atomicity test, the cascade-no-prompt test, the
+      touch-excludes reindex test, `stamp` idempotency, and the
+      `--body-from` real-frontmatter cases (incl. the edge-case flip).
 - [ ] 3. Create Fixtures — multi-project tree for `project set`; a tree
-      with a malformed sibling for the mv pre-flight.
+      with a malformed sibling for the mv pre-flight; a tree whose
+      `[exclude]` set holds a malformed file for the touch reindex; a raw
+      no-frontmatter file for `stamp`.
 - [ ] 4. Run Tests (RED) — confirm the intended red baseline.
-- [ ] 5. Update Interfaces — argparse: `project set`, `--cascade*`,
+- [ ] 5. Update Interfaces — argparse: `project set`, `stamp`, `--cascade*`,
       strict-resolver wiring.
-- [ ] 6. Implement Core — the pre-flight walk, `project set`, cascade
-      set computation, slug/OSError guards.
+- [ ] 6. Implement Core — the pre-flight walk, `project set`, `stamp`,
+      cascade set computation, the touch exclude-predicate fix, the
+      `--body-from` block detector, slug/OSError guards.
 - [ ] 7. Update Wrappers — `pyproject.toml` 1.6.0; CHANGELOG entry;
       skill refs resync.
 - [ ] 8. Run Tests (GREEN) + quality gate.
@@ -196,6 +246,13 @@ refuses outside a root.
 - [ ] `pip`-relevant packaging guard actually fails if the skill glob
       breaks (C3).
 - [ ] Full suite GREEN; quality gate clean tree-wide; `docs check` exit 0.
+- [ ] `docs touch` over a tree with a malformed *excluded* file stamps the
+      dates *and* refreshes the INDEX cleanly (excluded file never indexed).
+- [ ] `docs stamp <raw.md>` inserts a valid metadata block (title from H1,
+      role/project from flags or `.docs.toml`); re-running is a no-op bar
+      `Updated:`.
+- [ ] `docs new --body-from` accepts a body whose prose contains `Reason:`/
+      `Plan:` lines, yet still refuses a whole doc-with-frontmatter body.
 
 ## OPEN QUESTIONS
 
@@ -211,5 +268,14 @@ refuses outside a root.
   independently maintained? The link fix must not break the
   `_trees_byte_identical` no-op detection. Recommend: declare `docs/`
   canonical, generate the bundled copies, fix links in the generator.
-- **Milestone size:** A+B+C is large (≈M12 scale). Split B2/`project set`
-  into its own milestone if Step-1 planning judges the cycle too wide?
+- **`docs stamp` shape (B3):** a new top-level `docs stamp <file>` verb, or
+  teach `docs migrate` to accept a single file (and alias `stamp` to it)?
+  Recommend: extend `migrate`'s single-file path and expose `docs stamp` as
+  the agent-facing name. How is metadata supplied — flags only, or infer
+  `role`/`project` defaults from `.docs.toml`? Recommend: `--role`/`--project`
+  flags, default `role: notes`, project from config.
+- **Milestone size:** A+B+C — now widened by A6/B3/C4 — is well past M12
+  scale. Strong candidate to split: e.g. carve the agent-native authoring
+  set (B2 `project set` + B3 `stamp` + C4 `--body-from`) into its own
+  milestone if Step-1 planning judges the cycle too wide. Recommend Step-1
+  makes the cut explicitly.

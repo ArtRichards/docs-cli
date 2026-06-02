@@ -29,8 +29,8 @@ _Generated 2026-06-02. 40 docs active, 3 archived._
 
 ### Active — Milestone
 
+- [m14-robustness-agent-native.md](m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6) - Title: Robustness + agent-native surface - Surface: hardening fixes to existing verbs + three…. Updated 2026-06-02.
 - [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md) — _milestone_ — - Milestone: M16 - Title: Bundled docs skill quality artifacts - Surface: bundled `docs` skill guidance under…. Updated 2026-06-02.
-- [m14-robustness-agent-native.md](m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6) - Title: Robustness + agent-native surface - Surface: hardening fixes to existing verbs + two…. Updated 2026-05-29.
 - [m12-project-rename.md](m12-project-rename.md) — _milestone_ — > **Stub-drafted 2026-05-28** following M11 closeout. M12 bundles > one operator-facing headline feature (`docs project…. Updated 2026-05-28.
 - [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
 - [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
@@ -44,9 +44,9 @@ _Generated 2026-06-02. 40 docs active, 3 archived._
 
 ### Active — Log
 
+- [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-06-02.
 - [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md) — _log_ — Chronological log for M16. This milestone records the docs-cli bundled `docs` skill changes required by the Agent…. Updated 2026-06-02.
 - [m13-pypi-publish-impl.md](m13-pypi-publish-impl.md) — _log_ — Chronological log of work on M13 — PyPI publish 1.5.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-05-29.
-- [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-05-29.
 - [m12-project-rename-impl.md](m12-project-rename-impl.md) — _log_ — Chronological log of work on M12 — Project rename verb + M11 wart fixes + version SoT (v1.5.0). Append a section per…. Updated 2026-05-28.
 - [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-27.
 - [m11-pypi-publish-impl.md](m11-pypi-publish-impl.md) — _log_ — Chronological log of work on M11 — PyPI publish `docs-cli` 1.4.0. Append a section per phase (Operator prep →…. Updated 2026-05-27.
