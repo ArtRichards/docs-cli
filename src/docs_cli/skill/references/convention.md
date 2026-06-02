@@ -251,9 +251,18 @@ Whether to keep a tree flat or nest it is the author's call. The metadata block 
 
 M8 introduces a single layered exclusion surface every walker
 consults — `docs migrate`, `docs index`, `docs check`,
-`docs list`. The four sources combine **additively** (no
-source replaces another); see [`cli.md`'s "Common: exclusion"
-section](cli.md#common-exclusion) for the per-verb shape.
+`docs list`. M14 (A6) extends it to the **end-of-batch INDEX
+reindex** the four mutating verbs run — `docs touch`,
+`docs archive`, `docs mv`, and `docs project rename` — so a
+malformed *excluded* file (e.g. a bundled plugin `README.md`
+under an `[exclude]` dir) cannot fail the post-mutation reindex
+after the verb has already stamped/moved on disk. The four
+sources combine **additively** (no source replaces another);
+see [`cli.md`'s "Common: exclusion"
+section](cli.md#common-exclusion) for the per-verb shape. The
+mutating verbs consult only the **persistent** sources
+(`[exclude]` + `.docsignore`) — they expose no `--exclude` flag
+of their own.
 
 - **`[exclude]` table in `.docs.toml`** (persistent, per-tree).
   Three keys — `dirs = [...]` for directory-name matches at

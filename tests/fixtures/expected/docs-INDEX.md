@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-05-29. 37 docs active, 3 archived._
+_Generated 2026-06-02. 42 docs active, 3 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-05-29.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-06-02.
 
 ### Active — Charter
 
@@ -19,16 +19,19 @@ _Generated 2026-05-29. 37 docs active, 3 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-05-29.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-06-02.
 
 ### Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-05-28.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-05-28.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-02.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-02.
+- [m16-bundled-docs-skill-quality-test-matrix.md](m16-bundled-docs-skill-quality-test-matrix.md) — _spec_ — Lite. Updated 2026-06-02.
 
 ### Active — Milestone
 
-- [m14-robustness-agent-native.md](m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6) - Title: Robustness + agent-native surface - Surface: hardening fixes to existing verbs + two…. Updated 2026-05-29.
+- [m14-robustness-agent-native.md](m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6.0, part 1 of 2) - Title: Robustness + autonomous archive - Surface: correctness/atomicity…. Updated 2026-06-02.
+- [m15-agent-native-authoring.md](m15-agent-native-authoring.md) — _milestone_ — - Milestone: M15 (v1.6.0, part 2 of 2) - Title: Agent-native doc authoring - Surface: the agent-native *authoring* set…. Updated 2026-06-02.
+- [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md) — _milestone_ — - Milestone: M16 - Title: Bundled docs skill quality artifacts - Surface: bundled `docs` skill guidance under…. Updated 2026-06-02.
 - [m12-project-rename.md](m12-project-rename.md) — _milestone_ — > **Stub-drafted 2026-05-28** following M11 closeout. M12 bundles > one operator-facing headline feature (`docs project…. Updated 2026-05-28.
 - [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
 - [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
@@ -42,8 +45,10 @@ _Generated 2026-05-29. 37 docs active, 3 archived._
 
 ### Active — Log
 
+- [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-06-02.
+- [m15-agent-native-authoring-impl.md](m15-agent-native-authoring-impl.md) — _log_ — Chronological log of work on M15 — Agent-native doc authoring. Append a section per TDD phase with objective, files…. Updated 2026-06-02.
+- [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md) — _log_ — Chronological log for M16. This milestone records the docs-cli bundled `docs` skill changes required by the Agent…. Updated 2026-06-02.
 - [m13-pypi-publish-impl.md](m13-pypi-publish-impl.md) — _log_ — Chronological log of work on M13 — PyPI publish 1.5.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-05-29.
-- [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-05-29.
 - [m12-project-rename-impl.md](m12-project-rename-impl.md) — _log_ — Chronological log of work on M12 — Project rename verb + M11 wart fixes + version SoT (v1.5.0). Append a section per…. Updated 2026-05-28.
 - [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-27.
 - [m11-pypi-publish-impl.md](m11-pypi-publish-impl.md) — _log_ — Chronological log of work on M11 — PyPI publish `docs-cli` 1.4.0. Append a section per phase (Operator prep →…. Updated 2026-05-27.

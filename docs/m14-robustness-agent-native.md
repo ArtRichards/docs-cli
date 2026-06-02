@@ -131,13 +131,33 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
 - [ ] A2 `docs new` strict-root refusal (no silent cwd write).
 - [ ] A3 empty-segment slug rejected.
 - [ ] A4 `OSError` in mv/archive edge-rewrite → clean exit 2.
-- [ ] A5 `atomic_write` fsync claim reconciled; archive docstring fixed.
-- [ ] A6 `docs touch` reindex threads the exclude predicate; malformed-
-      excluded-file atomicity test added.
-- [ ] B1 `archive --cascade` non-interactive flag set; prompt removed
-      (or behind `--interactive`); `cli.md` updated.
-- [ ] C1 bundled reference links host-resolvable.
-- [ ] C3 `test_a6` replaced with a real package-data assertion.
+- [ ] A5 `atomic_write` gains `os.fsync` before the rename (operator
+      decision 2026-06-02 — ADD fsync, the `cli.md` "fsync'd" claim
+      STAYS and becomes true); `_archive_one` docstring tightened.
+- [ ] A6 the end-of-batch reindex threads the exclude predicate at
+      **all four** mutating-verb call sites (operator decision
+      2026-06-02 — `docs touch`, `docs archive`, `docs mv`,
+      `docs project rename`); malformed-excluded-file atomicity test
+      added for each.
+- [ ] B1 `archive --cascade` non-interactive flag set (`--cascade` /
+      `--cascade-dry-run` / `--cascade-only GLOB` / `--interactive`);
+      the legacy prompt moves behind `--interactive`; the invariant
+      *docs never prompts unless `--interactive`* established; `cli.md`
+      updated.
+- [x] C1 bundled reference links host-resolvable — **done by M16**
+      (2026-06-02 verification). M16 rewrote the bundled references
+      self-contained; the cited dangling links
+      (`use-cases.md:5`, `references/cli.md:318`) no longer exist
+      (`grep -rn '](\.\./' src/docs_cli/skill/` returns zero matches).
+      M14 adds a GREEN regression guard
+      (`test_bundled_skill_has_no_repo_relative_links`) only. C1's own
+      OQ is answered below: `docs/` is canonical and the bundled copies
+      are byte-identical mirrors maintained by `cp` and enforced by
+      `tests/test_skill_refs.py` (NOT script-generated).
+- [ ] C3 `test_a6` (false-confidence pyproject-comment grep) removed;
+      `test_b3_wheel_contains_cli_and_skill` strengthened to assert the
+      built wheel carries real skill package-data so a broken
+      `packages` glob actually fails.
 - [ ] `pyproject.toml` `version` → `1.6.0`; `CHANGELOG.md`
       `## 1.6.0 — UNRELEASED` section authored (publish-survival wording).
       M14 owns the bump + section; **M15 appends its authoring entries to
@@ -148,8 +168,12 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
 
 ## Phase Checklist (10-phase TDD)
 
-- [ ] 1. Define Contract — `cli.md` deltas for the `--cascade` flag set,
-      the `new` strict-refusal exit codes, the `touch` exclude semantics.
+- [x] 1. Define Contract — `cli.md` deltas for the `--cascade` flag set
+      (+ `--cascade-dry-run` / `--cascade-only` / `--interactive` + the
+      no-prompt invariant), the `new` strict-refusal exit codes + empty-
+      segment slug, the four-site `touch`/`archive`/`mv`/`project rename`
+      exclude semantics; `convention.md` §Exclusion reconciled; bundled
+      refs resynced byte-identical; A5/A6 Decisions recorded.
 - [ ] 2. Write Tests (RED) — pin every A/B/C behavior, incl. the
       mv malformed-sibling atomicity test, the cascade-no-prompt test, and
       the touch-excludes reindex test.
@@ -170,6 +194,52 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
 
 ## Decisions
 
+- **A6 widened to four reindex sites (operator decision, 2026-06-02).**
+  The exclude predicate is threaded into the end-of-batch
+  `_refresh_index` for `docs touch`, `docs archive`, `docs mv`, AND
+  `docs project rename` — not `touch` alone. Rationale: all four share
+  the identical post-mutation reindex-walk shape; a malformed excluded
+  file would non-atomically fail any of them after the verb had already
+  stamped/moved/renamed on disk. No new `--exclude` flag is added to the
+  mutating verbs (Step-1 RQ#8): each wires
+  `compile_exclude_predicate(config, [])` so only the persistent
+  `[exclude]` / `.docsignore` sources apply. The contract is written
+  into `cli.md` (per-verb notes + the "Common: exclusion" intro) and
+  `convention.md` §Exclusion; Phase-2 tests cover all four verbs.
+- **A5 — ADD `os.fsync`, keep the "fsync'd" claim (operator decision,
+  2026-06-02).** Rather than dropping the `cli.md` §archive "fsync'd"
+  claim, `atomic_write` gains an `os.fsync` of the tmpfile (and its
+  parent directory) before the rename, so the durability claim becomes
+  true. The fsync **code** lands in Step 2 (Phase 6); Step 1 keeps the
+  claim in the spec (now accurate-by-intent) and writes the RED test
+  that pins *fsync-is-called* during an `atomic_write`-backed mutation.
+  The `_archive_one` docstring is tightened for accuracy now. (This is
+  NOT a "claim dropped" reconciliation — the claim stays.)
+- **B1 cascade shape (operator decision, 2026-06-02).** Bare
+  `--cascade` archives ALL one-hop `pairs-with`/`child-of` relations
+  with NO prompt + a loud stderr footer naming the set;
+  `--cascade-dry-run` previews and writes nothing (exit 0);
+  `--cascade-only GLOB` archives the subset whose related-doc
+  root-relative POSIX target path matches `GLOB` (compiled by the same
+  matcher `compile_exclude_predicate` uses); `--interactive` restores
+  the legacy `[y/N]` prompt and is the ONLY path that reads stdin.
+  `--cascade`/`--cascade-only`/`--interactive` are mutually exclusive;
+  `--cascade-dry-run` composes with `--cascade-only` but is rejected
+  with `--interactive`. The invariant *docs never prompts unless
+  `--interactive`* is established in the spec.
+- **A2 strict resolution scope — `new` ONLY (operator decision,
+  2026-06-02; answers the OQ below).** `docs new` refuses the
+  cwd-as-root fallback like `touch` / `project rename` already do. The
+  read verbs `index` / `list` / `check` KEEP the silent cwd-fallback
+  (a wrong-tree read is recoverable; a write is not). The Invocation
+  edit must not claim all verbs refuse.
+- **C1 — done by M16; verification only (operator decision,
+  2026-06-02).** The cited dangling bundled-reference links no longer
+  exist (M16 rewrote the references self-contained;
+  `tests/test_skill_refs.py` enforces byte-identity with `docs/`). M14
+  adds a GREEN regression guard only. Canonical source: `docs/`; the
+  bundled copies are byte-identical mirrors maintained by `cp`, NOT
+  script-generated.
 - **Version 1.6.0; publish is a separate milestone (M17).** Mirrors the
   M12→M13 cadence. M14 lands the bump + CHANGELOG section inline
   (Phase 7/10) but does not touch PyPI; M15 appends to the same section.
@@ -228,18 +298,19 @@ dates *and* refreshes the INDEX cleanly.
 
 ## OPEN QUESTIONS
 
-- **Strict resolution scope (A2):** refuse only on `new`, or extend the
-  strict resolver to `index`/`list`/`check` too? (Read verbs silently
-  defaulting to cwd is less harmful but still surprising.) Recommend:
-  `new` in M14; evaluate the read verbs as a fast-follow.
-- **`--cascade` default (B1):** does bare `--cascade` taking *all*
-  one-hop relations surprise anyone, or is `--cascade-dry-run`-first a
-  sufficient guard? Recommend: take-all + loud footer summary.
-- **Bundled-refs canonical source (C1):** are `docs/cli.md` /
-  `convention.md` the source and the skill copies generated, or are they
-  independently maintained? The link fix must not break the
-  `_trees_byte_identical` no-op detection. Recommend: declare `docs/`
-  canonical, generate the bundled copies, fix links in the generator.
+All Step-1 OQs are RESOLVED (operator decisions 2026-06-02 — recorded in
+Decisions above). Kept here for the audit trail:
+
+- **Strict resolution scope (A2) — RESOLVED:** refuse on `new` ONLY;
+  `index`/`list`/`check` keep the cwd-fallback. (Was: "evaluate the read
+  verbs as a fast-follow.")
+- **`--cascade` default (B1) — RESOLVED:** bare `--cascade` takes ALL
+  one-hop relations, no prompt, loud stderr footer naming the set;
+  `--cascade-dry-run` previews; `--interactive` restores the prompt.
+- **Bundled-refs canonical source (C1) — RESOLVED:** `docs/` is
+  canonical; the bundled copies are byte-identical mirrors maintained by
+  `cp` and enforced by `tests/test_skill_refs.py` (NOT script-generated).
+  M16 already fixed the dangling links; M14 adds a GREEN guard only.
 - **Milestone size — resolved (2026-06-02):** the A6/B3/C4 widening pushed
   M14 past M12 scale, so the agent-native authoring set was carved into
   **M15** (see Decisions). The `docs stamp` verb-shape and `--body-from`

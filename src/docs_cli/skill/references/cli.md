@@ -18,7 +18,9 @@ This spec defines the `docs` command-line surface: subcommands, flags, output fo
 docs <subcommand> [args] [flags]
 ```
 
-The binary expects to find a docs root by walking up from the current directory until it finds either `.docs.toml` or the directory passed via `--root`. If neither is present, `docs` operates on the current directory with defaults (project name = directory name, archive subdir = `archive/`).
+The binary expects to find a docs root by walking up from the current directory until it finds either `.docs.toml` or the directory passed via `--root`. If neither is present, the **read** verbs (`index`, `list`, `check`) operate on the current directory with defaults (project name = directory name, archive subdir = `archive/`).
+
+**Create/mutate refusal (M14 — A2; M12 — OQ-C).** The verbs that *create* a doc (`docs new`) or stamp/rename in place (`docs touch`, `docs project rename`) refuse the cwd-as-root fallback: if no `.docs.toml` is found up the ancestor chain and no `--root` is given, they exit 2 and write nothing rather than silently scaffolding into an unmanaged directory with default config. (The read verbs above keep the silent cwd-fallback — surfacing the wrong tree on a read is recoverable; writing into it is not.) See each verb's Exits paragraph for the exact message.
 
 Global flags:
 
@@ -35,14 +37,29 @@ Global flags:
 Scaffold a new doc in the active tree.
 
 - `<role>` must be in the built-in or configured Role vocabulary.
-- `<slug>` becomes the filename (`<slug>.md`), created in the resolved docs root. A trailing `.md` on the slug is stripped. The slug may name a subdirectory (`sub/feature` → `sub/feature.md`); missing intermediate directories are created. The slug may **not** be an absolute path, contain a `..` component, or resolve under the archive subtree — those are rejected. To create a doc in the archive subtree use `docs archive`; to relocate an existing doc use `docs mv`.
+- `<slug>` becomes the filename (`<slug>.md`), created in the resolved docs root. A trailing `.md` on the slug is stripped. The slug may name a subdirectory (`sub/feature` → `sub/feature.md`); missing intermediate directories are created. The slug may **not** be an absolute path, contain a `..` component, or resolve under the archive subtree — those are rejected. The slug's **final path segment may not be empty** (M14 — A3): `foo/` or `foo/.md` would write an invisible `foo/.md` dotfile (skipped by every read verb), so it is rejected with exit 2 `docs: invalid slug <slug>`. To create a doc in the archive subtree use `docs archive`; to relocate an existing doc use `docs mv`.
 - `--title` overrides the inferred H1 (default: the slug's last path segment, title-cased, with `-` and `_` treated as word separators).
 - Writes the metadata block with `Lifecycle: draft`, `Role: <role>`, `Project: <inferred>`, `Updated: <today>`.
 - Does not refresh INDEX (the new doc is empty; the user is expected to fill it, then run `docs index` or let another verb trigger it).
 - `--body-from PATH` (M8 — F9) reads body content from `PATH` (or `-` for stdin) and appends it under the scaffolded frontmatter. Closes the read-before-write friction in agent flows — one atomic Bash call writes the complete file. The body text is appended verbatim (the file ends byte-equal with the body).
   - **Refusal heuristic (OQ-E).** The first 20 lines of the supplied body are scanned for `^[A-Z][A-Za-z-]+:\s`; if any line matches, `docs new` exits 2 with the message `--body-from content appears to contain a metadata block. Pass body content only — docs new owns the frontmatter.` plus the first five body lines as preview. The conservative regex catches accidental frontmatter dumps; a body line like `Plan: stage one then stage two` will trip the heuristic — pass content only.
 
-Exits 2 on invalid role, invalid slug, missing `--body-from` path, or a body that trips the metadata-block refusal; 1 on existing file.
+**Strict-root refusal (M14 — A2).** `docs new` refuses the silent
+cwd-as-root fallback (which once misfired by scaffolding a doc at a repo
+root with default config). Resolution mirrors `docs touch` /
+`docs project rename` (M12 — OQ-C):
+
+- If `--root` is **not** given and no `.docs.toml` exists in the cwd's
+  ancestor chain, `docs new` exits 2 + stderr
+  `docs: new: <cwd> is not under a docs root with .docs.toml; refusing`
+  and writes nothing.
+- An explicit `--root <dir>` bypasses the up-walk **only when**
+  `<dir>/.docs.toml` exists; if `--root` is set but its `.docs.toml` is
+  missing, `docs new` refuses with
+  `docs: new: --root <root> does not contain .docs.toml; refusing`
+  (exit 2).
+
+Exits 2 on invalid role, invalid slug, missing `--body-from` path, a body that trips the metadata-block refusal, or the strict-root refusal; 1 on existing file.
 
 ### `docs index [DIR] [--exclude PATTERN]`
 
@@ -56,7 +73,7 @@ Regenerate `INDEX.md` in the docs root.
 
 Exits 0 always (warnings printed to stderr; use `docs check` for hard validation).
 
-### `docs archive <file> [--reason "…"] [--date YYYY-MM-DD] [--cascade]`
+### `docs archive <file> [--reason "…"] [--date YYYY-MM-DD] [--cascade | --cascade-dry-run | --cascade-only GLOB | --interactive]`
 
 Atomically archive a doc.
 
@@ -67,7 +84,51 @@ Atomically archive a doc.
 
 `--reason` is appended as a free-form `Archived-reason:` metadata line (harvested but uninterpreted).
 
-`--cascade` walks `Related: pairs-with` and `Related: child-of` and prompts to archive each related doc to the same dated directory. One hop only — no transitive cascade. Without `--cascade`, related docs are left in place (potential drift surfaced by `docs check`).
+**Invariant: `docs` never prompts unless `--interactive` (M14 — B1).**
+Every verb runs to completion (or refuses with a non-zero exit) without
+ever blocking on stdin, so an autonomous agent never stalls. The
+cascade surface below is the canonical example: bare `--cascade`
+archives the whole one-hop set with no prompt; the legacy `[y/N]`
+prompt is opt-in behind `--interactive`.
+
+The cascade follows `Related: pairs-with` and `Related: child-of`
+edges. **One hop only — no transitive cascade.** Without any cascade
+flag, related docs are left in place (potential drift surfaced by
+`docs check`). Four mutually-exclusive flags shape the cascade
+(M14 — B1):
+
+- **`--cascade`** archives *every* one-hop `pairs-with` / `child-of`
+  relation that still exists on disk, to the same dated directory, with
+  **no prompt**. A loud stderr footer names the cascaded set so the
+  operator (or an agent reading stderr) sees exactly what moved:
+  `docs: cascade archived N related doc(s): <rel1>, <rel2>, …`. When the
+  set is empty the footer is `docs: cascade: no one-hop relations to archive`.
+- **`--cascade-dry-run`** prints the would-be cascade set (one
+  `docs: cascade would archive <rel>` line per related doc, on stderr)
+  and the footer, then **writes nothing** and exits 0. The primary doc
+  is not archived either — `--cascade-dry-run` is a preview of the whole
+  cascade operation, equivalent to `--cascade --dry-run`.
+- **`--cascade-only GLOB`** archives the *subset* of the one-hop set
+  whose related-doc **root-relative POSIX target path** matches `GLOB`.
+  `GLOB` is compiled by the same matcher `compile_exclude_predicate`
+  uses (gitignore-flavoured: `**`, `*`, `?`; bare patterns match any
+  path segment at any depth). The primary doc is always archived;
+  related docs outside the glob are left in place and named in the
+  footer. Composes with `--cascade-dry-run` (preview the filtered
+  subset, write nothing).
+- **`--interactive`** restores the legacy behaviour: each one-hop
+  relation prompts `docs: also archive <rel>? [y/N] ` on stderr and is
+  archived only on a `y`/`yes` answer. This is the **only** way to make
+  `docs archive` read stdin.
+
+**Combination matrix.** `--cascade`, `--cascade-only`, and
+`--interactive` are mutually exclusive (argparse rejects any pair with
+exit 2). `--cascade-dry-run` composes with `--cascade-only` (preview the
+filtered subset) but is **rejected together with `--interactive`** via
+an argparse mutually-exclusive group (a dry-run that prompts is
+incoherent). `--cascade-dry-run` alone is shorthand for
+`--cascade --dry-run`. The global `--dry-run` applied to any cascade
+mode previews without writing.
 
 Atomicity: the metadata edit happens in a tmp file, fsync'd, renamed; the move happens only after the edit succeeds; the index regen runs last. A failure leaves the original file untouched.
 
@@ -78,16 +139,21 @@ walker (`rewrite_related_refs`) — only the `Related:` field is
 considered; prose markdown references are deliberately left alone.
 Archive-subtree docs are read-only and are NOT updated. The rewrite
 is part of the same atomic batch as the move + lifecycle edit: a
-single end-of-batch INDEX refresh covers everything.
+single end-of-batch INDEX refresh covers everything. That refresh
+honours `[exclude]` / `.docsignore` (M14 — A6) — a malformed *excluded*
+file never fails the post-move reindex (same threading as `docs touch`,
+above).
 
-`--cascade` (M12 — OQ-D) extends this — when the cascade archives
-related docs B, C, …, the referring-edge rewrites for every moved doc
-run as a single atomic batch with one INDEX refresh at the end.
-Per-doc cascade-archive failures still surface but only docs that
+The cascade flags (M12 — OQ-D; M14 — B1) extend this — when the cascade
+archives related docs B, C, …, the referring-edge rewrites for every
+moved doc run as a single atomic batch with one INDEX refresh at the
+end. Per-doc cascade-archive failures still surface but only docs that
 actually moved get their referring edges rewritten. Cascade remains
 one-hop only (M2 decision unchanged).
 
-Exits 1 on metadata-edit failure; 2 on archive-dir creation failure.
+Exits 1 on metadata-edit failure; 2 on archive-dir creation failure or
+an invalid cascade-flag combination. `--cascade-dry-run` exits 0 and
+writes nothing.
 
 ### `docs mv <old> <new>`
 
@@ -95,7 +161,9 @@ Move/rename a doc and rewrite every `Related:` reference that points at `<old>` 
 
 - `<new>` may be a new filename in the same directory, or a different directory under the docs root.
 - All matching `Related: <verb>: <old>` entries are rewritten to `<verb>: <new>`.
-- INDEX regenerated.
+- INDEX regenerated. The end-of-batch refresh honours `[exclude]` /
+  `.docsignore` (M14 — A6) — a malformed *excluded* file never fails the
+  post-move reindex (same threading as `docs touch`).
 
 Exits 1 on collision (`<new>` exists).
 
@@ -176,6 +244,24 @@ prepared in memory (any `MetadataError` aborts the batch before any
 disk write), then `atomic_write` is run per file followed by a single
 end-of-batch INDEX refresh. A failure during the validate-or-prepare
 phase leaves every file byte-identical to its pre-call state.
+
+**End-of-batch reindex honours `[exclude]` / `.docsignore` (M14 — A6).**
+The single end-of-batch INDEX refresh walks the tree through the same
+layered exclusion predicate `docs index` builds (persistent
+`.docs.toml [exclude]` + a root `.docsignore`; `touch` has no
+`--exclude` flag of its own). A file the operator has excluded — e.g. a
+bundled plugin `README.md` with no metadata block, parked under an
+`[exclude] dirs = [...]` directory — is therefore never read by the
+reindex. Because the dates are stamped *before* the reindex, an
+unfiltered walk that hit such a malformed excluded file would raise
+*after* the stamps landed, leaving a partial, non-atomic result (dates
+written, INDEX stale). Threading the predicate closes that gap: the
+touched files' `Updated:` lines land, the INDEX refreshes **without**
+the excluded file, and the command exits 0. (A malformed file that is
+**not** excluded is still a hard error — the reindex maps it to exit 2,
+unchanged.) This same exclude-predicate threading applies to every
+end-of-batch reindex — `docs archive`, `docs mv`, and `docs project
+rename` (M14 — A6, four-site).
 
 `--dry-run` prints one `docs: would touch <path>` per file on stderr
 (gated on `not --quiet`) and writes nothing. The success run prints
@@ -262,7 +348,9 @@ validate-and-prepare raises, exits 1 (or 2 for a malformed
 `.docs.toml`) with the offending path named on stderr and no on-disk
 mutation. After validation passes, every rewrite is committed via
 `atomic_write`, then `.docs.toml` is rewritten, then `INDEX.md` is
-refreshed exactly once.
+refreshed exactly once. That end-of-batch refresh honours `[exclude]` /
+`.docsignore` (M14 — A6) — a malformed *excluded* file never fails the
+reindex (same exclude-predicate threading as `docs touch`).
 
 **`--dry-run`.** Prints one `docs: would rewrite Project: in <rel-path>`
 line per matching doc, plus
@@ -614,9 +702,13 @@ a successful dry-run or `--apply`.
 ## Common: exclusion
 
 Four of the verbs (`migrate` / `index` / `check` / `list`) walk
-a tree. M8 (F3) introduces a single layered exclusion surface
-they all consult. The four sources combine **additively** — no
-source replaces another:
+a tree directly. M8 (F3) introduces a single layered exclusion
+surface they all consult. M14 (A6) threads the same surface into
+the **end-of-batch INDEX reindex** of the four mutating verbs
+(`touch` / `archive` / `mv` / `project rename`) — those consult
+only the two **persistent** sources (`[exclude]` + `.docsignore`),
+having no `--exclude` flag of their own. The four sources combine
+**additively** — no source replaces another:
 
 1. **`.docs.toml [exclude]`** (persistent, per-tree). Three
    keys:
@@ -662,12 +754,14 @@ total excluded count per top-level dir prefix
 | 1 | Recoverable error (file conflict, validation warning, missing input) |
 | 2 | Hard error (invalid vocab, atomic operation failure, validation errors) |
 
-M12-specific exit-code shape:
+M12 / M14-specific exit-code shape:
 
 | Verb | 0 | 1 | 2 |
 |---|---|---|---|
 | `project rename` | success / no-op / dry-run | doc lacks editable metadata block | malformed `.docs.toml`; no `.docs.toml` ancestor; empty post-normalised `<new-name>` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
-| `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure |
+| `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
+| `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; invalid cascade-flag combination (M14 — B1) |
+| `archive --cascade-dry-run` | preview written nothing | — | — |
 
 CI integration: `docs check` returning 2 should fail the build.

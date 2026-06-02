@@ -3379,9 +3379,16 @@ def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: 
     """Archive a single doc: edit metadata, then move it into the dated dir.
 
     Sets `Lifecycle: archived`, bumps `Updated:` to `date_str`, and appends an
-    `Archived-reason:` line when `reason` is given. The edited text is written
-    back atomically *before* the move, so a failure leaves the original doc
-    untouched. Returns the doc's new path.
+    `Archived-reason:` line when `reason` is given.
+
+    Ordering is the atomicity contract (cf. `cli.md` §archive). The
+    edited text is committed to the *original* path via `atomic_write`
+    (tmpfile + rename — see `atomic_write`) BEFORE the
+    `path.replace(dest)` move. A failure in the metadata edit raises
+    before the move, so the original doc is left untouched; the move
+    runs only once the edit has landed. The archive destination's
+    existence is checked first so an occupied slot fails fast (no
+    partial edit-then-collide). Returns the doc's new path.
 
     Raises:
         MetadataError: the doc has no editable metadata block.
