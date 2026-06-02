@@ -406,3 +406,6 @@ def test_project_rename_with_malformed_excluded_file_succeeds(docs_script, tmp_p
     assert vendor_readme.read_text() == vendor_before
     index = (root / "INDEX.md").read_text()
     assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"
+    # The conformant doc IS indexed — pins a FULL walk (excluding only
+    # vendor/), not a fix that swallows the walk error and drops docs.
+    assert "spec.md" in index, "the conformant doc must still be indexed"

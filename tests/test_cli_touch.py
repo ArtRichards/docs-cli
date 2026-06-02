@@ -329,5 +329,9 @@ def test_touch_excluded_malformed_file_not_in_index(docs_script, tmp_path):
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     index = (root / "INDEX.md").read_text()
     assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"
+    # The conformant doc IS indexed — pins that the reindex completed the
+    # FULL walk (excluding only vendor/), not a fix that merely swallows
+    # the walk error and drops legitimate docs.
+    assert "spec.md" in index, "the conformant doc must still be indexed"
     # The malformed excluded file is byte-unchanged.
     assert vendor_readme.read_text() == vendor_before

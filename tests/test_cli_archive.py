@@ -506,6 +506,9 @@ def test_archive_with_malformed_excluded_file_succeeds_and_reindexes(docs_script
     assert vendor_readme.read_text() == vendor_before
     index = (root / "INDEX.md").read_text()
     assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"
+    # The archived conformant doc IS indexed — pins a FULL walk (excluding
+    # only vendor/), not a fix that swallows the walk error and drops docs.
+    assert "archive/2026-05-28/doomed.md" in index, "the archived doc must be indexed"
 
 
 def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_dir, tmp_path):

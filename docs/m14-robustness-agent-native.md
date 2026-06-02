@@ -174,13 +174,19 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
       segment slug, the four-site `touch`/`archive`/`mv`/`project rename`
       exclude semantics; `convention.md` §Exclusion reconciled; bundled
       refs resynced byte-identical; A5/A6 Decisions recorded.
-- [ ] 2. Write Tests (RED) — pin every A/B/C behavior, incl. the
-      mv malformed-sibling atomicity test, the cascade-no-prompt test, and
-      the touch-excludes reindex test.
-- [ ] 3. Create Fixtures — a tree with a malformed sibling for the mv
-      pre-flight; a tree whose `[exclude]` set holds a malformed file for
-      the touch reindex.
-- [ ] 4. Run Tests (RED) — confirm the intended red baseline.
+- [x] 2. Write Tests (RED) — pinned every A/B/C behavior: the
+      mv malformed-sibling atomicity tests, the cascade-no-prompt /
+      dry-run / cascade-only tests, the four-site touch/archive/mv/project-
+      rename excludes-reindex tests, the A5 fsync test, the A2/A3 new
+      guards; migrated the 2 legacy cascade prompt tests to `--interactive`;
+      C1 GREEN guard added; C3 false-confidence test removed + `test_b3`
+      strengthened.
+- [x] 3. Create Fixtures — `tests/fixtures/trees/mv-with-malformed/` for
+      the mv pre-flight; the `[exclude]`-with-malformed trees for the four
+      reindex tests are inline `tmp_path` helpers in the Phase-2 test files.
+- [x] 4. Run Tests (RED) — confirmed the intended red baseline (454
+      collected, 17 failed = exactly the new behavior set + the 2 migrated
+      cascade tests, 437 passed). See the impl-log Phase-4 table.
 - [ ] 5. Update Interfaces — argparse: the `--cascade*` flag set,
       strict-resolver wiring for `new`.
 - [ ] 6. Implement Core — the mv pre-flight walk, cascade set

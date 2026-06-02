@@ -159,8 +159,7 @@ def test_mv_malformed_sibling_does_not_dangle_referring_edge(docs_script, fixtur
     assert "pairs-with: good-a.md" in referrer_text, "referrer edge must be unchanged"
     # The edge must not dangle: its target (good-a.md) must still exist.
     assert (root / "good-a.md").is_file(), (
-        "an aborted mv must leave the referring edge's target in place "
-        "(no dangling edge)"
+        "an aborted mv must leave the referring edge's target in place (no dangling edge)"
     )
     # The aborted mv must not have written a stray INDEX.
     assert not index.exists(), "an aborted mv must not create/refresh INDEX"
@@ -278,3 +277,6 @@ def test_mv_excluded_malformed_file_reindexes(docs_script, tmp_path):
     assert vendor_readme.read_text() == vendor_before
     index = (root / "INDEX.md").read_text()
     assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"
+    # The conformant doc IS indexed — pins a FULL walk (excluding only
+    # vendor/), not a fix that swallows the walk error and drops docs.
+    assert "other.md" in index, "the conformant doc must still be indexed"
