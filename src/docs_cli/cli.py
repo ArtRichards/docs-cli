@@ -582,14 +582,40 @@ def parse_metadata_block(
 
 
 def atomic_write(path: Path, content: str) -> None:
-    """Write `content` to `path` atomically via tmpfile + rename.
+    """Write `content` to `path` atomically via tmpfile + fsync + rename.
 
     POSIX-atomic on the same filesystem. Cross-filesystem renames fall back
     to a copy + unlink under the hood (`Path.replace` handles that).
+
+    M14 (A5): durability — the tmpfile's bytes are `os.fsync`'d before the
+    rename, and the parent directory is `os.fsync`'d after, so the rename
+    that publishes the new name is itself persisted (flushing the file's
+    bytes alone does not durably record the directory entry). The
+    parent-dir fsync is wrapped in `try/except OSError` for portability
+    (Windows / filesystems that disallow directory fds). Content is
+    encoded UTF-8 so the on-disk bytes match `Path.write_text`'s default
+    (golden byte-equality tests rely on this).
     """
     tmp = path.with_suffix(path.suffix + ".docs-tmp")
-    tmp.write_text(content)
+    data = content.encode()
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    try:
+        os.write(fd, data)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
     tmp.replace(path)
+    # Persist the rename itself: fsync the parent directory entry. Best
+    # effort — some platforms/filesystems reject opening a directory for
+    # fsync, in which case the rename is still atomic, just not flushed.
+    try:
+        dir_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -3327,10 +3353,14 @@ def _slug_to_title(slug: str) -> str:
 
 
 def _cmd_new(args: argparse.Namespace) -> int:
-    root = Path(args.root) if args.root else find_root(Path.cwd())
-    if not root.is_dir():
-        print(f"docs: root not found: {root}", file=sys.stderr)
-        return 1
+    # M14 (A2): refuse the cwd-as-root fallback. `docs new` must not
+    # silently scaffold into an unmanaged dir with default config; it
+    # resolves a real `.docs.toml` root or refuses with exit 2 (mirrors
+    # `touch` / `project rename`). The read verbs keep the cwd-fallback.
+    root_or_exit = _resolve_new_root(args, Path.cwd())
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
     try:
         config = load_config(root)
     except tomllib.TOMLDecodeError as exc:
@@ -3348,8 +3378,15 @@ def _cmd_new(args: argparse.Namespace) -> int:
         slug = slug[:-3]
     rel = Path(slug)
     target_rel = Path(slug + ".md")
+    # M14 (A3): reject an empty final segment. `foo/` (target `foo/.md`)
+    # and `foo/.md` (slug `foo/.` after the `.md` strip) both resolve to
+    # an invisible `.md` dotfile that every read verb skips. Split on the
+    # last `/` WITHOUT stripping a trailing slash so the empty / `.`
+    # segment is detected.
+    final_seg = slug.replace("\\", "/").rsplit("/", 1)[-1]
     if (
         not slug.strip()
+        or final_seg in ("", ".")
         or rel.is_absolute()
         or ".." in rel.parts
         or (len(target_rel.parts) >= 2 and target_rel.parts[0] == config.archive_dir)
@@ -3448,6 +3485,45 @@ def _cascade_set(doc: Doc, root: Path) -> list[tuple[str, Path]]:
             continue
         out.append((target, candidate))
     return out
+
+
+def _filter_cascade_set(
+    cascade: list[tuple[str, Path]], cascade_only: str | None
+) -> list[tuple[str, Path]]:
+    """Filter `_cascade_set` output by the `--cascade-only GLOB` pattern.
+
+    When `cascade_only` is None, the set passes through unchanged. When a
+    GLOB is given, it is compiled by the same matcher
+    `compile_exclude_predicate` uses (`_compile_docsignore_pattern`,
+    gitignore-flavoured) and matched against each related doc's
+    root-relative POSIX target path (M14 — B1; RQ#3). A pattern that
+    compiles to nothing (a comment / blank) matches nothing.
+    """
+    if cascade_only is None:
+        return cascade
+    compiled = _compile_docsignore_pattern(cascade_only)
+    if compiled is None:
+        return []
+    _negate, rgx = compiled
+    return [(rel, path) for rel, path in cascade if rgx.match(rel)]
+
+
+def _print_cascade_footer(rels: list[str], dry_run: bool) -> None:
+    """Print the M14 (B1) cascade footer to stderr.
+
+    Names the cascaded (or would-cascade) set so an operator or agent
+    reading stderr sees exactly what moved. An empty set prints the
+    no-relations footer (non-dry-run only; a dry-run with an empty set
+    just prints the footer too for symmetry).
+    """
+    if not rels:
+        print("docs: cascade: no one-hop relations to archive", file=sys.stderr)
+        return
+    joined = ", ".join(rels)
+    if dry_run:
+        print(f"docs: cascade would archive {len(rels)} related doc(s): {joined}", file=sys.stderr)
+    else:
+        print(f"docs: cascade archived {len(rels)} related doc(s): {joined}", file=sys.stderr)
 
 
 def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: str | None) -> Path:
@@ -3555,20 +3631,58 @@ def _cmd_archive(args: argparse.Namespace) -> int:
 
     dest = root / config.archive_dir / date_str / file_path.name
 
-    if args.dry_run:
+    # M14 (B1): the non-interactive cascade flags. `--cascade-dry-run` and
+    # `--interactive` are an incoherent pair (a dry-run that prompts) and
+    # are rejected here — the argparse mutex group covers the other
+    # forbidden pairs, but `--cascade-dry-run` is outside that group so it
+    # can compose with `--cascade-only`.
+    if args.cascade_dry_run and args.interactive:
+        print(
+            "docs: --cascade-dry-run cannot be combined with --interactive "
+            "(a dry-run that prompts is incoherent)",
+            file=sys.stderr,
+        )
+        return 2
+
+    # `--cascade-dry-run` is shorthand for `--cascade --dry-run`. Either a
+    # global `--dry-run` or `--cascade-dry-run` previews without writing.
+    is_dry = args.dry_run or args.cascade_dry_run
+    # The non-interactive cascade is active for `--cascade`, `--cascade-only`,
+    # or `--cascade-dry-run` (which previews the would-be cascade set).
+    cascade_active = args.cascade or args.cascade_only is not None or args.cascade_dry_run
+
+    # M14 (A6): the pre-flight validate walk and the end-of-batch reindex
+    # honour persistent [exclude] / .docsignore (no new CLI flag), so a
+    # malformed *excluded* file never fails either walk.
+    predicate = compile_exclude_predicate(config, [])
+
+    if is_dry:
         if not args.quiet:
             print(f"docs: would archive {file_path} -> {dest}", file=sys.stderr)
-            cascadable = [t for v, t in doc.related if v in _CASCADE_VERBS]
-            if args.cascade and cascadable:
-                print(f"docs: --cascade would prompt for: {', '.join(cascadable)}", file=sys.stderr)
+            if cascade_active and not args.interactive:
+                cascade = _filter_cascade_set(_cascade_set(doc, root), args.cascade_only)
+                for target_rel, _candidate in cascade:
+                    print(f"docs: cascade would archive {target_rel}", file=sys.stderr)
+                _print_cascade_footer([t for t, _ in cascade], dry_run=True)
+            elif args.cascade and args.interactive:
+                # Legacy preview wording for `--cascade --interactive --dry-run`
+                # is unreachable (mutex), but a bare `--dry-run --interactive`
+                # would prompt at run time, so name the would-prompt set.
+                cascadable = [t for v, t in doc.related if v in _CASCADE_VERBS]
+                if cascadable:
+                    print(
+                        f"docs: --interactive would prompt for: {', '.join(cascadable)}",
+                        file=sys.stderr,
+                    )
         return 0
 
-    # M12: pre-flight validation walk — catches malformed referring
-    # docs BEFORE the archive move, so a referring-edge rewrite that
-    # would later fail does not leave a half-archived tree. Mirrors
-    # the project-rename validate-all-first pattern.
+    # M12 / M14 (A6): pre-flight validation walk — catches malformed
+    # referring docs BEFORE the archive move, so a referring-edge rewrite
+    # that would later fail does not leave a half-archived tree. Honours
+    # [exclude] (A6) so an excluded malformed file does not abort the
+    # archive. Mirrors the project-rename validate-all-first pattern.
     try:
-        list(walk(root, config))
+        list(walk(root, config, predicate=predicate))
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
@@ -3589,17 +3703,37 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         return 2
 
     moves: list[tuple[str, str]] = [(old_rel, dest.resolve().relative_to(root_resolved).as_posix())]
-    if args.cascade:
+    if args.interactive:
+        # The only stdin path: prompt [y/N] per one-hop relation (legacy).
         moves.extend(_cascade_archive(doc, root, config, date_str, args.quiet))
+    elif cascade_active:
+        # Non-interactive: archive the whole filtered one-hop set, no prompt.
+        cascade = _filter_cascade_set(_cascade_set(doc, root), args.cascade_only)
+        archived_rels: list[str] = []
+        for target_rel, candidate in cascade:
+            try:
+                cdest = _archive_one(candidate, root, config, date_str, None)
+            except (MetadataError, FileExistsError, OSError) as exc:
+                print(f"docs: could not archive {target_rel}: {exc}", file=sys.stderr)
+                continue
+            new_rel = cdest.resolve().relative_to(root_resolved).as_posix()
+            moves.append((target_rel, new_rel))
+            archived_rels.append(target_rel)
+        if not args.quiet:
+            _print_cascade_footer(archived_rels, dry_run=False)
 
     # M12: rewrite every active-tree referring Related: edge to point
     # at the new archive path, atomically with the move. Archive
     # subtree is skipped by _rewrite_referring_edges (read-only).
     try:
-        _rewrite_referring_edges(root, config, moves)
-        _refresh_index(root, config)
+        _rewrite_referring_edges(root, config, moves, predicate=predicate)
+        _refresh_index(root, config, predicate=predicate)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        return 2
+    except OSError as exc:
+        # M14 (A4): map an OSError mid edge-rewrite to a clean exit 2.
+        print(f"docs: archive: {exc}", file=sys.stderr)
         return 2
     if not args.quiet:
         print(f"docs: archived {file_path.name} -> {dest}", file=sys.stderr)
@@ -3636,19 +3770,43 @@ def _cmd_mv(args: argparse.Namespace) -> int:
             print(f"docs: would move {old_rel} -> {new_rel}", file=sys.stderr)
         return 0
 
+    # M14 (A6): the reindex / rewrite walks honour persistent [exclude] /
+    # .docsignore (no new CLI flag), so a malformed *excluded* file never
+    # fails the post-move walk.
+    predicate = compile_exclude_predicate(config, [])
+
+    # M14 (A1): validate-all-first pre-flight walk BEFORE the move, so a
+    # malformed sibling aborts cleanly (exit 2) leaving the source in
+    # place + the destination absent + referring edges untouched. Without
+    # this, `old_path.replace(new_path)` runs first and the rewrite walk
+    # raises afterwards — a dangling edge + a non-atomic half-move. Mirrors
+    # the archive pre-flight, but exits 2 (not archive's 1): mv has no
+    # legacy exit-1 referring-edge contract (RQ#8).
+    try:
+        list(walk(root, config, predicate=predicate))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 2
+
     new_path.parent.mkdir(parents=True, exist_ok=True)
     old_path.replace(new_path)
 
     try:
         rewrites = 0
-        for doc in walk(root, config):
+        for doc in walk(root, config, predicate=predicate):
             updated_text, n = rewrite_related_refs(doc.path.read_text(), old_rel, new_rel)
             if n:
                 atomic_write(doc.path, updated_text)
                 rewrites += n
-        _refresh_index(root, config)
+        _refresh_index(root, config, predicate=predicate)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
+        return 2
+    except OSError as exc:
+        # M14 (A4): an OSError mid-rewrite (e.g. a referrer in a read-only
+        # directory) is mapped to a clean exit 2 rather than escaping as a
+        # traceback after the move.
+        print(f"docs: mv: {exc}", file=sys.stderr)
         return 2
 
     if not args.quiet:
@@ -3725,9 +3883,13 @@ def _cmd_touch(args: argparse.Namespace) -> int:
     for fp, new_text in rewrites:
         atomic_write(fp, new_text)
 
-    # OQ-C: single end-of-batch INDEX refresh.
+    # OQ-C: single end-of-batch INDEX refresh. M14 (A6): honour persistent
+    # [exclude] / .docsignore so a malformed *excluded* file (e.g. a
+    # bundled plugin README) never fails the post-stamp reindex — the
+    # dates are already written, so an unfiltered raise here is a partial,
+    # non-atomic result.
     try:
-        _refresh_index(root, config)
+        _refresh_index(root, config, predicate=compile_exclude_predicate(config, []))
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
         return 2
@@ -3775,17 +3937,23 @@ def _print_project_rename_footer(
     print(f"docs: project rename: {old_name} -> {new_name} ({body})", file=sys.stderr)
 
 
-def _rewrite_referring_edges(root: Path, config: Config, moves: list[tuple[str, str]]) -> None:
+def _rewrite_referring_edges(
+    root: Path,
+    config: Config,
+    moves: list[tuple[str, str]],
+    predicate: Callable[[str], bool] | None = None,
+) -> None:
     """Walk active tree once; rewrite `Related:` bullets per (old, new) move.
 
     Skips archived docs (`Doc.archived`). Reuses `rewrite_related_refs`
     per (old_rel, new_rel) pair; atomic-writes touched docs. M12 helper
     shared by `_cmd_archive` (single-move) and `_cmd_archive --cascade`
-    (batch).
+    (batch). M14 (A6): the optional `predicate` is threaded into `walk` so
+    a malformed *excluded* file never fails this rewrite walk.
     """
     if not moves:
         return
-    for doc in walk(root, config):
+    for doc in walk(root, config, predicate=predicate):
         if doc.archived:
             continue
         text = doc.path.read_text()
@@ -3838,6 +4006,11 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
     # as written. No double-normalisation.
     old_name = config.project
 
+    # M14 (A6): both the validate-all-first walk and the end-of-batch
+    # reindex honour persistent [exclude] / .docsignore (no new CLI flag),
+    # so a malformed *excluded* file never fails either walk.
+    predicate = compile_exclude_predicate(config, [])
+
     # Validate-all-first walk: parse every active doc, bucket into
     # matching vs. non-matching, count archived. A MetadataError or
     # VocabularyError on any doc aborts the whole batch before any
@@ -3847,7 +4020,7 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
     archived_count = 0
     non_matching: dict[str, int] = {}
     try:
-        for doc in walk(root, config):
+        for doc in walk(root, config, predicate=predicate):
             if doc.archived:
                 archived_count += 1
                 continue
@@ -3923,9 +4096,12 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
         atomic_write(path, new_text)
     atomic_write(sidecar_path, new_sidecar)
 
-    # INDEX refresh: reload config so the new project name renders.
+    # INDEX refresh: reload config so the new project name renders. M14
+    # (A6): reuse the original exclude predicate — exclude rules
+    # (dirs/globs/exts/.docsignore) do not depend on the project name, so
+    # they are stable across the rename.
     try:
-        _refresh_index(root, load_config(root))
+        _refresh_index(root, load_config(root), predicate=predicate)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
         return 2

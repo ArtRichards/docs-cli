@@ -46,6 +46,12 @@ def _run(
 def _minimal_tree(tmp_path: Path) -> Path:
     root = tmp_path / "tree"
     root.mkdir()
+    # M14 (A2) lockstep: `docs new --root <dir>` now requires <dir>/.docs.toml
+    # (the strict-root refusal — a write into an unmanaged dir is the footgun
+    # A2 closes). These tests exercise `--body-from` semantics, not root
+    # resolution, so the helper supplies a minimal valid docs root. Every
+    # `--body-from` assertion is unchanged.
+    (root / ".docs.toml").write_text('[project]\nname = "tree"\n\n[archive]\ndir = "archive"\n')
     return root
 
 
