@@ -131,27 +131,39 @@ def test_mv_malformed_sibling_aborts_atomically(docs_script, fixtures_dir, tmp_p
     assert "pairs-with: good-a.md" in referrer.read_text()
 
 
-def test_mv_malformed_sibling_leaves_index_untouched(docs_script, fixtures_dir, tmp_path):
-    """A pre-built INDEX must be byte-identical after an aborted `docs mv`.
+def test_mv_malformed_sibling_does_not_dangle_referring_edge(docs_script, fixtures_dir, tmp_path):
+    """An aborted `docs mv` must not leave a dangling referring edge or a
+    stray INDEX.
 
-    RED reason: same as above — the move happens first, so even though the
-    rewrite walk raises, the partial state is observable. With the
-    pre-flight walk (Step 2) the abort happens before any disk write and
-    the INDEX never changes.
+    The milestone's stated A1 harm is "dangling edges + INDEX never
+    refreshed": today the move happens, then the rewrite walk raises on
+    `broken.md` BEFORE rewriting `referrer.md`, so the referrer's
+    `pairs-with: good-a.md` edge is left pointing at a path that no longer
+    exists (good-a.md was moved to good-b.md). After the Step-2 pre-flight
+    walk the abort precedes the move, so the edge still resolves.
+
+    RED reason: today good-a.md is moved away, so the referrer's
+    `pairs-with: good-a.md` target no longer exists on disk → the edge
+    dangles. (No INDEX is pre-built: a non-excluded malformed sibling
+    makes `docs index` itself fail, so this test pins the resolvability of
+    the edge target instead of INDEX byte-identity.)
     """
     root = _mv_malformed_tree(fixtures_dir, tmp_path)
-    # Pre-build the INDEX so we can pin byte-identity across the aborted mv.
-    pre = _run(docs_script, "index", "--root", str(root))
-    assert pre.returncode == 0, pre.stderr
     index = root / "INDEX.md"
-    assert index.is_file()
-    index_before = index.read_bytes()
+    assert not index.exists()  # no INDEX exists before the call
 
     proc = _run(docs_script, "mv", str(root / "good-a.md"), str(root / "good-b.md"))
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
-    assert index.read_bytes() == index_before, (
-        "an aborted mv (malformed sibling) must not refresh INDEX"
+
+    referrer_text = (root / "referrer.md").read_text()
+    assert "pairs-with: good-a.md" in referrer_text, "referrer edge must be unchanged"
+    # The edge must not dangle: its target (good-a.md) must still exist.
+    assert (root / "good-a.md").is_file(), (
+        "an aborted mv must leave the referring edge's target in place "
+        "(no dangling edge)"
     )
+    # The aborted mv must not have written a stray INDEX.
+    assert not index.exists(), "an aborted mv must not create/refresh INDEX"
 
 
 # --- M14 A4 — uncaught OSError mid-rewrite → clean exit 2 -------------------
