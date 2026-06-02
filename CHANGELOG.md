@@ -5,6 +5,79 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.0 — UNRELEASED
+
+M14: robustness + autonomous archive. Burns down the post-1.5.0
+multi-agent-review correctness/atomicity findings (Thread A), lands the
+non-interactive `docs archive --cascade` agent affordance (B1), and
+corrects a packaging guard (C3). The bundled-skill reference links were
+already fixed by M16 (C1) — M14 adds a regression guard. Built locally
+only; the publish milestone (M17) ships 1.6.0 to PyPI. M15 appends its
+agent-native authoring entries to this same section before M17 publishes.
+
+### Added
+
+- **Non-interactive `docs archive --cascade` flag set** (M14 — B1).
+  Establishes the invariant *`docs` never prompts unless `--interactive`*.
+  Bare `--cascade` archives every one-hop `pairs-with` / `child-of`
+  relation that exists on disk to the same dated directory with **no
+  prompt**, and prints a loud stderr footer naming the set
+  (`docs: cascade archived N related doc(s): …`). `--cascade-dry-run`
+  previews the would-be cascade set and writes nothing (exit 0; the
+  primary is not archived either — equivalent to `--cascade --dry-run`).
+  `--cascade-only GLOB` archives only the subset whose related-doc
+  root-relative POSIX target matches `GLOB` (compiled by the same matcher
+  `compile_exclude_predicate` uses); composes with `--cascade-dry-run`.
+  `--interactive` restores the legacy `[y/N]` prompt and is the only path
+  that reads stdin. `--cascade`/`--cascade-only`/`--interactive` are
+  mutually exclusive; `--cascade-dry-run` is rejected with `--interactive`.
+
+### Changed
+
+- **`docs new` refuses the cwd-as-root fallback** (M14 — A2). With no
+  `--root` and no `.docs.toml` ancestor, `docs new` now exits 2 with
+  `docs: new: <path> is not under a docs root with .docs.toml; refusing`
+  rather than silently scaffolding into the unmanaged cwd with default
+  config. `--root <dir>` without `<dir>/.docs.toml` likewise refuses
+  (`docs: new: --root <dir> does not contain .docs.toml; refusing`). The
+  read verbs (`index`/`list`/`check`) keep the cwd-fallback — a wrong-tree
+  read is recoverable; a write is not.
+- **`atomic_write` now fsyncs before publishing** (M14 — A5). The tmpfile
+  is `os.fsync`'d before the rename and the parent directory is fsync'd
+  after, so the durability the `cli.md` §archive "fsync'd" claim promises
+  is real. The published bytes are unchanged.
+- **The end-of-batch reindex of every mutating verb honours `[exclude]` /
+  `.docsignore`** (M14 — A6). `docs touch`, `docs archive`, `docs mv`, and
+  `docs project rename` thread the persistent exclude predicate into every
+  tree walk and INDEX refresh, so a malformed *excluded* file (e.g. a
+  bundled plugin `README.md`) never fails a post-mutation walk. No new
+  `--exclude` flag is added to the mutating verbs.
+
+### Fixed
+
+- **`docs mv` is now all-or-nothing** (M14 — A1). A validate-all-first
+  pre-flight walk runs before the move, so a malformed sibling aborts the
+  move with exit 2, leaving the source in place, the destination absent,
+  and every referring `Related:` edge untouched (no dangling edge, no
+  stray INDEX). Previously the move happened first and the rewrite walk
+  raised afterwards, leaving a half-moved tree.
+- **An `OSError` mid edge-rewrite maps to a clean exit 2** (M14 — A4).
+  `docs mv` and `docs archive` no longer leak an uncaught traceback when a
+  referring doc cannot be written (e.g. a read-only directory) after the
+  move.
+- **`docs new <role> "foo/"` is rejected** (M14 — A3). A slug with an
+  empty final segment (`foo/`, `foo/.md`) exits 2 with
+  `docs: invalid slug …` instead of writing an invisible `.md` dotfile
+  that every read verb skips.
+- **The packaging skill-data guard actually fails on a broken glob**
+  (M14 — C3). The false-confidence `test_a6` (which grepped a pyproject
+  *comment*) was removed; `test_b3_wheel_contains_cli_and_skill` asserts
+  the built wheel carries the real skill package-data.
+- **Bundled-skill reference links resolve on a clean host** (M14 — C1,
+  done by M16). M14 adds a regression guard
+  (`test_bundled_skill_has_no_repo_relative_links`) that fails if any
+  bundled reference reintroduces a repo-relative `../` link.
+
 ## 1.5.0 — 2026-05-29
 
 M12: project rename verb + M11 wart fixes + version SoT.
