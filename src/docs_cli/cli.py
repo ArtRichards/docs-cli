@@ -3468,48 +3468,41 @@ def _cmd_new(args: argparse.Namespace) -> int:
 _CASCADE_VERBS = ("pairs-with", "child-of")
 
 
-def _cascade_set(doc: Doc, root: Path) -> list[tuple[str, Path]]:
-    """Return the one-hop cascade candidates of `doc` that exist on disk.
+def _cascade_set(doc: Doc, root: Path, cascade_only: str | None) -> list[tuple[str, Path]]:
+    """Return the one-hop cascade candidates of `doc`, filtered by `--cascade-only`.
 
     Pure helper for the non-interactive `--cascade` / `--cascade-only`
     paths (M14 — B1): walks `doc`'s `Related:` edges, keeps the
     `pairs-with` / `child-of` ones whose target file still exists, and
     returns `(target_rel, candidate_path)` pairs where `target_rel` is the
     related doc's root-relative POSIX `Related:` target (the source path,
-    used for `--cascade-only` glob matching and the footer) and
-    `candidate_path` is the on-disk path to archive. One hop only — the
-    related docs' own relations are not followed. No prompt, no stdin.
+    used for the footer) and `candidate_path` is the on-disk path to
+    archive. One hop only — the related docs' own relations are not
+    followed. No prompt, no stdin.
+
+    When `cascade_only` is given it is compiled by the same matcher
+    `compile_exclude_predicate` uses (`_compile_docsignore_pattern`,
+    gitignore-flavoured) and matched against each `target_rel` (RQ#3); a
+    pattern that compiles to nothing (a comment / blank) matches nothing.
     """
+    rgx: re.Pattern[str] | None = None
+    if cascade_only is not None:
+        compiled = _compile_docsignore_pattern(cascade_only)
+        if compiled is None:
+            return []
+        _negate, rgx = compiled
+
     out: list[tuple[str, Path]] = []
     for verb, target in doc.related:
         if verb not in _CASCADE_VERBS:
+            continue
+        if rgx is not None and not rgx.match(target):
             continue
         candidate = root / target
         if not candidate.is_file():
             continue
         out.append((target, candidate))
     return out
-
-
-def _filter_cascade_set(
-    cascade: list[tuple[str, Path]], cascade_only: str | None
-) -> list[tuple[str, Path]]:
-    """Filter `_cascade_set` output by the `--cascade-only GLOB` pattern.
-
-    When `cascade_only` is None, the set passes through unchanged. When a
-    GLOB is given, it is compiled by the same matcher
-    `compile_exclude_predicate` uses (`_compile_docsignore_pattern`,
-    gitignore-flavoured) and matched against each related doc's
-    root-relative POSIX target path (M14 — B1; RQ#3). A pattern that
-    compiles to nothing (a comment / blank) matches nothing.
-    """
-    if cascade_only is None:
-        return cascade
-    compiled = _compile_docsignore_pattern(cascade_only)
-    if compiled is None:
-        return []
-    _negate, rgx = compiled
-    return [(rel, path) for rel, path in cascade if rgx.match(rel)]
 
 
 def _print_cascade_footer(rels: list[str], dry_run: bool) -> None:
@@ -3668,7 +3661,7 @@ def _cmd_archive(args: argparse.Namespace) -> int:
             # and a dry-run never prompts, so there is no interactive
             # preview to print.)
             if cascade_active:
-                cascade = _filter_cascade_set(_cascade_set(doc, root), args.cascade_only)
+                cascade = _cascade_set(doc, root, args.cascade_only)
                 for target_rel, _candidate in cascade:
                     print(f"docs: cascade would archive {target_rel}", file=sys.stderr)
                 _print_cascade_footer([t for t, _ in cascade], dry_run=True)
@@ -3706,7 +3699,7 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         moves.extend(_cascade_archive(doc, root, config, date_str, args.quiet))
     elif cascade_active:
         # Non-interactive: archive the whole filtered one-hop set, no prompt.
-        cascade = _filter_cascade_set(_cascade_set(doc, root), args.cascade_only)
+        cascade = _cascade_set(doc, root, args.cascade_only)
         archived_rels: list[str] = []
         for target_rel, candidate in cascade:
             try:

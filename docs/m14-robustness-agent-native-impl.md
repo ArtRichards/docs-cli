@@ -425,6 +425,20 @@ Milestone + impl-log + status.md + plan.md flipped to
 implementation-complete; INDEX + frozen snapshot regenerated in lockstep;
 edited docs' `Updated:` bumped via `docs touch`.
 
+Second `/simplify` pass (`m14/simplify`): `_cascade_set` and
+`_filter_cascade_set` were always invoked as the pair
+`_filter_cascade_set(_cascade_set(doc, root), cascade_only)` (two call
+sites, dry-run preview + mutate path) and `_cascade_set` was never used
+standalone — an abstraction layer that did not earn its keep. Merged into
+one `_cascade_set(doc, root, cascade_only)` that compiles the
+`--cascade-only` glob once up front and skips non-matching targets inside
+the same edge walk. Same result set (glob ∩ on-disk-exists is order-
+independent), same iteration order; two call sites drop from a nested
+two-call composition to a single call. `_print_cascade_footer` kept (genuine
+two-site sharing of three message variants). Behaviour-preserving: full
+suite 459 passed / 0 failed; ruff / ruff format / mypy clean; `docs check
+docs/` exit 0.
+
 ## Milestone completion summary
 
 **M14 — Robustness + autonomous archive — implementation complete
