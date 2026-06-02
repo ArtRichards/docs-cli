@@ -2887,10 +2887,32 @@ def _build_parser() -> argparse.ArgumentParser:
     archive_p.add_argument("file", help="Path to the doc to archive.")
     archive_p.add_argument("--reason", help="Free-form Archived-reason: metadata line.")
     archive_p.add_argument("--date", help="Archive date YYYY-MM-DD (default: today).")
-    archive_p.add_argument(
+    # M14 (B1): the cascade flag set. `--cascade`, `--cascade-only`, and
+    # `--interactive` are mutually exclusive (one shaping mode per run).
+    # `--cascade-dry-run` is NOT in this group: it composes with
+    # `--cascade-only` (preview the filtered subset); its rejection
+    # together with `--interactive` is an imperative guard in
+    # `_cmd_archive` (a dry-run that prompts is incoherent).
+    cascade_group = archive_p.add_mutually_exclusive_group()
+    cascade_group.add_argument(
         "--cascade",
         action="store_true",
-        help="Also prompt to archive docs related by pairs-with / child-of (one hop).",
+        help="Archive every one-hop pairs-with / child-of relation (no prompt).",
+    )
+    cascade_group.add_argument(
+        "--cascade-only",
+        metavar="GLOB",
+        help="Cascade only the one-hop relations whose root-relative path matches GLOB.",
+    )
+    cascade_group.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Prompt [y/N] before archiving each one-hop relation (the only stdin path).",
+    )
+    archive_p.add_argument(
+        "--cascade-dry-run",
+        action="store_true",
+        help="Preview the cascade set and write nothing (exit 0); composes with --cascade-only.",
     )
 
     mv_p = subparsers.add_parser(
@@ -3206,6 +3228,36 @@ def _resolve_project_root(args: argparse.Namespace, start: Path) -> Path | int:
     return found
 
 
+def _resolve_new_root(args: argparse.Namespace, start: Path) -> Path | int:
+    """M14 (A2): resolve a docs root for `docs new`, or print a refusal + exit code.
+
+    Mirrors `_resolve_touch_root` with `docs: new:`-prefixed messages.
+    When `--root` is set, the directory must contain a `.docs.toml`;
+    otherwise refuse with exit 2. When `--root` is absent, walk up from
+    `start`; if no `.docs.toml` ancestor is found, refuse rather than
+    silently scaffolding into the unmanaged cwd with default config (the
+    pre-M14 footgun). The read verbs (`index`/`list`/`check`) keep the
+    cwd-fallback — a wrong-tree read is recoverable; a write is not.
+    """
+    if args.root:
+        root = Path(args.root).resolve()
+        if not (root / ".docs.toml").is_file():
+            print(
+                f"docs: new: --root {args.root} does not contain .docs.toml; refusing",
+                file=sys.stderr,
+            )
+            return 2
+        return root
+    found = _find_root_strict(start)
+    if found is None:
+        print(
+            f"docs: new: {start} is not under a docs root with .docs.toml; refusing",
+            file=sys.stderr,
+        )
+        return 2
+    return found
+
+
 def _refresh_index(
     root: Path,
     config: Config,
@@ -3373,6 +3425,29 @@ def _cmd_new(args: argparse.Namespace) -> int:
 
 # Relationship verbs that `archive --cascade` follows (one hop only).
 _CASCADE_VERBS = ("pairs-with", "child-of")
+
+
+def _cascade_set(doc: Doc, root: Path) -> list[tuple[str, Path]]:
+    """Return the one-hop cascade candidates of `doc` that exist on disk.
+
+    Pure helper for the non-interactive `--cascade` / `--cascade-only`
+    paths (M14 — B1): walks `doc`'s `Related:` edges, keeps the
+    `pairs-with` / `child-of` ones whose target file still exists, and
+    returns `(target_rel, candidate_path)` pairs where `target_rel` is the
+    related doc's root-relative POSIX `Related:` target (the source path,
+    used for `--cascade-only` glob matching and the footer) and
+    `candidate_path` is the on-disk path to archive. One hop only — the
+    related docs' own relations are not followed. No prompt, no stdin.
+    """
+    out: list[tuple[str, Path]] = []
+    for verb, target in doc.related:
+        if verb not in _CASCADE_VERBS:
+            continue
+        candidate = root / target
+        if not candidate.is_file():
+            continue
+        out.append((target, candidate))
+    return out
 
 
 def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: str | None) -> Path:
