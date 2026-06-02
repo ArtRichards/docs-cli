@@ -151,9 +151,10 @@ end. Per-doc cascade-archive failures still surface but only docs that
 actually moved get their referring edges rewritten. Cascade remains
 one-hop only (M2 decision unchanged).
 
-Exits 1 on metadata-edit failure; 2 on archive-dir creation failure or
-an invalid cascade-flag combination. `--cascade-dry-run` exits 0 and
-writes nothing.
+Exits 1 on metadata-edit failure; 2 on archive-dir creation failure, an
+`OSError` raised while rewriting a referring edge after the move
+(M14 — A4), or an invalid cascade-flag combination. `--cascade-dry-run`
+exits 0 and writes nothing.
 
 ### `docs mv <old> <new>`
 
@@ -165,7 +166,17 @@ Move/rename a doc and rewrite every `Related:` reference that points at `<old>` 
   `.docsignore` (M14 — A6) — a malformed *excluded* file never fails the
   post-move reindex (same threading as `docs touch`).
 
-Exits 1 on collision (`<new>` exists).
+**Atomic — all-or-nothing (M14 — A1).** A validate-all-first pre-flight
+walk runs *before* the move: if any (non-excluded) doc in the tree is
+malformed, `docs mv` aborts with **exit 2** *before* moving anything,
+leaving the source in place, the destination absent, and every referring
+`Related:` edge untouched (no dangling edge, no stray INDEX). An `OSError`
+raised while rewriting a referring doc *after* the move (e.g. a referrer
+in a read-only directory) is mapped to a clean **exit 2** rather than an
+uncaught traceback (M14 — A4).
+
+Exits 1 on collision (`<new>` exists); 2 on a malformed tree caught by the
+pre-flight walk (A1) or an `OSError` mid edge-rewrite (A4).
 
 ### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json] [--exclude PATTERN]`
 
@@ -761,7 +772,8 @@ M12 / M14-specific exit-code shape:
 | `project rename` | success / no-op / dry-run | doc lacks editable metadata block | malformed `.docs.toml`; no `.docs.toml` ancestor; empty post-normalised `<new-name>` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
-| `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; invalid cascade-flag combination (M14 — B1) |
+| `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); invalid cascade-flag combination (M14 — B1) |
 | `archive --cascade-dry-run` | preview only; writes nothing (exit 0) | — | — |
+| `mv` (M14 — A1 / A4) | success / dry-run | collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1); `OSError` mid edge-rewrite after the move (A4); both paths outside the docs root |
 
 CI integration: `docs check` returning 2 should fail the build.
