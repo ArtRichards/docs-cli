@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-06-01
+Updated: 2026-06-02
 
 Related:
 - pairs-with: plan.md
@@ -16,6 +16,8 @@ Related:
 - pairs-with: m12-project-rename.md
 - pairs-with: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: release-runbook.md
+- pairs-with: m14-robustness-agent-native.md
+- pairs-with: m15-agent-native-authoring.md
 - pairs-with: m16-bundled-docs-skill-quality.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
@@ -30,6 +32,12 @@ document test matrices, quality logs, generated report artifacts, and
 the mechanical limits of `docs check`. The milestone pair is
 [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md)
 + [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md).
+
+The **v1.6 implementation train** (next up) is **M14 — Robustness +
+autonomous archive** then **M15 — Agent-native doc authoring**, both
+Draft; **M17** publishes them together as `docs-cli==1.6.0`. M14 was
+re-scoped 2026-06-02 and M15 carved out of it (it had outgrown M12
+scale) — see the *Next action* block below for per-milestone scope.
 
 **docs-cli 1.5.0 shipped 2026-05-29.** **M13 — PyPI publish
 1.5.0** is **Complete (2026-05-29)** — `docs-cli==1.5.0` is
@@ -166,19 +174,27 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M14 — Robustness + agent-native surface
-(v1.6)** is **scaffolded (Draft, 2026-05-29)** on branch
-`m14/milestone-setup`. The milestone pair
-[m14-robustness-agent-native.md](m14-robustness-agent-native.md)
-+ [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md)
-is in place; scope folds the post-1.5.0 multi-agent review
-(the `docs mv` atomicity blocker, `docs new` strict-root
-refusal, slug/`OSError` guards, skill/packaging fixes) and the
-[agent-native-invocation.md](agent-native-invocation.md)
-proposal (non-interactive `archive --cascade`; `docs project
-set`). Phase 1 (Define Contract) opens via `/ship-milestone
-M14`. M14 builds 1.6.0 locally; M15 publishes it (M12→M13
-cadence). The broader agent-native surface (global `--json`,
+**Next action:** the v1.6 train is two implementation
+milestones then a publish, all **Draft** on branch
+`m14/milestone-setup`:
+
+- **M14 — Robustness + autonomous archive (v1.6.0)** — `docs mv`
+  atomicity, `docs new` strict-root refusal, `docs touch`
+  exclude-predicate fix, slug/`OSError` guards, non-interactive
+  `archive --cascade`, bundled-ref + packaging fixes. Pair:
+  [m14-robustness-agent-native.md](m14-robustness-agent-native.md)
+  + [impl](m14-robustness-agent-native-impl.md). Open via
+  `/ship-milestone M14`.
+- **M15 — Agent-native doc authoring (v1.6.0)** — `docs project
+  set`, single-file `docs stamp` (write-then-stamp), the
+  `--body-from` real-frontmatter detector, and the skill/cli
+  docs. Carved out of M14 on 2026-06-02 (it outgrew M12 scale);
+  **depends on M14**. Pair:
+  [m15-agent-native-authoring.md](m15-agent-native-authoring.md)
+  + [impl](m15-agent-native-authoring-impl.md).
+
+**M17 — PyPI publish 1.6.0** ships both (M12→M13 cadence). The
+broader agent-native surface (global `--json`,
 `docs context`/`capabilities`, hooks, MCP) is deferred — see
 the M14 Decisions.
 
@@ -342,7 +358,10 @@ for the milestone summary.
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
-| M14 — Robustness + agent-native surface (v1.6.0) | **Draft** (2026-05-29; scaffolded from the post-1.5.0 review + agent-native proposal; `mv` atomicity, `project set`, non-interactive `--cascade`, skill/packaging fixes; builds 1.6.0 locally, publish is M15) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
+| M14 — Robustness + autonomous archive (v1.6.0) | **Draft** (2026-05-29; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, `touch` excludes, slug/`OSError` guards, non-interactive `--cascade`, bundled-ref + packaging fixes; builds 1.6.0 locally) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
+| M15 — Agent-native doc authoring (v1.6.0) | **Draft** (2026-06-02; carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17) | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
+| M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance; pending operator commit/archive) | [Plan](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
+| M17 — PyPI publish 1.6.0 | **Planned** (publish-only; ships M14 + M15 as `docs-cli==1.6.0` via the release-runbook, mirroring M13 → M12) | _not yet created_ | — |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

@@ -1,4 +1,4 @@
-# M14 — Robustness + agent-native surface
+# M14 — Robustness + autonomous archive
 
 Lifecycle: draft
 Role: milestone
@@ -8,19 +8,22 @@ Updated: 2026-06-02
 Related:
 - child-of: plan.md
 - parent-of: m14-robustness-agent-native-impl.md
+- pairs-with: m15-agent-native-authoring.md
 - pairs-with: agent-native-invocation.md
 - pairs-with: cli.md
 - pairs-with: status.md
 
 ## Overview
 
-- Milestone: M14 (v1.6)
-- Title: Robustness + agent-native surface
-- Surface: hardening fixes to existing verbs + three new agent-facing
-  affordances (`docs project set`, non-interactive `archive --cascade`,
-  single-file `docs stamp`) + `--body-from`/`docs touch` robustness +
-  agent-skill/packaging corrections. No publish — M14 builds 1.6.0
-  locally; a separate publish milestone (M15) ships it, per the
+- Milestone: M14 (v1.6.0, part 1 of 2)
+- Title: Robustness + autonomous archive
+- Surface: correctness/atomicity hardening of existing verbs
+  (`mv`, `new`, `touch`, edge-rewrite) + one autonomous-agent affordance
+  (non-interactive `archive --cascade`) + bundled-skill/packaging
+  corrections. The agent-native *authoring* set (`docs project set`,
+  `docs stamp`, the `--body-from` detector) split out to **M15** once
+  this milestone outgrew M12 scale. No publish — M14 + M15 build 1.6.0
+  locally; the publish milestone (**M17**) ships it, per the
   M12→M13 / M10→M11 / M8→M9 cadence.
 - Status: Draft (scaffolded 2026-05-29 from the post-1.5.0 multi-agent
   code+docs review and the [agent-native-invocation.md](agent-native-invocation.md)
@@ -39,6 +42,14 @@ This milestone deliberately **defers** the broader agent-native surface
 `install-skill --with-hooks`, the MCP server) — see Decisions. Those
 want their own milestone(s); M14 takes the parts with a clear contract
 and immediate payoff.
+
+**Split (2026-06-02, operator-confirmed):** when the post-1.5.0 contract
+was widened with A6/B3/C4, M14 outgrew a single TDD cycle. The
+agent-native *authoring* set — B2 `docs project set`, B3 `docs stamp`,
+C4 the `--body-from` detector, plus their skill/cli docs (C2) — moved to
+**M15 — Agent-native doc authoring**. M14 keeps the correctness/atomicity
+hardening (Thread A), the autonomous-archive affordance (B1), and the
+packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
 
 ### Scope — three threads
 
@@ -83,7 +94,7 @@ and immediate payoff.
   that file out of the INDEX and the refresh succeeds. (Surfaced by the
   M16 bundled-skill dogfood — see impl-log provenance.)
 
-**Thread B — agent-native surface (from agent-native-invocation.md).**
+**Thread B — autonomous archive (from agent-native-invocation.md).**
 
 - **B1 — non-interactive `archive --cascade`** (proposal P0-1). The
   `--cascade` prompt (`cli.py:3427-3428`) stalls an autonomous agent.
@@ -92,29 +103,11 @@ and immediate payoff.
   `pairs-with`/`child-of`, no prompt), `--cascade-dry-run` (print the
   set, write nothing), `--cascade-only <glob>` (filtered subset);
   `--interactive` opts back into the prompt.
-- **B2 — `docs project set <doc>... <new-project>`** (proposal §5E). The
-  single-doc counterpart to `project rename`; closes the gap that forced
-  recreating a doc to change its `Project:`. Atomic batch + one
-  end-of-batch INDEX refresh; `normalise_project_name()` validation;
-  archived docs read-only; **no `Related:`-edge rewrite** (no path
-  change); `--dry-run`/`--quiet`/`--root`; a `--new-project` typo guard
-  that refuses a project value new to the tree (with a did-you-mean)
-  rather than prompting. Composes with `rename` (which already leaves
-  non-matching-project docs untouched).
-- **B3 — single-file write-then-stamp (`docs stamp <file>`).** The friction
-  the M16 bundled-skill dogfood hit: an agent's natural move is to *write
-  the whole document* with ordinary tools, then bring it under convention —
-  but `docs new --body-from` owns the frontmatter and fights bodies that
-  contain `Label:`-shaped prose (see C4). `docs migrate` already
-  infers/inserts a metadata block, but only tree-wide; the gap is the
-  single file. Add `docs stamp <file>...` (alias/extension of `migrate`):
-  infer `# H1` → title, take `--role`/`--project` (else fall back to
-  `.docs.toml`), insert a valid metadata block on top, idempotently
-  (re-stamping a doc that already has a block is a no-op bar an `Updated:`
-  refresh). Removes the body-content restriction *class* rather than
-  tuning the heuristic. Verb name + migrate-vs-new-verb shape is an Open Q.
 
-**Thread C — agent skill + packaging (from the review).**
+> B2 `docs project set` and B3 `docs stamp` moved to **M15** — see the
+> split note under Goal.
+
+**Thread C — bundled skill + packaging (from the review).**
 
 - **C1 — broken bundled-reference links.**
   `src/docs_cli/skill/references/use-cases.md:5`
@@ -122,28 +115,15 @@ and immediate payoff.
   (`../src/docs_cli/skill/SKILL.md`) are repo-relative and dangle once
   installed on a host. Repoint to host-resolvable siblings; keep the
   bundled-vs-`docs/` byte-identity invariant in mind (decide canonical).
-- **C2 — `SKILL.md` table omits `--body-from`** (`SKILL.md:46`), the
-  highest-value agent flag (atomic doc authoring in one call). Add it;
-  also refresh the frontmatter `description` verb list (`SKILL.md:3` —
-  add `project rename`, `install-skill`).
 - **C3 — `test_a6` is a false-confidence test**
   (`tests/test_packaging.py:141-172`): it greps for the literal `"skill"`
   which only matches a pyproject *comment*, not a real directive.
   Replace with an assertion on the actual `packages` glob, or fold into
   the real guard `test_b3` (`tests/test_packaging.py:239`).
-- **C4 — `--body-from` refuses real prose, not just frontmatter.** The
-  OQ-E heuristic (`cli.py:3336-3347`) rejects a body if *any* of its first
-  20 lines matches `^[A-Z][A-Za-z-]+:\s` — so a legitimate spec/test-matrix
-  body line like `Reason: …` or `Plan: …` is refused (this is exactly the
-  dogfood failure: a test-matrix body starting `## Risk level` was rejected
-  on its `Reason:` line). Replace the any-`Label:` match with detection of
-  an *actual* metadata block: a leading `---` YAML fence, or a contiguous
-  run carrying the required-field cluster (`Lifecycle`/`Role`/`Updated`)
-  at/near the top (after an optional `# H1`). Preserves the footgun guard
-  (a whole doc-with-frontmatter pasted as a body still refuses) while
-  letting prose through. NB: this flips the pinned `edge-case-keyword.md`
-  expectation in `tests/test_body_from.py` (the `Plan:` body now passes) —
-  update that fixture/assertion as part of the change.
+
+> C2 (`--body-from` in the SKILL table + frontmatter verb list) and C4
+> (the `--body-from` real-frontmatter detector) moved to **M15** — they
+> belong with the authoring surface they document and fix.
 
 ## Deliverables
 
@@ -156,39 +136,31 @@ and immediate payoff.
       excluded-file atomicity test added.
 - [ ] B1 `archive --cascade` non-interactive flag set; prompt removed
       (or behind `--interactive`); `cli.md` updated.
-- [ ] B2 `docs project set` verb shipped + spec'd in `cli.md` + skill.
-- [ ] B3 single-file `docs stamp <file>` (write-then-stamp) shipped +
-      spec'd in `cli.md` + skill; idempotent re-stamp.
 - [ ] C1 bundled reference links host-resolvable.
-- [ ] C2 `--body-from` in SKILL table; frontmatter description refreshed.
 - [ ] C3 `test_a6` replaced with a real package-data assertion.
-- [ ] C4 `--body-from` refusal detects a real metadata block (`---` fence
-      or required-field cluster), not any `Label:` line; `edge-case-keyword`
-      expectation flipped.
 - [ ] `pyproject.toml` `version` → `1.6.0`; `CHANGELOG.md`
-      `## 1.6.0 — UNRELEASED` authored (publish-survival wording).
+      `## 1.6.0 — UNRELEASED` section authored (publish-survival wording).
+      M14 owns the bump + section; **M15 appends its authoring entries to
+      the same 1.6.0 section** before M17 publishes.
 - [ ] `docs/cli.md` + `convention.md` reflect every behavior change;
       bundled skill refs resynced; INDEX + frozen snapshot in lockstep.
 - [ ] Full suite GREEN; ruff / ruff format / mypy / `docs check` clean.
 
 ## Phase Checklist (10-phase TDD)
 
-- [ ] 1. Define Contract — `cli.md` deltas for `project set`, the
-      `--cascade` flag set, the `new` strict-refusal exit codes.
+- [ ] 1. Define Contract — `cli.md` deltas for the `--cascade` flag set,
+      the `new` strict-refusal exit codes, the `touch` exclude semantics.
 - [ ] 2. Write Tests (RED) — pin every A/B/C behavior, incl. the
-      mv malformed-sibling atomicity test, the cascade-no-prompt test, the
-      touch-excludes reindex test, `stamp` idempotency, and the
-      `--body-from` real-frontmatter cases (incl. the edge-case flip).
-- [ ] 3. Create Fixtures — multi-project tree for `project set`; a tree
-      with a malformed sibling for the mv pre-flight; a tree whose
-      `[exclude]` set holds a malformed file for the touch reindex; a raw
-      no-frontmatter file for `stamp`.
+      mv malformed-sibling atomicity test, the cascade-no-prompt test, and
+      the touch-excludes reindex test.
+- [ ] 3. Create Fixtures — a tree with a malformed sibling for the mv
+      pre-flight; a tree whose `[exclude]` set holds a malformed file for
+      the touch reindex.
 - [ ] 4. Run Tests (RED) — confirm the intended red baseline.
-- [ ] 5. Update Interfaces — argparse: `project set`, `stamp`, `--cascade*`,
-      strict-resolver wiring.
-- [ ] 6. Implement Core — the pre-flight walk, `project set`, `stamp`,
-      cascade set computation, the touch exclude-predicate fix, the
-      `--body-from` block detector, slug/OSError guards.
+- [ ] 5. Update Interfaces — argparse: the `--cascade*` flag set,
+      strict-resolver wiring for `new`.
+- [ ] 6. Implement Core — the mv pre-flight walk, cascade set
+      computation, the touch exclude-predicate fix, slug/OSError guards.
 - [ ] 7. Update Wrappers — `pyproject.toml` 1.6.0; CHANGELOG entry;
       skill refs resync.
 - [ ] 8. Run Tests (GREEN) + quality gate.
@@ -198,9 +170,15 @@ and immediate payoff.
 
 ## Decisions
 
-- **Version 1.6.0; publish is a separate milestone (M15).** Mirrors the
-  M12→M13 cadence. M14 lands the bump + CHANGELOG inline (Phase 7/10)
-  but does not touch PyPI.
+- **Version 1.6.0; publish is a separate milestone (M17).** Mirrors the
+  M12→M13 cadence. M14 lands the bump + CHANGELOG section inline
+  (Phase 7/10) but does not touch PyPI; M15 appends to the same section.
+- **M14 split into M14 + M15 (2026-06-02, operator-confirmed).** The
+  A6/B3/C4 widening pushed the contract past M12 scale. The agent-native
+  authoring set (B2 `project set`, B3 `stamp`, C4 `--body-from` detector,
+  C2 docs) carved into **M15 — Agent-native doc authoring**; M14 keeps
+  Thread A + B1 + C1/C3. Monotonic numbering: M14 → M15 → (M16 skill,
+  already done) → M17 publish.
 - **Deferred to a later agent-native milestone (not M14):** global
   `--json` + `changed` across all verbs; `docs context`;
   `docs capabilities`; `install-skill --with-hooks` + SessionStart /
@@ -227,9 +205,10 @@ The standard tree-wide gate plus the new behavior tests:
 .venv/bin/docs index --root docs/ --dry-run
 ```
 
-Dogfood at Phase 9: exercise `docs project set` + non-interactive
-`archive --cascade` on a copied fixture tree, and confirm `docs new`
-refuses outside a root.
+Dogfood at Phase 9: exercise non-interactive `archive --cascade` on a
+copied fixture tree, confirm `docs new` refuses outside a root, and
+confirm `docs touch` over a tree with a malformed excluded file stamps
+dates *and* refreshes the INDEX cleanly.
 
 ## Success Criteria
 
@@ -237,8 +216,6 @@ refuses outside a root.
       leaves the source in place + INDEX untouched.
 - [ ] `docs new` outside any `.docs.toml` root (no `--root`) refuses
       with exit 2; never writes to cwd.
-- [ ] `docs project set <doc> <name>` reassigns one doc's project
-      atomically; `--new-project` guards typos; archived docs untouched.
 - [ ] `docs archive --cascade` runs without prompting; `--cascade-dry-run`
       previews the set.
 - [ ] `docs install-skill` on a clean host produces bundled references
@@ -248,11 +225,6 @@ refuses outside a root.
 - [ ] Full suite GREEN; quality gate clean tree-wide; `docs check` exit 0.
 - [ ] `docs touch` over a tree with a malformed *excluded* file stamps the
       dates *and* refreshes the INDEX cleanly (excluded file never indexed).
-- [ ] `docs stamp <raw.md>` inserts a valid metadata block (title from H1,
-      role/project from flags or `.docs.toml`); re-running is a no-op bar
-      `Updated:`.
-- [ ] `docs new --body-from` accepts a body whose prose contains `Reason:`/
-      `Plan:` lines, yet still refuses a whole doc-with-frontmatter body.
 
 ## OPEN QUESTIONS
 
@@ -268,14 +240,7 @@ refuses outside a root.
   independently maintained? The link fix must not break the
   `_trees_byte_identical` no-op detection. Recommend: declare `docs/`
   canonical, generate the bundled copies, fix links in the generator.
-- **`docs stamp` shape (B3):** a new top-level `docs stamp <file>` verb, or
-  teach `docs migrate` to accept a single file (and alias `stamp` to it)?
-  Recommend: extend `migrate`'s single-file path and expose `docs stamp` as
-  the agent-facing name. How is metadata supplied — flags only, or infer
-  `role`/`project` defaults from `.docs.toml`? Recommend: `--role`/`--project`
-  flags, default `role: notes`, project from config.
-- **Milestone size:** A+B+C — now widened by A6/B3/C4 — is well past M12
-  scale. Strong candidate to split: e.g. carve the agent-native authoring
-  set (B2 `project set` + B3 `stamp` + C4 `--body-from`) into its own
-  milestone if Step-1 planning judges the cycle too wide. Recommend Step-1
-  makes the cut explicitly.
+- **Milestone size — resolved (2026-06-02):** the A6/B3/C4 widening pushed
+  M14 past M12 scale, so the agent-native authoring set was carved into
+  **M15** (see Decisions). The `docs stamp` verb-shape and `--body-from`
+  detector open questions moved with it to the M15 doc.

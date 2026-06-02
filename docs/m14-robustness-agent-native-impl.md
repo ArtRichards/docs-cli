@@ -56,14 +56,16 @@ This section tracks implementation progress, which is distinct.)
   (the `ideas`-project proposal): P0-1 non-interactive `--cascade` and
   §5E `docs project set`. The broader agent-native surface in that doc
   is explicitly deferred (see the milestone doc's Decisions).
-- **A6 / B3 / C4 (folded in 2026-06-02)** — the M16 bundled-docs-skill
-  dogfood (run ahead of M14) hit two live defects: `docs new --body-from`
-  refused a test-matrix body on its `Reason:` line (→ C4), and `docs touch`
-  failed its post-mutation reindex on a malformed *excluded* plugin
-  `README.md` (→ A6, same family as A1/A4). B3 (`docs stamp`) is the
-  agent-native fix for the underlying friction — write the doc naturally,
-  then stamp the metadata on top. Operator-chosen scope + home (2026-06-02):
-  full B+A+touch, folded into M14.
+- **A6 added; B3/C4 carved to M15 (2026-06-02)** — the M16
+  bundled-docs-skill dogfood (run ahead of M14) hit two live defects:
+  `docs new --body-from` refused a test-matrix body on its `Reason:` line,
+  and `docs touch` failed its post-mutation reindex on a malformed
+  *excluded* plugin `README.md`. The touch fix landed here as **A6** (same
+  atomicity family as A1/A4). The `--body-from` detector (C4) and the
+  `docs stamp` write-then-stamp verb (B3) — plus B2 `project set` and the
+  C2 skill docs — were carved into **M15 — Agent-native doc authoring**
+  when the widened contract outgrew M12 scale (operator-confirmed
+  2026-06-02). M14 retains Thread A + B1 + C1/C3.
 
 ## Phase 1 — Define Contract
 
