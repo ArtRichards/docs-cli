@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = REPO_ROOT / "src" / "docs_cli" / "skill"
 
@@ -18,9 +17,7 @@ def test_skill_points_to_quality_artifacts_reference() -> None:
 
 
 def test_quality_artifacts_reference_documents_m16_contract() -> None:
-    body = (SKILL_DIR / "references" / "quality-artifacts.md").read_text(
-        encoding="utf-8"
-    )
+    body = (SKILL_DIR / "references" / "quality-artifacts.md").read_text(encoding="utf-8")
 
     required = [
         "m4-risky-change-test-matrix.md",
@@ -45,6 +42,4 @@ def test_installed_skill_references_do_not_depend_on_source_checkout() -> None:
         assert "../../../../docs/" not in body, (
             f"{path.name} links back to the source checkout docs tree"
         )
-        assert "../src/docs_cli/" not in body, (
-            f"{path.name} contains a source-layout relative link"
-        )
+        assert "../src/docs_cli/" not in body, f"{path.name} contains a source-layout relative link"
