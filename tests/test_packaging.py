@@ -271,6 +271,9 @@ def test_b3_wheel_contains_cli_and_skill(built_dist: dict) -> None:
     assert "docs_cli/skill/references/docs-toml-template.toml" in names, (
         "wheel missing docs_cli/skill/references/docs-toml-template.toml"
     )
+    assert "docs_cli/skill/references/quality-artifacts.md" in names, (
+        "wheel missing docs_cli/skill/references/quality-artifacts.md"
+    )
 
 
 def test_b4_entry_point_recorded_in_wheel(built_dist: dict) -> None:
@@ -458,6 +461,7 @@ def test_d3_install_skill_tree_is_byte_identical(wheel_venv: Path, tmp_path: Pat
         Path("references") / "use-cases.md",
         Path("references") / "adoption-playbook.md",
         Path("references") / "docs-toml-template.toml",
+        Path("references") / "quality-artifacts.md",
     ):
         src = PKG_SKILL_DIR / rel
         out = dest / rel

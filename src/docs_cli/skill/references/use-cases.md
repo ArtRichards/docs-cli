@@ -2,10 +2,10 @@
 
 When to reach for `docs`. The verbs cluster into three workflows.
 If your task doesn't fit one of these, `docs` is probably the
-wrong tool — see [charter.md](../../../../docs/charter.md)'s
-**Non-goals** section.
+wrong tool. The project charter's non-goals section explains the
+boundary in the source repository.
 
-This file is part of the bundled Claude Code skill at
+This file is part of the bundled `docs` agent skill at
 `src/docs_cli/skill/references/`. It is also the single source of
 truth for what `docs` is for — the charter links here for the
 concrete use-case catalog; `cli.md` is the verb-level reference;

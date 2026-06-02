@@ -4247,6 +4247,7 @@ _SKILL_RELATIVE_FILES: tuple[Path, ...] = (
     Path("references") / "use-cases.md",
     Path("references") / "adoption-playbook.md",
     Path("references") / "docs-toml-template.toml",
+    Path("references") / "quality-artifacts.md",
 )
 
 

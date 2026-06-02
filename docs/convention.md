@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-28
+Updated: 2026-06-02
 
 Related:
 - pairs-with: cli.md
@@ -304,7 +304,7 @@ The docs root contains an `INDEX.md` with this structure:
 <optional hand-edited trailer>
 ```
 
-`docs` only rewrites content between the markers. Everything outside is preserved verbatim. The derived section groups by Status and Role, lists every `.md` file in the tree with its title and a one-line excerpt, and separates the active tree from the archive subtree.
+`docs` only rewrites content between the markers. Everything outside is preserved verbatim. The derived section groups by project and role, lists every `.md` file in the tree with its title and a one-line excerpt, and separates the active tree from the archive subtree.
 
 ## Non-Markdown files in the tree
 

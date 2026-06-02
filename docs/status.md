@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-05-29
+Updated: 2026-06-01
 
 Related:
 - pairs-with: plan.md
@@ -16,10 +16,20 @@ Related:
 - pairs-with: m12-project-rename.md
 - pairs-with: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: release-runbook.md
+- pairs-with: m16-bundled-docs-skill-quality.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
+
+**M16 — Bundled docs skill quality artifacts** is
+**implementation-complete (2026-06-01)** for the Agent Playbook
+Suite risk-aware quality upgrade, pending operator commit/archive.
+Scope is limited to the bundled `docs` skill under `src/docs_cli/skill/`:
+document test matrices, quality logs, generated report artifacts, and
+the mechanical limits of `docs check`. The milestone pair is
+[m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md)
++ [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md).
 
 **docs-cli 1.5.0 shipped 2026-05-29.** **M13 — PyPI publish
 1.5.0** is **Complete (2026-05-29)** — `docs-cli==1.5.0` is

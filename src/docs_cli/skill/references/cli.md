@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-05-28
+Updated: 2026-06-02
 
 Related:
 - pairs-with: convention.md
@@ -312,12 +312,11 @@ No `--json` mode in M12 (M12 — OQ-7).
 
 ### `docs install-skill [--dest DIR] [--copy|--symlink] [--force] [--quiet]`
 
-Materialise the bundled Claude Code skill onto the host.
+Materialise the bundled `docs` agent skill onto the host.
 
 Synopsis. The `docs-cli` wheel carries a `docs_cli/skill/` directory (the
-[SKILL.md](../src/docs_cli/skill/SKILL.md) plus its bundled spec
-references). `install-skill` copies (or symlinks) that directory to a
-host-side location an agent driving Claude Code can read.
+`SKILL.md` file plus its bundled spec references). `install-skill` copies
+(or symlinks) that directory to a host-side location an agent can read.
 
 Flags:
 
