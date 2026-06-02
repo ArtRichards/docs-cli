@@ -38,7 +38,7 @@ This section tracks implementation progress, which is distinct.)
 | 1. Define Contract | Done | 2026-06-02 | cli.md + convention.md deltas; bundled refs resynced byte-identical; A5/A6 Decisions recorded; `docs check docs/` clean. |
 | 2. Write Tests (RED) | Done | 2026-06-02 | 19 new tests + 1 removed (false-confidence test_a6); migrated 2 cascade prompt tests to `--interactive`. |
 | 3. Create Fixtures | Done | 2026-06-02 | `tests/fixtures/trees/mv-with-malformed/`; inline tmp_path helpers for A4/A6/B1/A2/A3 live in their Phase-2 test files. |
-| 4. Run Tests (RED) | Done | 2026-06-02 | **454 collected, 17 failed, 437 passed**; the 17 are exactly the intended RED set (see Phase 4 section). No collateral, no import/fixture errors, no skips (non-root). |
+| 4. Run Tests (RED) | Done | 2026-06-02 | Initial baseline **454 collected, 17 failed, 437 passed**. Fresh-eyes review fixes (2026-06-02) → **458 collected, 18 failed, 440 passed**: +1 RED composition test, +3 GREEN-by-argparse mutex params, A5 fsync test tightened (still RED). See Phase 4 section. No collateral, no import/fixture errors, no skips (non-root). |
 | 5. Update Interfaces | Pending | — | |
 | 6. Implement Core | Pending | — | |
 | 7. Update Wrappers | Pending | — | |
@@ -218,5 +218,53 @@ formerly-stale `test_index_output_matches_frozen_snapshot` GREEN
 `ruff check` (I001 import-sort) AND `ruff format --check` — but this is
 **pre-existing**, committed in `9ceb113` ("Add bundled docs skill quality
 artifacts", the M16 artifacts that landed on this branch's base). It is
-not a file M14 touches. Surfaced for the operator; out of Step-1 scope to
-fix here (belongs with the M16 artifacts).
+not a file M14 touches. **Deferred to Step 2's quality phase (Phase 10):**
+M14's "quality gate clean tree-wide" Success Criterion is met there with a
+clearly-labeled mechanical ruff autofix. Intentionally NOT fixed in Step 1
+to keep the Step-1 commits clean and the RED baseline pure (it is not part
+of the RED behavior set).
+
+## Phase 4 — fresh-eyes review fixes (2026-06-02)
+
+A fresh-eyes review of Step 1 returned SOUND / no blockers with four
+clear (no-operator-decision) fixes. All applied as `m14(review): …`:
+
+1. **Cascade mutual-exclusion contract pinned (should-fix).** The
+   combination matrix says `--cascade` / `--cascade-only` / `--interactive`
+   are mutually exclusive, but only the `--cascade-dry-run --interactive`
+   rejection was pinned. Added the parametrized test
+   `test_archive_mutually_exclusive_cascade_flags_rejected` (3 cases:
+   `--cascade --interactive`, `--cascade-only <glob> --interactive`,
+   `--cascade --cascade-only <glob>`) asserting exit 2 + nothing written.
+   GREEN-by-argparse-accident now (the flags don't exist → "unrecognized
+   arguments" exit 2), exactly like the existing dry-run-rejects-interactive
+   test; will correctly catch a missing/incomplete argparse
+   mutually-exclusive group in Step 2.
+2. **`--cascade-dry-run` + `--cascade-only` composition pinned
+   (should-fix).** The documented filtered-preview-write-nothing
+   composition had no test. Added
+   `test_archive_cascade_dry_run_composes_with_cascade_only` on the
+   two-relation tree (`--cascade-only "sub/**"` matches only
+   `sub/alpha.md`, not root-level `beta.md`): preview names alpha but not
+   beta, nothing moves, exit 0. RED now (argparse rejects the unknown
+   flags → exit 2, test expects 0) — **+1 to the RED count**.
+3. **Garbled exit-code cell fixed (nit, clear doc bug).** `cli.md` §exit
+   codes `archive --cascade-dry-run` success cell `preview written
+   nothing` → `preview only; writes nothing (exit 0)`. Bundled mirror
+   `src/docs_cli/skill/references/cli.md` resynced byte-identical (`cp`);
+   INDEX + frozen snapshot regenerated in lockstep.
+4. **A5 fsync test tightened to match the contract (nit, consistency).**
+   The A5 Decision says `atomic_write` fsyncs "the tmpfile (and its parent
+   directory)". `test_atomic_write_fsyncs_before_rename` previously
+   asserted only "fsync called at least once"; now it classifies each
+   fsynced fd (via `os.fstat` + `stat.S_ISDIR`/`S_ISREG`) and pins that
+   the set includes BOTH a regular file and a directory (≥ 2 calls).
+   Parent-directory fsync is the correct durable-rename pattern. Stays RED
+   until Step 2 implements the fsync.
+
+**New RED baseline: 458 collected, 18 failed, 440 passed, 0 errors, 0
+skips.** The 18 RED are the original 17 (A1×2, A2×2, A3×1, A4×1, A5×1,
+A6×5, B1×5) plus the new composition test (item 2). The 3 mutex params
+(item 1) are GREEN-by-argparse-accident. No collateral GREEN broke:
+`test_skill_refs` byte-identity GREEN after the `cli.md` edit;
+`test_index_output_matches_frozen_snapshot` GREEN (snapshot in lockstep).

@@ -762,6 +762,6 @@ M12 / M14-specific exit-code shape:
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
 | `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; invalid cascade-flag combination (M14 — B1) |
-| `archive --cascade-dry-run` | preview written nothing | — | — |
+| `archive --cascade-dry-run` | preview only; writes nothing (exit 0) | — | — |
 
 CI integration: `docs check` returning 2 should fail the build.

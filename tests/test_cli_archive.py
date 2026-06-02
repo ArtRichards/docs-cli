@@ -8,6 +8,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 
 def _run(
     script: Path,
@@ -308,6 +310,95 @@ def test_archive_cascade_dry_run_rejects_interactive(docs_script, tmp_path):
     )
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
     assert not (root / "archive").exists()
+
+
+@pytest.mark.parametrize(
+    "extra_flags",
+    [
+        pytest.param(["--cascade", "--interactive"], id="cascade+interactive"),
+        pytest.param(["--cascade-only", "sub/**", "--interactive"], id="cascade-only+interactive"),
+        pytest.param(["--cascade", "--cascade-only", "sub/**"], id="cascade+cascade-only"),
+    ],
+)
+def test_archive_mutually_exclusive_cascade_flags_rejected(docs_script, tmp_path, extra_flags):
+    """The combination matrix (cli.md §archive) says `--cascade`,
+    `--cascade-only`, and `--interactive` are mutually exclusive. Each
+    forbidden pair must be rejected with exit 2, and nothing must be
+    written.
+
+    RED reason / GREEN-by-accident: none of `--cascade` /
+    `--cascade-only` / `--interactive` is a recognised flag yet, so
+    argparse rejects on the first unknown flag with exit 2 ("unrecognized
+    arguments"). That is the same intended posture as
+    `test_archive_cascade_dry_run_rejects_interactive` above: GREEN now on
+    the exit code, but it correctly catches a missing/incomplete argparse
+    mutually-exclusive group in Step 2 (when the flags exist, only a real
+    mutex group keeps these exit-2).
+    """
+    root = _two_relation_tree(tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        *extra_flags,
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # No interactive prompt and nothing written for any forbidden pair.
+    assert "[y/N]" not in proc.stderr
+    assert not (root / "archive").exists()
+    # The primary and both relations are left in place.
+    assert (root / "root.md").is_file()
+    assert (root / "sub" / "alpha.md").is_file()
+    assert (root / "beta.md").is_file()
+
+
+def test_archive_cascade_dry_run_composes_with_cascade_only(docs_script, tmp_path):
+    """`--cascade-dry-run --cascade-only GLOB` previews ONLY the filtered
+    subset and writes nothing (exit 0) — the documented composition
+    (cli.md §archive: "Composes with `--cascade-dry-run` (preview the
+    filtered subset, write nothing)").
+
+    On the two-relation tree, `--cascade-only "sub/**"` matches only the
+    `pairs-with: sub/alpha.md` relation (beta.md is at the root, outside
+    the glob). The preview names alpha.md but NOT beta.md, and nothing
+    moves: no archive dir, primary + every related doc unchanged on disk.
+
+    RED reason: `--cascade-dry-run` (and `--cascade-only`) are not yet
+    recognised flags — argparse rejects them with exit 2, but this test
+    expects exit 0. Step 2 adds the flags and the filtered-preview
+    composition. (Adds 1 to the RED count, consistent with the other
+    dry-run / cascade-only tests.)
+    """
+    root = _two_relation_tree(tmp_path)
+    before = {p.name: p.read_text() for p in root.glob("*.md")}
+    before["alpha.md"] = (root / "sub" / "alpha.md").read_text()
+
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        "--cascade-dry-run",
+        "--cascade-only",
+        "sub/**",
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # Nothing moved — no archive dir, every doc still in place + unchanged.
+    assert not (root / "archive").exists(), "dry-run composition must write nothing"
+    assert (root / "root.md").read_text() == before["root.md"]
+    assert (root / "sub" / "alpha.md").read_text() == before["alpha.md"]
+    assert (root / "beta.md").read_text() == before["beta.md"]
+    # The preview names ONLY the glob-matching relation (sub/alpha.md),
+    # not the out-of-glob beta.md.
+    assert "alpha.md" in proc.stderr, "the filtered preview must name sub/alpha.md"
+    assert "beta.md" not in proc.stderr, (
+        "beta.md is outside sub/** — it must NOT appear in the filtered preview"
+    )
+    # And no prompt is emitted.
+    assert "[y/N]" not in proc.stderr
 
 
 # --- M12 — referring-edge rewrite -------------------------------------------
