@@ -263,3 +263,71 @@ def test_touch_root_without_docs_toml_refuses(docs_script, tmp_path):
     assert "--root" in proc.stderr
     assert "does not contain .docs.toml" in proc.stderr
     assert "refusing" in proc.stderr
+
+
+# --- M14 A6 — touch end-of-batch reindex honours [exclude] -----------------
+
+
+def _touch_excluded_malformed_tree(tmp_path: Path) -> tuple[Path, Path]:
+    """Build a docs root with `[exclude] dirs = ["vendor"]`, a conformant
+    target doc at root, and a malformed `vendor/README.md`.
+
+    Returns (root, target). The malformed vendor file must NOT fail the
+    end-of-batch reindex because it is excluded.
+    """
+    root = tmp_path / "touch-excl"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "touch-excl"\n\n[archive]\ndir = "archive"\n\n'
+        '[exclude]\ndirs = ["vendor"]\n'
+    )
+    target = root / "spec.md"
+    target.write_text(
+        "# Spec\n\nLifecycle: active\nRole: spec\nProject: touch-excl\n"
+        "Updated: 2026-01-01\n\n## Body\n\nA conformant doc to touch.\n"
+    )
+    vendor = root / "vendor"
+    vendor.mkdir()
+    # Malformed: first non-empty line is not an H1 → parse() raises.
+    (vendor / "README.md").write_text("no metadata\n# H1\n")
+    return root, target
+
+
+def test_touch_with_malformed_excluded_file_stamps_and_reindexes(docs_script, tmp_path):
+    """`docs touch` over a tree whose `[exclude]` set holds a malformed file
+    must stamp the date AND refresh the INDEX, exiting 0.
+
+    RED reason: `_cmd_touch` calls `_refresh_index(root, config)` with NO
+    predicate (cli.py:3648), so the end-of-batch walk reads the excluded
+    malformed `vendor/README.md` and raises → exit 2 (after the date is
+    already stamped — a partial, non-atomic result). Step 2 threads
+    `compile_exclude_predicate(config, [])` into the reindex.
+    """
+    root, target = _touch_excluded_malformed_tree(tmp_path)
+    today = date.today().isoformat()
+
+    proc = _run(docs_script, "touch", str(target))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The target's Updated: is today.
+    assert f"Updated: {today}" in target.read_text()
+    # The INDEX exists and refreshed cleanly.
+    assert (root / "INDEX.md").is_file()
+
+
+def test_touch_excluded_malformed_file_not_in_index(docs_script, tmp_path):
+    """The excluded malformed file must never appear in the refreshed INDEX,
+    and must be byte-unchanged.
+
+    RED reason: same as above — the unfiltered reindex raises on the
+    excluded file rather than skipping it.
+    """
+    root, target = _touch_excluded_malformed_tree(tmp_path)
+    vendor_readme = root / "vendor" / "README.md"
+    vendor_before = vendor_readme.read_text()
+
+    proc = _run(docs_script, "touch", str(target))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    index = (root / "INDEX.md").read_text()
+    assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"
+    # The malformed excluded file is byte-unchanged.
+    assert vendor_readme.read_text() == vendor_before

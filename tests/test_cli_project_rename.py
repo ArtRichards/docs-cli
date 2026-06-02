@@ -354,3 +354,55 @@ def test_project_rename_does_not_touch_prose(docs_script, fixtures_dir, tmp_path
     assert "Project: foo" in text
     # The prose body is byte-identical (it still says "minimal" twice).
     assert "This doc's body mentions minimal in prose and links to minimal-page.\n" in text
+
+
+# --- M14 A6 — project rename end-of-batch reindex honours [exclude] ---------
+
+
+def _rename_excluded_malformed_tree(tmp_path: Path) -> Path:
+    """Build a docs root with `[exclude] dirs = ["vendor"]`, conformant docs
+    carrying `Project: old`, and a malformed `vendor/README.md`.
+
+    Returns the root. The malformed vendor file must NOT fail the
+    validate-all-first walk nor the end-of-batch reindex (it is excluded).
+    """
+    root = tmp_path / "rename-excl"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "old"\n\n[archive]\ndir = "archive"\n\n[exclude]\ndirs = ["vendor"]\n'
+    )
+    (root / "spec.md").write_text(
+        "# Spec\n\nLifecycle: active\nRole: spec\nProject: old\n"
+        "Updated: 2026-01-01\n\n## Body\n\nA conformant doc naming the old project.\n"
+    )
+    vendor = root / "vendor"
+    vendor.mkdir()
+    (vendor / "README.md").write_text("no metadata\n# H1\n")
+    return root
+
+
+def test_project_rename_with_malformed_excluded_file_succeeds(docs_script, tmp_path):
+    """`docs project rename` over a tree whose `[exclude]` set holds a
+    malformed file must rewrite the project name AND refresh the INDEX
+    cleanly (exit 0).
+
+    RED reason: `_cmd_project_rename` runs its validate-all-first walk
+    (`for doc in walk(root, config)`, cli.py:3768) and its end-of-batch
+    `_refresh_index(root, load_config(root))` (cli.py:3846) with NO
+    predicate, so the excluded malformed `vendor/README.md` makes the
+    validate walk raise → exit 1. Step 2 threads
+    `compile_exclude_predicate(config, [])` into both.
+    """
+    root = _rename_excluded_malformed_tree(tmp_path)
+    vendor_readme = root / "vendor" / "README.md"
+    vendor_before = vendor_readme.read_text()
+
+    proc = _run(docs_script, "project", "rename", "new", "--root", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The sidecar + the conformant doc were rewritten.
+    assert 'name = "new"' in (root / ".docs.toml").read_text()
+    assert "Project: new" in (root / "spec.md").read_text()
+    # The excluded malformed file is byte-unchanged and not in the INDEX.
+    assert vendor_readme.read_text() == vendor_before
+    index = (root / "INDEX.md").read_text()
+    assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"

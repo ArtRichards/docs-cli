@@ -138,40 +138,15 @@ def test_a5_project_urls_present() -> None:
     assert not missing, f"[project.urls] missing keys: {sorted(missing)}"
 
 
-def test_a6_hatch_build_packages_the_skill() -> None:
-    """A6: hatchling is configured to package the bundled skill.
-
-    Per Step 1 OQ-K this asserts loosely: any `[tool.hatch.build...]`
-    table mentions 'skill' (e.g. `force-include`, `include`,
-    `artifacts`, `package-data`, or a hatchling-specific table). The
-    strict shape lands at Phase 6 when hatchling is actually wired.
-
-    Intended RED reason: Phase 4 has no hatch configuration at all.
-    """
-    text = PYPROJECT.read_text(encoding="utf-8")
-    # Look for any [tool.hatch.build...] block referencing "skill".
-    # Both straight-prose and TOML constructs (include/force-include lists)
-    # land under this loose match.
-    found = False
-    in_hatch_build = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("[tool.hatch.build"):
-            in_hatch_build = True
-            continue
-        if (
-            in_hatch_build
-            and stripped.startswith("[")
-            and not stripped.startswith("[tool.hatch.build")
-        ):
-            in_hatch_build = False
-        if in_hatch_build and "skill" in stripped.lower():
-            found = True
-            break
-    assert found, (
-        "expected a [tool.hatch.build...] table mentioning 'skill' "
-        "(force-include / include / artifacts / package-data); none found"
-    )
+# test_a6_hatch_build_packages_the_skill REMOVED at M14 (C3).
+# It was a false-confidence test: it grepped the pyproject text for the
+# literal "skill" inside a `[tool.hatch.build...]` block, which matched a
+# *comment* — not a real packaging directive — so it passed even when the
+# `packages` glob was broken. The real, build-exercising guard is
+# `test_b3_wheel_contains_cli_and_skill` below, which unzips the BUILT
+# wheel and asserts the skill package-data is actually present
+# (SKILL.md + every bundled reference). A broken `packages` glob fails
+# `test_b3` for real. See docs/m14-robustness-agent-native.md C3.
 
 
 # A7 — `[dev]` extra includes `build` — DEFERRED (Step 1 OQ-A7-SKIP).
@@ -273,6 +248,17 @@ def test_b3_wheel_contains_cli_and_skill(built_dist: dict) -> None:
     )
     assert "docs_cli/skill/references/quality-artifacts.md" in names, (
         "wheel missing docs_cli/skill/references/quality-artifacts.md"
+    )
+    # C3 (M14): a broken `packages` / package-data glob would ship a wheel
+    # with the CLI but few or no skill files. Pin a floor on the count of
+    # bundled skill files so a degenerate glob (e.g. one that captures only
+    # SKILL.md, or none of references/) fails this guard for real — the
+    # false-confidence pyproject-comment grep it replaces could not.
+    skill_files = sorted(n for n in names if n.startswith("docs_cli/skill/"))
+    skill_refs = [n for n in skill_files if n.startswith("docs_cli/skill/references/")]
+    assert len(skill_refs) >= 5, (
+        "wheel ships too few docs_cli/skill/references/ files "
+        f"({len(skill_refs)}); the package-data glob is likely broken. Got: {skill_files}"
     )
 
 

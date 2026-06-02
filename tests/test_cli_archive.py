@@ -118,11 +118,21 @@ def test_archive_missing_file_exits_nonzero(docs_script, tmp_path):
     assert "not found" in proc.stderr.lower()
 
 
-def test_archive_cascade_yes_also_archives_related(docs_script, fixtures_dir, tmp_path):
-    """`--cascade` + a `y` answer archives a pairs-with relation to the same dir."""
+def test_archive_interactive_yes_also_archives_related(docs_script, fixtures_dir, tmp_path):
+    """`--interactive` + a `y` answer archives a pairs-with relation to the
+    same dir (the legacy prompt path; M14 — B1).
+
+    MIGRATED from `--cascade` to `--interactive` at M14: bare `--cascade`
+    no longer prompts (it takes all one-hop relations non-interactively),
+    so the prompt path is now exercised only under `--interactive`.
+
+    RED reason: `--interactive` is not yet a recognised flag (argparse
+    rejects it with exit 2). Step 2 adds the flag and routes it to the
+    prompt.
+    """
     root = _crossrefs_tree(fixtures_dir, tmp_path)
     # helper.md carries `- pairs-with: core.md`.
-    proc = _run(docs_script, "archive", str(root / "helper.md"), "--cascade", stdin_text="y\n")
+    proc = _run(docs_script, "archive", str(root / "helper.md"), "--interactive", stdin_text="y\n")
     assert proc.returncode == 0, proc.stderr
     dated = root / "archive" / date.today().isoformat()
     assert (dated / "helper.md").is_file()
@@ -130,15 +140,174 @@ def test_archive_cascade_yes_also_archives_related(docs_script, fixtures_dir, tm
     assert not (root / "core.md").exists()
 
 
-def test_archive_cascade_no_leaves_related_in_place(docs_script, fixtures_dir, tmp_path):
-    """`--cascade` + an `n` answer leaves the related doc untouched."""
+def test_archive_interactive_no_leaves_related_in_place(docs_script, fixtures_dir, tmp_path):
+    """`--interactive` + an `n` answer leaves the related doc untouched.
+
+    MIGRATED from `--cascade` to `--interactive` at M14 (see above).
+
+    RED reason: `--interactive` is not yet a recognised flag.
+    """
     root = _crossrefs_tree(fixtures_dir, tmp_path)
-    proc = _run(docs_script, "archive", str(root / "helper.md"), "--cascade", stdin_text="n\n")
+    proc = _run(docs_script, "archive", str(root / "helper.md"), "--interactive", stdin_text="n\n")
     assert proc.returncode == 0, proc.stderr
     dated = root / "archive" / date.today().isoformat()
     assert (dated / "helper.md").is_file()
     assert not (dated / "core.md").exists()
     assert (root / "core.md").is_file()
+
+
+# --- M14 B1 — non-interactive archive --cascade flag set --------------------
+
+
+def _two_relation_tree(tmp_path: Path) -> Path:
+    """Build a docs root where `root.md` has two one-hop cascade relations.
+
+    `root.md` carries `pairs-with: sub/alpha.md` and `child-of: beta.md`,
+    plus a non-cascade `references: gamma.md`. Used to test `--cascade`
+    (takes both alpha + beta, NOT gamma) and `--cascade-only` (glob filter
+    on the related-doc root-relative POSIX path).
+    """
+    root = tmp_path / "two-rel"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "two-rel"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: two-rel\n"
+    (root / "sub").mkdir()
+    (root / "sub" / "alpha.md").write_text(
+        f"# Alpha\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\nalpha.\n"
+    )
+    (root / "beta.md").write_text(f"# Beta\n\n{hdr}Updated: 2026-01-02\n\n## Body\n\nbeta.\n")
+    (root / "gamma.md").write_text(f"# Gamma\n\n{hdr}Updated: 2026-01-03\n\n## Body\n\ngamma.\n")
+    (root / "root.md").write_text(
+        f"# Root\n\n{hdr}Updated: 2026-01-04\n\n"
+        "Related:\n- pairs-with: sub/alpha.md\n- child-of: beta.md\n"
+        "- references: gamma.md\n\n## Body\n\nthe root doc.\n"
+    )
+    return root
+
+
+def test_archive_cascade_no_prompt_archives_all_relations(docs_script, tmp_path):
+    """Bare `--cascade` archives ALL one-hop pairs-with/child-of relations
+    with NO prompt, and prints a loud stderr footer naming the set.
+
+    No stdin is supplied: if the implementation still prompts, the read
+    blocks on EOF and the relations are NOT archived. The contract is
+    no-prompt + take-all + footer (M14 — B1).
+
+    RED reason: today `--cascade` calls `_cascade_archive`, which prompts
+    `[y/N]` on stderr and reads stdin (cli.py:3427-3428). With no stdin,
+    `readline()` returns '' → declines → `sub/alpha.md` / `beta.md` are
+    left in place, and the stderr carries the `[y/N]` prompt. Step 2
+    replaces the prompt with the non-interactive take-all + footer.
+    """
+    root = _two_relation_tree(tmp_path)
+    # (intentionally no stdin_text — a prompting impl would stall/decline)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        "--cascade",
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    dated = root / "archive" / "2026-05-28"
+    # The primary and BOTH cascade relations were archived.
+    assert (dated / "root.md").is_file()
+    assert (dated / "alpha.md").is_file(), "pairs-with relation not cascaded"
+    assert (dated / "beta.md").is_file(), "child-of relation not cascaded"
+    # The non-cascade `references` relation is left in place.
+    assert (root / "gamma.md").is_file(), "references is not a cascade verb"
+    # No interactive prompt was emitted.
+    assert "[y/N]" not in proc.stderr, "bare --cascade must not prompt"
+    # A loud footer names the cascaded set.
+    assert "cascade" in proc.stderr.lower()
+    assert "alpha.md" in proc.stderr and "beta.md" in proc.stderr
+
+
+def test_archive_cascade_dry_run_previews_and_writes_nothing(docs_script, tmp_path):
+    """`--cascade-dry-run` previews the cascade set on stderr and writes
+    nothing (exit 0) — the primary doc is NOT archived either.
+
+    RED reason: `--cascade-dry-run` is not yet a recognised flag (argparse
+    rejects it with exit 2). Step 2 adds it as a preview of the whole
+    cascade operation.
+    """
+    root = _two_relation_tree(tmp_path)
+    before = {p.name: p.read_text() for p in root.glob("*.md")}
+    before["alpha.md"] = (root / "sub" / "alpha.md").read_text()
+
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        "--cascade-dry-run",
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # Nothing moved — no archive dir, every doc still in place + unchanged.
+    assert not (root / "archive").exists(), "--cascade-dry-run must write nothing"
+    assert (root / "root.md").read_text() == before["root.md"]
+    assert (root / "sub" / "alpha.md").read_text() == before["alpha.md"]
+    assert (root / "beta.md").read_text() == before["beta.md"]
+    # The preview names the would-be cascade set.
+    assert "alpha.md" in proc.stderr and "beta.md" in proc.stderr
+
+
+def test_archive_cascade_only_filters_by_glob(docs_script, tmp_path):
+    """`--cascade-only GLOB` archives only the subset of one-hop relations
+    whose root-relative POSIX target path matches GLOB; the primary is
+    always archived; non-matching relations stay in place.
+
+    RED reason: `--cascade-only` is not yet a recognised flag (argparse
+    rejects it with exit 2). Step 2 adds it with the
+    `compile_exclude_predicate`-style glob matcher.
+    """
+    root = _two_relation_tree(tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        "--cascade-only",
+        "sub/**",
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    dated = root / "archive" / "2026-05-28"
+    # The primary is archived...
+    assert (dated / "root.md").is_file()
+    # ...and the glob-matching relation (sub/alpha.md)...
+    assert (dated / "alpha.md").is_file(), "sub/** should cascade sub/alpha.md"
+    # ...but NOT the non-matching relation (beta.md at root).
+    assert (root / "beta.md").is_file(), "beta.md is outside sub/** — must stay in place"
+    assert not (dated / "beta.md").exists()
+    assert "[y/N]" not in proc.stderr, "--cascade-only must not prompt"
+
+
+def test_archive_cascade_dry_run_rejects_interactive(docs_script, tmp_path):
+    """`--cascade-dry-run --interactive` is an incoherent combination and is
+    rejected by argparse (exit 2) — a dry-run that prompts makes no sense.
+
+    RED reason: neither flag is recognised yet (argparse rejects on the
+    first unknown flag, also exit 2 — so this test is GREEN-by-accident
+    today on the exit code). It is pinned so Step 2's argparse
+    mutually-exclusive group is exercised; the assertion on the
+    *combination* message tightens once both flags exist. We assert exit 2
+    AND that nothing was written.
+    """
+    root = _two_relation_tree(tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        "--cascade-dry-run",
+        "--interactive",
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert not (root / "archive").exists()
 
 
 # --- M12 — referring-edge rewrite -------------------------------------------
@@ -283,6 +452,60 @@ def test_archive_cascade_rewrites_edges_for_both_moves_atomically(
     witness = (root / "witness.md").read_text()
     assert "archive/2026-05-28/master.md" in witness
     assert "archive/2026-05-28/sidekick.md" in witness
+
+
+# --- M14 A6 — archive end-of-batch reindex honours [exclude] ---------------
+
+
+def _archive_excluded_malformed_tree(tmp_path: Path) -> tuple[Path, Path]:
+    """Build a docs root with `[exclude] dirs = ["vendor"]`, a conformant
+    doc to archive, and a malformed `vendor/README.md`.
+
+    Returns (root, target). The malformed vendor file must NOT fail the
+    archive's pre-flight validation walk nor the end-of-batch reindex,
+    because it is excluded.
+    """
+    root = tmp_path / "arch-excl"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "arch-excl"\n\n[archive]\ndir = "archive"\n\n'
+        '[exclude]\ndirs = ["vendor"]\n'
+    )
+    target = root / "doomed.md"
+    target.write_text(
+        "# Doomed\n\nLifecycle: active\nRole: notes\nProject: arch-excl\n"
+        "Updated: 2026-01-01\n\n## Body\n\nA doc destined for the archive.\n"
+    )
+    vendor = root / "vendor"
+    vendor.mkdir()
+    (vendor / "README.md").write_text("no metadata\n# H1\n")
+    return root, target
+
+
+def test_archive_with_malformed_excluded_file_succeeds_and_reindexes(docs_script, tmp_path):
+    """`docs archive` over a tree whose `[exclude]` set holds a malformed
+    file must archive the target AND refresh the INDEX cleanly (exit 0).
+
+    RED reason: `_cmd_archive` runs its pre-flight validation walk
+    (`list(walk(root, config))`, cli.py:3489) and its end-of-batch
+    `_refresh_index(root, config)` (cli.py:3518) with NO predicate, so the
+    excluded malformed `vendor/README.md` makes the pre-flight walk raise
+    → exit 1. Step 2 threads `compile_exclude_predicate(config, [])` into
+    both the pre-flight walk and the reindex.
+    """
+    root, target = _archive_excluded_malformed_tree(tmp_path)
+    vendor_readme = root / "vendor" / "README.md"
+    vendor_before = vendor_readme.read_text()
+
+    proc = _run(docs_script, "archive", str(target), "--date", "2026-05-28")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The target was archived.
+    assert (root / "archive" / "2026-05-28" / "doomed.md").is_file()
+    assert not target.exists()
+    # The excluded malformed file is byte-unchanged and not in the INDEX.
+    assert vendor_readme.read_text() == vendor_before
+    index = (root / "INDEX.md").read_text()
+    assert "vendor/README.md" not in index, "the excluded file must not appear in INDEX"
 
 
 def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_dir, tmp_path):
