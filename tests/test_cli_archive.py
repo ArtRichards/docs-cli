@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -631,3 +632,69 @@ def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_di
     assert proc.returncode == 0, proc.stderr
     # The archived doc is byte-identical.
     assert archived_doc.read_text() == archived_before
+
+
+# --- M14 A4 — uncaught OSError mid edge-rewrite → clean exit 2 --------------
+
+
+def _readonly_referrer_tree(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """Build a docs root where the referrer lives in a read-only subdir.
+
+    Returns (root, source, locked_dir). `source.md` (at root) is the
+    archive target; `locked/referrer.md` carries `pairs-with: source.md`,
+    so the post-move referring-edge rewrite walk tries to `atomic_write`
+    it — which raises `OSError` (PermissionError) when the `.docs-tmp`
+    tmpfile cannot be created in the `0o555` `locked/` directory. (A bare
+    `chmod 0o444` on the file is NOT a reliable trigger: POSIX `rename()`
+    onto a read-only target succeeds when the directory is writable; a
+    read-only *directory* is the portable trigger.)
+
+    This mirrors `tests/test_cli_mv.py::_readonly_referrer_tree`; the
+    contract under test (cli.md §archive + the exit-code matrix: "`OSError`
+    raised while rewriting a referring edge after the move (M14 — A4)") is
+    observable: exit 2 + no Traceback.
+    """
+    root = tmp_path / "ro"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "ro"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: ro\n"
+    source = root / "source.md"
+    source.write_text(f"# Source\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\nThe archive target.\n")
+    locked = root / "locked"
+    locked.mkdir()
+    (locked / "referrer.md").write_text(
+        f"# Referrer\n\n{hdr}Updated: 2026-01-02\n\n"
+        "Related:\n- pairs-with: source.md\n\n## Body\n\nReferences the source.\n"
+    )
+    # Read-only directory: the post-move walk can still read referrer.md,
+    # but the atomic_write tmpfile creation during the edge rewrite raises
+    # OSError (PermissionError, an OSError subclass).
+    os.chmod(locked, 0o555)
+    return root, source, locked
+
+
+@pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0,
+    reason="root bypasses 0o555 directory write protection; the OSError trigger does not fire",
+)
+def test_archive_oserror_mid_rewrite_exits_2(docs_script, tmp_path):
+    """An OSError raised while rewriting a referring edge after the archive
+    move must surface as a clean exit 2 with no Traceback on stderr (the
+    observable contract; M14 — A4).
+
+    Regression guard for the archive half of the A4 contract: `_cmd_archive`
+    maps an `OSError` from `_rewrite_referring_edges` (cli.py ~3728) to a
+    clean exit 2 with `docs: archive: …` on stderr. Mirrors the mv guard
+    `test_cli_mv.py::test_mv_oserror_mid_rewrite_exits_2`. GREEN against the
+    shipped code (NOT a RED→GREEN cycle).
+    """
+    root, source, locked = _readonly_referrer_tree(tmp_path)
+    try:
+        proc = _run(docs_script, "archive", str(source), "--date", "2026-05-28")
+        assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+        assert "Traceback" not in proc.stderr, (
+            "an OSError mid edge-rewrite must be mapped to a clean exit 2, not a "
+            f"traceback:\n{proc.stderr}"
+        )
+    finally:
+        os.chmod(locked, 0o755)  # restore so tmp_path teardown can clean up

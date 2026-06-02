@@ -600,7 +600,11 @@ def atomic_write(path: Path, content: str) -> None:
     data = content.encode()
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
     try:
-        os.write(fd, data)
+        # Write-all loop: a single os.write may short-write, so keep
+        # writing until every byte lands (PEP 475 handles EINTR retries).
+        written = 0
+        while written < len(data):
+            written += os.write(fd, data[written:])
         os.fsync(fd)
     finally:
         os.close(fd)

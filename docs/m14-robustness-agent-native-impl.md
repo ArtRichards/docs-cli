@@ -146,10 +146,17 @@ documented Step-2 reasons.
   `test_new_root_without_docs_toml_refuses`, and the over-refusal
   GREEN guard `test_new_inside_root_still_works_without_root_flag`.
 - A3 (`test_cli_new`): `test_new_empty_final_segment_slug_rejected`.
-- A4 (`test_cli_mv`): `test_mv_oserror_mid_rewrite_exits_2` — observable
-  contract (exit 2 + no `Traceback`); read-only-DIRECTORY trigger (a bare
-  `chmod 0o444` file is NOT a reliable trigger — POSIX `rename()` onto a
-  read-only target succeeds when the dir is writable); `skipif` root.
+- A4 (`test_cli_mv` + `test_cli_archive`):
+  `test_mv_oserror_mid_rewrite_exits_2` (mv) and
+  `test_archive_oserror_mid_rewrite_exits_2` (archive, added in the
+  post-Step-2 review) — BOTH halves of the A4 contract (mv AND archive →
+  clean exit 2, no `Traceback`) now have a regression guard. Both use the
+  identical observable contract (exit 2 + no `Traceback`) and the shared
+  read-only-DIRECTORY trigger (a bare `chmod 0o444` file is NOT reliable —
+  POSIX `rename()` onto a read-only target succeeds when the dir is
+  writable; a `0o555` referrer dir makes `atomic_write`'s
+  `os.open(tmp, O_CREAT)` raise `PermissionError`), and the same `skipif`
+  root guard (root bypasses `0o555`, so the OSError trigger does not fire).
 - A5 (`test_atomic_write`, new file): `test_atomic_write_fsyncs_before_rename`
   (patched-`os.fsync` recording) + the `test_atomic_write_still_publishes_content`
   GREEN guard.
@@ -454,3 +461,36 @@ entries to the same 1.6.0 CHANGELOG section before M17 publishes. Full
 suite **458 passed, 0 failed**; ruff / ruff format / mypy clean
 tree-wide (incl. the mechanical M16 import-sort fix); `docs check docs/`
 exit 0; INDEX + frozen snapshot in lockstep.
+
+## Post-Step-2 review (2026-06-02)
+
+A fresh-eyes review of Step 2 returned SOUND / no blockers / all Success
+Criteria met, with two findings addressed here.
+
+- **Finding 1 (should-fix) — archive A4 regression guard.** The archive
+  half of the A4 contract ("`OSError` mid edge-rewrite in mv AND archive
+  → clean exit 2, no traceback") shipped correctly and is documented
+  (`cli.md` §archive + the exit-code matrix) but had ZERO test coverage —
+  only the mv guard existed. Added
+  `tests/test_cli_archive.py::test_archive_oserror_mid_rewrite_exits_2`,
+  the archive analogue of
+  `test_cli_mv.py::test_mv_oserror_mid_rewrite_exits_2`: a `0o555`
+  read-only `locked/` dir holds `referrer.md` (`pairs-with: source.md`),
+  so the post-move referring-edge rewrite's `atomic_write` raises
+  `PermissionError` when it cannot create its `.docs-tmp` file. Asserts
+  exit 2 + no `Traceback`, reusing the shared read-only-DIRECTORY trigger
+  and `skipif (geteuid == 0)` idiom. GREEN immediately against shipped
+  code (NOT a RED→GREEN cycle). Non-vacuousness verified: temporarily
+  reverting the `_cmd_archive` `except OSError → return 2` clause makes
+  the test go RED (uncaught `PermissionError` traceback, exit 1) at
+  `_rewrite_referring_edges → atomic_write`; the clause was restored
+  byte-exact. Suite now **459 passed, 0 failed** (the new test RAN —
+  non-root).
+- **Finding 2 (nit) — `atomic_write` write-all loop.** Hardened the core
+  write primitive: replaced the single `os.write(fd, data)` with a
+  write-all loop (`while written < len(data): written += os.write(fd,
+  data[written:])`) so a short write cannot truncate (PEP 475 handles
+  EINTR retries). The change is clean and keeps EVERY test GREEN —
+  notably the A5 fsync test (`tests/test_atomic_write.py`, which patches
+  `cli.os.fsync` and inspects fsync'd fds; the loop does not perturb it)
+  and the golden byte-equality / INDEX frozen-snapshot tests.
