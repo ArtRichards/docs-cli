@@ -25,9 +25,10 @@ Related:
   this milestone outgrew M12 scale. No publish — M14 + M15 build 1.6.0
   locally; the publish milestone (**M17**) ships it, per the
   M12→M13 / M10→M11 / M8→M9 cadence.
-- Status: Draft (scaffolded 2026-05-29 from the post-1.5.0 multi-agent
-  code+docs review and the [agent-native-invocation.md](agent-native-invocation.md)
-  proposal).
+- Status: **Implementation complete (2026-06-02)** — `docs-cli==1.6.0`
+  built locally; PyPI publish is M17's. Scaffolded 2026-05-29 from the
+  post-1.5.0 multi-agent code+docs review and the
+  [agent-native-invocation.md](agent-native-invocation.md) proposal.
 
 ### Goal
 
@@ -127,19 +128,21 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
 
 ## Deliverables
 
-- [ ] A1 `docs mv` validate-all-first; malformed-sibling test added.
-- [ ] A2 `docs new` strict-root refusal (no silent cwd write).
-- [ ] A3 empty-segment slug rejected.
-- [ ] A4 `OSError` in mv/archive edge-rewrite → clean exit 2.
-- [ ] A5 `atomic_write` gains `os.fsync` before the rename (operator
+- [x] A1 `docs mv` validate-all-first; malformed-sibling test added.
+- [x] A2 `docs new` strict-root refusal (no silent cwd write).
+- [x] A3 empty-segment slug rejected.
+- [x] A4 `OSError` in mv/archive edge-rewrite → clean exit 2.
+- [x] A5 `atomic_write` gains `os.fsync` before the rename (operator
       decision 2026-06-02 — ADD fsync, the `cli.md` "fsync'd" claim
       STAYS and becomes true); `_archive_one` docstring tightened.
-- [ ] A6 the end-of-batch reindex threads the exclude predicate at
+- [x] A6 the end-of-batch reindex threads the exclude predicate at
       **all four** mutating-verb call sites (operator decision
       2026-06-02 — `docs touch`, `docs archive`, `docs mv`,
       `docs project rename`); malformed-excluded-file atomicity test
-      added for each.
-- [ ] B1 `archive --cascade` non-interactive flag set (`--cascade` /
+      added for each. (Implementation also threads the predicate through
+      `archive`'s `_rewrite_referring_edges` walk — the per-verb "every
+      walk/reindex" reading.)
+- [x] B1 `archive --cascade` non-interactive flag set (`--cascade` /
       `--cascade-dry-run` / `--cascade-only GLOB` / `--interactive`);
       the legacy prompt moves behind `--interactive`; the invariant
       *docs never prompts unless `--interactive`* established; `cli.md`
@@ -154,17 +157,20 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
       OQ is answered below: `docs/` is canonical and the bundled copies
       are byte-identical mirrors maintained by `cp` and enforced by
       `tests/test_skill_refs.py` (NOT script-generated).
-- [ ] C3 `test_a6` (false-confidence pyproject-comment grep) removed;
+- [x] C3 `test_a6` (false-confidence pyproject-comment grep) removed;
       `test_b3_wheel_contains_cli_and_skill` strengthened to assert the
       built wheel carries real skill package-data so a broken
       `packages` glob actually fails.
-- [ ] `pyproject.toml` `version` → `1.6.0`; `CHANGELOG.md`
+- [x] `pyproject.toml` `version` → `1.6.0`; `CHANGELOG.md`
       `## 1.6.0 — UNRELEASED` section authored (publish-survival wording).
       M14 owns the bump + section; **M15 appends its authoring entries to
-      the same 1.6.0 section** before M17 publishes.
-- [ ] `docs/cli.md` + `convention.md` reflect every behavior change;
-      bundled skill refs resynced; INDEX + frozen snapshot in lockstep.
-- [ ] Full suite GREEN; ruff / ruff format / mypy / `docs check` clean.
+      the same 1.6.0 section** before M17 publishes. (Built locally; M17
+      publishes.)
+- [x] `docs/cli.md` + `convention.md` reflect every behavior change
+      (authored Phase 1); bundled skill refs resynced byte-identical;
+      INDEX + frozen snapshot in lockstep.
+- [x] Full suite GREEN (458 passed); ruff / ruff format / mypy /
+      `docs check` clean tree-wide.
 
 ## Phase Checklist (10-phase TDD)
 
@@ -187,16 +193,20 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
 - [x] 4. Run Tests (RED) — confirmed the intended red baseline (454
       collected, 17 failed = exactly the new behavior set + the 2 migrated
       cascade tests, 437 passed). See the impl-log Phase-4 table.
-- [ ] 5. Update Interfaces — argparse: the `--cascade*` flag set,
-      strict-resolver wiring for `new`.
-- [ ] 6. Implement Core — the mv pre-flight walk, cascade set
-      computation, the touch exclude-predicate fix, slug/OSError guards.
-- [ ] 7. Update Wrappers — `pyproject.toml` 1.6.0; CHANGELOG entry;
-      skill refs resync.
-- [ ] 8. Run Tests (GREEN) + quality gate.
-- [ ] 9. Integrate — dogfood on this repo's `docs/` tree.
-- [ ] 10. Quality, Docs, Refactor — closeout summaries; INDEX + snapshot
-      lockstep; status/plan updated.
+- [x] 5. Update Interfaces — argparse: the `--cascade*` flag set
+      (mutex group + `--cascade-dry-run` outside it), `_resolve_new_root`
+      + `_cascade_set` declared.
+- [x] 6. Implement Core — the mv pre-flight walk, cascade set
+      computation, the four-verb exclude-predicate fix, slug/OSError/A5
+      fsync guards. All 18 RED → GREEN.
+- [x] 7. Update Wrappers — `pyproject.toml` 1.6.0; CHANGELOG section;
+      packaging version-string lockstep (skill refs unchanged).
+- [x] 8. Run Tests (GREEN) + quality gate — 458 passed; ruff / format /
+      mypy clean tree-wide (incl. the mechanical M16 import-sort fix).
+- [x] 9. Integrate — dogfood on throwaway copies; `docs check docs/`
+      read-only on this repo's tree (exit 0).
+- [x] 10. Quality, Docs, Refactor — closeout summaries; INDEX + snapshot
+      lockstep; status/plan updated; cascade dead-branch removed.
 
 ## Decisions
 
@@ -288,18 +298,24 @@ dates *and* refreshes the INDEX cleanly.
 
 ## Success Criteria
 
-- [ ] `docs mv` is atomic: a malformed sibling aborts with exit 2 and
+- [x] `docs mv` is atomic: a malformed sibling aborts with exit 2 and
       leaves the source in place + INDEX untouched.
-- [ ] `docs new` outside any `.docs.toml` root (no `--root`) refuses
+- [x] `docs new` outside any `.docs.toml` root (no `--root`) refuses
       with exit 2; never writes to cwd.
-- [ ] `docs archive --cascade` runs without prompting; `--cascade-dry-run`
+- [x] `docs archive --cascade` runs without prompting; `--cascade-dry-run`
       previews the set.
-- [ ] `docs install-skill` on a clean host produces bundled references
-      whose internal links resolve.
-- [ ] `pip`-relevant packaging guard actually fails if the skill glob
-      breaks (C3).
-- [ ] Full suite GREEN; quality gate clean tree-wide; `docs check` exit 0.
-- [ ] `docs touch` over a tree with a malformed *excluded* file stamps the
+- [x] `docs install-skill` on a clean host produces bundled references
+      whose internal links resolve. (Satisfied by M16's self-contained
+      references + the M14 GREEN guard
+      `test_bundled_skill_has_no_repo_relative_links` — no repo-relative
+      `../` links remain; `test_skill_refs.py` enforces byte-identity
+      with `docs/`.)
+- [x] `pip`-relevant packaging guard actually fails if the skill glob
+      breaks (C3) — `test_b3_wheel_contains_cli_and_skill` asserts the
+      built wheel carries real skill package-data.
+- [x] Full suite GREEN (458 passed); quality gate clean tree-wide;
+      `docs check` exit 0.
+- [x] `docs touch` over a tree with a malformed *excluded* file stamps the
       dates *and* refreshes the INDEX cleanly (excluded file never indexed).
 
 ## OPEN QUESTIONS

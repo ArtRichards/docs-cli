@@ -33,11 +33,16 @@ the mechanical limits of `docs check`. The milestone pair is
 [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md)
 + [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md).
 
-The **v1.6 implementation train** (next up) is **M14 — Robustness +
-autonomous archive** then **M15 — Agent-native doc authoring**, both
-Draft; **M17** publishes them together as `docs-cli==1.6.0`. M14 was
-re-scoped 2026-06-02 and M15 carved out of it (it had outgrown M12
-scale) — see the *Next action* block below for per-milestone scope.
+The **v1.6 implementation train**: **M14 — Robustness + autonomous
+archive** is now **implementation-complete (2026-06-02)** —
+`docs-cli==1.6.0` built locally (pyproject bump + CHANGELOG section), 458
+tests GREEN, quality gate clean tree-wide, pending operator
+commit/archive; the **PyPI publish is M17's** (mirrors the M12→M13
+local-build-then-publish-later cadence). Next up is **M15 — Agent-native
+doc authoring** (Draft; **depends on M14**), then **M17** publishes M14 +
+M15 together as `docs-cli==1.6.0`. M14 was re-scoped 2026-06-02 and M15
+carved out of it (it had outgrown M12 scale) — see the *Next action*
+block below for per-milestone scope.
 
 **docs-cli 1.5.0 shipped 2026-05-29.** **M13 — PyPI publish
 1.5.0** is **Complete (2026-05-29)** — `docs-cli==1.5.0` is
@@ -175,23 +180,26 @@ runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
 **Next action:** the v1.6 train is two implementation
-milestones then a publish, all **Draft** on branch
-`m14/milestone-setup`:
+milestones then a publish.
 
-- **M14 — Robustness + autonomous archive (v1.6.0)** — `docs mv`
-  atomicity, `docs new` strict-root refusal, `docs touch`
-  exclude-predicate fix, slug/`OSError` guards, non-interactive
-  `archive --cascade`, bundled-ref + packaging fixes. Pair:
-  [m14-robustness-agent-native.md](m14-robustness-agent-native.md)
-  + [impl](m14-robustness-agent-native-impl.md). Open via
-  `/ship-milestone M14`.
-- **M15 — Agent-native doc authoring (v1.6.0)** — `docs project
-  set`, single-file `docs stamp` (write-then-stamp), the
-  `--body-from` real-frontmatter detector, and the skill/cli
-  docs. Carved out of M14 on 2026-06-02 (it outgrew M12 scale);
+- **M14 — Robustness + autonomous archive (v1.6.0)** —
+  **implementation-complete (2026-06-02)** on branch
+  `m14/phases-5-10`, pending operator commit/archive: `docs mv`
+  atomicity, `docs new` strict-root refusal, `docs touch`/`archive`/`mv`/
+  `project rename` exclude-predicate fix, slug/`OSError`/`atomic_write`
+  fsync guards, non-interactive `archive --cascade`, bundled-ref +
+  packaging fixes. `docs-cli==1.6.0` built locally (pyproject + CHANGELOG);
+  **publish is M17's.** 458 tests GREEN; quality gate clean tree-wide.
+  Pair: [m14-robustness-agent-native.md](m14-robustness-agent-native.md)
+  + [impl](m14-robustness-agent-native-impl.md).
+- **M15 — Agent-native doc authoring (v1.6.0)** (next implementation
+  milestone) — `docs project set`, single-file `docs stamp`
+  (write-then-stamp), the `--body-from` real-frontmatter detector, and the
+  skill/cli docs. Carved out of M14 on 2026-06-02 (it outgrew M12 scale);
   **depends on M14**. Pair:
   [m15-agent-native-authoring.md](m15-agent-native-authoring.md)
-  + [impl](m15-agent-native-authoring-impl.md).
+  + [impl](m15-agent-native-authoring-impl.md). Open via
+  `/ship-milestone M15`.
 
 **M17 — PyPI publish 1.6.0** ships both (M12→M13 cadence). The
 broader agent-native surface (global `--json`,
@@ -358,7 +366,7 @@ for the milestone summary.
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
-| M14 — Robustness + autonomous archive (v1.6.0) | **Draft** (2026-05-29; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, `touch` excludes, slug/`OSError` guards, non-interactive `--cascade`, bundled-ref + packaging fixes; builds 1.6.0 locally) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
+| M14 — Robustness + autonomous archive (v1.6.0) | **Implementation-complete** (2026-06-02; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `--cascade`, bundled-ref guard + packaging fix; 458 GREEN, gate clean; `docs-cli==1.6.0` built locally — publish is M17's) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
 | M15 — Agent-native doc authoring (v1.6.0) | **Draft** (2026-06-02; carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17) | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
 | M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance; pending operator commit/archive) | [Plan](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
 | M17 — PyPI publish 1.6.0 | **Planned** (publish-only; ships M14 + M15 as `docs-cli==1.6.0` via the release-runbook, mirroring M13 → M12) | _not yet created_ | — |

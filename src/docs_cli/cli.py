@@ -3659,21 +3659,15 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     if is_dry:
         if not args.quiet:
             print(f"docs: would archive {file_path} -> {dest}", file=sys.stderr)
-            if cascade_active and not args.interactive:
+            # A non-interactive cascade dry-run previews the would-be set.
+            # (`--interactive` is mutually exclusive with the cascade flags,
+            # and a dry-run never prompts, so there is no interactive
+            # preview to print.)
+            if cascade_active:
                 cascade = _filter_cascade_set(_cascade_set(doc, root), args.cascade_only)
                 for target_rel, _candidate in cascade:
                     print(f"docs: cascade would archive {target_rel}", file=sys.stderr)
                 _print_cascade_footer([t for t, _ in cascade], dry_run=True)
-            elif args.cascade and args.interactive:
-                # Legacy preview wording for `--cascade --interactive --dry-run`
-                # is unreachable (mutex), but a bare `--dry-run --interactive`
-                # would prompt at run time, so name the would-prompt set.
-                cascadable = [t for v, t in doc.related if v in _CASCADE_VERBS]
-                if cascadable:
-                    print(
-                        f"docs: --interactive would prompt for: {', '.join(cascadable)}",
-                        file=sys.stderr,
-                    )
         return 0
 
     # M12 / M14 (A6): pre-flight validation walk — catches malformed

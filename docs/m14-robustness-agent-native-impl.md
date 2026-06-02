@@ -39,12 +39,12 @@ This section tracks implementation progress, which is distinct.)
 | 2. Write Tests (RED) | Done | 2026-06-02 | 19 new tests + 1 removed (false-confidence test_a6); migrated 2 cascade prompt tests to `--interactive`. |
 | 3. Create Fixtures | Done | 2026-06-02 | `tests/fixtures/trees/mv-with-malformed/`; inline tmp_path helpers for A4/A6/B1/A2/A3 live in their Phase-2 test files. |
 | 4. Run Tests (RED) | Done | 2026-06-02 | Initial baseline **454 collected, 17 failed, 437 passed**. Fresh-eyes review fixes (2026-06-02) → **458 collected, 18 failed, 440 passed**: +1 RED composition test, +3 GREEN-by-argparse mutex params, A5 fsync test tightened (still RED). See Phase 4 section. No collateral, no import/fixture errors, no skips (non-root). |
-| 5. Update Interfaces | Pending | — | |
-| 6. Implement Core | Pending | — | |
-| 7. Update Wrappers | Pending | — | |
-| 8. Run Tests (GREEN) + gate | Pending | — | |
-| 9. Integrate | Pending | — | |
-| 10. Quality, Docs, Refactor | Pending | — | |
+| 5. Update Interfaces | Done | 2026-06-02 | argparse cascade flag set (`--cascade` / `--cascade-only GLOB` / `--interactive` in one mutex group + `--cascade-dry-run` outside it); declared `_resolve_new_root` + `_cascade_set`. `archive --help` shows 4 flags; suite collects 458; 3-param mutex test GREEN by real mutex. |
+| 6. Implement Core | Done | 2026-06-02 | A5 fsync (tmpfile + parent dir), A1 mv pre-flight (exit 2), A4 OSError→2, A2 strict-root `new`, A3 empty-slug guard, A6 four-verb exclude predicate (every walk/reindex incl. `_rewrite_referring_edges`), B1 non-interactive cascade + footer/preview helpers. All 18 RED → GREEN; **458 passed**. `test_body_from._minimal_tree` gained a `.docs.toml` (A2 lockstep — see Phase-6 section). |
+| 7. Update Wrappers | Done | 2026-06-02 | pyproject 1.5.0→1.6.0 (`pip install -e .`); CHANGELOG `## 1.6.0 — UNRELEASED`; 4 packaging version-string assertions to 1.6.0 in lockstep (+`_1_6_0` renames). Bundled refs unchanged (no cli.md/convention.md edits in 6/7). |
+| 8. Run Tests (GREEN) + gate | Done | 2026-06-02 | **458 passed, 0 failed.** ruff / ruff format --check / mypy clean tree-wide after the separate M16 import-sort autofix commit. `docs check docs/` exit 0; `docs index --root docs/ --dry-run` no diff. |
+| 9. Integrate | Done | 2026-06-02 | Dogfood on throwaway copies (see Phase-9 section): `archive --cascade` / `--cascade-dry-run`, `new` outside-root refusal, `touch` over a malformed-excluded tree, `docs check docs/`. All four behave per Success Criteria. |
+| 10. Quality, Docs, Refactor | Done | 2026-06-02 | Closeout summaries; milestone + success-criteria boxes ticked; status.md / plan.md flipped to implementation-complete (1.6.0 built locally; M17 publishes); INDEX + frozen snapshot in lockstep; cascade dry-run dead-branch removed (behaviour-preserving). |
 
 ## Provenance — where the scope came from
 
@@ -268,3 +268,189 @@ A6×5, B1×5) plus the new composition test (item 2). The 3 mutex params
 (item 1) are GREEN-by-argparse-accident. No collateral GREEN broke:
 `test_skill_refs` byte-identity GREEN after the `cli.md` edit;
 `test_index_output_matches_frozen_snapshot` GREEN (snapshot in lockstep).
+
+## Phase 5 — Update Base Interfaces
+
+**Objective.** Wire the argparse surface for the M14 (B1) cascade flag
+set and declare the Phase-6 helpers, with no behaviour change beyond what
+argparse pins.
+
+**Actions.**
+
+- Replaced the lone `archive --cascade` (store_true) with the four-flag
+  set: a single `add_mutually_exclusive_group()` holding `--cascade`
+  (store_true), `--cascade-only GLOB`, and `--interactive` (store_true);
+  `--cascade-dry-run` (store_true) sits OUTSIDE the group so it can
+  compose with `--cascade-only`. The `--cascade-dry-run + --interactive`
+  rejection is an imperative guard in `_cmd_archive` (Phase 6).
+- Declared `_resolve_new_root(args, start)` (A2 — a `docs: new:`-prefixed
+  mirror of `_resolve_touch_root`) and `_cascade_set(doc, root)` (the pure
+  one-hop `pairs-with`/`child-of` on-disk candidate set, no prompt).
+
+**Results.** `docs archive --help` shows all four flags with the mutex
+group rendered `--cascade | --cascade-only GLOB | --interactive`. Suite
+still collects 458. The 3-param `test_archive_mutually_exclusive_cascade_flags_rejected`
+goes GREEN by the real argparse mutex; the two dry-run/compose tests stay
+RED pending the Phase-6 imperative guard + dry-run path.
+
+## Phase 6 — Implement Core
+
+**Objective.** Turn all 18 RED tests GREEN by implementing the contract.
+
+**Actions (A5 first — every verb calls `atomic_write`).**
+
+- **A5 `atomic_write`.** Writes the tmpfile via `os.open`/`os.write`,
+  `os.fsync(fd)`'s it, closes, `tmp.replace(path)`, then `os.open` the
+  parent dir `O_RDONLY` + `os.fsync(dir_fd)` wrapped in `try/except
+  OSError: pass` (Windows portability — RQ#2). Content is `.encode()`'d
+  UTF-8 so the golden byte-equality tests stay GREEN. The A5 test patches
+  `cli.os.fsync` and classifies each fd via `os.fstat` — both a regular
+  file and a directory are flushed.
+- **A1 `_cmd_mv`.** Inserted a validate-all-first pre-flight
+  `list(walk(root, config, predicate=...))` BEFORE `old_path.replace`. On
+  `(MetadataError, VocabularyError)` → `docs: {exc}` + **exit 2** (NOT
+  archive's 1 — RQ#8; the A1 test asserts 2).
+- **A4.** Widened mv's rewrite-loop+reindex `except` and archive's
+  edge-rewrite `except` to map `OSError` → exit 2 (`docs: mv:` /
+  `docs: archive:` prefix; no traceback).
+- **A2 `_cmd_new`.** Replaced the `find_root` cwd-fallback + `is_dir`
+  check with `_resolve_new_root`; the exact refusal messages the tests
+  assert (no `--root` & no ancestor → `… is not under a docs root with
+  .docs.toml; refusing`; `--root` without `.docs.toml` → `--root … does
+  not contain .docs.toml; refusing`). Bad-root exit becomes 2 (RQ#6).
+- **A3 slug guard.** Reject an empty final segment: split the slug on the
+  last `/` WITHOUT stripping a trailing slash, so `foo/` (final segment
+  `""`) and `foo/.md` (slug `foo/.` → final segment `.`) are both caught.
+  (The planning note's `rstrip("/")` would have missed `foo/`; the
+  no-rstrip split is the correct robust check and the A3 test confirms
+  it.)
+- **A6 (four verbs, every walk/reindex — RQ#1).** `predicate =
+  compile_exclude_predicate(config, [])` per verb threaded into: touch
+  reindex; archive pre-flight walk + `_rewrite_referring_edges` +
+  reindex; mv pre-flight + rewrite-loop + reindex; project-rename
+  validate walk + reindex. `_rewrite_referring_edges` gained an optional
+  `predicate` param (the plan's "four sites" needed this fifth thread —
+  the archive A6 test failed until the referring-edge walk also honoured
+  the predicate). No other signature changes.
+- **B1 non-interactive cascade.** `_cascade_set` (pure, one-hop, on-disk)
+  + `_filter_cascade_set` (`--cascade-only` GLOB via
+  `_compile_docsignore_pattern`, matched against the root-relative POSIX
+  target — RQ#3) + `_print_cascade_footer` (success / dry-run / empty
+  wording, STDERR — RQ#4). Imperative guard rejects `--cascade-dry-run +
+  --interactive` (RQ#5) → 2. Dry-run path computes the filtered set,
+  prints the preview + footer, writes nothing (primary NOT archived),
+  exit 0. Mutate path: `_archive_one` the primary, then `--interactive` →
+  legacy `_cascade_archive` (untouched), elif a cascade flag → `_archive_one`
+  each filtered member + footer (no prompt, no stdin), else nothing; then
+  `_rewrite_referring_edges` + reindex.
+
+**Collateral fixed (not in the plan).** `tests/test_body_from.py`'s inline
+`_minimal_tree` helper created a bare directory with NO `.docs.toml` and
+passed it via `--root`. The A2 contract (correctly) now refuses a `--root`
+that lacks `.docs.toml`, so all 7 body_from tests went RED. They exercise
+`--body-from` semantics, not root resolution, so the helper gained a
+minimal valid `.docs.toml` — a fixture lockstep update (same category as
+the Phase-7 packaging version-string lockstep), preserving every
+`--body-from` assertion. Surfaced for the audit.
+
+**Results.** Targeted run (mv/new/archive/touch/project-rename/atomic_write)
+all GREEN; full suite **458 passed, 0 failed** — all 18 prior RED now
+GREEN, no regressions.
+
+## Phase 7 — Update Wrappers
+
+`pyproject.toml` version 1.5.0 → 1.6.0 (the single version source;
+`__version__` reads it via `importlib.metadata`); `pip install -e .` so
+the dev venv reports 1.6.0. `CHANGELOG.md` `## 1.6.0 — UNRELEASED`
+section authored (Added: B1; Changed: A2/A5/A6; Fixed: A1/A4/A3/C3/C1
+guard) — M15 appends its authoring entries to this same section; M17
+publishes. `tests/test_packaging.py`: the four version-string assertions
+(`test_a3`/`test_b1`/`test_b2`/`test_c2`) moved to 1.6.0 in lockstep with
+the bump, with the `_1_6_0` function-name renames; `test_b3` (C3
+wheel-contents guard) untouched. Bundled skill refs needed NO resync (no
+`cli.md`/`convention.md` edits in Phase 6/7) — `test_skill_refs`
+byte-identity GREEN. Full suite **458 passed**.
+
+## Phase 8 — Run Tests GREEN + tree-wide quality gate
+
+`.venv/bin/python -m pytest tests/ -q` → **458 collected, 0 failed.**
+Tree-wide gate clean: `ruff check .`, `ruff format --check .`, `mypy` all
+pass. The pre-existing M16 ruff failure
+(`tests/test_skill_quality_artifacts.py`, I001 + format, from commit
+9ceb113) was fixed with a mechanical `ruff check --fix` + `ruff format`
+in a **separate, clearly-labelled commit** (`m14(phase 8): ruff autofix
+…`); no assertions changed (only an import-block blank line and
+call/assertion line-wrapping), M16 tests still GREEN.
+`docs check docs/` exit 0; `docs index --root docs/ --dry-run` no diff.
+
+## Phase 9 — Integrate / dogfood (throwaway copies)
+
+All four scenarios on `mktemp -d` copies (the repo's real `docs/` only
+read-only via `docs check`):
+
+1. **`archive --cascade`** on a copy of `tests/fixtures/trees/cross-refs`
+   (`helper.md --cascade --date 2026-05-28`, NO stdin): exit 0, no `[y/N]`
+   prompt, footer `docs: cascade archived 1 related doc(s): core.md`, both
+   `helper.md` + `core.md` under `archive/2026-05-28/`. Repeat with
+   `--cascade-dry-run`: nothing moved (no `archive/` dir), preview named
+   `core.md`, exit 0.
+2. **`docs new spec my-feature`** from an orphan dir (no `.docs.toml`
+   ancestor, no `--root`): exit 2, `docs: new: … is not under a docs root
+   with .docs.toml; refusing`, no `my-feature.md` written.
+3. **`docs touch spec.md`** over a tree with `[exclude] dirs = ["vendor"]`
+   + malformed `vendor/README.md`: exit 0, `spec.md` `Updated:` bumped to
+   2026-06-02, INDEX refreshed, `vendor/README.md` absent from INDEX +
+   byte-unchanged, `spec.md` indexed.
+4. **`docs check docs/`** exit 0.
+
+No code commit (dogfood is verification).
+
+## Phase 10 — Quality, Docs, Refactor
+
+Closeout. `/simplify`-style review of the cascade refactor: `_cascade_set`
+/ `_filter_cascade_set` / `_print_cascade_footer` earn their keep (shared
+by the dry-run preview and the mutate path, keeping the no-prompt logic
+DRY and obvious). Removed a dead dry-run branch (`elif args.cascade and
+args.interactive` — unreachable because `--cascade`/`--interactive` are
+argparse-mutex; no test/doc referenced its `--interactive would prompt
+for …` string) — behaviour-preserving; archive tests stay GREEN.
+Milestone + impl-log + status.md + plan.md flipped to
+implementation-complete; INDEX + frozen snapshot regenerated in lockstep;
+edited docs' `Updated:` bumped via `docs touch`.
+
+## Milestone completion summary
+
+**M14 — Robustness + autonomous archive — implementation complete
+(2026-06-02).**
+
+**Shipped:**
+
+- **Thread A (robustness):** A1 atomic `docs mv` (validate-all-first
+  pre-flight, exit 2); A2 `docs new` strict-root refusal (no silent cwd
+  write); A3 empty-segment slug rejection; A4 `OSError` in mv/archive
+  edge-rewrite → clean exit 2; A5 `atomic_write` fsyncs the tmpfile + the
+  parent directory before/after the rename (the `cli.md` "fsync'd" claim
+  is now true); A6 the persistent `[exclude]` / `.docsignore` predicate
+  threaded into EVERY walk / `_refresh_index` of all four mutating verbs
+  (`touch`, `archive`, `mv`, `project rename`).
+- **Thread B (autonomous archive):** B1 non-interactive
+  `docs archive --cascade` flag set (`--cascade` / `--cascade-dry-run` /
+  `--cascade-only GLOB` / `--interactive`); the invariant *`docs` never
+  prompts unless `--interactive`* established; the legacy `[y/N]` prompt
+  moved behind `--interactive`.
+- **Thread C (packaging hygiene):** C3 — the false-confidence `test_a6`
+  (pyproject-comment grep) removed; `test_b3` strengthened to assert the
+  built wheel carries real skill package-data. C1 was already fixed by
+  M16 (bundled reference links host-resolvable); M14 added the GREEN
+  regression guard `test_bundled_skill_has_no_repo_relative_links` only.
+- **C1 / `docs install-skill`** Success Criterion: satisfied by M16's
+  self-contained references + the M14 GREEN guard (no repo-relative
+  `../` links remain).
+
+**Build / quality:** `docs-cli==1.6.0` **BUILT LOCALLY** (pyproject bump +
+CHANGELOG section) — **NOT published**; the PyPI publish is **M17**
+(mirrors the M12→M13 cadence). M15 appends its agent-native authoring
+entries to the same 1.6.0 CHANGELOG section before M17 publishes. Full
+suite **458 passed, 0 failed**; ruff / ruff format / mypy clean
+tree-wide (incl. the mechanical M16 import-sort fix); `docs check docs/`
+exit 0; INDEX + frozen snapshot in lockstep.
