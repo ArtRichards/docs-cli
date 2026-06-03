@@ -402,3 +402,33 @@ def test_body_from_two_required_fields_non_adjacent_passes(docs_script, tmp_path
     written = (root / "my-feature.md").read_text()
     assert "Lifecycle: draft" in written, written  # scaffold frontmatter
     assert written.endswith(body), written[-200:]
+
+
+def test_body_from_required_fields_interleaved_by_non_required_label_passes(docs_script, tmp_path):
+    """Two required-field labels with a NON-required label BETWEEN them PASS.
+
+    Pins the resolved-Q2 boundary: the contiguous run is reset by a
+    *non-required* `Label:` line just as it is by blank/prose. Here
+    `Lifecycle:` and `Updated:` are adjacent ONLY across an intervening
+    `Owner:` line — the non-required label breaks the run, so the cluster
+    never reaches >= 2 directly-adjacent required fields and the body is
+    accepted. Guards against an implementation that counts required fields
+    across a non-required interruption.
+    """
+    root = _minimal_tree(tmp_path)
+    body = "Lifecycle: active\nOwner: alice\nUpdated: 2026-05-20\n\nSome body prose.\n"
+    proc = _run(
+        docs_script,
+        "new",
+        "spec",
+        "my-feature",
+        "--root",
+        str(root),
+        "--body-from",
+        "-",
+        stdin=body,
+    )
+    assert proc.returncode == 0, (proc.returncode, proc.stderr, proc.stdout)
+    written = (root / "my-feature.md").read_text()
+    assert "Lifecycle: draft" in written, written  # scaffold frontmatter
+    assert written.endswith(body), written[-200:]

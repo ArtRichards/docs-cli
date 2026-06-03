@@ -179,9 +179,14 @@ def test_stamp_role_default_notes_no_h1_inference(docs_script, fixtures_dir, tmp
     proc = _run(docs_script, "stamp", "raw-h1-suggests-role.md", "--root", str(root))
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     text = (root / "raw-h1-suggests-role.md").read_text()
-    # The H1 trailing word is "Plan" — but stamp does NOT infer it.
-    assert "Role: notes" in text, text
-    assert "Role: plan" not in text, text
+    # The H1 trailing word is "Plan" — but stamp does NOT infer it. Assert on
+    # the metadata-block `Role:` LINE, not a substring-anywhere match: the
+    # fixture's prose body literally contains the phrase `Role: plan` (it
+    # documents what migrate's inference WOULD do), so a `"Role: plan" not in
+    # text` whole-file check would spuriously fail on legitimate prose. The
+    # contract is about the metadata line the block carries.
+    role_lines = [ln for ln in text.splitlines() if ln.startswith("Role:")]
+    assert role_lines == ["Role: notes"], role_lines
 
 
 # --- Project from flag / from config ----------------------------------------

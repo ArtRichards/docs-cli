@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import difflib
 import enum
 import importlib.metadata
 import importlib.resources
@@ -3266,20 +3267,26 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _resolve_touch_root(args: argparse.Namespace, start: Path) -> Path | int:
-    """M12: resolve a docs root for `docs touch`, or print a refusal + exit code.
+def _resolve_managed_root(args: argparse.Namespace, start: Path, *, verb: str) -> Path | int:
+    """Resolve a strict docs root for a mutating verb, or print a refusal + exit code.
+
+    The shared root-resolution behaviour for the write verbs (M12 — OQ-C /
+    OQ-1 / OQ-η; M14 — A2; M15 — B2 / B3). `verb` parametrises the
+    `docs: <verb>:` message prefix so every verb refuses in its own voice
+    (e.g. `project set` must NOT emit `project rename:`).
 
     When `--root` is set, the directory must contain a `.docs.toml`;
     otherwise return 2 with the `--root`-named refusal. When `--root` is
     absent, walk up from `start`; if no `.docs.toml` ancestor is found,
-    return 2 with the start-path-named refusal (M12 — OQ-C / OQ-11 /
-    OQ-η).
+    return 2 with the start-path-named refusal. A write into an unmanaged
+    tree is the footgun this closes (the read verbs keep the cwd-fallback —
+    a wrong-tree read is recoverable; a write is not).
     """
     if args.root:
         root = Path(args.root).resolve()
         if not (root / ".docs.toml").is_file():
             print(
-                f"docs: touch: --root {args.root} does not contain .docs.toml; refusing",
+                f"docs: {verb}: --root {args.root} does not contain .docs.toml; refusing",
                 file=sys.stderr,
             )
             return 2
@@ -3287,67 +3294,26 @@ def _resolve_touch_root(args: argparse.Namespace, start: Path) -> Path | int:
     found = _find_root_strict(start)
     if found is None:
         print(
-            f"docs: touch: {start} is not under a docs root with .docs.toml; refusing",
+            f"docs: {verb}: {start} is not under a docs root with .docs.toml; refusing",
             file=sys.stderr,
         )
         return 2
     return found
+
+
+def _resolve_touch_root(args: argparse.Namespace, start: Path) -> Path | int:
+    """M12: resolve a docs root for `docs touch` (thin wrapper, `touch:` prefix)."""
+    return _resolve_managed_root(args, start, verb="touch")
 
 
 def _resolve_project_root(args: argparse.Namespace, start: Path) -> Path | int:
-    """M12: resolve a docs root for `docs project rename`, or print a refusal.
-
-    Mirrors `_resolve_touch_root`'s split (`--root` named when set; the
-    start path named when not) for the `docs project rename` no-root
-    refusal (M12 — OQ-1 / OQ-η).
-    """
-    if args.root:
-        root = Path(args.root).resolve()
-        if not (root / ".docs.toml").is_file():
-            print(
-                f"docs: project rename: --root {args.root} does not contain .docs.toml; refusing",
-                file=sys.stderr,
-            )
-            return 2
-        return root
-    found = _find_root_strict(start)
-    if found is None:
-        print(
-            f"docs: project rename: {start} is not under a docs root with .docs.toml; refusing",
-            file=sys.stderr,
-        )
-        return 2
-    return found
+    """M12: resolve a docs root for `docs project rename` (`project rename:` prefix)."""
+    return _resolve_managed_root(args, start, verb="project rename")
 
 
 def _resolve_new_root(args: argparse.Namespace, start: Path) -> Path | int:
-    """M14 (A2): resolve a docs root for `docs new`, or print a refusal + exit code.
-
-    Mirrors `_resolve_touch_root` with `docs: new:`-prefixed messages.
-    When `--root` is set, the directory must contain a `.docs.toml`;
-    otherwise refuse with exit 2. When `--root` is absent, walk up from
-    `start`; if no `.docs.toml` ancestor is found, refuse rather than
-    silently scaffolding into the unmanaged cwd with default config (the
-    pre-M14 footgun). The read verbs (`index`/`list`/`check`) keep the
-    cwd-fallback — a wrong-tree read is recoverable; a write is not.
-    """
-    if args.root:
-        root = Path(args.root).resolve()
-        if not (root / ".docs.toml").is_file():
-            print(
-                f"docs: new: --root {args.root} does not contain .docs.toml; refusing",
-                file=sys.stderr,
-            )
-            return 2
-        return root
-    found = _find_root_strict(start)
-    if found is None:
-        print(
-            f"docs: new: {start} is not under a docs root with .docs.toml; refusing",
-            file=sys.stderr,
-        )
-        return 2
-    return found
+    """M14 (A2): resolve a docs root for `docs new` (`new:` prefix)."""
+    return _resolve_managed_root(args, start, verb="new")
 
 
 def _refresh_index(
@@ -3409,6 +3375,64 @@ def _cmd_index(args: argparse.Namespace) -> int:
     return 0
 
 
+# M15 (C4): the required-field labels whose adjacent clustering signals a
+# real convention metadata block in a `--body-from` body. `Project` is
+# intentionally excluded — a prose `Project:` line is common and weak signal;
+# the block-shape signal is the {Lifecycle, Role, Updated} cluster.
+_C4_REQUIRED_LABELS: frozenset[str] = frozenset({"Lifecycle", "Role", "Updated"})
+_C4_REQUIRED_LABEL_RE = re.compile(r"^(Lifecycle|Role|Updated):\s")
+
+
+def _body_has_metadata_block(body_text: str) -> bool:
+    """True iff a `--body-from` body carries a real convention metadata block (M15 — C4).
+
+    Two signals trip detection (the footgun of pasting a whole front-matter
+    document as a body):
+
+    - **(a)** the first non-blank line, stripped, is ``---`` (a leading YAML
+      front-matter fence); or
+    - **(b)** within the first ~20 lines (after an optional single leading
+      ``# `` H1), a **contiguous run** of ``≥ 2`` of the required-field labels
+      ``{Lifecycle, Role, Updated}`` appears on directly-adjacent lines. Any
+      blank/prose line OR a *non-required* ``Label:`` line resets the run, so a
+      lone prose required-field line — or two required-field lines separated by
+      anything — does NOT trip the refusal.
+
+    A lone prose ``Reason:`` / ``Plan:`` / ``Updated:`` line is accepted
+    (``Reason``/``Plan`` are not even required labels). Mirrors the cli.md C4
+    contract.
+    """
+    lines = body_text.splitlines()
+
+    # Signal (a): a leading `---` YAML fence (first non-blank line).
+    for line in lines:
+        if line.strip() == "":
+            continue
+        if line.strip() == "---":
+            return True
+        break
+
+    # Signal (b): a >=2 required-field cluster on adjacent lines, scanning the
+    # first ~20 lines after skipping ONE optional leading `# ` H1.
+    head = lines[:20]
+    start = 0
+    for idx, line in enumerate(head):
+        if line.strip() == "":
+            continue
+        if line.startswith("# "):
+            start = idx + 1
+        break
+    run = 0
+    for line in head[start:]:
+        if _C4_REQUIRED_LABEL_RE.match(line):
+            run += 1
+            if run >= 2:
+                return True
+        else:
+            run = 0
+    return False
+
+
 def _slug_to_title(slug: str) -> str:
     """Derive a default H1 title from a slug: last path segment, title-cased.
 
@@ -3466,10 +3490,11 @@ def _cmd_new(args: argparse.Namespace) -> int:
         return 1
 
     # M8 (F9): `--body-from` reads body content from a file or stdin and
-    # appends it under the scaffold. The OQ-E refusal heuristic
-    # (per-OQ4: BEFORE the `--dry-run` check so an agent dry-running an
-    # invalid body still gets the failure) scans the first 20 lines for
-    # `^[A-Z][A-Za-z-]+:\s` and refuses if any line matches.
+    # appends it under the scaffold. M15 (C4): the body is refused (BEFORE the
+    # `--dry-run` check, so an agent dry-running an invalid body still gets the
+    # failure) only when it carries an *actual* metadata block — a leading
+    # `---` fence or a >=2 required-field cluster on adjacent lines — not
+    # whenever any line is `Label:`-shaped. See `_body_has_metadata_block`.
     body_text: str | None = None
     if args.body_from is not None:
         if args.body_from == "-":
@@ -3488,10 +3513,8 @@ def _cmd_new(args: argparse.Namespace) -> int:
                 print(f"docs: --body-from: {exc}", file=sys.stderr)
                 return 2
 
-        # OQ-E refusal heuristic — scan the first 20 lines.
-        head = body_text.splitlines()[:20]
-        metadata_re = re.compile(r"^[A-Z][A-Za-z-]+:\s")
-        if any(metadata_re.match(line) for line in head):
+        # C4 refusal — a real metadata block (cluster or fence).
+        if _body_has_metadata_block(body_text):
             preview = "\n".join(body_text.splitlines()[:5])
             print(
                 "docs: --body-from content appears to contain a metadata block.\n"
@@ -4171,14 +4194,324 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
     return 0
 
 
+def _known_projects(root: Path, config: Config) -> set[str]:
+    """Return the set of known projects in `root` for the `project set` typo guard.
+
+    The resolved `Project:` of every **active** doc (its explicit `Project:`,
+    or the docs-root project for a doc with none) plus the `.docs.toml`
+    `[project] name` (M15 — B2; resolved Q1). The walk **tolerates** parse
+    errors — an unparseable doc is skipped, never aborting the guard — and
+    always seeds `config.project`, so a tree of all-malformed docs still has
+    its root project in the known set.
+    """
+    known: set[str] = {config.project}
+    archive_prefix = config.archive_dir
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fname in filenames:
+            if fname.startswith(".") or not fname.endswith(".md"):
+                continue
+            file_path = Path(dirpath) / fname
+            rel = file_path.relative_to(root).as_posix()
+            if rel == INDEX_FILENAME:
+                continue
+            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+                continue
+            try:
+                doc = parse(file_path.read_text(), file_path, root)
+            except (MetadataError, VocabularyError):
+                continue
+            known.add(_resolved_project(doc, config))
+    return known
+
+
 def _cmd_project_set(args: argparse.Namespace) -> int:
-    # Phase 5 placeholder — implemented in Phase 6.
-    return 2
+    # M15 (B2) — reassign the `Project:` field of one or more named docs.
+    # Validate-all-first atomic semantics (mirrors `_cmd_touch` /
+    # `_cmd_project_rename`): no write until every named doc passes. Never
+    # touches `.docs.toml`, non-named docs, or `Related:` edges.
+
+    # Grammar: a single nargs="+" run split as `*docs, new_project`. At least
+    # two tokens — a single token is ambiguous (doc or project?).
+    *docs, raw_new = args.args
+    if not docs:
+        print(
+            "docs: project set: need at least one <doc> and a <new-project>",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Resolve the docs root (verb-specific prefix; NOT `project rename:`).
+    root_or_exit = _resolve_managed_root(args, Path.cwd(), verb="project set")
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    # Auto-normalise the new project name. Empty / whitespace-after-normalise
+    # is rejected BEFORE the typo guard (the empty/whitespace tests pass
+    # --new-project, which would otherwise bypass the guard).
+    normalised = normalise_project_name(raw_new)
+    if not normalised.strip():
+        print(
+            f"docs: project set: {raw_new} normalises to empty string; "
+            "project name must be non-empty",
+            file=sys.stderr,
+        )
+        return 2
+    if normalised != raw_new and not args.quiet:
+        print(
+            f'docs: project set: normalised "{raw_new}" to "{normalised}"',
+            file=sys.stderr,
+        )
+
+    # Typo guard (skipped when --new-project): refuse a value new to the tree.
+    if not args.new_project:
+        known = _known_projects(root, config)
+        if normalised not in known:
+            close = difflib.get_close_matches(normalised, sorted(known), n=1)
+            prefix = f"did you mean '{close[0]}'? " if close else ""
+            print(
+                f"docs: project set: '{normalised}' is not a project in this tree; refusing",
+                file=sys.stderr,
+            )
+            print(
+                f"  → {prefix}to create a new project group, pass --new-project",
+                file=sys.stderr,
+            )
+            return 2
+
+    # Validate-all-first: resolve every named doc's path + parse it, with the
+    # archived check (path-based) taking PRECEDENCE over missing / outside
+    # (resolved Q4). No writes until all pass.
+    root_resolved = root.resolve()
+    archive_dir = config.archive_dir
+    planned: list[tuple[Path, str]] = []  # (path, root-relative posix)
+    for raw_doc in docs:
+        doc_path = Path(raw_doc)
+        target = doc_path if doc_path.is_absolute() else root / doc_path
+
+        # Archived check is PATH-BASED and takes precedence: a named doc whose
+        # root-relative first segment is the archive dir refuses the whole
+        # batch (exit 2), even if it is missing or outside.
+        try:
+            rel = target.resolve().relative_to(root_resolved).as_posix()
+        except ValueError:
+            rel = None
+        if rel is not None and (rel == archive_dir or rel.startswith(archive_dir + "/")):
+            print(
+                f"docs: project set: {rel} is under the archive subtree (read-only); refusing",
+                file=sys.stderr,
+            )
+            return 2
+
+        # Outside the resolved root → exit 1 (explicit-path error, not a
+        # no-root refusal — the cross-verb exit-code convention).
+        if rel is None:
+            print(
+                f"docs: project set: {target} is outside the resolved docs root ({root_resolved})",
+                file=sys.stderr,
+            )
+            return 1
+
+        # Missing → exit 1.
+        if not target.is_file():
+            print(f"docs: project set: file not found: {target}", file=sys.stderr)
+            return 1
+
+        # Malformed (parse raises) → exit 1.
+        try:
+            doc = parse(target.read_text(), target, root)
+        except (MetadataError, VocabularyError) as exc:
+            print(f"docs: {exc}", file=sys.stderr)
+            return 1
+        planned.append((target, rel))
+
+    # No-op: every named doc already resolves to the normalised project.
+    rewrites: list[tuple[Path, str, str]] = []  # (path, rel, new_text)
+    for target, rel in planned:
+        doc = parse(target.read_text(), target, root)
+        if _resolved_project(doc, config) == normalised:
+            continue
+        new_text = set_metadata_field(target.read_text(), "Project", normalised)
+        rewrites.append((target, rel, new_text))
+
+    if not rewrites:
+        if not args.quiet:
+            print(
+                f"docs: project set: {normalised} already current — no rewrites needed",
+                file=sys.stderr,
+            )
+        return 0
+
+    if args.dry_run:
+        if not args.quiet:
+            for _target, rel, _new_text in rewrites:
+                print(f"docs: would rewrite Project: in {rel}", file=sys.stderr)
+        return 0
+
+    for target, _rel, new_text in rewrites:
+        atomic_write(target, new_text)
+
+    try:
+        _refresh_index(root, config, predicate=compile_exclude_predicate(config, []))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        return 2
+
+    if not args.quiet:
+        print(
+            f"docs: project set: set {normalised} on {len(rewrites)} doc(s)",
+            file=sys.stderr,
+        )
+    return 0
+
+
+def _replace_or_prepend_h1(text: str, title: str) -> str:
+    """Return `text` with its leading H1 replaced by `# {title}` (or one prepended).
+
+    Local helper for `stamp --title` (resolved Q3): the override happens
+    BEFORE `insert_metadata_block` so the block-insertion machinery is left
+    untouched (`migrate` depends on it). If the first non-blank line is a
+    `# ` H1 it is replaced in place; otherwise a `# {title}` line + blank
+    line is prepended. The file's trailing-newline state is preserved by
+    operating on `splitlines(keepends=True)`.
+    """
+    keep = text.splitlines(keepends=True)
+    for idx, line in enumerate(keep):
+        if line.strip() == "":
+            continue
+        if line.lstrip().startswith("# "):
+            ending = line[len(line.rstrip("\r\n")) :]
+            keep[idx] = f"# {title}{ending or chr(10)}"
+            return "".join(keep)
+        break
+    # No leading H1 — prepend one. `insert_metadata_block` will keep it.
+    prefix = f"# {title}\n\n"
+    return prefix + text
 
 
 def _cmd_stamp(args: argparse.Namespace) -> int:
-    # Phase 5 placeholder — implemented in Phase 6.
-    return 2
+    # M15 (B3) — write-then-stamp. Insert a convention-correct metadata block
+    # onto files an agent already wrote, preserving the body. Atomic
+    # multi-file batch (mirrors `_cmd_touch`): a bad/missing file aborts
+    # before any write.
+
+    # Resolve the docs root first (start from the first named file so the
+    # cwd-walk anchors on the doc, not the process cwd). The strict-root
+    # refusal carries the `stamp:` prefix.
+    start = Path(args.files[0]) if args.files else Path.cwd()
+    root_or_exit = _resolve_managed_root(args, start, verb="stamp")
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    # Resolve each named file: a relative path is taken under the root when
+    # `--root` is given (matching `project set`); otherwise relative to cwd
+    # (the cwd-walk case, where cwd is inside the tree). An absolute path is
+    # used as-is.
+    def _resolve_file(raw: str) -> Path:
+        fp = Path(raw)
+        if fp.is_absolute() or not args.root:
+            return fp
+        return root / fp
+
+    file_paths = [_resolve_file(p) for p in args.files]
+
+    # Existence pass: a missing file aborts the batch before any write.
+    for fp in file_paths:
+        if not fp.is_file():
+            print(f"docs: file not found: {fp}", file=sys.stderr)
+            return 1
+
+    # Outside-root pass → exit 1 (explicit-path error).
+    root_resolved = root.resolve()
+    for fp in file_paths:
+        try:
+            fp.resolve().relative_to(root_resolved)
+        except ValueError:
+            print(
+                f"docs: stamp: {fp} is outside the resolved docs root ({root_resolved})",
+                file=sys.stderr,
+            )
+            return 1
+
+    # Role: --role else default `notes`; validate against config.roles. The
+    # refusal must NAME the role and must NOT be argparse's "invalid choice".
+    role = args.role or "notes"
+    if role not in config.roles:
+        print(
+            f"docs: stamp: invalid role {role!r} (not in the Role vocabulary)",
+            file=sys.stderr,
+        )
+        return 2
+
+    today = date.today()
+    project = args.project or config.project
+
+    # Build every stamp in memory (validate-all-first). A file that parses
+    # cleanly is ALREADY STAMPED → refresh only Updated:; otherwise it is a
+    # FRESH file → insert the block.
+    stamps: list[tuple[Path, str, bool]] = []  # (path, new_text, already_stamped)
+    for fp in file_paths:
+        text = fp.read_text()
+        try:
+            parse(text, fp, root)
+            # Clean parse → already stamped. Bump Updated: only.
+            new_text = set_metadata_field(text, "Updated", today.strftime(config.date_format))
+            stamps.append((fp, new_text, True))
+        except (MetadataError, VocabularyError):
+            # Fresh file — insert the metadata block. Title: --title overrides
+            # the leading H1 (via a local helper, BEFORE insert); else the
+            # file's H1 / a synthesised title from the filename.
+            source = text
+            if args.title:
+                source = _replace_or_prepend_h1(text, args.title)
+            title = args.title or _slug_to_title(fp.stem)
+            new_text = insert_metadata_block(
+                source,
+                title=title,
+                status="draft",
+                role=role,
+                project=project,
+                updated=today,
+                date_format=config.date_format,
+            )
+            stamps.append((fp, new_text, False))
+
+    if args.dry_run:
+        if not args.quiet:
+            for fp, _new_text, _already in stamps:
+                print(f"docs: would stamp {fp}", file=sys.stderr)
+        return 0
+
+    for fp, new_text, _already in stamps:
+        atomic_write(fp, new_text)
+
+    try:
+        _refresh_index(root, config, predicate=compile_exclude_predicate(config, []))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        return 2
+
+    if not args.quiet:
+        for fp, _new_text, already in stamps:
+            if already:
+                print(f"docs: stamp: {fp} already stamped — refreshed Updated:", file=sys.stderr)
+            else:
+                print(f"docs: stamped {fp}", file=sys.stderr)
+    return 0
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
