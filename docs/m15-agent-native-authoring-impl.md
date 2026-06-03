@@ -39,12 +39,12 @@ section tracks implementation progress, which is distinct.)
 | 2. Write Tests (RED) | Done | 2026-06-03 | `test_cli_project_set.py` (20) + `test_cli_stamp.py` (15) new; `test_body_from.py` extended (C4 flip + prose-pass + true-positive refusals + cluster boundary). 47 collect across the three files; intended RED. |
 | 3. Create Data/Fixtures | Done | 2026-06-03 | `tests/fixtures/stamp/` (5 files) + 3 new `body-from/` fixtures; `with-frontmatter.txt` deleted (demoted). B2 reuses existing trees inline. Every Phase-2 fixture reference resolves. |
 | 4. Run Tests (RED Baseline) | Done | 2026-06-03 | 39 → **41** intended RED (20 project_set + **16** stamp + **5** body_from after the review-fix pass), classified below; 459 GREEN incl. test_skill_refs + the lockstep-regenerated frozen snapshot. ruff / format / mypy clean. (Review-fix pass added the `--title` stamp test + the C4 non-adjacent body-from PASS test, +2 reds — see the Review-fix pass section.) |
-| 5. Update Base Interfaces | Pending | — | |
-| 6. Implement Offline/Core Path | Pending | — | |
-| 7. Update Tool/Wrapper Layer | Pending | — | |
-| 8. Run Tests (GREEN) | Pending | — | |
-| 9. Implement Online/Integration | Pending | — | |
-| 10. Quality, Docs, Refactor | Pending | — | |
+| 5. Update Base Interfaces | Done | 2026-06-03 | `project set` nested subparser + `stamp` top-level subparser; main dispatch; SKILL.md verb-table rows (5.5 co-commit). 4 help/registration tests green; test_skill green; placeholders for the two `_cmd_*`. |
+| 6. Implement Offline/Core Path | Done | 2026-06-03 | `_resolve_managed_root(verb=…)` trap fix + thin wrappers; `_cmd_project_set`; `_cmd_stamp`; `_body_has_metadata_block` hooked into `_cmd_new`; `import difflib`. All 41 RED → GREEN; 501 total. |
+| 7. Update Tool/Wrapper Layer | Done | 2026-06-03 | CHANGELOG 1.6.0 M15 bullets + preamble (resolved Q5); SKILL.md description verb list. cli.md untouched → bundled ref byte-identical. test_skill + test_skill_refs green. |
+| 8. Run Tests (GREEN) | Done | 2026-06-03 | 501 passed / 0 failed; ruff / format / mypy clean; `docs check docs/` 0; `docs index --root docs/ --dry-run` 0; cli.md + convention.md byte-identical to bundled refs. No diff (suite reached GREEN in Phase 6). |
+| 9. Implement Online/Integration | Done | 2026-06-03 | Dogfooded stamp (fresh + idempotent) + project set (existing/typo/--new-project + one-INDEX no-op) + body-from (prose accept / fence refuse) on copies; real-repo `docs check docs/` 0. |
+| 10. Quality, Docs, Refactor | Done | 2026-06-03 | Milestone ticks; status/plan flipped; INDEX + frozen snapshot regenerated in lockstep; impl-log Phases 5–10 appended; final gate re-run. |
 
 ## Provenance — where the scope came from
 
@@ -416,3 +416,191 @@ INDEX snapshot regenerated in lockstep with `docs/INDEX.md` (the
 `agent-native-invocation.md` Updated-date bump from finding 1). Decisions
 recorded; diff is docs + tests only — no `cli.py` change (correct for
 phases 1–4).
+
+## Phase 5 — Update Interfaces (argparse + dispatch)
+
+**Objective.** Wire the argparse surface + `main` dispatch for the two new
+verbs so the 4 help/registration tests flip green and the remaining M15 reds
+fail inside the (not-yet-written) commands, not at argparse. No core logic.
+
+**Files changed.** `src/docs_cli/cli.py` (argparse + dispatch + placeholders);
+`src/docs_cli/skill/SKILL.md` (verb-table rows — the 5.5 co-commit).
+
+**Actions.**
+
+- `project set` nested subparser on `project_sub` (after `rename`): a single
+  `nargs="+"` positional `args` (metavar `doc ... new-project`, split as
+  `*docs, new_project` inside the command — NOT two positionals) + a
+  `--new-project` store_true; `parents=[common]`.
+- `stamp` top-level subparser: positional `files` `nargs="+"`; `--role`,
+  `--project`, `--title`; `parents=[common]`.
+- `main` dispatch: `stamp → _cmd_stamp`; `project set → _cmd_project_set`
+  (Phase-5 placeholders returning 2; full bodies in Phase 6 to avoid a
+  half-state).
+- **5.5 co-commit:** added a `docs stamp` and a `docs project set` verb-table
+  row to SKILL.md so `test_skill.py::test_every_named_verb_is_a_real_subcommand`
+  stays green the instant `stamp` registers (it harvests `docs <verb>`
+  inline-code spans); also added `--body-from` to the `docs new` row.
+  `test_skill_refs.py` mirrors only `cli.md`/`convention.md`, not SKILL.md,
+  so no bundled-SKILL resync was needed.
+
+**Test results.** 463 passed / 37 failed. The 4 help/registration tests flip
+green; the other 37 M15 reds now fail inside the placeholder commands (not at
+argparse). No regression in the 459. `ruff` / `format` / `mypy` clean.
+
+## Phase 6 — Implement Core
+
+**Objective.** Implement `project set`, `stamp`, and the C4 detector so all 41
+M15 RED pass with no regression.
+
+**Files changed.** `src/docs_cli/cli.py`; `tests/test_body_from.py`
+(resolved-Q2 interleaved test); `tests/test_cli_stamp.py` (one assertion
+tightened — see below).
+
+**Actions.**
+
+- **6.4 trap fix.** Collapsed the three `_resolve_*_root` helpers onto a
+  single `_resolve_managed_root(args, start, *, verb)` parametrising the
+  `docs: <verb>:` message prefix. `touch` / `project rename` / `new` became
+  thin wrappers (their messages are byte-identical). `project set` resolves
+  with `verb="project set"`, `stamp` with `verb="stamp"` — so neither emits
+  the hardcoded `project rename:` prefix the Phase-4 note warned about (pins
+  both prefix tests).
+- **6.1 `_cmd_project_set`.** Grammar split (`*docs, raw_new`, ≥2 tokens);
+  strict-root; `normalise_project_name` + empty-after-normalise reject
+  (BEFORE the typo guard — the empty/whitespace tests pass `--new-project`);
+  normalised-note gated on `not --quiet`; typo guard (skipped on
+  `--new-project`) over `_known_projects` (active docs' resolved project +
+  `config.project`, **tolerating** parse errors per resolved Q1) with
+  `difflib.get_close_matches` — the recovery hint **always** prints, the
+  `did you mean '<x>'?` prefix only when close; validate-all-first
+  (archived **path-based** check takes precedence over outside/missing per
+  resolved Q4 — archived exit 2, outside exit 1, missing/malformed exit 1);
+  no-op when already-current; `set_metadata_field` rewrite (inserts when
+  absent); ONE end-of-batch INDEX; `--dry-run`; footer
+  `set <new> on <N> doc(s)`. No `.docs.toml` / `Related:` rewrite.
+- **6.2 `_cmd_stamp`.** Strict-root (start = `files[0]`); files resolved
+  under root when `--root` is given else relative to cwd; existence + outside
+  passes (outside = exit 1); role = `--role` else `notes` validated against
+  `config.roles` (names the bad role, never "invalid choice"); clean
+  `parse()` = already-stamped (Updated-only refresh via `set_metadata_field`)
+  else fresh insert via `insert_metadata_block` (Lifecycle: draft, NO H1-role
+  inference, foreign metadata parked under `## Migrated metadata`); `--title`
+  override via a LOCAL `_replace_or_prepend_h1` BEFORE insert (resolved Q3 —
+  `insert_metadata_block` untouched, `migrate` depends on it); `--dry-run`;
+  one INDEX; per-file success/already-stamped lines gated on `not --quiet`.
+- **6.3 `_body_has_metadata_block`** + hooked into `_cmd_new` (replaced the
+  inline any-`Label:` heuristic; error tokens unchanged). Signal (a) leading
+  `---` fence; signal (b) ≥2 adjacent `{Lifecycle, Role, Updated}` labels,
+  where a non-required `Label:` line OR a blank/prose line RESETS the run
+  (resolved Q2). Verified against every body-from fixture.
+- `import difflib` added.
+
+**Tests.** Added `test_body_from_required_fields_interleaved_by_non_required_label_passes`
+(resolved Q2 — a non-required label BETWEEN two required breaks the run →
+passes). Tightened `test_stamp_role_default_notes_no_h1_inference` to assert
+on the metadata-block `Role:` LINE (`role_lines == ["Role: notes"]`): the
+fixture's prose body literally contains the string `Role: plan` (it documents
+what migrate's inference *would* do), so the original whole-file
+`"Role: plan" not in text` was a false-positive failure — the contract is
+about the block's role line, and the implementation correctly writes
+`Role: notes` with no inference.
+
+**Test results.** All 41 M15 RED → GREEN; full suite **501 passed / 0 failed**
+(500 + the resolved-Q2 interleaved test). `ruff` / `format` / `mypy` clean;
+`docs check docs/` exit 0; bundled cli.md byte-identical (no cli.md change).
+
+## Phase 7 — Update Wrappers (CHANGELOG + SKILL.md C2)
+
+**Objective.** Land the operator-facing wrappers: CHANGELOG entries + the
+SKILL.md frontmatter description. No code change.
+
+**Files changed.** `CHANGELOG.md`; `src/docs_cli/skill/SKILL.md`.
+
+**Actions.**
+
+- **7.1 CHANGELOG.** Appended M15 bullets to the existing
+  `## 1.6.0 — UNRELEASED` section (no version bump — M14 set 1.6.0;
+  `pyproject` confirmed 1.6.0; M17 publishes). Added: `docs project set`
+  (B2), `docs stamp` (B3). Fixed: `docs new --body-from` detector (C4).
+  Updated the preamble to "M14 + M15 landed locally; publish is M17"
+  (resolved Q5).
+- **7.2 SKILL.md C2.** Refreshed the frontmatter `description` verb list to
+  add stamp / project set / project rename / install-skill (kept EXACTLY the
+  `name` + `description` keys). The `docs stamp` + `docs project set`
+  verb-table rows landed in Phase 5.
+- **7.3.** `cli.md` untouched this phase → bundled ref stays byte-identical
+  (no resync needed).
+
+**Test results.** `test_skill.py` + `test_skill_refs.py` GREEN; full suite
+501 passed; gate clean; both bundled refs byte-identical.
+
+## Phase 8 — Run Tests (GREEN) + gate
+
+**Objective.** Confirm the full quality gate tree-wide.
+
+**Result.** `pytest tests/ -q` → **501 passed / 0 failed**. `ruff check`
+(all passed) / `ruff format --check` (39 files) / `mypy` (no issues) clean.
+`docs check docs/` exit 0. `docs index --root docs/ --dry-run` exit 0.
+`cmp docs/cli.md src/docs_cli/skill/references/cli.md` and the convention.md
+counterpart both byte-identical. No diff this phase — the suite reached GREEN
+in Phase 6 and held through Phase 7, so Phase 8 is a verification checkpoint
+with no commit of its own.
+
+## Phase 9 — Integrate (dogfood on copies)
+
+**Objective.** Exercise the three new behaviours end-to-end on copies (never
+the real `docs/`), and run the real-repo-safe `docs check docs/`.
+
+**Outcomes (all as contracted).**
+
+- **`docs stamp`** on a copy of `tests/fixtures/stamp/raw-no-frontmatter.md`:
+  fresh stamp inserted the block (`Lifecycle: draft` / `Role: notes` /
+  `Project: dog` / `Updated: today`), preserved the `BODYMARKER` body, printed
+  `docs: stamped <path>`. Re-run reported `already stamped — refreshed
+  Updated:` and left every non-`Updated:` line byte-identical. `docs check`
+  exit 0.
+- **`docs project set`** on a copy of `multi-project-alpha-sidecar`: setting
+  `beta-notes.md` to the existing `alpha` rewrote `Project:` + printed
+  `set alpha on 1 doc(s)`; a follow-up `docs index` was a byte-identical
+  no-op (one end-of-batch INDEX proof). An unknown `alfa` without
+  `--new-project` refused (exit 2) with `did you mean 'alpha'?` + the
+  always-printed `to create a new project group, pass --new-project` hint on
+  the one `→` line. `gamma` with `--new-project` succeeded (exit 0).
+  `docs check` exit 0.
+- **`docs new --body-from -`**: a `## Risk level` / `Reason: …` + `## Plan` /
+  `Plan: …` prose body was ACCEPTED (file created, scaffold frontmatter
+  present); a `---`-fenced body was REFUSED (exit 2, file not created), with
+  the unchanged error tokens.
+- **Real-repo safe:** `docs check docs/` exit 0 (no mutation of the real
+  tree).
+
+## Phase 10 — Quality, Docs, Refactor, closeout
+
+**Objective.** Closeout: milestone/status/plan ticks, INDEX + frozen-snapshot
+lockstep, impl-log Phases 5–10, final gate.
+
+**Actions.**
+
+- Ticked the milestone Deliverables, Phase Checklist (5–10), and Success
+  Criteria; flipped the status.md + plan.md M15 row to
+  "Implementation-complete — Phases 1–10; 501 GREEN; builds 1.6.0 locally,
+  publish is M17".
+- `docs touch` on the three edited docs/ docs (cli.md untouched), then
+  `docs index docs/`; regenerated `tests/fixtures/expected/docs-INDEX.md`
+  from the live `docs/INDEX.md` so the frozen snapshot stays in lockstep (the
+  snapshot test normalises only the `_Generated_` line).
+- No behaviour-preserving /simplify applied beyond the Phase-6
+  `_resolve_managed_root` collapse (which the plan flagged as the natural
+  candidate); Step 3 runs a dedicated simplify pass, so no over-refactor here.
+- Final gate re-run (see the closeout commit): 501 passed; ruff / format /
+  mypy clean; `docs check docs/` exit 0; both bundled refs byte-identical;
+  INDEX + snapshot in lockstep.
+
+**Decisions recorded (resolved Q1–Q5, binding).** Q1 typo-guard tolerates
+parse errors + always seeds `config.project`; Q2 C4 run reset by a
+non-required label or blank/prose (+ the interleaved PASS test); Q3
+`stamp --title` via a local H1-replace helper, `insert_metadata_block`
+untouched; Q4 `project set` archived detection path-based + precedence over
+outside/missing; Q5 CHANGELOG keeps `## 1.6.0 — UNRELEASED`, preamble notes
+M14+M15 landed locally, publish is M17.

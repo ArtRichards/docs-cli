@@ -39,10 +39,12 @@ archive** is now **implementation-complete (2026-06-02)** —
 tests GREEN, quality gate clean tree-wide, pending operator
 commit/archive; the **PyPI publish is M17's** (mirrors the M12→M13
 local-build-then-publish-later cadence). **M15 — Agent-native doc
-authoring** (**depends on M14**) is now **in progress** — Phases 1–4
-(contract + RED baseline: 39 intended reds, 459 GREEN, gate clean) done
-2026-06-03 on branch `m15/phases-1-4`; Phases 5–10 (implementation) are
-pending. Then **M17** publishes M14 + M15 together as `docs-cli==1.6.0`.
+authoring** (**depends on M14**) is now **implementation-complete** —
+Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN) on
+`m15/phases-1-4`; Phases 5–10 (implementation + dogfood + closeout: all
+41 RED → GREEN, 501 total, gate clean tree-wide) on `m15/phases-5-10`,
+both 2026-06-03. It builds 1.6.0 locally; the publish is M17's. Then
+**M17** publishes M14 + M15 together as `docs-cli==1.6.0`.
 M14 was re-scoped 2026-06-02 and M15 carved out of it (it had outgrown
 M12 scale) — see the *Next action* block below for per-milestone scope.
 
@@ -194,14 +196,13 @@ milestones then a publish.
   **publish is M17's.** 458 tests GREEN; quality gate clean tree-wide.
   Pair: [m14-robustness-agent-native.md](m14-robustness-agent-native.md)
   + [impl](m14-robustness-agent-native-impl.md).
-- **M15 — Agent-native doc authoring (v1.6.0)** (next implementation
-  milestone) — `docs project set`, single-file `docs stamp`
+- **M15 — Agent-native doc authoring (v1.6.0)** (**implementation-complete**
+  2026-06-03, Phases 1–10) — `docs project set`, single-file `docs stamp`
   (write-then-stamp), the `--body-from` real-frontmatter detector, and the
   skill/cli docs. Carved out of M14 on 2026-06-02 (it outgrew M12 scale);
-  **depends on M14**. Pair:
+  **depends on M14**; builds 1.6.0 locally, publish is M17's. Pair:
   [m15-agent-native-authoring.md](m15-agent-native-authoring.md)
-  + [impl](m15-agent-native-authoring-impl.md). Open via
-  `/ship-milestone M15`.
+  + [impl](m15-agent-native-authoring-impl.md).
 
 **M17 — PyPI publish 1.6.0** ships both (M12→M13 cadence). The
 broader agent-native surface (global `--json`,
@@ -369,7 +370,7 @@ for the milestone summary.
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
 | M14 — Robustness + autonomous archive (v1.6.0) | **Implementation-complete** (2026-06-02; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `--cascade`, bundled-ref guard + packaging fix; 458 GREEN, gate clean; `docs-cli==1.6.0` built locally — publish is M17's) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
-| M15 — Agent-native doc authoring (v1.6.0) | **In progress** (carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17). Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN, gate clean — incl. a fresh-eyes review-fix pass) done 2026-06-03 on branch `m15/phases-1-4`; implementation (Phases 5–10) pending. | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
+| M15 — Agent-native doc authoring (v1.6.0) | **Implementation-complete** — Phases 1–10 (carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17). Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN) on `m15/phases-1-4`; Phases 5–10 (impl + dogfood + closeout: all 41 RED → GREEN, 501 total, gate clean tree-wide, `docs check docs/` 0, bundled refs byte-identical) on `m15/phases-5-10` — both 2026-06-03. | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
 | M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance; pending operator commit/archive) | [Plan](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
 | M17 — PyPI publish 1.6.0 | **Planned** (publish-only; ships M14 + M15 as `docs-cli==1.6.0` via the release-runbook, mirroring M13 → M12) | _not yet created_ | — |
 

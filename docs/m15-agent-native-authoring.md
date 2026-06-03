@@ -89,19 +89,19 @@ should be implemented after it. Both land 1.6.0 locally; **M17** publishes.
 
 ## Deliverables
 
-- [ ] B2 `docs project set` verb shipped + spec'd in `cli.md` + skill.
-- [ ] B3 single-file `docs stamp <file>` (write-then-stamp) shipped +
+- [x] B2 `docs project set` verb shipped + spec'd in `cli.md` + skill.
+- [x] B3 single-file `docs stamp <file>` (write-then-stamp) shipped +
       spec'd in `cli.md` + skill; idempotent re-stamp.
-- [ ] C4 `--body-from` refusal detects a real metadata block (`---` fence
+- [x] C4 `--body-from` refusal detects a real metadata block (`---` fence
       or required-field cluster), not any `Label:` line; the
       `edge-case-keyword` expectation flipped.
-- [ ] C2 `--body-from`/`project set`/`stamp` documented in SKILL table +
+- [x] C2 `--body-from`/`project set`/`stamp` documented in SKILL table +
       `cli.md`; frontmatter verb list refreshed; skill refs byte-identical.
-- [ ] `CHANGELOG.md`: append M15's authoring entries to the
+- [x] `CHANGELOG.md`: append M15's authoring entries to the
       `## 1.6.0 — UNRELEASED` section M14 opened.
-- [ ] `docs/cli.md` + `convention.md` reflect every behavior change;
+- [x] `docs/cli.md` + `convention.md` reflect every behavior change;
       bundled skill refs resynced; INDEX + frozen snapshot in lockstep.
-- [ ] Full suite GREEN; ruff / ruff format / mypy / `docs check` clean.
+- [x] Full suite GREEN; ruff / ruff format / mypy / `docs check` clean.
 
 ## Phase Checklist (10-phase TDD)
 
@@ -118,17 +118,20 @@ should be implemented after it. Both land 1.6.0 locally; **M17** publishes.
       `tests/fixtures/stamp/` + 3 `body-from/` fixtures.)
 - [x] 4. Run Tests (RED) — confirm the intended red baseline. (2026-06-03;
       39 intended RED, 459 GREEN, gate clean — see impl log Phase 4.)
-- [ ] 5. Update Interfaces — argparse: `project set`, `stamp`
-      (or `migrate`'s single-file path), the `--body-from` detector hook.
-- [ ] 6. Implement Core — `project set`, `stamp`, the `--body-from` block
-      detector.
-- [ ] 7. Update Wrappers — CHANGELOG 1.6.0 authoring entries; `cli.md` +
-      SKILL.md + skill refs resync.
-- [ ] 8. Run Tests (GREEN) + quality gate.
-- [ ] 9. Integrate — dogfood `stamp` + `project set` + `--body-from` on a
-      copied fixture tree (and ideally on this repo's own `docs/`).
-- [ ] 10. Quality, Docs, Refactor — closeout summaries; INDEX + snapshot
-      lockstep; status/plan updated.
+- [x] 5. Update Interfaces — argparse: `project set` nested subparser +
+      `stamp` top-level subparser; main dispatch; SKILL.md verb-table rows.
+      (2026-06-03; standalone `stamp` verb, NOT routed through `migrate`.)
+- [x] 6. Implement Core — `project set`, `stamp`, the `--body-from` block
+      detector; `_resolve_managed_root` verb-param refactor (trap fix).
+      (2026-06-03; all 41 RED → GREEN.)
+- [x] 7. Update Wrappers — CHANGELOG 1.6.0 authoring entries; SKILL.md
+      description + verb table; skill refs byte-identical. (2026-06-03.)
+- [x] 8. Run Tests (GREEN) + quality gate — 501 passed; ruff / format /
+      mypy / `docs check` / index dry-run clean. (2026-06-03.)
+- [x] 9. Integrate — dogfooded `stamp` + `project set` + `--body-from` on
+      copied trees; real-repo `docs check docs/` exit 0. (2026-06-03.)
+- [x] 10. Quality, Docs, Refactor — closeout summaries; INDEX + snapshot
+      lockstep; status/plan updated. (2026-06-03.)
 
 ## Decisions
 
@@ -170,17 +173,17 @@ whole doc-with-frontmatter body is still refused.
 
 ## Success Criteria
 
-- [ ] `docs project set <doc> <name>` reassigns one doc's project
+- [x] `docs project set <doc> <name>` reassigns one doc's project
       atomically; `--new-project` guards typos; archived docs untouched.
-- [ ] `docs stamp <raw.md>` inserts a valid metadata block (title from H1,
+- [x] `docs stamp <raw.md>` inserts a valid metadata block (title from H1,
       role/project from flags or `.docs.toml`); re-running is a no-op bar
       `Updated:`.
-- [ ] `docs new --body-from` accepts a body whose prose contains `Reason:`/
+- [x] `docs new --body-from` accepts a body whose prose contains `Reason:`/
       `Plan:` lines, yet still refuses a whole doc-with-frontmatter body;
       the `edge-case-keyword` fixture expectation is flipped.
-- [ ] SKILL table + `cli.md` document `--body-from`/`project set`/`stamp`;
+- [x] SKILL table + `cli.md` document `--body-from`/`project set`/`stamp`;
       bundled skill refs byte-identical (`tests/test_skill_refs.py` GREEN).
-- [ ] Full suite GREEN; quality gate clean tree-wide; `docs check` exit 0.
+- [x] Full suite GREEN; quality gate clean tree-wide; `docs check` exit 0.
 
 ## OPEN QUESTIONS — RESOLVED (conductor-triaged 2026-06-03)
 
