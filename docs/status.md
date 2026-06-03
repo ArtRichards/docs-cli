@@ -19,6 +19,7 @@ Related:
 - pairs-with: m14-robustness-agent-native.md
 - pairs-with: m15-agent-native-authoring.md
 - pairs-with: m16-bundled-docs-skill-quality.md
+- pairs-with: m18-archive-edge-integrity.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
@@ -32,6 +33,20 @@ document test matrices, quality logs, generated report artifacts, and
 the mechanical limits of `docs check`. The milestone pair is
 [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md)
 + [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md).
+
+**Completed-milestone doc archival is DEFERRED pending M18.** The
+completed milestones M1–M9 + M12 (plan/log pairs), the M16 trio (plan +
+impl + test-matrix), and the three stray impl-logs
+(`m10-adoption-polish-impl.md`, `m11-pypi-publish-impl.md`,
+`m13-pypi-publish-impl.md`) remain in the LIVE `docs/` tree rather than
+under `archive/<date>/`. This is intentional: archiving interrelated docs
+into the archive subtree today orphans their `Related:` edges (a milestone
+plan↔log pair, or sweeping a log in beside its already-archived plan), which
+makes `docs check docs/` exit 2 — the
+[M18 — Archive edge integrity](m18-archive-edge-integrity.md) bug. Performing
+that archival is M18's Phase 9 integrate/dogfood payoff; M14/M15 stay live
+until the M17 publish regardless. Until M18 lands, the live tree keeps the
+completed-milestone docs in place so `docs check docs/` stays clean.
 
 The **v1.6 implementation train**: **M14 — Robustness + autonomous
 archive** is now **implementation-complete (2026-06-02)** —
@@ -371,8 +386,9 @@ for the milestone summary.
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
 | M14 — Robustness + autonomous archive (v1.6.0) | **Implementation-complete** (2026-06-02; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `--cascade`, bundled-ref guard + packaging fix; 458 GREEN, gate clean; `docs-cli==1.6.0` built locally — publish is M17's) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
 | M15 — Agent-native doc authoring (v1.6.0) | **Implementation-complete** — Phases 1–10 (carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17). Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN) on `m15/phases-1-4`; Phases 5–10 (impl + dogfood + closeout: all 41 RED → GREEN, 501 total, gate clean tree-wide, `docs check docs/` 0, bundled refs byte-identical) on `m15/phases-5-10` — both 2026-06-03. | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
-| M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance; pending operator commit/archive) | [Plan](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
+| M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance; code on `main` as `9ceb113`; doc archival of the M16 trio DEFERRED to M18 — see the deferred-archival note below) | [Plan](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
 | M17 — PyPI publish 1.6.0 | **Planned** (publish-only; ships M14 + M15 as `docs-cli==1.6.0` via the release-runbook, mirroring M13 → M12) | _not yet created_ | — |
+| M18 — Archive edge integrity (intra-archive Related: rewriting) | **Draft** (2026-06-03; correctness fix to `docs archive` — rewrite the moved doc's own archive-subtree `Related:` edges + repoint already-archived referrers; deliberately flips the pinned `test_archive_does_not_rewrite_archive_subtree_edges`; pending Open Q1, `docs mv` parity. Depends on nothing; unblocks the completed-milestone archival backlog) | [Plan](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
