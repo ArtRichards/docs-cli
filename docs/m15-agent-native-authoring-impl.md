@@ -604,3 +604,61 @@ non-required label or blank/prose (+ the interleaved PASS test); Q3
 untouched; Q4 `project set` archived detection path-based + precedence over
 outside/missing; Q5 CHANGELOG keeps `## 1.6.0 — UNRELEASED`, preamble notes
 M14+M15 landed locally, publish is M17.
+
+## Step 2 — fresh-eyes review fixes (post-Phase-10)
+
+A fresh-eyes review of the implementation step surfaced one real bug and two
+coverage gaps (no blockers). Applied on `m15/phases-5-10`:
+
+1. **Order-dependent archived precedence in `project set` (should-fix, REAL
+   BUG, FIXED).** The validate-all-first loop interleaved the archived
+   (exit 2) check with the missing / outside / malformed (exit 1) checks in a
+   single argument-order pass, returning on the FIRST failing token. So
+   `set <archived> <missing> <proj>` correctly exited 2, but
+   `set <missing> <archived> <proj>` and `set <outside> <archived> <proj>`
+   wrongly exited 1 — violating the contract (cli.md `project set` archived
+   clause ~533-540; agent-native-invocation.md §5E; CHANGELOG B2; resolved
+   Q4): *if ANY named doc resolves under `archive_dir`, the whole batch
+   refuses exit 2 REGARDLESS of position.* Safety was always intact (nothing
+   written, no INDEX in any ordering) — only the exit code + message were
+   order-dependent. **Fix (code-only; cli.md was already correct, so no
+   byte-identity change):** split the validate logic into a dedicated
+   archived-only PRE-PASS over EVERY named doc (path-based: root-relative
+   first segment == `config.archive_dir`) that refuses exit 2 before the
+   existence / outside-root / malformed pass runs on any token. The archived
+   message + path-naming for the already-passing `live, archived` ordering is
+   unchanged. The pre-pass uses a distinct `arc_rel` local so the second pass
+   can keep `rel: str | None` (mypy-clean).
+   - **Test gap that masked it:** the only archived test exercised the
+     `live, archived` ordering. Added
+     `test_project_set_archived_precedence_is_order_independent_missing_first`
+     and `..._outside_first` — each asserts exit 2, the ARCHIVED path named in
+     stderr, no file mutated, and no INDEX written. Both were verified to FAIL
+     before the fix (exit 1) and PASS after.
+
+2. **Untested partial/invalid-metadata-block stamp edge (nit / coverage,
+   ADDED).** A file with an H1 + an existing block carrying a BAD required
+   field (an invalid `Role:`) fails strict `parse()` → stamp falls to the
+   fresh-insert path → `insert_metadata_block` supersedes the four required
+   fields (the bogus `Role:` is replaced, NOT parked under `## Migrated
+   metadata` — it is a required field) → exactly one valid block. Added
+   fixture `tests/fixtures/stamp/raw-invalid-block.md` +
+   `test_stamp_supersedes_invalid_existing_block`: asserts exactly ONE of each
+   required field (no doubled/orphaned block), the bogus value gone, no
+   Migrated-metadata section, body preserved, `docs check` exit 0, and a
+   follow-up re-stamp is now idempotent (already-stamped).
+
+3. **Mixed no-op batch untested (nit / coverage, ADDED).** A batch mixing one
+   already-at-target doc + one needing-rewrite doc is NOT a whole-batch no-op:
+   it rewrites ONLY the non-matching doc, leaves the already-current doc
+   byte-identical, and the footer counts only the rewritten doc. Added
+   `test_project_set_mixed_no_op_rewrites_only_non_matching` (exit 0,
+   `set alpha on 1 doc(s)`, no "already current").
+
+The `_cmd_project_set` triple-parse / dead-store (~cli.py:4342) remains a
+behaviour-preserving simplify candidate **deferred to Step 3's /simplify
+pass** — untouched here.
+
+**Gate after the review-fix pass:** 505 passed (501 + 4 new); ruff / format /
+mypy clean; `docs check docs/` exit 0; both bundled refs byte-identical;
+INDEX + frozen snapshot in lockstep.

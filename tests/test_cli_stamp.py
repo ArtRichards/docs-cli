@@ -251,6 +251,51 @@ def test_stamp_preserves_foreign_metadata(docs_script, fixtures_dir, tmp_path):
     assert chk.returncode == 0, (chk.stdout, chk.stderr)
 
 
+# --- Partial / invalid existing metadata block (fresh-insert path) ----------
+
+
+def test_stamp_supersedes_invalid_existing_block(docs_script, fixtures_dir, tmp_path):
+    """A file with an H1 + a block whose `Role:` is invalid.
+
+    Such a file fails the strict `parse()` (the bogus Role is not in the
+    vocabulary) → stamp falls to the FRESH-insert path. `insert_metadata_block`
+    supersedes the four required fields (the bogus `Role:` is replaced with the
+    valid default, NOT parked under `## Migrated metadata` — it is a required
+    field). The result must carry exactly ONE valid metadata block — no
+    orphaned/doubled block, no stray `Role: not-a-real-role` line — and the
+    stamped tree must pass `docs check` (exit 0).
+    """
+    root = _stamp_tree(fixtures_dir, tmp_path, "raw-invalid-block.md")
+    target = root / "raw-invalid-block.md"
+    proc = _run(docs_script, "stamp", "raw-invalid-block.md", "--role", "spec", "--root", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    text = target.read_text()
+
+    # Exactly ONE of each required field — no doubled block. Count metadata
+    # lines (a line that starts with the label); the block lives in the header,
+    # so a simple per-line scan is unambiguous.
+    lines = text.splitlines()
+    for label in ("Lifecycle:", "Role:", "Project:", "Updated:"):
+        hits = [ln for ln in lines if ln.startswith(label)]
+        assert len(hits) == 1, (f"{label} appears {len(hits)}x, expected 1", text)
+    # The bogus Role was SUPERSEDED (valid value present), not preserved.
+    assert "Role: spec" in text, text
+    assert "not-a-real-role" not in text, text
+    # No Migrated-metadata section: the only "foreign" lines were required
+    # fields, which are superseded rather than parked.
+    assert "## Migrated metadata" not in text, text
+    # The body survives the stamp.
+    assert "BODYMARKER" in text, text
+    # The stamped tree passes docs check (the block round-trips through parse).
+    chk = _run(docs_script, "check", "--root", str(root))
+    assert chk.returncode == 0, (chk.stdout, chk.stderr)
+    # And the doc parses to a single valid block: a re-stamp is now idempotent
+    # (clean parse → only Updated refreshes, reported as already-stamped).
+    re_proc = _run(docs_script, "stamp", "raw-invalid-block.md", "--root", str(root))
+    assert re_proc.returncode == 0, (re_proc.stdout, re_proc.stderr)
+    assert "already stamped" in re_proc.stderr, re_proc.stderr
+
+
 # --- Dry-run writes nothing -------------------------------------------------
 
 

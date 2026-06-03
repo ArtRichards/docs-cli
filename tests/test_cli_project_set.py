@@ -282,6 +282,70 @@ def test_project_set_archived_doc_refuses_whole_batch(docs_script, fixtures_dir,
     assert not (root / "INDEX.md").exists()
 
 
+def test_project_set_archived_precedence_is_order_independent_missing_first(
+    docs_script, fixtures_dir, tmp_path
+):
+    """`<missing> <archived> <proj>` must exit 2 (archived), not exit 1 (missing).
+
+    The archived check takes PRECEDENCE over missing/outside/malformed and is
+    ORDER-INDEPENDENT (cli.md `project set` archived clause; §5E; resolved Q4):
+    if ANY named doc is under archive_dir, the whole batch refuses exit 2
+    REGARDLESS of position — even when an earlier token is missing.
+    """
+    root = _multi_project_alpha_tree(fixtures_dir, tmp_path)
+    archived = root / "archive" / "2026-04-01" / "beta-old.md"
+    archived_before = archived.read_text()
+    proc = _run(
+        docs_script,
+        "project",
+        "set",
+        "does-not-exist.md",  # missing, named FIRST
+        "archive/2026-04-01/beta-old.md",  # archived, named SECOND
+        "beta",
+        "--root",
+        str(root),
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # The archived path is named (not the missing one): the archived clause won.
+    assert "archive" in proc.stderr and "beta-old.md" in proc.stderr, proc.stderr
+    assert "is under the archive subtree" in proc.stderr, proc.stderr
+    # Nothing mutated; no INDEX from the aborted batch.
+    assert archived.read_text() == archived_before
+    assert not (root / "INDEX.md").exists()
+
+
+def test_project_set_archived_precedence_is_order_independent_outside_first(
+    docs_script, fixtures_dir, tmp_path
+):
+    """`<outside> <archived> <proj>` must exit 2 (archived), not exit 1 (outside)."""
+    root = _multi_project_alpha_tree(fixtures_dir, tmp_path)
+    archived = root / "archive" / "2026-04-01" / "beta-old.md"
+    archived_before = archived.read_text()
+    outside = tmp_path / "outside.md"
+    outside.write_text(
+        "# Outside\n\nLifecycle: active\nRole: notes\nProject: alpha\n"
+        "Updated: 2026-05-20\n\nBody.\n"
+    )
+    outside_before = outside.read_text()
+    proc = _run(
+        docs_script,
+        "project",
+        "set",
+        str(outside),  # outside the root, named FIRST
+        "archive/2026-04-01/beta-old.md",  # archived, named SECOND
+        "beta",
+        "--root",
+        str(root),
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "archive" in proc.stderr and "beta-old.md" in proc.stderr, proc.stderr
+    assert "is under the archive subtree" in proc.stderr, proc.stderr
+    # Neither file mutated; no INDEX.
+    assert archived.read_text() == archived_before
+    assert outside.read_text() == outside_before
+    assert not (root / "INDEX.md").exists()
+
+
 # --- Atomic validate failure (missing / malformed doc) ----------------------
 
 
@@ -342,6 +406,38 @@ def test_project_set_no_op_when_already_current(docs_script, fixtures_dir, tmp_p
     assert (root / "alpha-charter.md").read_text() == before
     # No INDEX refresh on a no-op.
     assert not (root / "INDEX.md").exists()
+
+
+def test_project_set_mixed_no_op_rewrites_only_non_matching(docs_script, fixtures_dir, tmp_path):
+    """A batch mixing an already-at-target doc + a needing-rewrite doc.
+
+    The whole batch is NOT a no-op: `set` rewrites ONLY the non-matching
+    doc(s), leaves the already-current doc byte-identical, and the footer
+    counts only the rewritten doc(s) — `set <proj> on 1 doc(s)`.
+    """
+    root = _multi_project_alpha_tree(fixtures_dir, tmp_path)
+    # alpha-charter.md is ALREADY Project: alpha (target); beta-notes.md is
+    # Project: beta and NEEDS the rewrite to alpha.
+    charter_before = (root / "alpha-charter.md").read_text()
+    proc = _run(
+        docs_script,
+        "project",
+        "set",
+        "alpha-charter.md",  # already at target — must NOT be rewritten
+        "beta-notes.md",  # needs rewrite alpha
+        "alpha",
+        "--root",
+        str(root),
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The already-current doc is byte-identical (not re-stamped, no Updated bump).
+    assert (root / "alpha-charter.md").read_text() == charter_before
+    # The non-matching doc was rewritten.
+    assert "Project: alpha" in (root / "beta-notes.md").read_text()
+    assert "Project: beta" not in (root / "beta-notes.md").read_text()
+    # Footer counts ONLY the rewritten doc — not the whole batch, not a no-op.
+    assert "set alpha on 1 doc(s)" in proc.stderr, proc.stderr
+    assert "already current" not in proc.stderr, proc.stderr
 
 
 # --- Dry-run ----------------------------------------------------------------

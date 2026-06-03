@@ -4286,29 +4286,43 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
             )
             return 2
 
-    # Validate-all-first: resolve every named doc's path + parse it, with the
-    # archived check (path-based) taking PRECEDENCE over missing / outside
-    # (resolved Q4). No writes until all pass.
+    # Validate-all-first: resolve every named doc's path + parse it. No writes
+    # until all pass. The archived check (path-based) takes PRECEDENCE over
+    # missing / outside / malformed (resolved Q4) and is ORDER-INDEPENDENT: it
+    # runs as a dedicated pre-pass over EVERY named doc, so a batch with any
+    # archived token refuses (exit 2) regardless of where that token sits
+    # relative to a missing / outside / malformed one.
     root_resolved = root.resolve()
     archive_dir = config.archive_dir
+
+    # Archived-only pre-pass: if ANY named doc's root-relative first segment is
+    # the archive dir, refuse the whole batch (exit 2) naming the path — even
+    # when other tokens are missing / outside / malformed.
+    for raw_doc in docs:
+        doc_path = Path(raw_doc)
+        target = doc_path if doc_path.is_absolute() else root / doc_path
+        try:
+            arc_rel = target.resolve().relative_to(root_resolved).as_posix()
+        except ValueError:
+            continue  # outside the root → cannot be archived; deferred to next pass
+        if arc_rel == archive_dir or arc_rel.startswith(archive_dir + "/"):
+            print(
+                f"docs: project set: {arc_rel} is under the archive subtree (read-only); refusing",
+                file=sys.stderr,
+            )
+            return 2
+
+    # Existence / outside-root / malformed pass (exit 1 on the first failure).
     planned: list[tuple[Path, str]] = []  # (path, root-relative posix)
     for raw_doc in docs:
         doc_path = Path(raw_doc)
         target = doc_path if doc_path.is_absolute() else root / doc_path
 
-        # Archived check is PATH-BASED and takes precedence: a named doc whose
-        # root-relative first segment is the archive dir refuses the whole
-        # batch (exit 2), even if it is missing or outside.
+        rel: str | None
         try:
             rel = target.resolve().relative_to(root_resolved).as_posix()
         except ValueError:
             rel = None
-        if rel is not None and (rel == archive_dir or rel.startswith(archive_dir + "/")):
-            print(
-                f"docs: project set: {rel} is under the archive subtree (read-only); refusing",
-                file=sys.stderr,
-            )
-            return 2
 
         # Outside the resolved root → exit 1 (explicit-path error, not a
         # no-root refusal — the cross-verb exit-code convention).
