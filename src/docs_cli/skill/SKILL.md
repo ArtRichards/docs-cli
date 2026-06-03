@@ -1,6 +1,6 @@
 ---
 name: docs
-description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / check / migrate) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
+description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, stamp a metadata block onto a file already written, reassign a doc's project, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / stamp / check / migrate / project rename / project set / install-skill) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
 ---
 
 # docs — run the verb, never hand-edit

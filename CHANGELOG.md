@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 1.6.0 — UNRELEASED
 
+M14 + M15 landed locally; the publish milestone (M17) ships 1.6.0 to PyPI.
+
 M14: robustness + autonomous archive. Burns down the post-1.5.0
 multi-agent-review correctness/atomicity findings (Thread A), lands the
 non-interactive `docs archive --cascade` agent affordance (B1), and
 corrects a packaging guard (C3). The bundled-skill reference links were
-already fixed by M16 (C1) — M14 adds a regression guard. Built locally
-only; the publish milestone (M17) ships 1.6.0 to PyPI. M15 appends its
-agent-native authoring entries to this same section before M17 publishes.
+already fixed by M16 (C1) — M14 adds a regression guard.
+
+M15: agent-native doc authoring. Adds the single-doc `docs project set`
+(B2) and the write-then-stamp `docs stamp` (B3), and replaces the
+`docs new --body-from` refusal heuristic with a real-metadata-block
+detector (C4) so legitimate prose bodies are no longer wrongly refused.
 
 ### Added
 
@@ -31,6 +36,31 @@ agent-native authoring entries to this same section before M17 publishes.
   `--interactive` restores the legacy `[y/N]` prompt and is the only path
   that reads stdin. `--cascade`/`--cascade-only`/`--interactive` are
   mutually exclusive; `--cascade-dry-run` is rejected with `--interactive`.
+- **`docs project set <doc>... <new-project>`** (M15 — B2). The single-doc
+  counterpart to `project rename`: reassigns the `Project:` field of just
+  the named docs (inserting the line when absent) and regenerates `INDEX.md`
+  once at end of batch — never touching `.docs.toml`, non-named docs, or
+  `Related:` edges. Validate-all-first atomic semantics (no write until every
+  named doc passes). `<new-project>` is auto-normalised; a value new to the
+  tree is **refused** (exit 2) unless `--new-project` is passed — the typo
+  guard that stops an agent silently fragmenting the INDEX (`idea` vs
+  `ideas`). The refusal carries a `difflib`-derived `did you mean '<closest>'?`
+  prefix when a known project is close, and **always** prints the
+  `to create a new project group, pass --new-project` recovery hint. A named
+  archived doc refuses the whole batch (exit 2); a missing/malformed/outside
+  named doc aborts before any write (exit 1). `--dry-run` previews.
+- **`docs stamp <file>... [--role] [--project] [--title]`** (M15 — B3). The
+  write-then-stamp counterpart to `docs new --body-from`: inserts a
+  convention-correct metadata block onto one or more files an agent already
+  wrote, preserving the body verbatim. `Lifecycle: draft`; role from `--role`
+  else the default `notes` (there is **no** H1-role inference — a file whose
+  H1 reads like a plan still gets `notes`); project from `--project` else the
+  root's configured project; title from the file's H1, `--title`, or a
+  filename-derived synthesis. Re-stamping a file that already carries a valid
+  block is idempotent — only `Updated:` is refreshed. Foreign metadata-shaped
+  lines are parked under a `## Migrated metadata` body section. Atomic
+  multi-file batch (a bad/missing file aborts before any write, exit 1); one
+  end-of-batch INDEX refresh; invalid `--role` exits 2; `--dry-run` previews.
 
 ### Changed
 
@@ -77,6 +107,16 @@ agent-native authoring entries to this same section before M17 publishes.
   done by M16). M14 adds a regression guard
   (`test_bundled_skill_has_no_repo_relative_links`) that fails if any
   bundled reference reintroduces a repo-relative `../` link.
+- **`docs new --body-from` no longer refuses legitimate prose bodies**
+  (M15 — C4). The old refusal heuristic flagged any body whose first 20
+  lines contained a `Label:`-shaped line, so a test-matrix section opening
+  `## Risk level` / `Reason: …` or a prose `Plan:` line was wrongly refused.
+  The detector now refuses **only** on a real metadata block: a leading
+  `---` YAML fence, or a contiguous run of **≥ 2** of the required-field
+  labels `{Lifecycle, Role, Updated}` on adjacent lines (a non-required
+  `Label:` line or any blank/prose line resets the run). A lone prose
+  required-field line is accepted and appended verbatim. The refusal error
+  tokens are unchanged.
 
 ## 1.5.0 — 2026-05-29
 
