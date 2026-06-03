@@ -3301,21 +3301,6 @@ def _resolve_managed_root(args: argparse.Namespace, start: Path, *, verb: str) -
     return found
 
 
-def _resolve_touch_root(args: argparse.Namespace, start: Path) -> Path | int:
-    """M12: resolve a docs root for `docs touch` (thin wrapper, `touch:` prefix)."""
-    return _resolve_managed_root(args, start, verb="touch")
-
-
-def _resolve_project_root(args: argparse.Namespace, start: Path) -> Path | int:
-    """M12: resolve a docs root for `docs project rename` (`project rename:` prefix)."""
-    return _resolve_managed_root(args, start, verb="project rename")
-
-
-def _resolve_new_root(args: argparse.Namespace, start: Path) -> Path | int:
-    """M14 (A2): resolve a docs root for `docs new` (`new:` prefix)."""
-    return _resolve_managed_root(args, start, verb="new")
-
-
 def _refresh_index(
     root: Path,
     config: Config,
@@ -3379,7 +3364,6 @@ def _cmd_index(args: argparse.Namespace) -> int:
 # real convention metadata block in a `--body-from` body. `Project` is
 # intentionally excluded — a prose `Project:` line is common and weak signal;
 # the block-shape signal is the {Lifecycle, Role, Updated} cluster.
-_C4_REQUIRED_LABELS: frozenset[str] = frozenset({"Lifecycle", "Role", "Updated"})
 _C4_REQUIRED_LABEL_RE = re.compile(r"^(Lifecycle|Role|Updated):\s")
 
 
@@ -3447,7 +3431,7 @@ def _cmd_new(args: argparse.Namespace) -> int:
     # silently scaffold into an unmanaged dir with default config; it
     # resolves a real `.docs.toml` root or refuses with exit 2 (mirrors
     # `touch` / `project rename`). The read verbs keep the cwd-fallback.
-    root_or_exit = _resolve_new_root(args, Path.cwd())
+    root_or_exit = _resolve_managed_root(args, Path.cwd(), verb="new")
     if isinstance(root_or_exit, int):
         return root_or_exit
     root = root_or_exit
@@ -3911,11 +3895,11 @@ def _cmd_touch(args: argparse.Namespace) -> int:
     # happens AFTER the file-existence check (OQ-β) so the existing
     # missing-file → exit 1 contract is preserved; an explicit
     # `--root` is validated against `.docs.toml` presence in
-    # `_resolve_touch_root`. The first file's path (not its parent)
+    # `_resolve_managed_root`. The first file's path (not its parent)
     # is named in the refusal message so the operator sees the
     # offending doc.
     start = file_paths[0] if file_paths else Path.cwd()
-    root_or_exit = _resolve_touch_root(args, start)
+    root_or_exit = _resolve_managed_root(args, start, verb="touch")
     if isinstance(root_or_exit, int):
         return root_or_exit
     root = root_or_exit
@@ -4047,7 +4031,7 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
     # apply throughout.
 
     # OQ-1: refuse cleanly when no .docs.toml ancestor.
-    root_or_exit = _resolve_project_root(args, Path.cwd())
+    root_or_exit = _resolve_managed_root(args, Path.cwd(), verb="project rename")
     if isinstance(root_or_exit, int):
         return root_or_exit
     root = root_or_exit
@@ -4313,7 +4297,9 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
             return 2
 
     # Existence / outside-root / malformed pass (exit 1 on the first failure).
-    planned: list[tuple[Path, str]] = []  # (path, root-relative posix)
+    # Read + parse each doc exactly once here; the no-op/rewrite pass below
+    # reuses that text + Doc (the file is untouched until every doc passes).
+    planned: list[tuple[Path, str, Doc, str]] = []  # (path, root-relative posix, doc, text)
     for raw_doc in docs:
         doc_path = Path(raw_doc)
         target = doc_path if doc_path.is_absolute() else root / doc_path
@@ -4339,20 +4325,20 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
             return 1
 
         # Malformed (parse raises) → exit 1.
+        text = target.read_text()
         try:
-            doc = parse(target.read_text(), target, root)
+            doc = parse(text, target, root)
         except (MetadataError, VocabularyError) as exc:
             print(f"docs: {exc}", file=sys.stderr)
             return 1
-        planned.append((target, rel))
+        planned.append((target, rel, doc, text))
 
     # No-op: every named doc already resolves to the normalised project.
     rewrites: list[tuple[Path, str, str]] = []  # (path, rel, new_text)
-    for target, rel in planned:
-        doc = parse(target.read_text(), target, root)
+    for target, rel, doc, text in planned:
         if _resolved_project(doc, config) == normalised:
             continue
-        new_text = set_metadata_field(target.read_text(), "Project", normalised)
+        new_text = set_metadata_field(text, "Project", normalised)
         rewrites.append((target, rel, new_text))
 
     if not rewrites:
@@ -4401,8 +4387,8 @@ def _replace_or_prepend_h1(text: str, title: str) -> str:
         if line.strip() == "":
             continue
         if line.lstrip().startswith("# "):
-            ending = line[len(line.rstrip("\r\n")) :]
-            keep[idx] = f"# {title}{ending or chr(10)}"
+            ending = line[len(line.rstrip("\r\n")) :] or "\n"
+            keep[idx] = f"# {title}{ending}"
             return "".join(keep)
         break
     # No leading H1 — prepend one. `insert_metadata_block` will keep it.

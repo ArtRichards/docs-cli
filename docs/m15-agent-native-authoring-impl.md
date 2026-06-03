@@ -662,3 +662,55 @@ pass** — untouched here.
 **Gate after the review-fix pass:** 505 passed (501 + 4 new); ruff / format /
 mypy clean; `docs check docs/` exit 0; both bundled refs byte-identical;
 INDEX + frozen snapshot in lockstep.
+
+## Step 3 — /simplify pass (post-review)
+
+Post-implementation simplify mode over M15's code only. Green baseline first
+(505 passed; ruff / format / mypy clean; `docs check docs/` exit 0), three
+behaviour-preserving simplifications applied, gate re-run green. Net
+−14 lines (14 insertions / 28 deletions), all in `src/docs_cli/cli.py`.
+
+1. **`_cmd_project_set` triple-parse / dead-store collapsed (the deferred
+   candidate).** The existence/malformed pass parsed each doc into a `doc`
+   local that was immediately discarded (a dead store; the parse was kept only
+   for its malformed-→-exit-1 side effect), then the no-op pass RE-read +
+   RE-parsed the same file, then `set_metadata_field` RE-read it a third time.
+   `parse()` and `set_metadata_field()` are pure functions of the text and the
+   file is untouched until every doc passes, so this was three reads + two
+   parses per doc for one read + one parse worth of information. Fix: the
+   validate pass now reads the text once and collects `(target, rel, doc,
+   text)` in `planned`; the no-op/rewrite pass reuses that `doc` + `text`
+   directly. Clever (implicit re-derivation) → obvious (read once, carry the
+   values). Behaviour identical — same exit codes, same rewrites, same INDEX.
+
+2. **Three single-use resolver wrappers inlined.** `_resolve_touch_root` /
+   `_resolve_project_root` / `_resolve_new_root` were each a one-line wrapper
+   over `_resolve_managed_root(args, start, verb=…)` with exactly one call
+   site, while M15's own `_cmd_project_set` / `_cmd_stamp` already called
+   `_resolve_managed_root` directly. Removed the three wrappers and inlined the
+   `verb="touch"` / `"project rename"` / `"new"` calls at their sites (and the
+   stale `_resolve_touch_root` mention in the `_cmd_touch` comment). The
+   `verb=` strings are unchanged, so every refusal message stays byte-for-byte
+   (the touch/rename/new tests, which pin those messages via subprocess, still
+   pass). Abstraction layer dropped; the call site now shows the verb prefix
+   inline.
+
+3. **Dead `_C4_REQUIRED_LABELS` constant removed + `chr(10)` de-cleverised.**
+   The module-level `_C4_REQUIRED_LABELS` frozenset was never referenced — the
+   labels are encoded in `_C4_REQUIRED_LABEL_RE`, the only thing used — so it
+   read as a load-bearing source of truth that wasn't; removed (the rationale
+   comment stays attached to the regex). In `_replace_or_prepend_h1`,
+   `f"# {title}{ending or chr(10)}"` used `chr(10)` to dodge the 3.11 ban on
+   backslashes inside f-string braces; hoisted the `or "\n"` into the plain
+   `ending = …` statement so the f-string is a bare interpolation and the
+   newline is obvious.
+
+Considered and SKIPPED (no genuine simplification): merging the C4 fence-scan
+and cluster-scan loops (different concerns; merging is cleverer, not simpler);
+inlining `_cmd_stamp`'s `_resolve_file` closure into its comprehension (denser,
+not clearer); merging `_cmd_stamp`'s existence + outside-root passes (would
+change which error surfaces first for a mixed batch — a pinned precedence).
+
+**Gate after /simplify:** 505 passed; ruff / format / mypy clean; `docs check
+docs/` exit 0; both bundled refs byte-identical; INDEX + frozen snapshot in
+lockstep.
