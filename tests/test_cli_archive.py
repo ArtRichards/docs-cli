@@ -635,31 +635,48 @@ def test_archive_pair_leaves_check_clean(docs_script, fixtures_dir, tmp_path):
 def test_archive_leaves_unrelated_archived_content_byte_identical(
     docs_script, fixtures_dir, tmp_path
 ):
-    """Open Q4 boundary lock (partial): a PRE-ARCHIVED bystander doc whose
-    `Related:` edge points at a NON-moving target (`helper.md`) — plus prose
-    mentioning the moving target `core.md` — is left byte-identical when an
-    UNRELATED doc (`core.md`) is archived.
+    """Open Q4 boundary lock (BOTH directions): when `core.md` is archived,
+    the fix rewrites an archived doc's `Related:` edge IFF its target equals a
+    batch `old_rel` (i.e. iff the target is moving in THIS op) — and never
+    otherwise.
 
-    What this pins: that an archived bystander's content, `Updated:`,
-    lifecycle, and its unrelated edges all stay byte-for-byte verbatim when a
-    doc it does NOT reference is archived. It guards the read-only stance for
-    everything OUTSIDE move-driven edge rewrites.
+    Two pre-archived bystanders in DIFFERENT archive dates exercise both
+    sides of the boundary:
 
-    What this does NOT pin: the edge-level boundary "the fix may only rewrite
-    an edge whose target equals a batch `old_rel`." Because this bystander's
-    edge points at a non-moving target, the test never exercises that
-    boundary — an over-broad fix that rewrote edges to non-moving targets
-    would still leave THIS doc unchanged. Its protection is byte-identity +
-    the structurally-anchored `rewrite_related_refs` matcher, not the
-    edge-level guard. (Phase 6 strengthens this — see the impl-log
-    carry-forward note.)
+    * `bystander.md` (`archive/2026-04-01/`) — edge -> NON-moving `helper.md`,
+      plus prose mentioning the moving `core.md`. It must stay BYTE-IDENTICAL:
+      its content, `Updated:`, lifecycle, and its unrelated edge are verbatim.
+      This guards the read-only stance for everything OUTSIDE move-driven edge
+      rewrites, and fails an over-broad fix that touched a non-moving edge OR
+      prose that merely names the moving doc (e.g. a naive whole-file string
+      replace instead of the structural `rewrite_related_refs` matcher).
+    * `mover-ref.md` (`archive/2026-03-01/`) — edge -> the MOVING `core.md`.
+      Its edge MUST be repointed to `archive/2026-05-28/core.md` (the new
+      path), even though it lives in a different archive date than the move's
+      destination. This fails any under-broad fix that unconditionally skips
+      archived docs (the pre-M18 stance) and leaves the edge dangling.
 
-    This test is GREEN at the Phase-4 baseline — a regression LOCK on the
-    boundary, not a behaviour RED. It must stay green through Phase 6.
+    Together these pin the exact boundary: rewrite an archived doc's edge iff
+    its target is in the batch `old_rels`. The Phase-4 partial form of this
+    test (single non-moving bystander) could not distinguish the UNDER-broad
+    skip; the second, moving-target bystander closes that gap (impl-log
+    Phase-6 carry-forward).
+
+    Boundary note (Q4): the `old_rels` gate and a hypothetical "walk all
+    archived docs unconditionally" fix produce BYTE-IDENTICAL output here,
+    because `rewrite_related_refs` only ever rewrites a bullet whose target
+    EXACTLY equals an `old_rel`. The exact-match matcher — not the gate — is
+    the edge-level boundary guard; the gate is an intent/efficiency screen
+    (skip archived docs that reference no mover). The byte-identity assertion
+    therefore catches over-broad fixes that escape the matcher (prose /
+    arbitrary content), while the mover-ref assertion catches the under-broad
+    skip. (Verified in Phase 6: an unconditional skip fails this test; an
+    unconditional rewrite leaves it green precisely because the matcher is
+    target-exact.)
     """
     root = _crossrefs_tree(fixtures_dir, tmp_path)
-    # An archived doc whose edge points at `helper.md` (which does NOT move
-    # in the op below — we archive `core.md`), plus prose.
+    # Bystander A: archived doc whose edge points at `helper.md` (which does
+    # NOT move in the op below — we archive `core.md`), plus prose.
     archived_dir = root / "archive" / "2026-04-01"
     archived_dir.mkdir(parents=True)
     bystander = archived_dir / "bystander.md"
@@ -673,6 +690,21 @@ def test_archive_leaves_unrelated_archived_content_byte_identical(
         "whose prose mentions core.md and helper.md should stay verbatim.\n"
     )
     before = bystander.read_text()
+
+    # Bystander B: archived doc in a DIFFERENT date whose edge points at the
+    # MOVING `core.md`. Its edge MUST be repointed to the new archive path.
+    other_dir = root / "archive" / "2026-03-01"
+    other_dir.mkdir(parents=True)
+    mover_ref = other_dir / "mover-ref.md"
+    mover_ref.write_text(
+        "# Mover ref\n\n"
+        "Lifecycle: archived\nRole: notes\nProject: cross-refs\n"
+        "Updated: 2026-03-01\n\n"
+        "Related:\n- references: core.md\n\n"
+        "## Body\n\n"
+        "An archived doc whose edge points at the (moving) core.md.\n"
+    )
+
     proc = _run(
         docs_script,
         "archive",
@@ -681,9 +713,12 @@ def test_archive_leaves_unrelated_archived_content_byte_identical(
         "2026-05-28",
     )
     assert proc.returncode == 0, proc.stderr
-    # The unrelated archived doc is byte-identical — its edge target did not
-    # move, so nothing about it is rewritten.
+    # Direction 1 — non-moving target: byte-identical (nothing rewritten).
     assert bystander.read_text() == before
+    # Direction 2 — moving target: the edge IS repointed to the new path.
+    after = mover_ref.read_text()
+    assert "references: archive/2026-05-28/core.md" in after, after
+    assert "references: core.md\n" not in after, after
 
 
 def test_archive_cascade_trio_lands_edge_clean(docs_script, fixtures_dir, tmp_path):

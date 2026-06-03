@@ -4027,7 +4027,10 @@ def _rewrite_referring_edges(
         return
     old_rels = {old for old, _new in moves}
     for doc in walk(root, config, predicate=predicate):
-        if doc.archived:
+        # M18 (D2/Q4): skip archived docs UNLESS one of their `Related:`
+        # targets is moving in this batch — then repoint that edge (the
+        # narrow move-driven exception to the M3 read-only stance).
+        if doc.archived and not any(target in old_rels for _verb, target in doc.related):
             continue
         text = doc.path.read_text()
         original = text
