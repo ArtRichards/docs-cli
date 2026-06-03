@@ -140,6 +140,16 @@ should be implemented after it. Both land 1.6.0 locally; **M17** publishes.
 - **Depends on M14.** Implement after M14: M15 shares the mutating-verb
   surface M14 hardens, and appends to the `## 1.6.0 — UNRELEASED`
   CHANGELOG section M14 opens. No publish here — M17 ships both.
+- **Cross-verb exit-code convention (review-fix, 2026-06-03, binding).**
+  No-docs-root = **exit 2** (all verbs — the `_resolve_*_root` strict-root
+  refusal: nothing can be resolved). A named target that resolves **outside
+  the already-resolved root** = **exit 1** for the explicit-path verbs
+  (`touch` / `stamp` / `project set`) — matching `docs touch`'s precedent
+  (cli.py:3850-3853) that an out-of-root explicit argument is a recoverable
+  path error, not a no-root refusal. Corrected `project set`'s contract
+  (it had grouped "named doc outside the root" at exit 2); `stamp`'s
+  contract already said exit 1. See cli.md's "Cross-verb exit-code
+  convention" note in the Exit codes summary.
 
 ## Testing / Quality Gate
 

@@ -521,11 +521,14 @@ value.
 parsed *before* any write: if any named path is missing or malformed, or any
 named doc resolves outside the docs root, the batch aborts **before any disk
 mutation** and the offending path is named on stderr; every doc is left
-byte-identical and no INDEX refresh runs. A missing/malformed named doc exits
-1; an outside-root / archived / typo / empty-name / single-token failure exits
-2. After validation passes, every rewrite is committed via `atomic_write`, then
-`INDEX.md` is refreshed exactly once (honouring `[exclude]` / `.docsignore`,
-M14 — A6).
+byte-identical and no INDEX refresh runs. A missing/malformed named doc, or a
+named doc that resolves **outside the resolved docs root**, exits 1 — matching
+`docs touch`'s precedent that a named target outside an *already-resolved* root
+is an explicit-path error, not a no-root refusal (the cross-verb exit-code
+convention; see the Exit codes summary). An archived / typo / empty-name /
+single-token failure exits 2. After validation passes, every rewrite is
+committed via `atomic_write`, then `INDEX.md` is refreshed exactly once
+(honouring `[exclude]` / `.docsignore`, M14 — A6).
 
 **Archived target → refuse the whole batch (exit 2).** Archive-subtree docs are
 read-only by convention (M3). Unlike `project rename` (which *skips + reports*
@@ -558,10 +561,12 @@ docs: project set: set <new-project> on <N> doc(s)
 ```
 
 **Exit codes.** 0 success / no-op / dry-run; 1 a named doc is missing or
-malformed (validate-all-first abort, byte-identical tree); 2 hard error
-(no `.docs.toml` ancestor or `--root` without `.docs.toml`; a named doc outside
-the docs root; a named archived doc; empty post-normalised `<new-project>`; an
-unknown `<new-project>` without `--new-project`; a single-token grammar error).
+malformed, or a named doc resolves outside the docs root (validate-all-first
+abort, byte-identical tree — matching `docs touch`'s "named target outside the
+resolved root" precedent); 2 hard error (no `.docs.toml` ancestor or `--root`
+without `.docs.toml`; a named archived doc; empty post-normalised
+`<new-project>`; an unknown `<new-project>` without `--new-project`; a
+single-token grammar error).
 
 ### `docs stamp <file>... [--role ROLE] [--project NAME] [--title "…"] [--dry-run] [--quiet] [--root DIR]`
 
@@ -998,12 +1003,24 @@ M12 / M14 / M15-specific exit-code shape:
 | Verb | 0 | 1 | 2 |
 |---|---|---|---|
 | `project rename` | success / no-op / dry-run | doc lacks editable metadata block | malformed `.docs.toml`; no `.docs.toml` ancestor; empty post-normalised `<new-name>` |
-| `project set` (M15 — B2) | success / no-op / dry-run | a named doc is missing or malformed (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; a named doc outside the docs root or under the archive subtree; empty post-normalised `<new-project>`; unknown `<new-project>` without `--new-project`; single-token grammar error |
+| `project set` (M15 — B2) | success / no-op / dry-run | a named doc is missing or malformed, or a named doc resolves outside the docs root (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; a named doc under the archive subtree; empty post-normalised `<new-project>`; unknown `<new-project>` without `--new-project`; single-token grammar error |
 | `stamp` (M15 — B3) | success / dry-run | a named file is missing or outside the docs root (validate-all-first abort) | invalid `--role`; no `.docs.toml` ancestor or `--root` without `.docs.toml` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
 | `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); invalid cascade-flag combination (M14 — B1) |
 | `archive --cascade-dry-run` | preview only; writes nothing (exit 0) | — | — |
 | `mv` (M14 — A1 / A4) | success / dry-run | collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1); `OSError` mid edge-rewrite after the move (A4); both paths outside the docs root |
+
+**Cross-verb exit-code convention (no-root vs outside-root).** Two distinct
+"out of the tree" conditions map to *different* codes for the explicit-path
+verbs (`touch`, `stamp`, `project set`):
+
+- **No docs root** — the cwd has no `.docs.toml` ancestor, or `--root` names a
+  directory without `.docs.toml`. This is a **hard refusal → exit 2** (the
+  `_resolve_*_root` strict-root refusal; nothing can be resolved).
+- **A named target resolves *outside* an already-resolved root** — the root was
+  found, but an explicit doc/file argument lies outside it. This is a
+  **recoverable explicit-path error → exit 1** (`docs touch`'s precedent: the
+  argument is wrong, not the tree).
 
 CI integration: `docs check` returning 2 should fail the build.

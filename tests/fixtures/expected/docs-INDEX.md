@@ -81,7 +81,7 @@ _Generated 2026-06-03. 42 docs active, 3 archived._
 
 ### Active — Plan
 
-- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-05-29.
+- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-06-03.
 
 ## Archived
 

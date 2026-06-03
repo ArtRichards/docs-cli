@@ -62,6 +62,7 @@ def test_stamp_help(docs_script):
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert "--role" in proc.stdout
     assert "--project" in proc.stdout
+    assert "--title" in proc.stdout
 
 
 def test_stamp_subcommand_registered(docs_script):
@@ -116,7 +117,41 @@ def test_stamp_synthesises_h1_when_absent(docs_script, fixtures_dir, tmp_path):
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     text = (root / "raw-no-h1.md").read_text()
     # No H1 in the fixture → one synthesised from the filename, title-cased.
-    assert text.lstrip().startswith("# Raw No H1"), text
+    # Assert the H1 LINE equals exactly the expected title (not a prefix): a
+    # `startswith` would accept a leaked `.md`/`.Md` extension
+    # (`# Raw No H1.Md`.startswith(`# Raw No H1`) is True). Pin the whole line.
+    h1_lines = [ln for ln in text.splitlines() if ln.startswith("# ")]
+    assert h1_lines, text
+    assert h1_lines[0] == "# Raw No H1", h1_lines[0]
+    assert ".md" not in h1_lines[0].lower(), h1_lines[0]
+
+
+# --- Title from --title overrides the existing/synthesised H1 ---------------
+
+
+def test_stamp_title_flag_overrides_existing_h1(docs_script, fixtures_dir, tmp_path):
+    # raw-no-frontmatter.md has the H1 `# Raw Title`; --title with a DIFFERENT
+    # value must override it so the doc title/H1 becomes `# Custom Title`.
+    root = _stamp_tree(fixtures_dir, tmp_path, "raw-no-frontmatter.md")
+    proc = _run(
+        docs_script,
+        "stamp",
+        "raw-no-frontmatter.md",
+        "--title",
+        "Custom Title",
+        "--root",
+        str(root),
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    text = (root / "raw-no-frontmatter.md").read_text()
+    h1_lines = [ln for ln in text.splitlines() if ln.startswith("# ")]
+    assert h1_lines, text
+    # The --title value wins over the fixture's `# Raw Title`.
+    assert h1_lines[0] == "# Custom Title", h1_lines[0]
+    assert "# Raw Title" not in text, text
+    # The stamped doc still parses + passes check.
+    chk = _run(docs_script, "check", "--root", str(root))
+    assert chk.returncode == 0, (chk.stdout, chk.stderr)
 
 
 # --- Role from flag ---------------------------------------------------------
@@ -286,5 +321,7 @@ def test_stamp_refuses_when_no_docs_toml(docs_script, tmp_path):
     (bad / "raw.md").write_text("# Raw\n\nBODYMARKER body.\n")
     proc = _run(docs_script, "stamp", "raw.md", cwd=bad)
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # The refusal must carry the verb-specific prefix `docs: stamp:`.
+    assert "docs: stamp:" in proc.stderr, proc.stderr
     assert "is not under a docs root" in proc.stderr, proc.stderr
     assert "refusing" in proc.stderr, proc.stderr

@@ -367,3 +367,38 @@ def test_body_from_two_required_fields_refuses(docs_script, tmp_path):
     assert proc.returncode == 2, (proc.returncode, proc.stderr, proc.stdout)
     assert "appears to contain a metadata block" in proc.stderr, proc.stderr
     assert not (root / "my-feature.md").exists()
+
+
+def test_body_from_two_required_fields_non_adjacent_passes(docs_script, tmp_path):
+    """TWO required-field prose lines that are NON-adjacent are ACCEPTED.
+
+    Pins the *adjacency* of the cluster boundary: the C4 refusal needs a
+    CONTIGUOUS run of >= 2 of {Lifecycle, Role, Updated}. Here two such labels
+    appear within the first ~20 lines but are separated by prose/blank lines,
+    so they do NOT form a contiguous run — the body is legitimate prose and
+    must pass. Guards against an implementation that refuses on ">= 2 required
+    fields *anywhere* in the first 20 lines" (dropping the adjacency rule).
+    """
+    root = _minimal_tree(tmp_path)
+    body = (
+        "## Notes\n\n"
+        "Lifecycle: we never wrote down the lifecycle of this subsystem.\n\n"
+        "Some intervening prose so the two label lines are not adjacent.\n\n"
+        "Role: the role of the cache here is purely advisory.\n\n"
+        "More body prose at the tail.\n"
+    )
+    proc = _run(
+        docs_script,
+        "new",
+        "spec",
+        "my-feature",
+        "--root",
+        str(root),
+        "--body-from",
+        "-",
+        stdin=body,
+    )
+    assert proc.returncode == 0, (proc.returncode, proc.stderr, proc.stdout)
+    written = (root / "my-feature.md").read_text()
+    assert "Lifecycle: draft" in written, written  # scaffold frontmatter
+    assert written.endswith(body), written[-200:]

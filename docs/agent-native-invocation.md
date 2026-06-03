@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: plan
 Project: ideas
-Updated: 2026-05-29
+Updated: 2026-06-03
 
 Related:
 - pairs-with: cli.md
@@ -300,8 +300,14 @@ them:
   - `<new-project>` normalised via M7's
     `normalise_project_name()` — same as `rename`; empty
     post-normalised input → exit 2.
-  - Archived docs are read-only (skip + report), matching
-    `rename`'s stance.
+  - Archived docs are read-only. **Divergence from `rename` (resolved
+    2026-06-03, binding — see cli.md `project set` + M15 Decisions):**
+    `rename` walks the *whole tree* and *skips + reports* archived docs it
+    meets incidentally (they are out of scope for a root-wide rewrite); but
+    `set` takes **explicitly named** doc paths, so a *named* archived doc is
+    an error, not an incidental skip. Naming an archived doc therefore
+    **refuses the whole batch with exit 2** (nothing written), naming the
+    offending path — unlike `rename`'s incidental skip.
   - **No path change ⇒ no `Related:`-edge rewrite** (unlike
     `rename`/`archive`/`mv`). It only edits the `Project:` line
     and the doc's INDEX grouping — strictly simpler than those.
@@ -332,9 +338,10 @@ them:
   `project set`.
 - **TDD sketch.** Counterpart tests to `project rename`'s set:
   single-doc set; multi-doc atomic batch; `--dry-run` plan;
-  archived-skip; empty-name → exit 2; unknown-project-without-
-  `--new-project` → exit 2 with did-you-mean; INDEX regrouping;
-  idempotent re-set reports no change.
+  named-archived-doc → **refuse the whole batch, exit 2** (NOT a skip —
+  see the archived divergence above); empty-name → exit 2;
+  unknown-project-without-`--new-project` → exit 2 with did-you-mean;
+  INDEX regrouping; idempotent re-set reports no change.
 
 ## Explicitly *not* worth porting
 

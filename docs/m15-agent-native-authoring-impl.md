@@ -38,7 +38,7 @@ section tracks implementation progress, which is distinct.)
 | 1. Define Contract | Done | 2026-06-03 | cli.md: `project set` + `stamp` sections; `--body-from` cluster/fence detector rewrite; per-verb exit-code rows; bundled ref resynced byte-identical. |
 | 2. Write Tests (RED) | Done | 2026-06-03 | `test_cli_project_set.py` (20) + `test_cli_stamp.py` (15) new; `test_body_from.py` extended (C4 flip + prose-pass + true-positive refusals + cluster boundary). 47 collect across the three files; intended RED. |
 | 3. Create Data/Fixtures | Done | 2026-06-03 | `tests/fixtures/stamp/` (5 files) + 3 new `body-from/` fixtures; `with-frontmatter.txt` deleted (demoted). B2 reuses existing trees inline. Every Phase-2 fixture reference resolves. |
-| 4. Run Tests (RED Baseline) | Done | 2026-06-03 | 39 intended RED (20 project_set + 15 stamp + 4 body_from), classified below; 459 GREEN incl. test_skill_refs + the lockstep-regenerated frozen snapshot. ruff / format / mypy clean. |
+| 4. Run Tests (RED Baseline) | Done | 2026-06-03 | 39 → **41** intended RED (20 project_set + **16** stamp + **5** body_from after the review-fix pass), classified below; 459 GREEN incl. test_skill_refs + the lockstep-regenerated frozen snapshot. ruff / format / mypy clean. (Review-fix pass added the `--title` stamp test + the C4 non-adjacent body-from PASS test, +2 reds — see the Review-fix pass section.) |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
@@ -334,3 +334,85 @@ change (correct for phases 1–4).
 audit fix is an internal-consistency or test-quality correction within the
 already-resolved contract; no decision changes milestone scope or behavior
 intent.
+
+### Review-fix pass (fresh-eyes findings, 2026-06-03)
+
+A fresh-eyes review of this step (still phases 1–4 only: contract + RED
+tests + fixtures + one cross-spec doc fix; NO `cli.py`) returned seven
+conductor-resolved findings, all applied:
+
+1. **§5E cross-spec contradiction (should-fix, FIXED).**
+   `agent-native-invocation.md` §5E still said `project set` archived docs
+   are "skip + report" (matching `rename`). Rewrote the §5E archived bullet
+   and the TDD-sketch `archived-skip` item to record the resolved
+   divergence: `set` takes **explicit** paths, so a named archived doc
+   **refuses the whole batch (exit 2)** — UNLIKE `rename`'s incidental
+   tree-walk skip. `docs touch` bumped its Updated → 2026-06-03; INDEX +
+   frozen snapshot regenerated in lockstep; `docs check` clean.
+2. **Outside-root exit-code polarity (should-fix, binding, FIXED).** Verified
+   the cli.py convention: no-docs-root / no-`.docs.toml`-ancestor → exit 2
+   for all verbs (the `_resolve_*_root` refusals: touch 3228 / rename 3254 /
+   new 3284); a **named target resolving outside an already-resolved root** →
+   exit 1 (the `_cmd_touch` precedent, cli.py:3850-3853). `project set` and
+   `stamp` both take explicit paths, so the closest precedent is `touch`:
+   named-doc-outside-root = exit 1. `stamp`'s contract already said exit 1
+   (kept). Moved `project set`'s "named doc outside the docs root" from the
+   exit-2 column to exit-1 in the per-verb table + both prose paragraphs
+   (Atomic semantics + Exit codes); added an explicit **"Cross-verb
+   exit-code convention (no-root vs outside-root)"** note to the Exit codes
+   summary. Resynced the bundled ref (byte-identical). Updated
+   `test_project_set_refuses_doc_outside_root` to expect exit 1 (still
+   red-now on the unregistered-verb SystemExit(2), so its red status is
+   unchanged — but it now asserts the correct code so Phase 8 turns it green
+   right). The no-docs-root test stays exit 2. Decision recorded in the
+   milestone doc.
+3. **`stamp --title` unpinned (should-fix, FIXED).** Added
+   `test_stamp_title_flag_overrides_existing_h1` (`--title "Custom Title"` on
+   `raw-no-frontmatter.md`, whose H1 is `# Raw Title`, must yield
+   `# Custom Title`; the doc parses + `docs check` clean) and added `--title`
+   to `test_stamp_help`. RED-now on the unregistered `stamp` verb (+1 red).
+4. **Under-constrained synthesised-H1 assertion (should-fix, FIXED).**
+   `test_stamp_synthesises_h1_when_absent` used `startswith("# Raw No H1")`,
+   which would accept a leaked `.md`/`.Md` extension. Strengthened to assert
+   the H1 LINE equals exactly `# Raw No H1` and that no `.md` leaks into it.
+5. **Did-you-mean recovery-hint pinning (nit, FIXED).** Extended
+   `test_project_set_did_you_mean_candidate` to find the single `→` line and
+   assert BOTH the `did you mean 'ideas'?` prefix AND the always-printed
+   `to create a new project group, pass --new-project` recovery hint appear
+   together on it — guarding against regression to the original ambiguous
+   wording the post-Phase-4 audit fixed.
+6. **Per-verb message-prefix pinning (nit, FIXED) + IMPLEMENTATION TRAP.**
+   Added `assert "docs: project set:" in stderr` to the project-set
+   no-docs-root test and `assert "docs: stamp:" in stderr` to the stamp
+   strict-root test. **TRAP for Phase 5/6:** `_resolve_project_root`
+   (cli.py:3235) **hardcodes the `docs: project rename:` prefix**;
+   `project set` must NOT emit `project rename:` — the helper must be
+   generalized (verb-label param) or a set-specific resolver used. Pinning
+   the prefix now forces that.
+7. **C4 adjacency PASS test (nit, FIXED).** Added
+   `test_body_from_two_required_fields_non_adjacent_passes`: a body with two
+   required-field prose lines (`Lifecycle:` … prose … `Role:`) that are
+   NON-adjacent within the first ~20 lines must PASS — the C4 refusal needs a
+   CONTIGUOUS run of ≥ 2 adjacent required fields. Catches an implementation
+   that refuses on "≥ 2 required fields *anywhere* in 20 lines". RED-now (the
+   old any-`Label:` heuristic refuses any `Lifecycle:`-shaped line), goes
+   green only after the C4 detector ships (+1 red).
+
+**New RED/GREEN baseline after the review-fix pass:** **41 intended RED**
+(20 project_set + 16 stamp + 5 body_from), **459 GREEN**. The +2 over the
+prior 39 are findings 3 (`--title` stamp test) and 7 (C4 non-adjacent
+body-from PASS). Re-classification: every red is either a clean argparse
+`SystemExit(2)` on the still-unregistered `set`/`stamp` verb, or the old
+`--body-from` any-`Label:` heuristic refusing a body the C4 detector will
+accept — no tracebacks, imports, or collection errors. The exit-code change
+(finding 2) and the strengthened assertions (findings 4/5/6) stay in their
+correct red-now state.
+
+**Gate after the pass:** `ruff check` (all passed) / `ruff format --check`
+(39 files) / `mypy` (40 source files, no issues) clean; `docs check docs/`
+exit 0; `tests/test_skill_refs.py` GREEN (3) + `docs/cli.md` ≡
+`src/docs_cli/skill/references/cli.md` byte-identical (`cmp`); the frozen
+INDEX snapshot regenerated in lockstep with `docs/INDEX.md` (the
+`agent-native-invocation.md` Updated-date bump from finding 1). Decisions
+recorded; diff is docs + tests only — no `cli.py` change (correct for
+phases 1–4).

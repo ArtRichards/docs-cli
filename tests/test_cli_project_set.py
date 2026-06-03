@@ -240,7 +240,17 @@ def test_project_set_did_you_mean_candidate(docs_script, fixtures_dir, tmp_path)
     proc = _run(docs_script, "project", "set", "alpha-charter.md", "idea", "--root", str(root))
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
     assert "'idea' is not a project in this tree; refusing" in proc.stderr, proc.stderr
-    assert "did you mean 'ideas'?" in proc.stderr, proc.stderr
+    # cli.md §5E pins BOTH clauses together on the single `→` line: the
+    # conditional `did you mean '<closest>'?` prefix AND the always-printed
+    # `to create a new project group, pass --new-project` recovery hint. Find
+    # the one `→` line and assert both clauses are present on it together —
+    # guarding against a regression to the original ambiguous wording where the
+    # recovery hint dropped when a close match existed.
+    arrow_lines = [ln for ln in proc.stderr.splitlines() if "→" in ln]
+    assert len(arrow_lines) == 1, proc.stderr
+    arrow = arrow_lines[0]
+    assert "did you mean 'ideas'?" in arrow, arrow
+    assert "to create a new project group, pass --new-project" in arrow, arrow
 
 
 # --- Archived target → refuse whole batch (exit 2) --------------------------
@@ -367,6 +377,11 @@ def test_project_set_refuses_when_no_docs_toml(docs_script, tmp_path):
     )
     proc = _run(docs_script, "project", "set", "doc.md", "y", "--new-project", cwd=bad)
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # The refusal must carry the verb-specific prefix `docs: project set:` —
+    # NOT `docs: project rename:`. _resolve_project_root currently hardcodes
+    # the `project rename` prefix; pinning it here forces Phase 5/6 to
+    # generalize the helper (verb-label param) or use a set-specific resolver.
+    assert "docs: project set:" in proc.stderr, proc.stderr
     assert "is not under a docs root" in proc.stderr, proc.stderr
     assert "refusing" in proc.stderr, proc.stderr
 
@@ -387,7 +402,11 @@ def test_project_set_refuses_doc_outside_root(docs_script, fixtures_dir, tmp_pat
         "--root",
         str(root),
     )
-    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # Cross-verb exit-code convention (cli.md): the docs root WAS resolved (a
+    # valid --root), but a named doc resolves OUTSIDE it. That is an
+    # explicit-path error → exit 1 (matching `docs touch`'s precedent), NOT the
+    # no-docs-root hard refusal (exit 2 — see the no-docs-toml test below).
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
     assert "outside" in proc.stderr.lower(), proc.stderr
     assert outside.read_text().count("Project: alpha") == 1
 
