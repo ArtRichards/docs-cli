@@ -254,6 +254,18 @@ implementation milestone is scoped; pick the next one up via
 `create-milestones` / `/ship-milestone next milestone` when the operator
 chooses.
 
+**Open follow-ons (rolled forward):**
+- **Token re-scope** to project-`docs-cli` — async operator UI work, not a
+  release blocker; rolls forward from M9 → M11 → M13 → M17.
+- **Stale `docs new --body-from` help string (v1.7).** The argparse `--help`
+  text (`src/docs_cli/cli.py:2900-2905`) shipped in 1.6.0 still describing
+  the pre-M15-C4 "first 20 lines" heuristic; the runtime detector + refusal
+  message are correct, only the help text drifted. Cosmetic — fix is a
+  one-line help-string correction for v1.7. Motivated the surface-parity
+  gate now in [plan.md](plan.md) + [release-runbook.md](release-runbook.md).
+  Full context in
+  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s Open follow-on note.
+
 - **M14 — Robustness + autonomous archive (v1.6.0)** — **Complete**;
   shipped to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03. `docs mv`
   atomicity, `docs new` strict-root refusal, the four-verb

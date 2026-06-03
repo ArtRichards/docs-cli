@@ -288,6 +288,20 @@ longer carried forward separately.
 - Cross-root federation.
 - Templates beyond `docs new` defaults. If users want richer scaffolds, they hand-edit after creation.
 
+## Ongoing conventions
+
+**Surface parity (CLI `--help` + bundled skill).** Any milestone that adds
+or changes a CLI verb, flag, or user-visible behavior must land that change
+in BOTH (a) the argparse `--help` strings in `src/docs_cli/cli.py` and (b)
+the bundled skill `src/docs_cli/skill/` — `SKILL.md` and `references/` (with
+`references/cli.md` kept byte-identical to `docs/cli.md`). It is part of
+Phase 10 (Quality/Docs) done: run `docs <verb> --help` for each new/changed
+verb and reconcile against the milestone's CHANGELOG surface, confirm the
+bundled skill documents the new verbs/flags, and grep for stale wording
+describing any *replaced* behavior. (Motivating miss: the
+`docs new --body-from` help shipped in 1.6.0 still describing the
+pre-M15-C4 "first 20 lines" heuristic.)
+
 ## Resolved questions
 
 - **`docs archive --cascade` stays opt-in** (M2, 2026-05-21). Archiving a doc must not silently pull its neighbours along — cascading is a deliberate per-invocation choice. `--cascade` is a plain `store_true` flag; it prompts (`y/N`, defaulting to no) before archiving each one-hop `pairs-with` / `child-of` relation. No `--no-cascade` is needed.

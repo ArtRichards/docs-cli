@@ -433,3 +433,31 @@ regression), so `1.6.0` published as-is. The runbook's internal hard gates
 (twine check, clean rehearsal, bit-perfect chain-of-custody) all passed.
 Token re-scope to project-`docs-cli` continues to roll forward as the M9
 open follow-on (async operator UI work; not a release blocker).
+
+### Open follow-on (v1.7) — stale `docs new --body-from` help string
+
+The post-publish dogfood found one **cosmetic help-text drift** that shipped
+in 1.6.0: the `docs new --body-from` argparse help string at
+`src/docs_cli/cli.py:2900-2905` still describes the **pre-M15-C4** detector —
+"Refused (exit 2) if any of the body's first 20 lines looks like a metadata
+block". M15-C4 replaced that "first 20 lines" heuristic; the actual detector
+`_body_has_metadata_block` (`cli.py:3370`) and the runtime refusal message
+(`cli.py:3500-3509`) are **correct** — they refuse only on a real metadata
+block (a leading `---` fence, or ≥2 of `{Lifecycle, Role, Updated}` on
+adjacent lines) and now *accept* lone prose like a `Plan:`/`Reason:` line.
+Only the argparse help text drifted; the prose docs (`docs/cli.md`) and the
+bundled `references/cli.md` were verified to **not** carry the "first 20
+lines" wording, so the fix is **doc-only and one line** in `cli.py`. Not
+fixing now (1.6.0 already shipped). Proposed corrected wording for the v1.7
+fix (turnkey):
+
+> Read body content from PATH (or `-` for stdin) and append it under the
+> scaffold's frontmatter. Refused (exit 2) only if the body itself contains
+> a metadata block — a leading `---` fence or ≥2 adjacent
+> `{Lifecycle, Role, Updated}` lines (lone prose like a `Plan:` line is
+> fine). Pass body content only; `docs new` owns the frontmatter.
+
+This miss motivated the new **surface-parity gate** (CLI `--help` + bundled
+skill) added to [plan.md](plan.md) and
+[release-runbook.md](release-runbook.md) — see the M17 entry in the runbook's
+Cumulative lessons + deviations.

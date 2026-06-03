@@ -199,6 +199,29 @@ M10's surface; CHANGELOG header dated at M10 Phase 10 with the
 trailing `(LOCAL; not on PyPI)` marker that got stripped at
 M11 Phase 4 before fresh build.
 
+### Surface parity (help + bundled skill)
+
+The CLI `--help` strings and the bundled skill must describe the
+*actual* shipping behavior — including behavior a milestone
+*replaced*, not just behavior it added. Replaced-behavior drift is
+the easy miss (the `docs new --body-from` "first 20 lines" help
+shipped stale in 1.6.0; see the M17 entry in
+[Cumulative lessons + deviations](#cumulative-lessons--deviations)).
+
+- [ ] For every verb/flag the shipping milestone(s) added or
+      changed, `docs <verb> --help` matches the actual behavior —
+      reconcile against the `## <VERSION>` CHANGELOG surface for
+      this release.
+- [ ] `docs --help` lists every new top-level verb; the relevant
+      subcommand `--help` lists every new flag.
+- [ ] The bundled skill `src/docs_cli/skill/` (SKILL.md +
+      `references/`) documents the new surface, and
+      `references/cli.md` is byte-identical to `docs/cli.md`
+      (`diff -q src/docs_cli/skill/references/cli.md docs/cli.md`).
+- [ ] `grep` the help strings + bundled skill for stale wording of
+      any behavior a milestone *replaced* (not just added) —
+      replaced-behavior drift is the easy miss.
+
 ### Tree state
 
 - [ ] `docs/status.md` reflects M6 / M7 / M8 / M9 in flight or
@@ -628,3 +651,32 @@ release closeout; do **not** rewrite past entries.
   code phases. The runbook's internal hard gates (twine check,
   clean rehearsal, bit-perfect chain-of-custody) remained the
   go/no-go conditions.
+
+### From M17 (2026-06-03, `docs-cli==1.6.0`)
+
+- **Fully-autonomous publish shipped M14 + M15 as 1.6.0.** M17
+  was driven end-to-end as a fully-autonomous pass walking this
+  runbook directly (no 10-phase TDD stack — a publish milestone
+  has no code phases); the operator authorized the irreversible
+  PyPI upload + `main` push + `v1.6.0` tag + GitHub release up
+  front. It batched M14 + M15 into one public release (as M9
+  batched M6+M7+M8); M18's already-merged archive-edge fix rode
+  along in the same tree. Chain-of-custody bit-perfect — fourth
+  release running (M11 + M13 + M17): the PyPI-served wheel sha256
+  (`b0822709…`) is byte-identical to the local Phase-4 build.
+- **Help-drift finding → surface-parity gate.** The post-publish
+  dogfood found a stale CLI `--help` string that **shipped in
+  1.6.0**: `docs new --body-from`'s argparse help
+  (`src/docs_cli/cli.py:2900-2905`) still described the
+  pre-M15-C4 "first 20 lines looks like a metadata block"
+  heuristic, which M15-C4 had replaced. The runtime detector
+  (`_body_has_metadata_block`) and refusal message were correct;
+  only the help text drifted, and the prose docs (`docs/cli.md`)
+  + bundled `references/cli.md` were already correct — so the fix
+  is doc-only and one line. **Not fixed in 1.6.0** (already
+  shipped); logged as a v1.7 one-line follow-on (see
+  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s Open
+  follow-on note). This miss motivated the new
+  [Surface parity (help + bundled skill)](#surface-parity-help--bundled-skill)
+  pre-publish gate above — **replaced-behavior drift** (not just
+  newly-added surface) is what slipped through.
