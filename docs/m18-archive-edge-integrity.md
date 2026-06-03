@@ -49,9 +49,9 @@ produce `broken-ref` errors → `docs check` exit 2:
    which no longer exists — the plan↔log edge is orphaned.
 
 2. **Already-archived referrers.** `_rewrite_referring_edges` (cli.py:4000)
-   walks live docs and rewrites edges pointing AT the archived doc, but
-   DELIBERATELY skips already-archived docs (`if doc.archived: continue`,
-   cli.py:4017) — a behaviour PINNED by
+   iterates the WHOLE tree (`walk()` yields archived docs too) and rewrites
+   edges pointing AT the archived doc, but DELIBERATELY skips already-archived
+   docs (`if doc.archived: continue`, cli.py:4017) — a behaviour PINNED by
    `tests/test_cli_archive.py::test_archive_does_not_rewrite_archive_subtree_edges`
    (~line 606). So when a doc that an already-archived doc points to is
    itself moved into the archive (e.g. sweeping a stray impl-log in beside
@@ -60,10 +60,15 @@ produce `broken-ref` errors → `docs check` exit 2:
 This was never hit before because the only prior archivals (M10/M11/M13)
 archived the PLAN solo and left the impl-log LIVE — neither leg fires when
 exactly one doc of a related set is in the archive and the other is live at
-the root. The moment a related PAIR (or a doc + an already-archived
-neighbour) lands in the archive subtree, the edges break. It also means
-`create-milestones`' advertised `docs archive --cascade` pair-archival
-(SKILL.md completion checklist) hits leg (1) directly.
+the root. The moment a related PAIR lands in the archive subtree the edges
+break: in ONE op (leg 1, both moved docs' own edges) or across two ops
+(leg 2, the already-archived referrer). `create-milestones`' advertised
+`docs archive --cascade` pair-archival (SKILL.md completion checklist) hits
+this only for a milestone whose plan carries a `pairs-with: <impl>` edge
+(the M14+ pairs, e.g. M16, where `--cascade` pulls the impl). The M1–M9
+plans link their log via `parent-of` ONLY — not a `_CASCADE_VERBS` member —
+so `--cascade` there never pulls the log; it instead over-archives the
+plan's `pairs-with` specs + `child-of: plan.md` (see Open Q3).
 
 M18 makes archive-subtree edges first-class: archiving a doc rewrites BOTH
 its own outgoing archive-subtree edges AND any already-archived referrers'
@@ -82,10 +87,13 @@ edges to it, mirroring how live referring edges are already rewritten. This
   ALREADY under `archive/`. The rewrite must compose with `--cascade` so a
   whole pair/trio archived in one call lands with every intra-archive edge
   pointing at the new paths. Exact contract → Phase 1.
-- **D2 — repoint already-archived referrers.** When a doc moves into the
-  archive, walk the archive subtree too and rewrite already-archived docs'
-  `Related:` edges that pointed at the now-moved doc (the leg
-  `_rewrite_referring_edges` skips today). This **flips** the pinned
+- **D2 — repoint already-archived referrers.** `_rewrite_referring_edges`
+  already iterates the WHOLE tree (`walk()` yields archived docs) but
+  DELIBERATELY skips them (`if doc.archived: continue`, cli.py:4017). The fix
+  conditions that skip so an already-archived doc whose `Related:` edge
+  points at the now-moved doc IS repointed to its new archive path — rather
+  than adding a new walk, since the archive subtree is already visited. This
+  **flips** the pinned
   `test_archive_does_not_rewrite_archive_subtree_edges` expectation: an
   archived referrer's edge to a doc that moves into the archive SHOULD be
   rewritten (the old test asserted it must NOT be). The flip is deliberate
@@ -171,25 +179,37 @@ edges to it, mirroring how live referring edges are already rewritten. This
 
 ## Decisions
 
-- **The bug (empirically confirmed 2026-06-03; this scaffolding session).**
-  Reproduced on throwaway copies of the live `docs/` tree:
-  - **Leg (1) — moved doc's own edge.** `docs archive m1-parser-and-index.md
-    --cascade` (cascade pulls the plan's `pairs-with` specs + `child-of:
-    plan.md`) archived the plan with its own `parent-of:
-    m1-parser-and-index-log.md` edge left as a bare basename → `docs check`
-    exit 2 (broken-ref). (Also surfaced the over-archival concern — see
-    Open Q3 — because bare `--cascade` swept the ACTIVE specs convention.md /
-    cli.md / architecture.md / test-strategy.md along with plan.md.)
-  - **Leg (2) — already-archived referrer.** Archiving the M1 plan SOLO
-    (`docs check` clean — the live log's edge still resolves), THEN sweeping
-    the log into the same dated folder, left the now-archived PLAN's
-    `parent-of: m1-parser-and-index-log.md` edge dangling (the rewriter
-    skips archived docs) → `docs check` exit 2. Note the log's OWN
-    `child-of` edge WAS rewritten to the archive path in this second op —
-    because the referring-edge rewriter walks all docs INCLUDING the
-    just-swept log and repoints edges to the plan that moved in the FIRST
-    op. So leg (1) bites hardest when a pair moves in ONE op (`--cascade`),
-    where the moved plan's own `parent-of: …-log.md` is never rewritten.
+- **The bug (empirically confirmed + re-verified 2026-06-03).** Reproduced
+  on throwaway copies of the live `docs/` tree (the M1 plan↔log pair):
+  - **Leg (1) — moved docs' own edges, pair archived in ONE op.** Archiving
+    the pair in a single logical move — `docs archive
+    m1-parser-and-index-log.md --cascade-only "m1-parser-and-index.md"`
+    (log→plan is `child-of`, a `_CASCADE_VERBS` member, so the plan is
+    pulled) — moved BOTH into `archive/2026-05-20/` and left BOTH own edges
+    as bare basenames: the plan's `parent-of: …-log.md` AND the log's
+    `child-of: …-index.md` → two `broken-ref` errors, `docs check` exit 2.
+    `_archive_one` never rewrites the moved doc's own bullets, and the
+    referring-edge rewriter skips the (now-archived) sibling, so neither
+    direction is repointed.
+  - **Leg (2) — already-archived referrer, two-step archival.** Archiving
+    the M1 plan SOLO is clean (`docs check` exit 0): the live log's
+    `child-of` edge is repointed to
+    `archive/2026-05-20/m1-parser-and-index.md` DURING that first op (the
+    rewriter walks the still-live log), and the archived plan's
+    `parent-of: …-log.md` still resolves while the log is live at the root.
+    Sweeping the log into the same folder afterward then leaves the
+    now-archived PLAN's `parent-of: …-log.md` dangling — the second op's
+    referring-edge rewriter SKIPS the already-archived plan
+    (`if doc.archived: continue`) → `docs check` exit 2 on that single edge.
+    (The log's own `child-of` is fine — it was correctly repointed in step
+    one, while it was still live.)
+  - **Adjacent — `--cascade` over-archives (NOT a leg of this bug; Open Q3).**
+    `docs archive m1-parser-and-index.md --cascade` does NOT pull the log
+    (`parent-of` ∉ `_CASCADE_VERBS`); its cascade set is the plan's
+    `pairs-with` specs (convention.md / cli.md / architecture.md /
+    test-strategy.md) + `child-of: plan.md` — i.e. it sweeps ACTIVE specs
+    into the archive. That is the over-archival concern of Open Q3, a
+    separate problem from the edge-integrity legs above.
 - **Never hit before — why now.** M10/M11/M13 archived the PLAN solo and
   left the impl-log LIVE; neither leg fires while exactly one doc of a
   related set is archived and its neighbour is live at the root. The

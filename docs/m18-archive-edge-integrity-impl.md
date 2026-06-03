@@ -55,20 +55,27 @@ section tracks implementation progress, which is distinct.)
 
 ## Provenance — where the scope came from
 
-The bug was confirmed empirically on 2026-06-03 (this scaffolding session)
-on throwaway copies of the live `docs/` tree:
+The bug was confirmed empirically and RE-VERIFIED on 2026-06-03 on throwaway
+copies of the live `docs/` tree (the M1 plan↔log pair):
 
-- **Leg (1) — moved doc's OWN edge.** `docs archive m1-parser-and-index.md
-  --cascade` archived the plan with its own `parent-of:
-  m1-parser-and-index-log.md` edge left as a bare basename →
-  `docs check` exit 2 (broken-ref). The same run also swept the ACTIVE
-  specs (convention.md / cli.md / architecture.md / test-strategy.md) and
-  plan.md into the archive — the over-archival concern (Open Q3).
-- **Leg (2) — already-archived referrer.** Archiving the M1 plan SOLO left
-  `docs check` clean (the live log's edge still resolved); sweeping the log
-  into the same dated folder afterward left the now-archived PLAN's
-  `parent-of: m1-parser-and-index-log.md` edge dangling (`_rewrite_referring_edges`
-  skips archived docs) → `docs check` exit 2.
+- **Leg (1) — moved docs' OWN edges (pair archived in ONE op).**
+  `docs archive m1-parser-and-index-log.md --cascade-only "m1-parser-and-index.md"`
+  (log→plan is `child-of`) moved BOTH into `archive/2026-05-20/` and left
+  BOTH own edges as bare basenames — the plan's `parent-of: …-log.md` and the
+  log's `child-of: …-index.md` → two broken-refs, `docs check` exit 2.
+- **Leg (2) — already-archived referrer (two-step).** Archiving the M1 plan
+  SOLO is clean (`docs check` exit 0; the live log's `child-of` is repointed
+  to the plan's archive path DURING that op, and the archived plan's
+  `parent-of: …-log.md` still resolves while the log is live). Sweeping the
+  log in afterward then leaves the now-archived PLAN's `parent-of: …-log.md`
+  dangling — the second op's rewriter skips the already-archived plan
+  (`_rewrite_referring_edges`: `if doc.archived: continue`) → `docs check`
+  exit 2 on that one edge.
+- **Adjacent (NOT a leg; Open Q3).** `docs archive m1-parser-and-index.md
+  --cascade` does NOT pull the log (`parent-of` ∉ `_CASCADE_VERBS`); it
+  sweeps the plan's `pairs-with` specs (convention.md / cli.md /
+  architecture.md / test-strategy.md) + `child-of: plan.md` into the archive
+  — the over-archival concern, separate from the edge-integrity legs.
 
 Code anchors: `_archive_one` (cli.py:3595 — sets metadata + moves, no own-edge
 rewrite); `_rewrite_referring_edges` (cli.py:4000, `if doc.archived: continue`
