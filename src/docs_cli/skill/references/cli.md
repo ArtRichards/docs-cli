@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 Related:
 - pairs-with: convention.md
@@ -42,7 +42,30 @@ Scaffold a new doc in the active tree.
 - Writes the metadata block with `Lifecycle: draft`, `Role: <role>`, `Project: <inferred>`, `Updated: <today>`.
 - Does not refresh INDEX (the new doc is empty; the user is expected to fill it, then run `docs index` or let another verb trigger it).
 - `--body-from PATH` (M8 — F9) reads body content from `PATH` (or `-` for stdin) and appends it under the scaffolded frontmatter. Closes the read-before-write friction in agent flows — one atomic Bash call writes the complete file. The body text is appended verbatim (the file ends byte-equal with the body).
-  - **Refusal heuristic (OQ-E).** The first 20 lines of the supplied body are scanned for `^[A-Z][A-Za-z-]+:\s`; if any line matches, `docs new` exits 2 with the message `--body-from content appears to contain a metadata block. Pass body content only — docs new owns the frontmatter.` plus the first five body lines as preview. The conservative regex catches accidental frontmatter dumps; a body line like `Plan: stage one then stage two` will trip the heuristic — pass content only.
+  - **Refusal heuristic (OQ-E; M15 — C4).** The supplied body is refused
+    **only when it carries an actual metadata block**, not whenever any line is
+    `Label:`-shaped. Two signals trip the refusal:
+    - **(a) a leading `---` YAML fence** — the first non-blank line of the body
+      is `---`, the footgun of pasting a whole front-matter-fenced document as a
+      body; or
+    - **(b) a required-field cluster** — within the first ~20 lines (after an
+      optional leading `# H1`), a **contiguous run** of metadata-shaped lines
+      carries **≥ 2** of the required-field labels `{Lifecycle, Role, Updated}`
+      on adjacent lines. This is the shape of a real convention metadata block
+      (the footgun of pasting a whole doc-with-frontmatter as a body).
+
+    A **lone** prose required-field line (a single `Updated:`/`Reason:`/`Plan:`
+    line in spec/test-matrix prose) no longer trips the refusal — it is
+    accepted and appended verbatim. (`Reason:`/`Plan:` are not even required-
+    field labels, so they never contribute to the cluster; this is exactly the
+    dogfood body — a test-matrix section opening `## Risk level` / `Reason: …` —
+    that the old any-`Label:` heuristic wrongly refused. `edge-case-keyword.md`,
+    whose only metadata-shaped line is a prose `Plan:` line, now **passes**.)
+
+    On a refusal `docs new` exits 2 with the message `--body-from content
+    appears to contain a metadata block. Pass body content only — docs new owns
+    the frontmatter.` plus the first five body lines as preview (the stable
+    error tokens are unchanged from M8).
 
 **Strict-root refusal (M14 — A2).** `docs new` refuses the silent
 cwd-as-root fallback (which once misfired by scaffolding a doc at a repo
@@ -59,7 +82,7 @@ root with default config). Resolution mirrors `docs touch` /
   `docs: new: --root <root> does not contain .docs.toml; refusing`
   (exit 2).
 
-Exits 2 on invalid role, invalid slug, missing `--body-from` path, a body that trips the metadata-block refusal, or the strict-root refusal; 1 on existing file.
+Exits 2 on invalid role, invalid slug, missing `--body-from` path, a body that trips the metadata-block refusal (a leading `---` fence or a ≥ 2 required-field cluster — M15 C4), or the strict-root refusal; 1 on existing file.
 
 ### `docs index [DIR] [--exclude PATTERN]`
 
@@ -408,6 +431,209 @@ No `--json` mode in M12 (M12 — OQ-7).
 (e.g. a doc with no editable metadata block); 2 hard error (malformed
 `.docs.toml`, no `.docs.toml` ancestor, empty post-normalised
 `<new-name>`).
+
+### `docs project set <doc>... <new-project>`
+
+Reassign one or more docs' `Project:` field to `<new-project>` (M15 — B2,
+proposal §5E). The **single-doc counterpart** to `project rename`: where
+`rename` rewrites the *whole root* (`.docs.toml` `[project] name` + every
+matching `Project:` line), `set` rewrites the `Project:` line of *just the
+named docs* and regroups them in the INDEX. It does **not** touch
+`.docs.toml`, non-named docs, or `Related:` edges.
+
+```
+docs project set <doc>... <new-project> [--new-project] [--dry-run] [--quiet] [--root DIR]
+```
+
+**Grammar.** A single `nargs="+"` positional run is split as
+`*docs, <new-project>` — the **last** token is the new project name, every
+earlier token is a doc path. At least **two** tokens are required: a
+single-token invocation (`docs project set foo`) is ambiguous (is `foo` a doc
+or a project?) and is refused with exit 2 + stderr
+`docs: project set: need at least one <doc> and a <new-project>` (writes
+nothing).
+
+**Resolution.** Operates on the docs root resolved from cwd via the standard
+upward `.docs.toml` walk, unless `--root` overrides it. If the resolved root
+has no `.docs.toml`, exits 2 with stderr
+`docs: project set: <cwd> is not under a docs root with .docs.toml; refusing`
+(mirrors `project rename` / `touch` strict-root resolution — a write into an
+unmanaged tree is the footgun this closes). An explicit `--root <dir>` bypasses
+the up-walk **only when** `<dir>/.docs.toml` exists; otherwise refuses with
+`docs: project set: --root <root> does not contain .docs.toml; refusing`
+(exit 2).
+
+**Auto-normalisation.** `<new-project>` is run through M7's
+`normalise_project_name()` (same as `rename` / `migrate`). When the normalised
+form differs from the input, stderr carries one line (gated on `not --quiet`):
+
+```
+docs: project set: normalised "<input>" to "<normalised>"
+```
+
+before the rewrite proceeds with the normalised value. If post-normalisation
+`<new-project>` is empty or whitespace-only, refuses with exit 2 + stderr
+`docs: project set: <input> normalises to empty string; project name must be non-empty`.
+
+**Typo guard (the §5E design decision).** The way an agent silently fragments
+the INDEX is a typo (`idea` vs `ideas` → two project groups). Rather than
+prompt (the non-interactive invariant), `set` **refuses a `<new-project>` value
+that is new to the tree** unless `--new-project` is passed. The set of known
+projects is the resolved `Project:` of every **active** doc (a doc's explicit
+`Project:`, or the docs-root project for a doc with none) **plus** the
+`.docs.toml` `[project] name`. When the normalised value is not in that set and
+`--new-project` is absent, refuses with exit 2 + stderr (the did-you-mean shape
+from agent-native-invocation.md §5E):
+
+```
+docs: project set: '<value>' is not a project in this tree; refusing
+  → did you mean '<closest>'? to create a new project group, pass --new-project
+```
+
+`<closest>` is the nearest known project via `difflib.get_close_matches`; when
+nothing is close, the `→ did you mean …` clause is omitted (the first refusal
+line + the `--new-project` hint still print). An **existing** project value
+needs no flag. Passing `--new-project` acknowledges the deliberate act of
+creating a new project group and succeeds for any (non-empty, normalised)
+value.
+
+**What gets rewritten** (success path):
+
+- Every named doc's `Project: <old>` line → `Project: <new-project>`. A doc
+  with no explicit `Project:` line implicitly resolves to the docs-root
+  project; on `set`, a `Project: <new-project>` line is **inserted** (M2's
+  `set_metadata_field` missing-field behaviour, consistent with
+  `project rename`).
+- `INDEX.md` regenerated **once** at end of batch.
+
+**What does NOT change.**
+
+- `.docs.toml` — `set` never rewrites the `[project] name` (that is `rename`'s
+  whole-root job).
+- `Related:` edges — `set` changes no path, so unlike `rename` / `archive` /
+  `mv` it performs **no** referring-edge rewrite. Strictly simpler than those.
+- Body prose and docs not named on the command line.
+- Files outside the docs root.
+
+**Atomic semantics — validate-all-first.** Every named doc is resolved and
+parsed *before* any write: if any named path is missing or malformed, or any
+named doc resolves outside the docs root, the batch aborts **before any disk
+mutation** and the offending path is named on stderr; every doc is left
+byte-identical and no INDEX refresh runs. A missing/malformed named doc exits
+1; an outside-root / archived / typo / empty-name / single-token failure exits
+2. After validation passes, every rewrite is committed via `atomic_write`, then
+`INDEX.md` is refreshed exactly once (honouring `[exclude]` / `.docsignore`,
+M14 — A6).
+
+**Archived target → refuse the whole batch (exit 2).** Archive-subtree docs are
+read-only by convention (M3). Unlike `project rename` (which *skips + reports*
+archived docs found incidentally during its tree walk), `set` operates on docs
+the operator **named explicitly** — naming an archived doc is an error, not an
+incidental skip. If any named doc resolves under the configured `archive_dir`,
+the **whole batch** is refused with exit 2 + stderr naming the path:
+`docs: project set: <path> is under the archive subtree (read-only); refusing`.
+Nothing is written.
+
+**`--dry-run`.** Prints one `docs: would rewrite Project: in <rel-path>` line
+per named doc (gated on `not --quiet`); exits 0; writes nothing; no INDEX
+refresh.
+
+**No-op.** When **every** named doc already carries the normalised
+`<new-project>` (the resolved value already equals the target), the verb is a
+no-op: prints (gated on `not --quiet`)
+
+```
+docs: project set: <new-project> already current — no rewrites needed
+```
+
+to stderr; exits 0; no disk mutation; **no INDEX refresh**.
+
+**Success output.** A single human-readable stderr line (gated on
+`not --quiet`):
+
+```
+docs: project set: set <new-project> on <N> doc(s)
+```
+
+**Exit codes.** 0 success / no-op / dry-run; 1 a named doc is missing or
+malformed (validate-all-first abort, byte-identical tree); 2 hard error
+(no `.docs.toml` ancestor or `--root` without `.docs.toml`; a named doc outside
+the docs root; a named archived doc; empty post-normalised `<new-project>`; an
+unknown `<new-project>` without `--new-project`; a single-token grammar error).
+
+### `docs stamp <file>... [--role ROLE] [--project NAME] [--title "…"] [--dry-run] [--quiet] [--root DIR]`
+
+Stamp a convention-correct metadata block onto one or more files an agent has
+already written (M15 — B3). The **write-then-stamp** counterpart to
+`docs new --body-from`: where `new` owns the frontmatter and appends a body,
+`stamp` takes a file that *already has a body* (authored with ordinary tools)
+and inserts the metadata block on top, preserving the body verbatim. It is a
+**standalone top-level verb** with mutating-verb polarity (writes by default;
+`--dry-run` to opt out) — it reuses the `docs migrate` metadata-block insertion
+internally but is **not** routed through or aliased to `migrate` (a precise
+single-file stamp, not a foreign-tree import).
+
+```
+docs stamp <file>... [--role ROLE] [--project NAME] [--title "…"] [--dry-run] [--quiet] [--root DIR]
+```
+
+**What it writes.** For each file, `stamp` inserts a metadata block via the
+same `insert_metadata_block` machinery `migrate --apply` uses — placed
+immediately under the H1, body preserved verbatim, with foreign metadata-shaped
+lines parked under a `## Migrated metadata` body section (each label
+`Migrated-`-prefixed; see `migrate`). The four required fields are filled:
+
+- **Lifecycle:** always `draft` (a freshly-stamped doc is a draft).
+- **Role:** `--role ROLE` if given, else the default `notes`. There is **no**
+  H1-role inference — a file whose H1 reads like a plan still gets `notes`
+  unless `--role plan` is passed. (`--role` must be in the built-in or
+  configured Role vocabulary; an invalid role exits 2.)
+- **Project:** `--project NAME` if given, else the docs root's configured
+  `[project] name`.
+- **Updated:** today (in the configured `date_format`).
+
+**Title.** Inferred from the file's `# H1` when present. When the file has no
+H1, one is synthesised as `# <title>` where `<title>` is `--title` if given,
+else the filename's last path segment, title-cased (`-`/`_` as word
+separators) — the same `_slug_to_title` derivation `docs new` uses. `--title`
+overrides the inferred/synthesised H1.
+
+**Idempotent re-stamp.** Re-stamping a file that already carries a valid
+metadata block (all four required fields present and valid — detected by a
+clean `parse()` of the file) is a **no-op bar an `Updated:` refresh**: only the
+`Updated:` line is bumped to today (via `set_metadata_field`); `Lifecycle`,
+`Role`, `Project`, the title, and the body are left byte-identical. Reports
+(gated on `not --quiet`) that the file was already stamped:
+
+```
+docs: stamp: <path> already stamped — refreshed Updated:
+```
+
+**Strict-root resolution.** Mirrors `docs new` / `docs touch`: resolved from
+cwd via the upward `.docs.toml` walk, or `--root` (which must contain
+`.docs.toml`). No `.docs.toml` ancestor (and no valid `--root`) refuses with
+exit 2 + stderr
+`docs: stamp: <path> is not under a docs root with .docs.toml; refusing`
+(or the `--root … does not contain .docs.toml; refusing` variant). The
+`Project:` default reads the resolved root's `[project] name`.
+
+**Atomic multi-file batch.** Mirrors `docs touch`: every named path is checked
+to exist and resolve under the docs root *before* any write; a missing file (or
+one outside the root) aborts the batch with exit 1 + a named-bad-path message,
+**before any write**. Each file's stamped text is then prepared in memory and
+committed via `atomic_write`, followed by a **single** end-of-batch INDEX
+refresh (honouring `[exclude]` / `.docsignore`).
+
+**`--dry-run`.** Prints one `docs: would stamp <path>` line per file (gated on
+`not --quiet`); exits 0; writes nothing; no INDEX refresh.
+
+**Success output.** One `docs: stamped <path>` line per newly-stamped file
+(gated on `not --quiet`); already-stamped files report the refresh line above.
+
+**Exit codes.** 0 success / dry-run; 1 a named file is missing or resolves
+outside the docs root (validate-all-first abort, byte-identical tree); 2 hard
+error (invalid `--role`; no `.docs.toml` ancestor or `--root` without
+`.docs.toml`).
 
 ### `docs install-skill [--dest DIR] [--copy|--symlink] [--force] [--quiet]`
 
@@ -765,11 +991,13 @@ total excluded count per top-level dir prefix
 | 1 | Recoverable error (file conflict, validation warning, missing input) |
 | 2 | Hard error (invalid vocab, atomic operation failure, validation errors) |
 
-M12 / M14-specific exit-code shape:
+M12 / M14 / M15-specific exit-code shape:
 
 | Verb | 0 | 1 | 2 |
 |---|---|---|---|
 | `project rename` | success / no-op / dry-run | doc lacks editable metadata block | malformed `.docs.toml`; no `.docs.toml` ancestor; empty post-normalised `<new-name>` |
+| `project set` (M15 — B2) | success / no-op / dry-run | a named doc is missing or malformed (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; a named doc outside the docs root or under the archive subtree; empty post-normalised `<new-project>`; unknown `<new-project>` without `--new-project`; single-token grammar error |
+| `stamp` (M15 — B3) | success / dry-run | a named file is missing or outside the docs root (validate-all-first abort) | invalid `--role`; no `.docs.toml` ancestor or `--root` without `.docs.toml` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
 | `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); invalid cascade-flag combination (M14 — B1) |

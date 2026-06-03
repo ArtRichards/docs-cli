@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 Related:
 - child-of: plan.md
@@ -105,8 +105,9 @@ should be implemented after it. Both land 1.6.0 locally; **M17** publishes.
 
 ## Phase Checklist (10-phase TDD)
 
-- [ ] 1. Define Contract — `cli.md` deltas for `project set`, `stamp`, and
-      the corrected `--body-from` refusal exit codes.
+- [x] 1. Define Contract — `cli.md` deltas for `project set`, `stamp`, and
+      the corrected `--body-from` refusal exit codes. (2026-06-03; bundled
+      ref resynced byte-identical.)
 - [ ] 2. Write Tests (RED) — `project set` atomic batch + typo guard;
       `stamp` insert + idempotent re-stamp; `--body-from` real-frontmatter
       cases incl. the `edge-case-keyword` flip and a `Reason:`-in-body pass.
