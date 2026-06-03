@@ -635,14 +635,27 @@ def test_archive_pair_leaves_check_clean(docs_script, fixtures_dir, tmp_path):
 def test_archive_leaves_unrelated_archived_content_byte_identical(
     docs_script, fixtures_dir, tmp_path
 ):
-    """The Open Q4 boundary guard: an archived doc whose `Related:` edge
-    points at a doc that does NOT move (plus prose) is left byte-identical
-    when an UNRELATED doc is archived. Narrows the read-only exception to
-    move-driven edge rewrites only.
+    """Open Q4 boundary lock (partial): a PRE-ARCHIVED bystander doc whose
+    `Related:` edge points at a NON-moving target (`helper.md`) — plus prose
+    mentioning the moving target `core.md` — is left byte-identical when an
+    UNRELATED doc (`core.md`) is archived.
+
+    What this pins: that an archived bystander's content, `Updated:`,
+    lifecycle, and its unrelated edges all stay byte-for-byte verbatim when a
+    doc it does NOT reference is archived. It guards the read-only stance for
+    everything OUTSIDE move-driven edge rewrites.
+
+    What this does NOT pin: the edge-level boundary "the fix may only rewrite
+    an edge whose target equals a batch `old_rel`." Because this bystander's
+    edge points at a non-moving target, the test never exercises that
+    boundary — an over-broad fix that rewrote edges to non-moving targets
+    would still leave THIS doc unchanged. Its protection is byte-identity +
+    the structurally-anchored `rewrite_related_refs` matcher, not the
+    edge-level guard. (Phase 6 strengthens this — see the impl-log
+    carry-forward note.)
 
     This test is GREEN at the Phase-4 baseline — a regression LOCK on the
-    boundary, not a behaviour RED. It must stay green through Phase 6: the
-    fix may only touch edges whose target equals a batch `old_rel`.
+    boundary, not a behaviour RED. It must stay green through Phase 6.
     """
     root = _crossrefs_tree(fixtures_dir, tmp_path)
     # An archived doc whose edge points at `helper.md` (which does NOT move

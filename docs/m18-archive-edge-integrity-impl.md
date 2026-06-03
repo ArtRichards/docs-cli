@@ -55,6 +55,19 @@ section tracks implementation progress, which is distinct.)
 | 9. Implement Online/Integration | Not started | — | Dogfood on copies, then run the completed-milestone archival backlog on the REAL `docs/` tree (the payoff) — `docs check docs/` exit 0, M14/M15 left live. |
 | 10. Quality, Docs, Refactor | Not started | — | Closeout summaries; INDEX + frozen snapshot lockstep; status/plan updated; simplify pass. |
 
+## Carry-forward to Phase 6
+
+- **Strengthen the Q4 boundary lock.** `test_archive_leaves_unrelated_
+  archived_content_byte_identical` (#4) currently guards prose/`Updated:`/
+  byte-identity for a bystander whose edge points at a NON-moving target, so
+  it does not actually exercise the edge-level boundary "rewrite an edge
+  ONLY when its target equals a batch `old_rel`." Phase 6: add a SECOND
+  pre-archived bystander whose edge target IS a batch `old_rel` reached via
+  a DIFFERENT archive date, and assert it is rewritten ONLY when the target
+  genuinely equals a batch `old_rel` (i.e. an over-broad fix that rewrote
+  edges to non-moving targets would fail). This closes the gap the current
+  #4 leaves open.
+
 ## Provenance — where the scope came from
 
 The bug was confirmed empirically and RE-VERIFIED on 2026-06-03 on throwaway
