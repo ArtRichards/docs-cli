@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 Related:
 - pairs-with: cli.md
@@ -236,6 +236,8 @@ Lifecycle/location consistency rules:
 - `docs check` reports any mismatch with nonzero exit (rule `status-drift`).
 
 `done` vs `archived`: `done` stays in the active tree (evergreen reference); `archived` is moved to the archive subtree. Use `done` when the doc is finished but still referenced day-to-day.
+
+**Archive-subtree edge integrity (M18).** Archive-subtree `Related:` edges are maintained across moves. When a doc moves into the archive, both its OWN intra-archive edges (bullets pointing at another doc moving in the same operation) and any already-archived referrers' edges to it are repointed to the new `archive/YYYY-MM-DD/` paths, so they keep resolving. The M3 "archive is read-only" stance is preserved for everything else — only these move-driven edge rewrites touch archived docs; prose, other metadata, and edges to docs that did not move are left byte-identical.
 
 ## Subdirectories
 

@@ -160,12 +160,40 @@ rewrites every `Related: <verb>: <old-rel>` bullet across the active
 tree to point at `archive/<YYYY-MM-DD>/<basename>`. Mirrors `docs mv`'s
 walker (`rewrite_related_refs`) — only the `Related:` field is
 considered; prose markdown references are deliberately left alone.
-Archive-subtree docs are read-only and are NOT updated. The rewrite
-is part of the same atomic batch as the move + lifecycle edit: a
-single end-of-batch INDEX refresh covers everything. That refresh
-honours `[exclude]` / `.docsignore` (M14 — A6) — a malformed *excluded*
-file never fails the post-move reindex (same threading as `docs touch`,
-above).
+The rewrite is part of the same atomic batch as the move + lifecycle
+edit: a single end-of-batch INDEX refresh covers everything. That
+refresh honours `[exclude]` / `.docsignore` (M14 — A6) — a malformed
+*excluded* file never fails the post-move reindex (same threading as
+`docs touch`, above).
+
+**Archive-subtree edge integrity (M18).** The referring-edge rewrite
+now repoints **two** edge classes to the new
+`archive/<YYYY-MM-DD>/<basename>` path, so that archiving interrelated
+docs into the archive subtree never orphans their `Related:` edges:
+
+1. **The moved doc's OWN `Related:` bullets** whose target is *itself* a
+   doc moving in the same archive operation. Under `--cascade` a
+   pair/trio lands with every intra-archive edge resolved (e.g. a plan
+   and its log archived together each end up pointing at the other's new
+   archive path); a *solo* archive of a doc whose co-moving target set is
+   empty changes none of its own edges.
+2. **Already-archived referrers** whose bullet points at a doc moving
+   into the archive in this op — repointed to the doc's new archive path
+   (previously left dangling, since the rewriter skipped archived docs).
+
+The "targets that moved" set is defined precisely as exactly the batch's
+`moves`: the primary archive target plus every cascaded relation, each
+carried as an `(old_rel, new_rel)` pair. An edge is rewritten **iff** its
+current target equals some `old_rel` in that batch — never any other
+archived-doc content. Both classes are handled by the same
+`rewrite_related_refs` matcher and land in the same atomic batch as the
+move (one end-of-batch INDEX refresh).
+
+This **narrows** the prior "archive subtree is read-only" stance (M3):
+archive-subtree docs are read-only **except** `Related:` bullets pointing
+at a doc moving in the same archive operation, which are repointed to the
+new archive path. All other archived-doc content — prose, other metadata,
+and edges to docs that did *not* move — is left byte-identical.
 
 The cascade flags (M12 — OQ-D; M14 — B1) extend this — when the cascade
 archives related docs B, C, …, the referring-edge rewrites for every
@@ -197,6 +225,17 @@ leaving the source in place, the destination absent, and every referring
 raised while rewriting a referring doc *after* the move (e.g. a referrer
 in a read-only directory) is mapped to a clean **exit 2** rather than an
 uncaught traceback (M14 — A4).
+
+**Moved-doc own-edge rewrite (M18 — D3).** Like `docs archive`'s D1,
+`docs mv` repoints the MOVED doc's OWN `Related:` bullets when their
+target is the doc being moved — via the same shared `rewrite_related_refs`
+walker that already rewrites referrers tree-wide. So moving a doc whose
+`Related:` target already lives under `archive/` (or self-referential
+bullets the move touches) lands the moved doc with its own edges
+resolving, not dangling. `docs mv` already rewrites already-archived
+referrers (its walk carries no `doc.archived` skip), so this completes
+the own-edge half and gives `mv` the same edge-integrity contract as
+`archive`.
 
 Exits 1 on collision (`<new>` exists); 2 on a malformed tree caught by the
 pre-flight walk (A1) or an `OSError` mid edge-rewrite (A4).

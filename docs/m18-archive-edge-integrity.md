@@ -99,14 +99,15 @@ edges to it, mirroring how live referring edges are already rewritten. This
   rewritten (the old test asserted it must NOT be). The flip is deliberate
   and is the headline contract change — recorded in Decisions, re-pinned by
   an updated/replacement test in Phase 2.
-- **D3 — `docs mv` parity (pending Open Q1).** `_cmd_mv` (cli.py:3803) walks
-  ALL docs (it does NOT carry the `if doc.archived: continue` skip the
-  cascade rewriter has), so it already rewrites archived referrers when a
-  doc is `mv`'d — but, like archive, it never rewrites the MOVED doc's own
-  outgoing edges. Decide (Open Q1) whether `mv` needs the same own-edge
-  rewrite as archive's D1, and whether the two share one helper. The
-  archive-subtree-rewrite machinery D1 introduces should be reusable by
-  `mv` without a second implementation.
+- **D3 — `docs mv` parity (Open Q1 RESOLVED: INCLUDED — operator decision).**
+  `_cmd_mv` (cli.py:3803) walks ALL docs (it does NOT carry the
+  `if doc.archived: continue` skip the cascade rewriter has), so it already
+  rewrites archived referrers when a doc is `mv`'d — but, like archive, it
+  never rewrites the MOVED doc's own outgoing edges. Open Q1 is RESOLVED
+  **INCLUDED** by operator decision: `mv` gets the same own-edge rewrite as
+  archive's D1, via the shared `rewrite_related_refs` helper (no second
+  implementation). Implemented in Phase 6; pinned by a `mv` own-edge test
+  in Phase 2; §mv contract delta added in Phase 1.
 - **D4 — `cli.md` / `convention.md` + bundled-ref docs.** Document the new
   archive edge-integrity behaviour in `cli.md` §archive (and §mv if D3
   lands), note the convention that archive-subtree `Related:` edges are now
@@ -126,8 +127,8 @@ edges to it, mirroring how live referring edges are already rewritten. This
       moves into the archive; the pinned
       `test_archive_does_not_rewrite_archive_subtree_edges` expectation is
       flipped (re-pinned by an updated/replacement test).
-- [ ] D3 `docs mv` own-edge / archive-referrer parity decided (Open Q1) and,
-      if in scope, implemented via the shared D1 machinery.
+- [ ] D3 `docs mv` own-edge / archive-referrer parity (Open Q1 RESOLVED:
+      INCLUDED) implemented via the shared D1 machinery.
 - [ ] D4 `cli.md` §archive (+ §mv) + `convention.md` document the new
       behaviour; bundled skill refs resynced byte-identical; INDEX + frozen
       snapshot in lockstep.
@@ -234,6 +235,30 @@ edges to it, mirroring how live referring edges are already rewritten. This
 - **No publish.** M18 is a correctness fix to existing archive machinery;
   the version/CHANGELOG handling (fold into the open 1.6.0 section vs a new
   patch line) is Open Q2. M17 still owns the PyPI publish.
+- **Resolved questions (operator + conductor decisions — BINDING).** The
+  four OPEN QUESTIONS below are resolved for this milestone:
+  - **Q1 (mv/D3 parity) → INCLUDED (operator).** Implement the shared
+    own-edge rewrite so `docs mv` gets archive's D1 behaviour; author the
+    `mv` own-edge test in Phase 2; add the §mv contract delta in Phase 1;
+    implement in Phase 6. Supersedes the "pending Open Q1" wording above.
+  - **Q2 (CHANGELOG) → APPEND to the open `## 1.6.0 — UNRELEASED`** section
+    at Phase 7 (a "Fixed" bullet for archive + mv edge integrity); do NOT
+    bump the version (M17 still ships 1.6.0).
+  - **Q3 (bare `--cascade` scope) → DEFERRED.** Phases 1-4 change NO
+    `--cascade` set semantics; drive the pair-archival test by archiving
+    the LOG with `--cascade-only`, never bare `--cascade` on a plan. The
+    larger `--cascade` redesign is a separate future milestone.
+  - **Q4 (read-only boundary) → narrow exception** to move-driven
+    `Related:` edge rewrites only (target equals a batch `old_rel`); pinned
+    by a byte-identity boundary test and the Phase-1 contract wording.
+  - **Q5 (flipped test) → DELETE**
+    `test_archive_does_not_rewrite_archive_subtree_edges`; ADD
+    `test_archive_repoints_already_archived_referrer` (inverted body,
+    docstring cites the flip).
+  - **Q6 (INDEX/snapshot lockstep) →** Phase 1 does the bundled-ref resync +
+    `Updated:` bumps; `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+    regen is DEFERRED to Phase 7/8 so no non-behaviour RED enters the
+    Phase-4 baseline.
 
 ## Testing / Quality Gate
 

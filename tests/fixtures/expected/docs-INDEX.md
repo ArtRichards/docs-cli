@@ -24,7 +24,7 @@ _Generated 2026-06-03. 44 docs active, 3 archived._
 ### Active — Spec
 
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-03.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-02.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-03.
 - [m16-bundled-docs-skill-quality-test-matrix.md](m16-bundled-docs-skill-quality-test-matrix.md) — _spec_ — Lite. Updated 2026-06-02.
 
 ### Active — Milestone
