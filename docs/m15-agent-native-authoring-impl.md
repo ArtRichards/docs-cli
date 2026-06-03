@@ -37,7 +37,7 @@ section tracks implementation progress, which is distinct.)
 |---|---|---|---|
 | 1. Define Contract | Done | 2026-06-03 | cli.md: `project set` + `stamp` sections; `--body-from` cluster/fence detector rewrite; per-verb exit-code rows; bundled ref resynced byte-identical. |
 | 2. Write Tests (RED) | Done | 2026-06-03 | `test_cli_project_set.py` (20) + `test_cli_stamp.py` (15) new; `test_body_from.py` extended (C4 flip + prose-pass + true-positive refusals + cluster boundary). 47 collect across the three files; intended RED. |
-| 3. Create Data/Fixtures | Pending | — | |
+| 3. Create Data/Fixtures | Done | 2026-06-03 | `tests/fixtures/stamp/` (5 files) + 3 new `body-from/` fixtures; `with-frontmatter.txt` deleted (demoted). B2 reuses existing trees inline. Every Phase-2 fixture reference resolves. |
 | 4. Run Tests (RED Baseline) | Pending | — | |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
@@ -181,3 +181,44 @@ collection / import errors).
 
 **Test results.** Intended RED — full classification recorded in Phase 4.
 Fixtures land in Phase 3, so a full run of these files comes after Phase 3.
+
+## Phase 3 — Create Fixtures
+
+**Objective.** Put every fixture the Phase-2 tests reference on disk so the
+Phase-4 run exercises real files (no path errors), and the intended RED is
+"behaviour not yet implemented", not "fixture missing".
+
+**Files changed.**
+
+- `tests/fixtures/stamp/` (new dir, 5 files):
+  - `raw-no-frontmatter.md` — `# Raw Title` + body (`BODYMARKER`).
+  - `raw-no-h1.md` — body only, no H1 (stamp synthesises `# Raw No H1`).
+  - `raw-with-foreign-meta.md` — `# H1` + `Owner: alice` / `Tags: infra`
+    foreign lines + body (parked under `## Migrated metadata`).
+  - `already-stamped.md` — a complete valid doc with `Updated: 2026-01-01`
+    (a past date, so the idempotent re-stamp's `Updated:` refresh is
+    observable).
+  - `raw-h1-suggests-role.md` — `# Deployment Rollout Plan` (H1 trailing
+    word "Plan") to pin "stamp does NO H1-role inference".
+- `tests/fixtures/body-from/` (3 new):
+  - `reason-in-body.md` — the dogfood shape (`## Risk level` / `Reason: …`
+    + `## Plan` / `Plan: …`) — ACCEPTED under C4.
+  - `real-frontmatter-body.md` — `# H1` + `Lifecycle`/`Role`/`Updated`
+    cluster + body — REFUSED (cluster signal b).
+  - `yaml-fence-body.md` — leading `---` YAML fence — REFUSED (fence
+    signal a).
+- `tests/fixtures/body-from/with-frontmatter.txt` — **deleted** (demoted):
+  its `Owner:` / `Tags:` lines are not required-field labels, so under the
+  C4 cluster detector they no longer refuse; leaving it as a refusal case
+  would be wrong. Refusal coverage now lives in the cluster/fence fixtures.
+
+B2 (`project set`) needs no new tree: the tests reuse the existing
+`multi-project-alpha-sidecar` (multi-project + orphan + archive) and
+`rename-with-malformed` trees, with extra docs (`ideas-doc.md`,
+`referrer.md`, outside-root doc) written inline per
+`test_cli_project_rename.py` convention.
+
+**Actions.** Created the fixture files; `git rm with-frontmatter.txt`;
+cross-checked every fixture-file reference in the three Phase-2 test files
+against disk — all resolve (tmp-path outputs like `my-feature.md`,
+`missing.md` are written by the tests, not fixtures).
