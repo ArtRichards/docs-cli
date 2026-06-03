@@ -6,17 +6,19 @@ friction that breaks the agent flow: `docs new <role> <slug>
 file (scaffold frontmatter + body under the H1) atomically in one Bash
 call.
 
-Per OQ-E (resolved 2026-05-24), the body content is REFUSED with exit
-2 if any line in the first 20 lines matches `^[A-Z][A-Za-z-]+:\\s` —
-the conservative-by-design metadata-block heuristic. The clear error
-message lets the agent self-correct in the next call.
-
-Per OQ5 (planning resolution), `edge-case-keyword.md` (with a line
-like `Plan: stage one then stage two`) IS expected to trigger the
-refusal — the heuristic's false-positive trade-off is folded into
-test 4's parametrisation with a docstring explaining the rationale.
-
-Test count: 7 functions (test 4 parametrized × 2 collected items).
+Per OQ-E (resolved 2026-05-24) the body was REFUSED with exit 2 if any
+of its first 20 lines matched `^[A-Z][A-Za-z-]+:\\s` — a conservative
+any-`Label:` heuristic. M15 (C4) replaces that with detection of an
+*actual* metadata block: the body is refused only when it carries a
+leading `---` YAML fence OR a contiguous run with ≥ 2 of the required-
+field labels `{Lifecycle, Role, Updated}` on adjacent lines (after an
+optional `# H1`). A lone prose `Reason:` / `Plan:` / `Updated:` line is
+now ACCEPTED — `edge-case-keyword.md` (a prose `Plan:` line) flips from
+refusal to pass, and the dogfood `reason-in-body.md` shape passes too.
+The footgun guard (a whole doc-with-frontmatter pasted as a body, or a
+`---`-fenced doc) still refuses, with the M8 error tokens unchanged.
+Refusal coverage is carried by `real-frontmatter-body.md` (cluster) and
+`yaml-fence-body.md` (fence).
 """
 
 from __future__ import annotations
@@ -150,21 +152,22 @@ def test_body_from_output_matches_scaffold_plus_body_golden(docs_script, tmp_pat
     )
 
 
-# --- 4. OQ-E refusal: body with metadata-shaped lines (parametric × 2) ----
+# --- 4. C4 refusal: body with a REAL metadata block (parametric × 2) ------
 
 
 @pytest.mark.parametrize(
     "fixture_name",
     [
-        # 1. Real metadata block at the head — the obvious refusal case.
-        "with-frontmatter.txt",
-        # 2. Edge-case keyword — `Plan:` matches `^[A-Z][A-Za-z-]+:\s`
-        # so the conservative-by-design heuristic refuses. Per OQ5,
-        # this is the documented false-positive trade-off the test pins.
-        "edge-case-keyword.md",
+        # 1. A required-field cluster (>=2 of {Lifecycle, Role, Updated} on
+        # adjacent lines after the H1) — a whole doc-with-frontmatter pasted
+        # as a body. The footgun the C4 detector still refuses.
+        "real-frontmatter-body.md",
+        # 2. A leading `---` YAML fence — a front-matter-fenced doc pasted as
+        # a body. Refused on signal (a).
+        "yaml-fence-body.md",
     ],
 )
-def test_body_from_rejects_metadata_block_in_body(
+def test_body_from_rejects_real_metadata_block_in_body(
     docs_script,
     fixtures_dir,
     tmp_path,
@@ -182,9 +185,9 @@ def test_body_from_rejects_metadata_block_in_body(
         "--body-from",
         str(body_file),
     )
-    # Exit 2 per OQ-E.
+    # Exit 2 — a real metadata block (cluster or fence) is refused (C4).
     assert proc.returncode == 2, (proc.returncode, proc.stderr, proc.stdout)
-    # The documented error message (verbatim tokens from milestone doc OQ-E).
+    # The documented error message (verbatim tokens, unchanged from M8).
     stderr = proc.stderr
     assert "appears to contain a metadata block" in stderr, stderr
     assert "Pass body content only" in stderr, stderr
@@ -267,3 +270,100 @@ def test_body_from_idempotency_second_call_refuses(docs_script, tmp_path):
     assert "already exists" in proc2.stderr.lower(), proc2.stderr
     # First body preserved (no overwrite).
     assert "## Overview" in (root / "my-feature.md").read_text()
+
+
+# --- 8. C4: a prose body with Plan:/Reason: lines is ACCEPTED -------------
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    [
+        # edge-case-keyword.md: a prose `Plan:` line. Under the old any-Label
+        # heuristic this REFUSED; under the C4 cluster/fence detector it
+        # passes (`Plan:` is not even a required-field label).
+        "edge-case-keyword.md",
+        # reason-in-body.md: the exact dogfood shape — a `## Risk level`
+        # section opening with a prose `Reason:` line. Now accepted.
+        "reason-in-body.md",
+    ],
+)
+def test_body_from_accepts_prose_with_label_lines(
+    docs_script,
+    fixtures_dir,
+    tmp_path,
+    fixture_name,
+):
+    root = _minimal_tree(tmp_path)
+    body_file = fixtures_dir / "body-from" / fixture_name
+    body = body_file.read_text()
+    proc = _run(
+        docs_script,
+        "new",
+        "spec",
+        "my-feature",
+        "--root",
+        str(root),
+        "--body-from",
+        str(body_file),
+    )
+    assert proc.returncode == 0, (proc.returncode, proc.stderr, proc.stdout)
+    written = (root / "my-feature.md").read_text()
+    # The scaffold frontmatter is present AND the prose body is appended
+    # verbatim at the tail (byte-equal).
+    assert "Lifecycle: draft" in written, written
+    assert written.endswith(body), (
+        f"file should end with the body content byte-equal; tail was:\n{written[-200:]!r}"
+    )
+
+
+# --- 9. C4 cluster boundary: 1 required-field passes, 2 refuses ------------
+
+
+def test_body_from_single_required_field_passes(docs_script, tmp_path):
+    """A body opening with a SINGLE required-field line is accepted.
+
+    Pins the lower edge of the cluster boundary: one `Updated:` prose line
+    is not a metadata block. (cli.md C4: refusal needs >= 2 of
+    {Lifecycle, Role, Updated} on adjacent lines.)
+    """
+    root = _minimal_tree(tmp_path)
+    body = "## Notes\n\nUpdated: we shipped the thing on Tuesday.\n\nMore prose.\n"
+    proc = _run(
+        docs_script,
+        "new",
+        "spec",
+        "my-feature",
+        "--root",
+        str(root),
+        "--body-from",
+        "-",
+        stdin=body,
+    )
+    assert proc.returncode == 0, (proc.returncode, proc.stderr, proc.stdout)
+    written = (root / "my-feature.md").read_text()
+    assert written.endswith(body), written[-200:]
+
+
+def test_body_from_two_required_fields_refuses(docs_script, tmp_path):
+    """A body with TWO adjacent required-field lines is refused.
+
+    Pins the upper edge of the cluster boundary: `Lifecycle:` + `Role:` on
+    adjacent lines is the required-field cluster signal (b) — a real
+    metadata block. (cli.md C4.)
+    """
+    root = _minimal_tree(tmp_path)
+    body = "Lifecycle: active\nRole: spec\n\nSome body after a pasted block.\n"
+    proc = _run(
+        docs_script,
+        "new",
+        "spec",
+        "my-feature",
+        "--root",
+        str(root),
+        "--body-from",
+        "-",
+        stdin=body,
+    )
+    assert proc.returncode == 2, (proc.returncode, proc.stderr, proc.stdout)
+    assert "appears to contain a metadata block" in proc.stderr, proc.stderr
+    assert not (root / "my-feature.md").exists()

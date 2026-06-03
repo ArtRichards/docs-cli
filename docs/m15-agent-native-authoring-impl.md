@@ -36,7 +36,7 @@ section tracks implementation progress, which is distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Done | 2026-06-03 | cli.md: `project set` + `stamp` sections; `--body-from` cluster/fence detector rewrite; per-verb exit-code rows; bundled ref resynced byte-identical. |
-| 2. Write Tests (RED) | Pending | — | |
+| 2. Write Tests (RED) | Done | 2026-06-03 | `test_cli_project_set.py` (20) + `test_cli_stamp.py` (15) new; `test_body_from.py` extended (C4 flip + prose-pass + true-positive refusals + cluster boundary). 47 collect across the three files; intended RED. |
 | 3. Create Data/Fixtures | Pending | — | |
 | 4. Run Tests (RED Baseline) | Pending | — | |
 | 5. Update Base Interfaces | Pending | — | |
@@ -130,3 +130,54 @@ unchanged from the 459-passing pre-phase baseline.
    `*docs, new_project`; ≥2 tokens required (exit 2 otherwise).
 8. `project set` archived target: refuse the WHOLE batch (exit 2) naming
    the path — not an incidental skip (unlike `project rename`).
+
+## Phase 2 — Write Tests (RED)
+
+**Objective.** Write subprocess CLI tests that pin the Phase 1 contract so
+the Phase 5–6 implementation has executable acceptance criteria. RED by
+construction (verbs unregistered; old `--body-from` heuristic still in
+place).
+
+**Files changed.**
+
+- `tests/test_cli_project_set.py` (new, 20 tests) — modeled on
+  `test_cli_project_rename.py` (subprocess + `docs_script` + `tmp_path`).
+  Covers: help/registration; single-doc set; multi-doc atomic batch +
+  one-INDEX-refresh (follow-up `docs index` byte-identical no-op); inserts
+  `Project:` when absent (`topics/orphan.md`); normalises input; empty /
+  whitespace name → exit 2; unknown-without-`--new-project` refuses (exit 2
+  + did-you-mean + `--new-project` hint); unknown-with-flag succeeds;
+  did-you-mean candidate (inline `ideas` doc → `idea` → `ideas`);
+  archived-target refuses the whole batch (exit 2, byte-identical live doc,
+  no INDEX); atomic validate failure — missing doc (exit 1) and malformed
+  doc (`rename-with-malformed` tree, exit 1) with the good doc byte-identical
+  + no INDEX; no-op already-current (exit 0, no INDEX); `--dry-run`
+  no-change; outside-root refusal (exit 2); does-not-rewrite-`Related:`-edges
+  (inline referrer byte-identical); single-token grammar error (exit 2).
+- `tests/test_cli_stamp.py` (new, 15 tests). Covers: help/registration;
+  inserts metadata block (Lifecycle:draft, Role, Project, Updated; body
+  verbatim via a `BODYMARKER`; `docs check` clean); title from H1;
+  synthesises H1 when absent; role from flag; role default `notes` with NO
+  H1-role inference (a fixture whose H1 trailing word is "Plan" still gets
+  `notes`); project from flag; project from config; idempotent re-stamp =
+  `Updated:`-only refresh (all other lines byte-identical, reports already
+  stamped); preserves foreign metadata under `## Migrated metadata`
+  (`Migrated-Owner: alice`); `--dry-run` no-write; multi-file atomic (a
+  missing file aborts before any write, exit 1, good file byte-identical);
+  invalid `--role` exit 2; outside-root exit 2.
+- `tests/test_body_from.py` (extended). Flipped the test-4 refusal
+  parametrize off `edge-case-keyword.md` / `with-frontmatter.txt` onto the
+  true-positive `real-frontmatter-body.md` (cluster) + `yaml-fence-body.md`
+  (fence) fixtures (unchanged error tokens). Updated the OQ5 docstring to
+  the C4 detector. Added test 8 (prose with `Plan:`/`Reason:` lines —
+  `edge-case-keyword.md` + `reason-in-body.md` — ACCEPTED, body byte-equal
+  at tail) and test 9 (cluster boundary: a single `Updated:` prose line
+  passes; two adjacent `Lifecycle:`/`Role:` lines refuse).
+
+**Actions.** Wrote the two new files + extended `test_body_from.py`;
+`ruff format` (2 files reformatted) + `ruff check` clean; `pytest
+--collect-only` → 47 tests collect cleanly across the three files (no
+collection / import errors).
+
+**Test results.** Intended RED — full classification recorded in Phase 4.
+Fixtures land in Phase 3, so a full run of these files comes after Phase 3.
