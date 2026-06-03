@@ -117,6 +117,17 @@ detector (C4) so legitimate prose bodies are no longer wrongly refused.
   `Label:` line or any blank/prose line resets the run). A lone prose
   required-field line is accepted and appended verbatim. The refusal error
   tokens are unchanged.
+- **Archiving interrelated docs no longer orphans `Related:` edges**
+  (M18). When a milestone plan and its log (or a `--cascade` pair/trio) are
+  archived into the same `archive/<date>/` folder, each moved doc's OWN
+  intra-archive `Related:` edges are now repointed to the new
+  root-relative archive path, and an ALREADY-archived referrer whose target
+  sweeps into the archive is likewise repointed — so `docs check` stays
+  clean instead of reporting `broken-ref` (exit 2). This narrows the M3
+  "archive subtree is read-only" stance to move-driven `Related:` rewrites
+  ONLY (an edge is rewritten iff its target equals a doc moving in the same
+  archival; prose and non-moving edges stay byte-identical). `docs mv`
+  already carried the moved-doc own-edge rewrite and is unchanged.
 
 ## 1.5.0 — 2026-05-29
 
