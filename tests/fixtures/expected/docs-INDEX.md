@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-06-03. 20 docs active, 29 archived._
+_Generated 2026-06-03. 15 docs active, 34 archived._
 
 ## Project — docs
 
@@ -28,17 +28,12 @@ _Generated 2026-06-03. 20 docs active, 29 archived._
 
 ### Active — Milestone
 
-- [m15-agent-native-authoring.md](m15-agent-native-authoring.md) — _milestone_ — - Milestone: M15 (v1.6.0, part 2 of 2) - Title: Agent-native doc authoring - Surface: the agent-native *authoring* set…. Updated 2026-06-03.
-- [m17-pypi-publish.md](m17-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-06-03, post M14 + M15 closeout.** M17 > enters active state immediately — M14 and M15 are both >…. Updated 2026-06-03.
 - [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) — _milestone_ — - Milestone: M18 - Title: Archive edge integrity (intra-archive Related: rewriting) - Surface: a correctness fix to…. Updated 2026-06-03.
-- [m14-robustness-agent-native.md](m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6.0, part 1 of 2) - Title: Robustness + autonomous archive - Surface: correctness/atomicity…. Updated 2026-06-02.
 
 ### Active — Log
 
-- [m15-agent-native-authoring-impl.md](m15-agent-native-authoring-impl.md) — _log_ — Chronological log of work on M15 — Agent-native doc authoring. Append a section per TDD phase with objective, files…. Updated 2026-06-03.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.
 - [m18-archive-edge-integrity-impl.md](m18-archive-edge-integrity-impl.md) — _log_ — Chronological log of work on M18 — Archive edge integrity (intra-archive `Related:` rewriting). Append a section per…. Updated 2026-06-03.
-- [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-06-02.
 
 ### Active — Decision
 
@@ -63,6 +58,11 @@ _Generated 2026-06-03. 20 docs active, 29 archived._
 
 ## Archived
 
+- [archive/2026-06-03/m14-robustness-agent-native-impl.md](archive/2026-06-03/m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-06-03.
+- [archive/2026-06-03/m14-robustness-agent-native.md](archive/2026-06-03/m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6.0, part 1 of 2) - Title: Robustness + autonomous archive - Surface: correctness/atomicity…. Updated 2026-06-03.
+- [archive/2026-06-03/m15-agent-native-authoring-impl.md](archive/2026-06-03/m15-agent-native-authoring-impl.md) — _log_ — Chronological log of work on M15 — Agent-native doc authoring. Append a section per TDD phase with objective, files…. Updated 2026-06-03.
+- [archive/2026-06-03/m15-agent-native-authoring.md](archive/2026-06-03/m15-agent-native-authoring.md) — _milestone_ — - Milestone: M15 (v1.6.0, part 2 of 2) - Title: Agent-native doc authoring - Surface: the agent-native *authoring* set…. Updated 2026-06-03.
+- [archive/2026-06-03/m17-pypi-publish.md](archive/2026-06-03/m17-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-06-03, post M14 + M15 closeout.** M17 > enters active state immediately — M14 and M15 are both >…. Updated 2026-06-03.
 - [archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md) — _log_ — Chronological log for M16. This milestone records the docs-cli bundled `docs` skill changes required by the Agent…. Updated 2026-06-01.
 - [archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md](archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md) — _spec_ — Lite. Updated 2026-06-01.
 - [archive/2026-06-01/m16-bundled-docs-skill-quality.md](archive/2026-06-01/m16-bundled-docs-skill-quality.md) — _milestone_ — - Milestone: M16 - Title: Bundled docs skill quality artifacts - Surface: bundled `docs` skill guidance under…. Updated 2026-06-01.

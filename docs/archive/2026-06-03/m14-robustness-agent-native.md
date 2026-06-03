@@ -1,14 +1,14 @@
 # M14 — Robustness + autonomous archive
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 Related:
 - child-of: plan.md
-- parent-of: m14-robustness-agent-native-impl.md
-- pairs-with: m15-agent-native-authoring.md
+- parent-of: archive/2026-06-03/m14-robustness-agent-native-impl.md
+- pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 - pairs-with: agent-native-invocation.md
 - pairs-with: cli.md
 - pairs-with: status.md

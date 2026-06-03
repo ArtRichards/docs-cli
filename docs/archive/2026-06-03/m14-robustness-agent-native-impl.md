@@ -1,13 +1,14 @@
 # M14 — Implementation Log
 
-Lifecycle: draft
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-03
+Archived-reason: Milestone M14 complete; docs-cli==1.6.0 shipped to PyPI via M17 2026-06-03
 
 Related:
-- child-of: m14-robustness-agent-native.md
-- pairs-with: m14-robustness-agent-native.md
+- child-of: archive/2026-06-03/m14-robustness-agent-native.md
+- pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
 - pairs-with: status.md
 
 ## Overview

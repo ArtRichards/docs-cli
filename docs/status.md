@@ -16,10 +16,10 @@ Related:
 - pairs-with: archive/2026-05-28/m12-project-rename.md
 - pairs-with: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: release-runbook.md
-- pairs-with: m14-robustness-agent-native.md
-- pairs-with: m15-agent-native-authoring.md
+- pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
+- pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 - pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality.md
-- pairs-with: m17-pypi-publish.md
+- pairs-with: archive/2026-06-03/m17-pypi-publish.md
 - pairs-with: m17-pypi-publish-impl.md
 - pairs-with: m18-archive-edge-integrity.md
 
@@ -65,42 +65,49 @@ op and at the end. Manifest:
 - the M16 trio (plan + impl + test-matrix) → `archive/2026-06-01/`
   (`--cascade-only "m16-*"`).
 Live referrers (architecture.md, plan.md, status.md, release-runbook.md)
-were repointed automatically to the new archive paths. **M14, M15, and M18
-(both pairs each) are LEFT LIVE at root** — M14/M15 await the M17 publish,
-and M18 is itself the in-flight milestone (a milestone is not self-archived;
-it flips to `archived` only when a later milestone sweeps it in).
+were repointed automatically to the new archive paths. **M18 (both pairs)
+is LEFT LIVE at root** — it is itself the in-flight milestone (a milestone
+is not self-archived; it flips to `archived` only when a later milestone
+sweeps it in). **M14 + M15 + M17 were archived to `archive/2026-06-03/` at
+the M17 closeout** (see the v1.6-publish note below).
 
-The **v1.6 implementation train**: **M14 — Robustness + autonomous
-archive** is now **implementation-complete (2026-06-02)** —
-`docs-cli==1.6.0` built locally (pyproject bump + CHANGELOG section), 458
-tests GREEN, quality gate clean tree-wide, pending operator
-commit/archive; the **PyPI publish is M17's** (mirrors the M12→M13
-local-build-then-publish-later cadence). **M15 — Agent-native doc
-authoring** (**depends on M14**) is now **implementation-complete** —
-Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN) on
-`m15/phases-1-4`; Phases 5–10 (implementation + dogfood + closeout: all
-41 RED → GREEN, 501 total, gate clean tree-wide) on `m15/phases-5-10`,
-both 2026-06-03. It builds 1.6.0 locally; the publish is M17's.
-M14 was re-scoped 2026-06-02 and M15 carved out of it (it had outgrown
-M12 scale) — see the *Next action* block below for per-milestone scope.
+**docs-cli 1.6.0 shipped 2026-06-03 — the v1.6 train is complete.**
+**M17 — PyPI publish 1.6.0** is **Complete (2026-06-03)**:
+`docs-cli==1.6.0` is live at https://pypi.org/project/docs-cli/1.6.0/,
+the operator-driven publish that shipped **M14 + M15 together** as one
+public release (batched, as M9 shipped M6+M7+M8; M11→M10 and M13→M12 were
+one-to-one). The `v1.6.0` annotated tag points at the M17 Phase-4
+dated-CHANGELOG commit (`95f23a6`); the GitHub release carries the
+`## 1.6.0` CHANGELOG notes. Chain-of-custody verified **bit-perfect**
+(PyPI-served wheel sha256 `b0822709…` byte-identical to the local Phase-4
+build); all seven M14 + M15 headline contracts hold against the
+PyPI-served wheel (M14 `mv` all-or-nothing; M14 `new` strict-root refusal;
+M14 non-interactive `archive --cascade` + `--cascade-dry-run`; M14
+four-verb exclude-honouring reindex; M15 `project set` atomic + typo
+guard; M15 single-file `stamp`; M15 `--body-from` real-frontmatter
+detector). Ran the [release-runbook.md](release-runbook.md) end-to-end as
+a fully-autonomous pass (no TDD code phases — the runbook sections are the
+phases, mirroring M9/M11/M13). Full publish record + deviations live in
+[m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s
+milestone-completion summary.
 
-**M17 — PyPI publish 1.6.0** is now **in flight (milestone-setup,
-2026-06-03)** — the operator-driven publish that ships M14 + M15
-together as `docs-cli==1.6.0` (batched, as M9 shipped M6+M7+M8;
-M11→M10 and M13→M12 were one-to-one). The milestone pair
-[m17-pypi-publish.md](m17-pypi-publish.md) +
-[m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) is created and
-the [release-runbook.md](release-runbook.md) is the operative
-checklist (no TDD code phases — the runbook sections are the phases,
-mirroring M9/M11/M13). It stays LIVE at root (a milestone is not
-self-archived). **The operator has authorized a fully-autonomous run**
-(Step 0, 2026-06-03) — including the irreversible real-PyPI upload +
-`main` push + `v1.6.0` tag + GitHub release, mirroring the M13
-authorization; the publish runs after the milestone-setup commit (see
-the milestone doc's Decisions). **Execution has not run yet.** M17's
-Phase-5 closeout is also where M14 + M15 (left LIVE by M18's Phase-9
-sweep "awaiting the M17 publish") get archived — both plan + impl
-pairs — alongside M17's own milestone doc.
+- **M14 — Robustness + autonomous archive** (impl-complete 2026-06-02):
+  `docs mv` atomicity, `docs new` strict-root refusal, the four-verb
+  `touch`/`archive`/`mv`/`project rename` exclude-predicate fix,
+  slug/`OSError`/`atomic_write`-fsync guards, non-interactive
+  `archive --cascade`, the bundled-ref guard + packaging fix.
+- **M15 — Agent-native doc authoring** (impl-complete 2026-06-03, carved
+  from M14): `docs project set`, single-file `docs stamp`
+  (write-then-stamp), the `--body-from` real-frontmatter detector, and
+  the skill/cli docs. **Depends on M14.**
+
+Both built `docs-cli==1.6.0` locally against the same CHANGELOG section;
+M17 published them together. Their milestone pairs (plan + impl, four
+docs) **and** the M17 milestone doc were archived to `archive/2026-06-03/`
+at the M17 closeout via `docs archive` (the Q2 decision); the M17 impl
+log, release-runbook, and this status doc stay `Lifecycle: active` per the
+M8/M9/M10/M11/M13 pattern. **M18 is untouched — a separate in-flight
+milestone.**
 
 **docs-cli 1.5.0 shipped 2026-05-29.** **M13 — PyPI publish
 1.5.0** is **Complete (2026-05-29)** — `docs-cli==1.5.0` is
@@ -237,40 +244,37 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** the v1.6 train's two implementation milestones
-are both done; the publish milestone M17 is now created and in
-flight (milestone-setup), authorized for a fully-autonomous run
-and ready to execute after the milestone-setup commit.
+**Next action:** **docs-cli 1.6.0 shipped to PyPI on 2026-06-03 via M17**
+— M14 + M15 are both live (batched, as M9 shipped M6+M7+M8). The v1.6
+publish train is complete. The only remaining in-flight milestone is
+**M18 — Archive edge integrity**, which is implementation-complete
+(2026-06-03) and stays LIVE at root until a later milestone sweeps it
+into the archive (a milestone is not self-archived). No further
+implementation milestone is scoped; pick the next one up via
+`create-milestones` / `/ship-milestone next milestone` when the operator
+chooses.
 
-- **M14 — Robustness + autonomous archive (v1.6.0)** —
-  **implementation-complete (2026-06-02)** on branch
-  `m14/phases-5-10`, pending operator commit/archive: `docs mv`
-  atomicity, `docs new` strict-root refusal, `docs touch`/`archive`/`mv`/
-  `project rename` exclude-predicate fix, slug/`OSError`/`atomic_write`
-  fsync guards, non-interactive `archive --cascade`, bundled-ref +
-  packaging fixes. `docs-cli==1.6.0` built locally (pyproject + CHANGELOG);
-  **publish is M17's.** 458 tests GREEN; quality gate clean tree-wide.
-  Pair: [m14-robustness-agent-native.md](m14-robustness-agent-native.md)
-  + [impl](m14-robustness-agent-native-impl.md).
-- **M15 — Agent-native doc authoring (v1.6.0)** (**implementation-complete**
-  2026-06-03, Phases 1–10) — `docs project set`, single-file `docs stamp`
-  (write-then-stamp), the `--body-from` real-frontmatter detector, and the
-  skill/cli docs. Carved out of M14 on 2026-06-02 (it outgrew M12 scale);
-  **depends on M14**; builds 1.6.0 locally, publish is M17's. Pair:
-  [m15-agent-native-authoring.md](m15-agent-native-authoring.md)
-  + [impl](m15-agent-native-authoring-impl.md).
-
-- **M17 — PyPI publish 1.6.0** — **in flight (milestone-setup,
-  2026-06-03)**: the operator-driven publish that ships M14 + M15
-  together (batched, as M9 shipped M6+M7+M8). Pair created
-  ([m17-pypi-publish.md](m17-pypi-publish.md) +
-  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)); the
-  [release-runbook.md](release-runbook.md) is the operative
-  checklist (runbook sections = phases; no TDD code phases).
-  The operator has **authorized a fully-autonomous run** (Step 0)
-  including the irreversible real-PyPI upload + `main` push +
-  `v1.6.0` tag + GitHub release; the publish runs after the
-  milestone-setup commit (see the milestone doc's Decisions).
+- **M14 — Robustness + autonomous archive (v1.6.0)** — **Complete**;
+  shipped to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03. `docs mv`
+  atomicity, `docs new` strict-root refusal, the four-verb
+  `touch`/`archive`/`mv`/`project rename` exclude-predicate fix,
+  slug/`OSError`/`atomic_write`-fsync guards, non-interactive
+  `archive --cascade`, bundled-ref + packaging fixes. Pair archived to
+  `archive/2026-06-03/`.
+- **M15 — Agent-native doc authoring (v1.6.0)** — **Complete**; shipped
+  to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03. `docs project set`,
+  single-file `docs stamp` (write-then-stamp), the `--body-from`
+  real-frontmatter detector, and the skill/cli docs. Carved out of M14 on
+  2026-06-02 (it outgrew M12 scale); **depended on M14**. Pair archived to
+  `archive/2026-06-03/`.
+- **M17 — PyPI publish 1.6.0** — **Complete (2026-06-03)**: the
+  operator-driven publish that shipped M14 + M15 together (batched, as M9
+  shipped M6+M7+M8). Ran the [release-runbook.md](release-runbook.md)
+  end-to-end as a fully-autonomous pass; chain-of-custody bit-perfect;
+  `v1.6.0` annotated tag at `95f23a6` + GitHub release. Milestone doc
+  archived to `archive/2026-06-03/`; the
+  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) impl log stays
+  `Lifecycle: active`.
 
 The broader agent-native surface (global `--json`,
 `docs context`/`capabilities`, hooks, MCP) is deferred — see
@@ -436,10 +440,10 @@ for the milestone summary.
 | M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](archive/2026-05-27/m11-pypi-publish-impl.md) |
 | M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](archive/2026-05-28/m12-project-rename.md) | [Log](archive/2026-05-28/m12-project-rename-impl.md) |
 | M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](archive/2026-05-29/m13-pypi-publish-impl.md) |
-| M14 — Robustness + autonomous archive (v1.6.0) | **Implementation-complete** (2026-06-02; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `--cascade`, bundled-ref guard + packaging fix; 458 GREEN, gate clean; `docs-cli==1.6.0` built locally — publish is M17's) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
-| M15 — Agent-native doc authoring (v1.6.0) | **Implementation-complete** — Phases 1–10 (carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17). Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN) on `m15/phases-1-4`; Phases 5–10 (impl + dogfood + closeout: all 41 RED → GREEN, 501 total, gate clean tree-wide, `docs check docs/` 0, bundled refs byte-identical) on `m15/phases-5-10` — both 2026-06-03. | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
+| M14 — Robustness + autonomous archive (v1.6.0) | **Complete** (2026-06-02 impl-complete; **shipped to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03**, batched with M15; `mv` atomicity, `new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `--cascade`, bundled-ref guard + packaging fix; the M14 pair was archived to `archive/2026-06-03/` at the M17 closeout) | [Plan](archive/2026-06-03/m14-robustness-agent-native.md) | [Log](archive/2026-06-03/m14-robustness-agent-native-impl.md) |
+| M15 — Agent-native doc authoring (v1.6.0) | **Complete** (2026-06-03 impl-complete, Phases 1–10; **shipped to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03**, batched with M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; 501 GREEN at M15 close, gate clean tree-wide; the M15 pair was archived to `archive/2026-06-03/` at the M17 closeout) | [Plan](archive/2026-06-03/m15-agent-native-authoring.md) | [Log](archive/2026-06-03/m15-agent-native-authoring-impl.md) |
 | M16 — Bundled docs skill quality artifacts | **Complete / archived** (2026-06-01 impl-complete; documentation-only bundled `docs` skill guidance; code on `main` as `9ceb113`; the M16 trio was archived to `archive/2026-06-01/` by M18's Phase-9 sweep on 2026-06-03) | [Plan](archive/2026-06-01/m16-bundled-docs-skill-quality.md) | [Log](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md) |
-| M17 — PyPI publish 1.6.0 | **In flight — milestone-setup** (2026-06-03; publish-only, ships M14 + M15 together as `docs-cli==1.6.0` via the release-runbook, mirroring M9's batched M6+M7+M8; pair created, operator-authorized for a fully-autonomous run — the irreversible PyPI upload + `main` push + tag + release — executing after the milestone-setup commit) | [Plan](m17-pypi-publish.md) | [Log](m17-pypi-publish-impl.md) |
+| M17 — PyPI publish 1.6.0 | **Complete** (2026-06-03; `docs-cli==1.6.0` on PyPI, batching M14 + M15 as M9 batched M6+M7+M8; `v1.6.0` annotated tag at `95f23a6` + GitHub release; chain-of-custody bit-perfect; all seven M14 + M15 headline contracts hold against the PyPI-served wheel; milestone doc archived to `archive/2026-06-03/`, impl log stays `Lifecycle: active`) | [Plan](archive/2026-06-03/m17-pypi-publish.md) | [Log](m17-pypi-publish-impl.md) |
 | M18 — Archive edge integrity (intra-archive Related: rewriting) | **Implementation-complete** (2026-06-03; correctness fix to `docs archive` — the conditioned archived-skip in `_rewrite_referring_edges` rewrites the moved doc's own archive-subtree `Related:` edges + repoints already-archived referrers; flipped the pinned `test_archive_does_not_rewrite_archive_subtree_edges` → `test_archive_repoints_already_archived_referrer`. `docs mv` own-edge parity (Open Q1 INCLUDED) verified already satisfied — no code change. Phase-9 payoff archived the M1–M9/M12 pairs + M16 trio + 3 stray impl-logs; `docs check docs/` exit 0; M14/M15/M18 left live. 510 GREEN. Stays LIVE at root) | [Plan](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped

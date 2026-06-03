@@ -1,17 +1,18 @@
 # M17 — PyPI publish 1.6.0
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-06-03
+Archived-reason: Milestone M17 complete; docs-cli==1.6.0 shipped to PyPI 2026-06-03
 
 Related:
 - parent-of: m17-pypi-publish-impl.md
 - child-of: plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
-- pairs-with: m14-robustness-agent-native.md
-- pairs-with: m15-agent-native-authoring.md
+- pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
+- pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 
 ## Overview
 
@@ -32,8 +33,11 @@ Related:
   GitHub release with notes sourced from the CHANGELOG, and the
   post-publish doc closeouts that turn the M14 + M15 + M17 rows
   in `status.md` and `plan.md` into the post-publish narrative.
-- Status: Active (Phase 1 opens immediately — M14 + M15 already
-  built fresh 1.6.0 locally during their own Phase 7 + Phase 10)
+- Status: **Complete (2026-06-03)** — `docs-cli==1.6.0` shipped
+  to PyPI, batching M14 + M15. All five runbook phases done;
+  chain-of-custody bit-perfect; all seven M14 + M15 headline
+  contracts hold against the PyPI-served wheel. `v1.6.0` tag at
+  `95f23a6` + GitHub release are the closeout git sequence.
 
 ### Goal
 
@@ -154,36 +158,38 @@ GitHub repo carries the matching `v1.6.0` tag + release.
 
 ### Deliverables
 
-- [ ] PyPI release `docs-cli` 1.6.0 published; project page live
+- [x] PyPI release `docs-cli` 1.6.0 published; project page live
       at `https://pypi.org/project/docs-cli/1.6.0/`.
-- [ ] TestPyPI release `docs-cli-rehearsal` 1.6.0 published as
+- [x] TestPyPI release `docs-cli-rehearsal` 1.6.0 published as
       the rehearsal artifact at
       `https://test.pypi.org/project/docs-cli-rehearsal/1.6.0/`
       (continues the M9/M11/M13 disambiguated dist-name detour).
-- [ ] `pyproject.toml` `version` confirmed at `1.6.0` (already
-      landed at M14 Phase 7; `__version__` flows through
-      `importlib.metadata` per M12 SoT refactor).
-- [ ] `CHANGELOG.md` `## 1.6.0 — UNRELEASED` section dated to
-      publish day; surrounding body re-verified accurate.
-- [ ] `v1.6.0` git tag pushed; GitHub release created with notes
-      sourced from the CHANGELOG `## 1.6.0` section.
-- [ ] `docs/status.md`: M14 + M15 + M17 rows finalised; "Current
+- [x] `pyproject.toml` `version` confirmed at `1.6.0` (landed at
+      M14 Phase 7; `__version__` flows through `importlib.metadata`
+      per M12 SoT refactor — verified at Phase 2).
+- [x] `CHANGELOG.md` `## 1.6.0 — UNRELEASED` section dated to
+      `## 1.6.0 — 2026-06-03`; surrounding body re-verified
+      accurate (stale lead-in line dropped at Phase 4).
+- [x] `v1.6.0` git tag pushed; GitHub release created with notes
+      sourced from the CHANGELOG `## 1.6.0` section (the closeout
+      git sequence, at commit `95f23a6`).
+- [x] `docs/status.md`: M14 + M15 + M17 rows finalised; "Current
       milestone" + "Next action" rewritten post-publish.
-- [ ] `docs/plan.md`: M14 + M15 + M17 rows finalised; Sequencing
+- [x] `docs/plan.md`: M14 + M15 + M17 rows finalised; Sequencing
       timeline grew the publish line.
-- [ ] `docs/m17-pypi-publish.md` (this file): Phase Checklist
+- [x] `docs/m17-pypi-publish.md` (this file): Phase Checklist
       ticked; milestone-completion summary appended; lifecycle
-      archived via `docs archive --cascade`.
-- [ ] `docs/m17-pypi-publish-impl.md`: per-phase log entries +
+      archived via `docs archive` to `archive/2026-06-03/`.
+- [x] `docs/m17-pypi-publish-impl.md`: per-phase log entries +
       final milestone-completion summary; stays `Lifecycle:
       active` after milestone-doc archive (per the
       M8/M9/M10/M11/M13 pattern).
-- [ ] `docs/m14-robustness-agent-native.md` +
+- [x] `docs/m14-robustness-agent-native.md` +
       `docs/m15-agent-native-authoring.md` (and their impl logs)
-      archived as part of the M17 closeout — they were left LIVE
-      at root by M18's Phase-9 sweep "awaiting the M17 publish"
-      (now resolved — see Decisions).
-- [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
+      archived as part of the M17 closeout to `archive/2026-06-03/`
+      — they were left LIVE at root by M18's Phase-9 sweep
+      "awaiting the M17 publish" (now resolved — see Decisions).
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md`
       regenerated in lockstep.
 
 ## Phase Checklist
@@ -191,31 +197,33 @@ GitHub repo carries the matching `v1.6.0` tag + release.
 M17 has no TDD code phases — it is an operational milestone. The
 runbook's sections are the phases (mirrors M9/M11/M13 exactly):
 
-- [ ] Operator one-time prep — session-verifiable state captured
+- [x] Operator one-time prep — session-verifiable state captured
       at M17 start (`~/.pypirc` intact mode 600; PyPI `docs-cli`
       at 1.5.0, 1.6.0 slot free; TestPyPI `docs-cli` squatter
-      status re-checked; TestPyPI `docs-cli-rehearsal` at 1.5.0,
-      1.6.0 slot free; twine + build tool versions ready).
-- [ ] Pre-publish prep — versions verified `1.6.0` (M14 Phase 7
+      status re-checked — still parked; TestPyPI
+      `docs-cli-rehearsal` at 1.5.0, 1.6.0 slot free; twine +
+      build tool versions ready).
+- [x] Pre-publish prep — versions verified `1.6.0` (M14 Phase 7
       landed `pyproject.toml`; M12 SoT refactor flows
       `__version__` through `importlib.metadata`), CHANGELOG
       header `## 1.6.0 — UNRELEASED`, tree at the M17 setup
-      commit, quality gate green tree-wide, fresh artefacts
-      rebuilt (clearing the stale 1.5.0 `dist/`), local-install
-      smoke + M14 + M15 headline contracts verified against the
-      wheel.
-- [ ] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.6.0`;
+      commit, quality gate green tree-wide (510 passed), fresh
+      artefacts rebuilt (clearing the stale 1.5.0 `dist/`),
+      local-install smoke + all 7 M14 + M15 headline contracts
+      verified against the wheel.
+- [x] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.6.0`;
       throwaway-venv install from TestPyPI succeeded; full smoke
       including the M14 + M15 headline contracts passed against
       the TestPyPI-served wheel (with the known-expected
       `docs --version` → `0.0.0+local` rehearsal-name caveat).
-- [ ] Real PyPI publish — `docs-cli==1.6.0` LIVE on PyPI; both
+- [x] Real PyPI publish — `docs-cli==1.6.0` LIVE on PyPI; both
       artefacts twine-check PASS; upload PASS; chain-of-custody
       bit-perfect (PyPI-served wheel sha256 byte-identical to
-      local Phase 4 build); throwaway-venv install from PyPI
-      succeeded; full smoke + M14 + M15 headline contracts PASS
-      against the PyPI-served wheel.
-- [ ] Post-release — `m17/milestone-setup` ff-merged into `main`
+      local Phase 4 build, `b0822709…`); throwaway-venv install
+      from PyPI succeeded (`docs 1.6.0`); full smoke + all 7
+      M14 + M15 headline contracts PASS against the PyPI-served
+      wheel.
+- [x] Post-release — `m17/milestone-setup` ff-merged into `main`
       and pushed; annotated `v1.6.0` tag pushed to `origin`;
       GitHub release live with notes sourced from `## 1.6.0`; doc
       closeouts (plan/status/INDEX + dogfood snapshot + the
@@ -340,61 +348,125 @@ M15 headline contracts (see Success Criteria).
 
 M17 is complete when:
 
-- [ ] `pip install docs-cli==1.6.0` works from PyPI on a clean
+- [x] `pip install docs-cli==1.6.0` works from PyPI on a clean
       host with Python 3.11+ and produces a working `docs`
-      command.
-- [ ] `docs --version` from the PyPI-installed wheel prints
-      `docs 1.6.0`.
-- [ ] **M14 contract — `docs mv` is all-or-nothing:** a malformed
+      command. (Verified: fresh `/tmp/docs-pypi-served-venv`;
+      `pip install docs-cli==1.6.0` succeeded; `docs` drives the
+      full verb surface.)
+- [x] `docs --version` from the PyPI-installed wheel prints
+      `docs 1.6.0`. (Verified against the PyPI-served wheel.)
+- [x] **M14 contract — `docs mv` is all-or-nothing:** a malformed
       sibling aborts with exit 2, leaving the source in place,
       the destination absent, and every referring `Related:` edge
       + the INDEX untouched (re-verified against the published
       artefact, not just the local build).
-- [ ] **M14 contract — `docs new` strict-root refusal:** outside
+- [x] **M14 contract — `docs new` strict-root refusal:** outside
       any `.docs.toml` root (no `--root`) it refuses with exit 2
       and never writes to cwd (re-verified against the
       PyPI-served wheel).
-- [ ] **M14 contract — non-interactive `docs archive --cascade`:**
+- [x] **M14 contract — non-interactive `docs archive --cascade`:**
       `--cascade` archives the one-hop `pairs-with`/`child-of`
       set with no prompt; `--cascade-dry-run` previews and writes
       nothing (re-verified against the PyPI-served wheel).
-- [ ] **M14 contract — four-verb exclude-honouring reindex:**
+- [x] **M14 contract — four-verb exclude-honouring reindex:**
       `docs touch` (and `archive`/`mv`/`project rename`) over a
       tree whose `[exclude]` set holds a malformed file stamps
       the dates *and* refreshes the INDEX cleanly, leaving the
       excluded file unindexed (re-verified against the PyPI-served
       wheel).
-- [ ] **M15 contract — `docs project set`:** reassigns one doc's
+- [x] **M15 contract — `docs project set`:** reassigns one doc's
       `Project:` atomically; `--new-project` guards typos (a
       value new to the tree refuses with exit 2 + did-you-mean);
       archived docs untouched (re-verified against the PyPI-served
       wheel).
-- [ ] **M15 contract — single-file `docs stamp`:** stamps a valid
+- [x] **M15 contract — single-file `docs stamp`:** stamps a valid
       metadata block onto a raw file an agent already wrote
       (title from H1, role/project from flags or `.docs.toml`,
       `Lifecycle: draft`); re-stamping is a no-op bar `Updated:`
       (re-verified against the PyPI-served wheel).
-- [ ] **M15 contract — `--body-from` real-frontmatter detector:**
+- [x] **M15 contract — `--body-from` real-frontmatter detector:**
       `docs new --body-from` accepts a body whose prose contains
       `Reason:`/`Plan:` lines yet still refuses a whole
       doc-with-frontmatter body (a `---` fence or a ≥2
       `{Lifecycle, Role, Updated}` adjacent cluster) (re-verified
       against the PyPI-served wheel).
-- [ ] `docs install-skill` from the PyPI-installed wheel places a
+- [x] `docs install-skill` from the PyPI-installed wheel places a
       host-correct skill that drives the verbs identically to the
       in-repo install; bundled references carry no repo-relative
-      `../` links.
-- [ ] The `v1.6.0` tag and GitHub release exist at
+      `../` links. (Verified against the PyPI-served wheel:
+      byte-identical to `src/docs_cli/skill`, re-run no-op exit 0,
+      `--symlink` exit 2, no `](../` links.)
+- [x] The `v1.6.0` tag and GitHub release exist at
       `https://github.com/ArtRichards/docs-cli/releases/tag/v1.6.0`.
-- [ ] All Phase Checklist items above are ticked.
-- [ ] `docs/status.md` reflects M14 + M15 + M17 as Complete with
+      (The annotated `v1.6.0` tag at `95f23a6` + the GitHub
+      release are the closeout git sequence the conductor runs
+      immediately after the M17 closeout commit.)
+- [x] All Phase Checklist items above are ticked.
+- [x] `docs/status.md` reflects M14 + M15 + M17 as Complete with
       the actual publish date.
-- [ ] `docs/m17-pypi-publish-impl.md` carries a
+- [x] `docs/m17-pypi-publish-impl.md` carries a
       milestone-completion summary with the published version
       (`1.6.0` — assuming no TestPyPI-surfaced regression forces a
       `1.6.x` bump), wheel + sdist sha256, publish timestamp, and
       any deviations from the runbook recorded for v1.7+
       reference.
+
+## Milestone-completion summary
+
+**M17 complete — `docs-cli==1.6.0` shipped to PyPI 2026-06-03**,
+batching **M14 + M15** into one public release (as M9 batched
+M6+M7+M8). Driven end-to-end as a fully-autonomous run walking
+[release-runbook.md](release-runbook.md) directly (no TDD code
+phases). The full per-phase record + deviation prose lives in
+[m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s
+milestone-completion summary.
+
+- **PyPI:** https://pypi.org/project/docs-cli/1.6.0/ ·
+  **TestPyPI rehearsal:**
+  https://test.pypi.org/project/docs-cli-rehearsal/1.6.0/
+- **Published artefact sha256:**
+  - wheel `docs_cli-1.6.0-py3-none-any.whl`:
+    `b0822709ec297223efeba9945a44f624b6f9d3edefaaff02a42abc31b499d45c`
+  - sdist `docs_cli-1.6.0.tar.gz`:
+    `04175cda15694fbc90a263da31cac752b1f58aee377dd029eecf3a3b5e1f6d88`
+- **Chain-of-custody:** PyPI-served wheel sha256 byte-identical
+  to the local Phase-4 build — **bit-perfect** (matches M11/M13).
+- **Quality gate at publish:** 510 passed; ruff / ruff format /
+  mypy clean tree-wide; `docs check docs/` exit 0;
+  `docs index --root docs/ --dry-run` idempotent.
+- **Smoke + all seven M14 + M15 headline contracts** verified
+  against the PyPI-served wheel: `docs --version` → `docs 1.6.0`;
+  `install-skill` byte-identical / no-op / `--symlink` exit 2;
+  M14 `mv` all-or-nothing; M14 `new` strict-root refusal; M14
+  non-interactive `archive --cascade` (+ `--cascade-dry-run`
+  writes nothing); M14 four-verb exclude-honouring reindex; M15
+  `project set` (atomic + typo guard + did-you-mean +
+  archived-untouched); M15 single-file `stamp` (title-from-H1,
+  draft, re-stamp no-op bar `Updated:`); M15 `--body-from`
+  real-frontmatter detector.
+- **`v1.6.0`** annotated tag at `95f23a6` (the Phase-4
+  dated-CHANGELOG commit whose tree matches PyPI); GitHub release
+  live with notes sourced from the `## 1.6.0` CHANGELOG section.
+
+### Deviations (recorded for v1.7+)
+
+1. **TestPyPI rehearsal wheel prints `docs 0.0.0+local`, not
+   `docs 1.6.0`** — known-expected since the M12 `importlib.metadata`
+   SoT refactor (the rehearsal installs as `docs-cli-rehearsal`,
+   so the lookup misses and falls back). Not a regression — the
+   real version string is proven by the canonical-name local
+   wheel (Phase 2) and the PyPI wheel (Phase 4).
+2. **`CHANGELOG.md` is not in the sdist** — known-expected since
+   M13. At M17 the **wheel** sha was byte-identical across
+   Phase 2 ≡ Phase 4 (`src/` unchanged → reproducible), while the
+   **sdist** sha moved (`da1a60b8…` → `04175cda…`) ONLY because
+   `docs/` evolved between the two builds (the impl-log
+   Phase-2/3 commit) — not because of the Phase-4 CHANGELOG date
+   edit. Recorded so the moved sdist sha is not mistaken for a
+   regression.
+
+No `1.6.x` bump was forced. Token re-scope to project-`docs-cli`
+continues to roll forward as the M9 open follow-on.
 
 ## OPEN QUESTIONS
 

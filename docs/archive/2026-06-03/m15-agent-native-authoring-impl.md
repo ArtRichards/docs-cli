@@ -1,13 +1,14 @@
 # M15 — Implementation Log
 
-Lifecycle: draft
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-06-03
+Archived-reason: Milestone M15 complete; docs-cli==1.6.0 shipped to PyPI via M17 2026-06-03
 
 Related:
-- child-of: m15-agent-native-authoring.md
-- pairs-with: m15-agent-native-authoring.md
+- child-of: archive/2026-06-03/m15-agent-native-authoring.md
+- pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 - pairs-with: status.md
 
 ## Overview

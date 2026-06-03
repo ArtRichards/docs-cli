@@ -1,14 +1,14 @@
 # M15 — Agent-native doc authoring (v1.6.0)
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-06-03
 
 Related:
 - child-of: plan.md
-- parent-of: m15-agent-native-authoring-impl.md
-- pairs-with: m14-robustness-agent-native.md
+- parent-of: archive/2026-06-03/m15-agent-native-authoring-impl.md
+- pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
 - pairs-with: agent-native-invocation.md
 - pairs-with: cli.md
 - pairs-with: status.md
