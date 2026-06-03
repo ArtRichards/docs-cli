@@ -572,7 +572,8 @@ def test_archive_cascade_rewrites_moved_docs_own_edges(docs_script, fixtures_dir
     RED reason: `_archive_one` (cli.py:3595) sets metadata + moves the file
     but never rewrites the moved doc's own `Related:` bullets, and
     `_rewrite_referring_edges` skips the (now-archived) sibling
-    (`if doc.archived: continue`, cli.py:4017) — so master's
+    (the unconditional `if doc.archived` skip in `_rewrite_referring_edges`)
+    — so master's
     `pairs-with: sidekick.md` and sidekick's `pairs-with: master.md` are
     left as bare basenames pointing at files that no longer live at the
     root. Phase 6 rewrites the moved doc's own batch-`old_rel` edges.
@@ -823,8 +824,8 @@ def test_archive_repoints_already_archived_referrer(docs_script, fixtures_dir, t
     dangles), narrowing the M3 "archive is read-only" stance to leave every
     non-move-driven edge untouched.
 
-    RED reason: `_rewrite_referring_edges` (cli.py:4017) skips
-    `if doc.archived: continue`, so the already-archived `old-ref.md`'s
+    RED reason: `_rewrite_referring_edges`'s unconditional `if doc.archived`
+    skip (`continue`s on every archived doc), so the already-archived `old-ref.md`'s
     `references: core.md` bullet is left as a bare basename pointing at the
     now-moved `core.md` — a dangling edge. Phase 6 conditions that skip so an
     archived referrer pointing at a batch `old_rel` is repointed.

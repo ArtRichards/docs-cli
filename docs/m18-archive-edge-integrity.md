@@ -51,7 +51,7 @@ produce `broken-ref` errors → `docs check` exit 2:
 2. **Already-archived referrers.** `_rewrite_referring_edges` (cli.py:4000)
    iterates the WHOLE tree (`walk()` yields archived docs too) and rewrites
    edges pointing AT the archived doc, but DELIBERATELY skips already-archived
-   docs (`if doc.archived: continue`, cli.py:4017) — a behaviour PINNED by
+   docs (the `if doc.archived` skip in `_rewrite_referring_edges`) — a behaviour PINNED by
    `tests/test_cli_archive.py::test_archive_does_not_rewrite_archive_subtree_edges`
    (~line 606). So when a doc that an already-archived doc points to is
    itself moved into the archive (e.g. sweeping a stray impl-log in beside
@@ -89,7 +89,7 @@ edges to it, mirroring how live referring edges are already rewritten. This
   pointing at the new paths. Exact contract → Phase 1.
 - **D2 — repoint already-archived referrers.** `_rewrite_referring_edges`
   already iterates the WHOLE tree (`walk()` yields archived docs) but
-  DELIBERATELY skips them (`if doc.archived: continue`, cli.py:4017). The fix
+  DELIBERATELY skips them (the `if doc.archived` skip in `_rewrite_referring_edges`). The fix
   conditions that skip so an already-archived doc whose `Related:` edge
   points at the now-moved doc IS repointed to its new archive path — rather
   than adding a new walk, since the archive subtree is already visited. This
