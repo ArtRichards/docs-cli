@@ -87,6 +87,8 @@ def test_stamp_inserts_metadata_block(docs_script, fixtures_dir, tmp_path):
     # The body content is preserved verbatim somewhere after the block.
     # (the fixture's distinctive body line survives the stamp).
     assert "BODYMARKER" in text, text
+    # cli.md pins the fresh-stamp success line: "docs: stamped <path>".
+    assert "stamped" in proc.stderr and "raw-no-frontmatter.md" in proc.stderr, proc.stderr
     # The stamped doc parses + passes check.
     chk = _run(docs_script, "check", "--root", str(root))
     assert chk.returncode == 0, (chk.stdout, chk.stderr)

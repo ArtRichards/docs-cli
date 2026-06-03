@@ -281,3 +281,56 @@ re-sorted their INDEX groups, which left the frozen acceptance snapshot
 line, not per-doc `Updated:` dates). Regenerated the snapshot from the live
 `docs/INDEX.md` — back in lockstep, that test GREEN again. This was the
 only collateral breakage; no other pre-existing test changed.
+
+### Post-Phase-4 consistency audit (2026-06-03)
+
+Ran the same-instance consistency / completeness / accuracy audit
+(`ship-milestone/references/consistency-check.md`, phases-1–4
+interpretation — the suite should be in the intended RED baseline and the
+highest-leverage check is whether the Phase-2 tests genuinely pin the
+contract). Findings + fixes (all committed):
+
+1. **Typo-guard message ambiguity (contract self-inconsistency, FIXED).**
+   The Phase-1 `project set` typo-guard contract put the
+   `to create a new project group, pass --new-project` recovery hint on the
+   same `→` line as the optional `did you mean '<closest>'?` clause, yet
+   also said "when nothing is close the `→ did you mean …` clause is
+   omitted (the `--new-project` hint still prints)" — contradictory, and
+   `test_project_set_unknown_project_without_flag_refuses` (uses `gamma`,
+   no close match) asserts the recovery hint prints. Rewrote the cli.md
+   wording so the recovery hint **always** prints and only the
+   `did you mean '<closest>'?` prefix is conditional (dropped when nothing
+   is close). Resynced the bundled ref. Both typo-guard tests are
+   consistent with the disambiguated contract.
+2. **Under-constrained `test_stamp_invalid_role_exit_2` (FIXED in Phase 4
+   commit).** It passed-now purely because the unregistered `stamp` verb's
+   argparse error is exit 2 + no write. Strengthened to assert the error
+   NAMES the bad role and is NOT argparse's "invalid choice" — now
+   genuinely RED, pins the role-vocabulary refusal.
+3. **Missing success-output coverage (FIXED).** No test pinned the
+   `project set` success footer (`set <new-project> on <N> doc(s)`) or the
+   `stamp` fresh-stamp success line (`stamped <path>`). Added a footer
+   assertion to the multi-doc `project set` test and a `stamped …`
+   assertion to `test_stamp_inserts_metadata_block`.
+4. **Stale milestone OPEN QUESTIONS (FIXED).** The three OQs (stamp shape,
+   detector boundary, canonical source) were conductor-resolved; converted
+   the section to "OPEN QUESTIONS — RESOLVED" summarising the binding
+   answers and pointing at the Phase-1 Decisions block.
+5. **Stale `cli.py` line reference (FIXED).** The milestone Scope cited the
+   `--body-from` heuristic at `cli.py:3336-3347`; the actual location is
+   `cli.py:3429-3440` in `_cmd_new`. Corrected.
+6. **status.md / plan.md M15 row stale (FIXED).** Both listed M15 as
+   "Draft"; updated to "In progress — Phases 1–4 (contract + RED) done on
+   branch `m15/phases-1-4`, Phases 5–10 pending"; aligned the status.md
+   narrative.
+
+Re-verified after fixes: full suite 39 intended RED / 459 GREEN;
+`test_skill_refs` + frozen snapshot GREEN; bundled ref byte-identical;
+`ruff check` / `ruff format --check` / `mypy` clean; `docs check docs/`
+exit 0. The diff is contract + tests + fixtures + docs only — no `cli.py`
+change (correct for phases 1–4).
+
+**Surfaced for operator (no scope/intent change made):** none — every
+audit fix is an internal-consistency or test-quality correction within the
+already-resolved contract; no decision changes milestone scope or behavior
+intent.

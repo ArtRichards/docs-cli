@@ -490,10 +490,12 @@ docs: project set: '<value>' is not a project in this tree; refusing
   → did you mean '<closest>'? to create a new project group, pass --new-project
 ```
 
-`<closest>` is the nearest known project via `difflib.get_close_matches`; when
-nothing is close, the `→ did you mean …` clause is omitted (the first refusal
-line + the `--new-project` hint still print). An **existing** project value
-needs no flag. Passing `--new-project` acknowledges the deliberate act of
+`<closest>` is the nearest known project via `difflib.get_close_matches`. The
+**`→ … to create a new project group, pass --new-project` recovery hint always
+prints** — only the `did you mean '<closest>'?` prefix is conditional: when no
+known project is close, the prefix is dropped and the `→` line reads
+`→ to create a new project group, pass --new-project`. An **existing** project
+value needs no flag. Passing `--new-project` acknowledges the deliberate act of
 creating a new project group and succeeds for any (non-empty, normalised)
 value.
 

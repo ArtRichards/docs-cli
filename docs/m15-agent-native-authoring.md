@@ -68,8 +68,8 @@ should be implemented after it. Both land 1.6.0 locally; **M17** publishes.
   refresh). Removes the body-content restriction *class* rather than
   tuning the heuristic. Verb name + migrate-vs-new-verb shape is an Open Q.
 - **C4 — `--body-from` refuses real prose, not just frontmatter.** The
-  OQ-E heuristic (`cli.py:3336-3347`) rejects a body if *any* of its first
-  20 lines matches `^[A-Z][A-Za-z-]+:\s` — so a legitimate spec/test-matrix
+  OQ-E heuristic (`cli.py:3429-3440`, in `_cmd_new`) rejects a body if *any*
+  of its first 20 lines matches `^[A-Z][A-Za-z-]+:\s` — so a legitimate spec/test-matrix
   body line like `Reason: …` or `Plan: …` is refused (this is exactly the
   dogfood failure: a test-matrix body starting `## Risk level` was rejected
   on its `Reason:` line). Replace the any-`Label:` match with detection of
@@ -172,20 +172,25 @@ whole doc-with-frontmatter body is still refused.
       bundled skill refs byte-identical (`tests/test_skill_refs.py` GREEN).
 - [ ] Full suite GREEN; quality gate clean tree-wide; `docs check` exit 0.
 
-## OPEN QUESTIONS
+## OPEN QUESTIONS — RESOLVED (conductor-triaged 2026-06-03)
 
-- **`docs stamp` shape (B3):** a new top-level `docs stamp <file>` verb, or
-  teach `docs migrate` to accept a single file (and alias `stamp` to it)?
-  Recommend: extend `migrate`'s single-file path and expose `docs stamp` as
-  the agent-facing name. How is metadata supplied — flags only, or infer
-  `role`/`project` defaults from `.docs.toml`? Recommend: `--role`/`--project`
-  flags, default `role: notes`, project from config.
-- **`--body-from` detector boundary (C4):** is "a contiguous
-  `Lifecycle`/`Role`/`Updated` cluster at/near the top" the right signal,
-  or should it require all three? A body could legitimately open with a
-  single `Updated:` prose line. Recommend: require the *cluster* (≥2 of the
-  required fields adjacent) or a `---` fence; pin the boundary in tests.
-- **C2 canonical source:** are `docs/cli.md` / `convention.md` the source
-  and the skill copies generated, or independently maintained? The doc
-  additions must not break `_trees_byte_identical`. Recommend: inherit
-  M14's C1 decision (declare `docs/` canonical).
+All three are now binding decisions; the full statements live in the impl
+log's Phase 1 "Decisions applied" block. Summary:
+
+- **`docs stamp` shape (B3) — RESOLVED.** A **standalone top-level**
+  `docs stamp <file>` verb (mutating polarity: writes by default,
+  `--dry-run` to opt out, `parents=[common]`). It reuses
+  `insert_metadata_block` internally but is **not** routed through or
+  aliased to `migrate`. Metadata: `--role` else default `notes` (NO H1-role
+  inference), `--project` else config, `Lifecycle: draft`, title from H1
+  (synthesised from filename when absent).
+- **`--body-from` detector boundary (C4) — RESOLVED.** Refuse on a leading
+  `---` fence OR a **≥ 2** `{Lifecycle, Role, Updated}` adjacent cluster
+  (after an optional `# H1`, within the first ~20 lines); a lone prose
+  required-field line passes. The boundary is pinned in
+  `test_body_from.py` (single-required-field passes; two adjacent refuse).
+- **C2 canonical source — RESOLVED.** Inherit M14's C1 decision: `docs/` is
+  canonical, and `src/docs_cli/skill/references/cli.md` is resynced
+  byte-identical in the same commit (Phase 1 done;
+  `tests/test_skill_refs.py` green). SKILL.md verb-table / frontmatter
+  description → Phase 7.

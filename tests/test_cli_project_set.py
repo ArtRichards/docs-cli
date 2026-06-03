@@ -115,6 +115,8 @@ def test_project_set_multi_doc_atomic_batch_one_index_refresh(docs_script, fixtu
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     for name in ("beta-notes.md", "beta-status.md"):
         assert "Project: alpha" in (root / name).read_text(), name
+    # cli.md pins the success footer: "set <new-project> on <N> doc(s)".
+    assert "set alpha on 2 doc(s)" in proc.stderr, proc.stderr
 
     # A follow-up `docs index` must be a no-op — proving the set refreshed
     # the INDEX exactly once at end-of-batch (same proof as project rename).
