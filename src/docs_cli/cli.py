@@ -4003,16 +4003,29 @@ def _rewrite_referring_edges(
     moves: list[tuple[str, str]],
     predicate: Callable[[str], bool] | None = None,
 ) -> None:
-    """Walk active tree once; rewrite `Related:` bullets per (old, new) move.
+    """Walk the whole tree once; rewrite `Related:` bullets per (old, new) move.
 
-    Skips archived docs (`Doc.archived`). Reuses `rewrite_related_refs`
-    per (old_rel, new_rel) pair; atomic-writes touched docs. M12 helper
-    shared by `_cmd_archive` (single-move) and `_cmd_archive --cascade`
-    (batch). M14 (A6): the optional `predicate` is threaded into `walk` so
-    a malformed *excluded* file never fails this rewrite walk.
+    Reuses `rewrite_related_refs` per (old_rel, new_rel) pair; atomic-writes
+    touched docs. M12 helper shared by `_cmd_archive` (single-move) and
+    `_cmd_archive --cascade` (batch). M14 (A6): the optional `predicate` is
+    threaded into `walk` so a malformed *excluded* file never fails this
+    rewrite walk.
+
+    M18 (D2/Q4) — archive-subtree edge integrity. Archived docs are skipped
+    by default (the M3 "archive subtree is read-only by convention" stance),
+    EXCEPT when one of their `Related:` targets equals a batch `old_rel` —
+    i.e. the archived doc references a doc that is moving in THIS archival.
+    In that narrow case the archived referrer's edge IS repointed to the new
+    archive path, so an already-archived doc whose target sweeps into the
+    archive does not dangle. The exception is move-driven only: the
+    `rewrite_related_refs` matcher rewrites a bullet iff its target ==
+    `old_rel`, so no non-moving edge, prose, or other metadata of an archived
+    doc is ever touched. `old_rels` is the set of batch move sources used to
+    gate the otherwise-unconditional archived skip.
     """
     if not moves:
         return
+    old_rels = {old for old, _new in moves}
     for doc in walk(root, config, predicate=predicate):
         if doc.archived:
             continue
