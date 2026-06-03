@@ -1,15 +1,15 @@
 # M16 — Bundled docs skill quality artifacts
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-01
 
 Related:
 - child-of: plan.md
-- parent-of: m16-bundled-docs-skill-quality-impl.md
-- pairs-with: m16-bundled-docs-skill-quality-impl.md
-- pairs-with: m16-bundled-docs-skill-quality-test-matrix.md
+- parent-of: archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md
 - pairs-with: status.md
 
 ## Overview

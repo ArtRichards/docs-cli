@@ -1,12 +1,12 @@
 # M4 — Migration helper (`docs migrate`)
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-22
 
 Related:
-- parent-of: m4-migration-helper-log.md
+- parent-of: archive/2026-05-22/m4-migration-helper-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md

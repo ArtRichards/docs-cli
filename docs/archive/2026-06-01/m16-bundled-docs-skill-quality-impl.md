@@ -1,14 +1,14 @@
 # M16 — Bundled docs skill quality artifacts Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-01
 
 Related:
-- child-of: m16-bundled-docs-skill-quality.md
-- pairs-with: m16-bundled-docs-skill-quality.md
-- pairs-with: m16-bundled-docs-skill-quality-test-matrix.md
+- child-of: archive/2026-06-01/m16-bundled-docs-skill-quality.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md
 - pairs-with: status.md
 
 ## Overview

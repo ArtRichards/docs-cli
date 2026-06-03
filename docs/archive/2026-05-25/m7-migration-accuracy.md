@@ -1,17 +1,17 @@
 # M7 — Migration plan accuracy
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-25
 
 Related:
-- parent-of: m7-migration-accuracy-log.md
+- parent-of: archive/2026-05-25/m7-migration-accuracy-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md
-- pairs-with: m4-migration-helper.md
-- pairs-with: m8-adoption-workflow.md
+- pairs-with: archive/2026-05-22/m4-migration-helper.md
+- pairs-with: archive/2026-05-25/m8-adoption-workflow.md
 
 ## Overview
 

@@ -10,15 +10,15 @@ Related:
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: status.md
-- parent-of: m1-parser-and-index.md
-- parent-of: m7-migration-accuracy.md
-- parent-of: m8-adoption-workflow.md
-- parent-of: m9-pypi-publish.md
-- parent-of: m12-project-rename.md
+- parent-of: archive/2026-05-20/m1-parser-and-index.md
+- parent-of: archive/2026-05-25/m7-migration-accuracy.md
+- parent-of: archive/2026-05-25/m8-adoption-workflow.md
+- parent-of: archive/2026-05-25/m9-pypi-publish.md
+- parent-of: archive/2026-05-28/m12-project-rename.md
 - parent-of: archive/2026-05-29/m13-pypi-publish.md
 - parent-of: m14-robustness-agent-native.md
 - parent-of: m15-agent-native-authoring.md
-- parent-of: m16-bundled-docs-skill-quality.md
+- parent-of: archive/2026-06-01/m16-bundled-docs-skill-quality.md
 - parent-of: m18-archive-edge-integrity.md
 
 ## Sequencing

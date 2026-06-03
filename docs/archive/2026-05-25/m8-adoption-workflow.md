@@ -1,18 +1,18 @@
 # M8 — Adoption workflow (agent-driveable)
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-25
 
 Related:
-- parent-of: m8-adoption-workflow-log.md
+- parent-of: archive/2026-05-25/m8-adoption-workflow-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: cli.md
-- pairs-with: m7-migration-accuracy.md
-- pairs-with: m5-claude-code-skill.md
-- pairs-with: m6-pypi-distribution.md
+- pairs-with: archive/2026-05-25/m7-migration-accuracy.md
+- pairs-with: archive/2026-05-23/m5-claude-code-skill.md
+- pairs-with: archive/2026-05-24/m6-pypi-distribution.md
 
 ## Overview
 

@@ -1,12 +1,12 @@
 # M1 — Implementation Log
 
-Lifecycle: done
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-20
 
 Related:
-- child-of: m1-parser-and-index.md
+- child-of: archive/2026-05-20/m1-parser-and-index.md
 - pairs-with: status.md
 
 ## Implementation metadata

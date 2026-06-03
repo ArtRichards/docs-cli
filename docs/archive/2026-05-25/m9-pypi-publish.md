@@ -1,17 +1,17 @@
 # M9 — PyPI publish 1.3.0
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-25
 
 Related:
-- parent-of: m9-pypi-publish-log.md
+- parent-of: archive/2026-05-25/m9-pypi-publish-log.md
 - child-of: plan.md
 - pairs-with: release-runbook.md
-- pairs-with: m6-pypi-distribution.md
-- pairs-with: m7-migration-accuracy.md
-- pairs-with: m8-adoption-workflow.md
+- pairs-with: archive/2026-05-24/m6-pypi-distribution.md
+- pairs-with: archive/2026-05-25/m7-migration-accuracy.md
+- pairs-with: archive/2026-05-25/m8-adoption-workflow.md
 
 ## Overview
 

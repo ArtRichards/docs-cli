@@ -10,7 +10,7 @@ Related:
 - pairs-with: convention.md
 - pairs-with: cli.md
 - pairs-with: test-strategy.md
-- pairs-with: m5-claude-code-skill.md
+- pairs-with: archive/2026-05-23/m5-claude-code-skill.md
 
 ## Shape
 

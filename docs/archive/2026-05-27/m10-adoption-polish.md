@@ -7,7 +7,7 @@ Updated: 2026-05-27
 Archived-reason: M10 complete (1.4.0 ready locally)
 
 Related:
-- parent-of: m10-adoption-polish-impl.md
+- parent-of: archive/2026-05-27/m10-adoption-polish-impl.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: status.md

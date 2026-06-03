@@ -1,6 +1,6 @@
 # M13 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-29

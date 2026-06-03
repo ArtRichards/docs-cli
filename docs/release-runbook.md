@@ -6,11 +6,11 @@ Project: docs
 Updated: 2026-05-29
 
 Related:
-- pairs-with: m9-pypi-publish.md
+- pairs-with: archive/2026-05-25/m9-pypi-publish.md
 - pairs-with: archive/2026-05-27/m11-pypi-publish.md
-- pairs-with: m6-pypi-distribution.md
-- pairs-with: m7-migration-accuracy.md
-- pairs-with: m8-adoption-workflow.md
+- pairs-with: archive/2026-05-24/m6-pypi-distribution.md
+- pairs-with: archive/2026-05-25/m7-migration-accuracy.md
+- pairs-with: archive/2026-05-25/m8-adoption-workflow.md
 - pairs-with: status.md
 - pairs-with: plan.md
 

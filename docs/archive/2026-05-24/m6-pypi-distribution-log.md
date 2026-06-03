@@ -1,12 +1,12 @@
 # M6 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-05-24
 
 Related:
-- child-of: m6-pypi-distribution.md
+- child-of: archive/2026-05-24/m6-pypi-distribution.md
 - pairs-with: status.md
 
 ## Implementation metadata

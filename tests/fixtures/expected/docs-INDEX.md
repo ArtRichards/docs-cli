@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-06-03. 44 docs active, 3 archived._
+_Generated 2026-06-03. 18 docs active, 29 archived._
 
 ## Project — docs
 
@@ -25,44 +25,18 @@ _Generated 2026-06-03. 44 docs active, 3 archived._
 
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-03.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-03.
-- [m16-bundled-docs-skill-quality-test-matrix.md](m16-bundled-docs-skill-quality-test-matrix.md) — _spec_ — Lite. Updated 2026-06-02.
 
 ### Active — Milestone
 
 - [m15-agent-native-authoring.md](m15-agent-native-authoring.md) — _milestone_ — - Milestone: M15 (v1.6.0, part 2 of 2) - Title: Agent-native doc authoring - Surface: the agent-native *authoring* set…. Updated 2026-06-03.
 - [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) — _milestone_ — - Milestone: M18 - Title: Archive edge integrity (intra-archive Related: rewriting) - Surface: a correctness fix to…. Updated 2026-06-03.
 - [m14-robustness-agent-native.md](m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6.0, part 1 of 2) - Title: Robustness + autonomous archive - Surface: correctness/atomicity…. Updated 2026-06-02.
-- [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md) — _milestone_ — - Milestone: M16 - Title: Bundled docs skill quality artifacts - Surface: bundled `docs` skill guidance under…. Updated 2026-06-02.
-- [m12-project-rename.md](m12-project-rename.md) — _milestone_ — > **Stub-drafted 2026-05-28** following M11 closeout. M12 bundles > one operator-facing headline feature (`docs project…. Updated 2026-05-28.
-- [m7-migration-accuracy.md](m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
-- [m8-adoption-workflow.md](m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
-- [m9-pypi-publish.md](m9-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-24, post M6 scope reframe.** M9 enters > active state once M8 ships. The operative checklist…. Updated 2026-05-25.
-- [m6-pypi-distribution.md](m6-pypi-distribution.md) — _milestone_ — > **Scope reframe 2026-05-24 (operator decision).** M6 is now > **preparation only** — the milestone delivered the…. Updated 2026-05-24.
-- [m5-claude-code-skill.md](m5-claude-code-skill.md) — _milestone_ — - Milestone: M5 - Title: Claude Code skill - Surface: a Claude Code **skill** — a `SKILL.md` artifact (plus, if needed,…. Updated 2026-05-23.
-- [m3-validation-and-query.md](m3-validation-and-query.md) — _milestone_ — - Milestone: M3 - Title: Validation and query (`check`, `list`) - Surface: two new read-only CLI subcommands on the…. Updated 2026-05-22.
-- [m4-migration-helper.md](m4-migration-helper.md) — _milestone_ — - Milestone: M4 - Title: Migration helper (`docs migrate`) - Surface: one new CLI subcommand on the `docs` executable…. Updated 2026-05-22.
-- [m2-mutating-verbs.md](m2-mutating-verbs.md) — _milestone_ — - Milestone: M2 - Title: Mutating verbs (`new`, `archive`, `mv`, `touch`) - Surface: four new CLI subcommands on the…. Updated 2026-05-21.
-- [m1-parser-and-index.md](m1-parser-and-index.md) — _milestone_ — - Milestone: M1 - Title: Parser and `docs index` - Surface: Python module `docs`, CLI subcommand `docs index` - Status:…. Updated 2026-05-20.
 
 ### Active — Log
 
 - [m15-agent-native-authoring-impl.md](m15-agent-native-authoring-impl.md) — _log_ — Chronological log of work on M15 — Agent-native doc authoring. Append a section per TDD phase with objective, files…. Updated 2026-06-03.
 - [m18-archive-edge-integrity-impl.md](m18-archive-edge-integrity-impl.md) — _log_ — Chronological log of work on M18 — Archive edge integrity (intra-archive `Related:` rewriting). Append a section per…. Updated 2026-06-03.
 - [m14-robustness-agent-native-impl.md](m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-06-02.
-- [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md) — _log_ — Chronological log for M16. This milestone records the docs-cli bundled `docs` skill changes required by the Agent…. Updated 2026-06-02.
-- [m13-pypi-publish-impl.md](m13-pypi-publish-impl.md) — _log_ — Chronological log of work on M13 — PyPI publish 1.5.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-05-29.
-- [m12-project-rename-impl.md](m12-project-rename-impl.md) — _log_ — Chronological log of work on M12 — Project rename verb + M11 wart fixes + version SoT (v1.5.0). Append a section per…. Updated 2026-05-28.
-- [m10-adoption-polish-impl.md](m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-27.
-- [m11-pypi-publish-impl.md](m11-pypi-publish-impl.md) — _log_ — Chronological log of work on M11 — PyPI publish `docs-cli` 1.4.0. Append a section per phase (Operator prep →…. Updated 2026-05-27.
-- [m7-migration-accuracy-log.md](m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
-- [m8-adoption-workflow-log.md](m8-adoption-workflow-log.md) — _log_ — - Project: docs - Milestone: M8 — Adoption workflow (agent-driveable) - Started: 2026-05-24 - Progress: **All 10 TDD…. Updated 2026-05-25.
-- [m9-pypi-publish-log.md](m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries appended as the operator walked [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-25.
-- [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: **M5 complete — shipped…. Updated 2026-05-23.
-- [m6-pypi-distribution-log.md](m6-pypi-distribution-log.md) — _log_ — - Project: docs - Milestone: M6 — PyPI distribution as `docs-cli` - Started: 2026-05-23 - Progress: **Milestone-setup…. Updated 2026-05-23.
-- [m3-validation-and-query-log.md](m3-validation-and-query-log.md) — _log_ — - Project: docs - Milestone: M3 — Validation and query (`check`, `list`) - Started: 2026-05-22 - Progress: Complete —…. Updated 2026-05-22.
-- [m4-migration-helper-log.md](m4-migration-helper-log.md) — _log_ — - Project: docs - Milestone: M4 — Migration helper (`docs migrate`) - Started: 2026-05-22 - Completed: 2026-05-22 -…. Updated 2026-05-22.
-- [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-05-21.
-- [m1-parser-and-index-log.md](m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Shipped: 2026-05-20 - Progress: Phase…. Updated 2026-05-20.
 
 ### Active — Decision
 
@@ -87,7 +61,33 @@ _Generated 2026-06-03. 44 docs active, 3 archived._
 
 ## Archived
 
+- [archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md) — _log_ — Chronological log for M16. This milestone records the docs-cli bundled `docs` skill changes required by the Agent…. Updated 2026-06-01.
+- [archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md](archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md) — _spec_ — Lite. Updated 2026-06-01.
+- [archive/2026-06-01/m16-bundled-docs-skill-quality.md](archive/2026-06-01/m16-bundled-docs-skill-quality.md) — _milestone_ — - Milestone: M16 - Title: Bundled docs skill quality artifacts - Surface: bundled `docs` skill guidance under…. Updated 2026-06-01.
+- [archive/2026-05-29/m13-pypi-publish-impl.md](archive/2026-05-29/m13-pypi-publish-impl.md) — _log_ — Chronological log of work on M13 — PyPI publish 1.5.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-05-29.
 - [archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-29, post M12 closeout.** M13 enters > active state immediately — the M12 wheel + sdist already…. Updated 2026-05-29.
+- [archive/2026-05-28/m12-project-rename-impl.md](archive/2026-05-28/m12-project-rename-impl.md) — _log_ — Chronological log of work on M12 — Project rename verb + M11 wart fixes + version SoT (v1.5.0). Append a section per…. Updated 2026-05-28.
+- [archive/2026-05-28/m12-project-rename.md](archive/2026-05-28/m12-project-rename.md) — _milestone_ — > **Stub-drafted 2026-05-28** following M11 closeout. M12 bundles > one operator-facing headline feature (`docs project…. Updated 2026-05-28.
+- [archive/2026-05-27/m10-adoption-polish-impl.md](archive/2026-05-27/m10-adoption-polish-impl.md) — _log_ — Chronological log of work on M10 — Adoption-flow polish + 1.3.0 carry-overs. Append a section per phase with objective,…. Updated 2026-05-27.
 - [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) — _milestone_ — - Milestone: M10 (v1.4.0) - Title: Adoption-flow polish + 1.3.0 carry-overs - Surface: two new CLI features (`docs…. Updated 2026-05-27.
+- [archive/2026-05-27/m11-pypi-publish-impl.md](archive/2026-05-27/m11-pypi-publish-impl.md) — _log_ — Chronological log of work on M11 — PyPI publish `docs-cli` 1.4.0. Append a section per phase (Operator prep →…. Updated 2026-05-27.
 - [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-27, post M10 closeout.** M11 enters > active state immediately — the M10 wheel + sdist already…. Updated 2026-05-27.
+- [archive/2026-05-25/m7-migration-accuracy-log.md](archive/2026-05-25/m7-migration-accuracy-log.md) — _log_ — - Project: docs - Milestone: M7 — Migration plan accuracy - Started: 2026-05-24 - Progress: **Phase 1 complete; Phase 2…. Updated 2026-05-25.
+- [archive/2026-05-25/m7-migration-accuracy.md](archive/2026-05-25/m7-migration-accuracy.md) — _milestone_ — - Milestone: M7 (v1.1) - Title: Migration plan accuracy - Surface: extensions to `docs migrate`'s inference…. Updated 2026-05-25.
+- [archive/2026-05-25/m8-adoption-workflow-log.md](archive/2026-05-25/m8-adoption-workflow-log.md) — _log_ — - Project: docs - Milestone: M8 — Adoption workflow (agent-driveable) - Started: 2026-05-24 - Progress: **All 10 TDD…. Updated 2026-05-25.
+- [archive/2026-05-25/m8-adoption-workflow.md](archive/2026-05-25/m8-adoption-workflow.md) — _milestone_ — - Milestone: M8 (v1.1) - Title: Adoption workflow — agent-driveable - Surface: new CLI flags + verbs (`--exclude`,…. Updated 2026-05-25.
+- [archive/2026-05-25/m9-pypi-publish-log.md](archive/2026-05-25/m9-pypi-publish-log.md) — _log_ — Per-phase log for M9. Entries appended as the operator walked [release-runbook.md](release-runbook.md) post-M8.. Updated 2026-05-25.
+- [archive/2026-05-25/m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-05-24, post M6 scope reframe.** M9 enters > active state once M8 ships. The operative checklist…. Updated 2026-05-25.
+- [archive/2026-05-24/m6-pypi-distribution-log.md](archive/2026-05-24/m6-pypi-distribution-log.md) — _log_ — - Project: docs - Milestone: M6 — PyPI distribution as `docs-cli` - Started: 2026-05-23 - Progress: **Milestone-setup…. Updated 2026-05-24.
+- [archive/2026-05-24/m6-pypi-distribution.md](archive/2026-05-24/m6-pypi-distribution.md) — _milestone_ — > **Scope reframe 2026-05-24 (operator decision).** M6 is now > **preparation only** — the milestone delivered the…. Updated 2026-05-24.
+- [archive/2026-05-23/m5-claude-code-skill-log.md](archive/2026-05-23/m5-claude-code-skill-log.md) — _log_ — - Project: docs - Milestone: M5 — Claude Code skill - Started: 2026-05-22 - Progress: **M5 complete — shipped…. Updated 2026-05-23.
+- [archive/2026-05-23/m5-claude-code-skill.md](archive/2026-05-23/m5-claude-code-skill.md) — _milestone_ — - Milestone: M5 - Title: Claude Code skill - Surface: a Claude Code **skill** — a `SKILL.md` artifact (plus, if needed,…. Updated 2026-05-23.
+- [archive/2026-05-22/m3-validation-and-query-log.md](archive/2026-05-22/m3-validation-and-query-log.md) — _log_ — - Project: docs - Milestone: M3 — Validation and query (`check`, `list`) - Started: 2026-05-22 - Progress: Complete —…. Updated 2026-05-22.
+- [archive/2026-05-22/m3-validation-and-query.md](archive/2026-05-22/m3-validation-and-query.md) — _milestone_ — - Milestone: M3 - Title: Validation and query (`check`, `list`) - Surface: two new read-only CLI subcommands on the…. Updated 2026-05-22.
+- [archive/2026-05-22/m4-migration-helper-log.md](archive/2026-05-22/m4-migration-helper-log.md) — _log_ — - Project: docs - Milestone: M4 — Migration helper (`docs migrate`) - Started: 2026-05-22 - Completed: 2026-05-22 -…. Updated 2026-05-22.
+- [archive/2026-05-22/m4-migration-helper.md](archive/2026-05-22/m4-migration-helper.md) — _milestone_ — - Milestone: M4 - Title: Migration helper (`docs migrate`) - Surface: one new CLI subcommand on the `docs` executable…. Updated 2026-05-22.
+- [archive/2026-05-21/m2-mutating-verbs-log.md](archive/2026-05-21/m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-05-21.
+- [archive/2026-05-21/m2-mutating-verbs.md](archive/2026-05-21/m2-mutating-verbs.md) — _milestone_ — - Milestone: M2 - Title: Mutating verbs (`new`, `archive`, `mv`, `touch`) - Surface: four new CLI subcommands on the…. Updated 2026-05-21.
+- [archive/2026-05-20/m1-parser-and-index-log.md](archive/2026-05-20/m1-parser-and-index-log.md) — _log_ — - Project: docs - Milestone: M1 — Parser and `docs index` - Started: 2026-05-20 - Shipped: 2026-05-20 - Progress: Phase…. Updated 2026-05-20.
+- [archive/2026-05-20/m1-parser-and-index.md](archive/2026-05-20/m1-parser-and-index.md) — _milestone_ — - Milestone: M1 - Title: Parser and `docs index` - Surface: Python module `docs`, CLI subcommand `docs index` - Status:…. Updated 2026-05-20.
 <!-- docs:generated end -->

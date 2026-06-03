@@ -7,7 +7,7 @@ Updated: 2026-05-27
 Archived-reason: Milestone M11 complete; docs-cli==1.4.0 shipped to PyPI 2026-05-27
 
 Related:
-- parent-of: m11-pypi-publish-impl.md
+- parent-of: archive/2026-05-27/m11-pypi-publish-impl.md
 - child-of: plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md

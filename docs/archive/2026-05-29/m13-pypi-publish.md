@@ -7,11 +7,11 @@ Updated: 2026-05-29
 Archived-reason: Milestone M13 complete; docs-cli==1.5.0 shipped to PyPI 2026-05-29
 
 Related:
-- parent-of: m13-pypi-publish-impl.md
+- parent-of: archive/2026-05-29/m13-pypi-publish-impl.md
 - child-of: plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
-- pairs-with: m12-project-rename.md
+- pairs-with: archive/2026-05-28/m12-project-rename.md
 
 ## Overview
 

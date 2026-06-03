@@ -1,12 +1,12 @@
 # M9 — PyPI publish 1.3.0 (log)
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-25
 
 Related:
-- child-of: m9-pypi-publish.md
+- child-of: archive/2026-05-25/m9-pypi-publish.md
 - pairs-with: release-runbook.md
 
 Per-phase log for M9. Entries appended as the operator walked

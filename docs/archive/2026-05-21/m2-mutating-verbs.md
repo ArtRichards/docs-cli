@@ -1,12 +1,12 @@
 # M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`)
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-21
 
 Related:
-- parent-of: m2-mutating-verbs-log.md
+- parent-of: archive/2026-05-21/m2-mutating-verbs-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md

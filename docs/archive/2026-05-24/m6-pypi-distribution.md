@@ -1,12 +1,12 @@
 # M6 — PyPI distribution as `docs-cli`
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-24
 
 Related:
-- parent-of: m6-pypi-distribution-log.md
+- parent-of: archive/2026-05-24/m6-pypi-distribution-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: architecture.md

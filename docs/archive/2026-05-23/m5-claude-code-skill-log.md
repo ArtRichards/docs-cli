@@ -1,12 +1,12 @@
 # M5 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-23
 
 Related:
-- child-of: m5-claude-code-skill.md
+- child-of: archive/2026-05-23/m5-claude-code-skill.md
 - pairs-with: status.md
 
 ## Implementation metadata

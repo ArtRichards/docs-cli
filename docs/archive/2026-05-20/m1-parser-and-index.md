@@ -1,12 +1,12 @@
 # M1 — Parser and `docs index`
 
-Lifecycle: done
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-20
 
 Related:
-- parent-of: m1-parser-and-index-log.md
+- parent-of: archive/2026-05-20/m1-parser-and-index-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md

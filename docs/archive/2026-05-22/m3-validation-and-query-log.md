@@ -1,12 +1,12 @@
 # M3 — Implementation Log
 
-Lifecycle: done
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-22
 
 Related:
-- child-of: m3-validation-and-query.md
+- child-of: archive/2026-05-22/m3-validation-and-query.md
 - pairs-with: status.md
 
 ## Implementation metadata

@@ -1,12 +1,12 @@
 # M3 — Validation and query (`check`, `list`)
 
-Lifecycle: done
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-22
 
 Related:
-- parent-of: m3-validation-and-query-log.md
+- parent-of: archive/2026-05-22/m3-validation-and-query-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md

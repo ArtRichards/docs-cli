@@ -7,18 +7,18 @@ Updated: 2026-06-03
 
 Related:
 - pairs-with: plan.md
-- pairs-with: m6-pypi-distribution.md
-- pairs-with: m7-migration-accuracy.md
-- pairs-with: m8-adoption-workflow.md
-- pairs-with: m9-pypi-publish.md
+- pairs-with: archive/2026-05-24/m6-pypi-distribution.md
+- pairs-with: archive/2026-05-25/m7-migration-accuracy.md
+- pairs-with: archive/2026-05-25/m8-adoption-workflow.md
+- pairs-with: archive/2026-05-25/m9-pypi-publish.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
 - pairs-with: archive/2026-05-27/m11-pypi-publish.md
-- pairs-with: m12-project-rename.md
+- pairs-with: archive/2026-05-28/m12-project-rename.md
 - pairs-with: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: release-runbook.md
 - pairs-with: m14-robustness-agent-native.md
 - pairs-with: m15-agent-native-authoring.md
-- pairs-with: m16-bundled-docs-skill-quality.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality.md
 - pairs-with: m18-archive-edge-integrity.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**

@@ -1,12 +1,12 @@
 # M4 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-22
 
 Related:
-- child-of: m4-migration-helper.md
+- child-of: archive/2026-05-22/m4-migration-helper.md
 - pairs-with: status.md
 
 ## Implementation metadata

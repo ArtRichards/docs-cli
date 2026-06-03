@@ -1,12 +1,12 @@
 # M12 — Project rename verb + M11 wart fixes + version SoT (v1.5.0)
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-28
 
 Related:
-- parent-of: m12-project-rename-impl.md
+- parent-of: archive/2026-05-28/m12-project-rename-impl.md
 - child-of: plan.md
 - pairs-with: status.md
 - pairs-with: cli.md

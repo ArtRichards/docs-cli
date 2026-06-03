@@ -1,12 +1,12 @@
 # M5 — Claude Code skill
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-05-23
 
 Related:
-- parent-of: m5-claude-code-skill-log.md
+- parent-of: archive/2026-05-23/m5-claude-code-skill-log.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md

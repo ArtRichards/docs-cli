@@ -1,12 +1,12 @@
 # M8 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-25
 
 Related:
-- child-of: m8-adoption-workflow.md
+- child-of: archive/2026-05-25/m8-adoption-workflow.md
 - pairs-with: status.md
 
 ## Implementation metadata

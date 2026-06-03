@@ -1,13 +1,13 @@
 # M12 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-28
 
 Related:
-- child-of: m12-project-rename.md
-- pairs-with: m12-project-rename.md
+- child-of: archive/2026-05-28/m12-project-rename.md
+- pairs-with: archive/2026-05-28/m12-project-rename.md
 - pairs-with: status.md
 
 ## Overview

@@ -1,12 +1,12 @@
 # M2 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-05-21
 
 Related:
-- child-of: m2-mutating-verbs.md
+- child-of: archive/2026-05-21/m2-mutating-verbs.md
 - pairs-with: status.md
 
 ## Implementation metadata

@@ -1,13 +1,13 @@
 # M16 — Bundled docs skill quality artifacts Test Matrix
 
-Lifecycle: active
+Lifecycle: archived
 Role: spec
 Project: docs
-Updated: 2026-06-02
+Updated: 2026-06-01
 
 Related:
-- pairs-with: m16-bundled-docs-skill-quality.md
-- pairs-with: m16-bundled-docs-skill-quality-impl.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality.md
+- pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md
 
 ## Risk level
 
