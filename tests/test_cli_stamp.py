@@ -263,6 +263,14 @@ def test_stamp_invalid_role_exit_2(docs_script, fixtures_dir, tmp_path):
         str(root),
     )
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    # The refusal must be the ROLE-vocabulary error naming the bad value —
+    # NOT argparse's unregistered-verb "invalid choice: 'stamp'". This pins
+    # that the `stamp` verb itself rejects the role (mirrors `docs new`'s
+    # `docs: invalid role '<value>' (not in the Role vocabulary)`), so the
+    # test does not pass merely because the verb is unregistered.
+    assert "role" in proc.stderr.lower(), proc.stderr
+    assert "not-a-role" in proc.stderr, proc.stderr
+    assert "invalid choice" not in proc.stderr, proc.stderr
     # No write on an invalid role.
     assert target.read_text() == before
 

@@ -108,13 +108,16 @@ should be implemented after it. Both land 1.6.0 locally; **M17** publishes.
 - [x] 1. Define Contract — `cli.md` deltas for `project set`, `stamp`, and
       the corrected `--body-from` refusal exit codes. (2026-06-03; bundled
       ref resynced byte-identical.)
-- [ ] 2. Write Tests (RED) — `project set` atomic batch + typo guard;
+- [x] 2. Write Tests (RED) — `project set` atomic batch + typo guard;
       `stamp` insert + idempotent re-stamp; `--body-from` real-frontmatter
       cases incl. the `edge-case-keyword` flip and a `Reason:`-in-body pass.
-- [ ] 3. Create Fixtures — multi-project tree for `project set`; a raw
+      (2026-06-03; 35 new verb tests + 4 new body-from cases.)
+- [x] 3. Create Fixtures — multi-project tree for `project set`; a raw
       no-frontmatter file + an already-stamped file for `stamp`; prose and
-      real-frontmatter bodies for `--body-from`.
-- [ ] 4. Run Tests (RED) — confirm the intended red baseline.
+      real-frontmatter bodies for `--body-from`. (2026-06-03;
+      `tests/fixtures/stamp/` + 3 `body-from/` fixtures.)
+- [x] 4. Run Tests (RED) — confirm the intended red baseline. (2026-06-03;
+      39 intended RED, 459 GREEN, gate clean — see impl log Phase 4.)
 - [ ] 5. Update Interfaces — argparse: `project set`, `stamp`
       (or `migrate`'s single-file path), the `--body-from` detector hook.
 - [ ] 6. Implement Core — `project set`, `stamp`, the `--body-from` block

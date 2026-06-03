@@ -38,7 +38,7 @@ section tracks implementation progress, which is distinct.)
 | 1. Define Contract | Done | 2026-06-03 | cli.md: `project set` + `stamp` sections; `--body-from` cluster/fence detector rewrite; per-verb exit-code rows; bundled ref resynced byte-identical. |
 | 2. Write Tests (RED) | Done | 2026-06-03 | `test_cli_project_set.py` (20) + `test_cli_stamp.py` (15) new; `test_body_from.py` extended (C4 flip + prose-pass + true-positive refusals + cluster boundary). 47 collect across the three files; intended RED. |
 | 3. Create Data/Fixtures | Done | 2026-06-03 | `tests/fixtures/stamp/` (5 files) + 3 new `body-from/` fixtures; `with-frontmatter.txt` deleted (demoted). B2 reuses existing trees inline. Every Phase-2 fixture reference resolves. |
-| 4. Run Tests (RED Baseline) | Pending | — | |
+| 4. Run Tests (RED Baseline) | Done | 2026-06-03 | 39 intended RED (20 project_set + 15 stamp + 4 body_from), classified below; 459 GREEN incl. test_skill_refs + the lockstep-regenerated frozen snapshot. ruff / format / mypy clean. |
 | 5. Update Base Interfaces | Pending | — | |
 | 6. Implement Offline/Core Path | Pending | — | |
 | 7. Update Tool/Wrapper Layer | Pending | — | |
@@ -222,3 +222,62 @@ B2 (`project set`) needs no new tree: the tests reuse the existing
 cross-checked every fixture-file reference in the three Phase-2 test files
 against disk — all resolve (tmp-path outputs like `my-feature.md`,
 `missing.md` are written by the tests, not fixtures).
+
+## Phase 4 — Run Tests (RED Baseline)
+
+**Objective.** Run the new files + full suite and CLASSIFY every failure to
+confirm the *intended* RED — every red is "behaviour not yet implemented",
+none is a traceback / import / collection error.
+
+**Result.** `pytest tests/ -q` → **39 failed, 459 passed**. Quality gate
+clean: `ruff check` (all checks passed), `ruff format --check` (39 files
+formatted), `mypy` (no issues, 40 source files), `docs check docs/` exit 0.
+
+**RED classification (all intended).**
+
+- **B2 `project set` — 20 RED.** All fail with a clean argparse
+  `SystemExit(2)` "invalid choice: 'set' (choose from 'rename')" — the
+  `project set` subcommand is NOT registered (Phase 5). The
+  message-asserting tests (typo guard, no-root, single-token, etc.) reach
+  exit 2 but the asserted message is absent because the verb never runs.
+  No tracebacks, no import errors.
+- **B3 `stamp` — 15 RED.** All fail with a clean argparse `SystemExit(2)`
+  "invalid choice: 'stamp'" — the top-level `stamp` verb is NOT registered
+  (Phase 5). `test_stamp_invalid_role_exit_2` was strengthened to assert
+  the error NAMES the bad role (not argparse's "invalid choice"), so it is
+  genuinely RED rather than passing on the unregistered-verb exit 2.
+- **C4 `--body-from` — 4 RED, 2 green-now (regression guards):**
+  - RED (red-now — old any-`Label:` heuristic still refuses, so the change
+    is needed): `…accepts_prose_with_label_lines[edge-case-keyword.md]`,
+    `…[reason-in-body.md]`, `…single_required_field_passes` — all exit 2
+    today; go green when the C4 cluster/fence detector ships (Phase 6).
+  - RED (red-now — NEW fence behaviour): `…rejects_real_metadata_block_in_body
+    [yaml-fence-body.md]` exits 0 today (the old heuristic matches only
+    uppercase `Label:` lines, not a `---` fence or lowercase `title:`), so
+    it refuses only after the C4 fence detector ships. NB: this is a
+    stronger classification than the plan's note (which expected both
+    true-positive refusals to be green-now) — the fence fixture genuinely
+    pins the new `(a)` signal and must be RED until C4.
+  - GREEN-now (regression guards that stay green across C4):
+    `…rejects_real_metadata_block_in_body[real-frontmatter-body.md]` (old
+    heuristic already refuses the uppercase `Lifecycle`/`Role`/`Updated`
+    cluster; C4 keeps refusing it via signal (b)) and
+    `…two_required_fields_refuses` (two adjacent uppercase required-field
+    lines refuse under both heuristics).
+- **Existing-test churn.** The only change to a pre-existing test is
+  `test_body_from.py` test 4 — its refusal parametrize was repointed off
+  `edge-case-keyword.md` / `with-frontmatter.txt` onto the true-positive
+  `real-frontmatter-body.md` / `yaml-fence-body.md` fixtures. Intentional
+  (the C4 flip). All other pre-existing `test_body_from` cases (1,2,3,5,6,7)
+  stay GREEN.
+- **`tests/test_skill_refs.py` GREEN** (3 passed) — Phase 1 resynced the
+  bundled ref byte-identical.
+
+**Lockstep fix (committed this phase).** The Phase-1–3 `docs touch` /
+`docs index` edits bumped `cli.md` + the two M15 docs to 2026-06-03 and
+re-sorted their INDEX groups, which left the frozen acceptance snapshot
+`tests/fixtures/expected/docs-INDEX.md` stale (the dogfood guard
+`test_index_output_matches_frozen_snapshot` normalises only the `_Generated_`
+line, not per-doc `Updated:` dates). Regenerated the snapshot from the live
+`docs/INDEX.md` — back in lockstep, that test GREEN again. This was the
+only collateral breakage; no other pre-existing test changed.
