@@ -35,9 +35,10 @@ implementation milestones — M14 (robustness + autonomous
 archive) and M15 (agent-native doc authoring) — then ships both
 via the publish milestone M17. M16 is an orthogonal bundled-skill
 quality upgrade on a separate track (already implementation-complete).
-M18 is a standalone archive-edge-integrity correctness fix that unblocks
-archiving the completed-milestone backlog; it depends on nothing and is
-independent of the M17 publish.
+M18 is a standalone archive-edge-integrity correctness fix that unblocked
+archiving the completed-milestone backlog (implementation-complete
+2026-06-03, including its Phase-9 archival payoff); it depended on nothing
+and is independent of the M17 publish.
 
 ```
 v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)
@@ -127,19 +128,19 @@ prior public release existed, no continuity to preserve.
 
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
-| M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [m6-pypi-distribution.md](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
-| M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
-| M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
-| M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
-| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [m12-project-rename.md](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
-| M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
+| M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [m6-pypi-distribution.md](archive/2026-05-24/m6-pypi-distribution.md) | [Log](archive/2026-05-24/m6-pypi-distribution-log.md) |
+| M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish deferred to M9 batched 1.3.0) | [m7-migration-accuracy.md](archive/2026-05-25/m7-migration-accuracy.md) | [Log](archive/2026-05-25/m7-migration-accuracy-log.md) |
+| M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [m8-adoption-workflow.md](archive/2026-05-25/m8-adoption-workflow.md) | [Log](archive/2026-05-25/m8-adoption-workflow-log.md) |
+| M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md) | [Log](archive/2026-05-25/m9-pypi-publish-log.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI as 1.4.0 via M11) | [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md) | [Log](archive/2026-05-27/m10-adoption-polish-impl.md) |
+| M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; M10 headline contract holds against PyPI-served wheel) | [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md) | [Log](archive/2026-05-27/m11-pypi-publish-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [m12-project-rename.md](archive/2026-05-28/m12-project-rename.md) | [Log](archive/2026-05-28/m12-project-rename-impl.md) |
+| M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md) | [Log](archive/2026-05-29/m13-pypi-publish-impl.md) |
 | M14 — Robustness + autonomous archive (v1.6.0) | **Implementation-complete** (2026-06-02; re-scoped 2026-06-02 — authoring set split to M15; `docs mv` atomicity, `docs new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `archive --cascade`, bundled-ref guard + packaging fix; 458 GREEN, gate clean; `docs-cli==1.6.0` built locally — publish is M17's) | [m14-robustness-agent-native.md](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
 | M15 — Agent-native doc authoring (v1.6.0) | **Implementation-complete** — Phases 1–10 (carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17). Done 2026-06-03 (Phases 1–4 on `m15/phases-1-4`; 5–10 on `m15/phases-5-10`); 501 GREEN, gate clean tree-wide. | [m15-agent-native-authoring.md](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
-| M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance for quality artifacts, test matrices, generated reports, and `docs check` limits; pending operator commit/archive) | [m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
+| M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance for quality artifacts, test matrices, generated reports, and `docs check` limits; pending operator commit/archive) | [m16-bundled-docs-skill-quality.md](archive/2026-06-01/m16-bundled-docs-skill-quality.md) | [Log](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md) |
 | M17 — PyPI publish 1.6.0 | **Planned** (publish-only; ships M14 + M15 as `docs-cli==1.6.0` via [release-runbook.md](release-runbook.md), mirroring M13 → M12) | _not yet created_ | — |
-| M18 — Archive edge integrity (intra-archive Related: rewriting) | **Draft** (2026-06-03; correctness fix to `docs archive` so archiving interrelated docs into the archive subtree does not orphan their `Related:` edges — rewrite the moved doc's own archive-subtree edges + repoint already-archived referrers, deliberately flipping the pinned `test_archive_does_not_rewrite_archive_subtree_edges`; `docs mv` parity (D3, included per resolved Open Q1). Depends on nothing; unblocks the completed-milestone archival backlog) | [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
+| M18 — Archive edge integrity (intra-archive Related: rewriting) | **Implementation-complete** (2026-06-03; correctness fix to `docs archive` so archiving interrelated docs into the archive subtree no longer orphans their `Related:` edges — the conditioned archived-skip in `_rewrite_referring_edges` rewrites the moved doc's own archive-subtree edges + repoints already-archived referrers; flipped the pinned `test_archive_does_not_rewrite_archive_subtree_edges` → `test_archive_repoints_already_archived_referrer`; `docs mv` parity (D3, Open Q1) verified already satisfied — no code change. Phase-9 payoff archived the M1–M9/M12 pairs + M16 trio + 3 stray impl-logs; `docs check docs/` exit 0; M14/M15/M18 left live. 510 GREEN, gate clean) | [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
 is **Complete (2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl`
@@ -161,7 +162,7 @@ byte-identical; orphan-dir touch refused; archive referring-edge
 rewrite atomic; repo's own docs/ round-tripped byte-identical).
 OQ-1 through OQ-11 (scope decisions) + OQ-α through OQ-ι (Step 2
 implementation decisions) all resolved per operator recommendation
-— see [m12-project-rename-impl.md](m12-project-rename-impl.md)'s
+— see [m12-project-rename-impl.md](archive/2026-05-28/m12-project-rename-impl.md)'s
 milestone-completion summary for the full resolution log.
 **Shipped to PyPI as `docs-cli==1.5.0` via M13 on 2026-05-29** —
 mirrors the M10 → M11, M8 → M9 cadence.
@@ -181,7 +182,7 @@ can't resolve the renamed `docs-cli-rehearsal` distribution —
 the version string is instead verified against the
 canonical-name local + PyPI wheels), and `CHANGELOG.md` is not
 shipped inside the sdist. Full record in
-[m13-pypi-publish-impl.md](m13-pypi-publish-impl.md)'s
+[m13-pypi-publish-impl.md](archive/2026-05-29/m13-pypi-publish-impl.md)'s
 milestone-completion summary.
 
 **M11 — `docs-cli==1.4.0` shipped 2026-05-27.** The publish-only
@@ -243,7 +244,7 @@ tagged `v1.3.0` at the M8 simplify commit, and created the
 GitHub release with hand-augmented notes. Doc closeouts ran
 in lockstep. Token re-scope was deferred as out-of-band
 operator UI work. Full record + deviations in
-[m9-pypi-publish.md](m9-pypi-publish.md)'s milestone-completion
+[m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md)'s milestone-completion
 summary; the operative checklist
 [release-runbook.md](release-runbook.md) stays the reference
 for v1.4+ releases.
@@ -279,4 +280,4 @@ rule-message shape and case-sensitivity decisions._
 _No plan-level open questions are currently outstanding. M10's
 milestone-scoped questions (OQ-A through OQ-I) were
 operator-confirmed 2026-05-26 and promoted to the Decisions section
-of [m10-adoption-polish.md](m10-adoption-polish.md)._
+of [m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md)._

@@ -25,28 +25,48 @@ Related:
 
 ## Current milestone
 
-**M16 — Bundled docs skill quality artifacts** is
-**implementation-complete (2026-06-01)** for the Agent Playbook
-Suite risk-aware quality upgrade, pending operator commit/archive.
-Scope is limited to the bundled `docs` skill under `src/docs_cli/skill/`:
-document test matrices, quality logs, generated report artifacts, and
-the mechanical limits of `docs check`. The milestone pair is
-[m16-bundled-docs-skill-quality.md](m16-bundled-docs-skill-quality.md)
-+ [m16-bundled-docs-skill-quality-impl.md](m16-bundled-docs-skill-quality-impl.md).
+**M18 — Archive edge integrity (intra-archive Related: rewriting)** is
+**implementation-complete (2026-06-03)**. The correctness fix to
+`docs archive` (rewrite the moved doc's own archive-subtree `Related:`
+edges + repoint already-archived referrers, via the conditioned
+archived-skip in `_rewrite_referring_edges`) landed, and its Phase-9 payoff
+archived the completed-milestone backlog on the live tree — see the
+*Completed-milestone doc archival is DONE* note below. The milestone pair is
+[m18-archive-edge-integrity.md](m18-archive-edge-integrity.md)
++ [m18-archive-edge-integrity-impl.md](m18-archive-edge-integrity-impl.md);
+it stays LIVE at root (a milestone is not self-archived). Full suite 510
+GREEN, gate clean tree-wide.
 
-**Completed-milestone doc archival is DEFERRED pending M18.** The
-completed milestones M1–M9 + M12 (plan/log pairs), the M16 trio (plan +
-impl + test-matrix), and the three stray impl-logs
-(`m10-adoption-polish-impl.md`, `m11-pypi-publish-impl.md`,
-`m13-pypi-publish-impl.md`) remain in the LIVE `docs/` tree rather than
-under `archive/<date>/`. This is intentional: archiving interrelated docs
-into the archive subtree today orphans their `Related:` edges (a milestone
-plan↔log pair, or sweeping a log in beside its already-archived plan), which
-makes `docs check docs/` exit 2 — the
-[M18 — Archive edge integrity](m18-archive-edge-integrity.md) bug. Performing
-that archival is M18's Phase 9 integrate/dogfood payoff; M14/M15 stay live
-until the M17 publish regardless. Until M18 lands, the live tree keeps the
-completed-milestone docs in place so `docs check docs/` stays clean.
+**M16 — Bundled docs skill quality artifacts** was implementation-complete
+2026-06-01 and is now **archived** (trio → `archive/2026-06-01/` by M18's
+Phase-9 sweep): the Agent Playbook Suite risk-aware quality upgrade, scoped
+to the bundled `docs` skill under `src/docs_cli/skill/` (document test
+matrices, quality logs, generated report artifacts, and the mechanical
+limits of `docs check`). The milestone pair is now
+[archive/2026-06-01/m16-bundled-docs-skill-quality.md](archive/2026-06-01/m16-bundled-docs-skill-quality.md)
++ [archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md).
+
+**Completed-milestone doc archival is DONE (2026-06-03), via M18.** The
+[M18 — Archive edge integrity](m18-archive-edge-integrity.md) fix landed
+(the conditioned archived-skip in `_rewrite_referring_edges`), and its
+Phase-9 payoff archived the completed-milestone backlog on the live `docs/`
+tree in strict completion-date order — `docs check docs/` exit 0 after every
+op and at the end. Manifest:
+- M1–M9 plan/log pairs → `archive/2026-05-{20,21,22,22,23,24,25,25,25}/`
+  (each archived the LOG with `--cascade-only "<plan>"`; `child-of` pulls
+  the plan, so both land together edge-clean);
+- M12 plan/impl pair → `archive/2026-05-28/`;
+- the three stray impl-logs swept into their plans' existing folders —
+  `m10`/`m11` → `archive/2026-05-27/`, `m13` → `archive/2026-05-29/`
+  (each repointed its already-archived plan's `parent-of` edge, the M18
+  D2 flip);
+- the M16 trio (plan + impl + test-matrix) → `archive/2026-06-01/`
+  (`--cascade-only "m16-*"`).
+Live referrers (architecture.md, plan.md, status.md, release-runbook.md)
+were repointed automatically to the new archive paths. **M14, M15, and M18
+(both pairs each) are LEFT LIVE at root** — M14/M15 await the M17 publish,
+and M18 is itself the in-flight milestone (a milestone is not self-archived;
+it flips to `archived` only when a later milestone sweeps it in).
 
 The **v1.6 implementation train**: **M14 — Robustness + autonomous
 archive** is now **implementation-complete (2026-06-02)** —
@@ -77,7 +97,7 @@ outside-root refusal; archive referring-edge rewrite;
 wheel. The milestone pair is
 [m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md)
 (archived at closeout) +
-[m13-pypi-publish-impl.md](m13-pypi-publish-impl.md); the
+[m13-pypi-publish-impl.md](archive/2026-05-29/m13-pypi-publish-impl.md); the
 operative checklist was
 [release-runbook.md](release-runbook.md). Full publish record
 + deviations live in the impl log's milestone-completion
@@ -180,7 +200,7 @@ empty stdout + empty stderr, the auto-emitted `.docs.toml`
 carries OQ-A's `[project]` + OQ-M's `[archive] date_format`
 under the provenance header, and `docs check` exits 0
 immediately. See
-[m10-adoption-polish-impl.md](m10-adoption-polish-impl.md)
+[m10-adoption-polish-impl.md](archive/2026-05-27/m10-adoption-polish-impl.md)
 for the per-phase log; the milestone doc was archived at
 Phase 10 closeout per the M8/M9 pattern (impl log stays
 Lifecycle: active).
@@ -192,7 +212,7 @@ https://pypi.org/project/docs-cli/1.3.0/, batching the M6 + M7
 M6 → M9 backlog grouping internally tracked as "v1.1".) The GitHub repo
 `ArtRichards/docs-cli` is public; source tag `v1.3.0` +
 GitHub release exist. See
-[m9-pypi-publish.md](m9-pypi-publish.md)'s
+[m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md)'s
 milestone-completion summary for the published version, wheel
 + sdist sha256, publish timestamp, and the deviations from the
 runbook recorded for v1.4+ releases. The release-runbook stays
@@ -241,14 +261,14 @@ scaffold, GitHub repo) delivered; no PyPI upload was ever in
 M6's scope after the 2026-05-24 reframe. The wheel + sdist in
 local `dist/` from 2026-05-23 are not uploaded; M9 will rebuild
 fresh from the post-M8 tree at publish time. See
-[m6-pypi-distribution.md](m6-pypi-distribution.md)'s top
+[m6-pypi-distribution.md](archive/2026-05-24/m6-pypi-distribution.md)'s top
 "Scope reframe" callout and the
 [release-runbook.md](release-runbook.md) for the operative
 checklist.
 
 ### M9 — PyPI publish 1.3.0 (Complete 2026-05-25)
 
-[m9-pypi-publish.md](m9-pypi-publish.md) walked top-to-bottom
+[m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md) walked top-to-bottom
 in one contiguous session 2026-05-25. Quality gate green
 (pytest 369), artefacts rebuilt fresh from the post-M8 tree,
 TestPyPI rehearsal ran under a disambiguated dist name
@@ -278,7 +298,7 @@ milestones:
   CLI flag: `docs migrate --config-project NAME` (plus
   `--lifecycle` rename on `docs list`). Trial-2 dogfood: 88%
   high+medium against the sanitised real-tree fixtures. Plan
-  at [m7-migration-accuracy.md](m7-migration-accuracy.md).
+  at [m7-migration-accuracy.md](archive/2026-05-25/m7-migration-accuracy.md).
 - **M8 — Adoption workflow** (after M7): `--exclude` tree-wide
   (in `migrate` + `index` + `check` + `list` via `.docs.toml`'s
   new `[exclude]` section), triage flags
@@ -286,7 +306,7 @@ milestones:
   (closes Read-before-Write friction), and a substantial rewrite
   of the bundled skill's references for the adoption flow
   (SKILL.md stays slim — one pointer line). Stub at
-  [m8-adoption-workflow.md](m8-adoption-workflow.md). Load-bearing
+  [m8-adoption-workflow.md](archive/2026-05-25/m8-adoption-workflow.md). Load-bearing
   ship gate: **fresh-subagent dogfooding** of the adoption loop
   end-to-end against trees the M8 author hasn't tuned for.
 
@@ -294,9 +314,9 @@ milestones:
 
 **M6 — PyPI distribution as `docs-cli` is in flight (milestone-setup
 phase complete, 2026-05-23).** The task plan
-[m6-pypi-distribution.md](m6-pypi-distribution.md) is promoted from
+[m6-pypi-distribution.md](archive/2026-05-24/m6-pypi-distribution.md) is promoted from
 `draft` to `active`; the log
-[m6-pypi-distribution-log.md](m6-pypi-distribution-log.md) is created.
+[m6-pypi-distribution-log.md](archive/2026-05-24/m6-pypi-distribution-log.md) is created.
 M6 is the first v1.1 milestone: it publishes the CLI as `docs-cli` on
 PyPI, relocates `bin/docs` to an importable package at
 `src/docs_cli/cli.py`, ships the Claude Code skill inside the wheel as
@@ -335,9 +355,9 @@ to a trigger surface (verb-task table + when-to-use scenarios +
 never-hand-edit rule), bundled `convention.md` and `cli.md` as
 references (byte-identical mirrors with a lockstep test), and
 cleaned dev cross-refs out of the source specs. See
-[m5-claude-code-skill-log.md](m5-claude-code-skill-log.md) for the
+[m5-claude-code-skill-log.md](archive/2026-05-23/m5-claude-code-skill-log.md) for the
 per-phase history (and the post-ship section appended to it) and
-[m5-claude-code-skill.md](m5-claude-code-skill.md) for the milestone
+[m5-claude-code-skill.md](archive/2026-05-23/m5-claude-code-skill.md) for the milestone
 summary.
 
 M4 — Migration helper (`docs migrate`) shipped 2026-05-22 across ten TDD
@@ -345,50 +365,50 @@ phases. It added one verb — `docs migrate <dir>` — that adopts a
 non-conforming directory into the convention: it walks a foreign tree, infers
 the required metadata per file, and produces a migration plan (dry-run by
 default; `--apply` writes the metadata blocks and normalises archive-style
-subdirectories). See [m4-migration-helper-log.md](m4-migration-helper-log.md)
-for the per-phase history and [m4-migration-helper.md](m4-migration-helper.md)
+subdirectories). See [m4-migration-helper-log.md](archive/2026-05-22/m4-migration-helper-log.md)
+for the per-phase history and [m4-migration-helper.md](archive/2026-05-22/m4-migration-helper.md)
 for the milestone summary.
 
 M3 — Validation and query (`check`, `list`) shipped 2026-05-22 across ten TDD
 phases. It added two read-only verbs — `docs check` (validate the tree, with
 CI-usable exit codes) and `docs list` (filterable query view with a stable
 JSON schema) — and regrouped `INDEX.md` by `Project` then `Role`. See
-[m3-validation-and-query-log.md](m3-validation-and-query-log.md) for the
-per-phase history and [m3-validation-and-query.md](m3-validation-and-query.md)
+[m3-validation-and-query-log.md](archive/2026-05-22/m3-validation-and-query-log.md) for the
+per-phase history and [m3-validation-and-query.md](archive/2026-05-22/m3-validation-and-query.md)
 for the milestone summary.
 
 M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) shipped 2026-05-21
-across ten TDD phases. See [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md)
-for the per-phase history and [m2-mutating-verbs.md](m2-mutating-verbs.md)
+across ten TDD phases. See [m2-mutating-verbs-log.md](archive/2026-05-21/m2-mutating-verbs-log.md)
+for the per-phase history and [m2-mutating-verbs.md](archive/2026-05-21/m2-mutating-verbs.md)
 for the milestone summary.
 
 M1 — Parser and `docs index` shipped 2026-05-20 across ten TDD phases.
-See [m1-parser-and-index-log.md](m1-parser-and-index-log.md) for the
-per-phase history and [m1-parser-and-index.md](m1-parser-and-index.md)
+See [m1-parser-and-index-log.md](archive/2026-05-20/m1-parser-and-index-log.md) for the
+per-phase history and [m1-parser-and-index.md](archive/2026-05-20/m1-parser-and-index.md)
 for the milestone summary.
 
 ## Milestone progress
 
 | Milestone | Status | Task plan | Log |
 |---|---|---|---|
-| M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](m1-parser-and-index.md) | [Log](m1-parser-and-index-log.md) |
-| M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](m2-mutating-verbs.md) | [Log](m2-mutating-verbs-log.md) |
-| M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](m3-validation-and-query.md) | [Log](m3-validation-and-query-log.md) |
-| M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](m4-migration-helper.md) | [Log](m4-migration-helper-log.md) |
-| M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](m5-claude-code-skill.md) | [Log](m5-claude-code-skill-log.md) |
-| M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](m6-pypi-distribution.md) | [Log](m6-pypi-distribution-log.md) |
-| M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m7-migration-accuracy.md) | [Log](m7-migration-accuracy-log.md) |
-| M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](m8-adoption-workflow.md) | [Log](m8-adoption-workflow-log.md) |
-| M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](m9-pypi-publish.md) | [Log](m9-pypi-publish-log.md) |
-| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI via M11; 400/400 GREEN at M10 close; kebab-tiny dogfood PASS) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](m10-adoption-polish-impl.md) |
-| M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](m11-pypi-publish-impl.md) |
-| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](m12-project-rename.md) | [Log](m12-project-rename-impl.md) |
-| M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](m13-pypi-publish-impl.md) |
+| M1 — Parser and `docs index` | **Complete** (2026-05-20) | [Plan](archive/2026-05-20/m1-parser-and-index.md) | [Log](archive/2026-05-20/m1-parser-and-index-log.md) |
+| M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) | **Complete** (2026-05-21) | [Plan](archive/2026-05-21/m2-mutating-verbs.md) | [Log](archive/2026-05-21/m2-mutating-verbs-log.md) |
+| M3 — Validation and query (`check`, `list`) | **Complete** (2026-05-22) | [Plan](archive/2026-05-22/m3-validation-and-query.md) | [Log](archive/2026-05-22/m3-validation-and-query-log.md) |
+| M4 — Migration helper (`docs migrate`) | **Complete** (2026-05-22) | [Plan](archive/2026-05-22/m4-migration-helper.md) | [Log](archive/2026-05-22/m4-migration-helper-log.md) |
+| M5 — Claude Code skill | **Complete** (2026-05-22) | [Plan](archive/2026-05-23/m5-claude-code-skill.md) | [Log](archive/2026-05-23/m5-claude-code-skill-log.md) |
+| M6 — PyPI distribution preparation as `docs-cli` | **Complete** (2026-05-24, preparation only; publish moved to M9) | [Plan](archive/2026-05-24/m6-pypi-distribution.md) | [Log](archive/2026-05-24/m6-pypi-distribution-log.md) |
+| M7 — Migration plan accuracy | **Complete** (2026-05-25; ship-ready locally, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](archive/2026-05-25/m7-migration-accuracy.md) | [Log](archive/2026-05-25/m7-migration-accuracy-log.md) |
+| M8 — Adoption workflow (agent-driveable) | **Complete** (2026-05-25; ship-ready locally as 1.3.0, publish DEFERRED to M9 batched 1.3.0 per OQ-C) | [Plan](archive/2026-05-25/m8-adoption-workflow.md) | [Log](archive/2026-05-25/m8-adoption-workflow-log.md) |
+| M9 — PyPI publish 1.3.0 | **Complete** (2026-05-25; `docs-cli==1.3.0` on PyPI; repo public; `v1.3.0` tag + GitHub release) | [Plan](archive/2026-05-25/m9-pypi-publish.md) | [Log](archive/2026-05-25/m9-pypi-publish-log.md) |
+| M10 — Adoption-flow polish + 1.3.0 carry-overs (v1.4.0) | **Complete** (2026-05-27; shipped to PyPI via M11; 400/400 GREEN at M10 close; kebab-tiny dogfood PASS) | [Plan](archive/2026-05-27/m10-adoption-polish.md) | [Log](archive/2026-05-27/m10-adoption-polish-impl.md) |
+| M11 — PyPI publish 1.4.0 | **Complete** (2026-05-27; `docs-cli==1.4.0` on PyPI; `v1.4.0` tag + GitHub release; chain-of-custody bit-perfect; headline M10 contract holds against PyPI-served wheel) | [Plan](archive/2026-05-27/m11-pypi-publish.md) | [Log](archive/2026-05-27/m11-pypi-publish-impl.md) |
+| M12 — Project rename + M11 wart fixes + version SoT (v1.5.0) | **Complete** (2026-05-28; `dist/docs_cli-1.5.0-*` built locally, twine check PASS, 433/433 pytest GREEN at simplify close; shipped to PyPI as 1.5.0 via M13 on 2026-05-29) | [Plan](archive/2026-05-28/m12-project-rename.md) | [Log](archive/2026-05-28/m12-project-rename-impl.md) |
+| M13 — PyPI publish 1.5.0 | **Complete** (2026-05-29; `docs-cli==1.5.0` on PyPI; `v1.5.0` annotated tag + GitHub release; chain-of-custody bit-perfect; all four M12 headline contracts hold against the PyPI-served wheel) | [Plan](archive/2026-05-29/m13-pypi-publish.md) | [Log](archive/2026-05-29/m13-pypi-publish-impl.md) |
 | M14 — Robustness + autonomous archive (v1.6.0) | **Implementation-complete** (2026-06-02; re-scoped 2026-06-02 — authoring set split to M15; `mv` atomicity, `new` strict-root, four-verb `touch`/`archive`/`mv`/`project rename` excludes, slug/`OSError`/`atomic_write`-fsync guards, non-interactive `--cascade`, bundled-ref guard + packaging fix; 458 GREEN, gate clean; `docs-cli==1.6.0` built locally — publish is M17's) | [Plan](m14-robustness-agent-native.md) | [Log](m14-robustness-agent-native-impl.md) |
 | M15 — Agent-native doc authoring (v1.6.0) | **Implementation-complete** — Phases 1–10 (carved from M14 — `docs project set`, single-file `docs stamp`, `--body-from` real-frontmatter detector, skill/cli docs; depends on M14; builds 1.6.0 locally, publish is M17). Phases 1–4 (contract + RED baseline: 41 intended reds, 459 GREEN) on `m15/phases-1-4`; Phases 5–10 (impl + dogfood + closeout: all 41 RED → GREEN, 501 total, gate clean tree-wide, `docs check docs/` 0, bundled refs byte-identical) on `m15/phases-5-10` — both 2026-06-03. | [Plan](m15-agent-native-authoring.md) | [Log](m15-agent-native-authoring-impl.md) |
-| M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance; code on `main` as `9ceb113`; doc archival of the M16 trio DEFERRED to M18 — see the deferred-archival note below) | [Plan](m16-bundled-docs-skill-quality.md) | [Log](m16-bundled-docs-skill-quality-impl.md) |
+| M16 — Bundled docs skill quality artifacts | **Complete / archived** (2026-06-01 impl-complete; documentation-only bundled `docs` skill guidance; code on `main` as `9ceb113`; the M16 trio was archived to `archive/2026-06-01/` by M18's Phase-9 sweep on 2026-06-03) | [Plan](archive/2026-06-01/m16-bundled-docs-skill-quality.md) | [Log](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md) |
 | M17 — PyPI publish 1.6.0 | **Planned** (publish-only; ships M14 + M15 as `docs-cli==1.6.0` via the release-runbook, mirroring M13 → M12) | _not yet created_ | — |
-| M18 — Archive edge integrity (intra-archive Related: rewriting) | **In progress** (Phase 1 done 2026-06-03; correctness fix to `docs archive` — rewrite the moved doc's own archive-subtree `Related:` edges + repoint already-archived referrers; deliberately flips the pinned `test_archive_does_not_rewrite_archive_subtree_edges`. Open Q1 RESOLVED: `docs mv` own-edge parity INCLUDED (operator). Depends on nothing; unblocks the completed-milestone archival backlog) | [Plan](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
+| M18 — Archive edge integrity (intra-archive Related: rewriting) | **Implementation-complete** (2026-06-03; correctness fix to `docs archive` — the conditioned archived-skip in `_rewrite_referring_edges` rewrites the moved doc's own archive-subtree `Related:` edges + repoints already-archived referrers; flipped the pinned `test_archive_does_not_rewrite_archive_subtree_edges` → `test_archive_repoints_already_archived_referrer`. `docs mv` own-edge parity (Open Q1 INCLUDED) verified already satisfied — no code change. Phase-9 payoff archived the M1–M9/M12 pairs + M16 trio + 3 stray impl-logs; `docs check docs/` exit 0; M14/M15/M18 left live. 510 GREEN. Stays LIVE at root) | [Plan](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
@@ -514,7 +534,7 @@ commit. Intermediate versions `1.1.0` and `1.2.0` never reached
 PyPI (no prior public release existed; no continuity to
 preserve). Full publish record + deviations recorded for
 future releases in
-[m9-pypi-publish.md](m9-pypi-publish.md)'s milestone-completion
+[m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md)'s milestone-completion
 summary. The [release-runbook.md](release-runbook.md) stays
 the operative reference for the next release (v1.5+).
 

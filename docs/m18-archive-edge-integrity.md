@@ -119,26 +119,36 @@ edges to it, mirroring how live referring edges are already rewritten. This
 
 ## Deliverables
 
-- [ ] D1 `_archive_one` (or its caller) rewrites the moved doc's OWN
+- [x] D1 `_archive_one` (or its caller) rewrites the moved doc's OWN
       `Related:` edges that point at archive-subtree targets to their
       root-relative archive paths; composes with `--cascade` so a whole
-      pair/trio lands edge-clean.
-- [ ] D2 already-archived referrers are repointed when a doc they reference
+      pair/trio lands edge-clean. (The post-`_archive_one` walk in
+      `_rewrite_referring_edges` now yields the moved docs as archived with
+      bare own-edges; their targets ∈ batch `old_rels` → repointed. Pinned by
+      #1/#2/#5; dogfooded on the M1 pair + M16 trio.)
+- [x] D2 already-archived referrers are repointed when a doc they reference
       moves into the archive; the pinned
       `test_archive_does_not_rewrite_archive_subtree_edges` expectation is
-      flipped (re-pinned by an updated/replacement test).
-- [ ] D3 `docs mv` own-edge / archive-referrer parity (Open Q1 RESOLVED:
-      INCLUDED) implemented via the shared D1 machinery.
-- [ ] D4 `cli.md` §archive (+ §mv) + `convention.md` document the new
-      behaviour; bundled skill refs resynced byte-identical; INDEX + frozen
-      snapshot in lockstep.
-- [ ] Phase 9 integrate/dogfood payoff: archive the completed-milestone
+      flipped (re-pinned by the replacement
+      `test_archive_repoints_already_archived_referrer`, #3). The conditioned
+      skip `if doc.archived and not any(target in old_rels …): continue` is
+      the one-line fix.
+- [x] D3 `docs mv` own-edge / archive-referrer parity (Open Q1 RESOLVED:
+      INCLUDED) — verified already satisfied by existing `_cmd_mv` (it walks
+      the whole tree post-move and applies `rewrite_related_refs` to the
+      moved doc itself); NO code change needed. Regression-locked by #6
+      (`test_mv_rewrites_moved_docs_own_archive_edge`).
+- [x] D4 `cli.md` §archive (+ §mv) + `convention.md` document the new
+      behaviour (landed in Phase 1; unchanged in Phase 5-10); bundled skill
+      refs byte-identical (`test_skill_refs` GREEN); INDEX + frozen snapshot
+      in lockstep (resynced post-Phase-9 archival).
+- [x] Phase 9 integrate/dogfood payoff: archived the completed-milestone
       backlog (M1–M9 + M12 pairs → `archive/<completion-date>/`; the M16
       trio → `archive/2026-06-01`; the three stray impl-logs swept into their
       plans' existing folders — m10/m11 → `archive/2026-05-27`, m13 →
-      `archive/2026-05-29`) and confirm `docs check docs/` exit 0.
-- [ ] Full suite GREEN; ruff / ruff format / mypy / `docs check` clean
-      tree-wide; bundled cli.md / convention.md byte-identical.
+      `archive/2026-05-29`); `docs check docs/` exit 0. M14/M15/M18 left live.
+- [x] Full suite GREEN (510 passed); ruff / ruff format / mypy / `docs check`
+      clean tree-wide; bundled cli.md / convention.md byte-identical.
 
 ## Phase Checklist (10-phase TDD)
 
@@ -162,23 +172,38 @@ edges to it, mirroring how live referring edges are already rewritten. This
       red is "behaviour not yet implemented" (broken-ref / un-rewritten
       edge), none a traceback / collection error. Flipped test classified RED;
       Q4 boundary + `mv` own-edge classified GREEN.
-- [ ] 5. Update Interfaces — declare the shared archive-subtree-edge rewrite
-      helper signature; thread it into `_archive_one`'s caller (and `mv` if
-      D3). No core logic.
-- [ ] 6. Implement Core — the own-edge rewrite (D1) + the already-archived
-      referrer repoint (D2) + (if D3) the `mv` parity. All RED → GREEN.
-- [ ] 7. Update Wrappers — CHANGELOG entry (1.6.0 section or its successor,
-      per Open Q2); SKILL.md / `create-milestones` guidance if pair-archival
-      expectations change; bundled refs byte-identical.
-- [ ] 8. Run Tests (GREEN) + quality gate — full suite GREEN; ruff / format /
-      mypy / `docs check docs/` / index dry-run clean; bundled refs
-      byte-identical.
-- [ ] 9. Integrate — dogfood the fix on copies, then perform the
-      completed-milestone archival backlog ON THE REAL `docs/` tree (the
-      milestone payoff) and confirm `docs check docs/` exit 0 with M14/M15
-      left live (await M17 publish).
-- [ ] 10. Quality, Docs, Refactor — closeout summaries; INDEX + snapshot
-      lockstep; status/plan updated; simplify pass.
+- [x] 5. Update Interfaces — added the `old_rels = {old for old, _new in
+      moves}` binding in `_rewrite_referring_edges` + rewrote the docstring
+      for the M18 D2/Q4 contract; skip left UNCONDITIONAL (honest split,
+      Q-F). Suite stayed 4 red / 506 pass. No `_archive_one` caller signature
+      change needed — `moves` already carried the batch.
+- [x] 6. Implement Core — flipped the skip to the move-driven condition; the
+      own-edge rewrite (D1) + already-archived referrer repoint (D2) all
+      RED → GREEN; D3 (mv) verified needs NO code change (#6 regression-lock).
+      Strengthened #4 with a second moving-target bystander pinning the
+      boundary both directions. 510 passed.
+- [x] 7. Update Wrappers — appended one Fixed bullet to the open
+      `## 1.6.0 — UNRELEASED` (Q2; no version bump). cli.md / convention.md
+      unchanged (carry the contract from Phase 1); bundled refs byte-identical
+      (`test_skill_refs` GREEN). No external-skill edit (Q-E).
+- [x] 8. Run Tests (GREEN) + quality gate — full suite GREEN (510); ruff /
+      format / mypy / `docs check docs/` / index dry-run clean; bundled refs
+      byte-identical; INDEX == frozen snapshot. (Gate run BEFORE the Phase-9
+      mutation so the rollback boundary was a clean committed state.)
+- [x] 9. Integrate — dogfooded the fix on throwaway copies (M1 pair, the
+      sweep-beside-already-archived leg-2 case, the M16 trio), then performed
+      the completed-milestone archival backlog ON THE REAL `docs/` tree (the
+      milestone payoff): 14 ops in strict completion-date order via
+      `--cascade-only`; `docs check docs/` exit 0 after every op and at the
+      end; M14/M15/M18 left live (await M17 publish). Q-D leg-2 cross-date
+      check passed.
+- [x] 10. Quality, Docs, Refactor — closeout summaries (this checklist +
+      Deliverables + Success Criteria ticked, impl-log rows 5-10); INDEX +
+      frozen snapshot lockstep (resynced post-archival); status/plan updated;
+      lifecycle left `draft` matching the M14/M15 completed-but-live
+      precedent (M18 stays live, not archived). Simplify: the fix is a
+      one-line conditioned skip + a set comprehension — already minimal;
+      no abstraction to collapse.
 
 ## Decisions
 
@@ -282,19 +307,21 @@ REAL `docs/` tree and confirm `docs check docs/` exit 0, M14/M15 left live.
 
 ## Success Criteria
 
-- [ ] Archiving a milestone plan + log together (single op, incl.
+- [x] Archiving a milestone plan + log together (single op, incl.
       `--cascade`) leaves every intra-archive `Related:` edge resolving to a
-      file; `docs check` exit 0.
-- [ ] Sweeping a doc into the archive beside an already-archived referrer
+      file; `docs check` exit 0. (#1/#2/#5 GREEN; dogfooded + live M1 pair,
+      M16 trio.)
+- [x] Sweeping a doc into the archive beside an already-archived referrer
       repoints the referrer's edge (the flipped contract); `docs check`
-      exit 0.
-- [ ] `docs mv` parity resolved (Open Q1) and consistent with archive.
-- [ ] `cli.md` / `convention.md` document the behaviour; bundled refs
+      exit 0. (#3 GREEN; dogfooded + live m13 impl sweep.)
+- [x] `docs mv` parity resolved (Open Q1) and consistent with archive
+      (already satisfied by existing `_cmd_mv`; #6 regression-lock).
+- [x] `cli.md` / `convention.md` document the behaviour; bundled refs
       byte-identical (`tests/test_skill_refs.py` GREEN).
-- [ ] The completed-milestone archival backlog (M1–M9 + M12 pairs, M16 trio,
+- [x] The completed-milestone archival backlog (M1–M9 + M12 pairs, M16 trio,
       three stray impl-logs) is archived and `docs check docs/` exits 0,
-      with M14/M15 still live.
-- [ ] Full suite GREEN; quality gate clean tree-wide.
+      with M14/M15 still live (and M18 itself in-flight).
+- [x] Full suite GREEN (510 passed); quality gate clean tree-wide.
 
 ## OPEN QUESTIONS
 
