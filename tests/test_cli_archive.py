@@ -546,6 +546,166 @@ def test_archive_cascade_rewrites_edges_for_both_moves_atomically(
     assert "archive/2026-05-28/sidekick.md" in witness
 
 
+# --- M18 — archive edge integrity (intra-archive Related: rewriting) --------
+
+
+def _archive_pair_tree(fixtures_dir: Path, tmp_path: Path) -> Path:
+    """Copy the archive-pair fixture (plan <-> log, child-of cascade) into tmp_path."""
+    root = tmp_path / "tree"
+    shutil.copytree(fixtures_dir / "trees" / "archive-pair", root)
+    return root
+
+
+def _archive_trio_tree(fixtures_dir: Path, tmp_path: Path) -> Path:
+    """Copy the archive-trio fixture (plan <-> impl + plan <-> test-matrix) into tmp_path."""
+    root = tmp_path / "tree"
+    shutil.copytree(fixtures_dir / "trees" / "archive-trio", root)
+    return root
+
+
+def test_archive_cascade_rewrites_moved_docs_own_edges(docs_script, fixtures_dir, tmp_path):
+    """archive `master.md --cascade` moves master.md AND sidekick.md
+    (pairs-with). Each moved doc's OWN `Related:` bullet — which points at
+    the other, co-moving doc — is repointed to the new archive path. Pins
+    D1 leg-1 (the moved doc's own outgoing edges).
+
+    RED reason: `_archive_one` (cli.py:3595) sets metadata + moves the file
+    but never rewrites the moved doc's own `Related:` bullets, and
+    `_rewrite_referring_edges` skips the (now-archived) sibling
+    (`if doc.archived: continue`, cli.py:4017) — so master's
+    `pairs-with: sidekick.md` and sidekick's `pairs-with: master.md` are
+    left as bare basenames pointing at files that no longer live at the
+    root. Phase 6 rewrites the moved doc's own batch-`old_rel` edges.
+    """
+    root = _cascade_refs_tree(fixtures_dir, tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "master.md"),
+        "--cascade",
+        "--date",
+        "2026-05-28",
+        stdin_text="y\n",
+    )
+    assert proc.returncode == 0, proc.stderr
+    dated = root / "archive" / "2026-05-28"
+    assert (dated / "master.md").is_file()
+    assert (dated / "sidekick.md").is_file()
+    master = (dated / "master.md").read_text()
+    sidekick = (dated / "sidekick.md").read_text()
+    # Each moved doc's own edge points at the other's NEW archive path.
+    assert "pairs-with: archive/2026-05-28/sidekick.md" in master, master
+    assert "pairs-with: archive/2026-05-28/master.md" in sidekick, sidekick
+    # The bare-basename forms are gone.
+    assert "pairs-with: sidekick.md\n" not in master, master
+    assert "pairs-with: master.md\n" not in sidekick, sidekick
+
+
+def test_archive_pair_leaves_check_clean(docs_script, fixtures_dir, tmp_path):
+    """Archiving a plan/log pair in one op — by archiving the LOG with
+    `--cascade-only` on the plan glob (log->plan is `child-of`, a cascade
+    verb) — lands BOTH docs in the archive with every intra-pair `Related:`
+    edge resolving. `docs check <root>` then exits 0. Pins D1 through the
+    real check gate (Q3: drive the cascade by archiving the log, never bare
+    `--cascade` on the plan).
+
+    RED reason: neither moved doc's own edge is rewritten today (D1 not
+    implemented), so the archived plan's `parent-of: <log>` and the log's
+    `child-of`/`pairs-with: <plan>` bullets dangle as bare basenames ->
+    `broken-ref` -> `docs check` exit 2. Phase 6 repoints them.
+    """
+    root = _archive_pair_tree(fixtures_dir, tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "feature-log.md"),
+        "--cascade-only",
+        "feature.md",
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 0, proc.stderr
+    dated = root / "archive" / "2026-05-28"
+    assert (dated / "feature.md").is_file(), "plan not cascaded via child-of"
+    assert (dated / "feature-log.md").is_file()
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)
+
+
+def test_archive_leaves_unrelated_archived_content_byte_identical(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The Open Q4 boundary guard: an archived doc whose `Related:` edge
+    points at a doc that does NOT move (plus prose) is left byte-identical
+    when an UNRELATED doc is archived. Narrows the read-only exception to
+    move-driven edge rewrites only.
+
+    This test is GREEN at the Phase-4 baseline — a regression LOCK on the
+    boundary, not a behaviour RED. It must stay green through Phase 6: the
+    fix may only touch edges whose target equals a batch `old_rel`.
+    """
+    root = _crossrefs_tree(fixtures_dir, tmp_path)
+    # An archived doc whose edge points at `helper.md` (which does NOT move
+    # in the op below — we archive `core.md`), plus prose.
+    archived_dir = root / "archive" / "2026-04-01"
+    archived_dir.mkdir(parents=True)
+    bystander = archived_dir / "bystander.md"
+    bystander.write_text(
+        "# Bystander\n\n"
+        "Lifecycle: archived\nRole: notes\nProject: cross-refs\n"
+        "Updated: 2026-04-01\n\n"
+        "Related:\n- references: helper.md\n\n"
+        "## Body\n\n"
+        "An archived doc whose edge points at helper.md (not moving) and "
+        "whose prose mentions core.md and helper.md should stay verbatim.\n"
+    )
+    before = bystander.read_text()
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "core.md"),
+        "--date",
+        "2026-05-28",
+    )
+    assert proc.returncode == 0, proc.stderr
+    # The unrelated archived doc is byte-identical — its edge target did not
+    # move, so nothing about it is rewritten.
+    assert bystander.read_text() == before
+
+
+def test_archive_cascade_trio_lands_edge_clean(docs_script, fixtures_dir, tmp_path):
+    """archive the plan `--cascade` on the trio fixture (plan <-> impl and
+    plan <-> test-matrix, both `pairs-with`) moves all three; every
+    intra-trio edge resolves to `archive/<date>/...` and `docs check` exits
+    0. Pins `--cascade` trio composition (M16-shaped).
+
+    RED reason: D1 not implemented — the plan's two `pairs-with` bullets and
+    each child's back-edge to the plan are left as bare basenames after the
+    move -> `broken-ref` -> `docs check` exit 2. Phase 6 repoints the whole
+    trio's intra-archive edges in one atomic batch.
+    """
+    root = _archive_trio_tree(fixtures_dir, tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "feature.md"),
+        "--cascade",
+        "--date",
+        "2026-05-28",
+        stdin_text="y\ny\n",
+    )
+    assert proc.returncode == 0, proc.stderr
+    dated = root / "archive" / "2026-05-28"
+    assert (dated / "feature.md").is_file()
+    assert (dated / "feature-impl.md").is_file(), "impl not cascaded (pairs-with)"
+    assert (dated / "feature-test-matrix.md").is_file(), "test-matrix not cascaded (pairs-with)"
+    plan = (dated / "feature.md").read_text()
+    assert "pairs-with: archive/2026-05-28/feature-impl.md" in plan, plan
+    assert "pairs-with: archive/2026-05-28/feature-test-matrix.md" in plan, plan
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)
+
+
 # --- M14 A6 — archive end-of-batch reindex honours [exclude] ---------------
 
 
@@ -603,10 +763,24 @@ def test_archive_with_malformed_excluded_file_succeeds_and_reindexes(docs_script
     assert "archive/2026-05-28/doomed.md" in index, "the archived doc must be indexed"
 
 
-def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_dir, tmp_path):
-    """A doc that already lives under archive/ that references `core.md`
-    via `Related:` is read-only and must NOT be rewritten when `core.md`
-    is archived."""
+def test_archive_repoints_already_archived_referrer(docs_script, fixtures_dir, tmp_path):
+    """An already-archived `old-ref.md` whose `Related:` edge points at the
+    still-active `core.md` IS repointed to `archive/<date>/core.md` once
+    `core.md` is archived into the subtree.
+
+    This is the FLIPPED REPLACEMENT for the deleted
+    `test_archive_does_not_rewrite_archive_subtree_edges`. The M18 Decisions
+    (Q5, binding) deliberately reverse that pin: an archived referrer whose
+    target MOVES INTO the archive SHOULD be repointed (otherwise the edge
+    dangles), narrowing the M3 "archive is read-only" stance to leave every
+    non-move-driven edge untouched.
+
+    RED reason: `_rewrite_referring_edges` (cli.py:4017) skips
+    `if doc.archived: continue`, so the already-archived `old-ref.md`'s
+    `references: core.md` bullet is left as a bare basename pointing at the
+    now-moved `core.md` — a dangling edge. Phase 6 conditions that skip so an
+    archived referrer pointing at a batch `old_rel` is repointed.
+    """
     root = _crossrefs_tree(fixtures_dir, tmp_path)
     # Manually drop an archived doc that references core.md via Related:.
     archived_dir = root / "archive" / "2026-04-01"
@@ -621,7 +795,6 @@ def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_di
         "An archived doc whose Related: edge points at the (still-active)"
         " core.md.\n"
     )
-    archived_before = archived_doc.read_text()
     proc = _run(
         docs_script,
         "archive",
@@ -630,8 +803,10 @@ def test_archive_does_not_rewrite_archive_subtree_edges(docs_script, fixtures_di
         "2026-05-28",
     )
     assert proc.returncode == 0, proc.stderr
-    # The archived doc is byte-identical.
-    assert archived_doc.read_text() == archived_before
+    # The archived referrer's edge is repointed to the new archive path.
+    after = archived_doc.read_text()
+    assert "references: archive/2026-05-28/core.md" in after, after
+    assert "references: core.md\n" not in after, after
 
 
 # --- M14 A4 — uncaught OSError mid edge-rewrite → clean exit 2 --------------

@@ -280,3 +280,57 @@ def test_mv_excluded_malformed_file_reindexes(docs_script, tmp_path):
     # The conformant doc IS indexed — pins a FULL walk (excluding only
     # vendor/), not a fix that swallows the walk error and drops docs.
     assert "other.md" in index, "the conformant doc must still be indexed"
+
+
+# --- M18 — mv own-edge parity (D3, operator Q1=INCLUDE) --------------------
+
+
+def _self_edge_tree(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """Build a docs root with a single doc that carries a self-referential
+    `Related:` edge (`references: <itself>`), plus an archive dir to move
+    it into.
+
+    Returns (root, source, dest). The self-edge is the only own-edge a
+    single-doc move can touch (a single `mv` relocates exactly one doc, so
+    the only "moved-doc target that moved" is the doc itself).
+    """
+    root = tmp_path / "mv-self"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "mv-self"\n\n[archive]\ndir = "archive"\n')
+    source = root / "feature.md"
+    source.write_text(
+        "# Feature\n\n"
+        "Lifecycle: active\nRole: notes\nProject: mv-self\nUpdated: 2026-01-01\n\n"
+        "Related:\n- references: feature.md\n\n"
+        "## Body\n\n"
+        "A doc whose Related: edge points at itself; moving it must repoint "
+        "that own edge via the shared rewrite_related_refs walker.\n"
+    )
+    dest = root / "archive" / "2026-05-28" / "feature.md"
+    return root, source, dest
+
+
+def test_mv_rewrites_moved_docs_own_archive_edge(docs_script, tmp_path):
+    """`docs mv` repoints the MOVED doc's OWN `Related:` bullet when its
+    target is the doc being moved — the D3 own-edge contract (operator
+    Q1=INCLUDE), via the shared `rewrite_related_refs` walker. Moving a doc
+    with a self-referential `references: feature.md` edge into the archive
+    leaves that edge repointed to `archive/<date>/feature.md`, not dangling.
+
+    Classification: GREEN at the Phase-4 baseline — a regression LOCK, not a
+    behaviour RED. `_cmd_mv` already walks the WHOLE tree post-move and
+    applies `rewrite_related_refs(text, old_rel, new_rel)` to every doc
+    INCLUDING the moved doc at its new path (cli.py:3856-3860), so a
+    single-move own-edge (only ever the self-edge, since exactly one doc
+    moves) is already repointed. Unlike archive's D1, mv has no `--cascade`,
+    so there is no multi-move own-edge gap to fix; this test pins that the
+    D3 contract holds and stays held through Phase 6 (no mv code change
+    expected — SURFACED to the operator as a scope finding).
+    """
+    root, source, dest = _self_edge_tree(tmp_path)
+    proc = _run(docs_script, "mv", str(source), str(dest))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert dest.is_file()
+    after = dest.read_text()
+    assert "references: archive/2026-05-28/feature.md" in after, after
+    assert "references: feature.md\n" not in after, after
