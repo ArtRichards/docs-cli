@@ -2971,6 +2971,35 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     touch_p.add_argument("files", nargs="+", help="Path(s) to the doc(s) to touch.")
 
+    # M15 (B3): `docs stamp <file>...` — write-then-stamp. Inserts a
+    # convention-correct metadata block onto files an agent already wrote,
+    # preserving the body. Standalone top-level verb, mutating-verb polarity
+    # (writes by default; --dry-run to opt out).
+    stamp_p = subparsers.add_parser(
+        "stamp",
+        parents=[common],
+        help="Stamp a metadata block onto one or more already-written files.",
+        description=(
+            "Insert a convention-correct metadata block (Lifecycle: draft, "
+            "Role, Project, Updated: today) onto one or more files an agent "
+            "has already written, preserving the body verbatim (M15 — B3). "
+            "The write-then-stamp counterpart to `docs new --body-from`. Role "
+            "is `--role` else the default `notes` (NO H1-role inference); "
+            "project is `--project` else the docs root's configured project; "
+            "title is the file's H1 (or `--title`, or synthesised from the "
+            "filename). Re-stamping an already-stamped file refreshes only "
+            "Updated:. Foreign metadata is parked under `## Migrated "
+            "metadata`. Atomic multi-file batch; one end-of-batch INDEX "
+            "refresh; `--dry-run` previews."
+        ),
+    )
+    stamp_p.add_argument("files", nargs="+", help="Path(s) to the file(s) to stamp.")
+    stamp_p.add_argument(
+        "--role", help="Doc role (default: notes); must be in the Role vocabulary."
+    )
+    stamp_p.add_argument("--project", help="Project slug (overrides the configured default).")
+    stamp_p.add_argument("--title", help="H1 title (overrides the file's H1 / synthesised title).")
+
     # M12: `docs project` verb namespace. Today the only nested verb is
     # `rename`; the namespace is reserved for future per-project verbs
     # (`show`, `validate`, ...).
@@ -3004,6 +3033,39 @@ def _build_parser() -> argparse.ArgumentParser:
         "new_name",
         metavar="new-name",
         help="The new project slug. Auto-normalised; rejected if empty.",
+    )
+
+    # M15 (B2): `docs project set <doc>... <new-project>` — the single-doc
+    # counterpart to `rename`. A single nargs="+" positional run is split as
+    # `*docs, new_project` inside the command (NOT two positionals; argparse
+    # cannot split a variadic run + a trailing positional unambiguously).
+    project_set_p = project_sub.add_parser(
+        "set",
+        parents=[common],
+        help="Reassign one or more docs' Project: field to <new-project>.",
+        description=(
+            "Reassign the `Project:` field of one or more named docs (M15 — "
+            "B2). A single positional run is split as `*docs, <new-project>`: "
+            "the last token is the new project name, the earlier tokens are "
+            "doc paths. Rewrites only the named docs' `Project:` line "
+            "(inserting it when absent) and regenerates INDEX.md once; never "
+            "touches `.docs.toml`, non-named docs, or `Related:` edges. "
+            "`<new-project>` is auto-normalised; a value new to the tree is "
+            "refused unless `--new-project` is passed (the typo guard). A "
+            "named archived doc refuses the whole batch (exit 2); validate-"
+            "all-first atomic semantics; `--dry-run` previews."
+        ),
+    )
+    project_set_p.add_argument(
+        "args",
+        nargs="+",
+        metavar="doc ... new-project",
+        help="One or more doc paths followed by the new project name.",
+    )
+    project_set_p.add_argument(
+        "--new-project",
+        action="store_true",
+        help="Acknowledge creating a new project group (bypasses the typo guard).",
     )
 
     # M3 read-only verbs. They take neither --dry-run nor the `common` parent
@@ -4109,6 +4171,16 @@ def _cmd_project_rename(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_project_set(args: argparse.Namespace) -> int:
+    # Phase 5 placeholder — implemented in Phase 6.
+    return 2
+
+
+def _cmd_stamp(args: argparse.Namespace) -> int:
+    # Phase 5 placeholder — implemented in Phase 6.
+    return 2
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     if args.root:
         root = Path(args.root)
@@ -4652,6 +4724,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_mv(args)
     if args.command == "touch":
         return _cmd_touch(args)
+    if args.command == "stamp":
+        return _cmd_stamp(args)
     if args.command == "check":
         return _cmd_check(args)
     if args.command == "list":
@@ -4663,6 +4737,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "project":
         if args.project_command == "rename":
             return _cmd_project_rename(args)
+        if args.project_command == "set":
+            return _cmd_project_set(args)
         return 2
     return 2
 
