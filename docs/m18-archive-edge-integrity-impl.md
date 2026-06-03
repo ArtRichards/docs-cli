@@ -28,9 +28,11 @@ changed, actions, test results, decisions.
   edges and (2) `_rewrite_referring_edges` deliberately skips already-archived
   referrers (the pinned `test_archive_does_not_rewrite_archive_subtree_edges`).
   Both legs reproduced on copies of the live `docs/` tree → `docs check`
-  exit 2. Scope is a correctness fix to archive (and pending Open Q1, `mv`):
-  rewrite the moved doc's own archive-subtree edges + repoint already-archived
-  referrers, deliberately flipping the pinned test. Depends on nothing;
+  exit 2. Scope is a correctness fix to archive (and `mv` — Open Q1 RESOLVED
+  INCLUDED, operator): rewrite the moved doc's own archive-subtree edges +
+  repoint already-archived referrers, deliberately flipping the pinned test.
+  (Phase 2 finding: the `mv` own-edge leg is already satisfied by existing
+  code — see the Phase-2 table row.) Depends on nothing;
   unblocks the completed-milestone archival backlog (currently DEFERRED in
   the live tree). Phase 1 (Define Contract) opens via
   `/ship-milestone M18`.

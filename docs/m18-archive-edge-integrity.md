@@ -17,9 +17,9 @@ Related:
 
 - Milestone: M18
 - Title: Archive edge integrity (intra-archive Related: rewriting)
-- Surface: a correctness fix to `docs archive` (and, pending an Open Q,
-  `docs mv`) so that archiving interrelated docs into the archive subtree
-  does not orphan their `Related:` edges. Two legs: (a) the moved doc's OWN
+- Surface: a correctness fix to `docs archive` (and `docs mv`, Open Q1
+  RESOLVED INCLUDED) so that archiving interrelated docs into the archive
+  subtree does not orphan their `Related:` edges. Two legs: (a) the moved doc's OWN
   outgoing edges that point at docs which now live under `archive/` are
   rewritten to their root-relative archive paths; (b) ALREADY-archived
   referrers are repointed when a doc they reference moves into the archive.
@@ -142,24 +142,26 @@ edges to it, mirroring how live referring edges are already rewritten. This
 
 ## Phase Checklist (10-phase TDD)
 
-- [ ] 1. Define Contract — `cli.md` §archive deltas for the own-edge rewrite
+- [x] 1. Define Contract — `cli.md` §archive deltas for the own-edge rewrite
       (D1) + already-archived-referrer repoint (D2); the precise "targets
       that moved" set under single vs `--cascade` archive; exit-code rows;
-      the D3 `mv` decision (Open Q1); `convention.md` archive-subtree-edge
-      note; bundled refs resynced byte-identical.
-- [ ] 2. Write Tests (RED) — pair-archival leaves both directions clean
+      the D3 `mv` decision (Open Q1 RESOLVED INCLUDED); `convention.md`
+      archive-subtree-edge note; bundled refs resynced byte-identical.
+- [x] 2. Write Tests (RED) — pair-archival leaves both directions clean
       (plan's own `parent-of: …-log.md` → archive path; log's `child-of`);
       sweep-a-doc-in-beside-an-already-archived-referrer repoints the
       archived referrer (the FLIPPED case replacing/superseding
       `test_archive_does_not_rewrite_archive_subtree_edges`); `--cascade`
-      pair/trio lands edge-clean; the backlog-shaped acceptance fixture;
-      (if D3) the `mv` own-edge case.
-- [ ] 3. Create Fixtures — small trees with a plan/log pair + an
-      already-archived referrer + a trio (plan/impl/test-matrix) mirroring
-      the real backlog shape, under `tests/fixtures/`.
-- [ ] 4. Run Tests (RED Baseline) — confirm the intended red baseline; every
+      pair/trio lands edge-clean; the `mv` own-edge case (D3). NOTE: the `mv`
+      own-edge test is GREEN at baseline — D3 is already satisfied by
+      existing `_cmd_mv` (surfaced to operator).
+- [x] 3. Create Fixtures — small trees with a plan/log pair (`archive-pair/`)
+      + a trio (`archive-trio/`, plan/impl/test-matrix) mirroring the real
+      backlog shape, under `tests/fixtures/trees/`.
+- [x] 4. Run Tests (RED Baseline) — confirmed: 4 failed, 506 passed; every
       red is "behaviour not yet implemented" (broken-ref / un-rewritten
-      edge), none a traceback / collection error. Classify the flipped test.
+      edge), none a traceback / collection error. Flipped test classified RED;
+      Q4 boundary + `mv` own-edge classified GREEN.
 - [ ] 5. Update Interfaces — declare the shared archive-subtree-edge rewrite
       helper signature; thread it into `_archive_one`'s caller (and `mv` if
       D3). No core logic.
