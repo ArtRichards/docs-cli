@@ -5,9 +5,10 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.6.0 — UNRELEASED
+## 1.6.0 — 2026-06-03
 
-M14 + M15 landed locally; the publish milestone (M17) ships 1.6.0 to PyPI.
+Robustness + autonomous archival (M14) and agent-native doc authoring
+(M15), shipped together as one release.
 
 M14: robustness + autonomous archive. Burns down the post-1.5.0
 multi-agent-review correctness/atomicity findings (Thread A), lands the
