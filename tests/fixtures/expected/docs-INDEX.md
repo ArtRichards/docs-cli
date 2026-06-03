@@ -45,7 +45,7 @@ _Generated 2026-06-03. 18 docs active, 29 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-05-29.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-06-03.
 
 ### Active — Reference
 

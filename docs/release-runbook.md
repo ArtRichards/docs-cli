@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-05-29
+Updated: 2026-06-03
 
 Related:
 - pairs-with: archive/2026-05-25/m9-pypi-publish.md
@@ -22,7 +22,7 @@ the operative reference for future releases (v1.6+). Every
 "operator runs X" bullet below is the walked-top-to-bottom
 procedure. The bullets are scoped tight enough to copy-paste;
 the prose framing for each release lives in its milestone doc
-([m9-pypi-publish.md](m9-pypi-publish.md),
+([archive/2026-05-25/m9-pypi-publish.md](archive/2026-05-25/m9-pypi-publish.md),
 [archive/2026-05-27/m11-pypi-publish.md](archive/2026-05-27/m11-pypi-publish.md),
 [archive/2026-05-29/m13-pypi-publish.md](archive/2026-05-29/m13-pypi-publish.md)).
 

@@ -325,6 +325,16 @@ REAL `docs/` tree and confirm `docs check docs/` exit 0, M14/M15 left live.
 
 ## OPEN QUESTIONS
 
+**All RESOLVED — see Decisions › "Resolved questions (Q1-Q6, BINDING)" above
+(milestone implementation-complete 2026-06-03).** Q1 (mv/D3) → INCLUDED
+(verified already satisfied, no code change); Q2 (CHANGELOG) → appended to
+open 1.6.0, no version bump; Q3 (bare `--cascade`) → DEFERRED, Phase-9 driven
+by `--cascade-only`; Q4 (read-only boundary) → narrowed to move-driven
+rewrites, pinned by the strengthened byte-identity test; Q5 (flipped test) →
+old test deleted, `test_archive_repoints_already_archived_referrer` added;
+Q6 (INDEX/snapshot lockstep) → resynced post-Phase-9. The analysis below is
+retained as the historical record of the forks and why each was decided.
+
 Genuine scope/contract forks for the operator. Each: question, why it
 matters, recommended answer.
 

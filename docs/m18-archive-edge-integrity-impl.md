@@ -32,10 +32,15 @@ changed, actions, test results, decisions.
   INCLUDED, operator): rewrite the moved doc's own archive-subtree edges +
   repoint already-archived referrers, deliberately flipping the pinned test.
   (Phase 2 finding: the `mv` own-edge leg is already satisfied by existing
-  code — see the Phase-2 table row.) Depends on nothing;
-  unblocks the completed-milestone archival backlog (currently DEFERRED in
-  the live tree). Phase 1 (Define Contract) opens via
-  `/ship-milestone M18`.
+  code — see the Phase-2 table row.) Depends on nothing.
+  **Implementation-complete 2026-06-03 (all 10 TDD phases).** The fix is the
+  conditioned archived-skip in `_rewrite_referring_edges` (one line + an
+  `old_rels` set); the four intended reds went GREEN; `mv` needed no code
+  change. The Phase-9 payoff archived the completed-milestone backlog (M1–M9
+  + M12 pairs, the M16 trio, the three stray impl-logs) on the live `docs/`
+  tree with `docs check docs/` exit 0; M14/M15/M18 left live. Full suite 510
+  GREEN, gate clean tree-wide. See the TDD Phase Progress table for per-phase
+  detail.
 
 (Note: doc-lifecycle status is the front-matter `Lifecycle:` field. This
 section tracks implementation progress, which is distinct.)
@@ -56,6 +61,16 @@ section tracks implementation progress, which is distinct.)
 | 10. Quality, Docs, Refactor | Done | 2026-06-03 | Closeout: ticked Deliverables D1-D4 + the Phase-9 payoff row + the tree-wide-clean row; ticked all Success Criteria; flipped Phase Checklist 5-10 to [x] with per-phase summaries. status.md: the "archival DEFERRED pending M18" section moved to DONE 2026-06-03 with the manifest; M14/M15/M18 recorded still live. plan.md: M18 marked complete in the roster. INDEX + frozen snapshot resynced in lockstep after the Phase-9 archival (Q6) — `docs index --root docs/ --dry-run` exit 0. **Lifecycle decision:** left M18 milestone + impl `Lifecycle: draft`, matching the M14/M15 completed-but-live precedent (a milestone flips to `archived` only when physically moved to the archive subtree, per convention.md; M18 stays live and is NOT self-archived — the plan forbids archiving the M18 pair). Simplify: the fix is a single conditioned-skip line + one set comprehension — already minimal, no helper/abstraction to collapse. `docs touch` bumped on the M18 pair + status.md + plan.md to refresh `Updated:`; INDEX + snapshot re-regenerated in lockstep. Full suite 510 passed; ruff/format/mypy/`docs check docs/` clean. |
 
 ## Carry-forward to Phase 6
+
+**DONE in Phase 6 (2026-06-03).** The strengthening below was applied: a
+second pre-archived bystander (`mover-ref.md`, `archive/2026-03-01/`) whose
+edge target IS the moving `core.md` now asserts the edge IS repointed, while
+the first bystander stays byte-identical. The Q4 boundary nuance discovered
+while doing it — that the `old_rels` gate and an unconditional "walk all
+archived" produce byte-identical output because `rewrite_related_refs` is
+target-exact, so the matcher (not the gate) is the edge-level boundary guard
+— is recorded in the Phase-6 log row and the test docstring. The note below
+is retained as the original carry-forward.
 
 - **Strengthen the Q4 boundary lock.** `test_archive_leaves_unrelated_
   archived_content_byte_identical` (#4) currently guards prose/`Updated:`/
