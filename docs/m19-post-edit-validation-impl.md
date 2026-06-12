@@ -52,7 +52,7 @@ section tracks implementation progress, which is distinct.)
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | — |
+| 1. Define Contract | **Complete** | 2026-06-12 | `cli.md` §touch `--check [--stale N]` block + heading; §check stale-window resolution (CLI `--stale` > `[check] stale_days` > unset) + threshold-provenance message contract; §list Q6 note; `convention.md` `[check]` subsection. Bundled refs resynced byte-identical (`test_skill_refs` GREEN); `docs check docs/` exit 0; INDEX snapshot in lockstep. The three Phase-2 verbatim strings (`--stale requires --check`, `set in .docs.toml [check] stale_days`, `via --stale`) all present. Q-A provenance-plumbing (`stale_source` + `resolve_stale` helper) noted in the contract. |
 | 2. Write Tests (RED) | Pending | — | — |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
@@ -125,3 +125,59 @@ Code anchors (verified against the current tree at scaffold time, 2026-06-12):
 See [m19-post-edit-validation.md](m19-post-edit-validation.md) Decisions +
 OPEN QUESTIONS for the full contract analysis and the Q1–Q6 forks with
 recommended defaults.
+
+## Phase 1 — Define Contract (2026-06-12, branch `m19/phases-1-4`)
+
+**Objective.** Pin the M19 surface in the specs (no code, no tests) so the
+Phase-2 RED tests assert against frozen, byte-identical contract text.
+
+**Files changed.**
+
+- `docs/cli.md` (+ bundled `src/docs_cli/skill/references/cli.md`, resynced):
+  - §`docs touch` heading → `### \`docs touch <file>... [--check [--stale N]]\``;
+    new **`--check [--stale N]`** block after the dry-run paragraph pinning:
+    tree-wide `check_tree` after the end-of-batch reindex *replacing* the
+    `docs check .` loop step (Q2); combined exit `max(touch, check)` with the
+    touch-fail short-circuit (Q1); `--stale` forwarding + the
+    `docs: touch: --stale requires --check` hard exit 2 (Q3); `--dry-run
+    --check` over the un-mutated on-disk tree (Q4); `--quiet` gates only
+    touch's stderr lines, never the check findings on stdout (Q-E); the
+    `[exclude]`/`.docsignore` predicate parity (Q-F).
+  - §`docs check` → **Stale-window resolution** (CLI `--stale` > `[check]
+    stale_days` > unset; `--stale 0` honoured; a configured key makes bare
+    `docs check` apply the rule — Q5) + **Threshold provenance** message
+    contract (config-sourced → `(stale threshold N, set in .docs.toml [check]
+    stale_days)`; CLI-sourced → `(stale threshold N, via --stale)`; id +
+    severity + exit code unchanged). The Q-A provenance plumbing — a
+    `stale_source` (`"config"`/`"cli"`/`None`) threaded alongside the window
+    and a shared `resolve_stale(cli_stale, config.stale_days) -> (window,
+    source)` helper — is noted in the contract (interface lands Phase 5).
+    The existing `--stale N` stale bullet was reworded to point at the
+    resolution subsection.
+  - §`docs list` → Q6 note: `[check] stale_days` does NOT affect `docs list
+    --stale`; bare `docs list` still lists everything; explicit `--stale N`
+    unaffected.
+- `docs/convention.md` (+ bundled `references/convention.md`, resynced): new
+  `### Per-tree \`[check]\` config (M19 — D2)` subsection modeled on
+  `[migrate]` — `stale_days = N` non-negative int; absent → no default
+  window; supplies the window to `docs check` / `docs touch --check`, NOT
+  `docs list`; CLI `--stale` overrides.
+- D3: no spec edit (the `docs/cli.md` §`docs new` `--body-from` prose is
+  already correct — only the argparse help string in `cli.py` drifts, fixed
+  at Phase 6).
+- `docs/cli.md` + `docs/convention.md` `Updated:` bumped to 2026-06-12 via
+  `docs touch`; `docs/INDEX.md` refreshed; the frozen snapshot
+  `tests/fixtures/expected/docs-INDEX.md` re-synced byte-identical.
+
+**Verification.**
+
+- Verbatim Phase-2 assertion strings all present in `cli.md`:
+  `--stale requires --check`, `set in .docs.toml [check] stale_days`,
+  `via --stale` (1 occurrence each).
+- `tests/test_skill_refs.py` GREEN (bundled refs byte-identical to source).
+- `.venv/bin/docs check docs/` → exit 0 (`docs: no violations found`).
+- `docs/INDEX.md` == `tests/fixtures/expected/docs-INDEX.md` (byte-identical).
+
+**Exit criteria met.** Every string Phase-2 asserts appears verbatim in
+`cli.md`; the Q-A provenance-plumbing approach is noted in the contract;
+`test_skill_refs.py` GREEN.
