@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-06-12. 14 docs active, 39 archived._
+_Generated 2026-06-12. 16 docs active, 39 archived._
 
 ## Project — docs
 
@@ -26,9 +26,14 @@ _Generated 2026-06-12. 14 docs active, 39 archived._
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-12.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-12.
 
+### Active — Milestone
+
+- [m21-update-check.md](m21-update-check.md) — _milestone_ — - Milestone: M21 (v1.7.0) - Title: Update-check notification (PyPI version check + skill-refresh nudge) - Surface:…. Updated 2026-06-12.
+
 ### Active — Log
 
 - [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-12.
+- [m21-update-check-impl.md](m21-update-check-impl.md) — _log_ — Chronological log of work on M21 — Update-check notification (PyPI version check + skill-refresh nudge). Append a…. Updated 2026-06-12.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.
 
 ### Active — Decision
