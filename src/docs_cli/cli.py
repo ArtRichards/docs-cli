@@ -1022,11 +1022,24 @@ def load_config(root: Path) -> Config:
         tuple(docsignore_path.read_text().splitlines()) if docsignore_path.is_file() else ()
     )
 
-    # M19 (D2): `[check] stale_days` is the per-tree default stale window.
-    # Read leniently — like `add_roles` / `project_name`, a malformed value
-    # is surfaced wherever it is consumed, not validated here (the CLI
-    # `--stale` is already `type=int`; the config read mirrors that leniency).
+    # M19 (D2; OQ-1 amended by Step-2 review): `[check] stale_days` is the
+    # per-tree default stale window. Unlike `add_roles` / `project_name` —
+    # which sibling reads coerce via `frozenset()` / `tuple()` and so never
+    # crash — `stale_days` is stored raw and flows straight into check_doc's
+    # `(today - updated).days > stale` comparison, where a non-int (e.g. a TOML
+    # string `stale_days = "14"`) raises an uncaught TypeError traceback. A
+    # traceback on malformed config is a bug, so refuse it here: a present-but-
+    # non-int value fails the config load like any other malformed `.docs.toml`
+    # condition (the callers' `except tomllib.TOMLDecodeError` → exit 2 with the
+    # `docs: malformed .docs.toml:` prefix). `bool` is excluded explicitly
+    # because `isinstance(True, int)` is True in Python — TOML `stale_days =
+    # true` would otherwise slip through. Negative ints stay honoured
+    # (aggressive-but-graceful, mirroring the `--stale 0` precedent).
     stale_days = check_section.get("stale_days")
+    if stale_days is not None and not (
+        isinstance(stale_days, int) and not isinstance(stale_days, bool)
+    ):
+        raise tomllib.TOMLDecodeError("[check] stale_days must be an integer")
 
     return Config(
         project=project,

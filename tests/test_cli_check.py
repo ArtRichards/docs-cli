@@ -242,3 +242,34 @@ def test_check_stale_zero_honored(docs_script, tmp_path):
     proc = _run(docs_script, "check", str(root), "--stale", "0")
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
     assert "ancient.md" in proc.stdout
+
+
+def test_check_config_stale_days_zero_honored(docs_script, tmp_path):
+    """A configured `[check] stale_days = 0` is honoured as given (not treated
+    as unset): a >0-day-old active doc is flagged → exit 1, with the config-
+    sourced provenance. The config-side mirror of `test_check_stale_zero_honored`
+    — locks `resolve_stale`'s `is not None` (vs truthiness) on the config path.
+    """
+    root = _stale_config_tree(tmp_path, "cfg-zero", stale_days=0)
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "ancient.md" in proc.stdout
+    assert "(stale threshold 0, set in .docs.toml [check] stale_days)" in proc.stdout
+
+
+def test_check_malformed_stale_days_refused_cleanly(docs_script, tmp_path):
+    """OQ-1 (Step-2 review amendment): a non-integer `[check] stale_days`
+    (e.g. the TOML string `"14"`) is refused at config load — clean exit 2 with
+    the `malformed .docs.toml` message naming the key, NOT a TypeError traceback
+    flowing through the stale comparison.
+    """
+    root = _stale_config_tree(tmp_path, "cfg-bad", stale_days=30)
+    # Overwrite the sidecar with a string value (the helper writes a bare int).
+    (root / ".docs.toml").write_text('[project]\nname = "cfg-bad"\n\n[check]\nstale_days = "14"\n')
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "malformed .docs.toml" in proc.stderr
+    assert "stale_days must be an integer" in proc.stderr
+    # A clean refusal, not an uncaught crash.
+    assert "Traceback" not in proc.stderr
+    assert "TypeError" not in proc.stderr

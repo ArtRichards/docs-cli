@@ -33,9 +33,14 @@ locally; a later operator-driven milestone publishes to PyPI.
   always overrides it; a tree with no `[check]` section is byte-for-byte
   unchanged. The stale finding's message names the threshold's provenance —
   config-sourced appends `, set in .docs.toml [check] stale_days`, CLI-sourced
-  appends `, via --stale` — so the operator knows which knob to turn. The key
-  is check-scoped: it does **not** affect `docs list --stale`, which stays an
-  explicit filter.
+  appends `, via --stale` — so the operator knows which knob to turn. This
+  provenance suffix rides on the stale finding's message text in both the human
+  and `--json` output (the rule id `stale` and severity `warning` are
+  unchanged). A non-integer `stale_days` (e.g. the TOML string `"14"`) is
+  refused at config load — exit 2, `malformed .docs.toml: [check] stale_days
+  must be an integer` — rather than crashing; negative integers are honoured.
+  The key is check-scoped: it does **not** affect `docs list --stale`, which
+  stays an explicit filter.
 
 ### Fixed
 

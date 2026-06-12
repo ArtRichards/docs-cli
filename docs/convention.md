@@ -220,7 +220,7 @@ per-tree default stale window for validation:
 stale_days = 30                          # M19: default --stale window for this tree
 ```
 
-- `stale_days` — a **non-negative integer**. When set, it supplies the
+- `stale_days` — an **integer**. When set, it supplies the
   stale window to `docs check` and `docs touch --check` whenever no
   explicit CLI `--stale` is given — a configured `stale_days` makes bare
   `docs check` apply the `stale` rule with this window (the operator's
@@ -228,7 +228,12 @@ stale_days = 30                          # M19: default --stale window for this 
   overrides it. **Absent** → no default stale window (today's behaviour:
   the `stale` rule fires only under an explicit `--stale`). The key is
   scoped to **check** semantics — it does **not** feed `docs list --stale`,
-  which stays an explicit filter.
+  which stays an explicit filter. A **non-integer** value (e.g. the TOML
+  string `stale_days = "14"`, or `stale_days = true`) is **refused** at
+  config load — `docs` exits 2 with `malformed .docs.toml: [check]
+  stale_days must be an integer`, rather than crashing in the stale
+  comparison. Negative integers are honoured as given (a negative window
+  flags every active doc, mirroring `--stale 0`).
 
 ## Relationship verbs
 

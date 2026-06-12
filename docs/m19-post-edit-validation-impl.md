@@ -405,3 +405,53 @@ RED as baseline). Full suite → **533 collected, 19 failed (RED), 514 passed**
 — membership identical to the Phase-4 baseline. Quality gate (`ruff check`,
 `ruff format --check`, `mypy`) clean; `docs check docs/` exit 0; INDEX snapshot
 byte-identical.
+
+## Step 2 review fixes (2026-06-12, branch `m19/phases-5-10`)
+
+Fresh-eyes review of Step 2 (phases 5-10) surfaced one should-fix bug + two
+nits + one log-only heads-up. The conductor triaged the should-fix as a real
+bug and **amended OQ-1** (the original "leniency parity" rationale was
+disproved). Applied — **suite rose 533 → 540** (+7: the 5-case parametrized
+`resolve_stale` unit test counts as 5, plus 2 new CLI tests); all GREEN:
+
+- **Malformed `[check] stale_days` now refused cleanly (OQ-1 amendment;
+  should-fix).** A non-integer `stale_days` (e.g. the TOML string
+  `stale_days = "14"`) flowed raw through `resolve_stale` into `check_doc`'s
+  `(today - updated).days > stale` comparison and raised an **uncaught
+  `TypeError` traceback** (reproduced by the reviewer). The recorded OQ-1
+  rationale — leniency parity with `add_roles` — was factually wrong: the
+  sibling reads coerce via `frozenset()` / `tuple()` and never crash, whereas
+  `stale_days` is stored raw and detonates. Fix in `load_config`
+  (`src/docs_cli/cli.py`): a present-but-non-int `stale_days` now raises
+  `tomllib.TOMLDecodeError("[check] stale_days must be an integer")`, which
+  every caller already catches → **exit 2**, `docs: malformed .docs.toml:
+  [check] stale_days must be an integer`. `bool` is excluded explicitly
+  (`isinstance(x, int) and not isinstance(x, bool)` — `isinstance(True, int)`
+  is True, so `stale_days = true` would otherwise pass). **Negative ints stay
+  honoured** (aggressive-but-graceful, `--stale 0` precedent). Pinned by
+  `test_check_malformed_stale_days_refused_cleanly` (`tests/test_cli_check.py`:
+  exit 2 + message, no `Traceback` / `TypeError` on stderr). OQ-1's Decision
+  entry (`m19-post-edit-validation.md`) records the amendment; the refusal
+  contract is documented in `convention.md` › *Per-tree `[check]` config* (and
+  the bundled `convention.md` ref re-copied byte-identical) + a sentence in the
+  CHANGELOG 1.6.5 entry.
+- **Config-side `stale_days = 0` lock (nit).** Added
+  `test_check_config_stale_days_zero_honored` (`tests/test_cli_check.py`):
+  `_stale_config_tree(..., stale_days=0)` flags a >0-day-old active doc → exit
+  1, config-sourced provenance `(stale threshold 0, set in .docs.toml [check]
+  stale_days)`. The config-side mirror of `test_check_stale_zero_honored`,
+  locking `resolve_stale`'s `is not None` (vs truthiness) on the config path.
+- **`resolve_stale` precedence unit test (nit).** Added the parametrized
+  `test_resolve_stale_precedence` (`tests/test_config.py`, where pure helpers
+  are unit-tested): `(None,None)→(None,None)`, `(0,30)→(0,"cli")`,
+  `(None,0)→(0,"config")`, `(14,None)→(14,"cli")`, `(None,30)→(30,"config")` —
+  CLI `--stale` > `[check] stale_days` > unset, with the `is not None`
+  (not truthiness) semantics pinned directly on the helper.
+- **Provenance-suffix heads-up (log + CHANGELOG only).** The stale finding's
+  message text carries the provenance suffix in both human and `--json` output
+  (intended per D2; rule id `stale` / severity `warning` unchanged). Noted in
+  the CHANGELOG 1.6.5 entry; no code action.
+
+**Verification.** Full suite → **540 passed** (533 + 7). Quality gate
+(`ruff check`, `ruff format --check`, `mypy`) clean; `docs check docs/` exit 0;
+bundled `convention.md` ref re-copied byte-identical (`test_skill_refs` GREEN).

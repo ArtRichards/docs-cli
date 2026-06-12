@@ -396,12 +396,29 @@ closing the follow-on tracked in status.md + the
   decisions, resolved for Step 2 — phases 5-10).** The Step-2 planning agent
   surfaced five implementation forks; the conductor resolved each, and they
   are recorded here for the same reason Q1-Q6 are:
-  - **OQ-1 (config-value validation for `[check] stale_days`) → NO bespoke
-    validation (leniency parity).** `load_config` reads `stale_days` exactly
-    as it reads `add_roles` / `project_name` — no type/negative check. The CLI
-    `--stale` is already `type=int`; a hand-malformed config value behaves like
-    any other lenient config read. (Keeps the config surface uniform; a
-    validation pass, if ever wanted, is a separate cross-key change.)
+  - **OQ-1 (config-value validation for `[check] stale_days`) → REFUSE a
+    non-integer value (amended by the Step-2 fresh-eyes review; the original
+    "leniency parity" rationale was disproved).** The original decision read
+    `stale_days` raw "like `add_roles` / `project_name`", expecting leniency
+    parity. The review proved that rationale factually wrong: the sibling reads
+    coerce via `frozenset()` / `tuple()` and so never crash, whereas
+    `stale_days` is stored raw and flows straight into `check_doc`'s
+    `(today - updated).days > stale` comparison — where a non-int (e.g. the
+    TOML string `stale_days = "14"`) raises an **uncaught `TypeError`
+    traceback** (reproduced by the reviewer). A traceback on malformed config
+    is a bug, so `load_config` now refuses it: a present-but-non-int
+    `stale_days` fails the config load the same way any other malformed
+    `.docs.toml` condition does — it raises `tomllib.TOMLDecodeError`, which
+    every caller already catches → **exit 2** with `docs: malformed .docs.toml:
+    [check] stale_days must be an integer`. `bool` is excluded explicitly
+    (`isinstance(x, int) and not isinstance(x, bool)`), since `isinstance(True,
+    int)` is True in Python and TOML `stale_days = true` would otherwise slip
+    through. **Negative ints stay honoured** (aggressive-but-graceful,
+    mirroring the `--stale 0` precedent — a negative window simply flags every
+    active doc). Pinned by `test_check_malformed_stale_days_refused_cleanly`
+    (`tests/test_cli_check.py`: clean exit 2 + message, no traceback). (A
+    broader cross-key config-validation pass, if ever wanted, is still a
+    separate change — this fix is scoped to the one key that detonates.)
   - **OQ-2 (CLI-sourced provenance suffix risks regressing existing
     `docs check --stale N` message assertions) → audit-then-green (mandatory,
     in-phase).** Before declaring Phase 6 GREEN, `grep -rn "stale threshold"
