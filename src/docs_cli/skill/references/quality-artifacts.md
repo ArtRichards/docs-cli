@@ -46,10 +46,13 @@ The generated report file remains canonical for tool output.
 ```sh
 docs new spec m4-risky-change-test-matrix --project <project> --title "M4 - Test Matrix" --body-from -
 docs new log quality/m4-quality-log --project <project> --title "M4 - Quality Log" --body-from -
-docs touch m4-risky-change-test-matrix.md quality/m4-quality-log.md
-docs index <root>
-docs check <root> --stale 14
+docs touch m4-risky-change-test-matrix.md quality/m4-quality-log.md --check
 ```
+
+`docs touch --check` bumps `Updated:`, reindexes (a separate `docs index` is
+redundant), and runs the tree-wide check in one step. The stale window comes
+from the tree's `.docs.toml [check] stale_days`; pass `--stale N` only as a
+one-off override.
 
 ## Linking reports
 
