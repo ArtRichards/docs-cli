@@ -454,8 +454,9 @@ def test_new_body_from_help_no_first_20_lines(docs_script):
         "the --body-from help still describes the dead pre-M15-C4 heuristic"
     )
     # The corrected wording names the real detector: a `---` fence OR the
-    # required-field labels cluster.
+    # required-field labels cluster. Require the field-label "Lifecycle" — the
+    # drifted string's own "metadata block" must not be able to satisfy this.
     assert "---" in help_text
-    assert "Lifecycle" in help_text or "metadata block" in help_text, (
-        "the help must describe the real C4 detector shape"
+    assert "Lifecycle" in help_text, (
+        "the help must describe the real C4 detector shape (required-field cluster)"
     )

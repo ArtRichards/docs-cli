@@ -323,13 +323,80 @@ honest-argparse-then-message-assert failure. The suite is in the exact state
 the phase requires.
 
 **Phase-7 follow-through (Q-D, recorded for the wrapper phase).** Only
-`test_a3` was flipped to 1.6.5. The slow build-gated packaging tests **B1/B2/
-C2** (`test_b*` / `test_c2_*` — editable-install version, built-wheel version,
-`docs --version` over the installed entry point) still assert/observe the old
-version and are **deliberately left for Phase 7**, when `pyproject.toml` flips
-to 1.6.5 and the editable install is refreshed. They are NOT part of this
-step's RED set.
+`test_a3` (`test_a3_project_version_is_1_6_5`) was flipped to 1.6.5. Three
+slow build-gated packaging tests still hard-code `1.6.0` and pass against the
+stale cached wheel; they are **deliberately left for Phase 7** and must flip
+in lockstep when `pyproject.toml` bumps 1.6.0 → 1.6.5 and the built/installed
+wheel is refreshed. By exact function name, so Step 2 cannot miss any:
+
+- `test_b1_wheel_builds` (`tests/test_packaging.py:192`) — asserts the wheel
+  filename starts `docs_cli-1.6.0-`; flip to `docs_cli-1.6.5-`.
+- `test_b2_sdist_builds` (`tests/test_packaging.py:204`) — asserts the sdist
+  is `docs_cli-1.6.0.tar.gz`; flip to `docs_cli-1.6.5.tar.gz`.
+- `test_c2_docs_version_is_1_6_0` (`tests/test_packaging.py:326`) — asserts
+  `docs --version` prints the `1.6.0` token; rename to `..._is_1_6_5` and flip
+  the asserted token to `1.6.5`.
+
+(The version-agnostic packaging tests — `test_b3_wheel_contains_cli_and_skill`,
+`test_b4_entry_point_recorded_in_wheel` — carry NO version literal and must
+stay untouched.) None of the three are part of this step's RED set.
 
 **Exit criteria met.** Every intended-RED test fails for its classified
 reason; the 5 GREEN-at-baseline locks pass; the untouched pre-existing suite
 (509) stays GREEN; counts captured above.
+
+## Step 1 review fixes (2026-06-12, branch `m19/phases-1-4`)
+
+Fresh-eyes review of Step 1 (phases 1-4) surfaced four contract-tightening
+fixes (no operator decisions; all consistent with the binding Decisions) plus
+one log-only confirmation. Applied — RED/GREEN membership unchanged
+(**still 533 collected, 19 RED, 514 GREEN**; no test added or dropped):
+
+- **Provenance wording pinned to the full frozen parenthetical.** The three
+  provenance tests asserted only the trailing substring; the Decision froze
+  the whole clause. Strengthened to the exact parenthetical with the concrete
+  `N` each tree uses:
+  - `test_check_config_sourced_provenance_message`
+    (`tests/test_cli_check.py`) → `(stale threshold 30, set in .docs.toml
+    [check] stale_days)` (tree's `stale_days=30`).
+  - `test_check_cli_sourced_provenance_message` → `(stale threshold 30, via
+    --stale)` (the test passes `--stale 30`).
+  - `test_touch_check_config_default_provenance` (`tests/test_cli_touch.py`)
+    → `(stale threshold 30, set in .docs.toml [check] stale_days)` (tree's
+    `[check] stale_days = 30`).
+  Each stays RED for its prior reason (assertion / argparse-reject).
+- **Provenance mutual exclusion asserted on the config side too.** Added
+  `assert "via --stale" not in proc.stdout` to
+  `test_check_config_sourced_provenance_message` and
+  `test_touch_check_config_default_provenance` (the CLI-sourced test already
+  carried the symmetric `set in .docs.toml [check] stale_days` negative).
+- **D3 help assertion tightened (nit).**
+  `test_new_body_from_help_no_first_20_lines` (`tests/test_body_from.py`)
+  weakened the C4-detector check to `"Lifecycle" in help_text or "metadata
+  block" in help_text` — satisfiable by the *drifted* string's own "metadata
+  block". Narrowed to `assert "Lifecycle" in help_text` (the corrected spec
+  wording carries it); the `"first 20 lines" not in help_text` guard is
+  unchanged, so the test stays RED until Phase 6 fixes the help string.
+- **Short-circuit test made observable (nit).**
+  `test_touch_check_touch_failure_short_circuits_check` (`tests/test_cli_touch.py`)
+  on a clean tree could not distinguish a true short-circuit from a
+  wrongly-run-and-folded check (`max(1, 0) = 1`). Seeded a `broken-ref`
+  sibling (`brokenref.md` → unresolved `nonexistent-target.md`) into the
+  `_multi_file_tree` root: a wrongly-run check would report `broken-ref` →
+  exit 2 (`max(1, 2) = 2`) and surface the target on stdout. Added
+  `assert "nonexistent-target.md" not in proc.stdout` and `assert "broken-ref"
+  not in proc.stdout` alongside the existing exit-1 + no-INDEX assertions. The
+  test stays RED via argparse-reject (`--check` undeclared → exit 2) until
+  Phase 5; the new stdout-negatives harden the GREEN behaviour at Phase 8.
+- **Phase-7 packaging follow-through made explicit (log-only).** The Phase-4
+  follow-through note above now names the three lockstep-flip tests by exact
+  function name — `test_b1_wheel_builds`, `test_b2_sdist_builds`,
+  `test_c2_docs_version_is_1_6_0` — and calls out that the version-agnostic
+  `test_b3`/`test_b4` must stay untouched, so Step 2 cannot miss any.
+
+**Verification.** Affected files re-run: `test_cli_check.py` +
+`test_cli_touch.py` + `test_body_from.py` → 16 failed / 47 passed (the same 16
+RED as baseline). Full suite → **533 collected, 19 failed (RED), 514 passed**
+— membership identical to the Phase-4 baseline. Quality gate (`ruff check`,
+`ruff format --check`, `mypy`) clean; `docs check docs/` exit 0; INDEX snapshot
+byte-identical.

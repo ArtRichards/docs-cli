@@ -216,7 +216,10 @@ def test_check_config_sourced_provenance_message(docs_script, tmp_path):
     root = _stale_config_tree(tmp_path, "cfg-prov", stale_days=30)
     proc = _run(docs_script, "check", str(root))
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
-    assert "set in .docs.toml [check] stale_days" in proc.stdout
+    # Full frozen parenthetical (Decision: BINDING), not just the trailing clause.
+    assert "(stale threshold 30, set in .docs.toml [check] stale_days)" in proc.stdout
+    # Mutually exclusive with the CLI-sourced variant — config did not come via --stale.
+    assert "via --stale" not in proc.stdout
 
 
 def test_check_cli_sourced_provenance_message(docs_script, tmp_path):
@@ -226,7 +229,8 @@ def test_check_cli_sourced_provenance_message(docs_script, tmp_path):
     root = _stale_tree(tmp_path, "cli-prov", include_fresh=False)
     proc = _run(docs_script, "check", str(root), "--stale", "30")
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
-    assert "via --stale" in proc.stdout
+    # Full frozen parenthetical (Decision: BINDING), not just the trailing clause.
+    assert "(stale threshold 30, via --stale)" in proc.stdout
     assert "set in .docs.toml [check] stale_days" not in proc.stdout
 
 

@@ -444,14 +444,29 @@ def test_touch_check_touch_failure_short_circuits_check(docs_script, tmp_path):
     """A missing path in the batch fails `touch` (exit 1) BEFORE the check —
     the check does not run and touch's exit 1 is returned (Q1 short-circuit),
     not promoted to a check exit code.
+
+    The tree carries a *broken-ref* sibling so a wrongly-run-and-folded check
+    is observable: a check on this tree would report `broken-ref` → exit 2 and
+    name the unresolved target on stdout. The short-circuit must instead leave
+    the exit at touch's 1 with no finding on stdout (`max(1, 0)` ambiguity is
+    thereby broken — a folded check would be `max(1, 2) = 2`).
     """
     root, a, b, _c = _multi_file_tree(tmp_path)
+    brokenref = root / "brokenref.md"
+    brokenref.write_text(
+        "# Brokenref\n\nLifecycle: active\nRole: notes\nProject: multi\n"
+        "Updated: 2026-01-01\n\nRelated:\n- references: nonexistent-target.md\n\nBody.\n"
+    )
     bad = root / "no-such.md"
     proc = _run(docs_script, "touch", str(a), str(b), str(bad), "--check")
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
     assert str(bad) in proc.stderr or "no-such.md" in proc.stderr
     # No INDEX written (touch failed in its validate pass, before any check).
     assert not (root / "INDEX.md").exists()
+    # A wrongly-run check would have promoted the exit to 2 and surfaced the
+    # broken ref on stdout; a true short-circuit shows neither.
+    assert "nonexistent-target.md" not in proc.stdout
+    assert "broken-ref" not in proc.stdout
 
 
 def test_touch_check_outside_root_short_circuits(docs_script, tmp_path):
@@ -561,4 +576,8 @@ def test_touch_check_config_default_provenance(docs_script, tmp_path):
     proc = _run(docs_script, "touch", str(fresh), "--check")
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
     assert "ancient.md" in proc.stdout
-    assert "set in .docs.toml [check] stale_days" in proc.stdout
+    # Full frozen parenthetical (Decision: BINDING) — touch --check inherits the
+    # config-sourced provenance when no --stale is forwarded.
+    assert "(stale threshold 30, set in .docs.toml [check] stale_days)" in proc.stdout
+    # Mutually exclusive with the CLI-sourced variant — no --stale was given.
+    assert "via --stale" not in proc.stdout
