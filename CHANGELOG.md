@@ -5,11 +5,10 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.6.5 — UNRELEASED
+## 1.6.5 — 2026-06-12
 
 Post-edit validation ergonomics (M19). Two additive, backward-compatible
-affordances on the post-edit loop plus one cosmetic help-string fix. Built
-locally; a later operator-driven milestone publishes to PyPI.
+affordances on the post-edit loop plus one cosmetic help-string fix.
 
 ### Added
 
