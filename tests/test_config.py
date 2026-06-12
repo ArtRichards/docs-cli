@@ -16,6 +16,7 @@ from docs import (
     Config,
     find_root,
     load_config,
+    resolve_stale,
 )
 
 
@@ -156,3 +157,46 @@ def test_load_config_fields_preserves_case(tmp_path):
     cfg = load_config(tmp_path)
     assert "Owner" in cfg.fields
     assert "owner" in cfg.fields
+
+
+# --- M19 D2 — `[check] stale_days` parsed into Config.stale_days -----------
+#
+# RED at baseline: `Config` has no `stale_days` field until Phase 5, so the
+# attribute access raises `AttributeError` (the accepted, documented RED
+# reason per Q-B — the field is NOT pulled into Phase 3).
+
+
+def test_load_config_reads_stale_days(tmp_path):
+    """`[check] stale_days = 30` ⇒ `Config.stale_days == 30`."""
+    (tmp_path / ".docs.toml").write_text('[project]\nname = "x"\n\n[check]\nstale_days = 30\n')
+    cfg = load_config(tmp_path)
+    assert cfg.stale_days == 30
+
+
+def test_load_config_stale_days_defaults_to_none(tmp_path):
+    """No `[check]` section ⇒ `Config.stale_days is None` (no default window)."""
+    (tmp_path / ".docs.toml").write_text('[project]\nname = "x"\n')
+    cfg = load_config(tmp_path)
+    assert cfg.stale_days is None
+
+
+# --- M19 D2 — `resolve_stale` precedence + provenance (unit) ---------------
+#
+# Pure-helper unit coverage for the CLI `--stale` > `[check] stale_days` >
+# unset resolution. Locks the `is not None` (not truthiness) semantics: an
+# explicit `--stale 0` / config `stale_days = 0` resolves to window `0` with
+# the right source, never collapsing to the unset `(None, None)` branch.
+
+
+@pytest.mark.parametrize(
+    ("cli_stale", "config_stale_days", "expected"),
+    [
+        (None, None, (None, None)),  # neither set → no window
+        (0, 30, (0, "cli")),  # CLI 0 wins (not unset) and shadows config
+        (None, 0, (0, "config")),  # config 0 honoured (not unset)
+        (14, None, (14, "cli")),  # CLI-only
+        (None, 30, (30, "config")),  # config-only
+    ],
+)
+def test_resolve_stale_precedence(cli_stale, config_stale_days, expected):
+    assert resolve_stale(cli_stale, config_stale_days) == expected

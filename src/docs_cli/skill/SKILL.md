@@ -52,7 +52,7 @@ but easy to misuse — confirm with the user before any verb that writes.
 | Archive a finished doc | `docs archive <file>` | `--reason`, `--date`, `--cascade` |
 | Rename or move a doc | `docs mv <old> <new>` | rewrites `Related:` tree-wide |
 | List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
-| Bump a doc's `Updated:` | `docs touch <file>` | reindexes |
+| Bump a doc's `Updated:` | `docs touch <file> [--check [--stale N]]` | reindexes; `--check` folds in `docs check` (touch-then-validate in one invocation; `--stale N` is the check's stale window) |
 | Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors |
 | Adopt a foreign tree | `docs migrate <dir>` | dry-run by default; `--apply` to write |
 | Rename the project | `docs project rename <new-name>` | rewrites `.docs.toml` + every `Project:` line; `--dry-run` |
@@ -63,6 +63,14 @@ but easy to misuse — confirm with the user before any verb that writes.
 `docs <verb> --root DIR` to point at a specific tree explicitly. For
 full flag and exit-code detail, read
 [`references/cli.md`](references/cli.md) or run `docs <verb> --help`.
+
+**Per-tree stale window (`.docs.toml [check] stale_days = N`).** Set a
+`[check] stale_days = N` key in the tree's `.docs.toml` to give
+`docs check` and `docs touch --check` a default stale window — bare
+`docs check` then flags `Lifecycle: active` docs untouched for more than
+`N` days, instead of hard-coding `--stale N` at every call site. An
+explicit CLI `--stale` overrides it; the key is check-scoped (it does not
+affect `docs list --stale`).
 
 **Adopting an existing Markdown directory?** Read
 [references/adoption-playbook.md](references/adoption-playbook.md)

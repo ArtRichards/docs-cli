@@ -147,3 +147,129 @@ def test_check_cli_allowlist_match_exits_0(docs_script, tmp_path):
     proc = _run(docs_script, "check", str(root))
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert "unknown-field" not in proc.stdout, proc.stdout
+
+
+# --- M19 D2 — `[check] stale_days` config default + threshold provenance ---
+#
+# RED at baseline: nothing reads `[check] stale_days` until Phases 5-6, so a
+# configured default does not affect bare `docs check` and the provenance
+# parenthetical is not yet emitted. These fail as plain assertion mismatches
+# (exit code / stdout substring), not tracebacks or argparse refusals.
+#
+# Phase 3 fixture: `_stale_config_tree` mirrors `_stale_tree` but emits the
+# `[check] stale_days = N` sidecar; the stale doc's `Updated:` is
+# `today`-relative so the case never rots.
+
+
+def _stale_config_tree(tmp_path: Path, name: str, *, stale_days: int) -> Path:
+    """A docs root with `[check] stale_days = N` + one ancient active doc.
+
+    Mirrors `_stale_tree`, adding the `[check]` sidecar. The ancient doc is
+    400 days old (well past any small window), so a configured `stale_days`
+    makes bare `docs check` flag it.
+    """
+    root = tmp_path / name
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        f'[project]\nname = "{name}"\n\n[check]\nstale_days = {stale_days}\n'
+    )
+    old = (date.today() - timedelta(days=400)).isoformat()
+    (root / "ancient.md").write_text(
+        f"# Ancient\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: {old}\n\nBody.\n"
+    )
+    return root
+
+
+def test_check_config_stale_days_applies_to_bare_check(docs_script, tmp_path):
+    """HEADLINE D2 (Q5): a configured `[check] stale_days` makes BARE
+    `docs check` (no `--stale` flag) apply the stale rule → exit 1.
+    """
+    root = _stale_config_tree(tmp_path, "cfg-bare", stale_days=30)
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "ancient.md" in proc.stdout
+    assert "stale" in proc.stdout.lower()
+
+
+def test_check_cli_stale_overrides_config(docs_script, tmp_path):
+    """An explicit CLI `--stale 99999` overrides the configured `stale_days`,
+    clearing the ancient doc → exit 0 (CLI wins).
+    """
+    root = _stale_config_tree(tmp_path, "cfg-override", stale_days=30)
+    proc = _run(docs_script, "check", str(root), "--stale", "99999")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_check_no_check_section_unchanged(docs_script, tmp_path):
+    """GREEN-at-baseline regression lock: a tree with NO `[check]` section and
+    an old active doc, checked bare (no `--stale`), is unchanged → exit 0.
+    """
+    root = _stale_tree(tmp_path, "no-check-section", include_fresh=False)
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_check_config_sourced_provenance_message(docs_script, tmp_path):
+    """A config-sourced stale finding names the file + key so the operator
+    knows where to change the window.
+    """
+    root = _stale_config_tree(tmp_path, "cfg-prov", stale_days=30)
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    # Full frozen parenthetical (Decision: BINDING), not just the trailing clause.
+    assert "(stale threshold 30, set in .docs.toml [check] stale_days)" in proc.stdout
+    # Mutually exclusive with the CLI-sourced variant — config did not come via --stale.
+    assert "via --stale" not in proc.stdout
+
+
+def test_check_cli_sourced_provenance_message(docs_script, tmp_path):
+    """A CLI-sourced stale finding names `--stale` and does NOT carry the
+    config clause (the threshold did not come from the config).
+    """
+    root = _stale_tree(tmp_path, "cli-prov", include_fresh=False)
+    proc = _run(docs_script, "check", str(root), "--stale", "30")
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    # Full frozen parenthetical (Decision: BINDING), not just the trailing clause.
+    assert "(stale threshold 30, via --stale)" in proc.stdout
+    assert "set in .docs.toml [check] stale_days" not in proc.stdout
+
+
+def test_check_stale_zero_honored(docs_script, tmp_path):
+    """GREEN-at-baseline: `--stale 0` is honoured as given (flag every active
+    doc not updated *today*), not treated as unset. An old active doc → 1.
+    """
+    root = _stale_tree(tmp_path, "stale-zero", include_fresh=False)
+    proc = _run(docs_script, "check", str(root), "--stale", "0")
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "ancient.md" in proc.stdout
+
+
+def test_check_config_stale_days_zero_honored(docs_script, tmp_path):
+    """A configured `[check] stale_days = 0` is honoured as given (not treated
+    as unset): a >0-day-old active doc is flagged → exit 1, with the config-
+    sourced provenance. The config-side mirror of `test_check_stale_zero_honored`
+    — locks `resolve_stale`'s `is not None` (vs truthiness) on the config path.
+    """
+    root = _stale_config_tree(tmp_path, "cfg-zero", stale_days=0)
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "ancient.md" in proc.stdout
+    assert "(stale threshold 0, set in .docs.toml [check] stale_days)" in proc.stdout
+
+
+def test_check_malformed_stale_days_refused_cleanly(docs_script, tmp_path):
+    """OQ-1 (Step-2 review amendment): a non-integer `[check] stale_days`
+    (e.g. the TOML string `"14"`) is refused at config load — clean exit 2 with
+    the `malformed .docs.toml` message naming the key, NOT a TypeError traceback
+    flowing through the stale comparison.
+    """
+    root = _stale_config_tree(tmp_path, "cfg-bad", stale_days=30)
+    # Overwrite the sidecar with a string value (the helper writes a bare int).
+    (root / ".docs.toml").write_text('[project]\nname = "cfg-bad"\n\n[check]\nstale_days = "14"\n')
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "malformed .docs.toml" in proc.stderr
+    assert "stale_days must be an integer" in proc.stderr
+    # A clean refusal, not an uncaught crash.
+    assert "Traceback" not in proc.stderr
+    assert "TypeError" not in proc.stderr

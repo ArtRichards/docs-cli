@@ -236,6 +236,13 @@ class Config:
     ``_BUILTIN_METADATA_FIELDS`` to decide which extra metadata labels
     are allowed.
 
+    M19 (D2) adds ``stale_days`` — the per-tree default stale window
+    sourced from the ``[check]`` table's ``stale_days`` key. When set,
+    it supplies the window to ``docs check`` and ``docs touch --check``
+    whenever no explicit CLI ``--stale`` is given; absent (``None``) →
+    no default window (today's behaviour). The key is check-scoped — it
+    does NOT feed ``docs list --stale``.
+
     Defaults when `.docs.toml` is absent:
         project = root.resolve().name or "root"
         archive_dir = "archive"
@@ -250,6 +257,7 @@ class Config:
         exclude_exts = ()
         docsignore_patterns = ()
         fields = frozenset()
+        stale_days = None
     """
 
     project: str
@@ -265,6 +273,7 @@ class Config:
     exclude_exts: tuple[str, ...] = ()
     docsignore_patterns: tuple[str, ...] = ()
     fields: frozenset[str] = frozenset()
+    stale_days: int | None = None
 
     def __post_init__(self) -> None:
         if not self.project.strip():
@@ -961,6 +970,10 @@ def load_config(root: Path) -> Config:
     file (raw line contents) so the four ``Config`` exclude fields are
     populated for ``compile_exclude_predicate``.
 
+    M19 (D2) also reads the optional ``[check]`` section's ``stale_days``
+    key into ``Config.stale_days`` — the per-tree default stale window for
+    ``docs check`` / ``docs touch --check`` (absent → ``None``).
+
     Args:
         root: Docs root directory (the one that may contain `.docs.toml`).
 
@@ -977,6 +990,7 @@ def load_config(root: Path) -> Config:
     vocab_section = data.get("vocabulary", {})
     migrate_section = data.get("migrate", {})
     exclude_section = data.get("exclude", {})
+    check_section = data.get("check", {})
 
     project = project_section.get("name")
     if not project:
@@ -1008,6 +1022,25 @@ def load_config(root: Path) -> Config:
         tuple(docsignore_path.read_text().splitlines()) if docsignore_path.is_file() else ()
     )
 
+    # M19 (D2; OQ-1 amended by Step-2 review): `[check] stale_days` is the
+    # per-tree default stale window. Unlike `add_roles` / `project_name` —
+    # which sibling reads coerce via `frozenset()` / `tuple()` and so never
+    # crash — `stale_days` is stored raw and flows straight into check_doc's
+    # `(today - updated).days > stale` comparison, where a non-int (e.g. a TOML
+    # string `stale_days = "14"`) raises an uncaught TypeError traceback. A
+    # traceback on malformed config is a bug, so refuse it here: a present-but-
+    # non-int value fails the config load like any other malformed `.docs.toml`
+    # condition (the callers' `except tomllib.TOMLDecodeError` → exit 2 with the
+    # `docs: malformed .docs.toml:` prefix). `bool` is excluded explicitly
+    # because `isinstance(True, int)` is True in Python — TOML `stale_days =
+    # true` would otherwise slip through. Negative ints stay honoured
+    # (aggressive-but-graceful, mirroring the `--stale 0` precedent).
+    stale_days = check_section.get("stale_days")
+    if stale_days is not None and not (
+        isinstance(stale_days, int) and not isinstance(stale_days, bool)
+    ):
+        raise tomllib.TOMLDecodeError("[check] stale_days must be an integer")
+
     return Config(
         project=project,
         archive_dir=archive_dir,
@@ -1021,6 +1054,7 @@ def load_config(root: Path) -> Config:
         exclude_exts=exclude_exts,
         docsignore_patterns=docsignore_patterns,
         fields=fields,
+        stale_days=stale_days,
     )
 
 
@@ -1445,6 +1479,7 @@ def check_doc(
     config: Config,
     stale: int | None,
     today: date,
+    stale_source: str | None = None,
 ) -> list[Finding]:
     """Validate a single doc's raw ``text``; return every finding, never raise.
 
@@ -1593,7 +1628,7 @@ def check_doc(
                     )
                 )
 
-    # --- stale (warning; only with --stale, only Lifecycle: active) ---
+    # --- stale (warning; only with a stale window, only Lifecycle: active) ---
     if (
         stale is not None
         and isinstance(lifecycle, str)
@@ -1601,13 +1636,22 @@ def check_doc(
         and updated is not None
         and (today - updated).days > stale
     ):
+        # M19 (D2): name the threshold's provenance so the operator knows
+        # which knob to turn. `stale_source` ("config"/"cli"/None) comes from
+        # `resolve_stale`; a bare/legacy call (no source) keeps the old form.
+        if stale_source == "config":
+            provenance = ", set in .docs.toml [check] stale_days"
+        elif stale_source == "cli":
+            provenance = ", via --stale"
+        else:
+            provenance = ""
         findings.append(
             Finding(
                 path,
                 "warning",
                 "stale",
                 f"Lifecycle: active but not updated in {(today - updated).days} days "
-                f"(stale threshold {stale})",
+                f"(stale threshold {stale}{provenance})",
             )
         )
 
@@ -1644,6 +1688,7 @@ def check_tree(
     stale: int | None,
     today: date,
     predicate: Callable[[str], bool] | None = None,
+    stale_source: str | None = None,
 ) -> list[Finding]:
     """Validate every doc under ``root``; return all findings.
 
@@ -1653,10 +1698,14 @@ def check_tree(
 
     M8 (F3): the optional ``predicate`` argument is threaded into
     `_iter_doc_texts` so excluded files are skipped before validation.
+
+    M19 (D2): the optional ``stale_source`` (``"cli"`` / ``"config"`` /
+    ``None``, from `resolve_stale`) is forwarded to `check_doc` so the stale
+    finding's message can name the threshold's provenance.
     """
     findings: list[Finding] = []
     for path, text in _iter_doc_texts(root, config, predicate=predicate):
-        findings.extend(check_doc(path, text, root, config, stale, today))
+        findings.extend(check_doc(path, text, root, config, stale, today, stale_source))
     return findings
 
 
@@ -1672,6 +1721,29 @@ def exit_code_for(findings: list[Finding]) -> int:
     if any(f.severity == "warning" for f in findings):
         return 1
     return 0
+
+
+def resolve_stale(
+    cli_stale: int | None, config_stale_days: int | None
+) -> tuple[int | None, str | None]:
+    """Resolve the stale window + its provenance (M19 — D2).
+
+    Precedence: CLI ``--stale`` > ``[check] stale_days`` > unset. Returns a
+    ``(window, source)`` pair where ``source`` is ``"cli"`` when the window
+    came from an explicit ``--stale`` (including ``--stale 0`` — only ``None``
+    means "flag absent"), ``"config"`` when it came from the tree's
+    ``[check] stale_days``, and ``None`` when neither is set (no stale window).
+
+    The ``source`` lets ``check_doc`` name the threshold's provenance in the
+    stale finding so the operator knows which knob to turn. Shared by both
+    check-path consumers — bare/explicit ``docs check`` and ``docs touch
+    --check``; ``docs list --stale`` is NOT a consumer (Q6).
+    """
+    if cli_stale is not None:
+        return cli_stale, "cli"
+    if config_stale_days is not None:
+        return config_stale_days, "config"
+    return None, None
 
 
 def query_docs(
@@ -2899,9 +2971,10 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help=(
             "Read body content from PATH (or `-` for stdin) and append it under "
-            "the scaffold's frontmatter. Refused (exit 2) if any of the body's "
-            "first 20 lines looks like a metadata block — pass body content "
-            "only; `docs new` owns the frontmatter."
+            "the scaffold's frontmatter. Refused (exit 2) only if the body itself "
+            "contains a metadata block — a leading `---` fence or >=2 adjacent "
+            "{Lifecycle, Role, Updated} lines (lone prose like a `Plan:` line is "
+            "fine). Pass body content only; `docs new` owns the frontmatter."
         ),
     )
 
@@ -2971,6 +3044,25 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     touch_p.add_argument("files", nargs="+", help="Path(s) to the doc(s) to touch.")
+    touch_p.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "After the end-of-batch reindex, run the same tree-wide `docs check` "
+            "over the resolved root and fold its result into the exit code "
+            "(max(touch, check); a failed touch short-circuits the check)."
+        ),
+    )
+    touch_p.add_argument(
+        "--stale",
+        type=int,
+        metavar="N",
+        help=(
+            "Stale window forwarded to --check's validation (active docs not "
+            "updated in more than N days). Requires --check; absent → the "
+            "[check] stale_days config default applies."
+        ),
+    )
 
     # M15 (B3): `docs stamp <file>...` — write-then-stamp. Inserts a
     # convention-correct metadata block onto files an agent already wrote,
@@ -3878,6 +3970,13 @@ def _cmd_mv(args: argparse.Namespace) -> int:
 
 
 def _cmd_touch(args: argparse.Namespace) -> int:
+    # M19 (Q3): `--stale` is only meaningful as `--check`'s window. Passing
+    # it without `--check` is an incoherent-flag hard refusal (exit 2) — the
+    # guard precedes every path read so the file stays byte-unchanged.
+    if args.stale is not None and not args.check:
+        print("docs: touch: --stale requires --check", file=sys.stderr)
+        return 2
+
     # M10 (OQ-C): atomic multi-file touch. Validate every path first; if
     # any path is missing or any rewrite would raise, exit 1 + name the
     # bad path BEFORE any on-disk mutation. Otherwise: write every rewrite
@@ -3938,6 +4037,11 @@ def _cmd_touch(args: argparse.Namespace) -> int:
         if not args.quiet:
             for fp, _ in rewrites:
                 print(f"docs: would touch {fp} (Updated: {today})", file=sys.stderr)
+        # M19 (Q4): `--dry-run --check` previews the touch and runs the check
+        # against the UN-MUTATED on-disk tree (no INDEX refresh runs under
+        # dry-run, so a doc the dry-run would refresh may still read as stale).
+        if args.check:
+            return _run_touch_check(root, config, args.stale)
         return 0
 
     for fp, new_text in rewrites:
@@ -3957,7 +4061,33 @@ def _cmd_touch(args: argparse.Namespace) -> int:
     if not args.quiet:
         for fp, _ in rewrites:
             print(f"docs: touched {fp}", file=sys.stderr)
+
+    # M19 (Q1): touch succeeded (0). With --check, fold the tree-wide check's
+    # 0/1/2 into the command's exit code. (Every earlier touch failure already
+    # returned 1/2 above, so the touch-fail short-circuit is automatic.)
+    if args.check:
+        return _run_touch_check(root, config, args.stale)
     return 0
+
+
+def _run_touch_check(root: Path, config: Config, cli_stale: int | None) -> int:
+    """Run `docs touch --check`'s tree-wide validation; return its exit code.
+
+    Mirrors bare `docs check` over the resolved root (M19 — D1/Q2): the same
+    `[exclude]` / `.docsignore` predicate parity (Q-F), the same
+    CLI-`--stale` > `[check] stale_days` > unset resolution + provenance
+    (D2), and the same grouped human output on stdout via the shared
+    `_print_check_findings`. Findings print regardless of `--quiet` (Q-E —
+    `--quiet` gates only touch's own stderr lines). No `--json` mode in M19
+    (OQ-5 — deliberate non-goal).
+    """
+    predicate = compile_exclude_predicate(config, [])
+    window, source = resolve_stale(cli_stale, config.stale_days)
+    findings = check_tree(
+        root, config, window, date.today(), predicate=predicate, stale_source=source
+    )
+    _print_check_findings(findings, root)
+    return exit_code_for(findings)
 
 
 def _rewrite_sidecar_project_name(text: str, old: str, new: str) -> str:
@@ -4530,6 +4660,27 @@ def _cmd_stamp(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_check_findings(findings: list[Finding], root: Path) -> None:
+    """Print `docs check` findings as grouped human output (M19 — D1 reuse).
+
+    One file header per group, one indented line per finding. Empty findings
+    print the "no violations found" line. Shared by `_cmd_check`'s non-json
+    branch and `docs touch --check`'s `_run_touch_check`.
+    """
+    if not findings:
+        print("docs: no violations found")
+        return
+    current: str | None = None
+    for finding in findings:
+        rel = _root_relative(finding.path, root)
+        if rel != current:
+            if current is not None:
+                print()
+            print(rel)
+            current = rel
+        print(f"  {finding.severity}: [{finding.rule}] {finding.message}")
+
+
 def _cmd_check(args: argparse.Namespace) -> int:
     if args.root:
         root = Path(args.root)
@@ -4549,22 +4700,17 @@ def _cmd_check(args: argparse.Namespace) -> int:
         return 2
 
     predicate = compile_exclude_predicate(config, getattr(args, "exclude", []) or [])
-    findings = check_tree(root, config, args.stale, date.today(), predicate=predicate)
+    # M19 (D2): CLI --stale > [check] stale_days > unset; `source` lets the
+    # stale finding name its provenance.
+    window, source = resolve_stale(args.stale, config.stale_days)
+    findings = check_tree(
+        root, config, window, date.today(), predicate=predicate, stale_source=source
+    )
 
     if args.json:
         print(json.dumps([finding_to_json(f, root) for f in findings], indent=2))
-    elif not findings:
-        print("docs: no violations found")
     else:
-        current: str | None = None
-        for finding in findings:
-            rel = _root_relative(finding.path, root)
-            if rel != current:
-                if current is not None:
-                    print()
-                print(rel)
-                current = rel
-            print(f"  {finding.severity}: [{finding.rule}] {finding.message}")
+        _print_check_findings(findings, root)
 
     return exit_code_for(findings)
 

@@ -5,6 +5,51 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.6.5 — UNRELEASED
+
+Post-edit validation ergonomics (M19). Two additive, backward-compatible
+affordances on the post-edit loop plus one cosmetic help-string fix. Built
+locally; a later operator-driven milestone publishes to PyPI.
+
+### Added
+
+- **`docs touch <files> --check [--stale N]`** (M19 — D1). Folds the existing
+  `docs check` machinery into `docs touch` so the common post-edit loop
+  (`docs touch <files>` → `docs index .` → `docs check . --stale N`) collapses
+  to a single invocation. After `touch`'s end-of-batch INDEX refresh, the same
+  tree-wide `check_tree` bare `docs check` runs validates the resolved root and
+  its result folds into the exit code as `max(touch, check)` — touch runs
+  first and a failed touch (exit 1/2) short-circuits the check. `--stale N` is
+  forwarded as the check's stale window; `--stale` **without** `--check` is a
+  hard error (exit 2, `docs: touch: --stale requires --check`). `--dry-run
+  --check` previews the touch and checks the un-mutated on-disk tree. The check
+  honours the same `[exclude]` / `.docsignore` predicate as the reindex, and
+  its findings print on stdout regardless of `--quiet`.
+- **`.docs.toml [check] stale_days = N`** (M19 — D2). A per-tree default stale
+  window for validation. Consumed by both bare `docs check` and `docs touch
+  --check`: when no CLI `--stale` is given, a configured `stale_days` supplies
+  the window — a configured key therefore arms the `stale` rule on **bare
+  `docs check`** (the operator's per-tree opt-in). An explicit CLI `--stale N`
+  always overrides it; a tree with no `[check]` section is byte-for-byte
+  unchanged. The stale finding's message names the threshold's provenance —
+  config-sourced appends `, set in .docs.toml [check] stale_days`, CLI-sourced
+  appends `, via --stale` — so the operator knows which knob to turn. This
+  provenance suffix rides on the stale finding's message text in both the human
+  and `--json` output (the rule id `stale` and severity `warning` are
+  unchanged). A non-integer `stale_days` (e.g. the TOML string `"14"`) is
+  refused at config load — exit 2, `malformed .docs.toml: [check] stale_days
+  must be an integer` — rather than crashing; negative integers are honoured.
+  The key is check-scoped: it does **not** affect `docs list --stale`, which
+  stays an explicit filter.
+
+### Fixed
+
+- **`docs new --body-from` help-string drift** (M19 — D3). The argparse help
+  still described the pre-M15-C4 "first 20 lines looks like a metadata block"
+  heuristic; corrected to the real detector (a leading `---` fence or ≥ 2
+  adjacent `{Lifecycle, Role, Updated}` lines). The runtime detector and
+  refusal message were already correct — only the help text drifted.
+
 ## 1.6.0 — 2026-06-03
 
 Robustness + autonomous archival (M14) and agent-native doc authoring

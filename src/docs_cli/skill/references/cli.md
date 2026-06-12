@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-06-12
 
 Related:
 - pairs-with: convention.md
@@ -262,6 +262,12 @@ Query view.
 > **`docs list --status` was renamed `docs list --lifecycle` at
 > M7. The breaking-rename has no backward-compat alias.**
 
+> **`[check] stale_days` does NOT affect `docs list --stale` (M19 — Q6).**
+> The `.docs.toml [check] stale_days` config key is scoped to **check**
+> semantics only. `docs list` keeps `--stale` as an explicit filter: bare
+> `docs list` (no `--stale`) lists everything regardless of any configured
+> `stale_days`, and an explicit `docs list --stale N` filters by N as always.
+
 Exits 0.
 
 ### `docs check [DIR] [--stale N] [--json] [--exclude PATTERN]`
@@ -274,7 +280,7 @@ Validate the tree. Reports (and exits nonzero on) any of:
 - Structural breakage: a missing H1. (A malformed line inside the metadata block ends the block early rather than raising; its effect surfaces as a missing required field, not as a separate finding.)
 - Lifecycle/location mismatch (`Lifecycle: archived` outside archive subtree, or any other lifecycle inside) — rule `status-drift` (stable rule id from M3).
 - `Related:` paths that don't resolve to a file under the docs root.
-- (With `--stale N`) `Lifecycle: active` docs with `Updated:` more than N days ago.
+- (With a stale window — see **Stale-window resolution** below) `Lifecycle: active` docs with `Updated:` more than N days ago.
 - (M7 — F1) A missing `Role:` line whose value is resolvable from an H1
   trailing-word signal or a section-header pattern produces a
   medium-confidence inference — `severity: warning`, rule
@@ -303,7 +309,42 @@ Exit codes:
 - 1 — warnings only (stale docs; medium-confidence inferences; unknown-field warnings).
 - 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs).
 
-### `docs touch <file>...`
+**Stale-window resolution (M19 — D2).** The stale window the `stale` rule
+applies is resolved as **CLI `--stale` > `[check] stale_days` > unset**:
+
+- An explicit CLI `--stale N` always wins — including `--stale 0`, which is
+  honoured as given (flag every active doc not updated *today*), not treated
+  as "unset".
+- When `--stale` is absent and the docs root's `.docs.toml` carries a
+  `[check] stale_days = N` (see `convention.md` › *Per-tree `[check]`
+  config*), that value supplies the window. A configured `stale_days`
+  therefore makes **bare `docs check`** (with no `--stale` flag) apply the
+  stale rule — setting the key is the operator's explicit per-tree opt-in.
+- When neither is present, behaviour is exactly today's: no stale window, so
+  the `stale` rule never fires. Trees with no `[check]` section are
+  byte-for-byte unchanged.
+
+This resolution is shared by `docs check` and `docs touch --check`;
+`docs list --stale` is **not** a consumer (see `docs list` below).
+
+**Threshold provenance.** The `stale` finding's message names where the
+threshold came from, so the operator knows which knob to turn. The
+parenthetical extends as follows (the rule id `stale`, severity `warning`,
+and exit code 1 are unchanged — only the message text):
+
+- config-sourced (the window came from `[check] stale_days`):
+  `(stale threshold N, set in .docs.toml [check] stale_days)`;
+- CLI-sourced (the window came from `--stale N`):
+  `(stale threshold N, via --stale)`.
+
+(`docs touch --check` inherits this resolution and provenance: config-sourced
+when no `--stale` is forwarded, CLI-sourced when `--stale N` is.) Internally,
+a `stale_source` (`"config"` / `"cli"` / `None`) is threaded alongside the
+resolved window — a small `resolve_stale(cli_stale, config.stale_days)`
+helper, shared by both consumers, returns the `(window, source)` pair so the
+message is assembled in one place.
+
+### `docs touch <file>... [--check [--stale N]]`
 
 Bump `Updated:` to today in one or more docs. Accepts one or more
 positional file paths. INDEX regenerated **exactly once** at end of
@@ -340,6 +381,46 @@ rename` (M14 — A6, four-site).
 (gated on `not --quiet`) and writes nothing. The success run prints
 one `docs: touched <path>` per file on stderr (gated on `not
 --quiet`).
+
+**`--check [--stale N]` — touch-then-validate in one invocation (M19 — D1).**
+`--check` folds the existing `docs check` machinery into `docs touch` so
+the common post-edit loop (`docs touch <files>` → `docs index .` →
+`docs check . --stale N`) collapses to a single command. When `--check`
+is set, *after* `touch`'s end-of-batch INDEX refresh runs, `touch`
+invokes the same **tree-wide** `check_tree` over the resolved docs root
+that bare `docs check` runs — it *replaces* the `docs check .` step of
+the loop, not a touched-files-only subset.
+
+- **Combined exit code = `max(touch, check)` with a touch-fail
+  short-circuit (M19 — Q1).** Touch runs first. If touch itself fails
+  (exit 1 — missing/bad path; or exit 2 — outside-root refusal /
+  INDEX-refresh failure) the check does **not** run and touch's code is
+  returned (a failed touch left nothing meaningful to validate). If touch
+  succeeds (0), the check runs and its 0/1/2 (clean / warnings-only /
+  errors) becomes the command's exit code.
+- **`--stale N` is forwarded to the check (M19 — Q3 / D2).** With
+  `--check`, `--stale N` supplies the check's stale window; when `--stale`
+  is absent, the `[check] stale_days` config default applies (see
+  `docs check` below for the resolution rule). `--stale` **without**
+  `--check` is a hard error — exit 2 with
+  `docs: touch: --stale requires --check` on stderr; the file is left
+  byte-unchanged and no reindex runs.
+- **`--dry-run --check` previews the touch and checks the un-mutated tree
+  (M19 — Q4).** Under `--dry-run` nothing is written and no INDEX refresh
+  runs, so the check walks the **on-disk (un-mutated)** tree directly. A
+  doc the dry-run *would* refresh may therefore still read as stale, since
+  dry-run did not bump its `Updated:`.
+- **`--quiet` gates only `touch`'s own stderr lines (M19 — Q-E).** The
+  `would touch` / `touched` success/preview lines are suppressed under
+  `--quiet`; the check's findings, which print on **stdout**, are **never**
+  suppressed by `--quiet`.
+- **The check honours the same `[exclude]` / `.docsignore` predicate as
+  `touch`'s reindex (M19 — Q-F).** The tree-wide check applies the
+  persistent layered exclusion predicate (`.docs.toml [exclude]` + a root
+  `.docsignore`) — the same one `touch`'s end-of-batch reindex and bare
+  `docs check` use. `touch` has no `--exclude` flag of its own. A malformed
+  *excluded* file therefore never fails the check (just as it never fails
+  the reindex).
 
 Multi-root invocation (`docs touch a.md b.md` where `a.md` and `b.md`
 resolve to different docs roots) is **undefined behaviour and out of

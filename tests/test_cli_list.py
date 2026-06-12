@@ -10,6 +10,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 
@@ -108,3 +109,61 @@ def test_list_json_related_entries_are_objects(docs_script, fixtures_dir):
     assert related  # at least one fixture doc has a Related: block
     for entry in related:
         assert set(entry) == {"verb", "target"}
+
+
+# --- M19 Q6 — `[check] stale_days` does NOT affect `docs list --stale` -----
+#
+# GREEN-at-baseline regression locks: `docs list` is deliberately NOT a
+# consumer of `[check] stale_days`. These pin that bare `docs list` keeps
+# listing everything and an explicit `--stale N` is identical with or without
+# a `[check]` section. They pass today and must keep passing after Phases 5-6
+# wire the config into the CHECK path only.
+
+
+def _list_stale_config_tree(tmp_path: Path, name: str, *, with_check: bool) -> Path:
+    """A docs root with a fresh + an ancient active doc, optionally carrying a
+    `[check] stale_days = 1` sidecar. `today`-relative dates so it never rots.
+    """
+    root = tmp_path / name
+    root.mkdir()
+    toml = f'[project]\nname = "{name}"\n'
+    if with_check:
+        toml += "\n[check]\nstale_days = 1\n"
+    (root / ".docs.toml").write_text(toml)
+    today = date.today().isoformat()
+    old = (date.today() - timedelta(days=400)).isoformat()
+    (root / "fresh.md").write_text(
+        f"# Fresh\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: {today}\n\nBody.\n"
+    )
+    (root / "ancient.md").write_text(
+        f"# Ancient\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: {old}\n\nBody.\n"
+    )
+    return root
+
+
+def test_list_stale_config_does_not_filter_bare_list(docs_script, tmp_path):
+    """A `[check] stale_days = 1` tree: bare `docs list` (no `--stale`) returns
+    ALL docs — the config window must not be applied as a `list` filter.
+    """
+    root = _list_stale_config_tree(tmp_path, "list-cfg", with_check=True)
+    proc = _run(docs_script, "list", "--root", str(root), "--json")
+    assert proc.returncode == 0, proc.stderr
+    data = json.loads(proc.stdout)
+    paths = {rec["path"] for rec in data}
+    assert "fresh.md" in paths
+    assert "ancient.md" in paths, "[check] stale_days must NOT filter bare list"
+
+
+def test_list_explicit_stale_unaffected_by_config(docs_script, tmp_path):
+    """`docs list --stale 90 --json` returns the identical record set whether
+    or not a `[check]` section is present — the explicit filter is the SoT.
+    """
+    with_cfg = _list_stale_config_tree(tmp_path, "list-with", with_check=True)
+    without_cfg = _list_stale_config_tree(tmp_path, "list-without", with_check=False)
+
+    def _stale_paths(root: Path) -> set[str]:
+        proc = _run(docs_script, "list", "--root", str(root), "--stale", "90", "--json")
+        assert proc.returncode == 0, proc.stderr
+        return {rec["path"] for rec in json.loads(proc.stdout)}
+
+    assert _stale_paths(with_cfg) == _stale_paths(without_cfg) == {"ancient.md"}

@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-06-12. 15 docs active, 34 archived._
+_Generated 2026-06-12. 17 docs active, 34 archived._
 
 ## Project — docs
 
@@ -19,19 +19,21 @@ _Generated 2026-06-12. 15 docs active, 34 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-06-03.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-06-12.
 
 ### Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-03.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-03.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-12.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-12.
 
 ### Active — Milestone
 
+- [m19-post-edit-validation.md](m19-post-edit-validation.md) — _milestone_ — - Milestone: M19 (v1.6.5) - Title: Post-edit validation ergonomics (touch --check + configurable stale window) -…. Updated 2026-06-12.
 - [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) — _milestone_ — - Milestone: M18 - Title: Archive edge integrity (intra-archive Related: rewriting) - Surface: a correctness fix to…. Updated 2026-06-03.
 
 ### Active — Log
 
+- [m19-post-edit-validation-impl.md](m19-post-edit-validation-impl.md) — _log_ — Chronological log of work on M19 — Post-edit validation ergonomics (`docs touch --check` + configurable stale window).…. Updated 2026-06-12.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.
 - [m18-archive-edge-integrity-impl.md](m18-archive-edge-integrity-impl.md) — _log_ — Chronological log of work on M18 — Archive edge integrity (intra-archive `Related:` rewriting). Append a section per…. Updated 2026-06-03.
 

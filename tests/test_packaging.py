@@ -97,16 +97,17 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_1_6_0() -> None:
-    """A3: `[project].version` is `1.6.0` (M14).
+def test_a3_project_version_is_1_6_5() -> None:
+    """A3: `[project].version` is `1.6.5` (M19).
 
-    M14 Phase 7 bumps the pyproject `version` string from 1.5.0 to 1.6.0
+    M19 Phase 7 bumps the pyproject `version` string from 1.6.0 to 1.6.5
     (the single version source of truth; `__version__` reads it via
-    `importlib.metadata`). 1.6.0 is built locally — M17 publishes.
+    `importlib.metadata`). 1.6.5 is built locally — a later milestone
+    publishes (the M12→M13, M14+M15→M17 pattern).
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "1.6.0", (
-        f"[project].version must be '1.6.0'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "1.6.5", (
+        f"[project].version must be '1.6.5'; got {data['project']['version']!r}"
     )
 
 
@@ -189,25 +190,25 @@ def built_dist(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def test_b1_wheel_builds(built_dist: dict) -> None:
-    """B1: `python -m build` produces a wheel named `docs_cli-1.6.0-*.whl`.
+    """B1: `python -m build` produces a wheel named `docs_cli-1.6.5-*.whl`.
 
-    M14 Phase 7 bumped the pyproject `version` to 1.6.0, so the build
-    produces a 1.6.0 wheel (built locally; M17 publishes).
+    M19 Phase 7 bumped the pyproject `version` to 1.6.5, so the build
+    produces a 1.6.5 wheel (built locally; a later milestone publishes).
     """
     assert built_dist["wheel"].exists()
-    assert built_dist["wheel"].name.startswith("docs_cli-1.6.0-"), (
-        f"wheel filename must encode version 1.6.0; got {built_dist['wheel'].name}"
+    assert built_dist["wheel"].name.startswith("docs_cli-1.6.5-"), (
+        f"wheel filename must encode version 1.6.5; got {built_dist['wheel'].name}"
     )
 
 
 def test_b2_sdist_builds(built_dist: dict) -> None:
-    """B2: `python -m build` produces an sdist `docs_cli-1.6.0.tar.gz`.
+    """B2: `python -m build` produces an sdist `docs_cli-1.6.5.tar.gz`.
 
-    M14 Phase 7: same bump as B1 — pyproject is at 1.6.0.
+    M19 Phase 7: same bump as B1 — pyproject is at 1.6.5.
     """
     assert built_dist["sdist"].exists()
-    assert built_dist["sdist"].name == "docs_cli-1.6.0.tar.gz", (
-        f"sdist filename must be 'docs_cli-1.6.0.tar.gz'; got {built_dist['sdist'].name}"
+    assert built_dist["sdist"].name == "docs_cli-1.6.5.tar.gz", (
+        f"sdist filename must be 'docs_cli-1.6.5.tar.gz'; got {built_dist['sdist'].name}"
     )
 
 
@@ -322,12 +323,12 @@ def test_c1_docs_on_path_in_venv(wheel_venv: Path) -> None:
     assert wheel_venv.is_file()
 
 
-def test_c2_docs_version_is_1_6_0(wheel_venv: Path) -> None:
-    """C2: `docs --version` prints `1.6.0` (M14).
+def test_c2_docs_version_is_1_6_5(wheel_venv: Path) -> None:
+    """C2: `docs --version` prints `1.6.5` (M19).
 
-    M14 Phase 7 bumped `__version__` (sourced from `importlib.metadata`)
-    to 1.6.0 by bumping the pyproject `version`. The built wheel installed
-    into `wheel_venv` reports 1.6.0.
+    M19 Phase 7 bumped `__version__` (sourced from `importlib.metadata`)
+    to 1.6.5 by bumping the pyproject `version`. The built wheel installed
+    into `wheel_venv` reports 1.6.5.
     """
     result = subprocess.run(
         [str(wheel_venv), "--version"],
@@ -339,12 +340,12 @@ def test_c2_docs_version_is_1_6_0(wheel_venv: Path) -> None:
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     combined = (result.stdout + result.stderr).strip()
-    # Exact-token match: bare substring `"1.6.0" in combined` would also
-    # accept `21.6.0` or `1.6.0.dev0`. Split on whitespace and require the
+    # Exact-token match: bare substring `"1.6.5" in combined` would also
+    # accept `21.6.5` or `1.6.5.dev0`. Split on whitespace and require the
     # version token to appear verbatim.
     tokens = combined.split()
-    assert "1.6.0" in tokens, (
-        f"`docs --version` must print '1.6.0' as a standalone token; got: {combined!r}"
+    assert "1.6.5" in tokens, (
+        f"`docs --version` must print '1.6.5' as a standalone token; got: {combined!r}"
     )
 
 
