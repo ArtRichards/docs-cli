@@ -51,10 +51,14 @@ scope, `--stale`-without-`--check`, `--dry-run --check`, whether a configured
 `stale_days` makes bare `docs check` apply the stale rule, and whether it
 feeds `docs list --stale`) are **RESOLVED** (operator decisions 2026-06-12,
 each per the recommended default — see the milestone doc's Decisions). **Step 1
-(Phase 1 — Define Contract) complete on branch `m19/phases-1-4`** (2026-06-12):
-`cli.md` §touch `--check` block + §check stale-resolution/provenance contract +
-§list Q6 note, `convention.md` `[check]` subsection, bundled refs resynced
-byte-identical.
+(Phases 1-4 — Contract + RED baseline) complete on branch `m19/phases-1-4`**
+(2026-06-12): `cli.md` §touch `--check` block + §check stale-resolution/
+provenance contract + §list Q6 note, `convention.md` `[check]` subsection,
+bundled refs resynced byte-identical (Phase 1); 23 new tests written RED across
+5 suites + the version-pin flip to 1.6.5 (Phase 2); inline today-relative
+fixtures (Phase 3); **RED baseline GREEN — 533 collected, 19 RED for their
+classified reasons, 514 GREEN incl. 5 GREEN-at-baseline locks** (Phase 4).
+Step 2 (interfaces + core impl, Phases 5-8) is next.
 
 **M18 — Archive edge integrity (intra-archive Related: rewriting)** is
 **implementation-complete (2026-06-03)**. The correctness fix to

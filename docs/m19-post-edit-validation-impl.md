@@ -55,7 +55,7 @@ section tracks implementation progress, which is distinct.)
 | 1. Define Contract | **Complete** | 2026-06-12 | `cli.md` §touch `--check [--stale N]` block + heading; §check stale-window resolution (CLI `--stale` > `[check] stale_days` > unset) + threshold-provenance message contract; §list Q6 note; `convention.md` `[check]` subsection. Bundled refs resynced byte-identical (`test_skill_refs` GREEN); `docs check docs/` exit 0; INDEX snapshot in lockstep. The three Phase-2 verbatim strings (`--stale requires --check`, `set in .docs.toml [check] stale_days`, `via --stale`) all present. Q-A provenance-plumbing (`stale_source` + `resolve_stale` helper) noted in the contract. |
 | 2. Write Tests (RED) | **Complete** | 2026-06-12 | 23 new tests, split by layer (Q-C). D1 touch `--check` (12) in `test_cli_touch.py`; D2 config-parse (2) in `test_config.py`; D2 check CLI + provenance (6) in `test_cli_check.py`; Q6 list locks (2) in `test_cli_list.py`; D3 help (1) in `test_body_from.py`; version pin flipped `test_a3_..._1_6_0` → `..._1_6_5` in `test_packaging.py` (B1/B2/C2 untouched — Q-D, Phase-7 surface). Reused `_multi_file_tree` / `_orphan_doc` / `_touch_excluded_malformed_tree` (touch) + `_stale_tree` (check). Suite collects 533 (510 + 23); ruff + format clean on the new files. |
 | 3. Create Data/Fixtures | **Complete** | 2026-06-12 | All fixtures are inline `tmp_path` builders with `today`-relative dates (no committed static fixtures — committed dates rot). `_stale_config_tree(tmp_path, name, *, stale_days)` in `test_cli_check.py` mirrors `_stale_tree` + the `[check] stale_days = N` sidecar; `_check_tree` (touch) and `_list_stale_config_tree` (list) likewise; the broken-ref + clean + config-default cases are inline. No `tests/fixtures/trees/` additions; the byte-frozen `docs-INDEX.md` snapshot is the only committed fixture, kept in lockstep. (Builders authored in the Phase-2 commit — tests cannot collect without them; this phase confirms the inline-only fixture decision.) |
-| 4. Run Tests (RED Baseline) | Pending | — | — |
+| 4. Run Tests (RED Baseline) | **Complete** | 2026-06-12 | Full suite: **533 collected, 19 failed (RED), 514 passed.** The 19 RED are exactly the intended set, each failing for its classified reason (below). The 514 passing = 509 untouched pre-existing + 5 new GREEN-at-baseline locks (`check_cli_stale_overrides_config`, `check_no_check_section_unchanged`, `check_stale_zero_honored`, `list_stale_config_does_not_filter_bare_list`, `list_explicit_stale_unaffected_by_config`). Note: the version-pin rename flipped the old `test_a3_..._1_6_0` (was GREEN) → `..._1_6_5` (now RED), so "pre-existing still GREEN" is 509, not 510. |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
@@ -281,3 +281,55 @@ invariant). Confirmed `git status` shows no new `tests/fixtures/` files.
 
 **Exit criteria met.** All Phase-2 tests have date-independent inline data;
 no rotting committed fixture introduced.
+
+## Phase 4 — Run Tests (RED Baseline) (2026-06-12, branch `m19/phases-1-4`)
+
+**Objective.** Confirm every intended-RED test fails for its *classified*
+reason, the GREEN-at-baseline locks pass, and the pre-existing suite still
+passes.
+
+**Result: `533 collected, 19 failed (RED), 514 passed`** (`pytest tests/ -q`,
+23.6 s).
+
+- **19 RED** — exactly the intended set.
+- **514 GREEN** = 509 untouched pre-existing + 5 new GREEN-at-baseline locks.
+  (The version-pin rename flipped the old `test_a3_..._1_6_0`, previously
+  GREEN, into the now-RED `..._1_6_5`, so the untouched pre-existing GREEN
+  count is 509, not 510 — the headline 510 minus the one renamed test.)
+
+**RED classifications (each verified against the captured failure line).**
+
+| Tests | # | RED reason (verified) |
+|---|---|---|
+| D1 touch `--check` / `--stale` (all 12 in `test_cli_touch.py`) | 12 | argparse `error: unrecognized arguments: --check` / `--stale` → **exit 2** (flags undeclared until Phase 5). The two intended-exit-2 cases (`stale_without_check`, `outside_root_short_circuits`) get argparse's exit 2 but fail their *message* assertion (`--stale requires --check` / `is not under a docs root`), so they are genuinely RED, not falsely green. Documented honest RED (Q-B/Q-D style). |
+| `Config.stale_days` parse (2 in `test_config.py`) | 2 | `AttributeError: 'Config' object has no attribute 'stale_days'` — the field lands Phase 5 (Q-B; not pulled into Phase 3). |
+| D2 check behaviour + provenance (3 in `test_cli_check.py`) | 3 | plain assertion failures: bare check on a `[check]`-configured tree still exits 0 (config not read); the stale message is `(stale threshold N)` with no `set in .docs.toml [check] stale_days` / `via --stale` provenance clause. |
+| D3 help (1 in `test_body_from.py`) | 1 | assertion: `'first 20 lines' in help_text` — the stale argparse string is still shipped (`...the body's first 20 lines looks like a metadata...`). |
+| Version pin (1 in `test_packaging.py`) | 1 | assertion: `version == '1.6.5'` but pyproject still `'1.6.0'` (bumps at Phase 7). |
+
+**GREEN-at-baseline locks (5, all passing — must stay GREEN).**
+`test_check_cli_stale_overrides_config` (CLI `--stale 99999` → exit 0;
+degenerate today since config is ignored, but the correct post-impl outcome
+too); `test_check_no_check_section_unchanged`;
+`test_check_stale_zero_honored` (`--stale 0` honoured — exit 1);
+`test_list_stale_config_does_not_filter_bare_list`;
+`test_list_explicit_stale_unaffected_by_config` (Q6 — `docs list` is not a
+config consumer).
+
+**No tracebacks / collection errors / xfails.** The two AttributeError cases
+are the accepted, documented Q-B RED (the field is intentionally absent until
+Phase 5); every other RED is a clean assertion or an
+honest-argparse-then-message-assert failure. The suite is in the exact state
+the phase requires.
+
+**Phase-7 follow-through (Q-D, recorded for the wrapper phase).** Only
+`test_a3` was flipped to 1.6.5. The slow build-gated packaging tests **B1/B2/
+C2** (`test_b*` / `test_c2_*` — editable-install version, built-wheel version,
+`docs --version` over the installed entry point) still assert/observe the old
+version and are **deliberately left for Phase 7**, when `pyproject.toml` flips
+to 1.6.5 and the editable install is refreshed. They are NOT part of this
+step's RED set.
+
+**Exit criteria met.** Every intended-RED test fails for its classified
+reason; the 5 GREEN-at-baseline locks pass; the untouched pre-existing suite
+(509) stays GREEN; counts captured above.
