@@ -54,7 +54,7 @@ section tracks implementation progress, which is distinct.)
 |---|---|---|---|
 | 1. Define Contract | **Complete** | 2026-06-12 | `cli.md` §touch `--check [--stale N]` block + heading; §check stale-window resolution (CLI `--stale` > `[check] stale_days` > unset) + threshold-provenance message contract; §list Q6 note; `convention.md` `[check]` subsection. Bundled refs resynced byte-identical (`test_skill_refs` GREEN); `docs check docs/` exit 0; INDEX snapshot in lockstep. The three Phase-2 verbatim strings (`--stale requires --check`, `set in .docs.toml [check] stale_days`, `via --stale`) all present. Q-A provenance-plumbing (`stale_source` + `resolve_stale` helper) noted in the contract. |
 | 2. Write Tests (RED) | **Complete** | 2026-06-12 | 23 new tests, split by layer (Q-C). D1 touch `--check` (12) in `test_cli_touch.py`; D2 config-parse (2) in `test_config.py`; D2 check CLI + provenance (6) in `test_cli_check.py`; Q6 list locks (2) in `test_cli_list.py`; D3 help (1) in `test_body_from.py`; version pin flipped `test_a3_..._1_6_0` → `..._1_6_5` in `test_packaging.py` (B1/B2/C2 untouched — Q-D, Phase-7 surface). Reused `_multi_file_tree` / `_orphan_doc` / `_touch_excluded_malformed_tree` (touch) + `_stale_tree` (check). Suite collects 533 (510 + 23); ruff + format clean on the new files. |
-| 3. Create Data/Fixtures | Pending | — | — |
+| 3. Create Data/Fixtures | **Complete** | 2026-06-12 | All fixtures are inline `tmp_path` builders with `today`-relative dates (no committed static fixtures — committed dates rot). `_stale_config_tree(tmp_path, name, *, stale_days)` in `test_cli_check.py` mirrors `_stale_tree` + the `[check] stale_days = N` sidecar; `_check_tree` (touch) and `_list_stale_config_tree` (list) likewise; the broken-ref + clean + config-default cases are inline. No `tests/fixtures/trees/` additions; the byte-frozen `docs-INDEX.md` snapshot is the only committed fixture, kept in lockstep. (Builders authored in the Phase-2 commit — tests cannot collect without them; this phase confirms the inline-only fixture decision.) |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
@@ -247,3 +247,37 @@ convention.
 
 **Exit criteria met.** Tests written RED per the plan; collection clean; the
 intended-RED vs GREEN-at-baseline split is classified for Phase 4.
+
+## Phase 3 — Create Data/Fixtures (2026-06-12, branch `m19/phases-1-4`)
+
+**Objective.** Provide the test data the Phase-2 RED tests need, preferring
+inline `tmp_path` builders over committed dated fixtures (committed dates
+rot as the wall clock advances).
+
+**Decision: inline-only, today-relative.** Every M19 fixture is an inline
+`tmp_path` builder whose stale dates are computed as
+`date.today() - timedelta(days=400)` (and "fresh" as `date.today()`), so no
+case rots. No files were added under `tests/fixtures/trees/`.
+
+**Builders (authored in the Phase-2 commit — tests cannot collect without
+them; recorded here as the Phase-3 fixture surface):**
+
+- `tests/test_cli_check.py` — `_stale_config_tree(tmp_path, name, *,
+  stale_days)`: mirrors the existing `_stale_tree` and adds the
+  `[check] stale_days = N` sidecar + one 400-day-old active doc. Used by the
+  config-default, CLI-override, and both provenance tests.
+- `tests/test_cli_touch.py` — `_check_tree(tmp_path, name)`: a root with one
+  fresh + one ancient active doc, for the touch `--check` exit-code and
+  forwarding/quiet tests. The broken-ref and clean cases are inline within
+  their tests.
+- `tests/test_cli_list.py` — `_list_stale_config_tree(tmp_path, name, *,
+  with_check)`: a fresh + ancient pair, optionally carrying the
+  `[check] stale_days = 1` sidecar, for the Q6 list regression locks.
+
+**Static fixtures.** None added. The only committed fixture in M19's blast
+radius is the byte-frozen `tests/fixtures/expected/docs-INDEX.md`, kept
+identical to `docs/INDEX.md` after every INDEX regen (the repo's lockstep
+invariant). Confirmed `git status` shows no new `tests/fixtures/` files.
+
+**Exit criteria met.** All Phase-2 tests have date-independent inline data;
+no rotting committed fixture introduced.
