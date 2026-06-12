@@ -236,6 +236,13 @@ class Config:
     ``_BUILTIN_METADATA_FIELDS`` to decide which extra metadata labels
     are allowed.
 
+    M19 (D2) adds ``stale_days`` — the per-tree default stale window
+    sourced from the ``[check]`` table's ``stale_days`` key. When set,
+    it supplies the window to ``docs check`` and ``docs touch --check``
+    whenever no explicit CLI ``--stale`` is given; absent (``None``) →
+    no default window (today's behaviour). The key is check-scoped — it
+    does NOT feed ``docs list --stale``.
+
     Defaults when `.docs.toml` is absent:
         project = root.resolve().name or "root"
         archive_dir = "archive"
@@ -250,6 +257,7 @@ class Config:
         exclude_exts = ()
         docsignore_patterns = ()
         fields = frozenset()
+        stale_days = None
     """
 
     project: str
@@ -265,6 +273,7 @@ class Config:
     exclude_exts: tuple[str, ...] = ()
     docsignore_patterns: tuple[str, ...] = ()
     fields: frozenset[str] = frozenset()
+    stale_days: int | None = None
 
     def __post_init__(self) -> None:
         if not self.project.strip():
@@ -961,6 +970,10 @@ def load_config(root: Path) -> Config:
     file (raw line contents) so the four ``Config`` exclude fields are
     populated for ``compile_exclude_predicate``.
 
+    M19 (D2) also reads the optional ``[check]`` section's ``stale_days``
+    key into ``Config.stale_days`` — the per-tree default stale window for
+    ``docs check`` / ``docs touch --check`` (absent → ``None``).
+
     Args:
         root: Docs root directory (the one that may contain `.docs.toml`).
 
@@ -977,6 +990,7 @@ def load_config(root: Path) -> Config:
     vocab_section = data.get("vocabulary", {})
     migrate_section = data.get("migrate", {})
     exclude_section = data.get("exclude", {})
+    check_section = data.get("check", {})
 
     project = project_section.get("name")
     if not project:
@@ -1008,6 +1022,12 @@ def load_config(root: Path) -> Config:
         tuple(docsignore_path.read_text().splitlines()) if docsignore_path.is_file() else ()
     )
 
+    # M19 (D2): `[check] stale_days` is the per-tree default stale window.
+    # Read leniently — like `add_roles` / `project_name`, a malformed value
+    # is surfaced wherever it is consumed, not validated here (the CLI
+    # `--stale` is already `type=int`; the config read mirrors that leniency).
+    stale_days = check_section.get("stale_days")
+
     return Config(
         project=project,
         archive_dir=archive_dir,
@@ -1021,6 +1041,7 @@ def load_config(root: Path) -> Config:
         exclude_exts=exclude_exts,
         docsignore_patterns=docsignore_patterns,
         fields=fields,
+        stale_days=stale_days,
     )
 
 
@@ -1445,6 +1466,7 @@ def check_doc(
     config: Config,
     stale: int | None,
     today: date,
+    stale_source: str | None = None,
 ) -> list[Finding]:
     """Validate a single doc's raw ``text``; return every finding, never raise.
 
@@ -1644,6 +1666,7 @@ def check_tree(
     stale: int | None,
     today: date,
     predicate: Callable[[str], bool] | None = None,
+    stale_source: str | None = None,
 ) -> list[Finding]:
     """Validate every doc under ``root``; return all findings.
 
@@ -1653,10 +1676,14 @@ def check_tree(
 
     M8 (F3): the optional ``predicate`` argument is threaded into
     `_iter_doc_texts` so excluded files are skipped before validation.
+
+    M19 (D2): the optional ``stale_source`` (``"cli"`` / ``"config"`` /
+    ``None``, from `resolve_stale`) is forwarded to `check_doc` so the stale
+    finding's message can name the threshold's provenance.
     """
     findings: list[Finding] = []
     for path, text in _iter_doc_texts(root, config, predicate=predicate):
-        findings.extend(check_doc(path, text, root, config, stale, today))
+        findings.extend(check_doc(path, text, root, config, stale, today, stale_source))
     return findings
 
 
@@ -1672,6 +1699,29 @@ def exit_code_for(findings: list[Finding]) -> int:
     if any(f.severity == "warning" for f in findings):
         return 1
     return 0
+
+
+def resolve_stale(
+    cli_stale: int | None, config_stale_days: int | None
+) -> tuple[int | None, str | None]:
+    """Resolve the stale window + its provenance (M19 — D2).
+
+    Precedence: CLI ``--stale`` > ``[check] stale_days`` > unset. Returns a
+    ``(window, source)`` pair where ``source`` is ``"cli"`` when the window
+    came from an explicit ``--stale`` (including ``--stale 0`` — only ``None``
+    means "flag absent"), ``"config"`` when it came from the tree's
+    ``[check] stale_days``, and ``None`` when neither is set (no stale window).
+
+    The ``source`` lets ``check_doc`` name the threshold's provenance in the
+    stale finding so the operator knows which knob to turn. Shared by both
+    check-path consumers — bare/explicit ``docs check`` and ``docs touch
+    --check``; ``docs list --stale`` is NOT a consumer (Q6).
+    """
+    if cli_stale is not None:
+        return cli_stale, "cli"
+    if config_stale_days is not None:
+        return config_stale_days, "config"
+    return None, None
 
 
 def query_docs(
@@ -2971,6 +3021,25 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     touch_p.add_argument("files", nargs="+", help="Path(s) to the doc(s) to touch.")
+    touch_p.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "After the end-of-batch reindex, run the same tree-wide `docs check` "
+            "over the resolved root and fold its result into the exit code "
+            "(max(touch, check); a failed touch short-circuits the check)."
+        ),
+    )
+    touch_p.add_argument(
+        "--stale",
+        type=int,
+        metavar="N",
+        help=(
+            "Stale window forwarded to --check's validation (active docs not "
+            "updated in more than N days). Requires --check; absent → the "
+            "[check] stale_days config default applies."
+        ),
+    )
 
     # M15 (B3): `docs stamp <file>...` — write-then-stamp. Inserts a
     # convention-correct metadata block onto files an agent already wrote,
