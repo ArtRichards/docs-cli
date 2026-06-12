@@ -163,14 +163,14 @@ closing the follow-on tracked in status.md + the
 
 ## Deliverables
 
-- [ ] D1 `docs touch --check [--stale N]` runs `check_tree` after the
+- [x] D1 `docs touch --check [--stale N]` runs `check_tree` after the
       end-of-batch reindex and folds its result into `touch`'s exit code
       (tree-wide check — Q2; combined exit = max(touch, check), touch-fail
       short-circuits the check — Q1). Pinned by Phase-2 tests (touch+check
       clean → 0; touch+check on a stale tree → 1; touch+check on a broken-ref
       tree → 2; `--stale` without `--check` → exit 2 — Q3; `--dry-run --check`
-      writes nothing and checks the un-mutated tree — Q4).
-- [ ] D2 `.docs.toml [check] stale_days = N` parsed into `Config.stale_days`;
+      writes nothing and checks the un-mutated tree — Q4). **DONE (Phase 6).**
+- [x] D2 `.docs.toml [check] stale_days = N` parsed into `Config.stale_days`;
       consumed by bare `docs check` and D1's combined `touch --check` path
       (NOT `docs list --stale` — Q6); explicit CLI `--stale` overrides;
       absent config preserves today's "no stale window unless `--stale`"
@@ -180,26 +180,30 @@ closing the follow-on tracked in status.md + the
       `via --stale`. Pinned by Phase-2 tests (config default applies to bare
       `check`; CLI `--stale` overrides config; no `[check]` section →
       unchanged; config-sourced provenance string; CLI-sourced provenance
-      string).
-- [ ] D3 `docs new --body-from` argparse help string corrected to the M15-C4
+      string). **DONE (Phases 5-6).**
+- [x] D3 `docs new --body-from` argparse help string corrected to the M15-C4
       detector wording; `docs new --help` no longer says "first 20 lines".
       Closes the rolled-forward follow-on. Pinned by a help-string assertion
       (no "first 20 lines"; mentions the real `---` fence / `{Lifecycle,
-      Role, Updated}` cluster shape).
-- [ ] D4 `cli.md` (§touch + §check + §list) + `convention.md` (`[check]`
+      Role, Updated}` cluster shape). **DONE (Phase 6).**
+- [x] D4 `cli.md` (§touch + §check + §list) + `convention.md` (`[check]`
       schema) document the behaviour; `pyproject.toml` 1.6.5 + packaging
       version-pin test in lockstep; `## 1.6.5 — UNRELEASED` CHANGELOG section
       authored (publish-survival wording); bundled skill refs byte-identical
-      (`test_skill_refs` GREEN); INDEX + frozen snapshot in lockstep.
-- [ ] Surface-parity gate (Phase 10, plan.md "Ongoing conventions"): run
+      (`test_skill_refs` GREEN); INDEX + frozen snapshot in lockstep. **DONE
+      (Phase 1 specs frozen; Phase 7 version + CHANGELOG).**
+- [x] Surface-parity gate (Phase 10, plan.md "Ongoing conventions"): run
       `docs touch --help`, `docs check --help`, `docs new --help`; reconcile
       against the CHANGELOG surface; confirm the bundled skill documents the
       new flag + config; grep for stale wording describing any replaced
       behaviour (the `--body-from` "first 20 lines" string is the named
-      target).
-- [ ] Full suite GREEN (current 510 + the new M19 tests); ruff / ruff format
+      target). **DONE (Phase 10): `--help` reconciled; SKILL.md verb table +
+      `[check] stale_days` note updated (OQ-4); `grep "first 20 lines" src/`
+      → zero source hits.**
+- [x] Full suite GREEN (current 510 + the new M19 tests); ruff / ruff format
       / mypy / `docs check docs/` clean tree-wide; bundled cli.md /
       convention.md byte-identical; `docs --version` prints `docs 1.6.5`.
+      **DONE (Phase 8): 533/533 GREEN; gate clean; `docs 1.6.5`.**
 
 ## Phase Checklist (10-phase TDD)
 
@@ -237,7 +241,7 @@ closing the follow-on tracked in status.md + the
       errors); classify each new test RED vs GREEN-at-baseline (the D3
       help-string test is RED today; an absent-config regression lock is
       GREEN). Capture the baseline count.
-- [ ] 5. Update Base Interfaces — `Config.stale_days: int | None = None`
+- [x] 5. Update Base Interfaces — `Config.stale_days: int | None = None`
       field + `load_config` `[check]` read; the `touch` argparse `--check`
       + `--stale` flags declared (with the `--stale`-requires-`--check`
       guard — Q3); the `_cmd_check` + `touch --check` check-path call sites
@@ -245,7 +249,7 @@ closing the follow-on tracked in status.md + the
       may stay unchanged this phase per the honest split). `_cmd_list` /
       `query_docs` are deliberately NOT threaded (Q6 — `docs list` is not a
       consumer).
-- [ ] 6. Implement Core — the stale-window resolution helper (CLI `--stale`
+- [x] 6. Implement Core — the stale-window resolution helper (CLI `--stale`
       > `config.stale_days` > None) wired into `_cmd_check` and the
       `touch --check` path (NOT `_cmd_list` — Q6); the resolution carries
       the threshold's **source** (config vs CLI) so the stale finding's
@@ -254,22 +258,22 @@ closing the follow-on tracked in status.md + the
       `touch --check` post-reindex `check_tree` call + exit-code fold (Q1);
       the `--stale`-without-`--check` exit-2 guard (Q3); the D3 help string.
       All RED → GREEN.
-- [ ] 7. Update Wrappers — `pyproject.toml` `version` → `1.6.5`;
+- [x] 7. Update Wrappers — `pyproject.toml` `version` → `1.6.5`;
       `## 1.6.5 — UNRELEASED` CHANGELOG section (Added: `touch --check`,
       `[check] stale_days`; Fixed: `--body-from` help drift); packaging
       version-pin test updated; bundled cli.md / convention.md resynced
       byte-identical (`test_skill_refs` GREEN).
-- [ ] 8. Run Tests (GREEN) + quality gate — full suite GREEN; ruff / format
+- [x] 8. Run Tests (GREEN) + quality gate — full suite GREEN; ruff / format
       / mypy / `docs check docs/` / index dry-run clean; bundled refs
       byte-identical; INDEX == frozen snapshot; `docs --version` →
       `docs 1.6.5`.
-- [ ] 9. Integrate — dogfood the post-edit loop on a throwaway copy
+- [x] 9. Integrate — dogfood the post-edit loop on a throwaway copy
       (`docs touch <file> --check` against a clean tree → exit 0; against a
       tree with a stale doc + a `[check] stale_days` shorter than the doc's
       age → exit 1; with a broken ref → exit 2), and the bare-`check` config
       default, on the real `docs/` tree read-only where safe; confirm the
       INDEX refresh + check run in one invocation.
-- [ ] 10. Quality, Docs, Refactor — closeout summaries (checklist +
+- [x] 10. Quality, Docs, Refactor — closeout summaries (checklist +
       Deliverables + Success Criteria ticked, impl-log rows); INDEX + frozen
       snapshot lockstep; status/plan updated; surface-parity gate run
       (`--help` reconciliation + stale-wording grep); lifecycle left `draft`
@@ -383,6 +387,39 @@ closing the follow-on tracked in status.md + the
     The key is scoped to **check** semantics only; `docs list --stale` stays
     an explicit filter (bare `docs list` lists everything). An explicit
     `docs list --stale N` is unaffected.
+- **Implementation-phase open questions (OQ-1..OQ-5, BINDING — conductor
+  decisions, resolved for Step 2 — phases 5-10).** The Step-2 planning agent
+  surfaced five implementation forks; the conductor resolved each, and they
+  are recorded here for the same reason Q1-Q6 are:
+  - **OQ-1 (config-value validation for `[check] stale_days`) → NO bespoke
+    validation (leniency parity).** `load_config` reads `stale_days` exactly
+    as it reads `add_roles` / `project_name` — no type/negative check. The CLI
+    `--stale` is already `type=int`; a hand-malformed config value behaves like
+    any other lenient config read. (Keeps the config surface uniform; a
+    validation pass, if ever wanted, is a separate cross-key change.)
+  - **OQ-2 (CLI-sourced provenance suffix risks regressing existing
+    `docs check --stale N` message assertions) → audit-then-green (mandatory,
+    in-phase).** Before declaring Phase 6 GREEN, `grep -rn "stale threshold"
+    tests/` + audit every hit. Result: only the 3 new M19 provenance tests pin
+    the threshold-message text; all pre-existing stale assertions are
+    rule/severity-based or loose substrings (`test_check_stale_only_tree_exits_1`
+    asserts `"stale" in stdout.lower()`, which `via --stale` satisfies). Zero
+    regression — the highest-risk item in the milestone, cleared.
+  - **OQ-3 (does the repo's own `docs/.docs.toml` adopt `[check] stale_days`
+    in M19?) → NO.** The repo tree does not adopt the key in M19. The config
+    path is dogfooded on a throwaway `cp -r` copy of `docs/` instead, so the
+    repo's tree stays byte-unchanged and `docs check docs/` keeps its current
+    no-stale-window behaviour. (Adopting the key for this repo is a separate,
+    later operator choice.)
+  - **OQ-4 (update the bundled `SKILL.md` verb table for `touch --check`?) →
+    YES.** The `SKILL.md` touch row gains `[--check [--stale N]]` + a
+    "--check folds in docs check" note, plus a brief `[check] stale_days`
+    paragraph. `SKILL.md` has no byte-identity test counterpart (unlike the
+    `references/` bundled refs), so there is no lockstep cost.
+  - **OQ-5 (does `docs touch --check` get a `--json` mode in M19?) → NO
+    (deliberate non-goal).** `touch --check` prints grouped human findings
+    only; `--json` is out of M19 scope and is a candidate follow-on. (Bare
+    `docs check --json` is unchanged.)
 
 ## Testing / Quality Gate
 
@@ -408,28 +445,34 @@ the INDEX refresh and the check.
 
 ## Success Criteria
 
-- [ ] `docs touch <files> --check` runs the tree-wide check after the reindex
+- [x] `docs touch <files> --check` runs the tree-wide check after the reindex
       in one invocation; its exit code is `max(touch, check)` with a
       touch-fail short-circuit (clean → 0; stale-only → 1; errors → 2).
       `--stale` without `--check` → exit 2 (Q3). `--dry-run --check` writes
-      nothing and checks the un-mutated tree.
-- [ ] `.docs.toml [check] stale_days = N` supplies the stale window to bare
+      nothing and checks the un-mutated tree. **MET — Phase 6 impl + Phase 9
+      dogfood (exercises 1-4).**
+- [x] `.docs.toml [check] stale_days = N` supplies the stale window to bare
       `docs check` and `docs touch --check` when no CLI `--stale` is given
       (Q5); an explicit `--stale` overrides it; a tree with no `[check]`
       section is unchanged; `docs list --stale` is NOT affected by the config
       key (Q6 — it stays an explicit filter). The stale finding names the
       threshold's provenance — config-sourced → `set in .docs.toml [check]
-      stale_days`; CLI-sourced → `via --stale`.
-- [ ] `docs new --help` no longer describes the "first 20 lines" heuristic;
-      the rolled-forward `--body-from` help-drift follow-on is closed.
-- [ ] `cli.md` / `convention.md` document both features; bundled refs
+      stale_days`; CLI-sourced → `via --stale`. **MET — Phases 5-6 impl +
+      Phase 9 dogfood (exercises 2, 5).**
+- [x] `docs new --help` no longer describes the "first 20 lines" heuristic;
+      the rolled-forward `--body-from` help-drift follow-on is closed. **MET —
+      Phase 6 D3 help fix; `grep "first 20 lines" src/` → zero source hits.**
+- [x] `cli.md` / `convention.md` document both features; bundled refs
       byte-identical (`tests/test_skill_refs.py` GREEN); INDEX + frozen
-      snapshot in lockstep.
-- [ ] `pyproject.toml` + packaging version-pin at `1.6.5`;
+      snapshot in lockstep. **MET — Phase 1 specs frozen; `test_skill_refs`
+      GREEN; INDEX == snapshot.**
+- [x] `pyproject.toml` + packaging version-pin at `1.6.5`;
       `## 1.6.5 — UNRELEASED` CHANGELOG section authored; `docs --version`
       prints `docs 1.6.5`. NO publish, NO tag, NO GitHub release (a later
-      milestone publishes).
-- [ ] Full suite GREEN; quality gate clean tree-wide.
+      milestone publishes). **MET — Phase 7; standalone `python -m build` +
+      `twine check` both PASSED (local verification only, dist/ gitignored).**
+- [x] Full suite GREEN; quality gate clean tree-wide. **MET — Phase 8:
+      533/533 GREEN; ruff / format / mypy / `docs check docs/` clean.**
 
 ## OPEN QUESTIONS
 

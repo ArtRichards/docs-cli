@@ -29,9 +29,9 @@ Related:
 ## Current milestone
 
 **M19 — Post-edit validation ergonomics (touch --check + configurable stale
-window)** is **in flight (milestone-setup 2026-06-12)**. A feature milestone
-shipping as **v1.6.5** (operator decision 2026-06-12 — 1.6.5, not 1.7.0;
-local build only, publish is a later operator-driven milestone). Three
+window)** is **implementation-complete (2026-06-12)** — built locally as
+**v1.6.5** (operator decision 2026-06-12 — 1.6.5, not 1.7.0; publish is a
+later operator-driven milestone). Three
 deliverables: (D1) `docs touch --check [--stale N]` folds the existing
 `check_tree` machinery into `docs touch` after its end-of-batch reindex, so
 the three-command post-edit loop (`touch` → `index` → `check --stale 14`)
@@ -52,13 +52,22 @@ scope, `--stale`-without-`--check`, `--dry-run --check`, whether a configured
 feeds `docs list --stale`) are **RESOLVED** (operator decisions 2026-06-12,
 each per the recommended default — see the milestone doc's Decisions). **Step 1
 (Phases 1-4 — Contract + RED baseline) complete on branch `m19/phases-1-4`**
-(2026-06-12): `cli.md` §touch `--check` block + §check stale-resolution/
-provenance contract + §list Q6 note, `convention.md` `[check]` subsection,
-bundled refs resynced byte-identical (Phase 1); 23 new tests written RED across
-5 suites + the version-pin flip to 1.6.5 (Phase 2); inline today-relative
-fixtures (Phase 3); **RED baseline GREEN — 533 collected, 19 RED for their
-classified reasons, 514 GREEN incl. 5 GREEN-at-baseline locks** (Phase 4).
-Step 2 (interfaces + core impl, Phases 5-8) is next.
+(2026-06-12): contract specs frozen, 23 new tests written RED across 5 suites +
+the version-pin flip to 1.6.5, inline today-relative fixtures, RED baseline
+captured (533 collected, 19 RED, 514 GREEN). **Step 2 (implement & ship,
+Phases 5-10) complete on branch `m19/phases-5-10`** (2026-06-12):
+`Config.stale_days` + `load_config` `[check]` read, `resolve_stale`
+precedence/provenance helper, `stale_source` threading, `touch --check`/`--stale`
+flags (Phase 5); `check_doc` provenance suffix + `_cmd_touch` check-fold +
+`_run_touch_check`/`_print_check_findings` + D3 help fix (Phase 6, after the
+mandatory OQ-2 message-regression audit — zero regression); version 1.6.5 +
+packaging lockstep + `## 1.6.5 — UNRELEASED` CHANGELOG (Phase 7); **full suite
+533/533 GREEN, gate clean, `docs --version` → `docs 1.6.5`** (Phase 8); all 5
+dogfood exercises GREEN + config path verified on a throwaway `docs/` copy
+(OQ-3 — repo tree not adopted) (Phase 9); surface-parity gate + SKILL.md verb
+table (OQ-4) + standalone `python -m build` & `twine check` both PASSED locally
+(Phase 10). M19 stays LIVE at root; lifecycle stays `draft`. Step 3 (fresh-eyes
+review + `/simplify`) is next; the PyPI publish is a later milestone.
 
 **M18 — Archive edge integrity (intra-archive Related: rewriting)** is
 **implementation-complete (2026-06-03)**. The correctness fix to
@@ -277,48 +286,43 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M19 — Post-edit validation ergonomics (v1.6.5)** is the
-in-flight milestone (milestone-setup 2026-06-12): `docs touch --check`,
+**Next action:** **M19 — Post-edit validation ergonomics (v1.6.5)** is
+**implementation-complete (2026-06-12)**: `docs touch --check [--stale N]`,
 `.docs.toml [check] stale_days`, and the `docs new --body-from` help-string
-fix. Q1–Q6 are RESOLVED (operator 2026-06-12, each per the recommended
-default) and Step 1 (Phases 1-4 — Contract + RED baseline) is complete on
-branch `m19/phases-1-4`; Step 2 (interfaces + core impl, Phases 5-8) is next.
-docs-cli 1.6.0 shipped to PyPI on 2026-06-03 via M17 (M14 + M15 batched); M19
-builds 1.6.5 locally — the publish is a later operator-driven milestone. **M18 — Archive
-edge integrity** is implementation-complete (2026-06-03) and stays LIVE at
-root until a later milestone sweeps it into the archive (a milestone is not
-self-archived).
+fix all landed and built locally as 1.6.5 (full suite 533/533 GREEN, gate
+clean, `docs --version` → `docs 1.6.5`). Step 2 (implement & ship, Phases
+5-10) is complete on branch `m19/phases-5-10`; **Step 3 — fresh-eyes review +
+`/simplify` — is next**, then the operator-driven sync/merge. docs-cli 1.6.0
+shipped to PyPI on 2026-06-03 via M17 (M14 + M15 batched); M19's 1.6.5 publish
+is a later operator-driven milestone. **M18 — Archive edge integrity** is
+implementation-complete (2026-06-03) and stays LIVE at root until a later
+milestone sweeps it into the archive (a milestone is not self-archived).
 
 **Open follow-ons (rolled forward):**
 - **Token re-scope** to project-`docs-cli` — async operator UI work, not a
   release blocker; rolls forward from M9 → M11 → M13 → M17.
-- **Stale `docs new --body-from` help string → FOLDED INTO M19 (D3).** The
-  argparse `--help` text (`src/docs_cli/cli.py:2900-2905`) shipped in 1.6.0
-  still describing the pre-M15-C4 "first 20 lines" heuristic; the runtime
-  detector + refusal message are correct, only the help text drifted.
-  Cosmetic — a one-line help-string correction, now scoped into **M19** as
-  deliverable D3 (the surface-parity gate's own motivating miss). Motivated
-  the surface-parity gate now in [plan.md](plan.md) +
-  [release-runbook.md](release-runbook.md). Full context (incl. the turnkey
-  corrected wording) in
-  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s Open follow-on note.
+- **Stale `docs new --body-from` help string → FIXED in M19 (D3),
+  implementation-complete 2026-06-12.** The argparse `--help` text shipped in
+  1.6.0 still described the pre-M15-C4 "first 20 lines" heuristic; M19 D3
+  replaced it with the real-detector wording (leading `---` fence or ≥2
+  adjacent `{Lifecycle, Role, Updated}` lines). `grep "first 20 lines" src/`
+  now returns zero source hits; pinned by `test_new_body_from_help_no_first_20_lines`.
+  This closes the rolled-forward follow-on (the surface-parity gate's own
+  motivating miss). The entry clears when M19 archives.
 - **Single-step "update metadata + validate" loop + configurable stale
-  window → SCOPED AS M19 (v1.6.5).** Operator feedback, 2026-06-12, two
-  parts, since retargeted from v1.7 to v1.6.5 and scoped into **M19 —
-  Post-edit validation ergonomics** (milestone-setup 2026-06-12; see
+  window → IMPLEMENTED in M19 (v1.6.5), implementation-complete 2026-06-12.**
+  Operator feedback 2026-06-12, retargeted from v1.7 to v1.6.5 and built in
+  **M19 — Post-edit validation ergonomics** (see
   [m19-post-edit-validation.md](m19-post-edit-validation.md)). (a) The
   three-command post-edit workflow (`docs touch <files>`, `docs index .`,
-  `docs check . --stale 14`) collapses to one step via `docs touch --check
-  [--stale N]` (M19 D1) — `docs touch` already runs the end-of-batch INDEX
-  refresh (M10), so the explicit `docs index .` is already redundant; the
-  real gap is bundled validation, which D1 closes by running the existing
-  `check_tree` machinery after the reindex. (b) The fixed `--stale 14`
-  window (too short for multi-week projects, where an active doc can be
-  legitimately untouched for weeks while its milestone is in flight) becomes
-  a `.docs.toml [check] stale_days = N` per-tree default (M19 D2; explicit
-  CLI `--stale` overrides). The cosmetic `docs new --body-from` help-string
-  follow-on below is also folded into M19 (D3). No longer unscoped — tracked
-  by M19; remove this entry when M19 completes.
+  `docs check . --stale 14`) now collapses to one step via `docs touch --check
+  [--stale N]` (D1 — runs `check_tree` after the end-of-batch reindex, exit
+  `max(touch, check)` with a touch-fail short-circuit). (b) The fixed
+  `--stale 14` window becomes a `.docs.toml [check] stale_days = N` per-tree
+  default (D2 — arms bare `docs check`, explicit CLI `--stale` overrides,
+  provenance-named stale messages); does not affect `docs list --stale` (Q6).
+  Both shipped at 1.6.5 (built locally; publish is a later milestone). The
+  entry clears when M19 archives.
 
 - **M14 — Robustness + autonomous archive (v1.6.0)** — **Complete**;
   shipped to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03. `docs mv`
