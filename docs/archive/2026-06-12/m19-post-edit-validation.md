@@ -1,14 +1,14 @@
 # M19 — Post-edit validation ergonomics (touch --check + configurable stale window)
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-06-12
 
 Related:
 - child-of: plan.md
-- parent-of: m19-post-edit-validation-impl.md
-- pairs-with: m19-post-edit-validation-impl.md
+- parent-of: archive/2026-06-12/m19-post-edit-validation-impl.md
+- pairs-with: archive/2026-06-12/m19-post-edit-validation-impl.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: status.md

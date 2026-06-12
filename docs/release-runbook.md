@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-06-12
 
 Related:
 - pairs-with: archive/2026-05-25/m9-pypi-publish.md
@@ -680,3 +680,60 @@ release closeout; do **not** rewrite past entries.
   [Surface parity (help + bundled skill)](#surface-parity-help--bundled-skill)
   pre-publish gate above — **replaced-behavior drift** (not just
   newly-added surface) is what slipped through.
+
+### From M20 (2026-06-12, `docs-cli==1.6.5`)
+
+- **Fully-autonomous publish shipped M19 as 1.6.5 (one-to-one).** M20
+  was driven end-to-end as a fully-autonomous pass walking this
+  runbook directly (no 10-phase TDD stack — a publish milestone has no
+  code phases); the operator authorized the irreversible PyPI upload +
+  `main` push + `v1.6.5` tag + GitHub release up front. It shipped M19
+  alone (as M11 shipped M10 and M13 shipped M12; M9 and M17 were the
+  batched shapes). Chain-of-custody bit-perfect — **fifth release
+  running** (M11 + M13 + M17 + M20).
+- **Chain-of-custody extended to the sdist.** M11/M13/M17 sha256-compared
+  only the PyPI-served **wheel** against the local build. M20 also pulled
+  the served **sdist** (`pip download --no-deps --no-binary :all:`) and
+  sha256-compared it — **also bit-perfect** (`f9de1eb4…`). Worth keeping:
+  the sdist check is cheap and catches a class of mismatch the wheel check
+  can't (sdist-only packaging globs). Note the sdist sha is only stable
+  *within* a publish when `docs/` is untouched between builds — here it
+  moved from the Phase-2/3 GO-report build (`78cef9cc…`) to the Phase-4
+  dated-commit build (`f9de1eb4…`) purely because `docs/` evolved (the
+  impl-log Phase-2/3 commit), **not** because of the CHANGELOG date edit
+  (CHANGELOG is in neither sdist nor wheel — M13 generalised). The
+  dated-commit build is canonical; the served sdist matched it bit-for-bit.
+- **CHANGELOG is in neither the sdist nor the wheel — confirmed by
+  manifest.** M13 verified CHANGELOG isn't in the sdist; M20 additionally
+  inspected the **wheel** manifest (`docs_cli/` + `docs_cli-1.6.5.dist-info`
+  only) and confirmed CHANGELOG isn't in the wheel either. So dating the
+  CHANGELOG at Phase 4 cannot move *either* artefact's sha — the wheel was
+  byte-identical to the GO-report build (`aba36e92…`), and the sdist moved
+  only via `docs/` drift. The dated CHANGELOG reaches users via the git repo
+  + the GitHub release notes.
+- **Host-machine skill refresh is a NEW publish-closeout step (CLAUDE.md
+  policy, 2026-06-12) — and it caught a real drift on first run.** Per the
+  CLAUDE.md "Skill update flow" policy, host skills under `~/.claude/skills/`
+  refresh only at production ship. M20's closeout ran `docs install-skill
+  --force` from the published wheel (host `docs` skill came back
+  byte-identical to the published bundled skill) and swept the workflow
+  skills (`sync-and-commit`/`create-milestones`/`project-foundation`/
+  `ship-milestone`) for the new surface (`touch --check`, `[check]
+  stale_days`). The sweep found one genuine stale reference:
+  `project-foundation/references/foundation-playbook.md` still described
+  `docs new --body-from` with the pre-M19-D3 "first 20 lines" heuristic —
+  fixed in place to the real detector. This is the first time the
+  workflow-skill sweep surfaced a real drift, validating its place in the
+  closeout. **v1.7+ candidate:** an in-repo lint that diffs the workflow
+  skills' docs-cli prescriptions against the bundled `references/` surface so
+  this drift is caught before publish, not at it.
+- **JSON metadata cache lag recurred (as M11).** Immediately post-upload,
+  the aggregate `/pypi/docs-cli/json` `releases` array still listed 1.6.0 as
+  latest for a couple of minutes, while the per-version
+  `/pypi/docs-cli/1.6.5/json` endpoint and the project page were already
+  200 and `pip install docs-cli==1.6.5` resolved first try. Trust `pip
+  install` / the per-version endpoint, not the lagging aggregate JSON.
+- **Squatter still parked.** TestPyPI bare `docs-cli` re-checked at M20
+  Phase 1 — unchanged (`latest: 0.1.0`, author None). The
+  `docs-cli-rehearsal` detour continues. Token re-scope to project-`docs-cli`
+  rolls forward as the M9 open follow-on.

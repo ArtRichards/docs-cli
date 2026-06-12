@@ -1,13 +1,14 @@
 # M18 — Implementation Log
 
-Lifecycle: draft
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-06-12
+Archived-reason: Milestone M18 complete; archive-edge-integrity fix rode in 1.6.0 + swept at the M20 1.6.5 closeout 2026-06-12
 
 Related:
-- child-of: m18-archive-edge-integrity.md
-- pairs-with: m18-archive-edge-integrity.md
+- child-of: archive/2026-06-12/m18-archive-edge-integrity.md
+- pairs-with: archive/2026-06-12/m18-archive-edge-integrity.md
 - pairs-with: status.md
 
 ## Overview

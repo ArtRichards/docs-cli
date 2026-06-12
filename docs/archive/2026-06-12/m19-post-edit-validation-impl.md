@@ -1,13 +1,14 @@
 # M19 — Implementation Log
 
-Lifecycle: draft
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-06-12
+Archived-reason: Milestone M19 complete; shipped to PyPI as docs-cli==1.6.5 via M20 on 2026-06-12
 
 Related:
-- child-of: m19-post-edit-validation.md
-- pairs-with: m19-post-edit-validation.md
+- child-of: archive/2026-06-12/m19-post-edit-validation.md
+- pairs-with: archive/2026-06-12/m19-post-edit-validation.md
 - pairs-with: status.md
 
 ## Overview

@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-06-12. 19 docs active, 34 archived._
+_Generated 2026-06-12. 14 docs active, 39 archived._
 
 ## Project — docs
 
@@ -26,18 +26,10 @@ _Generated 2026-06-12. 19 docs active, 34 archived._
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-12.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-12.
 
-### Active — Milestone
-
-- [m19-post-edit-validation.md](m19-post-edit-validation.md) — _milestone_ — - Milestone: M19 (v1.6.5) - Title: Post-edit validation ergonomics (touch --check + configurable stale window) -…. Updated 2026-06-12.
-- [m20-pypi-publish.md](m20-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-06-12, post M19 implementation-complete.** M20 > enters active state immediately — M19 is…. Updated 2026-06-12.
-- [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) — _milestone_ — - Milestone: M18 - Title: Archive edge integrity (intra-archive Related: rewriting) - Surface: a correctness fix to…. Updated 2026-06-03.
-
 ### Active — Log
 
-- [m19-post-edit-validation-impl.md](m19-post-edit-validation-impl.md) — _log_ — Chronological log of work on M19 — Post-edit validation ergonomics (`docs touch --check` + configurable stale window).…. Updated 2026-06-12.
 - [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-12.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.
-- [m18-archive-edge-integrity-impl.md](m18-archive-edge-integrity-impl.md) — _log_ — Chronological log of work on M18 — Archive edge integrity (intra-archive `Related:` rewriting). Append a section per…. Updated 2026-06-03.
 
 ### Active — Decision
 
@@ -46,7 +38,7 @@ _Generated 2026-06-12. 19 docs active, 34 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-06-03.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-06-12.
 
 ### Active — Reference
 
@@ -62,6 +54,11 @@ _Generated 2026-06-12. 19 docs active, 34 archived._
 
 ## Archived
 
+- [archive/2026-06-12/m18-archive-edge-integrity-impl.md](archive/2026-06-12/m18-archive-edge-integrity-impl.md) — _log_ — Chronological log of work on M18 — Archive edge integrity (intra-archive `Related:` rewriting). Append a section per…. Updated 2026-06-12.
+- [archive/2026-06-12/m18-archive-edge-integrity.md](archive/2026-06-12/m18-archive-edge-integrity.md) — _milestone_ — - Milestone: M18 - Title: Archive edge integrity (intra-archive Related: rewriting) - Surface: a correctness fix to…. Updated 2026-06-12.
+- [archive/2026-06-12/m19-post-edit-validation-impl.md](archive/2026-06-12/m19-post-edit-validation-impl.md) — _log_ — Chronological log of work on M19 — Post-edit validation ergonomics (`docs touch --check` + configurable stale window).…. Updated 2026-06-12.
+- [archive/2026-06-12/m19-post-edit-validation.md](archive/2026-06-12/m19-post-edit-validation.md) — _milestone_ — - Milestone: M19 (v1.6.5) - Title: Post-edit validation ergonomics (touch --check + configurable stale window) -…. Updated 2026-06-12.
+- [archive/2026-06-12/m20-pypi-publish.md](archive/2026-06-12/m20-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-06-12, post M19 implementation-complete.** M20 > enters active state immediately — M19 is…. Updated 2026-06-12.
 - [archive/2026-06-03/m14-robustness-agent-native-impl.md](archive/2026-06-03/m14-robustness-agent-native-impl.md) — _log_ — Chronological log of work on M14 — Robustness + agent-native surface. Append a section per TDD phase with objective,…. Updated 2026-06-03.
 - [archive/2026-06-03/m14-robustness-agent-native.md](archive/2026-06-03/m14-robustness-agent-native.md) — _milestone_ — - Milestone: M14 (v1.6.0, part 1 of 2) - Title: Robustness + autonomous archive - Surface: correctness/atomicity…. Updated 2026-06-03.
 - [archive/2026-06-03/m15-agent-native-authoring-impl.md](archive/2026-06-03/m15-agent-native-authoring-impl.md) — _log_ — Chronological log of work on M15 — Agent-native doc authoring. Append a section per TDD phase with objective, files…. Updated 2026-06-03.

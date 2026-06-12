@@ -1,17 +1,18 @@
 # M20 — PyPI publish 1.6.5
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-06-12
+Archived-reason: Milestone M20 complete; docs-cli==1.6.5 shipped to PyPI 2026-06-12
 
 Related:
 - parent-of: m20-pypi-publish-impl.md
 - child-of: plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
-- pairs-with: m18-archive-edge-integrity.md
-- pairs-with: m19-post-edit-validation.md
+- pairs-with: archive/2026-06-12/m18-archive-edge-integrity.md
+- pairs-with: archive/2026-06-12/m19-post-edit-validation.md
 
 ## Overview
 
@@ -156,39 +157,39 @@ contracts hold against the PyPI-served wheel (see Success Criteria below),
 
 ### Deliverables
 
-- [ ] PyPI release `docs-cli` 1.6.5 published; project page live at
+- [x] PyPI release `docs-cli` 1.6.5 published; project page live at
       `https://pypi.org/project/docs-cli/1.6.5/`.
-- [ ] TestPyPI release `docs-cli-rehearsal` 1.6.5 published as the rehearsal
+- [x] TestPyPI release `docs-cli-rehearsal` 1.6.5 published as the rehearsal
       artifact at
       `https://test.pypi.org/project/docs-cli-rehearsal/1.6.5/` (continues the
       M9/M11/M13/M17 disambiguated dist-name detour).
-- [ ] `pyproject.toml` `version` confirmed at `1.6.5` (landed at M19 Phase 7;
+- [x] `pyproject.toml` `version` confirmed at `1.6.5` (landed at M19 Phase 7;
       `__version__` flows through `importlib.metadata` per M12 SoT refactor —
       verified at Phase 2).
-- [ ] `CHANGELOG.md` `## 1.6.5 — UNRELEASED` section dated to `## 1.6.5 —
+- [x] `CHANGELOG.md` `## 1.6.5 — UNRELEASED` section dated to `## 1.6.5 —
       <publish-date>`; surrounding body re-verified accurate (stale "built
       locally" lead-in re-read / dropped at Phase 4 if it reads stale).
-- [ ] `v1.6.5` git tag pushed; GitHub release created with notes sourced from
+- [x] `v1.6.5` git tag pushed; GitHub release created with notes sourced from
       the CHANGELOG `## 1.6.5` section.
-- [ ] **Host-machine skills refreshed (NEW vs M17):** `docs install-skill
+- [x] **Host-machine skills refreshed (NEW vs M17):** `docs install-skill
       --force` re-materialises `~/.claude/skills/` from the published 1.6.5
       surface; the workflow skills' docs-cli prescriptions swept for the new
       surface (`touch --check`, `[check] stale_days`).
-- [ ] `docs/status.md`: M18 + M19 + M20 rows finalised; "Current milestone" +
+- [x] `docs/status.md`: M18 + M19 + M20 rows finalised; "Current milestone" +
       "Next action" rewritten post-publish.
-- [ ] `docs/plan.md`: M18 + M19 + M20 rows finalised; Sequencing timeline grew
+- [x] `docs/plan.md`: M18 + M19 + M20 rows finalised; Sequencing timeline grew
       the publish line.
-- [ ] `docs/m20-pypi-publish.md` (this file): Phase Checklist ticked;
+- [x] `docs/m20-pypi-publish.md` (this file): Phase Checklist ticked;
       milestone-completion summary appended; lifecycle archived via
       `docs archive` to `archive/<publish-date>/`.
-- [ ] `docs/m20-pypi-publish-impl.md`: per-phase log entries + final
+- [x] `docs/m20-pypi-publish-impl.md`: per-phase log entries + final
       milestone-completion summary; stays `Lifecycle: active` after
       milestone-doc archive (per the M8/M9/M10/M11/M13/M17 pattern).
-- [ ] `docs/m18-archive-edge-integrity.md` +
+- [x] `docs/m18-archive-edge-integrity.md` +
       `docs/m19-post-edit-validation.md` (and their impl logs) archived as
       part of the M20 closeout to `archive/<publish-date>/` — they were left
       LIVE at root awaiting a sweep (M17 Q2 precedent; see Decisions).
-- [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated in
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated in
       lockstep.
 
 ## Phase Checklist
@@ -196,33 +197,34 @@ contracts hold against the PyPI-served wheel (see Success Criteria below),
 M20 has no TDD code phases — it is an operational milestone. The runbook's
 sections are the phases (mirrors M9/M11/M13/M17 exactly):
 
-- [ ] Operator one-time prep — session-verifiable state captured at M20 start
+- [x] Operator one-time prep — session-verifiable state captured at M20 start
       (`~/.pypirc` intact mode 600; PyPI `docs-cli` at 1.6.0, 1.6.5 slot free;
       TestPyPI `docs-cli` squatter status re-checked; TestPyPI
       `docs-cli-rehearsal` 1.6.5 slot free; twine + build tool versions ready).
-- [ ] Pre-publish prep — versions verified `1.6.5` (M19 Phase 7 landed
+- [x] Pre-publish prep — versions verified `1.6.5` (M19 Phase 7 landed
       `pyproject.toml`; M12 SoT refactor flows `__version__` through
       `importlib.metadata`), CHANGELOG header `## 1.6.5 — UNRELEASED`, tree at
       the M20 setup commit, quality gate green tree-wide (540 passed), fresh
       artefacts rebuilt, local-install smoke + the M19 headline contracts
       verified against the wheel.
-- [ ] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.6.5`;
+- [x] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.6.5`;
       throwaway-venv install from TestPyPI succeeded; full smoke including the
       M19 headline contracts passed against the TestPyPI-served wheel (with the
       known-expected `docs --version` → `0.0.0+local` rehearsal-name caveat).
-- [ ] Real PyPI publish — `docs-cli==1.6.5` LIVE on PyPI; both artefacts
+- [x] Real PyPI publish — `docs-cli==1.6.5` LIVE on PyPI; both artefacts
       twine-check PASS; upload PASS; chain-of-custody bit-perfect (PyPI-served
-      wheel sha256 byte-identical to local Phase 4 build); throwaway-venv
-      install from PyPI succeeded (`docs 1.6.5`); full smoke + the M19 headline
-      contracts PASS against the PyPI-served wheel.
-- [ ] Post-release — `m20/milestone-setup` ff-merged into `main` and pushed;
-      annotated `v1.6.5` tag pushed to `origin`; GitHub release live with notes
-      sourced from `## 1.6.5`; **host skills refreshed** (`docs install-skill
-      --force` + workflow-skill sweep — NEW vs M17); doc closeouts (plan/status/
-      INDEX + dogfood snapshot + the M18 + M19 milestone-doc archival — both
-      plan + impl pairs, four docs) landed; `docs archive --cascade` /
+      wheel **and sdist** sha256 byte-identical to local Phase 4 build);
+      throwaway-venv install from PyPI succeeded (`docs 1.6.5`); full smoke +
+      the M19 headline contracts PASS against the PyPI-served wheel.
+- [x] Post-release — annotated `v1.6.5` tag at the Phase-4 commit `0855466`
+      pushed to `origin`; GitHub release live with notes sourced from
+      `## 1.6.5`; **host skills refreshed** (`docs install-skill --force` +
+      workflow-skill sweep — NEW vs M17; the sweep caught + fixed one stale
+      `--body-from` reference in `project-foundation`); doc closeouts (plan/
+      status/INDEX + dogfood snapshot + the M18 + M19 milestone-doc archival —
+      both plan + impl pairs, four docs) landed; `docs archive` /
       `--cascade-only` ran (M18 + M19 both pairs **and** the M20 milestone doc
-      archived to `archive/<publish-date>/`; M20 impl log stays `Lifecycle:
+      archived to `archive/2026-06-12/`; M20 impl log stays `Lifecycle:
       active`; release-runbook + status declined). Token re-scope continues to
       roll forward as the M9 open follow-on.
 
@@ -349,54 +351,97 @@ sweep).
 
 M20 is complete when:
 
-- [ ] `pip install docs-cli==1.6.5` works from PyPI on a clean host with
+- [x] `pip install docs-cli==1.6.5` works from PyPI on a clean host with
       Python 3.11+ and produces a working `docs` command.
-- [ ] `docs --version` from the PyPI-installed wheel prints `docs 1.6.5`.
-- [ ] **M19 contract — `docs touch --check` exit fold:** `docs touch <files>
+- [x] `docs --version` from the PyPI-installed wheel prints `docs 1.6.5`.
+- [x] **M19 contract — `docs touch --check` exit fold:** `docs touch <files>
       --check` runs the tree-wide check after the end-of-batch reindex in one
       invocation; its exit code is `max(touch, check)` with a touch-fail
       short-circuit (clean → 0; stale-only → 1; broken-ref/errors → 2)
       (verified against the PyPI-served wheel, not just the local build).
-- [ ] **M19 contract — `--stale` requires `--check` refusal:** `docs touch
+- [x] **M19 contract — `--stale` requires `--check` refusal:** `docs touch
       --stale N` without `--check` is a hard exit 2 (`docs: touch: --stale
       requires --check`); the file is byte-unchanged and no INDEX refresh runs
       (re-verified against the PyPI-served wheel).
-- [ ] **M19 contract — `[check] stale_days` bare-check arming + CLI override:**
+- [x] **M19 contract — `[check] stale_days` bare-check arming + CLI override:**
       a `.docs.toml [check] stale_days = N` arms the stale rule on bare
       `docs check` (no `--stale`); an explicit CLI `--stale` overrides it; a
       tree with no `[check]` section is unchanged; a non-integer value is
       refused cleanly (exit 2, `malformed .docs.toml: [check] stale_days must
       be an integer`, no traceback); `docs list --stale` is unaffected (Q6)
       (re-verified against the PyPI-served wheel).
-- [ ] **M19 contract — both provenance message variants:** the stale finding
+- [x] **M19 contract — both provenance message variants:** the stale finding
       names the threshold's provenance — config-sourced appends `set in
       .docs.toml [check] stale_days`, CLI-sourced appends `via --stale`
       (re-verified against the PyPI-served wheel).
-- [ ] **M19 contract — `--body-from` help fixed:** `docs new --help` no longer
+- [x] **M19 contract — `--body-from` help fixed:** `docs new --help` no longer
       describes the "first 20 lines" heuristic; the corrected wording names the
       real detector (a leading `---` fence or ≥ 2 adjacent `{Lifecycle, Role,
       Updated}` lines) (re-verified against the PyPI-served wheel).
-- [ ] `docs install-skill` from the PyPI-installed wheel places a host-correct
+- [x] `docs install-skill` from the PyPI-installed wheel places a host-correct
       skill that drives the verbs identically to the in-repo install; bundled
       references carry no repo-relative `../` links; byte-identical to
       `src/docs_cli/skill`, re-run no-op exit 0, `--symlink` exit 2 (verified
       against the PyPI-served wheel).
-- [ ] **Host skills refreshed (NEW vs M17):** `docs install-skill --force`
+- [x] **Host skills refreshed (NEW vs M17):** `docs install-skill --force`
       re-materialised `~/.claude/skills/` from the published 1.6.5 surface; the
       workflow skills' docs-cli prescriptions swept and confirmed to match the
       now-published `touch --check` + `[check] stale_days` surface.
-- [ ] The `v1.6.5` tag and GitHub release exist at
+- [x] The `v1.6.5` tag and GitHub release exist at
       `https://github.com/ArtRichards/docs-cli/releases/tag/v1.6.5` (annotated
       `v1.6.5` tag at the Phase-4 dated-CHANGELOG commit whose tree matches
       PyPI + the GitHub release are the closeout git sequence).
-- [ ] All Phase Checklist items above are ticked.
-- [ ] `docs/status.md` reflects M18 + M19 + M20 as Complete/archived with the
+- [x] All Phase Checklist items above are ticked.
+- [x] `docs/status.md` reflects M18 + M19 + M20 as Complete/archived with the
       actual publish date.
-- [ ] `docs/m20-pypi-publish-impl.md` carries a milestone-completion summary
+- [x] `docs/m20-pypi-publish-impl.md` carries a milestone-completion summary
       with the published version (`1.6.5` — assuming no TestPyPI-surfaced
       regression forces a `1.6.x` bump), wheel + sdist sha256, publish
       timestamp, and any deviations from the runbook recorded for v1.7+
       reference.
+
+## Milestone-completion summary
+
+**M20 complete — `docs-cli==1.6.5` shipped to PyPI 2026-06-12**, the
+publish-only counterpart to **M19**, one-to-one (as M13 shipped M12 and M11
+shipped M10; M9 and M17 were the batched shapes). Driven end-to-end as a
+fully-autonomous run walking [release-runbook.md](release-runbook.md) directly
+(no TDD code phases); the operator authorized the irreversible PyPI upload +
+`main` push + `v1.6.5` tag + GitHub release up front (Q1 → FULL AUTONOMOUS).
+**NEW vs M17:** the closeout refreshed the host-machine skills per the CLAUDE.md
+skill-update-flow policy.
+
+- **PyPI:** https://pypi.org/project/docs-cli/1.6.5/ · **TestPyPI rehearsal:**
+  https://test.pypi.org/project/docs-cli-rehearsal/1.6.5/ · **GitHub release:**
+  https://github.com/ArtRichards/docs-cli/releases/tag/v1.6.5
+- **Published artefact sha256:**
+  - wheel `docs_cli-1.6.5-py3-none-any.whl`:
+    `aba36e92d92363958f0b9e91e52a769e2f10f69d92437a44c83cebeef396b4e0`
+  - sdist `docs_cli-1.6.5.tar.gz`:
+    `f9de1eb49ff84271969c6b4b7e0faef93a138bea0813cb1effd1d1314eff12be`
+- **Chain-of-custody — BIT-PERFECT (wheel AND sdist).** Both PyPI-served
+  sha256s byte-identical to the local Phase-4 build (M20 extended the M17
+  wheel-only check to the sdist too). Fifth release running (M11 + M13 + M17 +
+  M20).
+- **Quality gate at publish:** 540 passed; ruff / format / mypy clean; `docs
+  check docs/` exit 0; index dry-run idempotent.
+- **All M19 headline contracts PASS against the PyPI-served wheel** (`docs
+  --version` → `docs 1.6.5`; `touch --check` clean/stale-fold; `--stale`
+  requires `--check`; `[check] stale_days` arms bare check + CLI override +
+  non-integer refusal; both provenance variants; `--body-from` help = real
+  detector; `install-skill` byte-identical / no-op / `--symlink` exit 2).
+- **`v1.6.5`** annotated tag at the Phase-4 commit `0855466`; GitHub release
+  with `## 1.6.5` notes.
+- **Host-machine skills refreshed (NEW vs M17):** `~/.claude/skills/docs`
+  byte-identical to the published wheel's bundled skill; the workflow-skill
+  sweep caught + fixed one stale `--body-from` "first 20 lines" reference in
+  `project-foundation`.
+- **Deviations:** the two M13 known-expected (TestPyPI rehearsal `0.0.0+local`;
+  CHANGELOG not in sdist/wheel → the sdist sha moved from the GO-report build
+  only because `docs/` evolved, not the date edit). No forced `1.6.x` bump. Full
+  deviation prose in
+  [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md)'s milestone-completion
+  summary, including the new M20 host-skill-drift finding.
 
 ## OPEN QUESTIONS
 

@@ -1,14 +1,14 @@
 # M18 — Archive edge integrity (intra-archive Related: rewriting)
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-06-12
 
 Related:
 - child-of: plan.md
-- parent-of: m18-archive-edge-integrity-impl.md
-- pairs-with: m18-archive-edge-integrity-impl.md
+- parent-of: archive/2026-06-12/m18-archive-edge-integrity-impl.md
+- pairs-with: archive/2026-06-12/m18-archive-edge-integrity-impl.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: status.md
