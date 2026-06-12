@@ -22,6 +22,7 @@ Related:
 - parent-of: archive/2026-06-03/m17-pypi-publish.md
 - parent-of: m18-archive-edge-integrity.md
 - parent-of: m19-post-edit-validation.md
+- parent-of: m20-pypi-publish.md
 
 ## Sequencing
 
@@ -48,6 +49,14 @@ M19 (v1.6.5) is a post-edit-ergonomics feature milestone: `docs touch
 stale_days` key makes the stale window per-tree configurable, and the stale
 `docs new --body-from` help string is corrected. It builds 1.6.5 locally;
 the publish is a later operator-driven milestone (the M14+M15→M17 pattern).
+M20 is that publish milestone — the publish-only counterpart to M19,
+shipping `docs-cli==1.6.5` to PyPI **one-to-one** (as M13 shipped M12 and
+M11 shipped M10; M9 and M17 were the batched shapes). It runs the
+release-runbook on `main` (M17 precedent — a publish milestone has no TDD
+code phases), and its closeout NEWLY refreshes the host-machine skills
+(`docs install-skill --force` + a workflow-skill sweep) per the CLAUDE.md
+skill-update-flow policy (production ship is when `~/.claude/skills/`
+refreshes) and sweeps the M18 + M19 milestone-doc pairs into the archive.
 
 ```
 v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)
@@ -55,7 +64,7 @@ v1.1:  M6 (PyPI distribution prep)  →  M7 (migration accuracy)  →  M8 (adopt
 v1.4:  M10 (adoption-flow polish + 1.3.0 carry-overs)  →  M11 (PyPI publish 1.4.0)
 v1.5:  M12 (project rename + M11 wart fixes + version SoT)  →  M13 (PyPI publish 1.5.0)
 v1.6:  M14 (robustness + autonomous archive)  →  M15 (agent-native doc authoring)  →  M17 (PyPI publish 1.6.0)
-v1.6.5: M19 (post-edit validation ergonomics — touch --check + configurable stale window)
+v1.6.5: M19 (post-edit validation ergonomics — touch --check + configurable stale window)  →  M20 (PyPI publish 1.6.5)
 skill: M16 (bundled docs skill quality artifacts)
 fix:   M18 (archive edge integrity — intra-archive Related: rewriting)
 ```
@@ -151,7 +160,8 @@ prior public release existed, no continuity to preserve.
 | M16 — Bundled docs skill quality artifacts | **Implementation complete** (2026-06-01; documentation-only bundled `docs` skill guidance for quality artifacts, test matrices, generated reports, and `docs check` limits; pending operator commit/archive) | [m16-bundled-docs-skill-quality.md](archive/2026-06-01/m16-bundled-docs-skill-quality.md) | [Log](archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md) |
 | M17 — PyPI publish 1.6.0 | **Complete** (2026-06-03; `docs-cli==1.6.0` on PyPI, batching M14 + M15 as M9 batched M6+M7+M8; `v1.6.0` annotated tag at `95f23a6` + GitHub release; chain-of-custody bit-perfect; all seven M14 + M15 headline contracts hold against the PyPI-served wheel; milestone doc archived to `archive/2026-06-03/`, impl log stays `Lifecycle: active`) | [archive/2026-06-03/m17-pypi-publish.md](archive/2026-06-03/m17-pypi-publish.md) | [Log](m17-pypi-publish-impl.md) |
 | M18 — Archive edge integrity (intra-archive Related: rewriting) | **Implementation-complete** (2026-06-03; correctness fix to `docs archive` so archiving interrelated docs into the archive subtree no longer orphans their `Related:` edges — the conditioned archived-skip in `_rewrite_referring_edges` rewrites the moved doc's own archive-subtree edges + repoints already-archived referrers; flipped the pinned `test_archive_does_not_rewrite_archive_subtree_edges` → `test_archive_repoints_already_archived_referrer`; `docs mv` parity (D3, Open Q1) verified already satisfied — no code change. Phase-9 payoff archived the M1–M9/M12 pairs + M16 trio + 3 stray impl-logs; `docs check docs/` exit 0; M14/M15/M18 left live. 510 GREEN, gate clean) | [m18-archive-edge-integrity.md](m18-archive-edge-integrity.md) | [Log](m18-archive-edge-integrity-impl.md) |
-| M19 — Post-edit validation ergonomics (touch --check + configurable stale window) (v1.6.5) | **Implementation-complete** (2026-06-12; feature milestone — `docs touch --check [--stale N]` folds the existing `check_tree` into the touch loop after the end-of-batch reindex; `.docs.toml [check] stale_days = N` makes the stale window per-tree configurable (CLI `--stale` overrides); cosmetic `docs new --body-from` help-string fix closes the rolled-forward follow-on. No new verb, no new check rule; additive + backward-compatible. Built 1.6.5 locally (`python -m build` + `twine check` PASSED); publish is a later operator-driven milestone. Q1–Q6 + OQ-1..OQ-5 RESOLVED; threshold-provenance folded into D2. Step 1 (Phases 1-4 — Contract + RED baseline) on `m19/phases-1-4`; Step 2 (implement & ship, Phases 5-10) complete on `m19/phases-5-10` — full suite 533/533 GREEN, gate clean, `docs 1.6.5`. Stays LIVE at root; lifecycle `draft`. Step 3 (review + `/simplify`) next) | [m19-post-edit-validation.md](m19-post-edit-validation.md) | [Log](m19-post-edit-validation-impl.md) |
+| M19 — Post-edit validation ergonomics (touch --check + configurable stale window) (v1.6.5) | **Implementation-complete** (2026-06-12; feature milestone — `docs touch --check [--stale N]` folds the existing `check_tree` into the touch loop after the end-of-batch reindex; `.docs.toml [check] stale_days = N` makes the stale window per-tree configurable (CLI `--stale` overrides); cosmetic `docs new --body-from` help-string fix closes the rolled-forward follow-on. No new verb, no new check rule; additive + backward-compatible. Built 1.6.5 locally (`python -m build` + `twine check` PASSED); **shipped to PyPI as `docs-cli==1.6.5` via M20** — publish in flight. Q1–Q6 + OQ-1..OQ-5 RESOLVED; threshold-provenance folded into D2. Full suite 540/540 GREEN (533 + the Step-2 review +7), gate clean tree-wide, `docs 1.6.5`. Stays LIVE at root until the M20 closeout sweep; lifecycle `draft`) | [m19-post-edit-validation.md](m19-post-edit-validation.md) | [Log](m19-post-edit-validation-impl.md) |
+| M20 — PyPI publish 1.6.5 | **In flight** (2026-06-12 milestone-setup complete; publish pending — operator-driven publish-only counterpart to M19, one-to-one as M13 → M12; runs the [release-runbook.md](release-runbook.md) on `main`, M17 precedent (no TDD code phases). NEW vs M17: the closeout refreshes the host-machine skills (`docs install-skill --force` + workflow-skill sweep) per the CLAUDE.md skill-update-flow policy. Q1 (publish authorization) + Q2 (M18 + M19 archival at closeout) carry recommended defaults matching the M17 posture; the closeout archives the M18 + M19 pairs + M20's own milestone doc, the M20 impl log stays `Lifecycle: active`) | [m20-pypi-publish.md](m20-pypi-publish.md) | [Log](m20-pypi-publish-impl.md) |
 
 **M12 — Project rename + M11 wart fixes + version SoT (v1.5.0)**
 is **Complete (2026-05-28)** — `dist/docs_cli-1.5.0-py3-none-any.whl`
