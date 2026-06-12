@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-06-12
 
 Related:
 - pairs-with: plan.md
@@ -265,6 +265,24 @@ chooses.
   gate now in [plan.md](plan.md) + [release-runbook.md](release-runbook.md).
   Full context in
   [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s Open follow-on note.
+- **Single-step "update metadata + validate" loop + configurable stale
+  window (v1.7 candidates).** Operator feedback, 2026-06-12, two parts.
+  (a) The common post-edit workflow is run as three commands —
+  `docs touch <files>`, `docs index .`, `docs check . --stale 14` — and
+  should be a single step. `docs touch` already runs the end-of-batch
+  INDEX refresh (M10), so the explicit `docs index .` is redundant — but
+  nothing on the surface says so, and agent workflows run it anyway; the
+  real gap is that validation is not bundled (no way to touch-and-check
+  in one invocation). Candidate shape: `docs touch --check [--stale N]`,
+  running the existing check machinery after the end-of-batch reindex.
+  (b) A fixed `--stale 14` window is too short for multi-week projects —
+  an active doc can be legitimately untouched for weeks while its
+  milestone is in flight, so a hard-coded 14 mis-flags healthy trees.
+  Candidate shape: a `.docs.toml` `[check] stale_days = N` per-tree
+  default (explicit CLI `--stale` overrides), so the window is tuned per
+  project instead of hard-coded in agent workflows/skills. Unscoped —
+  feature candidates for the next implementation milestone; pick up at
+  `create-milestones` scoping.
 
 - **M14 — Robustness + autonomous archive (v1.6.0)** — **Complete**;
   shipped to PyPI as `docs-cli==1.6.0` via M17 on 2026-06-03. `docs mv`
