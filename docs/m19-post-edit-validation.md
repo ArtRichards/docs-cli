@@ -32,11 +32,16 @@ Related:
   rolled-forward follow-on). Local build only — ships as **v1.6.5**; the
   PyPI publish is a later operator-driven milestone (the M12→M13,
   M14+M15→M17 pattern).
-- Progress: Draft (scaffolded 2026-06-12 from the status.md "Single-step
-  'update metadata + validate' loop + configurable stale window" follow-on
-  — operator feedback 2026-06-12, retargeted from v1.7 to v1.6.5). Depends on
-  nothing; no new verb (a flag on an existing verb + a config key + a help
-  string). M18 (archive edge integrity) is the only other live milestone and
+- Progress: **Implementation-complete (2026-06-12).** Scaffolded 2026-06-12
+  from the status.md "Single-step 'update metadata + validate' loop +
+  configurable stale window" follow-on (operator feedback 2026-06-12,
+  retargeted from v1.7 to v1.6.5). All ten TDD phases done across two steps
+  (Step 1 — Contract + RED baseline on `m19/phases-1-4`; Step 2 — implement &
+  ship on `m19/phases-5-10`); full suite 533/533 GREEN, gate clean,
+  `docs --version` → `docs 1.6.5` (built locally; publish is a later
+  operator-driven milestone). Depends on nothing; no new verb (a flag on an
+  existing verb + a config key + a help string). Stays LIVE at root; lifecycle
+  `draft`. M18 (archive edge integrity) is the only other live milestone and
   is independent.
 
 ### Goal

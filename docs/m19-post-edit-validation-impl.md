@@ -36,10 +36,15 @@ phase with objective, files changed, actions, test results, decisions.
   no new check rule — additive flag + config key + help string. Ships as
   **1.6.5 locally**; the PyPI publish is a later operator-driven milestone
   (M12→M13, M14+M15→M17 pattern). Depends on nothing; M18 is the only other
-  live milestone and is independent. **Implementation not yet started** —
-  Phase 1 (Define Contract) is next. OPEN QUESTIONS Q1–Q6 are RESOLVED
+  live milestone and is independent. **Implementation-complete (2026-06-12)** —
+  all ten TDD phases done (Step 1 phases 1-4 on `m19/phases-1-4`; Step 2
+  phases 5-10 on `m19/phases-5-10`); full suite 533/533 GREEN, gate clean,
+  `docs --version` → `docs 1.6.5` (built locally; publish is a later
+  operator-driven milestone). OPEN QUESTIONS Q1–Q6 are RESOLVED
   (operator decisions 2026-06-12, each per the recommended default —
   see the milestone doc's Decisions › "Resolved questions (Q1-Q6, BINDING)");
+  the Step-2 implementation forks OQ-1..OQ-5 are RESOLVED (conductor decisions
+  — see the milestone doc's Decisions › "Implementation-phase open questions");
   a post-draft operator addition (2026-06-12) folds **threshold provenance**
   into D2 — the stale finding's message must name where the threshold is set
   (`set in .docs.toml [check] stale_days` for config-sourced, `via --stale`
