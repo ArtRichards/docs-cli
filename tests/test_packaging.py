@@ -97,16 +97,17 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_1_6_0() -> None:
-    """A3: `[project].version` is `1.6.0` (M14).
+def test_a3_project_version_is_1_6_5() -> None:
+    """A3: `[project].version` is `1.6.5` (M19).
 
-    M14 Phase 7 bumps the pyproject `version` string from 1.5.0 to 1.6.0
+    M19 Phase 7 bumps the pyproject `version` string from 1.6.0 to 1.6.5
     (the single version source of truth; `__version__` reads it via
-    `importlib.metadata`). 1.6.0 is built locally — M17 publishes.
+    `importlib.metadata`). 1.6.5 is built locally — a later milestone
+    publishes (the M12→M13, M14+M15→M17 pattern).
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "1.6.0", (
-        f"[project].version must be '1.6.0'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "1.6.5", (
+        f"[project].version must be '1.6.5'; got {data['project']['version']!r}"
     )
 
 

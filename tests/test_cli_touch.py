@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 
@@ -335,3 +335,230 @@ def test_touch_excluded_malformed_file_not_in_index(docs_script, tmp_path):
     assert "spec.md" in index, "the conformant doc must still be indexed"
     # The malformed excluded file is byte-unchanged.
     assert vendor_readme.read_text() == vendor_before
+
+
+# --- M19 D1 — `docs touch --check [--stale N]` ----------------------------
+#
+# RED at baseline: the `--check` and `--stale` flags are undeclared on the
+# `touch` subparser until Phase 5, so argparse rejects them with exit 2
+# ("unrecognized arguments"). Every intended-exit-0/1 test below therefore
+# fails its returncode assertion at baseline (a documented, honest RED per
+# the milestone's Q-B/Q-D RED-classification style); the intended-exit-2
+# tests fail because the message/behaviour they assert is the *contract*
+# refusal, not argparse's "unrecognized arguments" refusal.
+
+
+def _check_tree(tmp_path: Path, name: str = "checktree") -> tuple[Path, Path, Path]:
+    """A docs root with one fresh (today) active doc + one ancient active doc.
+
+    Returns (root, fresh, ancient). The dates are `today`-relative so the
+    tree never rots: `fresh` is updated today, `ancient` 400 days ago.
+    """
+    root = tmp_path / name
+    root.mkdir()
+    (root / ".docs.toml").write_text(f'[project]\nname = "{name}"\n')
+    today = date.today().isoformat()
+    old = (date.today() - timedelta(days=400)).isoformat()
+    fresh = root / "fresh.md"
+    fresh.write_text(
+        f"# Fresh\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: {today}\n\nBody.\n"
+    )
+    ancient = root / "ancient.md"
+    ancient.write_text(
+        f"# Ancient\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: {old}\n\nBody.\n"
+    )
+    return root, fresh, ancient
+
+
+def test_touch_check_clean_tree_exits_0(docs_script, tmp_path):
+    """Happy path: touch a doc with `--check` (no `--stale`, no config) over a
+    tree with no validation problems → the fold of max(0, 0) is exit 0.
+
+    With no stale window in play the `stale` rule never fires; the touched
+    doc is bumped to today and the post-reindex check is clean.
+    """
+    root = tmp_path / "clean"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "clean"\n')
+    doc = root / "doc.md"
+    doc.write_text(
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: clean\nUpdated: 2026-01-01\n\nBody.\n"
+    )
+    proc = _run(docs_script, "touch", str(doc), "--check")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_touch_check_stale_tree_exits_1(docs_script, tmp_path):
+    """`touch <fresh> --check --stale 30` over a tree with an *untouched*
+    ancient active sibling → the tree-wide check flags the sibling stale →
+    exit 1, and the stale doc + the `stale` rule are named on stdout.
+    """
+    root, fresh, _ancient = _check_tree(tmp_path)
+    proc = _run(docs_script, "touch", str(fresh), "--check", "--stale", "30")
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "ancient.md" in proc.stdout
+    assert "stale" in proc.stdout.lower()
+
+
+def test_touch_check_broken_ref_tree_exits_2(docs_script, tmp_path):
+    """A doc with a `Related:` target that does not resolve + `--check` →
+    the tree-wide check reports a `broken-ref` error → exit 2.
+    """
+    root = tmp_path / "brokenref"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "brokenref"\n')
+    doc = root / "doc.md"
+    doc.write_text(
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: brokenref\n"
+        "Updated: 2026-01-01\n\nRelated:\n- references: nonexistent-target.md\n\nBody.\n"
+    )
+    proc = _run(docs_script, "touch", str(doc), "--check")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "nonexistent-target.md" in proc.stdout or "broken-ref" in proc.stdout
+
+
+def test_touch_check_runs_check_after_reindex(docs_script, tmp_path):
+    """One `touch --check` invocation both refreshes the INDEX and validates
+    the tree — confirming the ordering reindex → check (the check observes
+    the post-reindex tree, and the single invocation produced an INDEX).
+    """
+    root = tmp_path / "afterreindex"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "afterreindex"\n')
+    doc = root / "doc.md"
+    doc.write_text(
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: afterreindex\n"
+        "Updated: 2026-01-01\n\nBody.\n"
+    )
+    proc = _run(docs_script, "touch", str(doc), "--check")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The single invocation refreshed the INDEX...
+    index = root / "INDEX.md"
+    assert index.is_file(), "touch --check must still run the end-of-batch reindex"
+    assert "doc.md" in index.read_text()
+    # ...and the doc was bumped to today (the check ran on the touched tree).
+    assert f"Updated: {date.today().isoformat()}" in doc.read_text()
+
+
+def test_touch_check_touch_failure_short_circuits_check(docs_script, tmp_path):
+    """A missing path in the batch fails `touch` (exit 1) BEFORE the check —
+    the check does not run and touch's exit 1 is returned (Q1 short-circuit),
+    not promoted to a check exit code.
+    """
+    root, a, b, _c = _multi_file_tree(tmp_path)
+    bad = root / "no-such.md"
+    proc = _run(docs_script, "touch", str(a), str(b), str(bad), "--check")
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert str(bad) in proc.stderr or "no-such.md" in proc.stderr
+    # No INDEX written (touch failed in its validate pass, before any check).
+    assert not (root / "INDEX.md").exists()
+
+
+def test_touch_check_outside_root_short_circuits(docs_script, tmp_path):
+    """An orphan doc with no `.docs.toml` → touch refuses with exit 2 and the
+    check never runs (Q1 short-circuit on the touch exit-2 path).
+    """
+    parent, doc = _orphan_doc(tmp_path)
+    proc = _run(docs_script, "touch", str(doc), "--check", cwd=parent)
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "is not under a docs root with .docs.toml" in proc.stderr
+    # The check never ran → no INDEX in the orphan dir, no stdout findings.
+    assert not (parent / "INDEX.md").exists()
+
+
+def test_touch_stale_without_check_exits_2(docs_script, tmp_path):
+    """`--stale` without `--check` is an incoherent-flag hard refusal: exit 2,
+    `--stale requires --check` on stderr, the file byte-unchanged (Q3).
+    """
+    root, _fresh, ancient = _check_tree(tmp_path)
+    before = ancient.read_text()
+    proc = _run(docs_script, "touch", str(ancient), "--stale", "30")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "--stale requires --check" in proc.stderr
+    # The file is left byte-identical — the refusal precedes any mutation.
+    assert ancient.read_text() == before
+
+
+def test_touch_dry_run_check_writes_nothing_and_checks_unmutated_tree(docs_script, tmp_path):
+    """`--dry-run --check --stale N`: nothing is written, no INDEX refresh
+    runs, and the check observes the UN-MUTATED on-disk tree (Q4). The doc
+    the dry-run *would* refresh still reads as stale, so the check exits 1.
+    """
+    root, _fresh, ancient = _check_tree(tmp_path)
+    before = ancient.read_text()
+    proc = _run(docs_script, "touch", str(ancient), "--dry-run", "--check", "--stale", "30")
+    # The ancient doc is un-mutated (dry-run) and therefore still stale → 1.
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert ancient.read_text() == before, "--dry-run must write nothing"
+    assert not (root / "INDEX.md").exists(), "--dry-run must not refresh the INDEX"
+    assert "ancient.md" in proc.stdout
+    assert "stale" in proc.stdout.lower()
+
+
+def test_touch_check_forwards_stale_value(docs_script, tmp_path):
+    """The `--stale N` value is forwarded verbatim to the check: a huge window
+    clears the ancient doc (exit 0); a tiny window flags it (exit 1) on the
+    very same tree.
+    """
+    root, fresh, _ancient = _check_tree(tmp_path, "forward")
+    loose = _run(docs_script, "touch", str(fresh), "--check", "--stale", "9999")
+    assert loose.returncode == 0, (loose.stdout, loose.stderr)
+
+    # Fresh sibling rebuilt (the first run bumped `fresh` to today already,
+    # which is fine); a tiny window now flags the still-ancient sibling.
+    tight = _run(docs_script, "touch", str(fresh), "--check", "--stale", "1")
+    assert tight.returncode == 1, (tight.stdout, tight.stderr)
+    assert "ancient.md" in tight.stdout
+
+
+def test_touch_check_quiet_suppresses_touch_lines_not_findings(docs_script, tmp_path):
+    """`--quiet` suppresses touch's `touched` stderr line but NEVER the check
+    findings on stdout (Q-E). A stale tree under `--quiet` still prints the
+    stale finding on stdout and exits 1.
+    """
+    root, fresh, _ancient = _check_tree(tmp_path, "quiet")
+    proc = _run(docs_script, "touch", str(fresh), "--check", "--stale", "30", "--quiet")
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    # touch's own success line is suppressed...
+    assert "touched" not in proc.stderr
+    # ...but the check finding is on stdout regardless of --quiet.
+    assert "ancient.md" in proc.stdout
+    assert "stale" in proc.stdout.lower()
+
+
+def test_touch_check_excluded_malformed_file_does_not_fail_check(docs_script, tmp_path):
+    """`touch --check` applies the same `[exclude]` predicate as the reindex
+    and bare `docs check` (Q-F): a malformed *excluded* file does not fail the
+    tree-wide check, so the command exits 0 (mirrors
+    `test_touch_with_malformed_excluded_file_*`).
+    """
+    root, target = _touch_excluded_malformed_tree(tmp_path)
+    proc = _run(docs_script, "touch", str(target), "--check")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # The excluded malformed file was neither indexed nor checked.
+    index = (root / "INDEX.md").read_text()
+    assert "vendor/README.md" not in index
+
+
+def test_touch_check_config_default_provenance(docs_script, tmp_path):
+    """`touch --check` (no `--stale`) over a `[check] stale_days`-configured
+    tree with an untouched stale sibling → the config window applies, the
+    check exits 1, and the finding names the config-sourced provenance.
+    """
+    root = tmp_path / "touchcfg"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "touchcfg"\n\n[check]\nstale_days = 30\n')
+    today = date.today().isoformat()
+    old = (date.today() - timedelta(days=400)).isoformat()
+    fresh = root / "fresh.md"
+    fresh.write_text(
+        f"# Fresh\n\nLifecycle: active\nRole: notes\nProject: touchcfg\nUpdated: {today}\n\nBody.\n"
+    )
+    ancient = root / "ancient.md"
+    ancient.write_text(
+        f"# Ancient\n\nLifecycle: active\nRole: notes\nProject: touchcfg\nUpdated: {old}\n\nBody.\n"
+    )
+    proc = _run(docs_script, "touch", str(fresh), "--check")
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "ancient.md" in proc.stdout
+    assert "set in .docs.toml [check] stale_days" in proc.stdout

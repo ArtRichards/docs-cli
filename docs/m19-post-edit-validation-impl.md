@@ -53,7 +53,7 @@ section tracks implementation progress, which is distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | **Complete** | 2026-06-12 | `cli.md` §touch `--check [--stale N]` block + heading; §check stale-window resolution (CLI `--stale` > `[check] stale_days` > unset) + threshold-provenance message contract; §list Q6 note; `convention.md` `[check]` subsection. Bundled refs resynced byte-identical (`test_skill_refs` GREEN); `docs check docs/` exit 0; INDEX snapshot in lockstep. The three Phase-2 verbatim strings (`--stale requires --check`, `set in .docs.toml [check] stale_days`, `via --stale`) all present. Q-A provenance-plumbing (`stale_source` + `resolve_stale` helper) noted in the contract. |
-| 2. Write Tests (RED) | Pending | — | — |
+| 2. Write Tests (RED) | **Complete** | 2026-06-12 | 23 new tests, split by layer (Q-C). D1 touch `--check` (12) in `test_cli_touch.py`; D2 config-parse (2) in `test_config.py`; D2 check CLI + provenance (6) in `test_cli_check.py`; Q6 list locks (2) in `test_cli_list.py`; D3 help (1) in `test_body_from.py`; version pin flipped `test_a3_..._1_6_0` → `..._1_6_5` in `test_packaging.py` (B1/B2/C2 untouched — Q-D, Phase-7 surface). Reused `_multi_file_tree` / `_orphan_doc` / `_touch_excluded_malformed_tree` (touch) + `_stale_tree` (check). Suite collects 533 (510 + 23); ruff + format clean on the new files. |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
@@ -181,3 +181,69 @@ Phase-2 RED tests assert against frozen, byte-identical contract text.
 **Exit criteria met.** Every string Phase-2 asserts appears verbatim in
 `cli.md`; the Q-A provenance-plumbing approach is noted in the contract;
 `test_skill_refs.py` GREEN.
+
+## Phase 2 — Write Tests (RED) (2026-06-12, branch `m19/phases-1-4`)
+
+**Objective.** Pin the M19 contract in tests, split by layer into the
+existing suites (Q-C — no new test file), following the subprocess-`_run`
+convention.
+
+**Files changed (23 new tests).**
+
+- `tests/test_cli_touch.py` (**D1 — 12 tests**, `import timedelta` added;
+  reused `_multi_file_tree` / `_orphan_doc` / `_touch_excluded_malformed_tree`;
+  new local `_check_tree` builder, today-relative dates):
+  `test_touch_check_clean_tree_exits_0`,
+  `test_touch_check_stale_tree_exits_1`,
+  `test_touch_check_broken_ref_tree_exits_2`,
+  `test_touch_check_runs_check_after_reindex`,
+  `test_touch_check_touch_failure_short_circuits_check`,
+  `test_touch_check_outside_root_short_circuits`,
+  `test_touch_stale_without_check_exits_2`,
+  `test_touch_dry_run_check_writes_nothing_and_checks_unmutated_tree`,
+  `test_touch_check_forwards_stale_value`,
+  `test_touch_check_quiet_suppresses_touch_lines_not_findings`,
+  `test_touch_check_excluded_malformed_file_does_not_fail_check` (Q-F lock),
+  `test_touch_check_config_default_provenance`.
+- `tests/test_config.py` (**D2 config — 2 tests**):
+  `test_load_config_reads_stale_days`,
+  `test_load_config_stale_days_defaults_to_none`.
+- `tests/test_cli_check.py` (**D2 check + provenance — 6 tests**, new
+  `_stale_config_tree` builder + `import timedelta`):
+  `test_check_config_stale_days_applies_to_bare_check` (HEADLINE Q5),
+  `test_check_cli_stale_overrides_config`,
+  `test_check_no_check_section_unchanged` (GREEN-at-baseline),
+  `test_check_config_sourced_provenance_message`,
+  `test_check_cli_sourced_provenance_message`,
+  `test_check_stale_zero_honored` (GREEN-at-baseline).
+- `tests/test_cli_list.py` (**Q6 — 2 GREEN-at-baseline locks**, new
+  `_list_stale_config_tree` builder + `import date, timedelta`):
+  `test_list_stale_config_does_not_filter_bare_list`,
+  `test_list_explicit_stale_unaffected_by_config`.
+- `tests/test_body_from.py` (**D3 — 1 test**):
+  `test_new_body_from_help_no_first_20_lines`.
+- `tests/test_packaging.py` (**version pin**):
+  `test_a3_project_version_is_1_6_0` → `test_a3_project_version_is_1_6_5`
+  asserting `"1.6.5"`. **B1/B2/C2 left for Phase 7** (Q-D — slow
+  build-gated; the editable-install / wheel-version surface is reconciled
+  when `pyproject.toml` flips at Phase 7).
+
+**RED classifications (carried into the Phase-4 row).**
+
+- D1 touch `--check` / `--stale` tests: argparse rejects the undeclared flags
+  with **exit 2** ("unrecognized arguments") until Phase 5 — documented honest
+  RED (Q-B/Q-D style). The intended-exit-2 tests
+  (`outside_root_short_circuits`, `stale_without_check`) assert the *contract*
+  message, not argparse's, so they also fail at baseline.
+- D2 `Config.stale_days` tests: **AttributeError** until the field lands at
+  Phase 5 (Q-B — not pulled into Phase 3).
+- D2 check-CLI behaviour/provenance + D3 help + A3 version-pin: plain
+  **assertion** failures.
+- GREEN-at-baseline locks (`no_check_section_unchanged`, `stale_zero_honored`,
+  the two Q6 list locks): pass today and must keep passing.
+
+**Verification.** `pytest --co` collects 533 (510 + 23). `ruff check` +
+`ruff format --check` clean on all six edited test files.
+
+**Exit criteria met.** Tests written RED per the plan; collection clean; the
+intended-RED vs GREEN-at-baseline split is classified for Phase 4.

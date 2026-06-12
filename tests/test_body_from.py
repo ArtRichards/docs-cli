@@ -432,3 +432,30 @@ def test_body_from_required_fields_interleaved_by_non_required_label_passes(docs
     written = (root / "my-feature.md").read_text()
     assert "Lifecycle: draft" in written, written  # scaffold frontmatter
     assert written.endswith(body), written[-200:]
+
+
+# --- M19 D3 — `docs new --body-from` help-string drift fix -----------------
+#
+# RED at baseline: the argparse help string at `cli.py` still describes the
+# pre-M15-C4 "first 20 lines looks like a metadata block" heuristic, while the
+# runtime detector and the prose spec already use the real C4 detector shape.
+# Phase 6 corrects the one line.
+
+
+def test_new_body_from_help_no_first_20_lines(docs_script):
+    """`docs new --help` must NOT describe the dead "first 20 lines" heuristic;
+    it must mention the real M15-C4 detector shape (a leading `---` fence or a
+    `{Lifecycle, Role, Updated}` required-field cluster).
+    """
+    proc = _run(docs_script, "new", "--help")
+    assert proc.returncode == 0, proc.stderr
+    help_text = proc.stdout
+    assert "first 20 lines" not in help_text, (
+        "the --body-from help still describes the dead pre-M15-C4 heuristic"
+    )
+    # The corrected wording names the real detector: a `---` fence OR the
+    # required-field labels cluster.
+    assert "---" in help_text
+    assert "Lifecycle" in help_text or "metadata block" in help_text, (
+        "the help must describe the real C4 detector shape"
+    )

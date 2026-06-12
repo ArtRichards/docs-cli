@@ -156,3 +156,24 @@ def test_load_config_fields_preserves_case(tmp_path):
     cfg = load_config(tmp_path)
     assert "Owner" in cfg.fields
     assert "owner" in cfg.fields
+
+
+# --- M19 D2 — `[check] stale_days` parsed into Config.stale_days -----------
+#
+# RED at baseline: `Config` has no `stale_days` field until Phase 5, so the
+# attribute access raises `AttributeError` (the accepted, documented RED
+# reason per Q-B — the field is NOT pulled into Phase 3).
+
+
+def test_load_config_reads_stale_days(tmp_path):
+    """`[check] stale_days = 30` ⇒ `Config.stale_days == 30`."""
+    (tmp_path / ".docs.toml").write_text('[project]\nname = "x"\n\n[check]\nstale_days = 30\n')
+    cfg = load_config(tmp_path)
+    assert cfg.stale_days == 30
+
+
+def test_load_config_stale_days_defaults_to_none(tmp_path):
+    """No `[check]` section ⇒ `Config.stale_days is None` (no default window)."""
+    (tmp_path / ".docs.toml").write_text('[project]\nname = "x"\n')
+    cfg = load_config(tmp_path)
+    assert cfg.stale_days is None
