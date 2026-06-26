@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: plan
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-06-24
 
 Related:
 - implements: charter.md
@@ -24,6 +24,7 @@ Related:
 - parent-of: archive/2026-06-12/m19-post-edit-validation.md
 - parent-of: archive/2026-06-12/m20-pypi-publish.md
 - parent-of: m21-update-check.md
+- parent-of: m22-root-placement-guidance.md
 
 ## Sequencing
 

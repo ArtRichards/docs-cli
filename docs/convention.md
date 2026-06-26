@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-06-24
 
 Related:
 - pairs-with: cli.md
@@ -273,6 +273,17 @@ A docs root is not required to be flat. Beyond the machine-managed archive subtr
 - The status/location consistency rule applies *only* to the archive subtree. A doc in any other subdirectory may carry any active-tree status.
 
 Whether to keep a tree flat or nest it is the author's call. The metadata block and the generated `INDEX.md` — not the directory layout — are the primary navigation surface; subdirectories are a convenience for humans browsing with `ls` or an editor file-tree. `docs new` can create a doc directly into a subdirectory (`docs new spec sub/feature`); `docs mv` can relocate one between directories.
+
+### Where to put `.docs.toml` (project ≠ directory)
+
+A `Project:` is a controlled **metadata field, not a directory** — one docs root can hold many projects (each doc names its own via the `Project:` slug), and a single project never requires a subdirectory of its own. Because `Related:` paths are root-relative (see "Relationship verbs"), nesting a lone project's docs in a subdirectory beneath a parent root makes every intra-project sibling reference carry a **redundant** `<subdir>/` prefix — `pairs-with: my-project/scope.md` instead of `pairs-with: scope.md` — while the parent root exists only to wrap that one project.
+
+So choose the root deliberately:
+
+- **One project:** put `.docs.toml` at the directory that holds the docs, so the docs **root is the project**. Docs sit flat at the root and cross-references stay clean. (This repo's own `docs/` tree is shaped this way: `.docs.toml` at `docs/`, `Project: docs`, files flat, `pairs-with: cli.md`.)
+- **Several projects in one tree:** keep one root and separate the docs by `Project:` metadata. Per-project subdirectories are optional; only then do prefixed references reflect a genuine cross-folder path.
+
+Do **not** create a parent root and nest a single project one level beneath it — that produces the redundant prefix above for no benefit. This mirrors how `INDEX.md` groups by `Project`, not by directory: the metadata, not the folder layout, is the navigation surface.
 
 ## Exclusion
 

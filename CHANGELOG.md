@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.7.0 — UNRELEASED
+
+### Documentation
+
+- **Doc-tree root placement guidance** (M22). The convention spec
+  (`convention.md` §Subdirectories) and the bundled `docs` skill now teach
+  where to put `.docs.toml`: a `Project:` is a metadata field, **not a
+  directory**, so a single project needs no subdirectory of its own. Because
+  `Related:` paths are root-relative, nesting a lone project beneath a parent
+  root prefixes every intra-project sibling reference with a redundant
+  `<subdir>/`. The recommended default is to make the project's own directory
+  the docs root (docs flat, clean refs), reserving per-project subdirectories
+  for genuinely multi-project trees (group by `Project:` metadata, not by
+  folder). Documentation only — no CLI surface or behavior change.
+
 ## 1.6.5 — 2026-06-12
 
 Post-edit validation ergonomics (M19). Two additive, backward-compatible
