@@ -23,6 +23,7 @@ def test_skill_md_has_root_placement_note() -> None:
     assert "Where to put" in body
     assert "not a directory" in body
     assert "redundant" in body
+    assert "<subdir>/" in body  # pin the specific consequence mechanism, not just the adjective
     assert "references/convention.md" in body
 
 
@@ -33,6 +34,7 @@ def test_convention_documents_root_placement() -> None:
     assert "metadata field, not a directory" in body
     assert "root is the project" in body
     assert "redundant" in body
+    assert "<subdir>/" in body
 
 
 def test_bundled_convention_carries_root_placement_guidance() -> None:
@@ -44,3 +46,4 @@ def test_bundled_convention_carries_root_placement_guidance() -> None:
 
     assert "metadata field, not a directory" in bundled
     assert "root is the project" in bundled
+    assert "<subdir>/" in bundled

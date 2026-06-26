@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-06-24
+Updated: 2026-06-26
 
 Related:
 - pairs-with: m22-root-placement-guidance.md
@@ -189,7 +189,7 @@ test.
 ### Files Changed
 | File | Action | Notes |
 |------|--------|-------|
-| tests/fixtures/expected/docs-INDEX.md | modified | dogfood-snapshot refresh: the frozen `docs index` acceptance fixture now reflects the added M22 pair (delta verified to be only the M22 entries + bumped `Updated:`/active-count on touched docs — no reordering, no broken links) |
+| tests/fixtures/expected/docs-INDEX.md | modified | dogfood-snapshot refresh: the frozen `docs index` acceptance fixture now reflects the added M22 pair (delta verified to be the M22 entries + bumped `Updated:`/active-count on touched docs + `convention.md` correctly sorting above `cli.md` in the Spec group after its 2026-06-24 touch (within-group order is `Updated` descending, then path ascending) — no broken links) |
 
 ### Actions Taken
 - Ran the M22 test (3 passed), the skill suite (17 passed), then the full
@@ -280,3 +280,30 @@ byte-identical; dogfood-snapshot refreshed; CHANGELOG staged under 1.7.0
 UNRELEASED. No CLI change, no version bump. Full suite 543 GREEN, gate clean,
 `docs check docs/` exit 0. Companion `project-foundation` note tracked
 separately in `agent-playbook-suite`. Ready to archive with `--cascade`.
+
+## Fresh-eyes review (2026-06-26)
+
+Independent reviewer (ship-milestone gate, run retroactively because M22 was
+built as a single commit outside the branch-stack flow). Verdict: **sound — no
+blockers, no should-fixes.** The central redundant-prefix claim was verified
+against the resolution code (`cli.py` root-relative `Related:` check) and
+empirically in throwaway trees; the RED baseline was genuine; the three
+surfaces are consistent; SKILL.md/parity invariants hold; the dogfood-fixture
+delta was M22-only.
+
+Three nits surfaced; resolution:
+- **Finding 1 (impl-log accuracy) — fixed.** The Phase-8 fixture note claimed
+  "no reordering"; corrected — `convention.md` sorts above `cli.md` in the Spec
+  group after its 2026-06-24 touch (within-group order: `Updated` desc, path asc).
+- **Finding 2 (test strength) — fixed.** The consequence claim was pinned only
+  by the word "redundant"; added `assert "<subdir>/" in ...` to all three pin
+  tests (genuine discriminator — absent in every surface before M22). Contract
+  amendment to the Phase-1 pin set, recorded here.
+- **Finding 3 (multi-project wording) — DEFERRED (operator).** convention.md's
+  multi-project note ("only then do prefixed references reflect a genuine
+  cross-folder path") could read as if only cross-folder refs need a prefix; a
+  same-folder intra-project sibling in a multi-project tree with per-project
+  subdirs still needs the `<subdir>/` prefix. A convention-spec clarity edit —
+  per operator policy it goes through a test-first milestone, not an ad-hoc edit
+  — so left for the operator to schedule. The lone-project teaching (M22's
+  actual scope) is correct and unaffected.
