@@ -1,9 +1,9 @@
-# M21 — Update-check notification (PyPI version check + skill-refresh nudge)
+# M21 — Update-check notification (PyPI new-version notice)
 
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-06-29
 
 Related:
 - child-of: plan.md
@@ -17,58 +17,72 @@ Related:
 ## Overview
 
 - Milestone: M21 (v1.7.0)
-- Title: Update-check notification (PyPI version check + skill-refresh nudge)
+- Title: Update-check notification (PyPI new-version notice)
 - Surface: docs-cli's **first network surface** — a once-per-24h, fail-silent
   check of PyPI for a newer `docs-cli` release that, when one exists, emits a
-  single STDERR line nudging the user/agent to update **both** the CLI and
-  their installed skills (`pip install -U docs-cli`, then `docs install-skill
-  --force`). The notice never touches stdout, never changes an exit code, is
-  suppressed under `--quiet` / `--json` / CI / opt-out env+config, and —
-  **deliberately inverting gh's TTY-gated rule** — shows on non-TTY too,
-  because the primary consumer is an agent that is itself the actor who
-  performs the update. A zero-network skill-drift check rides
-  along (ships IN — D5, OQ-6): when the host's installed skill differs from
-  the CLI's own bundled skill, the same one-line channel nudges
-  `docs install-skill --force`. Ships as **v1.7.0** (minor bump — additive
+  single STDERR line nudging the user/agent to update **the CLI**
+  (`pip install -U docs-cli`). The notice never touches stdout, never changes
+  an exit code, is suppressed under `--quiet` / `--json` / CI / opt-out
+  env+config, and — **deliberately inverting gh's TTY-gated rule** — shows on
+  non-TTY too, because the primary consumer is an agent that is itself the
+  actor who performs the update. Ships as **v1.7.0** (minor bump — additive
   feature; matches the 1.3→1.6 minor precedent; 1.6.5 was an operator-decreed
   patch exception). Implementation milestone — builds 1.7.0 locally; the PyPI
   publish is a later operator-driven milestone (the M19→M20, M14+M15→M17
   pattern).
-- Progress: **Draft (milestone-setup, 2026-06-12).** Scaffolded 2026-06-12
-  from the operator-directed M21 scope (design + precedent researched and
-  operator-reviewed this session). No TDD phase started. Depends on nothing;
-  nothing else in flight (M18/M19/M20 all shipped + archived). Stays LIVE at
-  root; lifecycle `draft` until a later milestone sweeps it in (the
-  M14/M15/M18/M19 completed-but-live precedent). OPEN QUESTIONS OQ-1..OQ-9 are
-  RESOLVED (conductor decisions 2026-06-12, each per the recommended default —
-  see Decisions › "Resolved questions"); milestone-setup is complete and
-  Phase 1 (Define Contract) is next.
+- Progress: **Draft (re-scoped 2026-06-29; originally scaffolded
+  2026-06-12).** Re-scoped to **CLI-only** this session: the former
+  skill-drift notice (D5) is **CUT** and the dual-action nudge collapses to a
+  single CLI-update line (see Decisions › "Re-scope to CLI-only"). The skill
+  story — install where the agent actually uses it, then nudge a refresh at the
+  recorded location — moves to the follow-on **M23 (agent-aware install-skill +
+  recorded-dest skill-refresh hint)**. No TDD phase started. Depends on nothing;
+  M22 ran ahead of M21 (operator run-order 2026-06-24) and is
+  implementation-complete. Stays LIVE at root, lifecycle `draft`, until a later
+  milestone sweeps it in (the M14/M15/M18/M19 completed-but-live precedent).
+  OPEN QUESTIONS are netted out — **none outstanding** (the re-scope resolves or
+  moots all of OQ-1..OQ-9; see Decisions + OPEN QUESTIONS). Phase 1 (Define
+  Contract) is next.
 
 ### Goal
 
 Today an installed `docs-cli` never tells the operator (or the agent driving
-it) that a newer release is on PyPI. The CLAUDE.md ship-time flow is a
-two-step refresh — `pip install -U docs-cli`, then `docs install-skill
---force` to refresh the host skills — and nothing surfaces that it is due. The
-host's own 2026-06-12 drift (a stale `--body-from` reference in a workflow
-skill, caught only at the M20 publish-closeout sweep) is the motivating miss:
-the update signal arrives too late, by hand, at publish time.
+it) that a newer release is on PyPI. The standing refresh flow asks the user to
+`pip install -U docs-cli`, and nothing surfaces that it is due. M21 makes
+`docs-cli` self-announce the **CLI** update.
 
-M21 makes `docs-cli` self-announce. On any invocation, **at most once per 24h**
-and **fail-silent always**, the CLI consults PyPI for the latest `docs-cli`
-version, compares it against the running version (the `importlib.metadata` SoT
-from M12), and — when newer — prints **one** STDERR line that names **both**
-update actions. The check is gated by a per-user state cache (one network
-attempt per 24h) and a separate per-user notify throttle (one notice per 24h),
-so it never spams and never adds latency or noise to the common case. Offline,
-timeout, HTTP error, or a corrupt cache all degrade to **byte-identical
-behaviour and exit code** vs today — the notice simply does not appear.
+On any invocation, **at most once per 24h** and **fail-silent always**, the CLI
+consults PyPI for the latest `docs-cli` version, compares it against the running
+version (the `importlib.metadata` SoT from M12), and — when newer — prints
+**one** STDERR line nudging `pip install -U docs-cli`. The check is gated by a
+per-user state cache (one network attempt per 24h) and a separate per-user
+notify throttle (one notice per 24h), so it never spams and never adds latency
+or noise to the common case. Offline, timeout, HTTP error, or a corrupt cache
+all degrade to **byte-identical behaviour and exit code** vs today — the notice
+simply does not appear.
 
 The primary consumer is an **agent**, and the agent is the actor who can
-*perform* the update (run the two commands). That is why M21 deliberately
-inverts gh's TTY-gated convention: the notice shows on non-TTY too. The
-suppression matrix (`--quiet`, `--json`, CI, two disable env vars, a config
-opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
+*perform* the update (run `pip install -U docs-cli`). That is why M21
+deliberately inverts gh's TTY-gated convention: the notice shows on non-TTY too.
+The suppression matrix (`--quiet`, `--json`, CI, two disable env vars) keeps it
+out of machine-readable streams, scripts, and CI logs.
+
+**Why CLI-only (the skill half moved to M23).** An earlier draft of M21 also
+named a second action — `docs install-skill --force` — and shipped a
+zero-network skill-drift notice (D5) that compared the host's installed skill
+against the CLI's own bundled skill. A planning pass (2026-06-29) found this
+contradicts two project principles: docs-cli must **not inspect or manage the
+user's installed skills**, and must **not assume Claude Code**. docs-cli ships
+exactly one skill (the Claude-Code `SKILL.md` shape); there is no per-agent
+skill format, so "which agent" is the wrong axis — "which directory" (the
+`install-skill --dest`) is the honest one. The real fix for "refresh the skill
+where the user actually uses it" is making `install-skill` agent-aware and
+*recording* the chosen dest so a future notice can replay it — a larger,
+separate surface. That work is the follow-on **M23**; M21 is the runtime CLI
+notice only. The 2026-06-12 host skill-drift miss (a stale `--body-from`
+reference caught only at the M20 publish-closeout sweep) is therefore addressed
+by **M23** (install-where-you-use-it + recorded-path refresh), **not** by
+runtime inspection in M21.
 
 ### Requirements
 
@@ -78,24 +92,28 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
   `info.version`, compare against `__version__` (the M12 `importlib.metadata`
   SoT). **At most one network attempt per 24h**, gated by a per-user state
   cache. **Stdlib `urllib` only** (the zero-dependency wheel is preserved —
-  no `requests`). **Short timeout** (recommend 1.0s — OQ-2). **Fail-silent
-  always**: offline / DNS failure / timeout / non-200 / malformed JSON /
-  unparseable version → no notice, no traceback, exit code and all streams
-  byte-identical to today.
+  no `requests`). **Short timeout** (1.0s — OQ-2). **Fail-silent always**:
+  offline / DNS failure / timeout / non-200 / malformed JSON / unparseable
+  version → no notice, no traceback, exit code and all streams byte-identical
+  to today.
 - **State cache (D1).** `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json`
-  with `last_check` (ISO timestamp), `latest_version` (last seen PyPI version),
-  `last_notified` (ISO timestamp of the last emitted notice). Created on first
+  with **exactly three keys** — `last_check` (ISO-8601 UTC timestamp),
+  `latest_version` (last seen PyPI version), `last_notified` (ISO-8601 UTC
+  timestamp of the last emitted notice). (The former `last_skill_drift_notified`
+  key is **dropped** with the D5 cut — DECISION, 2026-06-29.) Created on first
   successful check; read on every invocation to gate the network call and the
   notice. A missing / unreadable / malformed cache is treated as "no data" and
   silently rewritten — never fatal.
 - **Notification (D2).** When `latest_version > __version__` (stdlib numeric
   tuple-compare, fail-closed on pre-release/local/unparseable — OQ-3), emit
   **one** line on **STDERR**, at most once per 24h (the separate
-  `last_notified` throttle), naming **both** actions. Reference wording:
-  `docs: update available 1.6.5 -> 1.7.0 — pip install -U docs-cli, then docs
-  install-skill --force to refresh skills`. **NEVER** on stdout; **NEVER**
-  affects the exit code (exit codes are load-bearing — the M19 `touch --check`
-  fold proves the project treats them as a contract).
+  `last_notified` throttle). **Reference wording (CLI-only):**
+  `docs: update available <current> -> <latest> — run: pip install -U docs-cli`
+  (em-dash `—`, ASCII `->`; concrete example
+  `docs: update available 1.7.0 -> 1.7.1 — run: pip install -U docs-cli`). The
+  byte-exact string is pinned in `cli.md` during Phase 1. **NEVER** on stdout;
+  **NEVER** affects the exit code (exit codes are load-bearing — the M19
+  `touch --check` fold proves the project treats them as a contract).
 - **Suppression matrix (D3).** Each of the following suppresses the notice;
   those marked *(check too)* also skip the network call entirely:
   - `--quiet` — suppress the notice (the check may still warm the cache —
@@ -121,17 +139,14 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
   inversion of gh's TTY-gated rule). Rationale + precedent recorded as a
   binding Decision. This is what makes the agent — the non-TTY consumer — the
   recipient of the nudge it can act on.
-- **Offline skill-drift check (D5 — ships IN M21, OQ-6 resolved).** A fully
-  **offline, zero-network** check: `install-skill` already knows its default
-  dest (`~/.claude/skills/docs/`, `cli.py:3329`); the CLI can cheaply compare
-  the installed skill against its own bundled skill
-  (`importlib.resources` → `src/docs_cli/skill/`) and, on a difference, emit
-  the same one-line channel nudging `docs install-skill --force`. Zero network,
-  zero new risk; it catches the exact host drift found 2026-06-12. Ships as a
-  second, independent notice gated by the same suppression matrix + its own
-  third throttle key (`last_skill_drift_notified`); every ambiguous install
-  state (absent dir, unreadable, partially-installed, symlinked, a *newer* host
-  skill than the bundled one) falls **silent**.
+- **~~D5 — Offline skill-drift notice.~~ CUT (2026-06-29).** The former
+  zero-network skill-drift compare (installed skill vs bundled skill →
+  `docs install-skill --force` nudge) is **removed**, not deferred-as-D5: it
+  required content-inspection of the user's installed skill and assumed Claude
+  Code, both of which violate project principles. The skill-refresh nudge is
+  rebuilt — agent-appropriate and pointed at a *recorded* dest — in the
+  follow-on **M23**, riding M21's same suppression/throttle channel. (OQ-6's
+  earlier "ship D5" resolution is **REVERSED** — see Decisions.)
 
 **Non-functional.**
 
@@ -142,7 +157,9 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
   once per day; the timeout bounds the rare network path.
 - **Suite stays fully offline** — the checker is **injectable / mockable**;
   no test makes a real network call (D6). The default test posture is
-  network-disabled.
+  network-disabled, and the dispatch hook is **hard-disabled in the suite** via
+  `DOCS_CLI_NO_UPDATE_CHECK=1` set in `tests/conftest.py` (resolved decision)
+  so the existing subprocess suites never reach PyPI.
 - **Surface parity (plan.md "Ongoing conventions")** — any new `--help`
   strings, the bundled skill (`SKILL.md` + `references/`), and the byte-identical
   `references/{cli,convention}.md` mirrors all land in the same change.
@@ -150,17 +167,18 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
 ### Deliverables
 
 - [ ] **D1 — Update check + state cache.** A mockable checker queries
-      `https://pypi.org/pypi/docs-cli/json` (stdlib `urllib`, short timeout),
-      compares `info.version` to `__version__`, and persists
-      `{last_check, latest_version, last_notified}` to
+      `https://pypi.org/pypi/docs-cli/json` (stdlib `urllib`, 1.0s timeout),
+      compares `info.version` to `__version__`, and persists the three-key
+      `{last_check, latest_version, last_notified}` (ISO-8601 UTC) to
       `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json`. One network
       attempt per 24h (cache-gated). Fail-silent on every error path
       (offline / timeout / non-200 / malformed JSON / corrupt cache) →
       byte-identical behaviour + exit code. Pinned by Phase-2 tests.
 - [ ] **D2 — Notification.** One STDERR line, ≤ once per 24h (separate
-      `last_notified` throttle), naming both actions in the reference wording.
-      Never on stdout; never alters the exit code. Pinned by Phase-2 tests
-      (notice text + stream + exit-code-unchanged on success AND failure verbs).
+      `last_notified` throttle), in the **CLI-only** reference wording
+      (`pip install -U docs-cli`). Never on stdout; never alters the exit code.
+      Pinned by Phase-2 tests (byte-exact notice text + stream +
+      exit-code-unchanged on success AND failure verbs).
 - [ ] **D3 — Suppression matrix.** `--quiet`, `--json`, `CI`,
       `DOCS_CLI_NO_UPDATE_CHECK`, and `DO_NOT_TRACK` each suppress the notice;
       `CI` + the two env vars also skip the network call (the user-level config
@@ -169,33 +187,32 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
 - [ ] **D4 — TTY inversion.** Notice shows on non-TTY (recorded as a binding
       Decision with precedent). Pinned by a non-TTY (piped-stderr) test that
       still sees the notice.
-- [ ] **D5 — Offline skill-drift notice (ships IN M21 — OQ-6 resolved YES).**
-      Zero-network compare of the installed skill vs the bundled skill; on
-      drift, a one-line `docs install-skill --force` nudge through the same
-      suppressed/throttled channel (its own third throttle key
-      `last_skill_drift_notified`). Pinned by Phase-2 tests (drift → notice;
-      in-sync → silent; missing/ambiguous install dir → silent; suppression
-      honoured).
+- [ ] **~~D5 — Offline skill-drift notice.~~ CUT (2026-06-29)** — moved to
+      M23 (agent-aware install-skill + recorded-dest skill-refresh hint). No
+      drift compare, no `last_skill_drift_notified` key, no drift tests in M21.
 - [ ] **D6 — Offline test harness.** The checker is injectable/mockable; the
-      suite makes **no** real network call. Tests pin: no network when cache
-      fresh; both 24h throttles (check + notify, independently); every
-      suppression path; exit codes unchanged on every verb incl. failures;
-      malformed/corrupt cache handled silently; the notice format; and that
-      `--json` stdout stays byte-clean.
+      suite makes **no** real network call (dispatch hook hard-disabled in
+      `tests/conftest.py` via `DOCS_CLI_NO_UPDATE_CHECK=1`). Tests pin: no
+      network when cache fresh; both 24h throttles (check + notify,
+      independently); every suppression path; exit codes unchanged on every
+      verb incl. failures; malformed/corrupt cache handled silently; the
+      byte-exact CLI-only notice format; and that `--json` stdout stays
+      byte-clean.
 - [ ] **D7 — Docs / version plumbing.** Version → **1.7.0**
       (`pyproject.toml` + the `test_packaging.py` A3/B1/B2/C2 version pins, the
-      A3-fast / B1-B2-C2-slow split per the M19 precedent); a NEW
-      `## 1.7.0 — UNRELEASED` CHANGELOG section; `cli.md` (a new
-      §update-check / §Output-conventions note + the suppression-env table —
-      env vars + `CI` only; the config opt-out is DEFERRED, OQ-5/5a) contract
-      sections; bundled-skill surface parity; `references/{cli,
-      convention}.md` byte-identical.
+      A3-fast / B1-B2-C2-slow split per the M19 precedent); **APPEND** to the
+      existing `## 1.7.0 — UNRELEASED` CHANGELOG section (opened by M22 — do
+      NOT create a second 1.7.0 header); `cli.md` (a new §update-check /
+      §Output-conventions note + the suppression-env table — env vars + `CI`
+      only; the config opt-out is DEFERRED, OQ-5/5a) contract sections;
+      bundled-skill surface parity; `references/{cli,convention}.md`
+      byte-identical.
 - [ ] **Surface-parity gate (Phase 10, plan.md "Ongoing conventions").** Run
       `docs --help` / any changed verb `--help`; reconcile against the
       CHANGELOG surface; confirm the bundled skill documents the new env vars +
       notice; grep for stale wording. INDEX + frozen snapshot
       (`tests/fixtures/expected/docs-INDEX.md`) in lockstep throughout.
-- [ ] **Full suite GREEN** (current 540 + the new M21 tests); ruff / ruff
+- [ ] **Full suite GREEN** (current 543 + the new M21 tests); ruff / ruff
       format --check / mypy / `docs check docs/` exit 0; bundled cli.md /
       convention.md byte-identical; `docs --version` → `docs 1.7.0`.
 
@@ -208,9 +225,7 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
   (after the command runs, before `main` returns, emitting only to STDERR and
   **passing the command's exit code through untouched**). `--quiet` and
   `--json` are per-verb argparse flags today (no global `args.quiet`/`args.json`
-  on every namespace — see OQ-1). `install-skill`'s default dest
-  (`~/.claude/skills/docs/`, `cli.py:3329`) + the bundled skill via
-  `importlib.resources` give D5 everything it needs offline.
+  on every namespace — see OQ-1; the hook reads them defensively).
 - **Missing.** No network surface exists anywhere in the tree (`grep urllib |
   http | socket | .cache | XDG_CACHE` → zero hits) — M21 introduces the first,
   recorded as an explicit architectural Decision. No cache directory handling,
@@ -221,23 +236,26 @@ opt-out) keeps it out of machine-readable streams, scripts, and CI logs.
   (charter.md "runs on any host with Python 3.11+ … no third-party
   dependencies") — stdlib `urllib` only. `--json` stdout must stay
   byte-clean (existing `docs check --json` / `docs list --json` consumers).
+  The CHANGELOG already carries a `## 1.7.0 — UNRELEASED` section (opened by
+  M22, a docs-only milestone that ran ahead of M21) — Phase 7 **appends** to
+  it.
 
 ## TDD Implementation Plan
 
-Phases follow the canonical 10-phase TDD methodology. OQ-1..OQ-9 are RESOLVED
-(see Decisions › "Resolved questions"), so the per-phase objectives, files, and
-exit criteria below are settled; refine only as implementation surfaces detail.
+Phases follow the canonical 10-phase TDD methodology. The re-scope to CLI-only
+(D5 cut) is folded into every phase below; refine only as implementation
+surfaces detail.
 
 ### Phase 1: Define Contract
 - Objective: pin the M21 surface in the specs (no code, no tests) — `cli.md`
-  §update-check (notice wording, STDERR-only, exit-code-untouched, the
-  per-user cache schema + path, the 24h check + notify throttles, the
-  suppression matrix incl. the env-var table, the TTY-inversion), `cli.md`
-  §Output-conventions note, the D5 skill-drift notice (IN — OQ-6); the
-  user-level config opt-out is DEFERRED out of v1.7.0 (OQ-5/5a — no
-  `convention.md` opt-out row this milestone); OQ-1..OQ-9 already resolved into
-  Decisions at milestone-setup; resync the bundled refs byte-identical; record
-  the CHANGELOG version decision (new `## 1.7.0 — UNRELEASED`).
+  §update-check (the **byte-exact CLI-only** notice wording, STDERR-only,
+  exit-code-untouched, the per-user three-key cache schema + path, the 24h
+  check + notify throttles, the suppression matrix incl. the env-var table, the
+  TTY-inversion), `cli.md` §Output-conventions note; **no skill-drift contract
+  section** (D5 cut); the user-level config opt-out is DEFERRED out of v1.7.0
+  (OQ-5/5a — no `convention.md` opt-out row this milestone); resync the bundled
+  refs byte-identical; record the CHANGELOG decision (**append** to the existing
+  `## 1.7.0 — UNRELEASED`).
 - Files: `docs/cli.md`, `docs/convention.md`, `src/docs_cli/skill/references/{cli,convention}.md`, `docs/INDEX.md`, `tests/fixtures/expected/docs-INDEX.md`.
 - Exit: every Phase-2 assertion string present verbatim in the specs;
   `test_skill_refs` GREEN; `docs check docs/` exit 0; INDEX == snapshot.
@@ -247,21 +265,25 @@ exit criteria below are settled; refine only as implementation surfaces detail.
   no-new-file-where-possible precedent), all behind the mock seam (no real
   network). Cover: fresh-cache-no-network; check-throttle (24h); notify-
   throttle (24h, independent); newer→notice / same→silent / older→silent;
-  notice text + STDERR stream; exit-code unchanged on a success verb AND a
-  failing verb; each suppression path; `--json` stdout byte-clean; corrupt
-  cache silent; offline/timeout/non-200/malformed-JSON each silent; non-TTY
-  still sees notice; D5 drift/in-sync/missing cases; A3 version pin 1.7.0.
+  byte-exact CLI-only notice text + STDERR stream; exit-code unchanged on a
+  success verb AND a failing verb; each suppression path; `--json` stdout
+  byte-clean; corrupt cache silent; offline/timeout/non-200/malformed-JSON each
+  silent; non-TTY still sees notice; A3 version pin 1.7.0. **No skill-drift
+  tests** (D5 cut). Guard the not-yet-existing module with
+  `try/except ModuleNotFoundError → uc = None` so the RED baseline collects
+  cleanly.
 - Files: a new `tests/test_update_check.py` (the unit + injectable-checker
   surface) + targeted additions to existing CLI suites for the dispatch-level
-  notice; `tests/test_packaging.py` A3 flip.
+  notice; `tests/conftest.py` (set `DOCS_CLI_NO_UPDATE_CHECK=1` for the suite);
+  `tests/test_packaging.py` A3 flip.
 - Exit: tests import + collect cleanly; intended-RED vs GREEN-at-baseline
   classified for Phase 4.
 
 ### Phase 3: Create Data/Fixtures
-- Objective: provide the test data — a fake PyPI JSON payload builder, cache
-  files in each state (fresh / stale / missing / corrupt), and a fake bundled-
-  vs-installed skill pair for D5 — preferring inline `tmp_path` builders with
-  today-relative timestamps (the M19 "committed dates rot" decision).
+- Objective: provide the test data — a fake PyPI JSON payload builder and cache
+  files in each state (fresh / stale / missing / corrupt) — preferring inline
+  `tmp_path` builders with today-relative UTC timestamps (the M19 "committed
+  dates rot" decision). **No fake skill-pair fixture** (D5 cut).
 - Files: inline builders in `tests/test_update_check.py`; no committed dated
   fixtures; the byte-frozen `docs-INDEX.md` snapshot stays the only committed
   fixture, in lockstep.
@@ -269,45 +291,48 @@ exit criteria below are settled; refine only as implementation surfaces detail.
 
 ### Phase 4: Run Tests (RED Baseline)
 - Objective: confirm every intended-RED test fails for its classified reason
-  (no tracebacks / collection errors / argparse-exit-2 surprises); classify
-  RED vs GREEN-at-baseline; capture the baseline count verbatim.
+  (no tracebacks / collection errors / argparse-exit-2 surprises; the
+  module-import guard keeps collection clean); classify RED vs GREEN-at-baseline;
+  capture the baseline count verbatim.
 - Files: none (run only).
 - Exit: the RED set matches the plan; GREEN-at-baseline locks pass; the
-  untouched pre-existing 540 stay GREEN.
+  untouched pre-existing 543 stay GREEN.
 
 ### Phase 5: Update Base Interfaces
 - Objective: declare the seams with minimal logic — the cache dataclass +
-  read/write helpers (XDG-aware path), the injectable `fetch_latest_version`
-  hook (default = real `urllib` GET; tests inject a fake), the stdlib
-  tuple-compare helper (fail-closed on pre-release/local/unparseable — OQ-3),
-  the env-var suppression predicate, and the `main()` hook point (interface
-  declared; full wiring may land Phase 6 per the honest split).
+  read/write helpers (XDG-aware path, ISO-8601 UTC timestamps), the injectable
+  `fetch_latest_version` hook (default = real `urllib` GET; tests inject a
+  fake), the stdlib tuple-compare helper (fail-closed on
+  pre-release/local/unparseable — OQ-3), the env-var suppression predicate, and
+  the `main()` hook point (interface declared; full wiring may land Phase 6 per
+  the honest split).
 - Files: a dedicated `src/docs_cli/update_check.py` module (OQ-7 ACCEPTED — the
-  Step-1 planning agent pressure-tests it against the single-file `cli.py`
-  convention + confirms the B3 wheel-contents test tolerates the new module
-  before this phase commits to it); `src/docs_cli/cli.py` for the `main()` hook
-  point.
+  B3 wheel-contents test (`test_packaging.py`, ~line 215) makes only
+  positive-presence assertions and packages the whole `src/docs_cli` package, so
+  the new module needs no packaging change — resolved decision);
+  `src/docs_cli/cli.py` for the `main()` hook point.
 - Exit: type checks pass; tests can import the seam; behaviour may stay
   unchanged this phase.
 
 ### Phase 6: Implement Offline/Core Path
 - Objective: implement the offline/core path — cache read/write + both 24h
   throttles + the suppression matrix + the stdlib fail-closed tuple-compare
-  (OQ-3) + the notice formatter + the `main()` STDERR emission with exit-code
-  pass-through; the D5 offline skill-drift compare (its own third throttle
-  key). The **network** call stays behind the injected hook (its real-`urllib`
-  body is the Phase-9 online surface). All offline RED → GREEN.
+  (OQ-3) + the CLI-only notice formatter + the `main()` STDERR emission with
+  exit-code pass-through. **No D5 skill-drift compare** (cut). The **network**
+  call stays behind the injected hook (its real-`urllib` body is the Phase-9
+  online surface). All offline RED → GREEN.
 - Files: `src/docs_cli/update_check.py` (the OQ-7 module) + `src/docs_cli/cli.py`
   (the `main()` hook).
-- Exit: offline target tests GREEN; no regression in the 540.
+- Exit: offline target tests GREEN; no regression in the 543.
 
 ### Phase 7: Update Tool/Wrapper Layer
 - Objective: `pyproject.toml` `version` → `1.7.0`; the `test_packaging.py`
   A3/B1/B2/C2 version pins flipped in lockstep (A3 fast; B1/B2/C2 slow,
-  build-gated — the M19 split); a NEW `## 1.7.0 — UNRELEASED` CHANGELOG
-  section (Added: update-check notice + the disable env vars + the offline
-  skill-drift notice); bundled `cli.md`/`convention.md` resynced byte-identical;
-  the new `--help` / env-var wording reconciled into the bundled `SKILL.md`.
+  build-gated — the M19 split); **APPEND** to the existing
+  `## 1.7.0 — UNRELEASED` CHANGELOG section (Added: update-check notice + the
+  disable env vars) — do NOT add a second 1.7.0 header (M22 already opened it);
+  bundled `cli.md`/`convention.md` resynced byte-identical; the new
+  `--help` / env-var wording reconciled into the bundled `SKILL.md`.
 - Files: `pyproject.toml`, `tests/test_packaging.py`, `CHANGELOG.md`,
   `src/docs_cli/skill/`.
 - Exit: `test_a3` GREEN at 1.7.0; `test_skill_refs` GREEN.
@@ -360,20 +385,51 @@ exit criteria below are settled; refine only as implementation surfaces detail.
 
 ## Decisions
 
+- **Re-scope to CLI-only — D5 CUT; the notice nudges only the CLI
+  (2026-06-29, BINDING).** A planning pass + the operator pressure-tested the
+  former D5 ("offline skill-drift notice") and found it contradicts core
+  principles: docs-cli must **not inspect or manage the user's installed
+  skills**, and must **not assume Claude Code**. Findings: (1) docs-cli ships
+  exactly ONE skill (the Claude-Code `SKILL.md` shape) — there is no per-agent
+  skill format, so "which agent" is the wrong axis; "which directory"
+  (`install-skill --dest`) is the honest one, and it already exists. (2) D5's
+  whole premise is **content-inspection** of the installed skill → cut. (3) The
+  original notice named both `pip install -U docs-cli` AND
+  `docs install-skill --force`; the second half assumes Claude Code and assumes
+  the user even has the skill installed → the notice becomes **CLI-only**. (4)
+  The real fix for "install where the user is using it" is making
+  `install-skill` **agent-aware** + **recording** the chosen dest so the notice
+  can later replay it — a separate, larger surface → the follow-on **M23**.
+  Consequences folded here: D5 is removed (not deferred-as-D5); the cache loses
+  `last_skill_drift_notified` (DECISION 3 — three keys only); the notice uses
+  the CLI-only wording (DECISION 2); **OQ-6's earlier "ship D5" resolution is
+  REVERSED**. The skill-refresh nudge is rebuilt in M23, pointed at the
+  *recorded* dest, riding this same suppression/throttle channel.
+- **Notice wording (CLI-only) — DECISION (2026-06-29).**
+  `docs: update available <current> -> <latest> — run: pip install -U docs-cli`
+  (em-dash `—`, ASCII `->`; STDERR only; never alters the exit code). The
+  byte-exact string is pinned in `cli.md` at Phase 1 and asserted verbatim by
+  Phase-2 tests. (Supersedes the earlier dual-action wording that also named
+  `docs install-skill --force`.)
+- **Cache schema — three keys (DECISION, 2026-06-29).**
+  `{last_check, latest_version, last_notified}`, all timestamps ISO-8601 **UTC**
+  (`datetime.now(timezone.utc)`). The former `last_skill_drift_notified` key is
+  dropped with the D5 cut.
 - **Ships as v1.7.0 (minor bump).** The update-check notice is an additive,
   backward-compatible feature: no flag removed, no default changed, no exit
-  code altered, and trees/users who set a disable env var or config key see
-  byte-identical behaviour to 1.6.5. Minor is the right SemVer bucket and
-  matches the 1.3.0 → 1.4.0 → 1.5.0 → 1.6.0 minor cadence; 1.6.5 was the
-  operator-decreed **patch** exception (M19), not the rule. `pyproject.toml`
-  `version` + the `test_packaging.py` A3/B1/B2/C2 pins bump to `1.7.0` at
-  Phase 7; `importlib.metadata` stays the SoT (M12), so `docs --version` reads
-  `1.7.0` after an editable reinstall. Builds locally; the PyPI publish is a
-  later operator-driven milestone (the M19→M20, M14+M15→M17 cadence).
-- **CHANGELOG: a NEW `## 1.7.0 — UNRELEASED` section.** The `## 1.6.5` section
-  is dated + published (M20, 2026-06-12), so M21 opens a fresh section above it
-  with publish-survival wording (no "ready locally" / "deferred" markers — the
-  M11 lesson). The eventual publish milestone dates it.
+  code altered, and trees/users who set a disable env var see byte-identical
+  behaviour to 1.6.5. Minor is the right SemVer bucket and matches the 1.3.0 →
+  1.4.0 → 1.5.0 → 1.6.0 minor cadence; 1.6.5 was the operator-decreed **patch**
+  exception (M19), not the rule. `pyproject.toml` `version` + the
+  `test_packaging.py` A3/B1/B2/C2 pins bump to `1.7.0` at Phase 7;
+  `importlib.metadata` stays the SoT (M12), so `docs --version` reads `1.7.0`
+  after an editable reinstall. Builds locally; the PyPI publish is a later
+  operator-driven milestone (the M19→M20, M14+M15→M17 cadence).
+- **CHANGELOG: APPEND to the existing `## 1.7.0 — UNRELEASED` section.** M22 (a
+  docs-only milestone that ran ahead of M21) already opened
+  `## 1.7.0 — UNRELEASED` with a Documentation entry. M21's Phase 7 **adds an
+  `### Added` entry** under that same section — it does **not** create a second
+  1.7.0 header. The eventual publish milestone dates the section.
 - **First network surface — recorded as an explicit architectural Decision.**
   Until M21, `docs-cli` made **zero** network calls (verified:
   `grep urllib|http|socket|.cache` over `src/` → zero hits). M21 introduces
@@ -392,8 +448,7 @@ exit criteria below are settled; refine only as implementation surfaces detail.
   it never corrupts piped/scripted output). M21 **inverts** that: the primary
   consumer of `docs-cli` is an **agent**, the agent runs non-interactively
   (non-TTY), and the agent is precisely the actor who can *perform* the update
-  (`pip install -U docs-cli` + `docs install-skill --force` — automating the
-  CLAUDE.md ship-time flow). Gating on TTY would hide the nudge from the one
+  (`pip install -U docs-cli`). Gating on TTY would hide the nudge from the one
   consumer who can act on it. The safety the TTY rule buys — never corrupting a
   consumed stream — is instead bought by **(i)** emitting only to **STDERR**
   (never stdout), **(ii)** suppressing under `--json` (the machine-readable
@@ -429,7 +484,8 @@ exit criteria below are settled; refine only as implementation surfaces detail.
   `last_check`) without consuming the notice budget, and a run that fetches a
   new version still throttles the notice to once a day. (Their interaction
   under `--quiet`/`--json` is resolved by OQ-4: those flags suppress only the
-  notice and still warm the cache.)
+  notice and still warm the cache.) With D5 cut there is a **single** notice,
+  so the old dual-notice ordering question is **moot**.
 - **Stdlib numeric tuple-compare (no `packaging` dep), fail-closed.** Compare
   `latest_version` to `__version__` with a stdlib-only numeric tuple-compare on
   the dot-split release segments (no `packaging` dependency — the zero-dep
@@ -437,89 +493,65 @@ exit criteria below are settled; refine only as implementation surfaces detail.
   and any unparseable version on either side, fails **closed** (no notice);
   only a strictly-greater released version notifies. (The exact routine is
   resolved by OQ-3 — see Decisions › "Resolved questions".)
+- **Dedicated `src/docs_cli/update_check.py` module (OQ-7 ACCEPTED, STANDS).**
+  The update-check is a cohesive, independently-testable unit (cache I/O,
+  network hook, compare, suppression, formatter) with a clean seam; `main()`
+  calls one entry function. The B3 wheel-contents test (`test_packaging.py`,
+  ~line 215) makes only **positive-presence** assertions and packages the whole
+  `src/docs_cli` package, so the new module needs **no packaging change**
+  (verified this session). (Rejected: inline in `cli.py` — buries the network
+  seam in the largest file.)
+- **Suite offline guard (resolved decision).** Phase 2 sets
+  `DOCS_CLI_NO_UPDATE_CHECK=1` in `tests/conftest.py` so the dispatch hook
+  never lets the existing subprocess suites reach PyPI; the
+  `tests/test_update_check.py` unit tests exercise the seam directly via the
+  injected `fetch_latest_version` hook. Preserves the offline-suite invariant
+  (D6).
 - **Lifecycle stays `draft` (M14/M15/M18/M19 precedent).** A milestone flips to
   `archived` only when physically swept into the archive subtree by a later
   milestone; M21 stays live at root through implementation-complete. The plan
   forbids self-archiving the M21 pair.
-- **Resolved questions (OQ-1..OQ-9, BINDING — conductor decisions 2026-06-12).**
-  The nine OPEN QUESTIONS are resolved as follows; each takes the recommended
-  default the draft was written against, so no Scope, Deliverable, or
-  Phase-Checklist text moves:
+- **Resolved questions (OQ-1..OQ-9, BINDING — conductor decisions 2026-06-12,
+  amended by the 2026-06-29 re-scope).** The nine original OPEN QUESTIONS:
   - **OQ-1 (where the `main()` hook reads `--quiet` / `--json`) → defensive
     `getattr`, no argparse refactor.** The hook reads the effective quiet/json
     state with `getattr(args, "quiet", False)` / `getattr(args, "json", False)`,
     covering every verb that carries the per-verb flag without promoting them to
-    global flags. If a future milestone makes them global, the hook needs no
-    change. (Rejected: promoting `--quiet`/`--json` to global flags now — a
-    larger, orthogonal surface change touching every verb's help + tests.)
+    global flags. (Rejected: promoting `--quiet`/`--json` to global flags now.)
   - **OQ-2 (network timeout) → 1.0 second** connect+read timeout. The check is
-    best-effort and fail-silent, so a miss is harmless (the cache simply isn't
-    warmed and the next eligible run retries); 1.0s keeps even the worst-case
-    path snappy.
+    best-effort and fail-silent, so a miss is harmless; 1.0s keeps even the
+    worst-case path snappy.
   - **OQ-3 (version comparison, no `packaging` dep) → stdlib numeric
     tuple-compare on dot-split release segments, fail-closed on
-    pre-release/local/unparseable versions.** Compare `latest_version` to
-    `__version__` with a small `tuple(int(x) for x in ver.split(".")[...])`
-    compare over docs-cli's `MAJOR.MINOR.PATCH` scheme, guarded so any
-    unparseable / pre-release / local version on **either** side fails closed
-    (no notice) — a `0.0.0+local` running build never nudges. (Rejected:
-    vendoring a PEP 440 parser — overkill for a 3-segment scheme; adding
-    `packaging` — breaks the zero-dep wheel.)
+    pre-release/local/unparseable versions.** A `0.0.0+local` running build
+    never nudges. (Rejected: vendoring a PEP 440 parser; adding `packaging`.)
   - **OQ-4 (do `--quiet` / `--json` still warm the cache?) → YES — they
-    suppress ONLY the notice and still run the cache-warming check.** `--quiet`
-    and `--json` advance `last_check` / `latest_version` so a later
-    human-facing run notifies without waiting another 24h. This differs from
-    `CI` / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` (and any future config
-    opt-out), which skip the network **entirely** (those are "do not touch the
-    network" signals; `--quiet`/`--json` are "do not print" signals). The
-    headline D3 sub-contract.
+    suppress ONLY the notice and still run the cache-warming check.** This
+    differs from `CI` / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK`, which skip
+    the network **entirely**. The headline D3 sub-contract.
   - **OQ-5 + OQ-5a (config opt-out location + whether to ship it) → DEFER the
     user-level config file; env vars + CI detection suffice for v1.7.0; never
-    `.docs.toml`.** The two env vars (`DOCS_CLI_NO_UPDATE_CHECK`,
-    `DO_NOT_TRACK`) plus the `CI` skip cover every realistic per-user opt-out;
-    a new user-level config file (path resolution, schema, precedence, tests)
-    is a meaningfully larger surface for marginal benefit, so it is deferred.
-    When a future milestone adds it, the location is settled here and need not
-    be re-litigated: a **user-level** config at
+    `.docs.toml`.** When a future milestone adds it: a **user-level** config at
     `${XDG_CONFIG_HOME:-~/.config}/docs-cli/config.toml` with `[update_check]
-    enabled = false` (XDG-consistent with the cache path), **never**
-    `.docs.toml` (which is per-tree, while the check is per-user). M21's D3 +
-    D7 + the spec sections drop the live config-opt-out row and keep only the
-    env-var + CI matrix; the deferred config opt-out is recorded as future
-    work, not a v1.7.0 surface.
-  - **OQ-6 (ship the optional offline skill-drift notice D5?) → YES, ships IN
-    M21.** It is zero-network, zero-new-risk, reuses the same
-    suppressed/throttled STDERR channel, and directly catches the motivating
-    2026-06-12 host drift. It is gated by the same suppression matrix + its own
-    third throttle key (`last_skill_drift_notified`), and every ambiguous
-    install state (absent dir, unreadable, partially-installed, symlinked, a
-    *newer* host skill than the bundled one) falls **silent**.
-  - **OQ-7 (dedicated `src/docs_cli/update_check.py` module vs inline in
-    `cli.py`) → ACCEPTED — dedicated module, with a Step-1 pressure-test
-    flag.** The update-check is a cohesive, independently-testable unit (cache
-    I/O, network hook, compare, suppression, formatter) with a clean seam;
-    `main()` calls one entry function. **Flagged for the Step-1 planning
-    agent:** pressure-test the dedicated module against the repo's single-file
-    `cli.py` convention before Phase 5 commits to it, and confirm
-    `test_packaging.py`'s B3 wheel-contents assertions tolerate the new module
-    either way (the bundled-wheel packaging already ships the whole `docs_cli`
-    package, so no packaging change is expected — but verify B3 does not pin an
-    exact module list). (Rejected: inline in `cli.py` — buries the network seam
-    in the largest file.)
+    enabled = false`, **never** `.docs.toml`.
+  - **OQ-6 (ship the optional offline skill-drift notice D5?) → REVERSED to NO
+    (2026-06-29).** The earlier "ship D5 IN M21" answer is **reversed by the
+    re-scope**: D5 is CUT (it inspected the installed skill and assumed Claude
+    Code). The skill-refresh story moves to M23. No drift compare, no third
+    throttle key, no drift tests in M21.
+  - **OQ-7 (dedicated `src/docs_cli/update_check.py` module) → ACCEPTED
+    (STANDS).** The B3 wheel-contents test makes only positive-presence
+    assertions and ships the whole package, so the new module needs no
+    packaging change. (Rejected: inline in `cli.py`.)
   - **OQ-8 (is Phase 9 genuinely online?) → ONE real read-only PyPI probe
     OUTSIDE the pytest suite, on a throwaway cache; pytest stays 100%
-    offline.** Phase 9 exercises the real `urllib` GET once against the live
-    `https://pypi.org/pypi/docs-cli/json` endpoint on a throwaway cache dir
-    (read-only probe), plus an offline end-to-end dogfood of the
-    notice/throttle/suppression on the editable `docs 1.7.0`. The `pytest`
-    suite makes **no** real network call (D6 invariant preserved).
+    offline.** The `pytest` suite makes **no** real network call (D6 invariant
+    preserved).
   - **OQ-9 (rolled-forward follow-on fold-ins) → fold in NONE.** The M20
-    workflow-skill / bundled-skill **drift lint** is *related in spirit* to
-    D5's skill-drift *notice* but is a different artifact (a repo-side CI lint
-    vs a runtime user notice) — it stays a separate follow-on, not folded into
-    M21. The other rolled-forward candidates (`touch --check --json`; the repo
-    adopting `[check] stale_days`) are unrelated to update-check and likewise
-    not folded. M21 is the runtime notice only.
+    workflow-skill / bundled-skill **drift lint** stays a separate follow-on
+    (repo-side CI lint, not a runtime notice); the other rolled-forward
+    candidates are unrelated to update-check. M21 is the runtime CLI notice
+    only.
 
 ## Testing / Quality Gate
 
@@ -534,26 +566,27 @@ The standard tree-wide gate plus the new behaviour tests, **all offline**:
 ```
 
 Test invariants (D6): the injected checker is the default test seam — **no
-test performs a real network call**. Pin: no network when the cache is fresh
-(< 24h `last_check`); the check throttle (24h) and the notify throttle (24h)
-**independently**; every suppression path (`--quiet`, `--json`, `CI`,
-`DOCS_CLI_NO_UPDATE_CHECK`, `DO_NOT_TRACK` — the config opt-out is DEFERRED,
-OQ-5/5a); exit codes
-**unchanged on every verb including failing ones**; a malformed/corrupt cache
-handled silently (no traceback, behaviour byte-identical); the notice format
-(both actions named, STDERR, ≤ once/24h); and `--json` stdout stays
-**byte-clean**. The one genuinely-online exercise (Phase 9, OQ-8) runs outside
-the unit suite against the live PyPI endpoint on a throwaway cache, never in
-`pytest`.
+test performs a real network call** (the dispatch hook is hard-disabled in
+`tests/conftest.py` via `DOCS_CLI_NO_UPDATE_CHECK=1`). Pin: no network when the
+cache is fresh (< 24h `last_check`); the check throttle (24h) and the notify
+throttle (24h) **independently**; every suppression path (`--quiet`, `--json`,
+`CI`, `DOCS_CLI_NO_UPDATE_CHECK`, `DO_NOT_TRACK` — the config opt-out is
+DEFERRED, OQ-5/5a); exit codes **unchanged on every verb including failing
+ones**; a malformed/corrupt cache handled silently (no traceback, behaviour
+byte-identical); the **byte-exact CLI-only** notice format (single action named,
+STDERR, ≤ once/24h); and `--json` stdout stays **byte-clean**. **No
+skill-drift tests** (D5 cut). The one genuinely-online exercise (Phase 9,
+OQ-8) runs outside the unit suite against the live PyPI endpoint on a throwaway
+cache, never in `pytest`.
 
 ## Success Criteria
 
 M21 is complete when:
 
-- [ ] A newer PyPI version produces **one** STDERR line naming both actions
-      (`pip install -U docs-cli`, then `docs install-skill --force`), at most
-      once per 24h; stdout (incl. `--json`) is byte-unchanged and the exit code
-      is byte-unchanged vs the same invocation today.
+- [ ] A newer PyPI version produces **one** STDERR line in the CLI-only wording
+      (`docs: update available <current> -> <latest> — run: pip install -U
+      docs-cli`), at most once per 24h; stdout (incl. `--json`) is byte-unchanged
+      and the exit code is byte-unchanged vs the same invocation today.
 - [ ] At most one network attempt per 24h (cache-gated); offline / timeout /
       non-200 / malformed-JSON / corrupt-cache all degrade to byte-identical
       behaviour + exit code, no traceback.
@@ -562,144 +595,39 @@ M21 is complete when:
       DEFERRED out of v1.7.0 — OQ-5/5a); `--json` stdout stays byte-clean.
 - [ ] The notice shows on **non-TTY** (the deliberate TTY inversion), verified
       by a piped-stderr test.
-- [ ] The offline skill-drift notice (D5 — IN, OQ-6) fires when the installed
-      skill differs from the bundled skill and is silent when in sync / the
-      install dir is absent or ambiguous — zero network.
-- [ ] The suite is fully offline (no real network call); the checker is
-      injectable/mockable.
-- [ ] `pyproject.toml` + packaging A3/B1/B2/C2 pins at `1.7.0`; a
-      `## 1.7.0 — UNRELEASED` CHANGELOG section authored; `docs --version` →
-      `docs 1.7.0`. NO publish, NO tag, NO GitHub release (a later milestone
-      publishes).
+- [ ] The suite is fully offline (no real network call; dispatch hook
+      hard-disabled in `tests/conftest.py`); the checker is injectable/mockable.
+- [ ] `pyproject.toml` + packaging A3/B1/B2/C2 pins at `1.7.0`; an `### Added`
+      entry **appended** to the existing `## 1.7.0 — UNRELEASED` CHANGELOG
+      section (no second 1.7.0 header); `docs --version` → `docs 1.7.0`. NO
+      publish, NO tag, NO GitHub release (a later milestone publishes).
 - [ ] `cli.md` / `convention.md` document the feature; bundled refs
       byte-identical (`test_skill_refs` GREEN); INDEX + frozen snapshot in
       lockstep.
-- [ ] Full suite GREEN (540 + new); quality gate clean tree-wide.
+- [ ] Full suite GREEN (543 + new); quality gate clean tree-wide.
 
 ## OPEN QUESTIONS
 
-**None outstanding.** All nine (OQ-1–OQ-9) are RESOLVED — conductor decisions
-2026-06-12, each per the recommended default — and recorded in Decisions ›
-"Resolved questions (OQ-1..OQ-9, BINDING)" above: OQ-1 (`main()` quiet/json
-read) → defensive `getattr`, no argparse refactor; OQ-2 (network timeout) →
-1.0s; OQ-3 (version compare, no `packaging` dep) → stdlib numeric tuple-compare
-on dot-split release segments, fail-closed on pre-release/local/unparseable;
-OQ-4 (do `--quiet`/`--json` warm the cache?) → YES, they suppress only the
-notice and still run the check; OQ-5 + 5a (config opt-out) → DEFER the
-user-level config file (env vars + CI suffice for v1.7.0), never `.docs.toml`,
-location settled for a future milestone; OQ-6 (ship the offline skill-drift
-notice D5?) → YES, ships IN M21 with its own third throttle key; OQ-7
-(dedicated `update_check.py` module) → ACCEPTED, with a Step-1 pressure-test
-flag against the single-file convention + the B3 wheel-contents test; OQ-8
-(Phase 9 online?) → one real read-only PyPI probe OUTSIDE pytest on a throwaway
-cache, suite stays 100% offline; OQ-9 (rolled-forward fold-ins) → fold NONE
-(the M20 workflow-skill-lint candidate stays a separate follow-on). The
-analysis below is retained as the historical record of the forks and why each
-was decided.
+**None outstanding.** The 2026-06-29 re-scope to CLI-only resolves or moots
+everything:
 
-Genuine scope/contract forks for the operator/conductor. Each: question, why
-it matters, recommended answer. (The draft is written against the recommended
-default for each, so resolving each per its recommendation moves no
-Scope/Deliverable/Phase text.)
+- The original OQ-1..OQ-9 are all RESOLVED (conductor decisions 2026-06-12,
+  each per the recommended default) and recorded in Decisions ›
+  "Resolved questions" — with one amendment: **OQ-6 (ship D5) is REVERSED to
+  NO** by the re-scope (D5 CUT; the skill story moved to M23).
+- The earlier dual-notice ordering question is **moot** — D5's cut leaves a
+  **single** notice.
+- The surviving planning-agent findings are folded in as resolved decisions:
+  the dedicated `update_check.py` module stands (OQ-7; B3 tolerates it); the
+  suite offline guard sets `DOCS_CLI_NO_UPDATE_CHECK=1` in `tests/conftest.py`;
+  the not-yet-existing-module import guard (`try/except ModuleNotFoundError`)
+  covers the Phase-2/4 RED baseline; cache timestamps are ISO-8601 UTC; the
+  baseline test count is **543** (not 540).
 
-- **OQ-1 — Where does the `main()` hook read `--quiet` / `--json` from?**
-  *Why it matters:* `--quiet` and `--json` are **per-verb** argparse flags
-  today, not global — not every parsed namespace carries `args.quiet` /
-  `args.json`. The notice hook in `main()` must read the *effective* quiet/json
-  state to honour D3, so it needs a uniform way to detect them across verbs.
-  *Recommendation:* read them defensively with `getattr(args, "quiet", False)`
-  / `getattr(args, "json", False)` in the hook (no argparse refactor); this is
-  the smallest change and covers every verb that has the flag. If a future
-  milestone promotes them to global flags, the hook needs no change. (Rejected:
-  promoting `--quiet`/`--json` to global flags now — a larger, orthogonal
-  surface change that would touch every verb's help and tests.)
-- **OQ-2 — Network timeout value.** *Why it matters:* too long adds latency to
-  the once-a-day network path on a slow/blocked network; too short produces
-  spurious misses. *Recommendation:* **1.0 second** connect+read timeout. The
-  check is best-effort and fail-silent, so a miss is harmless (the cache simply
-  isn't warmed and the next eligible run retries); 1.0s keeps even the
-  worst-case path snappy. (Surfaced because it is a tunable the operator may
-  have a preference on; alternatives 0.5s / 2.0s are all defensible.)
-- **OQ-3 — Version comparison routine (no `packaging` dep).** *Why it matters:*
-  the zero-dependency wheel forbids importing `packaging.version`. A naive
-  string compare is wrong (`1.10.0` < `1.9.0` lexically); we need PEP 440-ish
-  ordering with stdlib only, and must NOT nudge when running a pre-release or
-  `0.0.0+local`. *Recommendation:* a small stdlib tuple-compare on the
-  dot-split numeric release segments (`tuple(int(x) for x in
-  ver.split(".")[...])`), guarded so any unparseable / pre-release / local
-  version on **either** side fails closed (no notice). This covers docs-cli's
-  simple `MAJOR.MINOR.PATCH` scheme without a dependency. (Rejected: vendoring
-  a PEP 440 parser — overkill for a 3-segment scheme; adding `packaging` —
-  breaks the zero-dep wheel.)
-- **OQ-4 — Do `--quiet` / `--json` still warm the cache (run the check) while
-  suppressing the notice?** *Why it matters:* if `--quiet`/`--json` skip the
-  network too, an agent that *always* runs `--json` would never learn of an
-  update — defeating the agent-first purpose. If they warm the cache, the next
-  non-`--json` run can notify immediately. *Recommendation:* **`--quiet` and
-  `--json` suppress only the NOTICE, not the check** — they still warm the
-  cache (advance `last_check` / `latest_version`) so a later human-facing run
-  notifies without waiting another 24h. This differs from CI / the env vars /
-  the config opt-out, which skip the check **entirely** (those are "do not
-  touch the network at all" signals; `--quiet`/`--json` are "do not print"
-  signals). Flag prominently — this is the headline D3 sub-contract.
-- **OQ-5 — Config opt-out location: user-level config vs `.docs.toml`.**
-  *Why it matters:* `.docs.toml` is **per-tree**, but the update check is
-  **per-user** (the cache lives in `~/.cache`, the CLI is installed per-user).
-  A `.docs.toml` opt-out would only silence the notice inside that one tree and
-  would be wrong/absent when `docs` runs outside any tree. *Recommendation:* a
-  **user-level config** at `${XDG_CONFIG_HOME:-~/.config}/docs-cli/config.toml`
-  with `[update_check] enabled = false` (XDG-consistent with the cache path),
-  NOT `.docs.toml`. The env vars (`DOCS_CLI_NO_UPDATE_CHECK`, `DO_NOT_TRACK`)
-  are the primary per-user kill switches and may be sufficient on their own —
-  so a sub-fork is **OQ-5a: ship the config opt-out at all in M21, or rely on
-  the two env vars and defer the config file?** Recommended: **defer the config
-  file**; the two env vars + CI cover every realistic opt-out, and a new
-  user-level config file is a meaningfully larger surface (path resolution,
-  schema, precedence, tests) for marginal benefit. If the operator wants
-  belt-and-suspenders, adopt the user-level TOML above — **never** `.docs.toml`.
-- **OQ-6 — Ship the optional offline skill-drift notice (D5) in M21?**
-  *Why it matters:* it is genuinely independent of the network check (zero
-  network, different signal) and catches the exact host drift found 2026-06-12,
-  but it is a second notice with its own edge cases (install dir absent /
-  partially-installed / symlinked / a *newer* host skill than the bundled one).
-  *Recommendation:* **YES, ship it (recommend IN)** — it is cheap, zero-risk
-  (no network), reuses the same suppressed/throttled STDERR channel, and
-  directly addresses the motivating miss. Gate it behind the same suppression
-  matrix + a third throttle key (`last_skill_drift_notified`), and make every
-  ambiguous install state (absent dir, unreadable, newer-than-bundled) fall
-  **silent**. (If the operator prefers a tighter M21, defer D5 to a follow-on
-  and keep M21 to the network check only — the two are cleanly separable.)
-- **OQ-7 — New `src/docs_cli/update_check.py` module vs inline in `cli.py`.**
-  *Why it matters:* `cli.py` is already ~5200 lines; the update-check is a
-  cohesive, independently-testable unit (cache I/O, network hook, compare,
-  suppression, formatter) with a clean seam. *Recommendation:* a **dedicated
-  `src/docs_cli/update_check.py` module** — keeps the network surface, the
-  cache I/O, and the mock seam in one isolated place, and makes the
-  offline-test boundary obvious. `main()` calls one entry function. (The
-  bundled-wheel packaging already ships the whole `docs_cli` package, so a new
-  module needs no packaging change — but confirm `test_packaging.py`'s
-  wheel-contents assertions (B3) don't pin an exact module list. Rejected:
-  inline in `cli.py` — buries the network seam in the largest file.)
-- **OQ-8 — Is Phase 9 genuinely online, or offline like every prior
-  milestone?** *Why it matters:* every milestone to date mapped Phase 9 to
-  offline dogfooding (no network surface existed). M21 has a real online
-  surface for the first time, but the project's "suite stays fully offline"
-  invariant is sacred. *Recommendation:* **Phase 9 exercises the real network
-  ONCE, outside the unit suite** — a manual read-only probe against the live
-  `https://pypi.org/pypi/docs-cli/json` on a throwaway cache dir, plus an
-  offline end-to-end dogfood of the notice/throttle/suppression on the editable
-  `docs 1.7.0`. The `pytest` suite stays 100% offline (D6). If the operator
-  wants zero real network even in Phase 9, substitute a localhost stub server
-  (stdlib `http.server`) for the probe. (This narrows "how do we online-test
-  the first network feature without breaking the offline-suite invariant.")
-- **OQ-9 — Rolled-forward follow-on fold-ins (default: NONE).** *Why it
-  matters:* status.md lists v1.7+ candidates — the **workflow-skill /
-  bundled-skill drift lint** (an in-repo lint diffing workflow-skill
-  prescriptions against `references/`), plus the M19/M20 rolled-forward
-  candidates (`touch --check --json`; the repo adopting `[check] stale_days`).
-  *Recommendation:* **fold NONE silently.** The skill-drift **lint** is
-  *related in spirit* to D5's skill-drift *notice* but is a different artifact
-  (a repo-side CI lint vs a runtime user notice) — keep them separate; M21 is
-  the runtime notice only. The other two are unrelated to update-check. If the
-  operator judges the drift-lint a natural companion to D5, that is the one
-  candidate worth a fold-in conversation — surfaced here, **not** folded.
+The follow-on **M23 (agent-aware install-skill + recorded-dest skill-refresh
+hint)** owns the skill half of the original M21 idea — making `install-skill`
+agent-aware via `--dest`, recording the resolved dest, and then extending this
+notice's channel with a skill-refresh hint pointed at the recorded location.
+M23 carries its own genuine OPEN QUESTIONS (non-TTY default-vs-refuse; the
+state-file location; multiple recorded dests; final version number); they are
+**not** M21's to decide.
