@@ -31,18 +31,25 @@ Related:
   patch exception). Implementation milestone — builds 1.7.0 locally; the PyPI
   publish is a later operator-driven milestone (the M19→M20, M14+M15→M17
   pattern).
-- Progress: **Draft (re-scoped 2026-06-29; originally scaffolded
-  2026-06-12).** Re-scoped to **CLI-only** this session: the former
-  skill-drift notice (D5) is **CUT** and the dual-action nudge collapses to a
-  single CLI-update line (see Decisions › "Re-scope to CLI-only"). The skill
-  story — install where the agent actually uses it, then nudge a refresh at the
-  recorded location — moves to the follow-on **M23 (agent-aware install-skill +
-  recorded-dest skill-refresh hint)**. **Phases 1–4 complete (RED baseline,
-  2026-06-29)** on branch `m21/phases-1-4`: the contract is pinned in `cli.md`,
-  the RED tests are written (600 collected; 48 RED / 10 GREEN-at-baseline locks),
-  the prior suite is 542 GREEN + the deliberately-flipped A3 (RED), and 552 pass
-  (counts finalized by the 2026-06-29 fresh-eyes review fold-in — see the
-  impl-log). **Phase 5 (Update Base Interfaces) is next.**
+- Progress: **Implementation-complete (all 10 TDD phases done, 2026-06-29;
+  1.7.0 built locally — publish is a later milestone). Lifecycle `draft`.**
+  Re-scoped to **CLI-only** this session: the former skill-drift notice (D5) is
+  **CUT** and the dual-action nudge collapses to a single CLI-update line (see
+  Decisions › "Re-scope to CLI-only"). The skill story — install where the agent
+  actually uses it, then nudge a refresh at the recorded location — moves to the
+  follow-on **M23 (agent-aware install-skill + recorded-dest skill-refresh
+  hint)**. **Phases 1–4** (Contract + RED baseline) landed on branch
+  `m21/phases-1-4` (600 collected; 48 RED / 10 GREEN-at-baseline locks; 552
+  pass at baseline). **Phases 5–10** (implementation) landed on
+  `m21/phases-5-10`: the `src/docs_cli/update_check.py` seam + the `main()`
+  post-dispatch hook are implemented; `pyproject` is at **1.7.0** (`docs
+  --version` = `docs 1.7.0` after the editable reinstall); the **full suite is
+  600 GREEN** with the gate clean tree-wide (ruff / ruff format --check / mypy /
+  `docs check docs/`); the Phase-9 online path was verified against live PyPI
+  (real `urllib`) and dogfooded end-to-end (notice / both 24h throttles / the
+  full suppression matrix / `--json` byte-clean stdout / exit-code parity), with
+  pytest staying 100% offline. **NO publish, NO tag, NO GitHub release** — a
+  later operator-driven milestone publishes 1.7.0 to PyPI (the M19→M20 pattern).
   Depends on nothing; M22 ran ahead of M21 (operator run-order 2026-06-24) and
   is implementation-complete. Stays LIVE at root, lifecycle `draft`, until a
   later milestone sweeps it in (the M14/M15/M18/M19 completed-but-live
@@ -171,7 +178,7 @@ runtime inspection in M21.
 
 ### Deliverables
 
-- [ ] **D1 — Update check + state cache.** A mockable checker queries
+- [x] **D1 — Update check + state cache.** A mockable checker queries
       `https://pypi.org/pypi/docs-cli/json` (stdlib `urllib`, 1.0s timeout),
       compares `info.version` to `__version__`, and persists the three-key
       `{last_check, latest_version, last_notified}` (ISO-8601 UTC) to
@@ -179,23 +186,23 @@ runtime inspection in M21.
       attempt per 24h (cache-gated). Fail-silent on every error path
       (offline / timeout / non-200 / malformed JSON / corrupt cache) →
       byte-identical behaviour + exit code. Pinned by Phase-2 tests.
-- [ ] **D2 — Notification.** One STDERR line, ≤ once per 24h (separate
+- [x] **D2 — Notification.** One STDERR line, ≤ once per 24h (separate
       `last_notified` throttle), in the **CLI-only** reference wording
       (`pip install -U docs-cli`). Never on stdout; never alters the exit code.
       Pinned by Phase-2 tests (byte-exact notice text + stream +
       exit-code-unchanged on success AND failure verbs).
-- [ ] **D3 — Suppression matrix.** `--quiet`, `--json`, `CI`,
+- [x] **D3 — Suppression matrix.** `--quiet`, `--json`, `CI`,
       `DOCS_CLI_NO_UPDATE_CHECK`, and `DO_NOT_TRACK` each suppress the notice;
       `CI` + the two env vars also skip the network call (the user-level config
       opt-out is DEFERRED out of v1.7.0 — OQ-5/5a). Pinned by one Phase-2 test
       per path + a `--json` stdout-byte-clean lock.
-- [ ] **D4 — TTY inversion.** Notice shows on non-TTY (recorded as a binding
+- [x] **D4 — TTY inversion.** Notice shows on non-TTY (recorded as a binding
       Decision with precedent). Pinned by a non-TTY (piped-stderr) test that
       still sees the notice.
-- [ ] **~~D5 — Offline skill-drift notice.~~ CUT (2026-06-29)** — moved to
+- [x] **~~D5 — Offline skill-drift notice.~~ CUT (2026-06-29)** — moved to
       M23 (agent-aware install-skill + recorded-dest skill-refresh hint). No
       drift compare, no `last_skill_drift_notified` key, no drift tests in M21.
-- [ ] **D6 — Offline test harness.** The checker is injectable/mockable; the
+- [x] **D6 — Offline test harness.** The checker is injectable/mockable; the
       suite makes **no** real network call (dispatch hook hard-disabled in
       `tests/conftest.py` via `DOCS_CLI_NO_UPDATE_CHECK=1`). Tests pin: no
       network when cache fresh; both 24h throttles (check + notify,
@@ -203,7 +210,7 @@ runtime inspection in M21.
       verb incl. failures; malformed/corrupt cache handled silently; the
       byte-exact CLI-only notice format; and that `--json` stdout stays
       byte-clean.
-- [ ] **D7 — Docs / version plumbing.** Version → **1.7.0**
+- [x] **D7 — Docs / version plumbing.** Version → **1.7.0**
       (`pyproject.toml` + the `test_packaging.py` A3/B1/B2/C2 version pins, the
       A3-fast / B1-B2-C2-slow split per the M19 precedent); **APPEND** to the
       existing `## 1.7.0 — UNRELEASED` CHANGELOG section (opened by M22 — do
@@ -212,12 +219,12 @@ runtime inspection in M21.
       only; the config opt-out is DEFERRED, OQ-5/5a) contract sections;
       bundled-skill surface parity; `references/{cli,convention}.md`
       byte-identical.
-- [ ] **Surface-parity gate (Phase 10, plan.md "Ongoing conventions").** Run
+- [x] **Surface-parity gate (Phase 10, plan.md "Ongoing conventions").** Run
       `docs --help` / any changed verb `--help`; reconcile against the
       CHANGELOG surface; confirm the bundled skill documents the new env vars +
       notice; grep for stale wording. INDEX + frozen snapshot
       (`tests/fixtures/expected/docs-INDEX.md`) in lockstep throughout.
-- [ ] **Full suite GREEN** (current 543 + the new M21 tests); ruff / ruff
+- [x] **Full suite GREEN** (current 543 + the new M21 tests); ruff / ruff
       format --check / mypy / `docs check docs/` exit 0; bundled cli.md /
       convention.md byte-identical; `docs --version` → `docs 1.7.0`.
 
@@ -386,7 +393,7 @@ surfaces detail.
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
 - [x] Phase 9 — Implement Online/Integration
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions
 
@@ -588,28 +595,28 @@ cache, never in `pytest`.
 
 M21 is complete when:
 
-- [ ] A newer PyPI version produces **one** STDERR line in the CLI-only wording
+- [x] A newer PyPI version produces **one** STDERR line in the CLI-only wording
       (`docs: update available <current> -> <latest> — run: pip install -U
       docs-cli`), at most once per 24h; stdout (incl. `--json`) is byte-unchanged
       and the exit code is byte-unchanged vs the same invocation today.
-- [ ] At most one network attempt per 24h (cache-gated); offline / timeout /
+- [x] At most one network attempt per 24h (cache-gated); offline / timeout /
       non-200 / malformed-JSON / corrupt-cache all degrade to byte-identical
       behaviour + exit code, no traceback.
-- [ ] Every suppression path silences the notice; `CI` + `DOCS_CLI_NO_UPDATE_CHECK`
+- [x] Every suppression path silences the notice; `CI` + `DOCS_CLI_NO_UPDATE_CHECK`
       + `DO_NOT_TRACK` also skip the network call (the config opt-out is
       DEFERRED out of v1.7.0 — OQ-5/5a); `--json` stdout stays byte-clean.
-- [ ] The notice shows on **non-TTY** (the deliberate TTY inversion), verified
+- [x] The notice shows on **non-TTY** (the deliberate TTY inversion), verified
       by a piped-stderr test.
-- [ ] The suite is fully offline (no real network call; dispatch hook
+- [x] The suite is fully offline (no real network call; dispatch hook
       hard-disabled in `tests/conftest.py`); the checker is injectable/mockable.
-- [ ] `pyproject.toml` + packaging A3/B1/B2/C2 pins at `1.7.0`; an `### Added`
+- [x] `pyproject.toml` + packaging A3/B1/B2/C2 pins at `1.7.0`; an `### Added`
       entry **appended** to the existing `## 1.7.0 — UNRELEASED` CHANGELOG
       section (no second 1.7.0 header); `docs --version` → `docs 1.7.0`. NO
       publish, NO tag, NO GitHub release (a later milestone publishes).
-- [ ] `cli.md` / `convention.md` document the feature; bundled refs
+- [x] `cli.md` / `convention.md` document the feature; bundled refs
       byte-identical (`test_skill_refs` GREEN); INDEX + frozen snapshot in
       lockstep.
-- [ ] Full suite GREEN (543 + new); quality gate clean tree-wide.
+- [x] Full suite GREEN (543 + new); quality gate clean tree-wide.
 
 ## OPEN QUESTIONS
 

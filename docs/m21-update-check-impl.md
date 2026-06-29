@@ -23,8 +23,13 @@ test results, decisions.
 - Milestone: M21 — Update-check notification (PyPI new-version notice) (v1.7.0)
 - Started: 2026-06-12 (scaffolded — milestone-setup); TDD Phases 1–4 run
   2026-06-29.
-- Progress: **Phases 1–4 complete (RED baseline, 2026-06-29)** on branch
-  `m21/phases-1-4`; re-scoped to CLI-only 2026-06-29. Headline: `docs-cli`
+- Progress: **Implementation-complete — all 10 TDD phases done (2026-06-29);
+  1.7.0 built locally, publish is a later milestone. Lifecycle `draft`.**
+  Phases 1–4 (RED baseline) on `m21/phases-1-4`; Phases 5–10 (implementation)
+  on `m21/phases-5-10`. Full suite **600 GREEN**, gate clean tree-wide, `docs
+  --version` = `docs 1.7.0`; the online path verified against live PyPI +
+  dogfooded end-to-end (pytest stays 100% offline). Re-scoped to CLI-only
+  2026-06-29. Headline: `docs-cli`
   checks PyPI for a newer release and, once
   per 24h and fail-silent, emits ONE STDERR line nudging the user/agent to
   update **the CLI** (`pip install -U docs-cli`). This is the tool's **first
@@ -39,10 +44,11 @@ test results, decisions.
   2026-06-29); the skill story moves to the follow-on **M23**. Ships as **1.7.0
   locally** (minor bump — additive feature; 1.6.5 was the operator-decreed
   patch exception); the PyPI publish is a later operator-driven milestone
-  (M19→M20, M14+M15→M17 pattern). Depends on nothing. **Phases 1–4 done (RED
-  baseline, finalized by the 2026-06-29 fresh-eyes review fold-in: 600 collected;
-  48 RED [47 update-check + the deliberately-flipped A3] / 10 GREEN-at-baseline
-  locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed); Phase 5 next.**
+  (M19→M20, M14+M15→M17 pattern). Depends on nothing. **All 10 phases done
+  (2026-06-29): the RED baseline (600 collected; 48 RED [47 update-check + the
+  deliberately-flipped A3] / 10 GREEN-at-baseline locks; 552 passed) closed out
+  GREEN — Phase 6 turned the 47 RED → GREEN, Phase 7 bumped to 1.7.0 (A3 GREEN),
+  and the Phase-8 editable reinstall took the full suite to 600 GREEN.**
   OPEN QUESTIONS are netted out — **none outstanding** (the
   re-scope resolves or moots OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED). See the
   milestone doc's Decisions.
@@ -63,7 +69,7 @@ section tracks implementation progress, which is distinct.)
 | 7. Update Tool/Wrapper Layer | Done | 2026-06-29 | `pyproject.toml` `version` 1.6.5 → **1.7.0**; `test_packaging.py` B1/B2/C2 pins + docstrings flipped to 1.7.0 (C2 renamed `…_1_6_5` → `…_1_7_0`); `CHANGELOG.md` `### Added` block appended under the existing `## 1.7.0 — UNRELEASED` (one header, both `### Added` + M22's `### Documentation`); `SKILL.md` gained an "Update notices" section (advisory line + `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK`). `cli.md`/`convention.md` untouched (contract pinned Phase 1) → bundled refs stay byte-identical (`test_skill_refs` GREEN). A3 GREEN; gate clean. |
 | 8. Run Tests (GREEN) | Done | 2026-06-29 | Editable reinstall (`pip install -e .`) refreshed the dist-info → `importlib.metadata` reports 1.7.0. Full suite **600 passed**; `ruff check` / `ruff format --check` / `mypy` (43 files) clean; `docs check docs/` 0 violations; `docs index` a byte no-op; `docs --version` → `docs 1.7.0`. |
 | 9. Implement Online/Integration | Done | 2026-06-29 | Live read-only PyPI probe (real `urllib`) → `info.version = '1.6.5'` (the published version; local build is 1.7.0, ahead of it). No-mock real-network `docs list` → cache written `{last_check, latest_version: "1.6.5", last_notified: null}`, **no** notice (local ahead), exit 0. Forced-newer dogfood (fake latest 1.7.99 on the real editable build) confirmed: notice once on stderr (byte-exact), 24h notify-gate suppresses the 2nd run, CI / CI= / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` each skip network + notice, `--quiet` / `--json` warm the cache without notice, `--json` stdout stays parseable JSON, failing verb keeps exit 2 with the notice on stderr + findings on stdout. pytest stays 100% offline. |
-| 10. Quality, Docs, Refactor | Pending | — | — |
+| 10. Quality, Docs, Refactor | Done | 2026-06-29 | Closeout: Phase 5–10 impl-log entries + the phase table; milestone Phase Checklist (5–10), Deliverables (D1–D7 + surface-parity + full-suite), and Success Criteria all ticked; `status.md` / `plan.md` updated to "implementation-complete (1.7.0 built locally; publish is a later milestone)". Surface-parity gate run: `docs --help` + per-verb `--help` unchanged (no new flag — controls are env vars + existing `--quiet`/`--json`); the env-var table is present in `cli.md` (Phase 1) + `SKILL.md` (Phase 7); stale-wording grep clean (no `install-skill --force` / skill-drift in the product surface). INDEX regenerated + frozen snapshot in lockstep; lifecycle stays `draft` (no `docs archive`). LIGHT cleanups only — the `/simplify` pass is Step 3. |
 
 ## Provenance — where the scope came from
 
@@ -648,3 +654,49 @@ dogfooded end-to-end; cache / both 24h throttles / the full suppression matrix /
 NO publish, NO tag, NO GitHub release (a later milestone publishes). `pytest`
 remains 100% offline (the conftest `DOCS_CLI_NO_UPDATE_CHECK=1` guard + the
 injected `fetch_latest_version`).
+
+## Phase 10 — Quality, Docs, Refactor
+
+**Objective.** Close out the milestone: docs current, INDEX/snapshot in
+lockstep, the surface-parity gate run, lifecycle left `draft`.
+
+**Closeout edits.**
+
+- This impl-log carries the Phase 5–10 entries + the phase table (all rows
+  Done).
+- The milestone doc's **Phase Checklist** (5–10), **Deliverables** (D1–D7 +
+  surface-parity + full-suite; D5 stays struck-through/CUT → M23), and
+  **Success Criteria** are all ticked; the Overview Progress now reads
+  "implementation-complete (1.7.0 built locally; publish is a later milestone)".
+- `status.md` + `plan.md` (narrative + the milestone-table row) updated from
+  "Phases 1–4 / Phase 5 next" to "implementation-complete, lifecycle `draft`,
+  600 GREEN, `docs --version` = `docs 1.7.0`".
+
+**Surface-parity gate (plan.md "Ongoing conventions").**
+
+- `docs --help` + per-verb `--help`: **no new flag** (the update-check controls
+  are env vars + the existing `--quiet` / `--json`) → no `--help` diff;
+  `test_c3` unaffected.
+- The suppression env-var table is present in `cli.md` (Phase 1) **and**
+  `SKILL.md`'s "Update notices" section (Phase 7) — `DOCS_CLI_NO_UPDATE_CHECK`,
+  `DO_NOT_TRACK`, `CI` all named in both.
+- Stale-wording grep over the product surface (`src/`, `cli.md`,
+  `convention.md`, `CHANGELOG.md`): **no** `install-skill --force` dual-action
+  nudge wording, **no** `skill-drift` / `last_skill_drift_notified` (D5 was cut,
+  not deferred). (`install-skill`'s legitimate `--force` flag in the verbs table
+  is unrelated.)
+- `docs/cli.md` + `docs/convention.md` untouched in Phases 5–10 → the bundled
+  `references/{cli,convention}.md` mirrors stay byte-identical (`test_skill_refs`
+  GREEN). INDEX regenerated + `tests/fixtures/expected/docs-INDEX.md` in lockstep
+  throughout (each doc-touching commit confirmed `docs check docs/` exit 0 +
+  `docs index` a byte no-op).
+
+**Lifecycle.** Left `draft` — **no `docs archive`** (the M14/M15/M18/M19
+completed-but-live precedent). The pair stays live at root until a later
+milestone sweeps it in; the PyPI publish is a separate future milestone.
+
+**Refactor.** LIGHT cleanups only this step — the dedicated `/simplify` pass is
+Step 3 (a separate `m21/simplify` branch), deliberately not pre-empted.
+
+**Exit.** Gate green; docs current; INDEX == snapshot; lifecycle `draft`; ready
+for a future publish milestone.

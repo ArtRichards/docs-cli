@@ -59,14 +59,19 @@ note is a separate companion follow-on in the `agent-playbook-suite` repo
 [m22-root-placement-guidance-impl.md](m22-root-placement-guidance-impl.md);
 stays LIVE at root, lifecycle `active`, until a later milestone sweeps it in.
 
-**M21 — Update-check notification (PyPI new-version notice)** is in
-**implementation, lifecycle `draft`**: **TDD Phases 1–4 are complete (RED
-baseline, 2026-06-29)** on branch `m21/phases-1-4` — the contract is pinned in
-`cli.md`, the RED tests are written (600 collected; 48 RED / 10
-GREEN-at-baseline locks; the prior suite is 542 GREEN + the deliberately-flipped
-A3 (RED), 552 pass — counts finalized by the 2026-06-29 fresh-eyes review
-fold-in), and **Phase 5 (Update Base Interfaces) is next.** **Re-scoped to
-CLI-only 2026-06-29**
+**M21 — Update-check notification (PyPI new-version notice)** is
+**implementation-complete (1.7.0 built locally; publish is a later milestone),
+lifecycle `draft`**: **all 10 TDD phases are complete (2026-06-29)** —
+Phases 1–4 (RED baseline) on branch `m21/phases-1-4`, Phases 5–10 on
+`m21/phases-5-10`. The `update_check.py` seam (cache I/O, numeric fail-closed
+compare, injectable `urllib` fetch hook, suppression predicates, notice
+formatter) + the `main()` post-dispatch hook are implemented; `pyproject` is at
+**1.7.0** (editable reinstall → `docs --version` = `docs 1.7.0`); the full suite
+is **600 GREEN** with the gate clean tree-wide (ruff / ruff format --check /
+mypy / `docs check docs/`). The Phase-9 online path was verified against live
+PyPI (real `urllib`) and dogfooded end-to-end (notice / both 24h throttles /
+the full suppression matrix / `--json` byte-clean stdout / exit-code parity);
+pytest stays 100% offline. **Re-scoped to CLI-only 2026-06-29**
 (was "PyPI version check + skill-refresh nudge"): the former offline skill-drift
 notice (D5) and the dual-action `docs install-skill --force` half are **CUT**,
 and the skill story moves to the new follow-on **M23**. Headline: `docs-cli`
@@ -408,21 +413,22 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M21 Phases 1–4 are COMPLETE (RED baseline, 2026-06-29) —
-Phase 5 (Update Base Interfaces) is next.** **M21 — Update-check notification
-(PyPI new-version notice)** is in implementation (lifecycle `draft`) on branch
-`m21/phases-1-4`; **re-scoped to CLI-only 2026-06-29** (D5 skill-drift CUT;
-skill story → M23). The pair is [m21-update-check.md](m21-update-check.md) +
-[m21-update-check-impl.md](m21-update-check-impl.md). The contract is pinned in
-`cli.md`, the RED tests are written (600 collected; 48 RED / 10
-GREEN-at-baseline locks; the prior suite is 542 GREEN + the deliberately-flipped
-A3 (RED), 552 pass — counts finalized by the 2026-06-29 fresh-eyes review
-fold-in). OPEN QUESTIONS are netted
-out — **none outstanding** (the re-scope resolves or moots OQ-1..OQ-9; OQ-6's
-"ship D5" is REVERSED — see the milestone doc's Decisions › "Re-scope to
-CLI-only"); drive the remaining TDD phases via `/ship-milestone M21` (or
-phase-driven work). M21 builds **1.7.0** locally; a later operator-driven
-publish milestone (the M19→M20 pattern) ships it to PyPI. The follow-on **M23 — Agent-aware install-skill +
+**Next action:** **M21 is IMPLEMENTATION-COMPLETE (all 10 TDD phases done,
+2026-06-29; 1.7.0 built locally — publish is a later milestone).** **M21 —
+Update-check notification (PyPI new-version notice)** landed on branches
+`m21/phases-1-4` (RED baseline) + `m21/phases-5-10` (implementation);
+**re-scoped to CLI-only 2026-06-29** (D5 skill-drift CUT; skill story → M23).
+The pair is [m21-update-check.md](m21-update-check.md) +
+[m21-update-check-impl.md](m21-update-check-impl.md). The `update_check.py` seam
++ the `main()` hook are implemented; `pyproject` is at **1.7.0** (`docs
+--version` = `docs 1.7.0` after the editable reinstall); the full suite is
+**600 GREEN** with the gate clean tree-wide; the online path was verified
+against live PyPI and dogfooded end-to-end (pytest stays 100% offline). OPEN
+QUESTIONS are netted out — **none outstanding** (the re-scope resolves or moots
+OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED — see the milestone doc's Decisions ›
+"Re-scope to CLI-only"). The pair stays LIVE at root, lifecycle `draft`, until a
+later milestone sweeps it in; a later operator-driven publish milestone (the
+M19→M20 pattern) ships 1.7.0 to PyPI (NO publish / tag / release in M21). The follow-on **M23 — Agent-aware install-skill +
 recorded-dest skill-refresh hint** (draft) restores the skill-refresh nudge cut
 from M21 — pair [m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md)
 + [m23-agent-aware-install-skill-impl.md](m23-agent-aware-install-skill-impl.md).
