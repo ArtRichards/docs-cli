@@ -42,6 +42,16 @@ If no `.docs.toml` exists up-tree, `docs` silently falls back to the
 current directory as the implicit root. That cwd-fallback is convenient
 but easy to misuse — confirm with the user before any verb that writes.
 
+**Where to put `.docs.toml`.** A *project* is metadata (the `Project:`
+slug), **not a directory** — one root can hold many projects, and a
+single project needs no subdirectory. Put `.docs.toml` at the directory
+that will hold the docs so the root *is* the project: docs sit flat and
+the root-relative `Related:` paths stay clean. Don't create a parent
+root and nest a lone project one level down — every sibling reference
+then carries a **redundant** `<subdir>/` prefix. Group genuinely
+separate bodies of work by `Project:` metadata, not by folder. See
+[`references/convention.md`](references/convention.md) "Where to put".
+
 ## The verbs
 
 | Task | Verb | Key flags / behaviour |

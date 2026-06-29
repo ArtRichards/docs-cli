@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-06-24
 
 Related:
 - pairs-with: plan.md
@@ -32,9 +32,34 @@ Related:
 
 ## Current milestone
 
+**M22 — Doc-tree root placement guidance (project ≠ directory)** is
+**implementation-complete (2026-06-24)** — all ten TDD phases done; full
+suite 543 GREEN, ruff/format/mypy clean, `docs check docs/` exit 0; Phase-9
+dogfood empirically reproduced the redundant-prefix consequence. It **stays
+LIVE at root, lifecycle `active`**, to be swept into the archive at the next
+publish closeout (the M18/M19/M21 + M16 precedent — feature/skill milestones
+ride live until a later milestone archives them). A documentation-only,
+M16-shaped milestone (no CLI/code
+change, no version bump): it adds "where to put `.docs.toml`" guidance to
+`convention.md` §Subdirectories and the bundled `SKILL.md`, making explicit
+that `Project:` is a metadata slug — **not** a directory — and that because
+`Related:` paths are root-relative, nesting a lone project beneath a parent
+root prefixes every intra-project sibling reference with a redundant
+`<subdir>/`. Default: a single project's docs root is the project's own
+directory (root = project, docs flat, clean refs); reserve per-project
+subdirs under one shared root for genuinely multi-project trees. Scoped to
+run **before** M21 (operator decision 2026-06-24 — run-order before M21, no
+renumber; milestone numbers here are creation-order, not execution order, as
+M14+M15→M17 / M18+M19→M20 already show). The matching `project-foundation`
+note is a separate companion follow-on in the `agent-playbook-suite` repo
+(tracked with the workflow-skill drift-lint follow-on). Pair:
+[m22-root-placement-guidance.md](m22-root-placement-guidance.md) +
+[m22-root-placement-guidance-impl.md](m22-root-placement-guidance-impl.md);
+stays LIVE at root, lifecycle `active`, until a later milestone sweeps it in.
+
 **M21 — Update-check notification (PyPI version check + skill-refresh nudge)**
-is the current milestone, in **milestone-setup / draft (2026-06-12)** — the
-pair is scaffolded; **no TDD phase has started.** Headline: `docs-cli` checks
+remains scaffolded in **milestone-setup / draft (2026-06-12)**, queued behind
+M22 — the pair is scaffolded; **no TDD phase has started.** Headline: `docs-cli` checks
 PyPI for a newer release and, once per 24h and **fail-silent**, emits ONE
 STDERR line nudging the user/agent to update **both** the CLI
 (`pip install -U docs-cli`) and their installed skills
@@ -602,6 +627,7 @@ for the milestone summary.
 | M19 — Post-edit validation ergonomics (touch --check + configurable stale window) (v1.6.5) | **Complete** (2026-06-12; feature milestone — `docs touch --check [--stale N]` folds the existing `check_tree` into the touch loop after the end-of-batch reindex; `.docs.toml [check] stale_days = N` makes the stale window per-tree configurable (CLI `--stale` overrides); cosmetic `docs new --body-from` help-string fix closes the rolled-forward follow-on. No new verb, no new check rule; additive + backward-compatible. **Shipped to PyPI as `docs-cli==1.6.5` via M20 on 2026-06-12.** Q1–Q6 + OQ-1..OQ-5 RESOLVED; threshold-provenance folded into D2. Full suite 540/540 GREEN (533 + the Step-2 review +7), gate clean tree-wide, `docs --version` → `docs 1.6.5`. The M19 pair was archived to `archive/2026-06-12/` at the M20 closeout) | [Plan](archive/2026-06-12/m19-post-edit-validation.md) | [Log](archive/2026-06-12/m19-post-edit-validation-impl.md) |
 | M20 — PyPI publish 1.6.5 | **Complete** (2026-06-12; `docs-cli==1.6.5` on PyPI, the publish-only counterpart to M19 one-to-one as M13 shipped M12; `v1.6.5` annotated tag at the Phase-4 commit `0855466` + GitHub release; chain-of-custody **bit-perfect for both wheel AND sdist** (wheel `aba36e92…`, sdist `f9de1eb4…`); all M19 headline contracts hold against the PyPI-served wheel; ran the [release-runbook.md](release-runbook.md) on `main` (M17 precedent — no TDD code phases). NEW vs M17: the Phase-5 closeout refreshed the host-machine skills (`docs install-skill --force` + a workflow-skill sweep that caught + fixed one stale `--body-from` reference in `project-foundation`) per the CLAUDE.md skill-update-flow policy. Q1 → FULL AUTONOMOUS, Q2 → archive the M18 + M19 pairs + M20's own milestone doc to `archive/2026-06-12/`; the M20 impl log stays `Lifecycle: active`) | [Plan](archive/2026-06-12/m20-pypi-publish.md) | [Log](m20-pypi-publish-impl.md) |
 | M21 — Update-check notification (PyPI version check + skill-refresh nudge) (v1.7.0) | **Draft / milestone-setup** (2026-06-12; scaffolded, **no TDD phase started**) — feature milestone introducing docs-cli's **first network surface**: a once-per-24h, fail-silent PyPI version check (stdlib `urllib` only, short timeout, 24h-cache-gated, zero-dependency wheel preserved) that emits ONE STDERR line nudging the user/agent to update **both** the CLI (`pip install -U docs-cli`) and their installed skills (`docs install-skill --force`). STDERR-only, never alters the exit code, suppressed under `--quiet`/`--json`/`CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK` (the user-level config opt-out is DEFERRED out of v1.7.0 — OQ-5/5a), but **deliberately shows on non-TTY** (inverting gh's TTY rule — the agent is the actor). Zero-network skill-drift notice (D5) ships IN (OQ-6). Ships as **1.7.0** (minor — additive; 1.6.5 was the operator-decreed patch exception); a later milestone publishes (M19→M20 pattern). **OQ-1..OQ-9 RESOLVED** (conductor decisions 2026-06-12, each per the recommended default); milestone-setup complete, Phase 1 next. Stays LIVE at root, lifecycle `draft`. | [Plan](m21-update-check.md) | [Log](m21-update-check-impl.md) |
+| M22 — Doc-tree root placement guidance (project ≠ directory) | **Implementation complete** (2026-06-24; all ten TDD phases; documentation-only, M16-shaped — no CLI/code change, no version bump; convention.md §Subdirectories + bundled SKILL.md "where to put `.docs.toml`" guidance: `Project:` is metadata not a directory, and root-relative `Related:` makes a nested lone project prefix every sibling ref; RED-first `tests/test_skill_root_placement.py`; bundled reference mirrored byte-identical; dogfood-snapshot refreshed; CHANGELOG staged under 1.7.0 UNRELEASED. Full suite 543 GREEN, gate clean, Phase-9 dogfood reproduced the redundant-prefix consequence. Ran **before** M21 per the operator's run-order decision 2026-06-24 — number = creation order, not execution order. **Stays LIVE at root, lifecycle `active`** until the next publish closeout sweeps it, M18/M19/M21 + M16 precedent. Companion `project-foundation` note tracked separately in `agent-playbook-suite`) | [Plan](m22-root-placement-guidance.md) | [Log](m22-root-placement-guidance-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
