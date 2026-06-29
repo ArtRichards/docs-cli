@@ -50,7 +50,7 @@ section tracks implementation progress, which is distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Done | 2026-06-29 | `cli.md` §Update check + §Output-conventions note; bundled `cli.md` mirror resynced byte-identical; INDEX + frozen snapshot refrozen (single delta = `cli.md` `Updated:` bump); `convention.md` untouched. 543 GREEN. |
-| 2. Write Tests (RED) | Pending | — | — |
+| 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests: unit seam + in-process dispatch + Q7 spec-lock + inline builders); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598; gate clean. |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
@@ -244,3 +244,43 @@ exit 0 and `docs index --root docs/ --dry-run` a byte no-op before commit.
 **Test state.** The pre-existing 543 stay GREEN (`test_skill_refs` +
 `test_index_output_matches_frozen_snapshot` included). No tests added this
 phase (Phase 2).
+
+## Phase 2 — Write Tests (RED)
+
+**Objective.** Express the Phase-1 contract as failing tests, split by layer,
+all behind the mock seam (no real network) so the suite stays 100% offline.
+
+**Files changed.**
+
+- `tests/test_update_check.py` (NEW, 55 tests) — guarded import
+  (`importlib.import_module("docs_cli.update_check")` → `uc`, `None` until
+  Phase 5; `importlib` + `uc: Any` keeps mypy clean before AND after the module
+  exists). UNIT tests (each opens `assert uc is not None, "<not-impl>"`):
+  `is_newer` (numeric, fail-closed on local / pre-release / unparseable),
+  `format_notice` (byte-exact, no trailing `\n`), cache path + I/O (XDG-aware;
+  missing / corrupt / malformed → no-data; three-key round-trip with no fourth
+  key; parent-dir creation; unwritable → swallow `OSError`), the two 24h
+  throttles + their independence, the `fetch_latest_version` hook (monkeypatched
+  `urllib`: 200 → version + asserts the PyPI URL & `timeout=1.0`; URLError /
+  timeout / HTTPError 500 / malformed body → `None`), and the
+  `notice_suppressed` / `network_suppressed` predicates (defensive `getattr`;
+  `--quiet`/`--json` warm the cache; `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/
+  `DO_NOT_TRACK` skip the network). DISPATCH tests (`cli.main([...])` in-process
+  + capsys; `_prep_dispatch` delenvs the suppression vars + points
+  `XDG_CACHE_HOME` at tmp; a `_FetchSpy` that lives outside `uc` so call-counts
+  hold at the RED baseline): intended-RED notice/cache-effect tests + GREEN-at-
+  baseline absence locks.
+- `tests/conftest.py` — module-level `os.environ["DOCS_CLI_NO_UPDATE_CHECK"]="1"`
+  (D6 offline guard; inert at baseline, inherited by every subprocess child).
+- `tests/test_packaging.py` — A3 only: renamed `test_a3_project_version_is_1_6_5`
+  → `_1_7_0`, asserting `1.7.0` (RED until the Phase-7 pyproject bump; B1/B2/C2
+  stay `1.6.5`).
+
+**Mock seam.** No real network anywhere: the fetch unit tests monkeypatch
+`urllib.request.urlopen`; the dispatch tests inject `_FetchSpy` onto
+`uc.fetch_latest_version` (a no-op while `uc is None`) and never reach PyPI.
+
+**Quality gate.** Tree-wide clean at the RED baseline — ruff / ruff format
+--check / mypy all pass (the guarded `importlib` import + `uc: Any` avoids the
+`import-not-found` mypy error the literal `from docs_cli import update_check`
+form would raise).

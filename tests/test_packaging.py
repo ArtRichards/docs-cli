@@ -97,17 +97,21 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_1_6_5() -> None:
-    """A3: `[project].version` is `1.6.5` (M19).
+def test_a3_project_version_is_1_7_0() -> None:
+    """A3: `[project].version` is `1.7.0` (M21).
 
-    M19 Phase 7 bumps the pyproject `version` string from 1.6.0 to 1.6.5
+    M21 Phase 7 bumps the pyproject `version` string from 1.6.5 to 1.7.0
     (the single version source of truth; `__version__` reads it via
-    `importlib.metadata`). 1.6.5 is built locally — a later milestone
-    publishes (the M12→M13, M14+M15→M17 pattern).
+    `importlib.metadata`). The update-check notice is an additive feature, so
+    a minor bump is the right SemVer bucket. 1.7.0 is built locally — a later
+    milestone publishes (the M19→M20, M14+M15→M17 pattern).
+
+    Intended RED reason (Phase 4): pyproject still says `version = "1.6.5"`;
+    Phase 7 bumps it to 1.7.0 in lockstep with the B1/B2/C2 pins.
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "1.6.5", (
-        f"[project].version must be '1.6.5'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "1.7.0", (
+        f"[project].version must be '1.7.0'; got {data['project']['version']!r}"
     )
 
 
