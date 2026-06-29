@@ -40,8 +40,10 @@ test results, decisions.
   locally** (minor bump — additive feature; 1.6.5 was the operator-decreed
   patch exception); the PyPI publish is a later operator-driven milestone
   (M19→M20, M14+M15→M17 pattern). Depends on nothing. **Phases 1–4 done (RED
-  baseline: 598 collected, 47 RED / 9 GREEN-at-baseline locks, prior 543 GREEN);
-  Phase 5 next.** OPEN QUESTIONS are netted out — **none outstanding** (the
+  baseline, finalized by the 2026-06-29 fresh-eyes review fold-in: 600 collected;
+  48 RED [47 update-check + the deliberately-flipped A3] / 10 GREEN-at-baseline
+  locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed); Phase 5 next.**
+  OPEN QUESTIONS are netted out — **none outstanding** (the
   re-scope resolves or moots OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED). See the
   milestone doc's Decisions.
 
@@ -53,9 +55,9 @@ section tracks implementation progress, which is distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Done | 2026-06-29 | `cli.md` §Update check + §Output-conventions note; bundled `cli.md` mirror resynced byte-identical; INDEX + frozen snapshot refrozen (single delta = `cli.md` `Updated:` bump); `convention.md` untouched. 543 GREEN. |
-| 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests: unit seam + in-process dispatch + Q7 spec-lock + inline builders); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598; gate clean. |
+| 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests at the Phase-2 run; the 2026-06-29 fresh-eyes review fold-in later added +2 → **57**: a `--version`-absence GREEN lock, a `should_notify` no-cache RED unit, and a hardened failing-verb assertion — see the review fold-in note); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598 (600 post-review); gate clean. |
 | 3. Create Data/Fixtures | Done | 2026-06-29 | Inline, date-independent `tmp_path` builders in `tests/test_update_check.py`; no committed dated fixtures (the frozen `docs-INDEX.md` stays the only committed fixture). |
-| 4. Run Tests (RED Baseline) | Done | 2026-06-29 | 598 collected; 47 RED (46 update-check + A3 flip), 9 GREEN-at-baseline locks; prior 543 intact (542 + 9 new green = 551 passed). Every RED a clean classified assertion; gate clean tree-wide. |
+| 4. Run Tests (RED Baseline) | Done | 2026-06-29 (finalized by the review fold-in same day) | **600 collected; 48 RED (47 update-check + A3 flip), 10 GREEN-at-baseline locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed** (542 prior + 10 new green). Every RED a clean classified assertion; gate clean tree-wide. |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
@@ -320,19 +322,24 @@ GREEN-at-baseline, and capture the baseline count.
 **Commands.**
 
 ```sh
-.venv/bin/python -m pytest tests/ -q          # 47 failed, 551 passed (598 total)
-.venv/bin/python -m pytest tests/test_update_check.py -q   # 46 failed, 9 passed
+.venv/bin/python -m pytest tests/ -q          # 48 failed, 552 passed (600 total)
+.venv/bin/python -m pytest tests/test_update_check.py -q   # 47 failed, 10 passed
 ```
+
+(Counts are the finalized baseline after the 2026-06-29 fresh-eyes review
+fold-in added +2 tests — see the review fold-in note. The original Phase-4 run
+collected 598: 47 RED / 9 GREEN-at-baseline / 551 passed.)
 
 **Baseline counts.**
 
-- **598** collected (= prior 543 + 55 new).
-- **47 RED**: 46 in `test_update_check.py` (unit + intended-RED dispatch) + the
+- **600** collected (= prior suite 543 + 57 new in `test_update_check.py`).
+- **48 RED**: 47 in `test_update_check.py` (unit + intended-RED dispatch) + the
   single A3 flip (`test_a3_project_version_is_1_7_0`).
-- **9 GREEN-at-baseline** (new regression locks): the Q7 spec-lock + 8 dispatch
-  absence tests.
-- The prior 543 stay GREEN, except the deliberately-flipped A3 (542 prior pass
-  + 9 new green = 551 passed).
+- **10 GREEN-at-baseline** (new regression locks): the Q7 spec-lock + 9 dispatch
+  absence tests (incl. the `--version`-absence lock).
+- The prior suite is **542 GREEN + the deliberately-flipped A3 (RED)**; total
+  passed is **552** (542 prior + 10 new green). Reconciles: 542 + 1 (A3) + 57
+  new = 600 collected; 48 RED + 552 GREEN = 600.
 
 **RED-vs-GREEN classification (the contract for this phase).**
 
@@ -340,7 +347,7 @@ GREEN-at-baseline, and capture the baseline count.
 |---|---|---|
 | all unit tests (`is_newer`, `format_notice`, cache I/O, throttles, fetch, suppression) | RED | `AssertionError: update_check module not yet implemented (Phase 5)` (`uc is None`) |
 | `test_dispatch_newer_emits_one_stderr_notice` | RED | empty stderr — `''.endswith(notice)` is False (no hook yet) |
-| `test_dispatch_failing_verb_keeps_exit_code_and_shows_notice` | RED | `code == 2` holds; empty stderr fails the notice assertion |
+| `test_dispatch_failing_verb_keeps_exit_code_and_shows_notice` (hardened, FI-3) | RED | `code == 2` and the additive guard (`"error:" in out.out` — `check` prints findings to **stdout**) both hold; empty stderr fails the notice-present assertion. The own-line guard (`before == "" or before.endswith("\n")`) is unreached at baseline |
 | `test_dispatch_stale_check_fetches_once_and_advances_last_check` | RED | `spy.calls == 0 != 1` (no hook calls the fetch) |
 | `test_dispatch_notify_throttle_is_independent_of_check` | RED | `spy.calls == 0 != 1` |
 | `test_dispatch_quiet_warms_cache_without_notice` | RED | `after is None` (no cache file written) |
@@ -348,6 +355,8 @@ GREEN-at-baseline, and capture the baseline count.
 | `test_dispatch_non_tty_still_sees_notice` | RED | non-TTY asserted true; empty stderr fails the notice assertion |
 | `test_a3_project_version_is_1_7_0` | RED | `AssertionError` — pyproject still `1.6.5` |
 | `test_cli_md_pins_notice_template_and_suppression_env_vars` (Q7 lock) | GREEN | Phase 1 pinned the template + env vars in cli.md |
+| `test_dispatch_version_flag_never_emits_notice` (FI-2) | GREEN | `docs --version` SystemExits in argument parsing, before the post-dispatch hook → no notice (trivially silent now; a real hook-placement lock once Phase 5/6 lands) |
+| `test_should_notify_true_when_no_cache` (FI-4) | RED | unit — `AssertionError: update_check module not yet implemented (Phase 5)` (`uc is None`); symmetric to `should_check`'s no-cache case |
 | `test_dispatch_same_version_is_silent` / `_older_latest_is_silent` / `_offline_*` | GREEN | tool emits no notice today (no hook) |
 | `test_dispatch_fresh_cache_skips_network` / `_ci_env_*` / `_no_update_check_env_*` / `_do_not_track_env_*` | GREEN | `spy.calls == 0` (fetch never installed/called at baseline) |
 | `test_dispatch_json_keeps_stdout_clean_and_suppresses_notice` | GREEN | `list --json` already emits byte-clean JSON, no notice |
@@ -355,6 +364,56 @@ GREEN-at-baseline, and capture the baseline count.
 **Verification.** Sampled the RED tracebacks: unit → the not-impl assertion;
 dispatch → `AssertionError` on empty stderr / `spy.calls` / `after is None`;
 A3 → `AssertionError`. No tracebacks, no collection errors, no argparse exit-2.
-Confirmed the only non-`test_update_check` failure is the A3 flip, and the 9
+Confirmed the only non-`test_update_check` failure is the A3 flip, and the 10
 GREEN-at-baseline locks pass. The quality gate (ruff / ruff format --check /
 mypy) is clean tree-wide at the RED baseline.
+
+## Fresh-eyes review fold-in (Step 1 finalize, 2026-06-29)
+
+An independent fresh-eyes review found Step 1 sound — no blockers, no
+correctness bugs (it verified the baseline numbers, the byte-exact notice, the
+three-key cache with no leftover `last_skill_drift_notified`, `convention.md`
+untouched, INDEX/snapshot lockstep, the full D5 cut, and that the Phase-2 tests
+genuinely pin the contract). The conductor triaged its findings into four
+binding fold-ins, all auto-resolved (no operator decision pending), applied
+here as **test additions + test hardening + doc-accuracy fixes only** — the
+implementation module `src/docs_cli/update_check.py` is still deliberately
+absent (Phase 5). The classified RED baseline is preserved.
+
+- **FI-1 (doc accuracy).** The rolled-up baseline one-liners overstated the
+  green count: "prior 543 GREEN" alongside "47 RED / 9 GREEN-at-baseline"
+  double-counted the A3 test (it is one of the 47 RED **and** part of the prior
+  543), implying 599 collected vs the 598 actually collected. Reconciled
+  everywhere the loose phrasing appeared (this impl-log's Overview + Phase-4
+  entry/table, `status.md`, `plan.md`, and the milestone doc's Progress) to the
+  recomputed numbers: **prior suite 542 GREEN + the deliberately-flipped A3
+  (RED); 57 new = 47 RED + 10 GREEN-at-baseline locks; 600 collected; 552
+  passed.**
+- **FI-2 (test-hardening — Q10 lock elevated to should-fix).** Added
+  `test_dispatch_version_flag_never_emits_notice`: with the offline guard
+  cleared and `fetch_latest_version` returning a strictly-newer version,
+  `docs --version` (which SystemExits inside argument parsing, before the
+  post-dispatch hook) emits **no** notice on stderr. GREEN-at-baseline (no hook
+  yet → trivially silent); a real hook-placement lock once Phase 5/6 lands. The
+  pre-existing `docs --version` test only inspected stdout, so a hook-placement
+  regression would have been uncaught.
+- **FI-3 (test-hardening).** Hardened
+  `test_dispatch_failing_verb_keeps_exit_code_and_shows_notice` so a hook that
+  (a) clobbered the command's own output or (b) glued the notice onto a prior
+  line could no longer pass. `docs check` prints its findings to **stdout**
+  (stderr is empty until the notice lands), so the additive guard asserts the
+  findings survive on stdout (`"error:" in out.out`); the own-line guard asserts
+  what precedes the notice on stderr is either nothing or ends in a newline
+  (`before == "" or before.endswith("\n")`). Still intended-RED at baseline —
+  the notice-present assertion (`out.err.endswith(notice)`) drives the RED.
+- **FI-4 (test completeness).** Added `test_should_notify_true_when_no_cache`,
+  the symmetric no-prior-notice unit case for `should_notify` (mirrors
+  `should_check`'s no-cache case). RED-at-baseline via the `uc is None` guard.
+
+**Re-run after the fold-ins:** `.venv/bin/python -m pytest tests/ -q` →
+**48 failed, 552 passed (600 collected)**; `tests/test_update_check.py` →
+47 failed, 10 passed (57 tests). Every RED is a clean classified assertion
+(unit → the not-impl guard; intended-RED dispatch → empty-stderr notice /
+`spy.calls` / `after is None`; A3 → pyproject still `1.6.5`) — no tracebacks, no
+collection errors, no argparse exit-2. Quality gate clean tree-wide (ruff / ruff
+format --check / mypy / `docs check docs/`).

@@ -32,6 +32,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from docs_cli import cli
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -332,6 +334,11 @@ def test_should_check_true_after_24h():
     assert uc.should_check(uc.Cache(last_check=_iso_hours_ago(25))) is True
 
 
+def test_should_notify_true_when_no_cache():
+    assert uc is not None, _NOT_IMPL
+    assert uc.should_notify(uc.Cache()) is True
+
+
 def test_should_notify_false_within_24h():
     assert uc is not None, _NOT_IMPL
     assert uc.should_notify(uc.Cache(last_notified=_iso_hours_ago(1))) is False
@@ -505,8 +512,19 @@ def test_dispatch_failing_verb_keeps_exit_code_and_shows_notice(
     _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
     code = cli.main(["check", str(tree)])
     out = capsys.readouterr()
+    notice = _expected_notice("1.7.1")
     assert code == 2  # the notice never changes the exit code
-    assert out.err.endswith(_expected_notice("1.7.1"))
+    # ADDITIVE, not a replacement: the verb's own diagnostic output survives.
+    # `docs check` prints its findings to STDOUT (stderr stays empty until the
+    # notice lands), so the additive guard targets stdout — a hook that
+    # clobbered the command's output would drop these findings.
+    assert "error:" in out.out  # the check findings still print
+    assert out.err.endswith(notice)  # notice is the last stderr line, byte-exact + \n
+    # ...and it sits on its OWN line: what precedes the notice on stderr is
+    # either nothing (stderr is only the notice) or ends in a newline — never
+    # glued onto a prior stderr line without a separator.
+    before = out.err[: -len(notice)]
+    assert before == "" or before.endswith("\n")
 
 
 def test_dispatch_stale_check_fetches_once_and_advances_last_check(
@@ -588,6 +606,21 @@ def test_dispatch_non_tty_still_sees_notice(monkeypatch, capsys, tmp_path, fixtu
 # ---------------------------------------------------------------------------
 # Dispatch — GREEN at baseline (absence the tool already exhibits; regression locks)
 # ---------------------------------------------------------------------------
+
+
+def test_dispatch_version_flag_never_emits_notice(monkeypatch, capsys, tmp_path):
+    """`docs --version` SystemExits inside argument parsing — before the
+    post-dispatch hook — so it never emits the update notice, even with the
+    offline guard cleared and a strictly-newer version available. GREEN at
+    baseline (no hook exists yet → trivially silent); becomes a real
+    hook-placement lock once the Phase-5/6 post-dispatch hook lands.
+    """
+    _prep_dispatch(monkeypatch, tmp_path)
+    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))  # strictly newer than CURRENT
+    with pytest.raises(SystemExit):
+        cli.main(["--version"])  # argparse version action exits before dispatch
+    out = capsys.readouterr()
+    assert "docs: update available" not in out.err
 
 
 def test_dispatch_same_version_is_silent(monkeypatch, capsys, tmp_path, fixtures_dir):

@@ -39,8 +39,10 @@ Related:
   recorded location — moves to the follow-on **M23 (agent-aware install-skill +
   recorded-dest skill-refresh hint)**. **Phases 1–4 complete (RED baseline,
   2026-06-29)** on branch `m21/phases-1-4`: the contract is pinned in `cli.md`,
-  the RED tests are written (598 collected; 47 RED / 9 GREEN-at-baseline locks),
-  and the prior 543 stay GREEN. **Phase 5 (Update Base Interfaces) is next.**
+  the RED tests are written (600 collected; 48 RED / 10 GREEN-at-baseline locks),
+  the prior suite is 542 GREEN + the deliberately-flipped A3 (RED), and 552 pass
+  (counts finalized by the 2026-06-29 fresh-eyes review fold-in — see the
+  impl-log). **Phase 5 (Update Base Interfaces) is next.**
   Depends on nothing; M22 ran ahead of M21 (operator run-order 2026-06-24) and
   is implementation-complete. Stays LIVE at root, lifecycle `draft`, until a
   later milestone sweeps it in (the M14/M15/M18/M19 completed-but-live
