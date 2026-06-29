@@ -60,7 +60,7 @@ section tracks implementation progress, which is distinct.)
 | 4. Run Tests (RED Baseline) | Done | 2026-06-29 (finalized by the review fold-in same day) | **600 collected; 48 RED (47 update-check + A3 flip), 10 GREEN-at-baseline locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed** (542 prior + 10 new green). Every RED a clean classified assertion; gate clean tree-wide. |
 | 5. Update Base Interfaces | Done | 2026-06-29 | New `src/docs_cli/update_check.py` (Cache + leaf helpers fully implemented; `maybe_notify` a declared no-op until Phase 6); `cli.py` extracts `_dispatch(args)` and reduces `main()` to dispatch → `maybe_notify(args, os.environ, __version__)` → return. All 40 unit tests GREEN; 7 orchestration dispatch tests + A3 stay RED (8 failed / 592 passed); gate clean. |
 | 6. Implement Offline/Core Path | Done | 2026-06-29 | Implemented `maybe_notify` (broad fail-silent net) + `_check_and_notify` (network-suppress short-circuit → cache read → 24h-gated fetch → `is_newer` + notice-suppress + 24h notify-gate → STDERR emit → write on fetch-or-emit) + `_now_iso`. All 47 RED dispatch+unit → GREEN; 10 locks stay GREEN. Full suite **1 failed (A3 only), 599 passed**; gate clean. |
-| 7. Update Tool/Wrapper Layer | Pending | — | — |
+| 7. Update Tool/Wrapper Layer | Done | 2026-06-29 | `pyproject.toml` `version` 1.6.5 → **1.7.0**; `test_packaging.py` B1/B2/C2 pins + docstrings flipped to 1.7.0 (C2 renamed `…_1_6_5` → `…_1_7_0`); `CHANGELOG.md` `### Added` block appended under the existing `## 1.7.0 — UNRELEASED` (one header, both `### Added` + M22's `### Documentation`); `SKILL.md` gained an "Update notices" section (advisory line + `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK`). `cli.md`/`convention.md` untouched (contract pinned Phase 1) → bundled refs stay byte-identical (`test_skill_refs` GREEN). A3 GREEN; gate clean. |
 | 8. Run Tests (GREEN) | Pending | — | — |
 | 9. Implement Online/Integration | Pending | — | — |
 | 10. Quality, Docs, Refactor | Pending | — | — |
@@ -518,3 +518,42 @@ RED is `test_a3_project_version_is_1_7_0` (pyproject still `1.6.5` until Phase
 7's bump; expected, not a regression). No network touched in-suite (the conftest
 guard + the injected `fetch_latest_version`). Gate clean: `ruff check` / `ruff
 format --check` / `mypy` (43 source files) all pass.
+
+## Phase 7 — Update Tool/Wrapper Layer
+
+**Objective.** Flip the version/packaging surface to 1.7.0 and reconcile the
+CHANGELOG + bundled skill — no new argparse flag (the controls are env vars +
+the existing `--quiet` / `--json`), so `docs --help` / per-verb `--help` are
+unchanged.
+
+**Files changed.**
+
+- `pyproject.toml` — `[project].version` `1.6.5` → **`1.7.0`** (the minor bump;
+  `importlib.metadata` stays the SoT, so `docs --version` reads `1.7.0` after
+  the Phase-8 editable reinstall).
+- `tests/test_packaging.py` — flipped the slow build-gated pins in lockstep with
+  the A3 fast pin (already 1.7.0 from Phase 2): **B1** `startswith
+  "docs_cli-1.7.0-"`, **B2** `== "docs_cli-1.7.0.tar.gz"`, **C2** renamed
+  `test_c2_docs_version_is_1_6_5` → `…_1_7_0` and now requires `"1.7.0"` as a
+  standalone token; bumped each docstring (M19 → M21). B3 is positive-presence
+  and ships the whole package, so the new `update_check.py` module needs no
+  packaging change (OQ-7, verified).
+- `CHANGELOG.md` — **appended** an `### Added` block **under** the existing
+  `## 1.7.0 — UNRELEASED` header (opened by M22's `### Documentation`) — no
+  second 1.7.0 header. Documents the STDERR-only ≤once/24h fail-silent notice,
+  the `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` / `CI` disable controls, and
+  the `--quiet` / `--json` suppression (cache still warms; `--json` stdout stays
+  byte-clean).
+- `src/docs_cli/skill/SKILL.md` — added a short "Update notices" section naming
+  the advisory line and the three disable env vars (Q8 — surface-parity policy).
+  No `](../` repo-relative link; the strings `test_skill_quality_artifacts.py`
+  pins are untouched.
+
+**Not changed (by decision).** `docs/cli.md` and `docs/convention.md` (the
+contract was pinned in Phase 1) → the bundled `references/{cli,convention}.md`
+mirrors stay byte-identical (`test_skill_refs` re-run GREEN, no re-sync needed).
+
+**Test results.** `test_a3` GREEN at 1.7.0; `test_skill_refs` +
+`test_skill_quality_artifacts` GREEN; `tests/test_update_check.py` 57 GREEN.
+Gate clean (`ruff check` / `ruff format --check`). The build-gated B1/B2/C2 +
+the editable-reinstall version match run in Phase 8.
