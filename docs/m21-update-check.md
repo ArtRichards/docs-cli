@@ -37,13 +37,15 @@ Related:
   single CLI-update line (see Decisions › "Re-scope to CLI-only"). The skill
   story — install where the agent actually uses it, then nudge a refresh at the
   recorded location — moves to the follow-on **M23 (agent-aware install-skill +
-  recorded-dest skill-refresh hint)**. No TDD phase started. Depends on nothing;
-  M22 ran ahead of M21 (operator run-order 2026-06-24) and is
-  implementation-complete. Stays LIVE at root, lifecycle `draft`, until a later
-  milestone sweeps it in (the M14/M15/M18/M19 completed-but-live precedent).
-  OPEN QUESTIONS are netted out — **none outstanding** (the re-scope resolves or
-  moots all of OQ-1..OQ-9; see Decisions + OPEN QUESTIONS). Phase 1 (Define
-  Contract) is next.
+  recorded-dest skill-refresh hint)**. **Phases 1–4 complete (RED baseline,
+  2026-06-29)** on branch `m21/phases-1-4`: the contract is pinned in `cli.md`,
+  the RED tests are written (598 collected; 47 RED / 9 GREEN-at-baseline locks),
+  and the prior 543 stay GREEN. **Phase 5 (Update Base Interfaces) is next.**
+  Depends on nothing; M22 ran ahead of M21 (operator run-order 2026-06-24) and
+  is implementation-complete. Stays LIVE at root, lifecycle `draft`, until a
+  later milestone sweeps it in (the M14/M15/M18/M19 completed-but-live
+  precedent). OPEN QUESTIONS are netted out — **none outstanding** (the re-scope
+  resolves or moots all of OQ-1..OQ-9; see Decisions + OPEN QUESTIONS).
 
 ### Goal
 

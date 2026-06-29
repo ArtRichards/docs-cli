@@ -21,9 +21,11 @@ test results, decisions.
 
 - Project: docs
 - Milestone: M21 — Update-check notification (PyPI new-version notice) (v1.7.0)
-- Started: 2026-06-12 (scaffolded — milestone-setup; no TDD phase started)
-- Progress: **Milestone pair scaffolded 2026-06-12; re-scoped to CLI-only
-  2026-06-29.** Headline: `docs-cli` checks PyPI for a newer release and, once
+- Started: 2026-06-12 (scaffolded — milestone-setup); TDD Phases 1–4 run
+  2026-06-29.
+- Progress: **Phases 1–4 complete (RED baseline, 2026-06-29)** on branch
+  `m21/phases-1-4`; re-scoped to CLI-only 2026-06-29. Headline: `docs-cli`
+  checks PyPI for a newer release and, once
   per 24h and fail-silent, emits ONE STDERR line nudging the user/agent to
   update **the CLI** (`pip install -U docs-cli`). This is the tool's **first
   network surface** (stdlib `urllib` only, 1.0s timeout, 24h-cache-gated,
@@ -37,10 +39,11 @@ test results, decisions.
   2026-06-29); the skill story moves to the follow-on **M23**. Ships as **1.7.0
   locally** (minor bump — additive feature; 1.6.5 was the operator-decreed
   patch exception); the PyPI publish is a later operator-driven milestone
-  (M19→M20, M14+M15→M17 pattern). Depends on nothing. **No TDD phase started** —
-  milestone-setup only. OPEN QUESTIONS are netted out — **none outstanding**
-  (the re-scope resolves or moots OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED). See
-  the milestone doc's Decisions.
+  (M19→M20, M14+M15→M17 pattern). Depends on nothing. **Phases 1–4 done (RED
+  baseline: 598 collected, 47 RED / 9 GREEN-at-baseline locks, prior 543 GREEN);
+  Phase 5 next.** OPEN QUESTIONS are netted out — **none outstanding** (the
+  re-scope resolves or moots OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED). See the
+  milestone doc's Decisions.
 
 (Note: doc-lifecycle status is the front-matter `Lifecycle:` field. This
 section tracks implementation progress, which is distinct.)
