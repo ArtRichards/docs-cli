@@ -52,7 +52,7 @@ section tracks implementation progress, which is distinct.)
 | 1. Define Contract | Done | 2026-06-29 | `cli.md` §Update check + §Output-conventions note; bundled `cli.md` mirror resynced byte-identical; INDEX + frozen snapshot refrozen (single delta = `cli.md` `Updated:` bump); `convention.md` untouched. 543 GREEN. |
 | 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests: unit seam + in-process dispatch + Q7 spec-lock + inline builders); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598; gate clean. |
 | 3. Create Data/Fixtures | Done | 2026-06-29 | Inline, date-independent `tmp_path` builders in `tests/test_update_check.py`; no committed dated fixtures (the frozen `docs-INDEX.md` stays the only committed fixture). |
-| 4. Run Tests (RED Baseline) | Pending | — | — |
+| 4. Run Tests (RED Baseline) | Done | 2026-06-29 | 598 collected; 47 RED (46 update-check + A3 flip), 9 GREEN-at-baseline locks; prior 543 intact (542 + 9 new green = 551 passed). Every RED a clean classified assertion; gate clean tree-wide. |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
@@ -307,3 +307,51 @@ inline in `tests/test_update_check.py`:
 **Exit.** Every Phase-2 test has date-independent inline data; no real
 `~/.cache` or network is touched; the byte-frozen `docs-INDEX.md` (regenerated
 in Phase 1) stays the only committed fixture.
+
+## Phase 4 — Run Tests (RED Baseline)
+
+**Objective.** Confirm every intended-RED test fails for its classified reason
+(no tracebacks / collection errors / argparse-exit-2 surprises), classify RED vs
+GREEN-at-baseline, and capture the baseline count.
+
+**Commands.**
+
+```sh
+.venv/bin/python -m pytest tests/ -q          # 47 failed, 551 passed (598 total)
+.venv/bin/python -m pytest tests/test_update_check.py -q   # 46 failed, 9 passed
+```
+
+**Baseline counts.**
+
+- **598** collected (= prior 543 + 55 new).
+- **47 RED**: 46 in `test_update_check.py` (unit + intended-RED dispatch) + the
+  single A3 flip (`test_a3_project_version_is_1_7_0`).
+- **9 GREEN-at-baseline** (new regression locks): the Q7 spec-lock + 8 dispatch
+  absence tests.
+- The prior 543 stay GREEN, except the deliberately-flipped A3 (542 prior pass
+  + 9 new green = 551 passed).
+
+**RED-vs-GREEN classification (the contract for this phase).**
+
+| Test(s) | Class | RED reason / GREEN basis |
+|---|---|---|
+| all unit tests (`is_newer`, `format_notice`, cache I/O, throttles, fetch, suppression) | RED | `AssertionError: update_check module not yet implemented (Phase 5)` (`uc is None`) |
+| `test_dispatch_newer_emits_one_stderr_notice` | RED | empty stderr — `''.endswith(notice)` is False (no hook yet) |
+| `test_dispatch_failing_verb_keeps_exit_code_and_shows_notice` | RED | `code == 2` holds; empty stderr fails the notice assertion |
+| `test_dispatch_stale_check_fetches_once_and_advances_last_check` | RED | `spy.calls == 0 != 1` (no hook calls the fetch) |
+| `test_dispatch_notify_throttle_is_independent_of_check` | RED | `spy.calls == 0 != 1` |
+| `test_dispatch_quiet_warms_cache_without_notice` | RED | `after is None` (no cache file written) |
+| `test_dispatch_corrupt_cache_recovers_and_notifies` | RED | empty stderr fails the notice assertion (asserted before the cache read, so no JSON traceback) |
+| `test_dispatch_non_tty_still_sees_notice` | RED | non-TTY asserted true; empty stderr fails the notice assertion |
+| `test_a3_project_version_is_1_7_0` | RED | `AssertionError` — pyproject still `1.6.5` |
+| `test_cli_md_pins_notice_template_and_suppression_env_vars` (Q7 lock) | GREEN | Phase 1 pinned the template + env vars in cli.md |
+| `test_dispatch_same_version_is_silent` / `_older_latest_is_silent` / `_offline_*` | GREEN | tool emits no notice today (no hook) |
+| `test_dispatch_fresh_cache_skips_network` / `_ci_env_*` / `_no_update_check_env_*` / `_do_not_track_env_*` | GREEN | `spy.calls == 0` (fetch never installed/called at baseline) |
+| `test_dispatch_json_keeps_stdout_clean_and_suppresses_notice` | GREEN | `list --json` already emits byte-clean JSON, no notice |
+
+**Verification.** Sampled the RED tracebacks: unit → the not-impl assertion;
+dispatch → `AssertionError` on empty stderr / `spy.calls` / `after is None`;
+A3 → `AssertionError`. No tracebacks, no collection errors, no argparse exit-2.
+Confirmed the only non-`test_update_check` failure is the A3 flip, and the 9
+GREEN-at-baseline locks pass. The quality gate (ruff / ruff format --check /
+mypy) is clean tree-wide at the RED baseline.
