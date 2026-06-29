@@ -61,7 +61,7 @@ section tracks implementation progress, which is distinct.)
 | 5. Update Base Interfaces | Done | 2026-06-29 | New `src/docs_cli/update_check.py` (Cache + leaf helpers fully implemented; `maybe_notify` a declared no-op until Phase 6); `cli.py` extracts `_dispatch(args)` and reduces `main()` to dispatch → `maybe_notify(args, os.environ, __version__)` → return. All 40 unit tests GREEN; 7 orchestration dispatch tests + A3 stay RED (8 failed / 592 passed); gate clean. |
 | 6. Implement Offline/Core Path | Done | 2026-06-29 | Implemented `maybe_notify` (broad fail-silent net) + `_check_and_notify` (network-suppress short-circuit → cache read → 24h-gated fetch → `is_newer` + notice-suppress + 24h notify-gate → STDERR emit → write on fetch-or-emit) + `_now_iso`. All 47 RED dispatch+unit → GREEN; 10 locks stay GREEN. Full suite **1 failed (A3 only), 599 passed**; gate clean. |
 | 7. Update Tool/Wrapper Layer | Done | 2026-06-29 | `pyproject.toml` `version` 1.6.5 → **1.7.0**; `test_packaging.py` B1/B2/C2 pins + docstrings flipped to 1.7.0 (C2 renamed `…_1_6_5` → `…_1_7_0`); `CHANGELOG.md` `### Added` block appended under the existing `## 1.7.0 — UNRELEASED` (one header, both `### Added` + M22's `### Documentation`); `SKILL.md` gained an "Update notices" section (advisory line + `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK`). `cli.md`/`convention.md` untouched (contract pinned Phase 1) → bundled refs stay byte-identical (`test_skill_refs` GREEN). A3 GREEN; gate clean. |
-| 8. Run Tests (GREEN) | Pending | — | — |
+| 8. Run Tests (GREEN) | Done | 2026-06-29 | Editable reinstall (`pip install -e .`) refreshed the dist-info → `importlib.metadata` reports 1.7.0. Full suite **600 passed**; `ruff check` / `ruff format --check` / `mypy` (43 files) clean; `docs check docs/` 0 violations; `docs index` a byte no-op; `docs --version` → `docs 1.7.0`. |
 | 9. Implement Online/Integration | Pending | — | — |
 | 10. Quality, Docs, Refactor | Pending | — | — |
 
@@ -557,3 +557,38 @@ mirrors stay byte-identical (`test_skill_refs` re-run GREEN, no re-sync needed).
 `test_skill_quality_artifacts` GREEN; `tests/test_update_check.py` 57 GREEN.
 Gate clean (`ruff check` / `ruff format --check`). The build-gated B1/B2/C2 +
 the editable-reinstall version match run in Phase 8.
+
+## Phase 8 — Run Tests (GREEN)
+
+**Objective.** Full suite GREEN; gate clean tree-wide; `docs --version` →
+`docs 1.7.0`.
+
+**Editable reinstall (Q7).** After the Phase-7 pyproject bump,
+`importlib.metadata` still reported 1.6.5 until the dist-info was refreshed (the
+M19 precedent), so `test_version_metadata::test_version_matches_pyproject` was
+RED until `.venv/bin/pip install -e .` ran. Post-reinstall: docs-cli 1.7.0
+installed; `__version__` → 1.7.0; the dispatch tests still pass (the fake PyPI
+1.7.1 > 1.7.0).
+
+**Commands + output.**
+
+```sh
+$ .venv/bin/pip install -e .
+Successfully installed docs-cli-1.7.0
+$ .venv/bin/python -m pytest tests/ -q
+600 passed in 26.10s
+$ .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
+All checks passed!
+42 files already formatted
+Success: no issues found in 43 source files
+$ .venv/bin/docs check docs/
+docs: no violations found
+$ .venv/bin/docs index --root docs/        # byte no-op (git diff --quiet clean)
+$ .venv/bin/docs --version
+docs 1.7.0
+```
+
+**Exit.** Full suite **600 GREEN**; gate clean tree-wide; `docs --version` →
+`docs 1.7.0`. (The single `mypy` note —
+`[annotation-unchecked]` on a test helper — is informational, not an error;
+`mypy` reports "Success".)
