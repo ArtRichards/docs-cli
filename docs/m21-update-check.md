@@ -385,7 +385,7 @@ surfaces detail.
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Implement Online/Integration
+- [x] Phase 9 — Implement Online/Integration
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions

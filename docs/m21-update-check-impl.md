@@ -62,7 +62,7 @@ section tracks implementation progress, which is distinct.)
 | 6. Implement Offline/Core Path | Done | 2026-06-29 | Implemented `maybe_notify` (broad fail-silent net) + `_check_and_notify` (network-suppress short-circuit → cache read → 24h-gated fetch → `is_newer` + notice-suppress + 24h notify-gate → STDERR emit → write on fetch-or-emit) + `_now_iso`. All 47 RED dispatch+unit → GREEN; 10 locks stay GREEN. Full suite **1 failed (A3 only), 599 passed**; gate clean. |
 | 7. Update Tool/Wrapper Layer | Done | 2026-06-29 | `pyproject.toml` `version` 1.6.5 → **1.7.0**; `test_packaging.py` B1/B2/C2 pins + docstrings flipped to 1.7.0 (C2 renamed `…_1_6_5` → `…_1_7_0`); `CHANGELOG.md` `### Added` block appended under the existing `## 1.7.0 — UNRELEASED` (one header, both `### Added` + M22's `### Documentation`); `SKILL.md` gained an "Update notices" section (advisory line + `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK`). `cli.md`/`convention.md` untouched (contract pinned Phase 1) → bundled refs stay byte-identical (`test_skill_refs` GREEN). A3 GREEN; gate clean. |
 | 8. Run Tests (GREEN) | Done | 2026-06-29 | Editable reinstall (`pip install -e .`) refreshed the dist-info → `importlib.metadata` reports 1.7.0. Full suite **600 passed**; `ruff check` / `ruff format --check` / `mypy` (43 files) clean; `docs check docs/` 0 violations; `docs index` a byte no-op; `docs --version` → `docs 1.7.0`. |
-| 9. Implement Online/Integration | Pending | — | — |
+| 9. Implement Online/Integration | Done | 2026-06-29 | Live read-only PyPI probe (real `urllib`) → `info.version = '1.6.5'` (the published version; local build is 1.7.0, ahead of it). No-mock real-network `docs list` → cache written `{last_check, latest_version: "1.6.5", last_notified: null}`, **no** notice (local ahead), exit 0. Forced-newer dogfood (fake latest 1.7.99 on the real editable build) confirmed: notice once on stderr (byte-exact), 24h notify-gate suppresses the 2nd run, CI / CI= / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` each skip network + notice, `--quiet` / `--json` warm the cache without notice, `--json` stdout stays parseable JSON, failing verb keeps exit 2 with the notice on stderr + findings on stdout. pytest stays 100% offline. |
 | 10. Quality, Docs, Refactor | Pending | — | — |
 
 ## Provenance — where the scope came from
@@ -592,3 +592,59 @@ docs 1.7.0
 `docs 1.7.0`. (The single `mypy` note —
 `[annotation-unchecked]` on a test helper — is informational, not an error;
 `mypy` reports "Success".)
+
+## Phase 9 — Implement Online/Integration
+
+**Objective.** The only genuinely-online phase — exercise the real `urllib`
+body once against live PyPI on a throwaway cache, then dogfood the end-to-end
+notice/throttle/suppression on the editable `docs 1.7.0`. Runs **outside**
+pytest; the suite stays 100% offline (OQ-8 / D6).
+
+**1. Live read-only PyPI probe (real network).**
+
+```sh
+$ XDG_CACHE_HOME=$(mktemp -d) .venv/bin/python -c \
+    "from docs_cli import update_check as u; print(u.fetch_latest_version())"
+1.6.5
+```
+
+The real stdlib `urllib` GET to `https://pypi.org/pypi/docs-cli/json` returns
+`info.version = '1.6.5'` — the currently-published version. The local build is
+1.7.0 (ahead of PyPI; the publish is a later milestone), so on the live build
+the real check correctly stays silent.
+
+**2. No-mock real-network end-to-end (`docs list`).** With a throwaway
+`XDG_CACHE_HOME` and the cleared suppression env, `docs list` ran the *real*
+fetch and wrote the cache:
+
+```json
+{"last_check": "2026-06-29T17:24:17.735317+00:00", "latest_version": "1.6.5", "last_notified": null}
+```
+
+Three keys, ISO-8601 UTC `last_check`, `last_notified` null (no emit — local
+1.7.0 > published 1.6.5), exit 0, zero notice lines. The full real path (fetch →
+compare → cache write) works with **no** mocking.
+
+**3. Forced-newer dogfood (real editable build, fake latest 1.7.99).** A one-off
+script (the plan's permitted option) monkeypatches only the network hook to
+return `1.7.99` and drives the real `main()` → `_dispatch` → `maybe_notify` path
+(`current = 1.7.0`). Measured:
+
+| Case | exit | fetch calls | notices | result |
+|---|---|---|---|---|
+| (a) clean run | 0 | 1 | 1 | byte-exact `docs: update available 1.7.0 -> 1.7.99 — run: pip install -U docs-cli` on stderr; **not** on stdout; cache `{last_check, latest_version=1.7.99, last_notified}` written |
+| (b) 2nd run, same cache | 0 | 0 | 0 | 24h **notify** gate suppresses (and 24h check gate skips the network) |
+| (c) `CI=true` | 0 | 0 | 0 | network skipped, no notice, no cache write |
+| (c) `CI=` (empty, present) | 0 | 0 | 0 | **presence-not-truthiness** confirmed — empty still suppresses |
+| (c) `DOCS_CLI_NO_UPDATE_CHECK=1` | 0 | 0 | 0 | feature off |
+| (c) `DO_NOT_TRACK=1` | 0 | 0 | 0 | feature off |
+| (c2) `--quiet` | 0 | 1 | 0 | notice suppressed, **cache warmed** (`last_check` set), `last_notified` none (budget untouched) |
+| (d) `--json` | 0 | 1 | 0 | notice suppressed, **stdout stays parseable JSON list**, cache warmed |
+| (e) failing verb `check` (invalid tree) | 2 | 1 | 1 | exit code **unchanged** by the notice; findings survive on stdout (`error:`); notice on stderr |
+
+**Exit.** Online path verified (real `urllib` GET against live PyPI) and
+dogfooded end-to-end; cache / both 24h throttles / the full suppression matrix /
+`--json` byte-clean stdout / exit-code parity all confirmed on the real build.
+NO publish, NO tag, NO GitHub release (a later milestone publishes). `pytest`
+remains 100% offline (the conftest `DOCS_CLI_NO_UPDATE_CHECK=1` guard + the
+injected `fetch_latest_version`).
