@@ -58,7 +58,7 @@ section tracks implementation progress, which is distinct.)
 | 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests at the Phase-2 run; the 2026-06-29 fresh-eyes review fold-in later added +2 → **57**: a `--version`-absence GREEN lock, a `should_notify` no-cache RED unit, and a hardened failing-verb assertion — see the review fold-in note); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598 (600 post-review); gate clean. |
 | 3. Create Data/Fixtures | Done | 2026-06-29 | Inline, date-independent `tmp_path` builders in `tests/test_update_check.py`; no committed dated fixtures (the frozen `docs-INDEX.md` stays the only committed fixture). |
 | 4. Run Tests (RED Baseline) | Done | 2026-06-29 (finalized by the review fold-in same day) | **600 collected; 48 RED (47 update-check + A3 flip), 10 GREEN-at-baseline locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed** (542 prior + 10 new green). Every RED a clean classified assertion; gate clean tree-wide. |
-| 5. Update Base Interfaces | Pending | — | — |
+| 5. Update Base Interfaces | Done | 2026-06-29 | New `src/docs_cli/update_check.py` (Cache + leaf helpers fully implemented; `maybe_notify` a declared no-op until Phase 6); `cli.py` extracts `_dispatch(args)` and reduces `main()` to dispatch → `maybe_notify(args, os.environ, __version__)` → return. All 40 unit tests GREEN; 7 orchestration dispatch tests + A3 stay RED (8 failed / 592 passed); gate clean. |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
 | 8. Run Tests (GREEN) | Pending | — | — |
@@ -417,3 +417,54 @@ absent (Phase 5). The classified RED baseline is preserved.
 `spy.calls` / `after is None`; A3 → pyproject still `1.6.5`) — no tracebacks, no
 collection errors, no argparse exit-2. Quality gate clean tree-wide (ruff / ruff
 format --check / mypy / `docs check docs/`).
+
+## Phase 5 — Update Base Interfaces
+
+**Objective.** Declare the `docs_cli.update_check` seam and wire the `main()`
+hook, fully implementing the leaf/unit-tested functions so every UNIT test goes
+GREEN; the dispatch orchestration is deferred to Phase 6 (the honest split).
+
+**Files changed.**
+
+- `src/docs_cli/update_check.py` (NEW) — the cohesive update-check module
+  (OQ-7). Constants `PYPI_URL`, `TIMEOUT = 1.0`, `THROTTLE = timedelta(hours=24)`,
+  and the byte-exact `NOTICE_TEMPLATE` (em-dash U+2014, ASCII `->`). The
+  `Cache` dataclass (three optional keys). Leaf helpers fully implemented:
+  `is_newer` (stdlib numeric tuple-compare on dot-split release segments,
+  fail-closed on any non-digit segment → pre-release / `0.0.0+local` /
+  unparseable never notify); `format_notice` (no trailing newline);
+  `cache_path` (XDG-aware); `read_cache` (missing / corrupt / non-dict /
+  missing-`last_check`-or-`latest_version` → `Cache()`; `last_notified`
+  optional); `write_cache` (exactly three keys; `mkdir(parents=True)` then
+  `write_text`, swallowing `OSError`); `should_check` / `should_notify` via a
+  `_stale` helper (None / unparseable / ≥24h → True); `fetch_latest_version`
+  (calls `urllib.request.urlopen(PYPI_URL, timeout=TIMEOUT)` as a module
+  attribute so the monkeypatch is seen; returns `info.version` or `None` on
+  URLError/timeout/HTTPError/OSError/malformed-JSON/KeyError/TypeError); and the
+  `notice_suppressed` / `network_suppressed` predicates (defensive `getattr`;
+  env presence-not-truthiness via `_env_disabled`). `maybe_notify` is a declared
+  no-op this phase (`return None`).
+- `src/docs_cli/cli.py` — added `from docs_cli import update_check` (first-party
+  import; no cycle — `update_check` imports no `docs_cli` symbol, the running
+  version is threaded in). Extracted the verbatim dispatch ladder into a new
+  module-level `def _dispatch(args) -> int:` and reduced `main()` to
+  `args = _build_parser().parse_args(argv)` → `code = _dispatch(args)` →
+  `update_check.maybe_notify(args, os.environ, __version__)` → `return code`.
+  Placement after `parse_args` means `--version` / `-h` (which `SystemExit`
+  inside parsing) never reach the hook.
+
+**Decisions applied (from the Step-2 plan).** Q3 — the running version is
+threaded in as `current` (no `importlib.metadata` recompute inside
+`update_check`, no circular import). Q4 — `_dispatch` extracted; the hook fires
+once between dispatch and `return code`. Q1 — `read_cache` requires `last_check`
+AND `latest_version` (so a 2-key warm cache is honored — keeps
+`test_dispatch_fresh_cache_skips_network` GREEN) but treats a `last_check`-only
+file as no-data. The `write_cache` `try/except OSError: return` mirrors the
+codebase's `contextlib.suppress(OSError)` posture (`cli.py`).
+
+**Test results.** `tests/test_update_check.py` → **50 passed, 7 failed** (all 40
+unit tests GREEN; the 7 RED are exactly the orchestration-dependent dispatch
+tests, plus A3 elsewhere). Full suite → **8 failed, 592 passed** (the 7 dispatch
++ A3; prior 542 + the 10 locks GREEN — the hook is inert under the conftest
+`DOCS_CLI_NO_UPDATE_CHECK=1` guard and the no-op `maybe_notify`). Gate clean:
+`ruff check` / `ruff format --check` / `mypy` (43 source files) all pass.
