@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-06-29. 18 docs active, 39 archived._
+_Generated 2026-06-29. 20 docs active, 39 archived._
 
 ## Project — docs
 
@@ -29,11 +29,13 @@ _Generated 2026-06-29. 18 docs active, 39 archived._
 ### Active — Milestone
 
 - [m21-update-check.md](m21-update-check.md) — _milestone_ — - Milestone: M21 (v1.7.0) - Title: Update-check notification (PyPI new-version notice) - Surface: docs-cli's **first…. Updated 2026-06-29.
+- [m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md) — _milestone_ — - Milestone: M23 (v1.8.0 recommended — see OPEN QUESTIONS) - Title: Agent-aware install-skill + recorded-dest…. Updated 2026-06-29.
 - [m22-root-placement-guidance.md](m22-root-placement-guidance.md) — _milestone_ — - Milestone: M22 - Title: Doc-tree root placement guidance (project ≠ directory) - Surface: documentation-only — the…. Updated 2026-06-24.
 
 ### Active — Log
 
 - [m21-update-check-impl.md](m21-update-check-impl.md) — _log_ — Chronological log of work on M21 — Update-check notification (PyPI new-version notice). Append a section per TDD phase…. Updated 2026-06-29.
+- [m23-agent-aware-install-skill-impl.md](m23-agent-aware-install-skill-impl.md) — _log_ — Chronological log of work on M23 — Agent-aware install-skill + recorded-dest skill-refresh hint. Append a section per…. Updated 2026-06-29.
 - [m22-root-placement-guidance-impl.md](m22-root-placement-guidance-impl.md) — _log_ — Chronological log of work on M22 (Doc-tree root placement guidance). Append a section per phase with objective, files…. Updated 2026-06-26.
 - [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-12.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.

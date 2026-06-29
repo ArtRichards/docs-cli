@@ -13,6 +13,7 @@ Related:
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: status.md
+- references: m23-agent-aware-install-skill.md
 
 ## Overview
 

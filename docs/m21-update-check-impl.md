@@ -9,6 +9,7 @@ Related:
 - child-of: m21-update-check.md
 - pairs-with: m21-update-check.md
 - pairs-with: status.md
+- references: m23-agent-aware-install-skill.md
 
 ## Overview
 

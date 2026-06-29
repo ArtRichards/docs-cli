@@ -27,6 +27,8 @@ Related:
 - pairs-with: m20-pypi-publish-impl.md
 - pairs-with: m21-update-check.md
 - pairs-with: m21-update-check-impl.md
+- pairs-with: m23-agent-aware-install-skill.md
+- pairs-with: m23-agent-aware-install-skill-impl.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
@@ -92,6 +94,28 @@ the suite sets `DOCS_CLI_NO_UPDATE_CHECK=1` in `tests/conftest.py` to stay
 offline; cache timestamps are ISO-8601 UTC; the baseline test count is **543**.
 **Milestone-setup is complete; Phase 1 (Define Contract) is next.** See the
 milestone doc's Decisions › "Re-scope to CLI-only".
+
+**M23 — Agent-aware install-skill + recorded-dest skill-refresh hint** is
+scaffolded in **milestone-setup / draft (2026-06-29)** — the follow-on that
+restores the skill-refresh nudge cut from M21. **No TDD phase started.** It
+makes `docs install-skill` **agent-aware**: `--dest` is the agent-agnostic
+source of truth, resolution is TTY-aware (a human may be prompted; an agent
+[non-TTY] is **never** blocked on a prompt), the resolved dest is **recorded**
+to a small per-user state file (a *path* only — **never** the skill's content),
+the "Claude Code skill" framing in `install-skill`'s help is neutralised to
+**"agent skill"** (reconciling with `cli.md`), and M21's update notice gains a
+skill-refresh hint pointed at the **recorded** dest (riding M21's same
+suppression matrix + throttle). Replay/remember is allowed; content-inspection
+and agent-guessing are NOT (the exact line the cut D5 crossed). Out of scope:
+multi-agent skill *formats* and agent auto-detection. **Depends on M21**
+(extends its notice channel). Ships a later version (recommend **1.8.0** — an
+OPEN QUESTION). **Four genuine OPEN QUESTIONS** stay open for a later planning
+pass — OQ-1 (non-TTY default-vs-refuse when `--dest` omitted), OQ-2 (state-file
+location: user config vs the M21 update-check cache), OQ-3 (multiple recorded
+dests vs last-write-wins single), OQ-4 (final version number). The pair is
+[m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md) +
+[m23-agent-aware-install-skill-impl.md](m23-agent-aware-install-skill-impl.md);
+it stays LIVE at root, lifecycle `draft`.
 
 **docs-cli 1.6.5 shipped 2026-06-12 — the v1.6.5 train is complete.**
 **M20 — PyPI publish 1.6.5** is **Complete (2026-06-12)**:
@@ -635,6 +659,7 @@ for the milestone summary.
 | M20 — PyPI publish 1.6.5 | **Complete** (2026-06-12; `docs-cli==1.6.5` on PyPI, the publish-only counterpart to M19 one-to-one as M13 shipped M12; `v1.6.5` annotated tag at the Phase-4 commit `0855466` + GitHub release; chain-of-custody **bit-perfect for both wheel AND sdist** (wheel `aba36e92…`, sdist `f9de1eb4…`); all M19 headline contracts hold against the PyPI-served wheel; ran the [release-runbook.md](release-runbook.md) on `main` (M17 precedent — no TDD code phases). NEW vs M17: the Phase-5 closeout refreshed the host-machine skills (`docs install-skill --force` + a workflow-skill sweep that caught + fixed one stale `--body-from` reference in `project-foundation`) per the CLAUDE.md skill-update-flow policy. Q1 → FULL AUTONOMOUS, Q2 → archive the M18 + M19 pairs + M20's own milestone doc to `archive/2026-06-12/`; the M20 impl log stays `Lifecycle: active`) | [Plan](archive/2026-06-12/m20-pypi-publish.md) | [Log](m20-pypi-publish-impl.md) |
 | M21 — Update-check notification (PyPI new-version notice) (v1.7.0) | **Draft / milestone-setup** (scaffolded 2026-06-12; **re-scoped to CLI-only 2026-06-29**; **no TDD phase started**) — feature milestone introducing docs-cli's **first network surface**: a once-per-24h, fail-silent PyPI version check (stdlib `urllib` only, 1.0s timeout, 24h-cache-gated under a three-key `{last_check, latest_version, last_notified}` cache, zero-dependency wheel preserved) that emits ONE STDERR line nudging the user/agent to update **the CLI** (`pip install -U docs-cli`; wording `docs: update available <current> -> <latest> — run: pip install -U docs-cli`). STDERR-only, never alters the exit code, suppressed under `--quiet`/`--json`/`CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK` (the user-level config opt-out is DEFERRED out of v1.7.0 — OQ-5/5a), but **deliberately shows on non-TTY** (inverting gh's TTY rule — the agent is the actor). The former skill-drift notice (D5) + the dual-action `docs install-skill --force` half are **CUT** (re-scope 2026-06-29 — no skill inspection, no Claude-Code assumption); the skill story moves to follow-on **M23**. Ships as **1.7.0** (minor — additive; 1.6.5 was the operator-decreed patch exception); a later milestone publishes (M19→M20 pattern). **OPEN QUESTIONS netted out — none outstanding** (OQ-1..OQ-9 RESOLVED 2026-06-12; OQ-6 "ship D5" REVERSED by the re-scope); milestone-setup complete, Phase 1 next. Stays LIVE at root, lifecycle `draft`. | [Plan](m21-update-check.md) | [Log](m21-update-check-impl.md) |
 | M22 — Doc-tree root placement guidance (project ≠ directory) | **Implementation complete** (2026-06-24; all ten TDD phases; documentation-only, M16-shaped — no CLI/code change, no version bump; convention.md §Subdirectories + bundled SKILL.md "where to put `.docs.toml`" guidance: `Project:` is metadata not a directory, and root-relative `Related:` makes a nested lone project prefix every sibling ref; RED-first `tests/test_skill_root_placement.py`; bundled reference mirrored byte-identical; dogfood-snapshot refreshed; CHANGELOG staged under 1.7.0 UNRELEASED. Full suite 543 GREEN, gate clean, Phase-9 dogfood reproduced the redundant-prefix consequence. Ran **before** M21 per the operator's run-order decision 2026-06-24 — number = creation order, not execution order. **Stays LIVE at root, lifecycle `active`** until the next publish closeout sweeps it, M18/M19/M21 + M16 precedent. Companion `project-foundation` note tracked separately in `agent-playbook-suite`) | [Plan](m22-root-placement-guidance.md) | [Log](m22-root-placement-guidance-impl.md) |
+| M23 — Agent-aware install-skill + recorded-dest skill-refresh hint (v1.8.0 recommended) | **Draft / milestone-setup** (2026-06-29; scaffolded, **no TDD phase started**) — follow-on to the M21 re-scope that restores the skill-refresh nudge cut from M21. Makes `docs install-skill` **agent-aware**: `--dest` is the agent-agnostic source of truth; TTY-aware resolution (human may be prompted; an agent [non-TTY] is **never** blocked); the resolved dest is **recorded** to a per-user state file (a *path* only — **never** the skill's content); the "Claude Code skill" framing in `install-skill`'s help is neutralised to **"agent skill"** (reconciling with `cli.md`); and M21's update notice gains a skill-refresh hint pointed at the **recorded** dest (riding M21's same suppression matrix + throttle). Replay/remember allowed; content-inspection + agent-guessing NOT. Out of scope: multi-agent skill *formats* + agent auto-detection. **Depends on M21.** Ships a later version (recommend **1.8.0** — OQ-4). **Four genuine OPEN QUESTIONS** open for a later planning pass: OQ-1 (non-TTY default-vs-refuse), OQ-2 (state-file location — user config vs the M21 update-check cache), OQ-3 (multiple recorded dests vs last-write-wins), OQ-4 (final version). Stays LIVE at root, lifecycle `draft`. | [Plan](m23-agent-aware-install-skill.md) | [Log](m23-agent-aware-install-skill-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI
