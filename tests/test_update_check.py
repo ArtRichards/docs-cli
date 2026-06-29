@@ -361,6 +361,16 @@ def test_throttles_are_independent():
     assert uc.should_notify(c2) is False
 
 
+def test_should_check_treats_naive_timestamp_as_stale():
+    assert uc is not None, _NOT_IMPL
+    # A JSON-valid cache whose last_check is a NAIVE (offset-less) ISO timestamp
+    # parses via fromisoformat into a naive datetime; the `now(UTC) - when`
+    # subtract would then raise TypeError (aware-minus-naive). `_stale` must
+    # self-heal — treat it as stale (re-check) rather than let the TypeError
+    # abort the check and permanently disable the notice. No raise.
+    assert uc.should_check(uc.Cache(last_check="2026-06-29T12:00:00")) is True
+
+
 # ---------------------------------------------------------------------------
 # Unit — fetch hook fail-silent (monkeypatched urllib; offline)
 # ---------------------------------------------------------------------------
@@ -593,6 +603,24 @@ def test_dispatch_corrupt_cache_recovers_and_notifies(monkeypatch, capsys, tmp_p
     assert after is not None and set(after) == {"last_check", "latest_version", "last_notified"}
 
 
+def test_dispatch_naive_timestamp_cache_self_heals(monkeypatch, capsys, tmp_path, fixtures_dir):
+    cache_home = _prep_dispatch(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    # A naive (offset-less) last_check would raise TypeError on the
+    # aware-minus-naive subtract; the check must treat it as stale, re-probe,
+    # emit, and rewrite an offset-aware cache — never abort fatally.
+    _write_dispatch_cache(cache_home, last_check="2026-06-29T12:00:00", latest_version=CURRENT)
+    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    code = cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert code == 0
+    assert out.err.endswith(_expected_notice("1.7.1"))  # self-healed → notice emitted
+    after = _read_dispatch_cache(cache_home)
+    assert after is not None
+    # rewritten with an offset-aware last_check (parses back to an aware datetime)
+    assert datetime.fromisoformat(after["last_check"]).tzinfo is not None
+
+
 def test_dispatch_non_tty_still_sees_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
@@ -716,3 +744,30 @@ def test_dispatch_offline_fetch_none_is_silent_exit_unchanged(
     out = capsys.readouterr()
     assert code == 0
     assert "docs: update available" not in out.err
+
+
+def test_dispatch_offline_fetch_none_writes_no_cache(monkeypatch, capsys, tmp_path, fixtures_dir):
+    cache_home = _prep_dispatch(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _patch_fetch(monkeypatch, _FetchSpy(version=None))  # offline → fetch returns None
+    code = cli.main(["list", "--root", str(tree)])
+    capsys.readouterr()
+    assert code == 0
+    # A None fetch is neither a successful check nor an emit, so `if fetched or
+    # notified: write_cache(...)` is False → nothing is persisted (no file at
+    # all here, since there was no pre-existing cache). last_check never advances.
+    assert _read_dispatch_cache(cache_home) is None
+
+
+def test_dispatch_offline_reprobes_each_invocation(monkeypatch, capsys, tmp_path, fixtures_dir):
+    _prep_dispatch(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    spy = _FetchSpy(version=None)  # permanently offline
+    _patch_fetch(monkeypatch, spy)
+    cli.main(["list", "--root", str(tree)])
+    cli.main(["list", "--root", str(tree)])
+    capsys.readouterr()
+    # The first None fetch left last_check unwritten, so the second invocation
+    # is still stale and re-probes — the resolved-Q2 bounded offline-retry
+    # property (each call pays the network attempt until a success persists).
+    assert spy.calls == 2

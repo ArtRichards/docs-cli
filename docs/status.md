@@ -67,7 +67,8 @@ Phases 1–4 (RED baseline) on branch `m21/phases-1-4`, Phases 5–10 on
 compare, injectable `urllib` fetch hook, suppression predicates, notice
 formatter) + the `main()` post-dispatch hook are implemented; `pyproject` is at
 **1.7.0** (editable reinstall → `docs --version` = `docs 1.7.0`); the full suite
-is **600 GREEN** with the gate clean tree-wide (ruff / ruff format --check /
+is **604 GREEN** (+4 from the 2026-06-29 Step-2 fresh-eyes review fold-in) with
+the gate clean tree-wide (ruff / ruff format --check /
 mypy / `docs check docs/`). The Phase-9 online path was verified against live
 PyPI (real `urllib`) and dogfooded end-to-end (notice / both 24h throttles /
 the full suppression matrix / `--json` byte-clean stdout / exit-code parity);
@@ -422,7 +423,7 @@ The pair is [m21-update-check.md](m21-update-check.md) +
 [m21-update-check-impl.md](m21-update-check-impl.md). The `update_check.py` seam
 + the `main()` hook are implemented; `pyproject` is at **1.7.0** (`docs
 --version` = `docs 1.7.0` after the editable reinstall); the full suite is
-**600 GREEN** with the gate clean tree-wide; the online path was verified
+**604 GREEN** (+4 Step-2 review fold-in) with the gate clean tree-wide; the online path was verified
 against live PyPI and dogfooded end-to-end (pytest stays 100% offline). OPEN
 QUESTIONS are netted out — **none outstanding** (the re-scope resolves or moots
 OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED — see the milestone doc's Decisions ›

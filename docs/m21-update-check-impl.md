@@ -26,7 +26,9 @@ test results, decisions.
 - Progress: **Implementation-complete — all 10 TDD phases done (2026-06-29);
   1.7.0 built locally, publish is a later milestone. Lifecycle `draft`.**
   Phases 1–4 (RED baseline) on `m21/phases-1-4`; Phases 5–10 (implementation)
-  on `m21/phases-5-10`. Full suite **600 GREEN**, gate clean tree-wide, `docs
+  on `m21/phases-5-10`. Full suite **604 GREEN** (600 at Phase 8; the 2026-06-29
+  Step-2 fresh-eyes review fold-in added +4 — see the fold-in note), gate clean
+  tree-wide, `docs
   --version` = `docs 1.7.0`; the online path verified against live PyPI +
   dogfooded end-to-end (pytest stays 100% offline). Re-scoped to CLI-only
   2026-06-29. Headline: `docs-cli`
@@ -700,3 +702,58 @@ Step 3 (a separate `m21/simplify` branch), deliberately not pre-empted.
 
 **Exit.** Gate green; docs current; INDEX == snapshot; lifecycle `draft`; ready
 for a future publish milestone.
+
+## Fresh-eyes review fold-in (Step 2 finalize, 2026-06-29)
+
+An independent fresh-eyes review found the Step-2 implementation **sound** — no
+blockers, no should-fix. The conductor triaged its four nit/judgment-call
+findings: two fold in (applied here), two are note-only (no action). Applied as
+a **one-line defensive broadening + test additions only**; no contract change,
+so `docs/cli.md` and the bundled `references/cli.md` mirror are untouched
+(`test_skill_refs` stays GREEN — no re-mirror).
+
+- **FI-1 (robustness — completes the fail-silent self-heal).** `_stale(ts)`
+  caught `ValueError` from `datetime.fromisoformat` but not `TypeError`. A
+  JSON-valid cache whose `last_check` / `last_notified` is a **naive**
+  (offset-less) ISO timestamp (e.g. `"2026-06-29T12:00:00"`) parses into a naive
+  datetime, then `datetime.now(UTC) - when` raises `TypeError` (aware-minus-naive)
+  — previously swallowed only by the outer `maybe_notify` net, so the check
+  aborted **without** rewriting the cache and the notice stayed disabled until
+  the file was removed by hand. Broadened the `except` to
+  `(ValueError, TypeError)` so an unparseable **or** naive timestamp is treated
+  as **stale** → the next run re-checks and rewrites a correct offset-aware
+  cache. Purely defensive (this module only ever writes offset-aware
+  `datetime.now(UTC).isoformat()` timestamps), but it makes the fail-silent
+  guarantee complete — the cli.md fail-silent enumeration ("a corrupt or
+  malformed cache file → … never fatal") already covers a malformed timestamp
+  conceptually, so **no cli.md edit**. Tests added: a unit lock
+  `test_should_check_treats_naive_timestamp_as_stale` (naive `last_check` →
+  `should_check` True, no raise) and a dispatch self-heal
+  `test_dispatch_naive_timestamp_cache_self_heals` (naive cache + newer fake
+  fetch → notice emitted, cache rewritten with an offset-aware `last_check`).
+- **FI-2 (test coverage hardening — locks the resolved-Q2 offline-retry
+  property).** The property that a `None` (offline) fetch leaves the cache
+  **unwritten** (so a second offline invocation re-probes) was documented but
+  only implied by a single-invocation test. Added
+  `test_dispatch_offline_fetch_none_writes_no_cache` (one None-fetch run with no
+  pre-existing cache writes **no** cache file) and
+  `test_dispatch_offline_reprobes_each_invocation` (two consecutive offline runs
+  → the fetch spy is called **twice**). Converts the documented Q2 property into
+  a tested property.
+
+**Note-only (no action taken, by conductor triage).**
+
+- **Offline latency.** A permanently-offline / captive-portal host pays up to
+  the 1.0s timeout on **every** `docs` invocation (each call re-probes, since a
+  failed fetch never persists `last_check`). This is the accepted, documented
+  resolved-Q2 property — forced by the locked cli.md "created on first
+  **successful** check" wording — **not** a defect. No backoff machinery added;
+  the conductor surfaces it to the operator.
+- **Ctrl-C.** `maybe_notify`'s `except Exception` deliberately does **not** catch
+  `KeyboardInterrupt` / `BaseException` — never swallow Ctrl-C. Left as-is.
+
+**Re-run after the fold-ins:** `.venv/bin/python -m pytest tests/ -q` →
+**604 passed** (600 + 4: the FI-1 unit + dispatch self-heal, the two FI-2
+offline-retry assertions; `tests/test_update_check.py` 57 → **61**). Gate clean
+tree-wide: `ruff check` / `ruff format --check` / `mypy` (43 source files) /
+`docs check docs/` (0 violations) all pass; `docs --version` → `docs 1.7.0`.

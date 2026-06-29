@@ -128,14 +128,18 @@ def write_cache(cache: Cache) -> None:
 
 
 def _stale(timestamp: str | None) -> bool:
-    """True if ``timestamp`` is missing, unparseable, or ≥ 24h in the past."""
+    """True if ``timestamp`` is missing, unparseable/naive, or ≥ 24h in the past."""
     if timestamp is None:
         return True
     try:
         when = datetime.fromisoformat(timestamp)
-    except ValueError:
+        return datetime.now(UTC) - when >= THROTTLE
+    except (ValueError, TypeError):
+        # Unparseable (ValueError) or naive/offset-less (TypeError on the
+        # aware-minus-naive subtract) → treat as stale so the next run re-checks
+        # and rewrites a correct offset-aware cache. Defensive: this module
+        # always writes offset-aware timestamps (datetime.now(UTC).isoformat()).
         return True
-    return datetime.now(UTC) - when >= THROTTLE
 
 
 def should_check(cache: Cache) -> bool:
