@@ -51,7 +51,7 @@ section tracks implementation progress, which is distinct.)
 |---|---|---|---|
 | 1. Define Contract | Done | 2026-06-29 | `cli.md` §Update check + §Output-conventions note; bundled `cli.md` mirror resynced byte-identical; INDEX + frozen snapshot refrozen (single delta = `cli.md` `Updated:` bump); `convention.md` untouched. 543 GREEN. |
 | 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests: unit seam + in-process dispatch + Q7 spec-lock + inline builders); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598; gate clean. |
-| 3. Create Data/Fixtures | Pending | — | — |
+| 3. Create Data/Fixtures | Done | 2026-06-29 | Inline, date-independent `tmp_path` builders in `tests/test_update_check.py`; no committed dated fixtures (the frozen `docs-INDEX.md` stays the only committed fixture). |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
@@ -284,3 +284,26 @@ all behind the mock seam (no real network) so the suite stays 100% offline.
 --check / mypy all pass (the guarded `importlib` import + `uc: Any` avoids the
 `import-not-found` mypy error the literal `from docs_cli import update_check`
 form would raise).
+
+## Phase 3 — Create Data/Fixtures
+
+**Objective.** Provide every Phase-2 test's data as inline, date-independent
+`tmp_path` builders — no committed dated fixtures that rot (the M19 "committed
+dates rot" decision).
+
+**Files changed.** None beyond the Phase-2 file — by design the builders are
+inline in `tests/test_update_check.py`:
+
+- `_fake_pypi_json(version)` → `{"info": {"version": version}}`; `_FetchSpy`
+  (callable returning a version or raising) and `_FakeResp` (context-manager
+  HTTP response) for the fetch/dispatch seams.
+- `_iso_hours_ago(n)` stamps `datetime.now(UTC) - timedelta(hours=n)` (e.g. 1 =
+  fresh, 25 = stale) so the 24h throttle data is always relative to "now".
+- `_write_dispatch_cache(...)` / `_read_dispatch_cache(...)` seed and read
+  `$XDG_CACHE_HOME/docs-cli/update-check.json`; corrupt = `b"{not json"`,
+  malformed = JSON missing keys, both written inline. `XDG_CACHE_HOME` is always
+  pointed at `tmp_path`.
+
+**Exit.** Every Phase-2 test has date-independent inline data; no real
+`~/.cache` or network is touched; the byte-frozen `docs-INDEX.md` (regenerated
+in Phase 1) stays the only committed fixture.
