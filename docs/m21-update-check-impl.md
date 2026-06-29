@@ -49,7 +49,7 @@ section tracks implementation progress, which is distinct.)
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | — |
+| 1. Define Contract | Done | 2026-06-29 | `cli.md` §Update check + §Output-conventions note; bundled `cli.md` mirror resynced byte-identical; INDEX + frozen snapshot refrozen (single delta = `cli.md` `Updated:` bump); `convention.md` untouched. 543 GREEN. |
 | 2. Write Tests (RED) | Pending | — | — |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
@@ -157,6 +157,90 @@ Net effect: M21 is the runtime **CLI-update** notice only; no skill inspection,
 no Claude-Code assumption. No TDD phase has run; the re-scope is a docs-only
 change to the milestone pair (no product code touched).
 
+## Conductor triage — Step 1 OQ dispositions (binding)
+
+The conductor triaged ten open questions for Step 1 (Phases 1–4) and
+auto-resolved each per the recommended default. Recorded here so the
+implementation record is complete:
+
+- **Q1 (cli.md section heading / placement)** → top-level `## Update check`
+  inserted between `## Output conventions` and `## Exit codes (summary)`, plus
+  one cross-ref bullet in `## Output conventions`.
+- **Q2 (convention.md change?)** → **NO.** The cache is per-user
+  `XDG_CACHE_HOME` host state; env vars are CLI surface (cli.md); the config
+  opt-out is deferred (OQ-5/5a). `convention.md` stays byte-identical; its
+  bundled mirror copy is a no-op. Not edited.
+- **Q3 (bump cli.md `Updated:` + refreeze snapshot in Phase 1?)** → **YES** —
+  bump `2026-06-12` → `2026-06-29`, regenerate INDEX, refreeze the snapshot.
+  Single expected snapshot delta this phase.
+- **Q4 (notice termination / position)** → one `\n`-terminated line, emitted as
+  the command's **last** stderr line. The formatter **returns the line without a
+  trailing newline**; the emitter adds the `\n`. The byte-exact dispatch test
+  asserts the trailing `\n` on emitted stderr; the formatter unit test asserts
+  no trailing newline.
+- **Q5 (fail-silent completeness — unwritable cache)** → **ADD** the
+  unwritable/uncreatable cache dir-or-file path to the fail-silent enumeration
+  in cli.md **and** add the unit test (write swallows `OSError`, no raise).
+- **Q6 (`last_notified` advance semantics)** → stated explicitly in cli.md:
+  `last_notified` advances **only when a notice is actually emitted**; a
+  `--quiet` / `--json` run warms `last_check` but not `last_notified`. Pinned by
+  the `--quiet`-warms-cache test.
+- **Q7 (spec-content lock test)** → **ADD** one minimal lock asserting
+  `docs/cli.md` contains (a) the byte-exact notice template
+  `docs: update available <current> -> <latest> — run: pip install -U docs-cli`
+  and (b) the three suppression env-var names `DOCS_CLI_NO_UPDATE_CHECK`,
+  `DO_NOT_TRACK`, `CI`. `test_skill_refs` transitively locks the bundled mirror.
+  Kept minimal (no extra spec-grep tests).
+- **Q8 (conftest offline-guard mechanism)** → module-level
+  `os.environ["DOCS_CLI_NO_UPDATE_CHECK"] = "1"` in `tests/conftest.py`; new
+  dispatch tests opt back in via `monkeypatch.delenv(..., raising=False)`.
+- **Q9 (A3-only flip in Phase 2)** → **YES** — Phase 2 flips only `test_a3` to
+  expect `1.7.0`. B1/B2/C2 stay `1.6.5` until Phase 7 (the pyproject bump).
+- **Q10 (no notice on `--version` / `--help`)** → stated in cli.md (the check
+  runs after dispatch returns, so it never runs for `--version` / `-h`). A cheap
+  GREEN lock (`docs --version` emits no notice) is optional.
+
 ## Phase 1 — Define Contract
 
-_Not started._
+**Objective.** Pin the M21 surface in the specs — no code, no tests — so every
+Phase-2 assertion string is present verbatim in `cli.md`.
+
+**Files changed.**
+
+- `docs/cli.md` — added a top-level `## Update check` section between
+  `## Output conventions` and `## Exit codes (summary)`, containing: the
+  byte-exact CLI-only notice template
+  (`docs: update available <current> -> <latest> — run: pip install -U docs-cli`,
+  em-dash `—`, ASCII `->`) + the concrete `1.7.0 -> 1.7.1` example; STDERR-only,
+  last-stderr-line, `\n`-terminated, ≤ once/24h, never stdout, never alters the
+  exit code; the one-HTTPS-GET to `https://pypi.org/pypi/docs-cli/json` (stdlib
+  `urllib`, 1.0s timeout) compared against `__version__`; the three-key cache
+  schema table (`last_check`, `latest_version`, `last_notified`, ISO-8601 UTC)
+  at `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json`; the two
+  independent 24h throttles + the `last_notified`-advances-only-on-emit rule;
+  the stdlib numeric tuple-compare fail-closed on pre-release / `0.0.0+local` /
+  unparseable; the full fail-silent enumeration (incl. the unwritable/
+  uncreatable cache path — Q5); the non-TTY inversion + rationale; the
+  suppression matrix table (`--quiet` / `--json` warm the cache; `CI` /
+  `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` skip the network); the
+  config-opt-out-deferred note (OQ-5/5a); and the "runs after dispatch returns,
+  so never for `--version` / `-h`" statement.
+- `docs/cli.md` `## Output conventions` — appended one cross-ref bullet.
+- `src/docs_cli/skill/references/cli.md` — resynced byte-identical to
+  `docs/cli.md` (surface-parity gate; `test_skill_refs` GREEN).
+- `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` — regenerated and
+  refrozen after the `cli.md` `Updated:` bump (`2026-06-12` → `2026-06-29`); the
+  single delta is that date.
+
+**Not changed (by decision).** `docs/convention.md` and its bundled mirror
+(Q2 — NO change); `SKILL.md` (env-var / `--help` reconciliation is Phase 7);
+`CHANGELOG.md` (Phase 7 **appends** an `### Added` entry under the existing
+`## 1.7.0 — UNRELEASED` header opened by M22 — no second 1.7.0 header).
+
+**Lifecycle commands.** Bumped the date + regenerated INDEX via the docs CLI
+(`docs touch docs/cli.md --check --root docs`); confirmed `docs check docs/`
+exit 0 and `docs index --root docs/ --dry-run` a byte no-op before commit.
+
+**Test state.** The pre-existing 543 stay GREEN (`test_skill_refs` +
+`test_index_output_matches_frozen_snapshot` included). No tests added this
+phase (Phase 2).
