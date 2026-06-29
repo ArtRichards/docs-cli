@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
@@ -179,6 +180,61 @@ def network_suppressed(args: argparse.Namespace, env: Mapping[str, str]) -> bool
     return _env_disabled(env)
 
 
+def _now_iso() -> str:
+    """The current instant as an ISO-8601 UTC timestamp."""
+    return datetime.now(UTC).isoformat()
+
+
 def maybe_notify(args: argparse.Namespace, env: Mapping[str, str], current: str) -> None:
-    """Post-dispatch update-check hook (orchestration lands in Phase 6)."""
-    return None
+    """The post-dispatch hook: best-effort, fail-silent always.
+
+    Wraps the core path in a broad guard so no update-check error (network,
+    cache, parse, or otherwise) can ever escape into ``main()`` and disturb the
+    command's exit code or output. The leaf functions catch their own specific
+    errors; this is the documented last-resort net.
+    """
+    try:
+        _check_and_notify(args, env, current)
+    except Exception:
+        return
+
+
+def _check_and_notify(args: argparse.Namespace, env: Mapping[str, str], current: str) -> None:
+    """Consult the cache, optionally fetch, and emit one notice when due.
+
+    Two independent 24h throttles: ``last_check`` gates the network (one GET
+    per 24h), ``last_notified`` gates the notice (one line per 24h). The cache
+    is written on a successful fetch OR an actual emit. ``last_notified``
+    advances only when a notice is really printed, so ``--quiet`` / ``--json``
+    warm the cache without consuming the notice budget.
+    """
+    if network_suppressed(args, env):
+        return
+    cache = read_cache()
+    fetched = False
+    if should_check(cache):
+        latest = fetch_latest_version()
+        if latest is not None:
+            cache = Cache(
+                last_check=_now_iso(),
+                latest_version=latest,
+                last_notified=cache.last_notified,  # preserve the notify budget
+            )
+            fetched = True
+    latest = cache.latest_version
+    notified = False
+    if (
+        latest is not None
+        and is_newer(current, latest)
+        and not notice_suppressed(args, env)
+        and should_notify(cache)
+    ):
+        print(format_notice(current, latest), file=sys.stderr)
+        cache = Cache(
+            last_check=cache.last_check,
+            latest_version=latest,
+            last_notified=_now_iso(),  # advance only on an actual emit
+        )
+        notified = True
+    if fetched or notified:
+        write_cache(cache)

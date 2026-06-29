@@ -59,7 +59,7 @@ section tracks implementation progress, which is distinct.)
 | 3. Create Data/Fixtures | Done | 2026-06-29 | Inline, date-independent `tmp_path` builders in `tests/test_update_check.py`; no committed dated fixtures (the frozen `docs-INDEX.md` stays the only committed fixture). |
 | 4. Run Tests (RED Baseline) | Done | 2026-06-29 (finalized by the review fold-in same day) | **600 collected; 48 RED (47 update-check + A3 flip), 10 GREEN-at-baseline locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed** (542 prior + 10 new green). Every RED a clean classified assertion; gate clean tree-wide. |
 | 5. Update Base Interfaces | Done | 2026-06-29 | New `src/docs_cli/update_check.py` (Cache + leaf helpers fully implemented; `maybe_notify` a declared no-op until Phase 6); `cli.py` extracts `_dispatch(args)` and reduces `main()` to dispatch → `maybe_notify(args, os.environ, __version__)` → return. All 40 unit tests GREEN; 7 orchestration dispatch tests + A3 stay RED (8 failed / 592 passed); gate clean. |
-| 6. Implement Offline/Core Path | Pending | — | — |
+| 6. Implement Offline/Core Path | Done | 2026-06-29 | Implemented `maybe_notify` (broad fail-silent net) + `_check_and_notify` (network-suppress short-circuit → cache read → 24h-gated fetch → `is_newer` + notice-suppress + 24h notify-gate → STDERR emit → write on fetch-or-emit) + `_now_iso`. All 47 RED dispatch+unit → GREEN; 10 locks stay GREEN. Full suite **1 failed (A3 only), 599 passed**; gate clean. |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
 | 8. Run Tests (GREEN) | Pending | — | — |
 | 9. Implement Online/Integration | Pending | — | — |
@@ -468,3 +468,53 @@ tests, plus A3 elsewhere). Full suite → **8 failed, 592 passed** (the 7 dispat
 + A3; prior 542 + the 10 locks GREEN — the hook is inert under the conftest
 `DOCS_CLI_NO_UPDATE_CHECK=1` guard and the no-op `maybe_notify`). Gate clean:
 `ruff check` / `ruff format --check` / `mypy` (43 source files) all pass.
+
+## Phase 6 — Implement Offline/Core Path
+
+**Objective.** Complete the orchestration so all 17 offline dispatch RED tests
+go GREEN while the 10 absence locks stay GREEN.
+
+**Files changed.**
+
+- `src/docs_cli/update_check.py` — added `import sys`, `_now_iso()`
+  (`datetime.now(UTC).isoformat()`), and replaced the no-op `maybe_notify`
+  with the real two-function core path (Q2/Q9):
+  - `maybe_notify(args, env, current)` wraps `_check_and_notify` in a top-level
+    `except Exception: return` — the documented fail-silent net (ruff does not
+    select BLE; the leaf functions keep their own specific catches). No
+    update-check error can reach `main()`.
+  - `_check_and_notify(...)`: `network_suppressed` short-circuit (CI /
+    `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` → no network, no notice) →
+    `read_cache` → if `should_check`, `fetch_latest_version`; on a non-None
+    result rebuild the cache with a fresh `last_check` + `latest_version`,
+    **preserving `last_notified`** (the notify budget) and setting `fetched` →
+    then, when `latest is not None and is_newer(current, latest) and not
+    notice_suppressed and should_notify`, `print(format_notice(...),
+    file=sys.stderr)` (the emitter adds the `\n`; last stderr line), advance
+    `last_notified` **only on the actual emit**, set `notified` → finally
+    `write_cache` when `fetched or notified`.
+
+**Decisions applied / recorded.**
+
+- **Q2 — write on success-or-emit; bounded offline-retry property.** The cache
+  is written only after a successful fetch or an actual emit. Because
+  `read_cache` treats a `last_check`-only file as "no data" (Q1), a
+  permanently-**offline** host re-attempts the network on *every* invocation
+  (each bounded by the 1.0s timeout) rather than once/24h — there is never a
+  successful fetch to persist a `last_check`, and a `last_check`-only file would
+  be ignored on read anyway. This is **forced by the locked tests + cli.md**
+  ("created on first **successful** check") and is an accepted, bounded
+  property; no un-pinned `last_check`-only persistence path was added (it would
+  be ignored on read).
+- **Q6 — `last_notified` advances only on emit.** A `--quiet` / `--json` run
+  warms `last_check` (and `latest_version`) but never `last_notified`, so the
+  notice budget is untouched (pinned by `test_dispatch_quiet_warms_cache_…`).
+- **Q9 — fail-silent boundary** kept as the top-level `except Exception:
+  return` with specific catches in the leaves.
+
+**Test results.** `tests/test_update_check.py` → **57 passed** (all 47 prior-RED
+now GREEN; the 10 locks hold). Full suite → **1 failed, 599 passed** — the only
+RED is `test_a3_project_version_is_1_7_0` (pyproject still `1.6.5` until Phase
+7's bump; expected, not a regression). No network touched in-suite (the conftest
+guard + the injected `fetch_latest_version`). Gate clean: `ruff check` / `ruff
+format --check` / `mypy` (43 source files) all pass.
