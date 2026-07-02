@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.8.0 — UNRELEASED
+
+### Added
+
+- **Agent-aware `install-skill`** (M23). `docs install-skill` now treats
+  `--dest` as the single, agent-agnostic source of truth for where the bundled
+  skill lands. When `--dest` is omitted, resolution is **TTY-aware**: an
+  interactive human is prompted (the `~/.claude/skills/docs/` default is
+  offered; empty input accepts it); a non-TTY caller (an agent) is **never**
+  blocked on a prompt — it falls back to the default and exits 0. The
+  `install-skill` help/description are reworded from "Claude Code skill" to the
+  agent-agnostic **"agent skill"** framing.
+- **Recorded-dest state file** (M23). On any successful `install-skill` (copy,
+  symlink, or already-identical no-op), the resolved destination **path** is
+  recorded to `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json`
+  (schema `{"dest": "<absolute-path>"}`, last-write-wins, fail-silent). It
+  records a **path only** — never the installed skill's content or a hash — and
+  a refusal records nothing.
+- **Recorded-dest skill-refresh hint** (M23). M21's update-check notice gains a
+  second STDERR line pointed at the recorded dest:
+  `docs: refresh the agent skill at <dest> — run: docs install-skill --dest <dest> --force`.
+  It is strictly coupled to the CLI notice — appended only when that notice
+  actually prints, under the **same** suppression matrix (`--quiet` / `--json` /
+  `CI` / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK`) and 24h throttle — replays
+  the recorded path verbatim (no filesystem check), and is absent when no dest
+  has been recorded (M21 behaviour unchanged).
+
 ## 1.7.0 — UNRELEASED
 
 ### Added

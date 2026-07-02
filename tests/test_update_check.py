@@ -39,9 +39,18 @@ from docs_cli import cli
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # The running version the notice quotes as `<current>`. Computed from the
-# installed metadata so the dispatch tests stay correct across the Phase-7
-# 1.6.5 -> 1.7.0 bump (the fake PyPI version is always strictly newer).
+# installed metadata so the dispatch tests stay correct across version bumps
+# (the fake PyPI version is always strictly newer).
 CURRENT = cli.__version__
+
+# A fake "latest" PyPI version that stays *strictly newer* than CURRENT across
+# every future version bump (M23 climbed CURRENT to 1.8.0; later milestones go
+# higher). The dispatch tests below and the M23 D5 hint tests both fetch this
+# sentinel as "a newer PyPI version": a hardcoded literal like "1.7.1" would
+# stop being newer than CURRENT once a bump lands, silently un-firing the
+# notice — the present-asserting tests would fail and the absence-asserting
+# ones would pass for the wrong reason. This bump-proof sentinel avoids that.
+NEWER = "99.0.0"
 
 # Guarded import: the module is created in Phase 5. Use importlib so mypy never
 # tries to resolve a not-yet-existing module (the gate must stay clean at the
@@ -510,11 +519,11 @@ def test_network_allowed_by_default():
 def test_dispatch_newer_emits_one_stderr_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
-    assert out.err.endswith(_expected_notice("1.7.1"))  # last line, byte-exact + \n
+    assert out.err.endswith(_expected_notice(NEWER))  # last line, byte-exact + \n
     assert out.err.count("docs: update available") == 1  # exactly one
     assert "docs: update available" not in out.out  # never on stdout
 
@@ -524,10 +533,10 @@ def test_dispatch_failing_verb_keeps_exit_code_and_shows_notice(
 ):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "invalid", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["check", str(tree)])
     out = capsys.readouterr()
-    notice = _expected_notice("1.7.1")
+    notice = _expected_notice(NEWER)
     assert code == 2  # the notice never changes the exit code
     # ADDITIVE, not a replacement: the verb's own diagnostic output survives.
     # `docs check` prints its findings to STDOUT (stderr stays empty until the
@@ -549,7 +558,7 @@ def test_dispatch_stale_check_fetches_once_and_advances_last_check(
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     old = _iso_hours_ago(25)
     _write_dispatch_cache(cache_home, last_check=old, latest_version=CURRENT)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -557,7 +566,7 @@ def test_dispatch_stale_check_fetches_once_and_advances_last_check(
     assert spy.calls == 1  # stale last_check → exactly one network attempt
     after = _read_dispatch_cache(cache_home)
     assert after is not None and after["last_check"] != old  # advanced
-    assert out.err.endswith(_expected_notice("1.7.1"))
+    assert out.err.endswith(_expected_notice(NEWER))
 
 
 def test_dispatch_notify_throttle_is_independent_of_check(
@@ -571,7 +580,7 @@ def test_dispatch_notify_throttle_is_independent_of_check(
         latest_version=CURRENT,
         last_notified=_iso_hours_ago(1),  # fresh → notice throttled
     )
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -582,7 +591,7 @@ def test_dispatch_notify_throttle_is_independent_of_check(
 def test_dispatch_quiet_warms_cache_without_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     cache_home = _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["touch", str(tree / "lone-doc.md"), "--root", str(tree), "--quiet"])
     out = capsys.readouterr()
     assert code == 0
@@ -599,11 +608,11 @@ def test_dispatch_corrupt_cache_recovers_and_notifies(monkeypatch, capsys, tmp_p
     cache_dir = cache_home / "docs-cli"
     cache_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / "update-check.json").write_bytes(b"{not json")
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
-    assert out.err.endswith(_expected_notice("1.7.1"))  # no traceback, notice emitted
+    assert out.err.endswith(_expected_notice(NEWER))  # no traceback, notice emitted
     after = _read_dispatch_cache(cache_home)  # parses → was rewritten to valid JSON
     assert after is not None and set(after) == {"last_check", "latest_version", "last_notified"}
 
@@ -615,11 +624,11 @@ def test_dispatch_naive_timestamp_cache_self_heals(monkeypatch, capsys, tmp_path
     # aware-minus-naive subtract; the check must treat it as stale, re-probe,
     # emit, and rewrite an offset-aware cache — never abort fatally.
     _write_dispatch_cache(cache_home, last_check="2026-06-29T12:00:00", latest_version=CURRENT)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
-    assert out.err.endswith(_expected_notice("1.7.1"))  # self-healed → notice emitted
+    assert out.err.endswith(_expected_notice(NEWER))  # self-healed → notice emitted
     after = _read_dispatch_cache(cache_home)
     assert after is not None
     # rewritten with an offset-aware last_check (parses back to an aware datetime)
@@ -629,11 +638,11 @@ def test_dispatch_naive_timestamp_cache_self_heals(monkeypatch, capsys, tmp_path
 def test_dispatch_non_tty_still_sees_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     assert not sys.stderr.isatty()  # capsys replaces stderr with a non-TTY buffer
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
-    assert out.err.endswith(_expected_notice("1.7.1"))  # TTY inversion: shown anyway
+    assert out.err.endswith(_expected_notice(NEWER))  # TTY inversion: shown anyway
 
 
 # ---------------------------------------------------------------------------
@@ -649,7 +658,7 @@ def test_dispatch_version_flag_never_emits_notice(monkeypatch, capsys, tmp_path)
     hook-placement lock once the Phase-5/6 post-dispatch hook lands.
     """
     _prep_dispatch(monkeypatch, tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))  # strictly newer than CURRENT
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))  # strictly newer than CURRENT
     with pytest.raises(SystemExit):
         cli.main(["--version"])  # argparse version action exits before dispatch
     out = capsys.readouterr()
@@ -678,7 +687,7 @@ def test_dispatch_fresh_cache_skips_network(monkeypatch, capsys, tmp_path, fixtu
     cache_home = _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     _write_dispatch_cache(cache_home, last_check=_iso_hours_ago(1), latest_version=CURRENT)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     capsys.readouterr()
@@ -690,7 +699,7 @@ def test_dispatch_json_keeps_stdout_clean_and_suppresses_notice(
 ):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--json", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
@@ -703,7 +712,7 @@ def test_dispatch_ci_env_silent_and_no_network(monkeypatch, capsys, tmp_path, fi
     _prep_dispatch(monkeypatch, tmp_path)
     monkeypatch.setenv("CI", "true")
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -717,7 +726,7 @@ def test_dispatch_no_update_check_env_silent_and_no_network(
     _prep_dispatch(monkeypatch, tmp_path)
     monkeypatch.setenv("DOCS_CLI_NO_UPDATE_CHECK", "1")
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -731,7 +740,7 @@ def test_dispatch_do_not_track_env_silent_and_no_network(
     _prep_dispatch(monkeypatch, tmp_path)
     monkeypatch.setenv("DO_NOT_TRACK", "1")
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -793,16 +802,6 @@ def test_dispatch_offline_reprobes_each_invocation(monkeypatch, capsys, tmp_path
 # notice) locks stay GREEN. M23 must never record a dest on a non-install-skill
 # path.
 # ===========================================================================
-
-# A fake "latest" PyPI version that stays *strictly newer* than CURRENT across
-# every future version bump (Phase 7 climbs CURRENT to 1.8.0, later milestones
-# higher). The M21 dispatch tests above hardcode "1.7.1", which stops being
-# newer than CURRENT once Phase 7 lands — see the Phase-7 note in the milestone
-# doc / impl log to rebase those. These M23 hint tests must never silently stop
-# exercising the notice (a "1.7.1" here would make the present-hint tests fail
-# and the absence-asserting tests pass for the wrong reason after the bump), so
-# they use this bump-proof sentinel instead.
-NEWER = "99.0.0"
 
 
 def _prep_state(monkeypatch: Any, tmp_path: Path) -> Path:
