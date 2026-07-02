@@ -47,7 +47,7 @@ section tracks implementation progress, which is distinct.)
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-07-02 | cli.md §install-skill + §Update check; refs resynced; OQs folded into Decisions |
-| 2. Write Tests (RED) | Pending | — | — |
+| 2. Write Tests (RED) | Complete | 2026-07-02 | new test_install_skill_dest.py; D5 additions to test_update_check.py; packaging pins flipped to 1.8.0 |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
@@ -134,3 +134,47 @@ a `cli.md` runtime detail (like M21's cache), not the docs-tree format.
 
 **Result.** `docs check docs/` exit 0; `tests/test_skill_refs.py` green;
 `docs index --root docs/ --dry-run` clean.
+
+## Phase 2 — Write Tests (RED)
+
+**Objective.** Failing tests for D1–D5 + the state-file / hint seams; all
+offline (M21 notice fake-injected, XDG_STATE + HOME pointed at tmp).
+
+**Files changed.**
+
+- `tests/test_install_skill_dest.py` (**new**) — drives
+  `cli.main(["install-skill", ...])` in-process:
+  - **D1** explicit `--dest` installs and never prompts (`builtins.input`
+    raises) — GREEN at baseline (a lock).
+  - **D2** TTY prompt → prompted dest used (RED); TTY empty input → default
+    (GREEN lock); non-TTY never blocks → default, exit 0 (GREEN lock, OQ-1).
+  - **D3** copy-success records `{"dest": <resolved>}` path-only (RED); an
+    already-identical no-op also records (RED); a refusal records nothing
+    (GREEN lock).
+  - **D4** subparser description + one-line help say "agent skill", never
+    "Claude Code" (RED).
+  - State-file helpers `state_path` / `read_recorded_dest` /
+    `write_recorded_dest`: existence, XDG_STATE path + `~/.local/state`
+    default, roundtrip, last-write-wins, missing/corrupt → None, unwritable →
+    silent (all RED via `hasattr` guards giving clean assertion failures).
+- `tests/test_update_check.py` (**additions**) — D5 recorded-dest hint on
+  M21's channel, reusing `_prep_dispatch` / `_FetchSpy` / `_expected_notice`
+  and adding `_prep_state` / `_write_recorded_dest` / `_expected_hint`:
+  - hint present as the byte-exact LAST stderr line, exactly once, never on
+    stdout (RED); verbatim replay of a non-existent path (RED); no-dest →
+    CLI line only, M21 unchanged (GREEN lock); `--json` / `--quiet` / CI /
+    `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` silence both lines (GREEN
+    locks); fresh `last_notified` throttles the hint too (GREEN lock);
+    current version → no hint (GREEN lock).
+  - `SKILL_HINT_TEMPLATE` / `format_skill_hint` seam + byte-exact formatter
+    (RED); the AF-1 spec-content lock on `docs/cli.md` (GREEN).
+- `tests/test_packaging.py` — A3 / B1 / B2 / C2 version pins flipped
+  1.7.0 → 1.8.0 (RED until Phase 7; function names + docstrings updated).
+
+**INVARIANT preserved.** The M21 dispatch tests run list/check/touch — never
+install-skill — so they never record a dest; their
+`endswith(_expected_notice)` locks stay GREEN.
+
+**Result.** New tests collect cleanly (no import/argparse-SystemExit
+surprises); ruff check + format clean on all three files; each intended-RED
+fails for its stated reason (see Phase 4).
