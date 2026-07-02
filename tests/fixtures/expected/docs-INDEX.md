@@ -11,7 +11,7 @@ _Generated 2026-07-02. 20 docs active, 39 archived._
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-06-29.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-07-02.
 
 ### Active — Charter
 
@@ -23,7 +23,7 @@ _Generated 2026-07-02. 20 docs active, 39 archived._
 
 ### Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-06-29.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-07-02.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-06-24.
 
 ### Active — Milestone

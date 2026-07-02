@@ -123,10 +123,13 @@ reworded "agent skill" help, and the M21-notice skill-refresh hint.
   Decisions as resolved (OQ-1 default / OQ-2 separate XDG_STATE file — both
   provisional pending operator confirm; OQ-3 single dest; OQ-4 1.8.0) plus
   AF-1/AF-2/AF-3; updated Overview, Requirements D2/D3, Deliverables D2/D3/D7.
-- `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` — regenerated in
-  lockstep (the milestone-doc description + m23 doc dates changed). The `cli.md`
-  edits are mid-file and did **not** bump its `Updated:` date, so its INDEX row
-  is a byte no-op.
+- `docs/cli.md` `Updated:` bumped to 2026-07-02 per the convention (an edited
+  doc bumps its own `Updated:` — status.md "How to keep this file honest");
+  `references/cli.md` re-synced byte-identical; `docs/INDEX.md` +
+  `tests/fixtures/expected/docs-INDEX.md` regenerated in lockstep. (The
+  date-bump was applied during the post-Phase-4 audit — the initial Phase-1
+  commit had left cli.md's date unchanged to keep the INDEX row a no-op, which
+  the audit corrected.)
 
 **Decisions bound.** OQ-1..OQ-4 + AF-1..AF-3 (see the milestone doc). The
 `convention.md` mirror is intentionally NOT touched — per-user runtime state is
@@ -259,3 +262,42 @@ The behaviour gate (the 21 RED) goes GREEN in Phases 6–8.
 **Result.** RED baseline matches the plan exactly; no collection errors; the
 untouched pre-existing suite is fully GREEN (only the 4 deliberately-flipped
 packaging pins moved to RED).
+
+## Post-Phase-4 audit (consistency / completeness / accuracy)
+
+Ran the same-instance audit (ship-milestone `consistency-check.md`). The RED
+baseline was re-verified as intact (634: 613 pass / 21 intended-RED). Three
+issues found and fixed:
+
+1. **cli.md `Updated:` not bumped.** Phase 1 kept `docs/cli.md` at 2026-06-29
+   (to keep the INDEX row a no-op), but the project convention is that an
+   edited doc bumps its own `Updated:`. Fixed: bumped to 2026-07-02, re-synced
+   `references/cli.md`, regenerated INDEX + frozen snapshot in lockstep. (This
+   deviates from the plan's "cli.md is a mid-file INDEX no-op" expectation, in
+   favour of the documented convention.)
+2. **status.md M23 row stale.** It claimed "No TDD phase started" and "Four
+   genuine OPEN QUESTIONS open" — both now false. Fixed: the M23 table row +
+   prose now report Phases 1–4 complete on `m23/phases-1-4` (634: 613/21) and
+   the four OQs resolved (OQ-1/OQ-2 provisional pending operator confirm);
+   status.md `Updated:` bumped; INDEX + snapshot regenerated in lockstep.
+3. **Dispatch-test hermeticity.** The reused `_prep_dispatch` did not isolate
+   `XDG_STATE_HOME`, so once the Phase-6 hint reads the recorded dest the M21
+   dispatch tests could pick up the host's real `~/.local/state`. Fixed:
+   `_prep_dispatch` now points `XDG_STATE_HOME` at a fresh tmp dir, keeping the
+   M21 `endswith(_expected_notice)` locks robust (plan Phase 3 "every test
+   points XDG_STATE at tmp").
+
+**Test-adequacy (the phases-1–4 highest-leverage check).** The RED tests pin
+the contract, not trivial passes: the state-file location is pinned to the
+exact `XDG_STATE` path + `~/.local/state` default; recording asserts the exact
+`{"dest": <resolved>}` shape with **no** hash/content key; the hint is pinned
+byte-exact as the LAST stderr line (order + count + not-on-stdout), with
+verbatim replay of a non-existent path, full suppression-matrix + throttle
+coupling, and current-version silence; D4 pins both the description and the
+one-line help. GREEN-at-baseline locks (D1, D2 empty/non-TTY, D3 refusal,
+hint-absent M21-unchanged, AF-1 spec lock) guard the pre-change contract.
+
+Surfaced for operator decision at branch review: OQ-1 (non-TTY = default) and
+OQ-2 (separate `XDG_STATE` file) were resolved **provisionally while the
+operator was away** and are flagged in the milestone doc Decisions + status.md
+for confirmation.

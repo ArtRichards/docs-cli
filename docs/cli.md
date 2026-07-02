@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-06-29
+Updated: 2026-07-02
 
 Related:
 - pairs-with: convention.md

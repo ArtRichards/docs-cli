@@ -158,13 +158,18 @@ def _prep_dispatch(monkeypatch: Any, tmp_path: Path) -> Path:
     """Re-enable the check (conftest disables it), point the cache at tmp.
 
     Clears the ambient suppression env vars so a host with `CI` set does not
-    mask the notice; returns the tmp `XDG_CACHE_HOME` directory.
+    mask the notice; returns the tmp `XDG_CACHE_HOME` directory. Also isolates
+    `XDG_STATE_HOME` (M23's recorded-dest lives there) so no dispatch test ever
+    reads the host's real `~/.local/state`: with a fresh, unseeded state dir
+    the M23 skill hint stays absent unless a test explicitly seeds one, keeping
+    the M21 `endswith(_expected_notice)` locks robust.
     """
     monkeypatch.delenv("DOCS_CLI_NO_UPDATE_CHECK", raising=False)
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     cache_home = tmp_path / "xdg-cache"
     monkeypatch.setenv("XDG_CACHE_HOME", str(cache_home))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
     return cache_home
 
 
