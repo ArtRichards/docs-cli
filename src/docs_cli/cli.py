@@ -3328,7 +3328,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     install_skill_p.add_argument(
         "--dest",
-        default="~/.claude/skills/docs/",
+        default=None,
         help="Destination directory (default: ~/.claude/skills/docs/).",
     )
     mode = install_skill_p.add_mutually_exclusive_group()
@@ -5047,8 +5047,33 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
-# `docs install-skill` materialises the bundled Claude Code skill onto a host.
+# `docs install-skill` materialises the bundled agent skill onto a host.
 # ---------------------------------------------------------------------------
+
+
+# The default destination when `--dest` is omitted. A default is not an
+# assumption that the user runs Claude Code — it is a convenient common
+# location; `--dest` remains the agent-agnostic source of truth (M23 D1/D2).
+_DEFAULT_SKILL_DEST = "~/.claude/skills/docs/"
+
+
+def _resolve_install_dest(args: argparse.Namespace) -> str:
+    """Resolve the raw dest string, TTY-aware, without expanding it (M23 D2).
+
+    - Explicit ``--dest`` wins verbatim (raw string; caller expands/resolves).
+    - Omitted + interactive TTY: prompt (default offered; empty accepts it).
+    - Omitted + non-TTY (an agent): NEVER block — fall back to the default.
+
+    Returns the RAW string; ``_cmd_install_skill`` applies the single
+    ``expanduser().resolve()`` so the recorded path is the resolved absolute
+    dest in every case (OQ-1 / OQ-C).
+    """
+    if args.dest is not None:
+        return str(args.dest)
+    if sys.stdin.isatty():
+        answer = input(f"Install destination [{_DEFAULT_SKILL_DEST}]: ").strip()
+        return answer or _DEFAULT_SKILL_DEST
+    return _DEFAULT_SKILL_DEST
 
 
 # Files the bundled skill is allowed to contain. Pinned by
