@@ -50,10 +50,10 @@ section tracks implementation progress, which is distinct.)
 | 2. Write Tests (RED) | Complete | 2026-07-02 | new test_install_skill_dest.py; D5 additions to test_update_check.py; packaging pins flipped to 1.8.0 |
 | 3. Create Data/Fixtures | Complete | 2026-07-02 | inline tmp builders (state seed + TTY harness); date-independent; no real-path/network; frozen INDEX snapshot the only committed fixture |
 | 4. Run Tests (RED Baseline) | Complete | 2026-07-02 | 636 total: 613 pass / 23 intended-RED (after the fresh-eyes fold added 2 nit RED tests); pre-existing suite green (only the 4 flipped packaging pins went RED) |
-| 5. Update Base Interfaces | Pending | — | — |
-| 6. Implement Offline/Core Path | Pending | — | — |
-| 7. Update Tool/Wrapper Layer | Pending | — | Version bump 1.8.0. **Sweep `tests/test_update_check.py` for `1.7.1` "newer" version literals and rebase them above the new version** — the M21 dispatch block (~513–747) hardcodes `1.7.1`, which stops being newer than `CURRENT` (= `cli.__version__`) once pyproject hits 1.8.0. (M23 D5 hint tests already use the bump-proof `NEWER="99.0.0"` sentinel.) |
-| 8. Run Tests (GREEN) | Pending | — | — |
+| 5. Update Base Interfaces | Complete | 2026-07-02 | update_check seams (SKILL_HINT_TEMPLATE/format_skill_hint + state_path/read/write_recorded_dest); cli.py _DEFAULT_SKILL_DEST + _resolve_install_dest; --dest default → None. Seam tests GREEN; behaviour RED |
+| 6. Implement Offline/Core Path | Complete | 2026-07-02 | extract-method _materialise_skill + single recording call site (OQ-A); D4 help reword; D5 hint in _check_and_notify. 17 behaviour RED → GREEN; 4 packaging pins still RED |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-07-02 | pyproject 1.8.0 + editable reinstall; NEWER sentinel hoisted + dispatch-block "newer" literals rebased (OQ-D); CHANGELOG 1.8.0; packaging pins GREEN; test_skill_refs GREEN |
+| 8. Run Tests (GREEN) | Complete | 2026-07-02 | Full suite 636 GREEN; ruff/format/mypy clean; docs check exit 0; docs index --dry-run byte no-op; docs --version = 1.8.0 |
 | 9. Implement Online/Integration | Pending | — | — |
 | 10. Quality, Docs, Refactor | Pending | — | — |
 
@@ -352,3 +352,107 @@ Folded on `m23/phases-1-4`; the suite stays at the intended RED baseline (now
 baseline re-verified: **636: 613 pass / 23 intended-RED**, every RED failing for
 its stated reason; the pre-existing suite stays GREEN (only the 4 flipped
 packaging pins are RED). No constraint relaxed; no Phase-5+ behaviour landed.
+
+## Phase 5 — Update Base Interfaces
+
+**Objective.** Declare the M23 seams with minimal logic, mirroring M21's
+fail-silent idioms; tests import the seam; behaviour tests stay RED.
+
+**Files changed.**
+
+- `src/docs_cli/update_check.py` — added `SKILL_HINT_TEMPLATE` (byte-exact
+  AF-1 template, em-dash U+2014 before `run:`, `{dest}` placeholder) beside
+  `NOTICE_TEMPLATE`; `format_skill_hint(dest)` beside `format_notice`; and the
+  path-only per-user state trio beside the cache helpers — `state_path()`
+  (`${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json`),
+  `read_recorded_dest()` (fail-silent on OSError/ValueError; dict + str `dest`
+  guard else `None`), `write_recorded_dest(dest)` (mkdir parents; write
+  `{"dest": dest}`; swallow OSError). M21's frozen 3-key `Cache` is untouched
+  (OQ-2).
+- `src/docs_cli/cli.py` — module const `_DEFAULT_SKILL_DEST =
+  "~/.claude/skills/docs/"`; `_resolve_install_dest(args)` (returns the RAW
+  string — explicit `--dest` verbatim; omitted + TTY → prompt, empty accepts
+  default; omitted + non-TTY → default, never blocks; OQ-1/OQ-C); `--dest`
+  argparse `default` flipped `"~/.claude/skills/docs/"` → `None` (the help=
+  literal "(default: ~/.claude/skills/docs/)" kept — packaging D7 + the human
+  default depend on it). The section comment above `_cmd_install_skill` was
+  reworded "Claude Code skill" → "agent skill" here (an OQ-B target folded early
+  — a zero-risk comment adjacent to the section being made agent-aware).
+
+**Result.** `mypy` clean (44 files); ruff/format clean; the seam +
+state-helper + formatter tests GREEN; the D2/D3/D4 behaviour tests and the 2
+dispatch-hint tests + 4 packaging pins stay RED (Phases 6–7).
+
+## Phase 6 — Implement Offline/Core Path
+
+**Objective.** Flip every non-packaging behaviour RED to GREEN: TTY-aware
+resolution + dest recording + reworded help + the recorded-dest skill hint.
+
+**Files changed.**
+
+- `src/docs_cli/cli.py` — `_cmd_install_skill` refactored (OQ-A extract-method):
+  it resolves `dest = Path(os.path.expanduser(_resolve_install_dest(args)))
+  .resolve()` (the SINGLE expanduser/resolve, OQ-C — captured pre-mutation so a
+  symlink install records the dest resolved before the link exists), calls
+  `_materialise_skill(args, dest, source)` (the pre-M23 body moved VERBATIM —
+  wheel-symlink refusal 2 / no-op 0 / conflict 2 / clean-slate + symlink 0 /
+  copy 0), and records at the ONE call site behind `if code == 0`
+  (refusals skip recording naturally, D3). D4: the `install-skill` argparse
+  `help`/`description` reworded to "agent skill" (both "Claude Code" phrases
+  dropped; the default path kept — a path is not a Claude-Code claim). No bundle
+  re-sync needed for D4 (docs/cli.md + references/cli.md already say "agent
+  skill").
+- `src/docs_cli/update_check.py` — `_check_and_notify`: inside the existing
+  single emit guard, immediately after the CLI notice print, `recorded =
+  read_recorded_dest(); if recorded is not None: print(format_skill_hint(
+  recorded), file=sys.stderr)`. Sitting inside the
+  `if latest and is_newer and not notice_suppressed and should_notify(cache):`
+  guard gives the hint the full suppression matrix + 24h throttle for free
+  (AF-3), fires once, always last on stderr (AF-1), never stdout, verbatim
+  (no fs check, AF-2); fail-silent via the `None` guard + `maybe_notify`'s
+  broad except.
+
+**Result.** All 17 non-packaging behaviour tests GREEN (D2 prompt / D3 copy /
+noop / omitted-default / symlink recording / refusal-records-nothing; D4
+description + short help; the dispatch hint present / verbatim-replay). Only the
+4 packaging version pins remain RED. mypy/ruff/format clean; `test_skill_refs`
+GREEN.
+
+## Phase 7 — Update Tool/Wrapper Layer
+
+**Objective.** Version bump + the OQ-D version-literal sweep + packaging parity.
+
+**Files changed.**
+
+- `pyproject.toml` — `version` `1.7.0` → `1.8.0`; `.venv/bin/pip install -e
+  ".[dev]"` so `importlib.metadata` (= `cli.__version__` = `CURRENT`) reads
+  1.8.0 (`docs --version` → 1.8.0).
+- `tests/test_update_check.py` — OQ-D sweep: hoisted the `NEWER = "99.0.0"`
+  sentinel up next to `CURRENT` and rebased every dispatch-block "newer PyPI
+  version" literal (`_FetchSpy(version="1.7.1")` → `_FetchSpy(version=NEWER)`,
+  `_expected_notice("1.7.1")` → `_expected_notice(NEWER)`) across both fires-
+  and absence-asserting tests. Left the self-contained unit literals
+  (`is_newer` / `format_notice` compare inputs, cache `latest_version` data,
+  the fetch fake-JSON) untouched — none compare against `CURRENT`. ruff-format
+  reflowed the touched lines.
+- `CHANGELOG.md` — added `## 1.8.0 — UNRELEASED` above the 1.7.0 header with an
+  `### Added` block (agent-aware install-skill, recorded-dest state file,
+  recorded-dest skill-refresh hint).
+- `tests/test_packaging.py` — no edit (A3/B1/B2/C2 already flipped to 1.8.0 in
+  Phase 2 → GREEN post-reinstall).
+
+**Result.** Packaging pins A3/B1/B2/C2 GREEN; `test_skill_refs` GREEN (cli.md /
+convention.md + bundle refs unchanged in 5–7). No stale "1.7.1"-as-newer literal
+remains below `CURRENT`.
+
+## Phase 8 — Run Tests (GREEN)
+
+**Objective.** Full suite GREEN; gate clean tree-wide; version reflects the bump.
+
+**Command.** `.venv/bin/python -m pytest tests/ -q`
+
+**Result.** **636 passed** (0 failed). Gate: `ruff check .` all passed;
+`ruff format --check .` all formatted; `mypy` "Success: no issues found in 44
+source files"; `docs check docs/` exit 0 ("no violations found"); `docs index
+--root docs/ --dry-run` a byte no-op vs the committed INDEX; `docs --version`
+prints `1.8.0`.
