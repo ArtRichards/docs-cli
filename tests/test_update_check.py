@@ -794,6 +794,16 @@ def test_dispatch_offline_reprobes_each_invocation(monkeypatch, capsys, tmp_path
 # path.
 # ===========================================================================
 
+# A fake "latest" PyPI version that stays *strictly newer* than CURRENT across
+# every future version bump (Phase 7 climbs CURRENT to 1.8.0, later milestones
+# higher). The M21 dispatch tests above hardcode "1.7.1", which stops being
+# newer than CURRENT once Phase 7 lands — see the Phase-7 note in the milestone
+# doc / impl log to rebase those. These M23 hint tests must never silently stop
+# exercising the notice (a "1.7.1" here would make the present-hint tests fail
+# and the absence-asserting tests pass for the wrong reason after the bump), so
+# they use this bump-proof sentinel instead.
+NEWER = "99.0.0"
+
 
 def _prep_state(monkeypatch: Any, tmp_path: Path) -> Path:
     """Point XDG_STATE_HOME at a tmp dir; return the state-home directory."""
@@ -865,7 +875,7 @@ def test_dispatch_recorded_dest_appends_skill_hint(monkeypatch, capsys, tmp_path
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     dest = "/home/agent/.claude/skills/docs"
     _write_recorded_dest(state_home, dest)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
@@ -884,10 +894,10 @@ def test_dispatch_no_recorded_dest_emits_cli_line_only(monkeypatch, capsys, tmp_
     _prep_dispatch(monkeypatch, tmp_path)
     _prep_state(monkeypatch, tmp_path)  # XDG_STATE at tmp, but nothing recorded
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
-    assert out.err.endswith(_expected_notice("1.7.1"))  # CLI line is the last line
+    assert out.err.endswith(_expected_notice(NEWER))  # CLI line is the last line
     assert "docs: refresh the agent skill" not in out.err
 
 
@@ -899,7 +909,7 @@ def test_dispatch_recorded_dest_replayed_verbatim(monkeypatch, capsys, tmp_path,
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     dest = "/nonexistent/path/does/not/exist/skills/docs"
     _write_recorded_dest(state_home, dest)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert out.err.endswith(_expected_hint(dest))  # exact path replayed, no fs check
@@ -916,7 +926,7 @@ def test_dispatch_json_suppresses_hint_and_cli(monkeypatch, capsys, tmp_path, fi
     state_home = _prep_state(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     _write_recorded_dest(state_home, "/x/dest")
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--json", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
@@ -931,7 +941,7 @@ def test_dispatch_quiet_suppresses_hint_and_cli(monkeypatch, capsys, tmp_path, f
     state_home = _prep_state(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     _write_recorded_dest(state_home, "/x/dest")
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["touch", str(tree / "lone-doc.md"), "--root", str(tree), "--quiet"])
     out = capsys.readouterr()
     assert code == 0
@@ -949,7 +959,7 @@ def test_dispatch_env_suppression_silences_hint_and_cli(
     state_home = _prep_state(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     _write_recorded_dest(state_home, "/x/dest")
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert "docs: update available" not in out.err
@@ -971,7 +981,7 @@ def test_dispatch_fresh_last_notified_throttles_hint_too(
         last_notified=_iso_hours_ago(1),  # fresh → notice (and hint) throttled
     )
     _write_recorded_dest(state_home, "/x/dest")
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert "docs: update available" not in out.err  # CLI throttled

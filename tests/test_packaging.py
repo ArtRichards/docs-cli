@@ -36,6 +36,7 @@ edit, the suite skips packaging tests cleanly instead of crashing.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -386,6 +387,18 @@ def test_c3_docs_help_lists_every_verb(wheel_venv: Path) -> None:
 # --- Group D: `docs install-skill` verb -------------------------------------
 
 
+def _isolated_env(tmp_path: Path) -> dict[str, str]:
+    """A copy of the ambient env with ``XDG_STATE_HOME`` pointed at a tmp dir.
+
+    Group-D tests run ``docs install-skill --dest <tmp>`` as *subprocesses*.
+    Once Phase 6 lands the recording, every success writes
+    ``docs-cli/install-skill.json`` under ``$XDG_STATE_HOME``; isolating it here
+    keeps those writes inside ``tmp_path`` instead of the host's real
+    ``~/.local/state``. (Harmless before recording exists — nothing reads it.)
+    """
+    return {**os.environ, "XDG_STATE_HOME": str(tmp_path / "xdg-state")}
+
+
 def test_d1_install_skill_subcommand_exists(wheel_venv: Path) -> None:
     """D1: `docs install-skill --help` exits 0.
 
@@ -417,6 +430,7 @@ def test_d2_install_skill_default_action_is_copy(wheel_venv: Path, tmp_path: Pat
         [str(wheel_venv), "install-skill", "--dest", str(dest)],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode == 0, (
         f"install-skill exited {result.returncode}:\n"
@@ -441,6 +455,7 @@ def test_d3_install_skill_tree_is_byte_identical(wheel_venv: Path, tmp_path: Pat
         [str(wheel_venv), "install-skill", "--dest", str(dest)],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode == 0, f"install-skill exited {result.returncode}"
     for rel in (
@@ -473,6 +488,7 @@ def test_d4_install_skill_is_idempotent(wheel_venv: Path, tmp_path: Path) -> Non
             [str(wheel_venv), "install-skill", "--dest", str(dest)],
             capture_output=True,
             text=True,
+            env=_isolated_env(tmp_path),
         )
         assert result.returncode == 0, (
             f"{invocation} invocation exited {result.returncode}:\n"
@@ -495,6 +511,7 @@ def test_d5_install_skill_refuses_non_identical_without_force(
         [str(wheel_venv), "install-skill", "--dest", str(dest)],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode != 0, (
         "install-skill must refuse a non-identical existing dest without --force; "
@@ -512,6 +529,7 @@ def test_d5_install_skill_refuses_non_identical_without_force(
         [str(wheel_venv), "install-skill", "--dest", str(dest), "--force"],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert forced.returncode == 0, (
         f"install-skill --force must succeed; exited {forced.returncode}:\nstderr:\n{forced.stderr}"
@@ -534,6 +552,7 @@ def test_d6_install_skill_rejects_symlink_on_wheel_install(
         [str(wheel_venv), "install-skill", "--dest", str(dest), "--symlink"],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode != 0, (
         f"install-skill --symlink must be rejected on a wheel install; exited {result.returncode}"

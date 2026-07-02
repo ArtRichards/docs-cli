@@ -209,6 +209,52 @@ def test_d3_refusal_records_nothing(tmp_path, monkeypatch):
     assert _read_state_raw(state_home) is None, "a refusal must record nothing"
 
 
+def test_d3_omitted_dest_records_resolved_default_path(tmp_path, monkeypatch):
+    """An install with ``--dest`` OMITTED records the *resolved* default path —
+    the fully-expanded absolute dest, never ``None`` and never an unexpanded
+    ``~`` (RED until the Phase-6 recording lands).
+
+    This pins that recording keys off the *resolved* dest the resolver picked,
+    not the raw ``args.dest``: on a non-TTY the default is used (OQ-1), and what
+    lands in the state file must be the expanded ``~/.claude/skills/docs``
+    absolute path — the same value the D5 hint later replays."""
+    state_home = _prep_state(monkeypatch, tmp_path)
+    default_dest = _prep_home(monkeypatch, tmp_path)  # resolved default under tmp HOME
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False, raising=False)  # non-TTY → default
+    monkeypatch.setattr("builtins.input", _raise_input)  # and never prompts
+    code = cli.main(["install-skill", "--copy"])
+    assert code == 0
+    assert hasattr(uc, "read_recorded_dest"), _NOT_IMPL_STATE
+    recorded = uc.read_recorded_dest()
+    assert recorded == str(default_dest), (
+        "an omitted --dest must record the RESOLVED default path, "
+        "not None and not an unexpanded '~'"
+    )
+    assert recorded is not None and "~" not in recorded
+    assert _read_state_raw(state_home) == {"dest": str(default_dest)}
+
+
+def test_d3_symlink_success_records_dest(tmp_path, monkeypatch):
+    """A successful ``--symlink`` install (editable install → symlink succeeds)
+    also records the resolved dest path (RED until Phase-6 recording lands).
+
+    ``cli.md``'s *Recorded destination* prose lists a symlink among the success
+    triggers, so the symlink path must record just like copy — this pins it."""
+    state_home = _prep_state(monkeypatch, tmp_path)
+    dest = tmp_path / "symlink-dest"
+    # Capture the expected recorded value BEFORE the symlink exists: the
+    # implementation records ``Path(expanduser(dest)).resolve()`` computed while
+    # dest is still absent, so resolving it now (nothing to follow) matches;
+    # resolving AFTER creation would chase the symlink to the source.
+    expected = str(dest.resolve())
+    code = cli.main(["install-skill", "--dest", str(dest), "--symlink"])
+    assert code == 0, "editable install → --symlink must succeed"
+    assert dest.is_symlink(), "the --symlink path must create a symlink"
+    assert hasattr(uc, "read_recorded_dest"), _NOT_IMPL_STATE
+    assert uc.read_recorded_dest() == expected
+    assert _read_state_raw(state_home) == {"dest": expected}
+
+
 # ---------------------------------------------------------------------------
 # D4 — reworded help: "agent skill", never "Claude Code"
 # ---------------------------------------------------------------------------
