@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-06-29
+Updated: 2026-07-02
 
 Related:
 - child-of: m23-agent-aware-install-skill.md
@@ -21,21 +21,23 @@ changed, actions, test results, decisions.
 
 - Project: docs
 - Milestone: M23 — Agent-aware install-skill + recorded-dest skill-refresh hint
-  (v1.8.0 recommended)
-- Started: 2026-06-29 (scaffolded — milestone-setup; no TDD phase started)
-- Progress: **Milestone pair scaffolded 2026-06-29** as the follow-on to the
-  M21 re-scope. M21 became a CLI-only update notice and CUT its skill half (the
-  offline skill-drift notice D5 + the dual `docs install-skill --force` nudge)
-  because it inspected the user's installed skill and assumed Claude Code. M23
-  rebuilds the skill-refresh story honestly: make `install-skill` agent-aware
-  (`--dest` is the agent-agnostic source of truth; TTY-aware resolution that
-  never blocks an agent), **record** the resolved dest to a per-user state file
-  (a *path*, never the skill's content), neutralise the "Claude Code skill"
-  framing in `install-skill`'s help → "agent skill", and extend M21's
-  update-notice channel with a skill-refresh hint pointed at the **recorded**
-  dest. **Depends on M21.** No TDD phase started. Four genuine OPEN QUESTIONS
-  remain for a later planning pass (non-TTY default-vs-refuse; state-file
-  location; multiple recorded dests; final version number — recommend 1.8.0).
+  (v1.8.0)
+- Started: 2026-06-29 (scaffolded — milestone-setup); TDD Phase 1 opened
+  2026-07-02.
+- Progress: **Phase 1–4 in progress (Contract & RED baseline, 2026-07-02).**
+  Scaffolded 2026-06-29 as the follow-on to the M21 re-scope (M21 became a
+  CLI-only update notice and CUT its skill half — the offline skill-drift notice
+  D5 + the dual `docs install-skill --force` nudge — because it inspected the
+  user's installed skill and assumed Claude Code). M23 rebuilds the
+  skill-refresh story honestly: make `install-skill` agent-aware (`--dest` is
+  the agent-agnostic source of truth; TTY-aware resolution that never blocks an
+  agent), **record** the resolved dest to a per-user state file (a *path*, never
+  the skill's content), neutralise the "Claude Code skill" framing in
+  `install-skill`'s help → "agent skill", and extend M21's update-notice channel
+  with a skill-refresh hint pointed at the **recorded** dest. **Depends on M21.**
+  The four OPEN QUESTIONS are **resolved** (OQ-1 default / OQ-2 separate
+  XDG_STATE file — provisional pending operator confirm; OQ-3 single dest;
+  OQ-4 1.8.0); see the milestone doc Decisions.
 
 (Note: doc-lifecycle status is the front-matter `Lifecycle:` field. This
 section tracks implementation progress, which is distinct.)
@@ -44,7 +46,7 @@ section tracks implementation progress, which is distinct.)
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | — |
+| 1. Define Contract | Complete | 2026-07-02 | cli.md §install-skill + §Update check; refs resynced; OQs folded into Decisions |
 | 2. Write Tests (RED) | Pending | — | — |
 | 3. Create Data/Fixtures | Pending | — | — |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
@@ -94,4 +96,41 @@ for the provenance.
 
 ## Phase 1 — Define Contract
 
-_Not started._
+**Objective.** Freeze the four contract surfaces in the specs (no code, no
+tests): the TTY-aware `--dest` resolution, the recorded-dest state file, the
+reworded "agent skill" help, and the M21-notice skill-refresh hint.
+
+**Files changed.**
+
+- `docs/cli.md` §install-skill — added two paragraphs: *Destination resolution*
+  (`--dest` is the single agent-agnostic SoT; omitted → TTY may prompt with the
+  default offered / empty accepts default, non-TTY silently uses the default
+  `~/.claude/skills/docs/` and exits 0) and *Recorded destination* (any success
+  — copy, symlink, or already-identical no-op — records the resolved **path**
+  to `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json`, schema
+  `{"dest": "<absolute-path>"}`, last-write-wins, fail-silent; a refusal records
+  nothing; path replayed verbatim, never inspected). Cross-reference to
+  §Update check.
+- `docs/cli.md` §Update check — added the **Skill-refresh hint** subsection
+  pinning the byte-exact template
+  `docs: refresh the agent skill at <dest> — run: docs install-skill --dest <dest> --force`,
+  its coupling to the CLI notice (same suppression matrix + 24h `last_notified`
+  throttle, no independent trigger), verbatim replay (no fs check), and the
+  M21-unchanged "no recorded dest → CLI line only" behaviour.
+- `src/docs_cli/skill/references/cli.md` — resynced byte-identical (surface
+  parity; `tests/test_skill_refs.py` green).
+- `docs/m23-agent-aware-install-skill.md` — folded the four OPEN QUESTIONS into
+  Decisions as resolved (OQ-1 default / OQ-2 separate XDG_STATE file — both
+  provisional pending operator confirm; OQ-3 single dest; OQ-4 1.8.0) plus
+  AF-1/AF-2/AF-3; updated Overview, Requirements D2/D3, Deliverables D2/D3/D7.
+- `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` — regenerated in
+  lockstep (the milestone-doc description + m23 doc dates changed). The `cli.md`
+  edits are mid-file and did **not** bump its `Updated:` date, so its INDEX row
+  is a byte no-op.
+
+**Decisions bound.** OQ-1..OQ-4 + AF-1..AF-3 (see the milestone doc). The
+`convention.md` mirror is intentionally NOT touched — per-user runtime state is
+a `cli.md` runtime detail (like M21's cache), not the docs-tree format.
+
+**Result.** `docs check docs/` exit 0; `tests/test_skill_refs.py` green;
+`docs index --root docs/ --dry-run` clean.
