@@ -293,6 +293,14 @@ def _check_and_notify(args: argparse.Namespace, env: Mapping[str, str], current:
         and should_notify(cache)
     ):
         print(format_notice(current, latest), file=sys.stderr)
+        # M23 D5 — append the recorded-dest skill-refresh hint, strictly coupled
+        # to the CLI notice (this guard already carries the full suppression
+        # matrix + 24h last_notified throttle, AF-3). Verbatim replay of the
+        # recorded path — no fs check (AF-2); absent when nothing recorded (M21
+        # unchanged); always the LAST stderr line (AF-1).
+        recorded = read_recorded_dest()
+        if recorded is not None:
+            print(format_skill_hint(recorded), file=sys.stderr)
         cache = Cache(
             last_check=cache.last_check,
             latest_version=latest,

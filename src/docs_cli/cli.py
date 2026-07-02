@@ -3312,11 +3312,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     install_skill_p = subparsers.add_parser(
         "install-skill",
-        help="Materialise the bundled Claude Code skill onto this host.",
+        help="Materialise the bundled agent skill onto this host.",
         description=(
-            "Copy (or symlink) the bundled `docs` Claude Code skill from the "
-            "installed `docs_cli` package onto a host so an agent driving "
-            "Claude Code can pick it up. The default destination is "
+            "Copy (or symlink) the bundled `docs` agent skill from the "
+            "installed `docs_cli` package onto a host so an agent can pick it "
+            "up. The default destination is "
             "~/.claude/skills/docs/; an existing destination must already be "
             "byte-identical to the bundled source or carry --force. "
             "--symlink is rejected when running from a wheel install (the "
@@ -5139,7 +5139,14 @@ def _trees_byte_identical(src: Path, dest: Path) -> bool:
 
 
 def _cmd_install_skill(args: argparse.Namespace) -> int:
-    """Materialise the bundled `docs` skill onto the host.
+    """Materialise the bundled `docs` agent skill onto the host, then record it.
+
+    Resolves the dest TTY-aware (`--dest` is the source of truth; omitted →
+    prompt on a TTY, default on a non-TTY — never blocks). On any success
+    (copy / symlink / already-identical no-op) records the resolved dest path
+    to the per-user state file so M21's update notice can replay it (M23 D3).
+    Refusals (exit 2) skip recording naturally — the single recording call site
+    sits behind the ``code == 0`` guard.
 
     Exit codes:
         0 — success (copy/symlink performed, or destination already
@@ -5148,9 +5155,22 @@ def _cmd_install_skill(args: argparse.Namespace) -> int:
             ``--force`` was not supplied, or ``--symlink`` was requested
             from a wheel install.
     """
-    dest = Path(os.path.expanduser(args.dest)).resolve()
+    dest = Path(os.path.expanduser(_resolve_install_dest(args))).resolve()
     source = _locate_bundled_skill()
+    code = _materialise_skill(args, dest, source)
+    if code == 0:
+        update_check.write_recorded_dest(str(dest))
+    return code
 
+
+def _materialise_skill(args: argparse.Namespace, dest: Path, source: Path) -> int:
+    """Copy / symlink the bundled skill from ``source`` to ``dest``.
+
+    The pre-M23 materialisation body, unchanged: wheel-symlink refusal (2),
+    byte-identical no-op (0), conflict refusal (2), clean-slate + symlink (0),
+    clean-slate + copy (0). ``dest`` is captured pre-mutation so a symlink
+    install records the dest resolved *before* the link exists.
+    """
     # Wheel-install symlink refusal (Q3 — site-packages ancestor heuristic).
     if args.mode == "symlink" and _running_from_wheel_install(source):
         print(
