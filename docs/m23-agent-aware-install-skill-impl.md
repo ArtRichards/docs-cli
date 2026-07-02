@@ -546,3 +546,29 @@ clean; `docs index --root docs/ --dry-run` a byte no-op. Lifecycle left
 and OQ-2 (separate `XDG_STATE` state file) were resolved **provisionally while
 the operator was away**; both remain flagged in the milestone Decisions,
 status.md, and plan.md for confirmation.
+
+## Post-Phase-10 audit (consistency / completeness / accuracy)
+
+Ran the same-instance audit (ship-milestone `consistency-check.md`) over the
+phases-5–10 work. Verified every Deliverable D1–D7 + the four Success Criteria
+against the milestone doc and the frozen `cli.md` contract (not memory): the
+code matches the §install-skill resolution + recorded-dest prose and the
+§Update-check skill-refresh-hint prose (template, coupling, verbatim replay,
+no-recorded-dest → M21 unchanged) exactly; no stubs / TODOs / commented-out
+code; suite fully GREEN from Phase 8. Two consistency issues found and fixed:
+
+1. **plan.md `Updated:` not bumped.** plan.md was edited this step (the M23
+   table row) but still carried `Updated: 2026-06-29`. Fixed via `docs touch
+   docs/plan.md --check` → 2026-07-02; `docs/INDEX.md` + the frozen
+   `tests/fixtures/expected/docs-INDEX.md` regenerated **in lockstep**
+   (byte-identical, only plan.md's INDEX-row date moved).
+2. **plan.md "Sequencing" prose stale.** The M23 Sequencing paragraph still
+   read "draft / milestone-setup (scaffolded 2026-06-29, no TDD phase started)"
+   with "Genuine OPEN QUESTIONS remain … not decided now" — contradicting the
+   updated table row. Reworded to implementation-complete (all 10 phases, 636
+   GREEN, `docs --version` 1.8.0) with the four OQs resolved (OQ-1/OQ-2 flagged
+   for branch-review confirm).
+
+Gate after the fixes: full suite **636 GREEN**; ruff / format / mypy clean;
+`docs check docs/` exit 0; `docs index --root docs/ --dry-run` a byte no-op vs
+the committed INDEX. Diff scope contained only M23 work.

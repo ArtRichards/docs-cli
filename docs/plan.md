@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: plan
 Project: docs
-Updated: 2026-06-29
+Updated: 2026-07-02
 
 Related:
 - implements: charter.md
@@ -90,19 +90,24 @@ nothing. **OPEN QUESTIONS netted out — none outstanding** (OQ-1..OQ-9 RESOLVED
 2026-06-12; OQ-6 "ship D5" REVERSED by the re-scope); milestone-setup is
 complete and Phase 1 (Define Contract) is next.
 
-M23 (v1.8.0 recommended) is the follow-on that restores the skill-refresh nudge
-cut from M21 — currently **draft / milestone-setup** (scaffolded 2026-06-29, no
-TDD phase started). It makes `docs install-skill` **agent-aware** via `--dest`
-(the source of truth, agent-agnostically), **records** the resolved dest to a
-small per-user state file so future runs / M21's update notice can **replay**
-it (replay/remember is allowed; content-inspection is NOT), neutralises the
+M23 (v1.8.0) is the follow-on that restores the skill-refresh nudge cut from
+M21 — **implementation-complete (all 10 TDD phases done 2026-07-02; 1.8.0 built
+locally — publish is a later milestone), lifecycle `draft`** on branches
+`m23/phases-1-4` (RED baseline) + `m23/phases-5-10` (implementation → dogfood →
+closeout); full suite **636 GREEN**, gate clean, `docs --version` = `docs
+1.8.0`. It makes `docs install-skill` **agent-aware** via `--dest` (the source
+of truth, agent-agnostically), **records** the resolved dest to a small
+per-user state file so future runs / M21's update notice can **replay** it
+(replay/remember is allowed; content-inspection is NOT), neutralises the
 "Claude Code skill" framing → "agent skill", and then extends M21's update
 notice with an agent-appropriate skill-refresh hint pointed at the recorded
 dest. Non-TTY runs never block on a prompt. Out of scope: multi-agent skill
 formats and agent auto-detection (don't guess the agent — ask on a TTY or take
-`--dest`). Depends on M21 (extends its notice channel). Genuine OPEN QUESTIONS
-remain (non-TTY default-vs-refuse; state-file location; multiple recorded
-dests; final version number) — for a later M23 planning pass, not decided now.
+`--dest`). Depends on M21 (extends its notice channel). **The four OPEN
+QUESTIONS are resolved** (OQ-1 non-TTY default; OQ-2 separate `XDG_STATE` state
+file; OQ-3 last-write-wins single dest; OQ-4 1.8.0) — OQ-1/OQ-2 resolved
+**provisionally while the operator was away**, flagged for confirmation at
+branch review.
 
 ```
 v1:    M1 (parser + index)  →  M2 (mutating verbs)  →  M3 (validation + JSON)  →  M4 (migrate)  →  M5 (skill)

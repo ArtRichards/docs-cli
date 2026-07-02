@@ -19,7 +19,7 @@ _Generated 2026-07-02. 20 docs active, 39 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-06-29.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-07-02.
 
 ### Active — Spec
 
