@@ -246,9 +246,19 @@ contract.
 - Objective: version bump (recommend 1.8.0 — OQ); packaging version pins in
   lockstep; CHANGELOG entry; bundled `SKILL.md` + `references/` resynced
   byte-identical; reconcile the reworded `--help` into the bundle.
-- Files: `pyproject.toml`, `tests/test_packaging.py`, `CHANGELOG.md`,
-  `src/docs_cli/skill/`.
-- Exit: version pin GREEN; `test_skill_refs` GREEN.
+  **Version-literal sweep (blind-spot guard):** bumping `pyproject` to 1.8.0
+  raises `cli.__version__` (= `CURRENT` in `tests/test_update_check.py`) to
+  1.8.0, so the *pre-existing* M21 dispatch tests that hardcode a "newer" PyPI
+  version of `1.7.1` (`_FetchSpy(version="1.7.1")` / `_expected_notice("1.7.1")`,
+  roughly `tests/test_update_check.py:513–747`) stop being newer than `CURRENT`
+  and their notice silently stops firing. **Sweep `tests/test_update_check.py`
+  for `1.7.1` version literals and rebase them above the new version** (the M23
+  D5 hint tests already use the bump-proof `NEWER = "99.0.0"` sentinel; the M21
+  block still needs rebasing here).
+- Files: `pyproject.toml`, `tests/test_packaging.py`, `tests/test_update_check.py`
+  (version-literal rebase), `CHANGELOG.md`, `src/docs_cli/skill/`.
+- Exit: version pin GREEN; `test_skill_refs` GREEN; no stale `1.7.1` "newer"
+  literal remains below `CURRENT`.
 
 ### Phase 8: Run Tests (GREEN)
 - Objective: full suite GREEN; gate clean tree-wide; `docs --version` reflects

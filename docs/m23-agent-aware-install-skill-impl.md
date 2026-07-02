@@ -49,10 +49,10 @@ section tracks implementation progress, which is distinct.)
 | 1. Define Contract | Complete | 2026-07-02 | cli.md §install-skill + §Update check; refs resynced; OQs folded into Decisions |
 | 2. Write Tests (RED) | Complete | 2026-07-02 | new test_install_skill_dest.py; D5 additions to test_update_check.py; packaging pins flipped to 1.8.0 |
 | 3. Create Data/Fixtures | Complete | 2026-07-02 | inline tmp builders (state seed + TTY harness); date-independent; no real-path/network; frozen INDEX snapshot the only committed fixture |
-| 4. Run Tests (RED Baseline) | Complete | 2026-07-02 | 634 total: 613 pass / 21 intended-RED; pre-existing suite green (only the 4 flipped packaging pins went RED) |
+| 4. Run Tests (RED Baseline) | Complete | 2026-07-02 | 636 total: 613 pass / 23 intended-RED (after the fresh-eyes fold added 2 nit RED tests); pre-existing suite green (only the 4 flipped packaging pins went RED) |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
-| 7. Update Tool/Wrapper Layer | Pending | — | — |
+| 7. Update Tool/Wrapper Layer | Pending | — | Version bump 1.8.0. **Sweep `tests/test_update_check.py` for `1.7.1` "newer" version literals and rebase them above the new version** — the M21 dispatch block (~513–747) hardcodes `1.7.1`, which stops being newer than `CURRENT` (= `cli.__version__`) once pyproject hits 1.8.0. (M23 D5 hint tests already use the bump-proof `NEWER="99.0.0"` sentinel.) |
 | 8. Run Tests (GREEN) | Pending | — | — |
 | 9. Implement Online/Integration | Pending | — | — |
 | 10. Quality, Docs, Refactor | Pending | — | — |
@@ -215,17 +215,22 @@ pre-existing suite stays GREEN; capture the exact baseline count.
 
 **Command.** `.venv/bin/python -m pytest tests/ -q`
 
-**Baseline count.** **634 tests: 613 passed, 21 failed** (all intended-RED).
-(The pre-M23 suite was 604; M23 added 30 tests — 17 in
-`test_install_skill_dest.py`, 13 D5/seam/spec-lock additions to
+**Baseline count.** **636 tests: 613 passed, 23 failed** (all intended-RED)
+— the post-Phase-4 fresh-eyes fold (below) added 2 nit RED tests, moving the
+original 634/21 baseline to 636/23. (The pre-M23 suite was 604; M23 added 32
+tests — 19 in `test_install_skill_dest.py`, 13 D5/seam/spec-lock additions to
 `test_update_check.py` — of which 13 are GREEN-at-baseline locks.)
 
-**Intended-RED set (21), each failing for its stated reason:**
+**Intended-RED set (23), each failing for its stated reason:**
 
-- `test_install_skill_dest.py` (13):
+- `test_install_skill_dest.py` (15):
   - `test_d2_tty_prompt_installs_at_prompted_dest` — no TTY-aware resolver yet;
     the static `--dest` default is used, so the prompted dest is not honoured.
-  - `test_d3_copy_success_records_dest_path_only`, `test_d3_noop_also_records`
+  - `test_d3_copy_success_records_dest_path_only`, `test_d3_noop_also_records`,
+    `test_d3_omitted_dest_records_resolved_default_path` (fresh-eyes nit — pins
+    that an OMITTED `--dest` records the *resolved* default path, not None /
+    unexpanded `~`), `test_d3_symlink_success_records_dest` (fresh-eyes nit —
+    pins symlink-success recording, the third `cli.md` success trigger)
     — `read_recorded_dest` absent (no recording yet).
   - `test_d4_install_skill_description_says_agent_skill_not_claude_code`,
     `test_d4_install_skill_short_help_says_agent_skill_not_claude_code` — help
@@ -301,3 +306,49 @@ Surfaced for operator decision at branch review: OQ-1 (non-TTY = default) and
 OQ-2 (separate `XDG_STATE` file) were resolved **provisionally while the
 operator was away** and are flagged in the milestone doc Decisions + status.md
 for confirmation.
+
+## Post-Phase-4 fresh-eyes review fold (2026-07-02)
+
+A fresh-eyes review of the phases-1–4 RED baseline returned four findings — all
+test-strengthening / latent-trap fixes, **no** scope or behaviour-intent change.
+Folded on `m23/phases-1-4`; the suite stays at the intended RED baseline (now
+**636: 613 pass / 23 intended-RED** — the two nit tests below are the +2 RED).
+
+1. **SHOULD-FIX — version-literal hazard (D5 hint tests).** The new D5 hint
+   tests hardcoded `_FetchSpy(version="1.7.1")` as the "newer" PyPI version.
+   `is_newer("1.8.0", "1.7.1")` is False, so once Phase 7 bumps `CURRENT` to
+   1.8.0 the CLI notice — and thus the hint — stops firing: the present-hint
+   tests would fail at Phase 8 GREEN and the absence-asserting ones would pass
+   for the wrong reason. Fixed: introduced a bump-proof `NEWER = "99.0.0"`
+   sentinel in the M23 section and rebased **all** M23 D5 `1.7.1` literals onto
+   it (both present- and absence-asserting tests). The pre-existing M21 dispatch
+   block (~513–747) still uses `1.7.1` (GREEN at the current 1.7.0, out of this
+   step's scope) — a **Phase 7 sweep note** was added to the milestone doc
+   Phase 7 objective + the Phase 7 row/notes here so Step 2 rebases those.
+2. **SHOULD-FIX — hermeticity leak (Group-D packaging tests).** The Group-D
+   `tests/test_packaging.py` tests run `docs install-skill --dest <tmp>` as
+   subprocesses without isolating `XDG_STATE_HOME`; once Phase 6 adds recording
+   each would silently write `install-skill.json` to the host's real
+   `~/.local/state/docs-cli/`. Fixed: added a `_isolated_env(tmp_path)` helper
+   (ambient env + `XDG_STATE_HOME` → tmp) and passed `env=` into every Group-D
+   install subprocess (D2–D6). Harmless before recording exists; the packaging
+   tests still behave (the 4 flipped version pins stay RED; the rest unchanged).
+3. **NIT — omitted-`--dest` recording unpinned.** Every D3 recording test used
+   an explicit `--dest`. Added `test_d3_omitted_dest_records_resolved_default_path`
+   — a default-resolved install (no `--dest`, non-TTY) must record the
+   **resolved** default path (not None / unexpanded `~`). NEW intended-RED (no
+   recording until Phase 6); hermetic (XDG_STATE + HOME at tmp).
+4. **NIT — symlink-success recording unpinned.** `cli.md`'s *Recorded
+   destination* prose lists a symlink among the success triggers, but no test
+   exercised it (only copy + no-op + refusal). Added
+   `test_d3_symlink_success_records_dest` — the editable-install `--symlink`
+   path records the resolved dest (expected value captured **before** the
+   symlink exists, so `resolve()` does not chase the link to the source). NEW
+   intended-RED until Phase 6; hermetic.
+
+**Gate after the fold.** `ruff check` + `ruff format --check` clean tree-wide;
+`mypy` "Success: no issues found in 44 source files"; `docs check docs/` exit 0;
+`docs index --root docs/ --dry-run` a byte no-op vs the committed INDEX. RED
+baseline re-verified: **636: 613 pass / 23 intended-RED**, every RED failing for
+its stated reason; the pre-existing suite stays GREEN (only the 4 flipped
+packaging pins are RED). No constraint relaxed; no Phase-5+ behaviour landed.
