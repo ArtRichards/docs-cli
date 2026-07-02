@@ -21,9 +21,18 @@ test results, decisions.
 
 - Project: docs
 - Milestone: M21 — Update-check notification (PyPI new-version notice) (v1.7.0)
-- Started: 2026-06-12 (scaffolded — milestone-setup; no TDD phase started)
-- Progress: **Milestone pair scaffolded 2026-06-12; re-scoped to CLI-only
-  2026-06-29.** Headline: `docs-cli` checks PyPI for a newer release and, once
+- Started: 2026-06-12 (scaffolded — milestone-setup); TDD Phases 1–4 run
+  2026-06-29.
+- Progress: **Implementation-complete — all 10 TDD phases done (2026-06-29);
+  1.7.0 built locally, publish is a later milestone. Lifecycle `draft`.**
+  Phases 1–4 (RED baseline) on `m21/phases-1-4`; Phases 5–10 (implementation)
+  on `m21/phases-5-10`. Full suite **604 GREEN** (600 at Phase 8; the 2026-06-29
+  Step-2 fresh-eyes review fold-in added +4 — see the fold-in note), gate clean
+  tree-wide, `docs
+  --version` = `docs 1.7.0`; the online path verified against live PyPI +
+  dogfooded end-to-end (pytest stays 100% offline). Re-scoped to CLI-only
+  2026-06-29. Headline: `docs-cli`
+  checks PyPI for a newer release and, once
   per 24h and fail-silent, emits ONE STDERR line nudging the user/agent to
   update **the CLI** (`pip install -U docs-cli`). This is the tool's **first
   network surface** (stdlib `urllib` only, 1.0s timeout, 24h-cache-gated,
@@ -37,10 +46,14 @@ test results, decisions.
   2026-06-29); the skill story moves to the follow-on **M23**. Ships as **1.7.0
   locally** (minor bump — additive feature; 1.6.5 was the operator-decreed
   patch exception); the PyPI publish is a later operator-driven milestone
-  (M19→M20, M14+M15→M17 pattern). Depends on nothing. **No TDD phase started** —
-  milestone-setup only. OPEN QUESTIONS are netted out — **none outstanding**
-  (the re-scope resolves or moots OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED). See
-  the milestone doc's Decisions.
+  (M19→M20, M14+M15→M17 pattern). Depends on nothing. **All 10 phases done
+  (2026-06-29): the RED baseline (600 collected; 48 RED [47 update-check + the
+  deliberately-flipped A3] / 10 GREEN-at-baseline locks; 552 passed) closed out
+  GREEN — Phase 6 turned the 47 RED → GREEN, Phase 7 bumped to 1.7.0 (A3 GREEN),
+  and the Phase-8 editable reinstall took the full suite to 600 GREEN.**
+  OPEN QUESTIONS are netted out — **none outstanding** (the
+  re-scope resolves or moots OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED). See the
+  milestone doc's Decisions.
 
 (Note: doc-lifecycle status is the front-matter `Lifecycle:` field. This
 section tracks implementation progress, which is distinct.)
@@ -49,16 +62,16 @@ section tracks implementation progress, which is distinct.)
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | — |
-| 2. Write Tests (RED) | Pending | — | — |
-| 3. Create Data/Fixtures | Pending | — | — |
-| 4. Run Tests (RED Baseline) | Pending | — | — |
-| 5. Update Base Interfaces | Pending | — | — |
-| 6. Implement Offline/Core Path | Pending | — | — |
-| 7. Update Tool/Wrapper Layer | Pending | — | — |
-| 8. Run Tests (GREEN) | Pending | — | — |
-| 9. Implement Online/Integration | Pending | — | — |
-| 10. Quality, Docs, Refactor | Pending | — | — |
+| 1. Define Contract | Done | 2026-06-29 | `cli.md` §Update check + §Output-conventions note; bundled `cli.md` mirror resynced byte-identical; INDEX + frozen snapshot refrozen (single delta = `cli.md` `Updated:` bump); `convention.md` untouched. 543 GREEN. |
+| 2. Write Tests (RED) | Done | 2026-06-29 | New `tests/test_update_check.py` (55 tests at the Phase-2 run; the 2026-06-29 fresh-eyes review fold-in later added +2 → **57**: a `--version`-absence GREEN lock, a `should_notify` no-cache RED unit, and a hardened failing-verb assertion — see the review fold-in note); `conftest.py` offline guard (`DOCS_CLI_NO_UPDATE_CHECK=1`); `test_packaging.py` A3 flipped to 1.7.0. Collects 598 (600 post-review); gate clean. |
+| 3. Create Data/Fixtures | Done | 2026-06-29 | Inline, date-independent `tmp_path` builders in `tests/test_update_check.py`; no committed dated fixtures (the frozen `docs-INDEX.md` stays the only committed fixture). |
+| 4. Run Tests (RED Baseline) | Done | 2026-06-29 (finalized by the review fold-in same day) | **600 collected; 48 RED (47 update-check + A3 flip), 10 GREEN-at-baseline locks; prior suite 542 GREEN + the A3 flip (RED); 552 passed** (542 prior + 10 new green). Every RED a clean classified assertion; gate clean tree-wide. |
+| 5. Update Base Interfaces | Done | 2026-06-29 | New `src/docs_cli/update_check.py` (Cache + leaf helpers fully implemented; `maybe_notify` a declared no-op until Phase 6); `cli.py` extracts `_dispatch(args)` and reduces `main()` to dispatch → `maybe_notify(args, os.environ, __version__)` → return. All 40 unit tests GREEN; 7 orchestration dispatch tests + A3 stay RED (8 failed / 592 passed); gate clean. |
+| 6. Implement Offline/Core Path | Done | 2026-06-29 | Implemented `maybe_notify` (broad fail-silent net) + `_check_and_notify` (network-suppress short-circuit → cache read → 24h-gated fetch → `is_newer` + notice-suppress + 24h notify-gate → STDERR emit → write on fetch-or-emit) + `_now_iso`. All 47 RED dispatch+unit → GREEN; 10 locks stay GREEN. Full suite **1 failed (A3 only), 599 passed**; gate clean. |
+| 7. Update Tool/Wrapper Layer | Done | 2026-06-29 | `pyproject.toml` `version` 1.6.5 → **1.7.0**; `test_packaging.py` B1/B2/C2 pins + docstrings flipped to 1.7.0 (C2 renamed `…_1_6_5` → `…_1_7_0`); `CHANGELOG.md` `### Added` block appended under the existing `## 1.7.0 — UNRELEASED` (one header, both `### Added` + M22's `### Documentation`); `SKILL.md` gained an "Update notices" section (advisory line + `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK`). `cli.md`/`convention.md` untouched (contract pinned Phase 1) → bundled refs stay byte-identical (`test_skill_refs` GREEN). A3 GREEN; gate clean. |
+| 8. Run Tests (GREEN) | Done | 2026-06-29 | Editable reinstall (`pip install -e .`) refreshed the dist-info → `importlib.metadata` reports 1.7.0. Full suite **600 passed**; `ruff check` / `ruff format --check` / `mypy` (43 files) clean; `docs check docs/` 0 violations; `docs index` a byte no-op; `docs --version` → `docs 1.7.0`. |
+| 9. Implement Online/Integration | Done | 2026-06-29 | Live read-only PyPI probe (real `urllib`) → `info.version = '1.6.5'` (the published version; local build is 1.7.0, ahead of it). No-mock real-network `docs list` → cache written `{last_check, latest_version: "1.6.5", last_notified: null}`, **no** notice (local ahead), exit 0. Forced-newer dogfood (fake latest 1.7.99 on the real editable build) confirmed: notice once on stderr (byte-exact), 24h notify-gate suppresses the 2nd run, CI / CI= / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` each skip network + notice, `--quiet` / `--json` warm the cache without notice, `--json` stdout stays parseable JSON, failing verb keeps exit 2 with the notice on stderr + findings on stdout. pytest stays 100% offline. |
+| 10. Quality, Docs, Refactor | Done | 2026-06-29 | Closeout: Phase 5–10 impl-log entries + the phase table; milestone Phase Checklist (5–10), Deliverables (D1–D7 + surface-parity + full-suite), and Success Criteria all ticked; `status.md` / `plan.md` updated to "implementation-complete (1.7.0 built locally; publish is a later milestone)". Surface-parity gate run: `docs --help` + per-verb `--help` unchanged (no new flag — controls are env vars + existing `--quiet`/`--json`); the env-var table is present in `cli.md` (Phase 1) + `SKILL.md` (Phase 7); stale-wording grep clean (no `install-skill --force` / skill-drift in the product surface). INDEX regenerated + frozen snapshot in lockstep; lifecycle stays `draft` (no `docs archive`). LIGHT cleanups only — the `/simplify` pass is Step 3. |
 
 ## Provenance — where the scope came from
 
@@ -157,6 +170,590 @@ Net effect: M21 is the runtime **CLI-update** notice only; no skill inspection,
 no Claude-Code assumption. No TDD phase has run; the re-scope is a docs-only
 change to the milestone pair (no product code touched).
 
+## Conductor triage — Step 1 OQ dispositions (binding)
+
+The conductor triaged ten open questions for Step 1 (Phases 1–4) and
+auto-resolved each per the recommended default. Recorded here so the
+implementation record is complete:
+
+- **Q1 (cli.md section heading / placement)** → top-level `## Update check`
+  inserted between `## Output conventions` and `## Exit codes (summary)`, plus
+  one cross-ref bullet in `## Output conventions`.
+- **Q2 (convention.md change?)** → **NO.** The cache is per-user
+  `XDG_CACHE_HOME` host state; env vars are CLI surface (cli.md); the config
+  opt-out is deferred (OQ-5/5a). `convention.md` stays byte-identical; its
+  bundled mirror copy is a no-op. Not edited.
+- **Q3 (bump cli.md `Updated:` + refreeze snapshot in Phase 1?)** → **YES** —
+  bump `2026-06-12` → `2026-06-29`, regenerate INDEX, refreeze the snapshot.
+  Single expected snapshot delta this phase.
+- **Q4 (notice termination / position)** → one `\n`-terminated line, emitted as
+  the command's **last** stderr line. The formatter **returns the line without a
+  trailing newline**; the emitter adds the `\n`. The byte-exact dispatch test
+  asserts the trailing `\n` on emitted stderr; the formatter unit test asserts
+  no trailing newline.
+- **Q5 (fail-silent completeness — unwritable cache)** → **ADD** the
+  unwritable/uncreatable cache dir-or-file path to the fail-silent enumeration
+  in cli.md **and** add the unit test (write swallows `OSError`, no raise).
+- **Q6 (`last_notified` advance semantics)** → stated explicitly in cli.md:
+  `last_notified` advances **only when a notice is actually emitted**; a
+  `--quiet` / `--json` run warms `last_check` but not `last_notified`. Pinned by
+  the `--quiet`-warms-cache test.
+- **Q7 (spec-content lock test)** → **ADD** one minimal lock asserting
+  `docs/cli.md` contains (a) the byte-exact notice template
+  `docs: update available <current> -> <latest> — run: pip install -U docs-cli`
+  and (b) the three suppression env-var names `DOCS_CLI_NO_UPDATE_CHECK`,
+  `DO_NOT_TRACK`, `CI`. `test_skill_refs` transitively locks the bundled mirror.
+  Kept minimal (no extra spec-grep tests).
+- **Q8 (conftest offline-guard mechanism)** → module-level
+  `os.environ["DOCS_CLI_NO_UPDATE_CHECK"] = "1"` in `tests/conftest.py`; new
+  dispatch tests opt back in via `monkeypatch.delenv(..., raising=False)`.
+- **Q9 (A3-only flip in Phase 2)** → **YES** — Phase 2 flips only `test_a3` to
+  expect `1.7.0`. B1/B2/C2 stay `1.6.5` until Phase 7 (the pyproject bump).
+- **Q10 (no notice on `--version` / `--help`)** → stated in cli.md (the check
+  runs after dispatch returns, so it never runs for `--version` / `-h`). A cheap
+  GREEN lock (`docs --version` emits no notice) is optional.
+
 ## Phase 1 — Define Contract
 
-_Not started._
+**Objective.** Pin the M21 surface in the specs — no code, no tests — so every
+Phase-2 assertion string is present verbatim in `cli.md`.
+
+**Files changed.**
+
+- `docs/cli.md` — added a top-level `## Update check` section between
+  `## Output conventions` and `## Exit codes (summary)`, containing: the
+  byte-exact CLI-only notice template
+  (`docs: update available <current> -> <latest> — run: pip install -U docs-cli`,
+  em-dash `—`, ASCII `->`) + the concrete `1.7.0 -> 1.7.1` example; STDERR-only,
+  last-stderr-line, `\n`-terminated, ≤ once/24h, never stdout, never alters the
+  exit code; the one-HTTPS-GET to `https://pypi.org/pypi/docs-cli/json` (stdlib
+  `urllib`, 1.0s timeout) compared against `__version__`; the three-key cache
+  schema table (`last_check`, `latest_version`, `last_notified`, ISO-8601 UTC)
+  at `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json`; the two
+  independent 24h throttles + the `last_notified`-advances-only-on-emit rule;
+  the stdlib numeric tuple-compare fail-closed on pre-release / `0.0.0+local` /
+  unparseable; the full fail-silent enumeration (incl. the unwritable/
+  uncreatable cache path — Q5); the non-TTY inversion + rationale; the
+  suppression matrix table (`--quiet` / `--json` warm the cache; `CI` /
+  `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` skip the network); the
+  config-opt-out-deferred note (OQ-5/5a); and the "runs after dispatch returns,
+  so never for `--version` / `-h`" statement.
+- `docs/cli.md` `## Output conventions` — appended one cross-ref bullet.
+- `src/docs_cli/skill/references/cli.md` — resynced byte-identical to
+  `docs/cli.md` (surface-parity gate; `test_skill_refs` GREEN).
+- `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` — regenerated and
+  refrozen after the `cli.md` `Updated:` bump (`2026-06-12` → `2026-06-29`); the
+  single delta is that date.
+
+**Not changed (by decision).** `docs/convention.md` and its bundled mirror
+(Q2 — NO change); `SKILL.md` (env-var / `--help` reconciliation is Phase 7);
+`CHANGELOG.md` (Phase 7 **appends** an `### Added` entry under the existing
+`## 1.7.0 — UNRELEASED` header opened by M22 — no second 1.7.0 header).
+
+**Lifecycle commands.** Bumped the date + regenerated INDEX via the docs CLI
+(`docs touch docs/cli.md --check --root docs`); confirmed `docs check docs/`
+exit 0 and `docs index --root docs/ --dry-run` a byte no-op before commit.
+
+**Test state.** The pre-existing 543 stay GREEN (`test_skill_refs` +
+`test_index_output_matches_frozen_snapshot` included). No tests added this
+phase (Phase 2).
+
+## Phase 2 — Write Tests (RED)
+
+**Objective.** Express the Phase-1 contract as failing tests, split by layer,
+all behind the mock seam (no real network) so the suite stays 100% offline.
+
+**Files changed.**
+
+- `tests/test_update_check.py` (NEW, 55 tests) — guarded import
+  (`importlib.import_module("docs_cli.update_check")` → `uc`, `None` until
+  Phase 5; `importlib` + `uc: Any` keeps mypy clean before AND after the module
+  exists). UNIT tests (each opens `assert uc is not None, "<not-impl>"`):
+  `is_newer` (numeric, fail-closed on local / pre-release / unparseable),
+  `format_notice` (byte-exact, no trailing `\n`), cache path + I/O (XDG-aware;
+  missing / corrupt / malformed → no-data; three-key round-trip with no fourth
+  key; parent-dir creation; unwritable → swallow `OSError`), the two 24h
+  throttles + their independence, the `fetch_latest_version` hook (monkeypatched
+  `urllib`: 200 → version + asserts the PyPI URL & `timeout=1.0`; URLError /
+  timeout / HTTPError 500 / malformed body → `None`), and the
+  `notice_suppressed` / `network_suppressed` predicates (defensive `getattr`;
+  `--quiet`/`--json` warm the cache; `CI`/`DOCS_CLI_NO_UPDATE_CHECK`/
+  `DO_NOT_TRACK` skip the network). DISPATCH tests (`cli.main([...])` in-process
+  + capsys; `_prep_dispatch` delenvs the suppression vars + points
+  `XDG_CACHE_HOME` at tmp; a `_FetchSpy` that lives outside `uc` so call-counts
+  hold at the RED baseline): intended-RED notice/cache-effect tests + GREEN-at-
+  baseline absence locks.
+- `tests/conftest.py` — module-level `os.environ["DOCS_CLI_NO_UPDATE_CHECK"]="1"`
+  (D6 offline guard; inert at baseline, inherited by every subprocess child).
+- `tests/test_packaging.py` — A3 only: renamed `test_a3_project_version_is_1_6_5`
+  → `_1_7_0`, asserting `1.7.0` (RED until the Phase-7 pyproject bump; B1/B2/C2
+  stay `1.6.5`).
+
+**Mock seam.** No real network anywhere: the fetch unit tests monkeypatch
+`urllib.request.urlopen`; the dispatch tests inject `_FetchSpy` onto
+`uc.fetch_latest_version` (a no-op while `uc is None`) and never reach PyPI.
+
+**Quality gate.** Tree-wide clean at the RED baseline — ruff / ruff format
+--check / mypy all pass (the guarded `importlib` import + `uc: Any` avoids the
+`import-not-found` mypy error the literal `from docs_cli import update_check`
+form would raise).
+
+## Phase 3 — Create Data/Fixtures
+
+**Objective.** Provide every Phase-2 test's data as inline, date-independent
+`tmp_path` builders — no committed dated fixtures that rot (the M19 "committed
+dates rot" decision).
+
+**Files changed.** None beyond the Phase-2 file — by design the builders are
+inline in `tests/test_update_check.py`:
+
+- `_fake_pypi_json(version)` → `{"info": {"version": version}}`; `_FetchSpy`
+  (callable returning a version or raising) and `_FakeResp` (context-manager
+  HTTP response) for the fetch/dispatch seams.
+- `_iso_hours_ago(n)` stamps `datetime.now(UTC) - timedelta(hours=n)` (e.g. 1 =
+  fresh, 25 = stale) so the 24h throttle data is always relative to "now".
+- `_write_dispatch_cache(...)` / `_read_dispatch_cache(...)` seed and read
+  `$XDG_CACHE_HOME/docs-cli/update-check.json`; corrupt = `b"{not json"`,
+  malformed = JSON missing keys, both written inline. `XDG_CACHE_HOME` is always
+  pointed at `tmp_path`.
+
+**Exit.** Every Phase-2 test has date-independent inline data; no real
+`~/.cache` or network is touched; the byte-frozen `docs-INDEX.md` (regenerated
+in Phase 1) stays the only committed fixture.
+
+## Phase 4 — Run Tests (RED Baseline)
+
+**Objective.** Confirm every intended-RED test fails for its classified reason
+(no tracebacks / collection errors / argparse-exit-2 surprises), classify RED vs
+GREEN-at-baseline, and capture the baseline count.
+
+**Commands.**
+
+```sh
+.venv/bin/python -m pytest tests/ -q          # 48 failed, 552 passed (600 total)
+.venv/bin/python -m pytest tests/test_update_check.py -q   # 47 failed, 10 passed
+```
+
+(Counts are the finalized baseline after the 2026-06-29 fresh-eyes review
+fold-in added +2 tests — see the review fold-in note. The original Phase-4 run
+collected 598: 47 RED / 9 GREEN-at-baseline / 551 passed.)
+
+**Baseline counts.**
+
+- **600** collected (= prior suite 543 + 57 new in `test_update_check.py`).
+- **48 RED**: 47 in `test_update_check.py` (unit + intended-RED dispatch) + the
+  single A3 flip (`test_a3_project_version_is_1_7_0`).
+- **10 GREEN-at-baseline** (new regression locks): the Q7 spec-lock + 9 dispatch
+  absence tests (incl. the `--version`-absence lock).
+- The prior suite is **542 GREEN + the deliberately-flipped A3 (RED)**; total
+  passed is **552** (542 prior + 10 new green). Reconciles: 542 + 1 (A3) + 57
+  new = 600 collected; 48 RED + 552 GREEN = 600.
+
+**RED-vs-GREEN classification (the contract for this phase).**
+
+| Test(s) | Class | RED reason / GREEN basis |
+|---|---|---|
+| all unit tests (`is_newer`, `format_notice`, cache I/O, throttles, fetch, suppression) | RED | `AssertionError: update_check module not yet implemented (Phase 5)` (`uc is None`) |
+| `test_dispatch_newer_emits_one_stderr_notice` | RED | empty stderr — `''.endswith(notice)` is False (no hook yet) |
+| `test_dispatch_failing_verb_keeps_exit_code_and_shows_notice` (hardened, FI-3) | RED | `code == 2` and the additive guard (`"error:" in out.out` — `check` prints findings to **stdout**) both hold; empty stderr fails the notice-present assertion. The own-line guard (`before == "" or before.endswith("\n")`) is unreached at baseline |
+| `test_dispatch_stale_check_fetches_once_and_advances_last_check` | RED | `spy.calls == 0 != 1` (no hook calls the fetch) |
+| `test_dispatch_notify_throttle_is_independent_of_check` | RED | `spy.calls == 0 != 1` |
+| `test_dispatch_quiet_warms_cache_without_notice` | RED | `after is None` (no cache file written) |
+| `test_dispatch_corrupt_cache_recovers_and_notifies` | RED | empty stderr fails the notice assertion (asserted before the cache read, so no JSON traceback) |
+| `test_dispatch_non_tty_still_sees_notice` | RED | non-TTY asserted true; empty stderr fails the notice assertion |
+| `test_a3_project_version_is_1_7_0` | RED | `AssertionError` — pyproject still `1.6.5` |
+| `test_cli_md_pins_notice_template_and_suppression_env_vars` (Q7 lock) | GREEN | Phase 1 pinned the template + env vars in cli.md |
+| `test_dispatch_version_flag_never_emits_notice` (FI-2) | GREEN | `docs --version` SystemExits in argument parsing, before the post-dispatch hook → no notice (trivially silent now; a real hook-placement lock once Phase 5/6 lands) |
+| `test_should_notify_true_when_no_cache` (FI-4) | RED | unit — `AssertionError: update_check module not yet implemented (Phase 5)` (`uc is None`); symmetric to `should_check`'s no-cache case |
+| `test_dispatch_same_version_is_silent` / `_older_latest_is_silent` / `_offline_*` | GREEN | tool emits no notice today (no hook) |
+| `test_dispatch_fresh_cache_skips_network` / `_ci_env_*` / `_no_update_check_env_*` / `_do_not_track_env_*` | GREEN | `spy.calls == 0` (fetch never installed/called at baseline) |
+| `test_dispatch_json_keeps_stdout_clean_and_suppresses_notice` | GREEN | `list --json` already emits byte-clean JSON, no notice |
+
+**Verification.** Sampled the RED tracebacks: unit → the not-impl assertion;
+dispatch → `AssertionError` on empty stderr / `spy.calls` / `after is None`;
+A3 → `AssertionError`. No tracebacks, no collection errors, no argparse exit-2.
+Confirmed the only non-`test_update_check` failure is the A3 flip, and the 10
+GREEN-at-baseline locks pass. The quality gate (ruff / ruff format --check /
+mypy) is clean tree-wide at the RED baseline.
+
+## Fresh-eyes review fold-in (Step 1 finalize, 2026-06-29)
+
+An independent fresh-eyes review found Step 1 sound — no blockers, no
+correctness bugs (it verified the baseline numbers, the byte-exact notice, the
+three-key cache with no leftover `last_skill_drift_notified`, `convention.md`
+untouched, INDEX/snapshot lockstep, the full D5 cut, and that the Phase-2 tests
+genuinely pin the contract). The conductor triaged its findings into four
+binding fold-ins, all auto-resolved (no operator decision pending), applied
+here as **test additions + test hardening + doc-accuracy fixes only** — the
+implementation module `src/docs_cli/update_check.py` is still deliberately
+absent (Phase 5). The classified RED baseline is preserved.
+
+- **FI-1 (doc accuracy).** The rolled-up baseline one-liners overstated the
+  green count: "prior 543 GREEN" alongside "47 RED / 9 GREEN-at-baseline"
+  double-counted the A3 test (it is one of the 47 RED **and** part of the prior
+  543), implying 599 collected vs the 598 actually collected. Reconciled
+  everywhere the loose phrasing appeared (this impl-log's Overview + Phase-4
+  entry/table, `status.md`, `plan.md`, and the milestone doc's Progress) to the
+  recomputed numbers: **prior suite 542 GREEN + the deliberately-flipped A3
+  (RED); 57 new = 47 RED + 10 GREEN-at-baseline locks; 600 collected; 552
+  passed.**
+- **FI-2 (test-hardening — Q10 lock elevated to should-fix).** Added
+  `test_dispatch_version_flag_never_emits_notice`: with the offline guard
+  cleared and `fetch_latest_version` returning a strictly-newer version,
+  `docs --version` (which SystemExits inside argument parsing, before the
+  post-dispatch hook) emits **no** notice on stderr. GREEN-at-baseline (no hook
+  yet → trivially silent); a real hook-placement lock once Phase 5/6 lands. The
+  pre-existing `docs --version` test only inspected stdout, so a hook-placement
+  regression would have been uncaught.
+- **FI-3 (test-hardening).** Hardened
+  `test_dispatch_failing_verb_keeps_exit_code_and_shows_notice` so a hook that
+  (a) clobbered the command's own output or (b) glued the notice onto a prior
+  line could no longer pass. `docs check` prints its findings to **stdout**
+  (stderr is empty until the notice lands), so the additive guard asserts the
+  findings survive on stdout (`"error:" in out.out`); the own-line guard asserts
+  what precedes the notice on stderr is either nothing or ends in a newline
+  (`before == "" or before.endswith("\n")`). Still intended-RED at baseline —
+  the notice-present assertion (`out.err.endswith(notice)`) drives the RED.
+- **FI-4 (test completeness).** Added `test_should_notify_true_when_no_cache`,
+  the symmetric no-prior-notice unit case for `should_notify` (mirrors
+  `should_check`'s no-cache case). RED-at-baseline via the `uc is None` guard.
+
+**Re-run after the fold-ins:** `.venv/bin/python -m pytest tests/ -q` →
+**48 failed, 552 passed (600 collected)**; `tests/test_update_check.py` →
+47 failed, 10 passed (57 tests). Every RED is a clean classified assertion
+(unit → the not-impl guard; intended-RED dispatch → empty-stderr notice /
+`spy.calls` / `after is None`; A3 → pyproject still `1.6.5`) — no tracebacks, no
+collection errors, no argparse exit-2. Quality gate clean tree-wide (ruff / ruff
+format --check / mypy / `docs check docs/`).
+
+## Phase 5 — Update Base Interfaces
+
+**Objective.** Declare the `docs_cli.update_check` seam and wire the `main()`
+hook, fully implementing the leaf/unit-tested functions so every UNIT test goes
+GREEN; the dispatch orchestration is deferred to Phase 6 (the honest split).
+
+**Files changed.**
+
+- `src/docs_cli/update_check.py` (NEW) — the cohesive update-check module
+  (OQ-7). Constants `PYPI_URL`, `TIMEOUT = 1.0`, `THROTTLE = timedelta(hours=24)`,
+  and the byte-exact `NOTICE_TEMPLATE` (em-dash U+2014, ASCII `->`). The
+  `Cache` dataclass (three optional keys). Leaf helpers fully implemented:
+  `is_newer` (stdlib numeric tuple-compare on dot-split release segments,
+  fail-closed on any non-digit segment → pre-release / `0.0.0+local` /
+  unparseable never notify); `format_notice` (no trailing newline);
+  `cache_path` (XDG-aware); `read_cache` (missing / corrupt / non-dict /
+  missing-`last_check`-or-`latest_version` → `Cache()`; `last_notified`
+  optional); `write_cache` (exactly three keys; `mkdir(parents=True)` then
+  `write_text`, swallowing `OSError`); `should_check` / `should_notify` via a
+  `_stale` helper (None / unparseable / ≥24h → True); `fetch_latest_version`
+  (calls `urllib.request.urlopen(PYPI_URL, timeout=TIMEOUT)` as a module
+  attribute so the monkeypatch is seen; returns `info.version` or `None` on
+  URLError/timeout/HTTPError/OSError/malformed-JSON/KeyError/TypeError); and the
+  `notice_suppressed` / `network_suppressed` predicates (defensive `getattr`;
+  env presence-not-truthiness via `_env_disabled`). `maybe_notify` is a declared
+  no-op this phase (`return None`).
+- `src/docs_cli/cli.py` — added `from docs_cli import update_check` (first-party
+  import; no cycle — `update_check` imports no `docs_cli` symbol, the running
+  version is threaded in). Extracted the verbatim dispatch ladder into a new
+  module-level `def _dispatch(args) -> int:` and reduced `main()` to
+  `args = _build_parser().parse_args(argv)` → `code = _dispatch(args)` →
+  `update_check.maybe_notify(args, os.environ, __version__)` → `return code`.
+  Placement after `parse_args` means `--version` / `-h` (which `SystemExit`
+  inside parsing) never reach the hook.
+
+**Decisions applied (from the Step-2 plan).** Q3 — the running version is
+threaded in as `current` (no `importlib.metadata` recompute inside
+`update_check`, no circular import). Q4 — `_dispatch` extracted; the hook fires
+once between dispatch and `return code`. Q1 — `read_cache` requires `last_check`
+AND `latest_version` (so a 2-key warm cache is honored — keeps
+`test_dispatch_fresh_cache_skips_network` GREEN) but treats a `last_check`-only
+file as no-data. The `write_cache` `try/except OSError: return` mirrors the
+codebase's `contextlib.suppress(OSError)` posture (`cli.py`).
+
+**Test results.** `tests/test_update_check.py` → **50 passed, 7 failed** (all 40
+unit tests GREEN; the 7 RED are exactly the orchestration-dependent dispatch
+tests, plus A3 elsewhere). Full suite → **8 failed, 592 passed** (the 7 dispatch
++ A3; prior 542 + the 10 locks GREEN — the hook is inert under the conftest
+`DOCS_CLI_NO_UPDATE_CHECK=1` guard and the no-op `maybe_notify`). Gate clean:
+`ruff check` / `ruff format --check` / `mypy` (43 source files) all pass.
+
+## Phase 6 — Implement Offline/Core Path
+
+**Objective.** Complete the orchestration so all 17 offline dispatch RED tests
+go GREEN while the 10 absence locks stay GREEN.
+
+**Files changed.**
+
+- `src/docs_cli/update_check.py` — added `import sys`, `_now_iso()`
+  (`datetime.now(UTC).isoformat()`), and replaced the no-op `maybe_notify`
+  with the real two-function core path (Q2/Q9):
+  - `maybe_notify(args, env, current)` wraps `_check_and_notify` in a top-level
+    `except Exception: return` — the documented fail-silent net (ruff does not
+    select BLE; the leaf functions keep their own specific catches). No
+    update-check error can reach `main()`.
+  - `_check_and_notify(...)`: `network_suppressed` short-circuit (CI /
+    `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` → no network, no notice) →
+    `read_cache` → if `should_check`, `fetch_latest_version`; on a non-None
+    result rebuild the cache with a fresh `last_check` + `latest_version`,
+    **preserving `last_notified`** (the notify budget) and setting `fetched` →
+    then, when `latest is not None and is_newer(current, latest) and not
+    notice_suppressed and should_notify`, `print(format_notice(...),
+    file=sys.stderr)` (the emitter adds the `\n`; last stderr line), advance
+    `last_notified` **only on the actual emit**, set `notified` → finally
+    `write_cache` when `fetched or notified`.
+
+**Decisions applied / recorded.**
+
+- **Q2 — write on success-or-emit; bounded offline-retry property.** The cache
+  is written only after a successful fetch or an actual emit. Because
+  `read_cache` treats a `last_check`-only file as "no data" (Q1), a
+  permanently-**offline** host re-attempts the network on *every* invocation
+  (each bounded by the 1.0s timeout) rather than once/24h — there is never a
+  successful fetch to persist a `last_check`, and a `last_check`-only file would
+  be ignored on read anyway. This is **forced by the locked tests + cli.md**
+  ("created on first **successful** check") and is an accepted, bounded
+  property; no un-pinned `last_check`-only persistence path was added (it would
+  be ignored on read).
+- **Q6 — `last_notified` advances only on emit.** A `--quiet` / `--json` run
+  warms `last_check` (and `latest_version`) but never `last_notified`, so the
+  notice budget is untouched (pinned by `test_dispatch_quiet_warms_cache_…`).
+- **Q9 — fail-silent boundary** kept as the top-level `except Exception:
+  return` with specific catches in the leaves.
+
+**Test results.** `tests/test_update_check.py` → **57 passed** (all 47 prior-RED
+now GREEN; the 10 locks hold). Full suite → **1 failed, 599 passed** — the only
+RED is `test_a3_project_version_is_1_7_0` (pyproject still `1.6.5` until Phase
+7's bump; expected, not a regression). No network touched in-suite (the conftest
+guard + the injected `fetch_latest_version`). Gate clean: `ruff check` / `ruff
+format --check` / `mypy` (43 source files) all pass.
+
+## Phase 7 — Update Tool/Wrapper Layer
+
+**Objective.** Flip the version/packaging surface to 1.7.0 and reconcile the
+CHANGELOG + bundled skill — no new argparse flag (the controls are env vars +
+the existing `--quiet` / `--json`), so `docs --help` / per-verb `--help` are
+unchanged.
+
+**Files changed.**
+
+- `pyproject.toml` — `[project].version` `1.6.5` → **`1.7.0`** (the minor bump;
+  `importlib.metadata` stays the SoT, so `docs --version` reads `1.7.0` after
+  the Phase-8 editable reinstall).
+- `tests/test_packaging.py` — flipped the slow build-gated pins in lockstep with
+  the A3 fast pin (already 1.7.0 from Phase 2): **B1** `startswith
+  "docs_cli-1.7.0-"`, **B2** `== "docs_cli-1.7.0.tar.gz"`, **C2** renamed
+  `test_c2_docs_version_is_1_6_5` → `…_1_7_0` and now requires `"1.7.0"` as a
+  standalone token; bumped each docstring (M19 → M21). B3 is positive-presence
+  and ships the whole package, so the new `update_check.py` module needs no
+  packaging change (OQ-7, verified).
+- `CHANGELOG.md` — **appended** an `### Added` block **under** the existing
+  `## 1.7.0 — UNRELEASED` header (opened by M22's `### Documentation`) — no
+  second 1.7.0 header. Documents the STDERR-only ≤once/24h fail-silent notice,
+  the `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK` / `CI` disable controls, and
+  the `--quiet` / `--json` suppression (cache still warms; `--json` stdout stays
+  byte-clean).
+- `src/docs_cli/skill/SKILL.md` — added a short "Update notices" section naming
+  the advisory line and the three disable env vars (Q8 — surface-parity policy).
+  No `](../` repo-relative link; the strings `test_skill_quality_artifacts.py`
+  pins are untouched.
+
+**Not changed (by decision).** `docs/cli.md` and `docs/convention.md` (the
+contract was pinned in Phase 1) → the bundled `references/{cli,convention}.md`
+mirrors stay byte-identical (`test_skill_refs` re-run GREEN, no re-sync needed).
+
+**Test results.** `test_a3` GREEN at 1.7.0; `test_skill_refs` +
+`test_skill_quality_artifacts` GREEN; `tests/test_update_check.py` 57 GREEN.
+Gate clean (`ruff check` / `ruff format --check`). The build-gated B1/B2/C2 +
+the editable-reinstall version match run in Phase 8.
+
+## Phase 8 — Run Tests (GREEN)
+
+**Objective.** Full suite GREEN; gate clean tree-wide; `docs --version` →
+`docs 1.7.0`.
+
+**Editable reinstall (Q7).** After the Phase-7 pyproject bump,
+`importlib.metadata` still reported 1.6.5 until the dist-info was refreshed (the
+M19 precedent), so `test_version_metadata::test_version_matches_pyproject` was
+RED until `.venv/bin/pip install -e .` ran. Post-reinstall: docs-cli 1.7.0
+installed; `__version__` → 1.7.0; the dispatch tests still pass (the fake PyPI
+1.7.1 > 1.7.0).
+
+**Commands + output.**
+
+```sh
+$ .venv/bin/pip install -e .
+Successfully installed docs-cli-1.7.0
+$ .venv/bin/python -m pytest tests/ -q
+600 passed in 26.10s
+$ .venv/bin/ruff check . && .venv/bin/ruff format --check . && .venv/bin/mypy
+All checks passed!
+42 files already formatted
+Success: no issues found in 43 source files
+$ .venv/bin/docs check docs/
+docs: no violations found
+$ .venv/bin/docs index --root docs/        # byte no-op (git diff --quiet clean)
+$ .venv/bin/docs --version
+docs 1.7.0
+```
+
+**Exit.** Full suite **600 GREEN**; gate clean tree-wide; `docs --version` →
+`docs 1.7.0`. (The single `mypy` note —
+`[annotation-unchecked]` on a test helper — is informational, not an error;
+`mypy` reports "Success".)
+
+## Phase 9 — Implement Online/Integration
+
+**Objective.** The only genuinely-online phase — exercise the real `urllib`
+body once against live PyPI on a throwaway cache, then dogfood the end-to-end
+notice/throttle/suppression on the editable `docs 1.7.0`. Runs **outside**
+pytest; the suite stays 100% offline (OQ-8 / D6).
+
+**1. Live read-only PyPI probe (real network).**
+
+```sh
+$ XDG_CACHE_HOME=$(mktemp -d) .venv/bin/python -c \
+    "from docs_cli import update_check as u; print(u.fetch_latest_version())"
+1.6.5
+```
+
+The real stdlib `urllib` GET to `https://pypi.org/pypi/docs-cli/json` returns
+`info.version = '1.6.5'` — the currently-published version. The local build is
+1.7.0 (ahead of PyPI; the publish is a later milestone), so on the live build
+the real check correctly stays silent.
+
+**2. No-mock real-network end-to-end (`docs list`).** With a throwaway
+`XDG_CACHE_HOME` and the cleared suppression env, `docs list` ran the *real*
+fetch and wrote the cache:
+
+```json
+{"last_check": "2026-06-29T17:24:17.735317+00:00", "latest_version": "1.6.5", "last_notified": null}
+```
+
+Three keys, ISO-8601 UTC `last_check`, `last_notified` null (no emit — local
+1.7.0 > published 1.6.5), exit 0, zero notice lines. The full real path (fetch →
+compare → cache write) works with **no** mocking.
+
+**3. Forced-newer dogfood (real editable build, fake latest 1.7.99).** A one-off
+script (the plan's permitted option) monkeypatches only the network hook to
+return `1.7.99` and drives the real `main()` → `_dispatch` → `maybe_notify` path
+(`current = 1.7.0`). Measured:
+
+| Case | exit | fetch calls | notices | result |
+|---|---|---|---|---|
+| (a) clean run | 0 | 1 | 1 | byte-exact `docs: update available 1.7.0 -> 1.7.99 — run: pip install -U docs-cli` on stderr; **not** on stdout; cache `{last_check, latest_version=1.7.99, last_notified}` written |
+| (b) 2nd run, same cache | 0 | 0 | 0 | 24h **notify** gate suppresses (and 24h check gate skips the network) |
+| (c) `CI=true` | 0 | 0 | 0 | network skipped, no notice, no cache write |
+| (c) `CI=` (empty, present) | 0 | 0 | 0 | **presence-not-truthiness** confirmed — empty still suppresses |
+| (c) `DOCS_CLI_NO_UPDATE_CHECK=1` | 0 | 0 | 0 | feature off |
+| (c) `DO_NOT_TRACK=1` | 0 | 0 | 0 | feature off |
+| (c2) `--quiet` | 0 | 1 | 0 | notice suppressed, **cache warmed** (`last_check` set), `last_notified` none (budget untouched) |
+| (d) `--json` | 0 | 1 | 0 | notice suppressed, **stdout stays parseable JSON list**, cache warmed |
+| (e) failing verb `check` (invalid tree) | 2 | 1 | 1 | exit code **unchanged** by the notice; findings survive on stdout (`error:`); notice on stderr |
+
+**Exit.** Online path verified (real `urllib` GET against live PyPI) and
+dogfooded end-to-end; cache / both 24h throttles / the full suppression matrix /
+`--json` byte-clean stdout / exit-code parity all confirmed on the real build.
+NO publish, NO tag, NO GitHub release (a later milestone publishes). `pytest`
+remains 100% offline (the conftest `DOCS_CLI_NO_UPDATE_CHECK=1` guard + the
+injected `fetch_latest_version`).
+
+## Phase 10 — Quality, Docs, Refactor
+
+**Objective.** Close out the milestone: docs current, INDEX/snapshot in
+lockstep, the surface-parity gate run, lifecycle left `draft`.
+
+**Closeout edits.**
+
+- This impl-log carries the Phase 5–10 entries + the phase table (all rows
+  Done).
+- The milestone doc's **Phase Checklist** (5–10), **Deliverables** (D1–D7 +
+  surface-parity + full-suite; D5 stays struck-through/CUT → M23), and
+  **Success Criteria** are all ticked; the Overview Progress now reads
+  "implementation-complete (1.7.0 built locally; publish is a later milestone)".
+- `status.md` + `plan.md` (narrative + the milestone-table row) updated from
+  "Phases 1–4 / Phase 5 next" to "implementation-complete, lifecycle `draft`,
+  600 GREEN, `docs --version` = `docs 1.7.0`".
+
+**Surface-parity gate (plan.md "Ongoing conventions").**
+
+- `docs --help` + per-verb `--help`: **no new flag** (the update-check controls
+  are env vars + the existing `--quiet` / `--json`) → no `--help` diff;
+  `test_c3` unaffected.
+- The suppression env-var table is present in `cli.md` (Phase 1) **and**
+  `SKILL.md`'s "Update notices" section (Phase 7) — `DOCS_CLI_NO_UPDATE_CHECK`,
+  `DO_NOT_TRACK`, `CI` all named in both.
+- Stale-wording grep over the product surface (`src/`, `cli.md`,
+  `convention.md`, `CHANGELOG.md`): **no** `install-skill --force` dual-action
+  nudge wording, **no** `skill-drift` / `last_skill_drift_notified` (D5 was cut,
+  not deferred). (`install-skill`'s legitimate `--force` flag in the verbs table
+  is unrelated.)
+- `docs/cli.md` + `docs/convention.md` untouched in Phases 5–10 → the bundled
+  `references/{cli,convention}.md` mirrors stay byte-identical (`test_skill_refs`
+  GREEN). INDEX regenerated + `tests/fixtures/expected/docs-INDEX.md` in lockstep
+  throughout (each doc-touching commit confirmed `docs check docs/` exit 0 +
+  `docs index` a byte no-op).
+
+**Lifecycle.** Left `draft` — **no `docs archive`** (the M14/M15/M18/M19
+completed-but-live precedent). The pair stays live at root until a later
+milestone sweeps it in; the PyPI publish is a separate future milestone.
+
+**Refactor.** LIGHT cleanups only this step — the dedicated `/simplify` pass is
+Step 3 (a separate `m21/simplify` branch), deliberately not pre-empted.
+
+**Exit.** Gate green; docs current; INDEX == snapshot; lifecycle `draft`; ready
+for a future publish milestone.
+
+## Fresh-eyes review fold-in (Step 2 finalize, 2026-06-29)
+
+An independent fresh-eyes review found the Step-2 implementation **sound** — no
+blockers, no should-fix. The conductor triaged its four nit/judgment-call
+findings: two fold in (applied here), two are note-only (no action). Applied as
+a **one-line defensive broadening + test additions only**; no contract change,
+so `docs/cli.md` and the bundled `references/cli.md` mirror are untouched
+(`test_skill_refs` stays GREEN — no re-mirror).
+
+- **FI-1 (robustness — completes the fail-silent self-heal).** `_stale(ts)`
+  caught `ValueError` from `datetime.fromisoformat` but not `TypeError`. A
+  JSON-valid cache whose `last_check` / `last_notified` is a **naive**
+  (offset-less) ISO timestamp (e.g. `"2026-06-29T12:00:00"`) parses into a naive
+  datetime, then `datetime.now(UTC) - when` raises `TypeError` (aware-minus-naive)
+  — previously swallowed only by the outer `maybe_notify` net, so the check
+  aborted **without** rewriting the cache and the notice stayed disabled until
+  the file was removed by hand. Broadened the `except` to
+  `(ValueError, TypeError)` so an unparseable **or** naive timestamp is treated
+  as **stale** → the next run re-checks and rewrites a correct offset-aware
+  cache. Purely defensive (this module only ever writes offset-aware
+  `datetime.now(UTC).isoformat()` timestamps), but it makes the fail-silent
+  guarantee complete — the cli.md fail-silent enumeration ("a corrupt or
+  malformed cache file → … never fatal") already covers a malformed timestamp
+  conceptually, so **no cli.md edit**. Tests added: a unit lock
+  `test_should_check_treats_naive_timestamp_as_stale` (naive `last_check` →
+  `should_check` True, no raise) and a dispatch self-heal
+  `test_dispatch_naive_timestamp_cache_self_heals` (naive cache + newer fake
+  fetch → notice emitted, cache rewritten with an offset-aware `last_check`).
+- **FI-2 (test coverage hardening — locks the resolved-Q2 offline-retry
+  property).** The property that a `None` (offline) fetch leaves the cache
+  **unwritten** (so a second offline invocation re-probes) was documented but
+  only implied by a single-invocation test. Added
+  `test_dispatch_offline_fetch_none_writes_no_cache` (one None-fetch run with no
+  pre-existing cache writes **no** cache file) and
+  `test_dispatch_offline_reprobes_each_invocation` (two consecutive offline runs
+  → the fetch spy is called **twice**). Converts the documented Q2 property into
+  a tested property.
+
+**Note-only (no action taken, by conductor triage).**
+
+- **Offline latency.** A permanently-offline / captive-portal host pays up to
+  the 1.0s timeout on **every** `docs` invocation (each call re-probes, since a
+  failed fetch never persists `last_check`). This is the accepted, documented
+  resolved-Q2 property — forced by the locked cli.md "created on first
+  **successful** check" wording — **not** a defect. No backoff machinery added;
+  the conductor surfaces it to the operator.
+- **Ctrl-C.** `maybe_notify`'s `except Exception` deliberately does **not** catch
+  `KeyboardInterrupt` / `BaseException` — never swallow Ctrl-C. Left as-is.
+
+**Re-run after the fold-ins:** `.venv/bin/python -m pytest tests/ -q` →
+**604 passed** (600 + 4: the FI-1 unit + dispatch self-heal, the two FI-2
+offline-retry assertions; `tests/test_update_check.py` 57 → **61**). Gate clean
+tree-wide: `ruff check` / `ruff format --check` / `mypy` (43 source files) /
+`docs check docs/` (0 violations) all pass; `docs --version` → `docs 1.7.0`.

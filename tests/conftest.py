@@ -20,6 +20,7 @@ no contract change, this conftest:
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -33,6 +34,13 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 # Make `src/docs_cli/` importable without an editable install.
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+
+# M21 (D6) — hard-disable the PyPI update-check for the whole suite so no
+# test (in-process or subprocess) ever reaches the network. Inert at baseline
+# (nothing reads it until the M21 dispatch hook lands); inherited by every
+# `subprocess.run` child. Dispatch tests that need to SEE the notice opt back
+# in per-test via `monkeypatch.delenv("DOCS_CLI_NO_UPDATE_CHECK", raising=False)`.
+os.environ["DOCS_CLI_NO_UPDATE_CHECK"] = "1"
 
 from docs_cli import cli as _cli  # noqa: E402  (must follow sys.path insert)
 

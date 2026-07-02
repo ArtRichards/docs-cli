@@ -49,6 +49,8 @@ from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 
+from docs_cli import update_check
+
 # ---------------------------------------------------------------------------
 # Vocabulary
 # ---------------------------------------------------------------------------
@@ -5191,24 +5193,8 @@ def _cmd_install_skill(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry point. Returns the process exit code.
-
-    Subcommands:
-        index — regenerate INDEX.md from metadata in the docs root (M1).
-        new, archive, mv, touch — mutating verbs (M2).
-        check, list — validation and query verbs (M3).
-        migrate — adopt a non-conforming foreign directory (M4).
-        install-skill — materialise the bundled Claude Code skill (M6).
-
-    Exit codes (per cli.md):
-        0 — success (or warnings-only on `check`).
-        1 — recoverable error (file conflict, validation warning,
-            missing input).
-        2 — hard error (invalid vocab, atomic-operation failure,
-            validation errors).
-    """
-    args = _build_parser().parse_args(argv)
+def _dispatch(args: argparse.Namespace) -> int:
+    """Route a parsed namespace to its verb handler, returning the exit code."""
     if args.command == "index":
         return _cmd_index(args)
     if args.command == "new":
@@ -5236,6 +5222,34 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_project_set(args)
         return 2
     return 2
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point. Returns the process exit code.
+
+    Subcommands:
+        index — regenerate INDEX.md from metadata in the docs root (M1).
+        new, archive, mv, touch — mutating verbs (M2).
+        check, list — validation and query verbs (M3).
+        migrate — adopt a non-conforming foreign directory (M4).
+        install-skill — materialise the bundled Claude Code skill (M6).
+
+    Exit codes (per cli.md):
+        0 — success (or warnings-only on `check`).
+        1 — recoverable error (file conflict, validation warning,
+            missing input).
+        2 — hard error (invalid vocab, atomic-operation failure,
+            validation errors).
+
+    After the command dispatch returns, a best-effort PyPI update-check (M21)
+    may emit one advisory line to STDERR; it never alters the exit code. The
+    hook runs after ``parse_args`` so ``--version`` / ``-h`` (which exit inside
+    parsing) never reach it.
+    """
+    args = _build_parser().parse_args(argv)
+    code = _dispatch(args)
+    update_check.maybe_notify(args, os.environ, __version__)
+    return code
 
 
 if __name__ == "__main__":

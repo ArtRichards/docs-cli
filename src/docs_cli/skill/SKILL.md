@@ -108,6 +108,16 @@ Important: `docs check` proves the docs tree is mechanically clean. It does
 not prove behavior is correct, visible tests are adequate, hidden/
 generalization coverage exists, or risk gates passed.
 
+## Update notices
+
+`docs` checks PyPI at most once a day and, when a newer `docs-cli` release is
+available, prints **one** advisory line to **stderr** —
+`docs: update available <current> -> <latest> — run: pip install -U docs-cli`.
+It never touches stdout and never changes the exit code, so it is safe to leave
+on in scripts. To silence it: `--quiet` or `--json` suppress the line, and
+setting `CI`, `DOCS_CLI_NO_UPDATE_CHECK`, or `DO_NOT_TRACK` (any value) disables
+the check entirely. See [`references/cli.md`](references/cli.md) "Update check".
+
 ## Three things never to hand-edit
 
 - **`INDEX.md`** — generated between `<!-- docs:generated -->` markers.
