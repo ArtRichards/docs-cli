@@ -49,7 +49,7 @@ section tracks implementation progress, which is distinct.)
 | 1. Define Contract | Complete | 2026-07-02 | cli.md §install-skill + §Update check; refs resynced; OQs folded into Decisions |
 | 2. Write Tests (RED) | Complete | 2026-07-02 | new test_install_skill_dest.py; D5 additions to test_update_check.py; packaging pins flipped to 1.8.0 |
 | 3. Create Data/Fixtures | Complete | 2026-07-02 | inline tmp builders (state seed + TTY harness); date-independent; no real-path/network; frozen INDEX snapshot the only committed fixture |
-| 4. Run Tests (RED Baseline) | Pending | — | — |
+| 4. Run Tests (RED Baseline) | Complete | 2026-07-02 | 634 total: 613 pass / 21 intended-RED; pre-existing suite green (only the 4 flipped packaging pins went RED) |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
 | 7. Update Tool/Wrapper Layer | Pending | — | — |
@@ -204,3 +204,58 @@ snapshot stays the only committed fixture (regenerated in lockstep in Phase 1).
 
 **Result.** Date-independent test data; no rotting fixture; no real-path or
 network access.
+
+## Phase 4 — Run Tests (RED Baseline)
+
+**Objective.** Confirm the intended-RED set fails for its reason and the
+pre-existing suite stays GREEN; capture the exact baseline count.
+
+**Command.** `.venv/bin/python -m pytest tests/ -q`
+
+**Baseline count.** **634 tests: 613 passed, 21 failed** (all intended-RED).
+(The pre-M23 suite was 604; M23 added 30 tests — 17 in
+`test_install_skill_dest.py`, 13 D5/seam/spec-lock additions to
+`test_update_check.py` — of which 13 are GREEN-at-baseline locks.)
+
+**Intended-RED set (21), each failing for its stated reason:**
+
+- `test_install_skill_dest.py` (13):
+  - `test_d2_tty_prompt_installs_at_prompted_dest` — no TTY-aware resolver yet;
+    the static `--dest` default is used, so the prompted dest is not honoured.
+  - `test_d3_copy_success_records_dest_path_only`, `test_d3_noop_also_records`
+    — `read_recorded_dest` absent (no recording yet).
+  - `test_d4_install_skill_description_says_agent_skill_not_claude_code`,
+    `test_d4_install_skill_short_help_says_agent_skill_not_claude_code` — help
+    still says "Claude Code".
+  - `test_state_helpers_exist`, `test_state_path_honours_xdg_state_home`,
+    `test_state_path_defaults_to_local_state_when_xdg_unset`,
+    `test_recorded_dest_roundtrips`, `test_recorded_dest_last_write_wins`,
+    `test_read_recorded_dest_missing_returns_none`,
+    `test_read_recorded_dest_corrupt_returns_none`,
+    `test_write_recorded_dest_unwritable_swallows_oserror` — state-file helpers
+    not yet implemented (clean `hasattr`-guarded assertion failures).
+- `test_update_check.py` (4):
+  - `test_skill_hint_template_and_formatter_seam`,
+    `test_format_skill_hint_is_byte_exact_without_trailing_newline` —
+    `SKILL_HINT_TEMPLATE` / `format_skill_hint` absent.
+  - `test_dispatch_recorded_dest_appends_skill_hint`,
+    `test_dispatch_recorded_dest_replayed_verbatim` — no hint appended to the
+    M21 notice yet.
+- `test_packaging.py` (4): `test_a3_project_version_is_1_8_0`,
+  `test_b1_wheel_builds`, `test_b2_sdist_builds`, `test_c2_docs_version_is_1_8_0`
+  — pyproject is still 1.7.0 (RED until Phase 7).
+
+**GREEN-at-baseline locks that PASS** (proving the contract is honoured before
+the change and M21 is unchanged): D1 explicit-dest / D2 empty-input + non-TTY /
+D3 refusal-records-nothing; the AF-1 spec-content lock; hint-absent →
+CLI-line-only; the full suppression matrix + throttle-coupling + current-version
+hint-silence; `test_skill_refs` byte-identity; the frozen INDEX snapshot.
+
+**Gate note.** `ruff check .` + `ruff format --check .` clean tree-wide;
+`mypy` reports "Success: no issues found in 44 source files" (the new test file
+types `uc` as `Any`, so referencing the not-yet-existing seams is mypy-clean).
+The behaviour gate (the 21 RED) goes GREEN in Phases 6–8.
+
+**Result.** RED baseline matches the plan exactly; no collection errors; the
+untouched pre-existing suite is fully GREEN (only the 4 deliberately-flipped
+packaging pins moved to RED).
