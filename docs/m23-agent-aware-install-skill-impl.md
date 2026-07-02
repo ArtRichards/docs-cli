@@ -48,7 +48,7 @@ section tracks implementation progress, which is distinct.)
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-07-02 | cli.md §install-skill + §Update check; refs resynced; OQs folded into Decisions |
 | 2. Write Tests (RED) | Complete | 2026-07-02 | new test_install_skill_dest.py; D5 additions to test_update_check.py; packaging pins flipped to 1.8.0 |
-| 3. Create Data/Fixtures | Pending | — | — |
+| 3. Create Data/Fixtures | Complete | 2026-07-02 | inline tmp builders (state seed + TTY harness); date-independent; no real-path/network; frozen INDEX snapshot the only committed fixture |
 | 4. Run Tests (RED Baseline) | Pending | — | — |
 | 5. Update Base Interfaces | Pending | — | — |
 | 6. Implement Offline/Core Path | Pending | — | — |
@@ -178,3 +178,29 @@ install-skill — so they never record a dest; their
 **Result.** New tests collect cleanly (no import/argparse-SystemExit
 surprises); ruff check + format clean on all three files; each intended-RED
 fails for its stated reason (see Phase 4).
+
+## Phase 3 — Create Data/Fixtures
+
+**Objective.** Ensure date-independent, hermetic test data with no rotting
+fixture and no real-path / network access.
+
+**Actions.** All builders are inline in the two test files (landed in Phase 2);
+no new committed fixture:
+
+- `tests/test_install_skill_dest.py`: `_prep_state` (XDG_STATE → tmp),
+  `_prep_home` (HOME → tmp so the `~/.claude/skills/docs/` default is contained
+  in tmp), `_read_state_raw` / `_state_file`, and a TTY harness
+  (`monkeypatch.setattr("sys.stdin.isatty", ...)` + `builtins.input`).
+- `tests/test_update_check.py`: `_prep_state` / `_write_recorded_dest`
+  (present/absent/stale-path variants) / `_expected_hint`, layered on M21's
+  reused `_prep_dispatch` / `_FetchSpy` / `_expected_notice` / `_iso_hours_ago`.
+
+**Hermeticity.** Every test that could touch per-user state points XDG_STATE
+(and HOME where `--dest` is omitted) at `tmp_path`; install runs read only the
+in-repo bundled skill and the M21 fetch is fake-injected — no real `~/.cache`,
+`~/.local/state`, or network. Timestamps are all relative to
+`datetime.now(UTC)`. The frozen `tests/fixtures/expected/docs-INDEX.md`
+snapshot stays the only committed fixture (regenerated in lockstep in Phase 1).
+
+**Result.** Date-independent test data; no rotting fixture; no real-path or
+network access.
