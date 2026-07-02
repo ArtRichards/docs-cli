@@ -24,7 +24,12 @@ changed, actions, test results, decisions.
   (v1.8.0)
 - Started: 2026-06-29 (scaffolded — milestone-setup); TDD Phase 1 opened
   2026-07-02.
-- Progress: **Phase 1–4 in progress (Contract & RED baseline, 2026-07-02).**
+- Progress: **Implementation complete — all ten TDD phases done (2026-07-02);
+  1.8.0 built locally (publish is a later milestone); lifecycle `draft`.**
+  Phases 1–4 on `m23/phases-1-4`; Phases 5–10 on `m23/phases-5-10`. Full suite
+  **636 GREEN**, gate clean tree-wide, `docs --version` = `docs 1.8.0`; online
+  path dogfooded against a seeded throwaway cache (pytest 100% offline).
+  OQ-1/OQ-2 remain flagged for confirmation at branch review.
   Scaffolded 2026-06-29 as the follow-on to the M21 re-scope (M21 became a
   CLI-only update notice and CUT its skill half — the offline skill-drift notice
   D5 + the dual `docs install-skill --force` nudge — because it inspected the
@@ -55,7 +60,7 @@ section tracks implementation progress, which is distinct.)
 | 7. Update Tool/Wrapper Layer | Complete | 2026-07-02 | pyproject 1.8.0 + editable reinstall; NEWER sentinel hoisted + dispatch-block "newer" literals rebased (OQ-D); CHANGELOG 1.8.0; packaging pins GREEN; test_skill_refs GREEN |
 | 8. Run Tests (GREEN) | Complete | 2026-07-02 | Full suite 636 GREEN; ruff/format/mypy clean; docs check exit 0; docs index --dry-run byte no-op; docs --version = 1.8.0 |
 | 9. Implement Online/Integration | Complete | 2026-07-02 | Dogfooded on the editable install (seeded throwaway cache; no real network): copy/no-op/symlink all record; newer-PyPI notice fires CLI line + hint (byte-exact, hint LAST); non-TTY piped install never blocks + records resolved default; --json/--quiet/CI/DOCS_CLI_NO_UPDATE_CHECK/DO_NOT_TRACK silence both. Suite stays offline |
-| 10. Quality, Docs, Refactor | Pending | — | — |
+| 10. Quality, Docs, Refactor | Complete | 2026-07-02 | OQ-B stale-wording sweep (4 stray "Claude Code" strings reworded; install-skill surface grep clean); status.md + plan.md M23 rows + milestone-doc checklist/criteria/deliverables ticked; INDEX + frozen snapshot in lockstep; surface-parity gate re-verified (test_skill_refs GREEN); lifecycle left `draft`; no /simplify (conductor's Step 3) |
 
 ## Provenance — where the scope came from
 
@@ -496,3 +501,48 @@ path.
    process-wide; the dispatch tests that exercise the notice re-enable it but
    inject a fake `fetch_latest_version` (`_patch_fetch` / `_FetchSpy`), so no
    test reaches the network. No networked test was added.
+
+## Phase 10 — Quality, Docs, Refactor
+
+**Objective.** Closeout: OQ-B stale-wording sweep, doc updates, INDEX + frozen
+snapshot lockstep, surface-parity re-verify, lifecycle left `draft`. (No
+`/simplify` — that is the conductor's Step 3, a separate agent.)
+
+**Files changed.**
+
+- **OQ-B stale-wording sweep** — reworded the four stray "Claude Code" strings
+  on the install-skill surface to "agent skill": `src/docs_cli/cli.py:12`
+  (module docstring), the `_DEFAULT_SKILL_DEST` const comment (reworded to "an
+  assumption about which agent the user runs" so the grep is clean too),
+  `main()`'s docstring subcommand line, and `src/docs_cli/__init__.py:8`. (The
+  section comment above `_cmd_install_skill` was already reworded in Phase 5.)
+  A tree grep confirms the install-skill **surface** (help / description /
+  docstrings / comments) is clean of "Claude Code"; remaining tree hits are
+  legitimately out of scope — historical archive milestones (M5/M6),
+  `README.md`/`CHANGELOG.md` history, test-file docstrings, and the D4
+  assertions in `test_install_skill_dest.py` that enforce the *absence* of the
+  phrase.
+- `docs/status.md` — M23 prose block + milestone-table row updated to
+  implementation-complete (all 10 phases, 636 GREEN, `docs --version` 1.8.0,
+  suite offline); the OQ-1/OQ-2 provisional-confirmation flag preserved.
+- `docs/plan.md` — M23 row rewritten from the stale "Draft / milestone-setup,
+  no TDD phase started / four OPEN QUESTIONS open" to implementation-complete
+  with the four OQs resolved (OQ-1/OQ-2 flagged for branch-review confirm).
+- `docs/m23-agent-aware-install-skill.md` — Phase Checklist (5–10), Deliverables
+  (D1–D7 + gate), and Success Criteria all ticked; Overview Progress line
+  updated.
+- `docs/m23-agent-aware-install-skill-impl.md` — Phases 5–10 sections + progress
+  table filled; Overview Progress line updated.
+- `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` — regenerated in
+  lockstep (`docs touch <bumped files> --check`) so the frozen snapshot matches.
+
+**Result.** Surface-parity gate re-verified (`test_skill_refs` GREEN — cli.md /
+convention.md + bundle refs byte-identical, untouched by M23's code-only
+reword). Full suite **636 GREEN**; ruff / format / mypy / `docs check docs/`
+clean; `docs index --root docs/ --dry-run` a byte no-op. Lifecycle left
+`draft` (a later milestone publishes 1.8.0). No `/simplify` run (Step 3).
+
+**Surfaced for operator decision (branch review).** OQ-1 (non-TTY = default)
+and OQ-2 (separate `XDG_STATE` state file) were resolved **provisionally while
+the operator was away**; both remain flagged in the milestone Decisions,
+status.md, and plan.md for confirmation.

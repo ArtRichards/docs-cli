@@ -9,7 +9,7 @@ See `docs/` (relative to repo root) for the full specification:
 
 The single-file module is exposed as the ``docs`` console-script via
 the ``docs_cli.cli:main`` entry point declared in ``pyproject.toml``.
-The Claude Code skill ships alongside under ``docs_cli/skill/`` and is
+The agent skill ships alongside under ``docs_cli/skill/`` and is
 materialised onto a host via the ``docs install-skill`` verb.
 
 M1: parser, walker, renderer, `docs index`, config loading. M2 adds the
@@ -5052,7 +5052,7 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
 
 
 # The default destination when `--dest` is omitted. A default is not an
-# assumption that the user runs Claude Code — it is a convenient common
+# assumption about which agent the user runs — it is a convenient common
 # location; `--dest` remains the agent-agnostic source of truth (M23 D1/D2).
 _DEFAULT_SKILL_DEST = "~/.claude/skills/docs/"
 
@@ -5277,7 +5277,7 @@ def main(argv: list[str] | None = None) -> int:
         new, archive, mv, touch — mutating verbs (M2).
         check, list — validation and query verbs (M3).
         migrate — adopt a non-conforming foreign directory (M4).
-        install-skill — materialise the bundled Claude Code skill (M6).
+        install-skill — materialise the bundled agent skill (M6).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).

@@ -26,7 +26,14 @@ Related:
   **recorded** dest. No new verb. The change is to `install-skill`'s
   resolution + a tiny state-write, plus a second (skill) line on M21's existing
   STDERR notice channel.
-- Progress: **Phase 1–4 in progress (Contract & RED baseline, 2026-07-02).**
+- Progress: **Implementation complete — all ten TDD phases done (2026-07-02);
+  1.8.0 built locally, publish is a later milestone; lifecycle `draft`.**
+  Phases 1–4 (Contract & RED baseline) on branch `m23/phases-1-4`; Phases 5–10
+  (implementation → dogfood → closeout) on `m23/phases-5-10`. Full suite
+  **636 GREEN**, gate clean tree-wide (ruff / format / mypy / `docs check
+  docs/`), `pyproject` at 1.8.0 (`docs --version` = `docs 1.8.0`); the online
+  path was dogfooded end-to-end against a seeded throwaway cache (pytest stays
+  100% offline). OQ-1/OQ-2 remain **flagged for confirmation at branch review**.
   Scaffolded 2026-06-29 as the follow-on to the M21 re-scope (M21 dropped its
   skill half — the offline skill-drift notice D5 + the dual
   `docs install-skill --force` nudge — because it inspected the user's installed
@@ -134,28 +141,28 @@ installed skill or guessing which agent the user runs.
 
 ### Deliverables
 
-- [ ] **D1 — `--dest` source of truth** (no agent guessing). Pinned by tests.
-- [ ] **D2 — TTY-aware resolution** when `--dest` omitted (TTY may prompt;
+- [x] **D1 — `--dest` source of truth** (no agent guessing). Pinned by tests.
+- [x] **D2 — TTY-aware resolution** when `--dest` omitted (TTY may prompt;
       non-TTY never blocks). Pinned by a TTY/non-TTY test pair. *(non-TTY =
       **default** — OQ-1 resolved.)*
-- [ ] **D3 — Record resolved dest** to a per-user state file (path only).
+- [x] **D3 — Record resolved dest** to a per-user state file (path only).
       Pinned by a record-then-read test. *(location = separate
       `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` — OQ-2
       resolved.)*
-- [ ] **D4 — Reword install-skill help/description** to "agent skill"
+- [x] **D4 — Reword install-skill help/description** to "agent skill"
       (reconcile with `cli.md`). Pinned by a help-string test + the skill-refs
       byte-identity gate.
-- [ ] **D5 — Recorded-dest skill-refresh hint** on M21's notice channel.
+- [x] **D5 — Recorded-dest skill-refresh hint** on M21's notice channel.
       Pinned by tests (hint present when a dest is recorded; absent + M21
       unchanged when none; full M21 suppression matrix honoured for the hint).
-- [ ] **D6 — Offline test harness** — TTY behaviour and the recording exercised
+- [x] **D6 — Offline test harness** — TTY behaviour and the recording exercised
       offline; the M21 notice channel stays mocked (no real network).
-- [ ] **D7 — Docs / version plumbing** — version bump to **1.8.0** (OQ-4
+- [x] **D7 — Docs / version plumbing** — version bump to **1.8.0** (OQ-4
       resolved); `cli.md` §install-skill + the update-notice section updated;
       CHANGELOG entry; bundled-skill surface parity; bundled refs
       byte-identical.
-- [ ] **Surface-parity gate** + INDEX/frozen-snapshot lockstep throughout.
-- [ ] **Full suite GREEN**; ruff / format / mypy / `docs check docs/` exit 0.
+- [x] **Surface-parity gate** + INDEX/frozen-snapshot lockstep throughout.
+- [x] **Full suite GREEN**; ruff / format / mypy / `docs check docs/` exit 0.
 
 ## Current State Analysis
 
@@ -288,12 +295,12 @@ contract.
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
-- [ ] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Implement Online/Integration
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 5 — Update Base Interfaces
+- [x] Phase 6 — Implement Offline/Core Path
+- [x] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 8 — Run Tests (GREEN)
+- [x] Phase 9 — Implement Online/Integration
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions
 
@@ -389,19 +396,19 @@ real network call** (M21's offline invariant preserved).
 
 M23 is complete when:
 
-- [ ] `install-skill` resolves the dest TTY-aware (`--dest` SoT; TTY may prompt;
+- [x] `install-skill` resolves the dest TTY-aware (`--dest` SoT; TTY may prompt;
       non-TTY never blocks) and **records** the resolved path to the per-user
       state file (path only — no content read).
-- [ ] `install-skill`'s help/description say "agent skill" (no "Claude Code"),
+- [x] `install-skill`'s help/description say "agent skill" (no "Claude Code"),
       reconciled with `cli.md`; a stale-wording grep for "Claude Code" in the
       install-skill surface is clean.
-- [ ] M21's update notice gains a recorded-dest skill-refresh hint on the same
+- [x] M21's update notice gains a recorded-dest skill-refresh hint on the same
       STDERR channel, under the same suppression matrix + throttle; absent when
       no dest is recorded (M21 behaviour unchanged).
-- [ ] No content-inspection of the installed skill; no agent guessing anywhere.
-- [ ] Suite fully offline; bundled refs byte-identical (`test_skill_refs`
+- [x] No content-inspection of the installed skill; no agent guessing anywhere.
+- [x] Suite fully offline; bundled refs byte-identical (`test_skill_refs`
       GREEN); INDEX + frozen snapshot in lockstep.
-- [ ] Version bumped (recommend 1.8.0 — OQ); CHANGELOG entry; `docs --version`
+- [x] Version bumped (**1.8.0** — OQ-4); CHANGELOG entry; `docs --version`
       reflects it; full suite GREEN; gate clean. NO publish (a later milestone
       publishes).
 

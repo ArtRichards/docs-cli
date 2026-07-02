@@ -5,7 +5,7 @@ as ``main`` here for convenience::
 
     from docs_cli import main
 
-The bundled Claude Code skill is shipped as package data under
+The bundled agent skill is shipped as package data under
 ``docs_cli/skill/`` and is materialised onto a host via
 ``docs install-skill``.
 
