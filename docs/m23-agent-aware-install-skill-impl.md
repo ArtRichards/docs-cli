@@ -572,3 +572,31 @@ code; suite fully GREEN from Phase 8. Two consistency issues found and fixed:
 Gate after the fixes: full suite **636 GREEN**; ruff / format / mypy clean;
 `docs check docs/` exit 0; `docs index --root docs/ --dry-run` a byte no-op vs
 the committed INDEX. Diff scope contained only M23 work.
+
+## Step-2 fresh-eyes review closeout (2026-07-02)
+
+The Step-2 fresh-eyes review returned **no blockers and no should-fix items** —
+the phases-5–10 implementation is sound and ship-ready. It raised exactly one
+NIT / operator-awareness judgment call, recorded here (and in the milestone doc
+Decisions › "Known limitation — repeated `--symlink` recording") and **not**
+code-fixed, because a fix would deviate from a binding decision:
+
+- **NIT — repeated `--symlink` re-records the source path.** On a *repeated*
+  `docs install-skill --dest <D> --symlink` where `<D>` is already the symlink
+  from a prior run, `_cmd_install_skill`'s top-of-function
+  `Path(os.path.expanduser(_resolve_install_dest(args))).resolve()`
+  (`cli.py:5158`) chases the existing symlink to the bundled **source** tree, so
+  the no-op re-run writes the source-tree path (not `<D>`) via
+  `write_recorded_dest`; the D5 hint would then read
+  `docs install-skill --dest <source-tree> --force`. Scope is narrow — editable
+  installs only (the wheel rejects `--symlink`) and only on a *repeated*
+  `--symlink` install; the first install and every copy / fresh install record
+  correctly, and any later copy / fresh install re-corrects the record
+  (last-write-wins, D3), so it self-heals. This is a direct consequence of the
+  binding implementation-choice **OQ-C** (keep M6's single
+  `expanduser().resolve()` semantics byte-for-byte, Phase 6). A fix would record
+  `os.path.abspath(os.path.expanduser(<raw>))` for the recorded value **only**,
+  leaving `_materialise_skill`'s `resolve()`d `dest` untouched — but that
+  deviates from binding OQ-C, so it is **deferred to the operator's branch
+  review**, bundled with the existing OQ-1/OQ-2 confirm-at-review flag. No code
+  changed.

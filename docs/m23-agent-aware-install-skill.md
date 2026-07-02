@@ -374,6 +374,33 @@ recommendations) — **confirm at branch review**. OQ-3 and OQ-4 are firm.
   throttle and full suppression matrix; no hint when the CLI is current; absent
   when no dest is recorded (M21 unchanged).
 
+### Known limitation — repeated `--symlink` recording (deferred to review)
+
+Surfaced by the Step-2 fresh-eyes review (one nit, no blocker). Bound by the
+implementation-choice **OQ-C** (keep M6's single `Path(os.path.expanduser(
+_resolve_install_dest(args))).resolve()` semantics byte-for-byte; see impl-log
+Phase 6). On a **repeated** `docs install-skill --dest <D> --symlink` where
+`<D>` is already the symlink created by a **prior** run, that top-of-function
+`resolve()` chases the existing symlink to the bundled source tree, so the
+no-op re-run records the **source-tree** path instead of `<D>`. The
+recorded-dest hint would then read
+`docs install-skill --dest <source-tree> --force`.
+
+- **Scope is narrow.** Editable installs only (the wheel rejects `--symlink`),
+  and **only** on a repeated `--symlink` install. The *first* install and
+  *every* copy / fresh install record the dest correctly, and any later copy /
+  fresh install **re-corrects** the record (last-write-wins, D3) — so it
+  self-heals.
+- **Not fixed here — it would deviate from a BINDING decision.** The behaviour
+  is a direct consequence of the binding OQ-C decision to preserve M6
+  `resolve()` semantics byte-for-byte, so changing it is out of scope for this
+  step. A fix would record `os.path.abspath(os.path.expanduser(<raw>))` for the
+  **recorded value only**, leaving `_materialise_skill`'s `dest` (which must
+  stay `resolve()`d) untouched.
+- **Deferred to the operator's branch review**, bundled with the existing
+  OQ-1/OQ-2 confirm-at-review flag above (non-TTY = default; separate
+  `XDG_STATE` state file). No code changed for this note.
+
 ## Testing / Quality Gate
 
 The standard tree-wide gate plus the new behaviour tests, **all offline**:
