@@ -54,7 +54,7 @@ section tracks implementation progress, which is distinct.)
 | 6. Implement Offline/Core Path | Complete | 2026-07-02 | extract-method _materialise_skill + single recording call site (OQ-A); D4 help reword; D5 hint in _check_and_notify. 17 behaviour RED → GREEN; 4 packaging pins still RED |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-07-02 | pyproject 1.8.0 + editable reinstall; NEWER sentinel hoisted + dispatch-block "newer" literals rebased (OQ-D); CHANGELOG 1.8.0; packaging pins GREEN; test_skill_refs GREEN |
 | 8. Run Tests (GREEN) | Complete | 2026-07-02 | Full suite 636 GREEN; ruff/format/mypy clean; docs check exit 0; docs index --dry-run byte no-op; docs --version = 1.8.0 |
-| 9. Implement Online/Integration | Pending | — | — |
+| 9. Implement Online/Integration | Complete | 2026-07-02 | Dogfooded on the editable install (seeded throwaway cache; no real network): copy/no-op/symlink all record; newer-PyPI notice fires CLI line + hint (byte-exact, hint LAST); non-TTY piped install never blocks + records resolved default; --json/--quiet/CI/DOCS_CLI_NO_UPDATE_CHECK/DO_NOT_TRACK silence both. Suite stays offline |
 | 10. Quality, Docs, Refactor | Pending | — | — |
 
 ## Provenance — where the scope came from
@@ -456,3 +456,43 @@ remains below `CURRENT`.
 source files"; `docs check docs/` exit 0 ("no violations found"); `docs index
 --root docs/ --dry-run` a byte no-op vs the committed INDEX; `docs --version`
 prints `1.8.0`.
+
+## Phase 9 — Implement Online/Integration
+
+**Objective.** Dogfood the end-to-end behaviour on the editable install; the
+pytest suite stays OFFLINE (M21 invariant). LOG ONLY — no test added.
+
+**Method.** Ran the real `docs` console-script (editable install) with
+`XDG_STATE_HOME` and `XDG_CACHE_HOME` pointed at a throwaway scratch dir; the
+"newer PyPI" notice was simulated by seeding the update-check cache with a fresh
+`last_check` + `latest_version = 99.0.0` (so no network is consulted — the cache
+is fresh, the fetch is never called), reproducing the M21 mocked/throwaway-cache
+path.
+
+**Results.**
+
+1. **Recording (all three success triggers).** `docs install-skill --dest <tmp>
+   --copy` recorded `{"dest": "<resolved-abs>"}` to
+   `$XDG_STATE_HOME/docs-cli/install-skill.json`; deleting the file and re-running
+   (an already-identical **no-op**, exit 0) re-recorded it; a **`--symlink`**
+   install (editable → symlink succeeds) recorded the resolved dest (the link's
+   own path, not the source it points at).
+2. **Newer-PyPI notice + hint.** With a dest recorded and the seeded newer
+   version, `docs list --root docs/` emitted the CLI line
+   `docs: update available 1.8.0 -> 99.0.0 — run: pip install -U docs-cli`
+   followed by the byte-exact hint
+   `docs: refresh the agent skill at <dest> — run: docs install-skill --dest <dest> --force`
+   as the **LAST** stderr line.
+3. **Non-TTY, `--dest` omitted, never blocks.** `docs install-skill --copy`
+   with stdin redirected from `/dev/null` (non-TTY) and `HOME` at tmp exited 0
+   without prompting, materialised the skill at the default
+   `~/.claude/skills/docs`, and recorded that **resolved** absolute path — which
+   the same run then replayed verbatim in the skill hint.
+4. **Suppression matrix silences BOTH lines.** `--json` (stdout stays clean
+   JSON), `--quiet` (on the `--quiet`-capable `touch`; cache still warmed),
+   `CI=1`, `DOCS_CLI_NO_UPDATE_CHECK=1`, and `DO_NOT_TRACK=1` each silenced the
+   CLI line and the hint together.
+5. **Suite offline.** `tests/conftest.py` sets `DOCS_CLI_NO_UPDATE_CHECK=1`
+   process-wide; the dispatch tests that exercise the notice re-enable it but
+   inject a fake `fetch_latest_version` (`_patch_fetch` / `_FetchSpy`), so no
+   test reaches the network. No networked test was added.
