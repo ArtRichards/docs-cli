@@ -39,6 +39,16 @@ THROTTLE = timedelta(hours=24)
 # asserted verbatim by tests/test_update_check.py.
 NOTICE_TEMPLATE = "docs: update available {current} -> {latest} — run: pip install -U docs-cli"
 
+# The byte-exact recorded-dest skill-refresh hint (M23 — AF-1). A second STDERR
+# line appended immediately after NOTICE_TEMPLATE when a dest was recorded by a
+# prior `docs install-skill`. Em-dash U+2014 before `run:` (parallel to
+# NOTICE_TEMPLATE); `--force` is included because a bundled-skill bump makes the
+# installed copy differ, so a forceless re-run would refuse. Pinned in
+# docs/cli.md and asserted verbatim by tests/test_update_check.py.
+SKILL_HINT_TEMPLATE = (
+    "docs: refresh the agent skill at {dest} — run: docs install-skill --dest {dest} --force"
+)
+
 
 @dataclass
 class Cache:
@@ -82,6 +92,11 @@ def format_notice(current: str, latest: str) -> str:
     return NOTICE_TEMPLATE.format(current=current, latest=latest)
 
 
+def format_skill_hint(dest: str) -> str:
+    """The recorded-dest skill-refresh hint, without a trailing newline."""
+    return SKILL_HINT_TEMPLATE.format(dest=dest)
+
+
 def cache_path() -> Path:
     """``${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json``."""
     xdg = os.environ.get("XDG_CACHE_HOME")
@@ -123,6 +138,50 @@ def write_cache(cache: Cache) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data), encoding="utf-8")
+    except OSError:
+        return
+
+
+# ---------------------------------------------------------------------------
+# M23 — recorded-dest per-user state (path only; NOT a key on M21's cache).
+#
+# Durable per-user state (where `install-skill` put the skill) lives in
+# XDG_STATE, separate from the ephemeral XDG_CACHE update-check cache whose
+# 3-key contract stays frozen. The schema is a single path key:
+# ``{"dest": "<absolute-path>"}``. Records/replays a path only — never the
+# installed skill's content or a hash. Read + write are both fail-silent.
+# ---------------------------------------------------------------------------
+
+
+def state_path() -> Path:
+    """``${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json``."""
+    xdg = os.environ.get("XDG_STATE_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".local" / "state"
+    return base / "docs-cli" / "install-skill.json"
+
+
+def read_recorded_dest() -> str | None:
+    """The recorded dest path, or ``None`` if absent / unreadable / malformed.
+
+    Fail-silent: missing / unreadable file (OSError) or non-JSON (ValueError)
+    → ``None``; any shape other than a dict carrying a string ``dest`` → None.
+    """
+    try:
+        raw = json.loads(state_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(raw, dict):
+        return None
+    dest = raw.get("dest")
+    return dest if isinstance(dest, str) else None
+
+
+def write_recorded_dest(dest: str) -> None:
+    """Persist ``{"dest": dest}`` (last-write-wins); swallow any ``OSError``."""
+    path = state_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"dest": dest}), encoding="utf-8")
     except OSError:
         return
 
@@ -234,6 +293,14 @@ def _check_and_notify(args: argparse.Namespace, env: Mapping[str, str], current:
         and should_notify(cache)
     ):
         print(format_notice(current, latest), file=sys.stderr)
+        # M23 D5 — append the recorded-dest skill-refresh hint, strictly coupled
+        # to the CLI notice (this guard already carries the full suppression
+        # matrix + 24h last_notified throttle, AF-3). Verbatim replay of the
+        # recorded path — no fs check (AF-2); absent when nothing recorded (M21
+        # unchanged); always the LAST stderr line (AF-1).
+        recorded = read_recorded_dest()
+        if recorded is not None:
+            print(format_skill_hint(recorded), file=sys.stderr)
         cache = Cache(
             last_check=cache.last_check,
             latest_version=latest,

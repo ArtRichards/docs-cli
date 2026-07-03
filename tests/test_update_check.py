@@ -39,9 +39,18 @@ from docs_cli import cli
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # The running version the notice quotes as `<current>`. Computed from the
-# installed metadata so the dispatch tests stay correct across the Phase-7
-# 1.6.5 -> 1.7.0 bump (the fake PyPI version is always strictly newer).
+# installed metadata so the dispatch tests stay correct across version bumps
+# (the fake PyPI version is always strictly newer).
 CURRENT = cli.__version__
+
+# A fake "latest" PyPI version that stays *strictly newer* than CURRENT across
+# every future version bump (M23 climbed CURRENT to 1.8.0; later milestones go
+# higher). The dispatch tests below and the M23 D5 hint tests both fetch this
+# sentinel as "a newer PyPI version": a hardcoded literal like "1.7.1" would
+# stop being newer than CURRENT once a bump lands, silently un-firing the
+# notice — the present-asserting tests would fail and the absence-asserting
+# ones would pass for the wrong reason. This bump-proof sentinel avoids that.
+NEWER = "99.0.0"
 
 # Guarded import: the module is created in Phase 5. Use importlib so mypy never
 # tries to resolve a not-yet-existing module (the gate must stay clean at the
@@ -158,13 +167,18 @@ def _prep_dispatch(monkeypatch: Any, tmp_path: Path) -> Path:
     """Re-enable the check (conftest disables it), point the cache at tmp.
 
     Clears the ambient suppression env vars so a host with `CI` set does not
-    mask the notice; returns the tmp `XDG_CACHE_HOME` directory.
+    mask the notice; returns the tmp `XDG_CACHE_HOME` directory. Also isolates
+    `XDG_STATE_HOME` (M23's recorded-dest lives there) so no dispatch test ever
+    reads the host's real `~/.local/state`: with a fresh, unseeded state dir
+    the M23 skill hint stays absent unless a test explicitly seeds one, keeping
+    the M21 `endswith(_expected_notice)` locks robust.
     """
     monkeypatch.delenv("DOCS_CLI_NO_UPDATE_CHECK", raising=False)
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     cache_home = tmp_path / "xdg-cache"
     monkeypatch.setenv("XDG_CACHE_HOME", str(cache_home))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
     return cache_home
 
 
@@ -505,11 +519,11 @@ def test_network_allowed_by_default():
 def test_dispatch_newer_emits_one_stderr_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
-    assert out.err.endswith(_expected_notice("1.7.1"))  # last line, byte-exact + \n
+    assert out.err.endswith(_expected_notice(NEWER))  # last line, byte-exact + \n
     assert out.err.count("docs: update available") == 1  # exactly one
     assert "docs: update available" not in out.out  # never on stdout
 
@@ -519,10 +533,10 @@ def test_dispatch_failing_verb_keeps_exit_code_and_shows_notice(
 ):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "invalid", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["check", str(tree)])
     out = capsys.readouterr()
-    notice = _expected_notice("1.7.1")
+    notice = _expected_notice(NEWER)
     assert code == 2  # the notice never changes the exit code
     # ADDITIVE, not a replacement: the verb's own diagnostic output survives.
     # `docs check` prints its findings to STDOUT (stderr stays empty until the
@@ -544,7 +558,7 @@ def test_dispatch_stale_check_fetches_once_and_advances_last_check(
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     old = _iso_hours_ago(25)
     _write_dispatch_cache(cache_home, last_check=old, latest_version=CURRENT)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -552,7 +566,7 @@ def test_dispatch_stale_check_fetches_once_and_advances_last_check(
     assert spy.calls == 1  # stale last_check → exactly one network attempt
     after = _read_dispatch_cache(cache_home)
     assert after is not None and after["last_check"] != old  # advanced
-    assert out.err.endswith(_expected_notice("1.7.1"))
+    assert out.err.endswith(_expected_notice(NEWER))
 
 
 def test_dispatch_notify_throttle_is_independent_of_check(
@@ -566,7 +580,7 @@ def test_dispatch_notify_throttle_is_independent_of_check(
         latest_version=CURRENT,
         last_notified=_iso_hours_ago(1),  # fresh → notice throttled
     )
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -577,7 +591,7 @@ def test_dispatch_notify_throttle_is_independent_of_check(
 def test_dispatch_quiet_warms_cache_without_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     cache_home = _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["touch", str(tree / "lone-doc.md"), "--root", str(tree), "--quiet"])
     out = capsys.readouterr()
     assert code == 0
@@ -594,11 +608,11 @@ def test_dispatch_corrupt_cache_recovers_and_notifies(monkeypatch, capsys, tmp_p
     cache_dir = cache_home / "docs-cli"
     cache_dir.mkdir(parents=True, exist_ok=True)
     (cache_dir / "update-check.json").write_bytes(b"{not json")
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
-    assert out.err.endswith(_expected_notice("1.7.1"))  # no traceback, notice emitted
+    assert out.err.endswith(_expected_notice(NEWER))  # no traceback, notice emitted
     after = _read_dispatch_cache(cache_home)  # parses → was rewritten to valid JSON
     assert after is not None and set(after) == {"last_check", "latest_version", "last_notified"}
 
@@ -610,11 +624,11 @@ def test_dispatch_naive_timestamp_cache_self_heals(monkeypatch, capsys, tmp_path
     # aware-minus-naive subtract; the check must treat it as stale, re-probe,
     # emit, and rewrite an offset-aware cache — never abort fatally.
     _write_dispatch_cache(cache_home, last_check="2026-06-29T12:00:00", latest_version=CURRENT)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
-    assert out.err.endswith(_expected_notice("1.7.1"))  # self-healed → notice emitted
+    assert out.err.endswith(_expected_notice(NEWER))  # self-healed → notice emitted
     after = _read_dispatch_cache(cache_home)
     assert after is not None
     # rewritten with an offset-aware last_check (parses back to an aware datetime)
@@ -624,11 +638,11 @@ def test_dispatch_naive_timestamp_cache_self_heals(monkeypatch, capsys, tmp_path
 def test_dispatch_non_tty_still_sees_notice(monkeypatch, capsys, tmp_path, fixtures_dir):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     assert not sys.stderr.isatty()  # capsys replaces stderr with a non-TTY buffer
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
-    assert out.err.endswith(_expected_notice("1.7.1"))  # TTY inversion: shown anyway
+    assert out.err.endswith(_expected_notice(NEWER))  # TTY inversion: shown anyway
 
 
 # ---------------------------------------------------------------------------
@@ -644,7 +658,7 @@ def test_dispatch_version_flag_never_emits_notice(monkeypatch, capsys, tmp_path)
     hook-placement lock once the Phase-5/6 post-dispatch hook lands.
     """
     _prep_dispatch(monkeypatch, tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))  # strictly newer than CURRENT
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))  # strictly newer than CURRENT
     with pytest.raises(SystemExit):
         cli.main(["--version"])  # argparse version action exits before dispatch
     out = capsys.readouterr()
@@ -673,7 +687,7 @@ def test_dispatch_fresh_cache_skips_network(monkeypatch, capsys, tmp_path, fixtu
     cache_home = _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
     _write_dispatch_cache(cache_home, last_check=_iso_hours_ago(1), latest_version=CURRENT)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     capsys.readouterr()
@@ -685,7 +699,7 @@ def test_dispatch_json_keeps_stdout_clean_and_suppresses_notice(
 ):
     _prep_dispatch(monkeypatch, tmp_path)
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    _patch_fetch(monkeypatch, _FetchSpy(version="1.7.1"))
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
     code = cli.main(["list", "--json", "--root", str(tree)])
     out = capsys.readouterr()
     assert code == 0
@@ -698,7 +712,7 @@ def test_dispatch_ci_env_silent_and_no_network(monkeypatch, capsys, tmp_path, fi
     _prep_dispatch(monkeypatch, tmp_path)
     monkeypatch.setenv("CI", "true")
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -712,7 +726,7 @@ def test_dispatch_no_update_check_env_silent_and_no_network(
     _prep_dispatch(monkeypatch, tmp_path)
     monkeypatch.setenv("DOCS_CLI_NO_UPDATE_CHECK", "1")
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -726,7 +740,7 @@ def test_dispatch_do_not_track_env_silent_and_no_network(
     _prep_dispatch(monkeypatch, tmp_path)
     monkeypatch.setenv("DO_NOT_TRACK", "1")
     tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
-    spy = _FetchSpy(version="1.7.1")
+    spy = _FetchSpy(version=NEWER)
     _patch_fetch(monkeypatch, spy)
     cli.main(["list", "--root", str(tree)])
     out = capsys.readouterr()
@@ -771,3 +785,217 @@ def test_dispatch_offline_reprobes_each_invocation(monkeypatch, capsys, tmp_path
     # is still stale and re-probes — the resolved-Q2 bounded offline-retry
     # property (each call pays the network attempt until a success persists).
     assert spy.calls == 2
+
+
+# ===========================================================================
+# M23 (D5) — recorded-dest skill-refresh hint on M21's notice channel.
+#
+# Phase 2 (RED). The hint rides M21's exact STDERR channel: appended only when
+# the CLI notice actually prints, under the same suppression matrix + 24h
+# last_notified throttle. It replays the recorded dest verbatim (no fs check).
+# Every test points XDG_STATE_HOME at tmp so no test reads the real
+# ~/.local/state; the recorded dest is seeded inline (date-independent).
+#
+# INVARIANT: the M21 dispatch tests above run list/check/touch — never
+# install-skill — so they never record a dest; with XDG_STATE at a fresh tmp
+# (or unseeded), read_recorded_dest() is None and their endswith(_expected_
+# notice) locks stay GREEN. M23 must never record a dest on a non-install-skill
+# path.
+# ===========================================================================
+
+
+def _prep_state(monkeypatch: Any, tmp_path: Path) -> Path:
+    """Point XDG_STATE_HOME at a tmp dir; return the state-home directory."""
+    state_home = tmp_path / "xdg-state"
+    monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
+    return state_home
+
+
+def _write_recorded_dest(state_home: Path, dest: str) -> Path:
+    """Seed `$XDG_STATE_HOME/docs-cli/install-skill.json` with a recorded dest."""
+    state_dir = state_home / "docs-cli"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    path = state_dir / "install-skill.json"
+    path.write_text(json.dumps({"dest": dest}), encoding="utf-8")
+    return path
+
+
+def _expected_hint(dest: str) -> str:
+    """The byte-exact emitted stderr hint line (formatter output + \\n)."""
+    return (
+        f"docs: refresh the agent skill at {dest} — run: docs install-skill --dest {dest} --force\n"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Spec-content lock (AF-1) — GREEN at baseline (Phase 1 pinned the template)
+# ---------------------------------------------------------------------------
+
+
+def test_cli_md_pins_skill_hint_template():
+    """cli.md carries the byte-exact skill-refresh hint template (AF-1)."""
+    cli_md = (REPO_ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
+    assert (
+        "docs: refresh the agent skill at <dest> — run: docs install-skill --dest <dest> --force"
+        in cli_md
+    )
+
+
+# ---------------------------------------------------------------------------
+# Unit — SKILL_HINT_TEMPLATE / format_skill_hint seam (RED until Phase 5)
+# ---------------------------------------------------------------------------
+
+
+def test_skill_hint_template_and_formatter_seam():
+    assert hasattr(uc, "SKILL_HINT_TEMPLATE"), "SKILL_HINT_TEMPLATE not implemented (Phase 5)"
+    assert hasattr(uc, "format_skill_hint"), "format_skill_hint not implemented (Phase 5)"
+    assert uc.format_skill_hint("/x") == uc.SKILL_HINT_TEMPLATE.format(dest="/x")
+
+
+def test_format_skill_hint_is_byte_exact_without_trailing_newline():
+    assert hasattr(uc, "format_skill_hint"), "format_skill_hint not implemented (Phase 5)"
+    hint = uc.format_skill_hint("/a/b")
+    assert hint == (
+        "docs: refresh the agent skill at /a/b — run: docs install-skill --dest /a/b --force"
+    )
+    assert not hint.endswith("\n")
+
+
+# ---------------------------------------------------------------------------
+# Dispatch — hint present / absent (RED / GREEN at baseline)
+# ---------------------------------------------------------------------------
+
+
+def test_dispatch_recorded_dest_appends_skill_hint(monkeypatch, capsys, tmp_path, fixtures_dir):
+    """Recorded dest + newer version → CLI line AND the byte-exact hint as the
+    LAST stderr line, exactly once; neither line on stdout (RED)."""
+    _prep_dispatch(monkeypatch, tmp_path)
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    dest = "/home/agent/.claude/skills/docs"
+    _write_recorded_dest(state_home, dest)
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    code = cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert code == 0
+    assert "docs: update available" in out.err  # the CLI line is still there
+    assert out.err.endswith(_expected_hint(dest))  # hint is the LAST line, byte-exact + \n
+    assert out.err.count("docs: refresh the agent skill") == 1  # exactly once
+    assert "docs: refresh the agent skill" not in out.out  # never on stdout
+    assert "docs: update available" not in out.out
+
+
+def test_dispatch_no_recorded_dest_emits_cli_line_only(monkeypatch, capsys, tmp_path, fixtures_dir):
+    """No recorded dest + newer version → only the CLI line (M21 unchanged).
+
+    GREEN at baseline: this is exactly today's M21 behaviour.
+    """
+    _prep_dispatch(monkeypatch, tmp_path)
+    _prep_state(monkeypatch, tmp_path)  # XDG_STATE at tmp, but nothing recorded
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert out.err.endswith(_expected_notice(NEWER))  # CLI line is the last line
+    assert "docs: refresh the agent skill" not in out.err
+
+
+def test_dispatch_recorded_dest_replayed_verbatim(monkeypatch, capsys, tmp_path, fixtures_dir):
+    """A recorded dest that does not exist on disk is still replayed verbatim —
+    no stat/existence check (AF-2) (RED)."""
+    _prep_dispatch(monkeypatch, tmp_path)
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    dest = "/nonexistent/path/does/not/exist/skills/docs"
+    _write_recorded_dest(state_home, dest)
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert out.err.endswith(_expected_hint(dest))  # exact path replayed, no fs check
+
+
+# ---------------------------------------------------------------------------
+# Dispatch — the hint is coupled to the CLI notice (suppression + throttle)
+# ---------------------------------------------------------------------------
+
+
+def test_dispatch_json_suppresses_hint_and_cli(monkeypatch, capsys, tmp_path, fixtures_dir):
+    """`--json` suppresses BOTH the CLI line and the hint; stdout stays clean."""
+    _prep_dispatch(monkeypatch, tmp_path)
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _write_recorded_dest(state_home, "/x/dest")
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    code = cli.main(["list", "--json", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert code == 0
+    json.loads(out.out)  # stdout stays byte-clean JSON
+    assert "docs: update available" not in out.err
+    assert "docs: refresh the agent skill" not in out.err
+
+
+def test_dispatch_quiet_suppresses_hint_and_cli(monkeypatch, capsys, tmp_path, fixtures_dir):
+    """`--quiet` suppresses BOTH the CLI line and the hint (touch supports it)."""
+    _prep_dispatch(monkeypatch, tmp_path)
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _write_recorded_dest(state_home, "/x/dest")
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    code = cli.main(["touch", str(tree / "lone-doc.md"), "--root", str(tree), "--quiet"])
+    out = capsys.readouterr()
+    assert code == 0
+    assert "docs: update available" not in out.err
+    assert "docs: refresh the agent skill" not in out.err
+
+
+@pytest.mark.parametrize("env_key", ["CI", "DOCS_CLI_NO_UPDATE_CHECK", "DO_NOT_TRACK"])
+def test_dispatch_env_suppression_silences_hint_and_cli(
+    env_key, monkeypatch, capsys, tmp_path, fixtures_dir
+):
+    """Each env kill-switch suppresses BOTH the CLI line and the hint."""
+    _prep_dispatch(monkeypatch, tmp_path)
+    monkeypatch.setenv(env_key, "1")
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _write_recorded_dest(state_home, "/x/dest")
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert "docs: update available" not in out.err
+    assert "docs: refresh the agent skill" not in out.err
+
+
+def test_dispatch_fresh_last_notified_throttles_hint_too(
+    monkeypatch, capsys, tmp_path, fixtures_dir
+):
+    """A fresh `last_notified` throttles the CLI notice — and the hint with it
+    (the hint shares the SAME throttle, no independent budget) (AF-3)."""
+    cache_home = _prep_dispatch(monkeypatch, tmp_path)
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _write_dispatch_cache(
+        cache_home,
+        last_check=_iso_hours_ago(25),  # stale → check runs
+        latest_version=CURRENT,
+        last_notified=_iso_hours_ago(1),  # fresh → notice (and hint) throttled
+    )
+    _write_recorded_dest(state_home, "/x/dest")
+    _patch_fetch(monkeypatch, _FetchSpy(version=NEWER))
+    cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert "docs: update available" not in out.err  # CLI throttled
+    assert "docs: refresh the agent skill" not in out.err  # hint coupled → also silent
+
+
+def test_dispatch_current_version_emits_no_hint(monkeypatch, capsys, tmp_path, fixtures_dir):
+    """When the CLI is current (no CLI notice), no hint is emitted even with a
+    recorded dest (the hint never fires on its own) (AF-3)."""
+    _prep_dispatch(monkeypatch, tmp_path)
+    state_home = _prep_state(monkeypatch, tmp_path)
+    tree = _copy_tree(fixtures_dir, "minimal", tmp_path)
+    _write_recorded_dest(state_home, "/x/dest")
+    _patch_fetch(monkeypatch, _FetchSpy(version=CURRENT))  # not newer → no CLI notice
+    cli.main(["list", "--root", str(tree)])
+    out = capsys.readouterr()
+    assert "docs: update available" not in out.err
+    assert "docs: refresh the agent skill" not in out.err

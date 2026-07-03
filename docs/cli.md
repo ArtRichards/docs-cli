@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-06-29
+Updated: 2026-07-02
 
 Related:
 - pairs-with: convention.md
@@ -781,6 +781,15 @@ Flags:
 - `--force` — overwrite a non-identical existing destination.
 - `--quiet` — suppress success messages on stderr.
 
+Destination resolution. `--dest` is the single, agent-agnostic source of
+truth for where the skill lands — there is no agent auto-detection and no
+per-agent default map. When `--dest` is **omitted**, resolution is
+TTY-aware: on an interactive TTY the command **may** prompt for the
+destination, offering `~/.claude/skills/docs/` as the default (an empty
+response accepts the default); on a non-TTY (an agent), it **never** blocks
+on a prompt — it silently uses the default `~/.claude/skills/docs/` and
+exits 0. Passing `--dest` explicitly skips the prompt entirely.
+
 Idempotency. If `<dest>` already exists and every bundled file matches
 byte-for-byte, `install-skill` prints a no-op message and exits 0
 without writing.
@@ -790,6 +799,18 @@ and `--force` was not supplied — the existing tree is preserved
 unchanged in this case; or (b) `--symlink` was requested from a wheel
 install. In both cases the message describes the recovery path
 (`--force`, `--dest <DIR>`, or an editable install).
+
+Recorded destination. On any **successful** run — a copy, a symlink, or an
+already-identical no-op (all exit 0) — the resolved destination path is
+recorded to a small per-user state file at
+`${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` with the
+schema `{"dest": "<absolute-path>"}`. Only the **path** is recorded — never
+the skill's content, never a hash or a diff. Writes are **last-write-wins**
+and **fail-silent**: an unwritable or uncreatable state directory-or-file
+never changes the exit code or the command's output. A **refusal** (exit 2)
+records nothing. The recorded path is later **replayed verbatim** by the
+update-check skill-refresh hint (see [Update check](#update-check)) — it is
+never inspected, stat-ed, or diffed.
 
 Windows note. `--symlink` may require developer-mode or elevated
 privileges depending on the user's Windows-side configuration; the
@@ -1205,6 +1226,28 @@ the `CI` skip cover every realistic per-user opt-out (OQ-5/5a). When a future
 milestone adds one it will be a user-level
 `${XDG_CONFIG_HOME:-~/.config}/docs-cli/config.toml`, never `.docs.toml`
 (which is per-tree, while this check is per-user).
+
+**Skill-refresh hint.** When a skill destination has been **recorded** by a
+prior `install-skill` run (see the [`install-skill`](#docs-install-skill---dest-dir---copy--symlink---force---quiet)
+recorded-destination note) **and** the CLI update notice above fires, a
+**second** STDERR line is appended immediately **after** the CLI line,
+pointing at the recorded destination:
+
+```
+docs: refresh the agent skill at <dest> — run: docs install-skill --dest <dest> --force
+```
+
+(an em-dash `—` before `run:`, parallel to the CLI notice; `--force` is
+included because a bundled-skill bump makes the installed copy differ, so a
+forceless re-run would refuse.) The hint rides the CLI notice's **exact**
+channel — the **same** suppression matrix and the **same** 24h
+`last_notified` throttle. It has **no independent trigger or throttle**: it
+is appended **only** when the CLI notice actually prints, and is silenced by
+every row of the suppression matrix along with the CLI line. The recorded
+path is replayed **verbatim** — there is **no** filesystem or existence
+check on it (record/replay a path; never inspect the installed skill). When
+**no** destination has been recorded, only the CLI line is emitted (the M21
+behaviour is unchanged).
 
 ## Exit codes (summary)
 

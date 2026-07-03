@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-06-29
+Updated: 2026-07-02
 
 Related:
 - child-of: plan.md
@@ -15,7 +15,7 @@ Related:
 
 ## Overview
 
-- Milestone: M23 (v1.8.0 recommended — see OPEN QUESTIONS)
+- Milestone: M23 (v1.8.0)
 - Title: Agent-aware install-skill + recorded-dest skill-refresh hint
 - Surface: `docs install-skill` becomes **agent-aware** — `--dest` is the
   single, agent-agnostic source of truth for where the bundled skill lands; the
@@ -26,17 +26,26 @@ Related:
   **recorded** dest. No new verb. The change is to `install-skill`'s
   resolution + a tiny state-write, plus a second (skill) line on M21's existing
   STDERR notice channel.
-- Progress: **Draft (milestone-setup, 2026-06-29).** Scaffolded this session as
-  the follow-on to the M21 re-scope (M21 dropped its skill half — the offline
-  skill-drift notice D5 + the dual `docs install-skill --force` nudge — because
-  it inspected the user's installed skill and assumed Claude Code). M23 rebuilds
-  the skill-refresh story the **honest** way: record where the agent actually
-  installs the skill, then replay that location in a refresh hint — **never**
-  inspect the installed skill's content, **never** guess the agent. No TDD phase
-  started. **Depends on M21** (it extends M21's update-notice channel). Genuine
-  OPEN QUESTIONS remain (non-TTY default-vs-refuse; state-file location;
-  multiple recorded dests; final version number) — for a later M23
-  milestone-setup / planning pass, NOT decided here. Stays LIVE at root,
+- Progress: **Implementation complete — all ten TDD phases done (2026-07-02);
+  1.8.0 built locally, publish is a later milestone; lifecycle `draft`.**
+  Phases 1–4 (Contract & RED baseline) on branch `m23/phases-1-4`; Phases 5–10
+  (implementation → dogfood → closeout) on `m23/phases-5-10`. Full suite
+  **636 GREEN**, gate clean tree-wide (ruff / format / mypy / `docs check
+  docs/`), `pyproject` at 1.8.0 (`docs --version` = `docs 1.8.0`); the online
+  path was dogfooded end-to-end against a seeded throwaway cache (pytest stays
+  100% offline). OQ-1/OQ-2 remain **flagged for confirmation at branch review**.
+  Scaffolded 2026-06-29 as the follow-on to the M21 re-scope (M21 dropped its
+  skill half — the offline skill-drift notice D5 + the dual
+  `docs install-skill --force` nudge — because it inspected the user's installed
+  skill and assumed Claude Code). M23 rebuilds the skill-refresh story the
+  **honest** way: record where the agent actually installs the skill, then
+  replay that location in a refresh hint — **never** inspect the installed
+  skill's content, **never** guess the agent. **Depends on M21** (it extends
+  M21's update-notice channel). The four former OPEN QUESTIONS are now
+  **resolved** (see Decisions): OQ-1 = default (non-TTY falls back, never
+  refuses); OQ-2 = a separate `XDG_STATE_HOME` file; OQ-3 = last-write-wins
+  single dest; OQ-4 = version **1.8.0** — with OQ-1/OQ-2 resolved provisionally
+  while the operator was away (confirm at branch review). Stays LIVE at root,
   lifecycle `draft`.
 
 ### Goal
@@ -85,16 +94,18 @@ installed skill or guessing which agent the user runs.
   one knob that decides where the skill lands. No agent auto-detection, no
   per-agent default map. (Out of scope: guessing the agent — see Non-goals.)
 - **D2 — TTY-aware resolution when `--dest` is omitted.** Interactive TTY: MAY
-  prompt the human for the dest (default offered). Non-TTY (an agent): **NEVER**
-  block on a prompt — either fall back to a default dest or refuse with a clear
-  actionable "pass `--dest`" message. **The non-TTY default-vs-refuse choice is
-  an OPEN QUESTION** (surface, do not decide here).
+  prompt the human for the dest (default offered; empty input accepts the
+  default). Non-TTY (an agent): **NEVER** block on a prompt — falls back to the
+  default dest `~/.claude/skills/docs/` and exits 0 (OQ-1 resolved =
+  **default**, never refuse).
 - **D3 — Record the resolved dest.** On a successful `install-skill`, write the
   resolved dest path to a small per-user state file so future runs / the M21
   notice can replay it. Recording a **path only** — never the skill's content,
   never a hash/diff (the content-inspection line M21 must not cross). Idempotent
-  / last-write-wins by default. **The state-file location is an OPEN QUESTION**
-  (user config vs the M21 update-check cache).
+  / last-write-wins by default. State-file location (OQ-2 resolved) = a
+  **separate** file `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json`,
+  schema `{"dest": "<abs-path>"}` — NOT a fourth key on M21's update-check
+  cache (M21's 3-key cache contract stays frozen).
 - **D4 — Neutralise the Claude-Code framing.** Rewrite `install-skill`'s
   argparse `help`/`description` (`cli.py:3313-3325`) from "Claude Code skill" /
   "an agent driving Claude Code" to agent-agnostic "agent skill" wording,
@@ -130,26 +141,28 @@ installed skill or guessing which agent the user runs.
 
 ### Deliverables
 
-- [ ] **D1 — `--dest` source of truth** (no agent guessing). Pinned by tests.
-- [ ] **D2 — TTY-aware resolution** when `--dest` omitted (TTY may prompt;
-      non-TTY never blocks). Pinned by a TTY/non-TTY test pair. *(non-TTY
-      default-vs-refuse — OPEN QUESTION.)*
-- [ ] **D3 — Record resolved dest** to a per-user state file (path only).
-      Pinned by a record-then-read test. *(location — OPEN QUESTION.)*
-- [ ] **D4 — Reword install-skill help/description** to "agent skill"
+- [x] **D1 — `--dest` source of truth** (no agent guessing). Pinned by tests.
+- [x] **D2 — TTY-aware resolution** when `--dest` omitted (TTY may prompt;
+      non-TTY never blocks). Pinned by a TTY/non-TTY test pair. *(non-TTY =
+      **default** — OQ-1 resolved.)*
+- [x] **D3 — Record resolved dest** to a per-user state file (path only).
+      Pinned by a record-then-read test. *(location = separate
+      `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` — OQ-2
+      resolved.)*
+- [x] **D4 — Reword install-skill help/description** to "agent skill"
       (reconcile with `cli.md`). Pinned by a help-string test + the skill-refs
       byte-identity gate.
-- [ ] **D5 — Recorded-dest skill-refresh hint** on M21's notice channel.
+- [x] **D5 — Recorded-dest skill-refresh hint** on M21's notice channel.
       Pinned by tests (hint present when a dest is recorded; absent + M21
       unchanged when none; full M21 suppression matrix honoured for the hint).
-- [ ] **D6 — Offline test harness** — TTY behaviour and the recording exercised
+- [x] **D6 — Offline test harness** — TTY behaviour and the recording exercised
       offline; the M21 notice channel stays mocked (no real network).
-- [ ] **D7 — Docs / version plumbing** — version bump (recommend **1.8.0** —
-      OPEN QUESTION); `cli.md` §install-skill + the update-notice section
-      updated; CHANGELOG entry; bundled-skill surface parity; bundled refs
+- [x] **D7 — Docs / version plumbing** — version bump to **1.8.0** (OQ-4
+      resolved); `cli.md` §install-skill + the update-notice section updated;
+      CHANGELOG entry; bundled-skill surface parity; bundled refs
       byte-identical.
-- [ ] **Surface-parity gate** + INDEX/frozen-snapshot lockstep throughout.
-- [ ] **Full suite GREEN**; ruff / format / mypy / `docs check docs/` exit 0.
+- [x] **Surface-parity gate** + INDEX/frozen-snapshot lockstep throughout.
+- [x] **Full suite GREEN**; ruff / format / mypy / `docs check docs/` exit 0.
 
 ## Current State Analysis
 
@@ -190,7 +203,9 @@ contract.
 - Objective: freeze the `install-skill` resolution contract (TTY-aware,
   `--dest` SoT), the recorded-dest state-file schema + location, the reworded
   "agent skill" help, and the M21-notice skill-hint wording — in `cli.md`
-  (§install-skill + §update-check). Resolve the four OPEN QUESTIONS first.
+  (§install-skill + §update-check). The four OPEN QUESTIONS are resolved (see
+  Decisions): OQ-1 default, OQ-2 separate XDG_STATE file, OQ-3 single dest,
+  OQ-4 version 1.8.0; AF-1 pins the byte-exact hint template.
 - Files: `docs/cli.md`, `docs/convention.md` (if the state file is user-config),
   `src/docs_cli/skill/references/{cli,convention}.md`, INDEX + snapshot.
 - Exit: contract strings present; `test_skill_refs` GREEN; `docs check` exit 0.
@@ -238,9 +253,19 @@ contract.
 - Objective: version bump (recommend 1.8.0 — OQ); packaging version pins in
   lockstep; CHANGELOG entry; bundled `SKILL.md` + `references/` resynced
   byte-identical; reconcile the reworded `--help` into the bundle.
-- Files: `pyproject.toml`, `tests/test_packaging.py`, `CHANGELOG.md`,
-  `src/docs_cli/skill/`.
-- Exit: version pin GREEN; `test_skill_refs` GREEN.
+  **Version-literal sweep (blind-spot guard):** bumping `pyproject` to 1.8.0
+  raises `cli.__version__` (= `CURRENT` in `tests/test_update_check.py`) to
+  1.8.0, so the *pre-existing* M21 dispatch tests that hardcode a "newer" PyPI
+  version of `1.7.1` (`_FetchSpy(version="1.7.1")` / `_expected_notice("1.7.1")`,
+  roughly `tests/test_update_check.py:513–747`) stop being newer than `CURRENT`
+  and their notice silently stops firing. **Sweep `tests/test_update_check.py`
+  for `1.7.1` version literals and rebase them above the new version** (the M23
+  D5 hint tests already use the bump-proof `NEWER = "99.0.0"` sentinel; the M21
+  block still needs rebasing here).
+- Files: `pyproject.toml`, `tests/test_packaging.py`, `tests/test_update_check.py`
+  (version-literal rebase), `CHANGELOG.md`, `src/docs_cli/skill/`.
+- Exit: version pin GREEN; `test_skill_refs` GREEN; no stale `1.7.1` "newer"
+  literal remains below `CURRENT`.
 
 ### Phase 8: Run Tests (GREEN)
 - Objective: full suite GREEN; gate clean tree-wide; `docs --version` reflects
@@ -266,16 +291,16 @@ contract.
 
 ## Phase Checklist
 
-- [ ] Phase 1 — Define Contract
-- [ ] Phase 2 — Write Tests (RED)
-- [ ] Phase 3 — Create Data/Fixtures
-- [ ] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
-- [ ] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Implement Online/Integration
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 1 — Define Contract
+- [x] Phase 2 — Write Tests (RED)
+- [x] Phase 3 — Create Data/Fixtures
+- [x] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 5 — Update Base Interfaces
+- [x] Phase 6 — Implement Offline/Core Path
+- [x] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 8 — Run Tests (GREEN)
+- [x] Phase 9 — Implement Online/Integration
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions
 
@@ -306,8 +331,75 @@ contract.
   guessing/detecting the agent. (Operator rule: don't guess the agent — ask on
   a TTY or take `--dest`.)
 - **Recommended version: 1.8.0** (a minor bump — additive, consistent with the
-  1.3→1.7 minor cadence). Not finalised — see OPEN QUESTIONS (it ships a later
-  version than M21's 1.7.0 regardless).
+  1.3→1.7 minor cadence). Confirmed as OQ-4 below.
+
+### Resolved (were OPEN QUESTIONS)
+
+Resolved at the M23 planning pass (Step 1). OQ-1 and OQ-2 were resolved
+**provisionally while the operator was away** (per the planner's firm
+recommendations) — **confirm at branch review**. OQ-3 and OQ-4 are firm.
+
+- **OQ-1 — Non-TTY (agent) behaviour when `--dest` is omitted = DEFAULT.** On a
+  non-TTY with `--dest` omitted, fall back to the default
+  `~/.claude/skills/docs/` and exit 0 — **never** block, **never** refuse.
+  Backward-compatible/additive: it preserves the current M6 non-TTY behaviour
+  (the static `--dest` default); the only new non-TTY behaviour is the
+  recording. *(Resolved provisionally, operator absent — confirm at review.)*
+- **OQ-2 — Recorded-dest location = SEPARATE `XDG_STATE_HOME` FILE.**
+  `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json`, schema
+  `{"dest": "<abs-path>"}`. Do **not** add a key to M21's update-check cache —
+  M21's 3-key cache contract (`last_check` / `latest_version` /
+  `last_notified`) stays frozen. Durable per-user state belongs in `XDG_STATE`,
+  not the ephemeral `XDG_CACHE`. *(Resolved provisionally, operator absent —
+  confirm at review.)*
+- **OQ-3 — Multiple dests vs single = LAST-WRITE-WINS SINGLE dest.** One `dest`
+  key; forward-compatible to an array later if real multi-dest use appears.
+- **OQ-4 — Version = 1.8.0.** A minor bump (additive), one bucket above M21's
+  1.7.0. Built locally; a later milestone publishes.
+- **AF-1 — byte-exact skill-refresh hint template.** A second STDERR line,
+  appended **after** the CLI notice line:
+
+  ```
+  docs: refresh the agent skill at <dest> — run: docs install-skill --dest <dest> --force
+  ```
+
+  Em-dash `—` before `run:` (parallel to the CLI `NOTICE_TEMPLATE`); `--force`
+  is included because a bundled-skill bump makes the installed copy differ, so
+  a forceless re-run would refuse. Defined in `update_check.py` as
+  `SKILL_HINT_TEMPLATE` with a `{dest}` placeholder, mirroring `NOTICE_TEMPLATE`.
+- **AF-2 — pure verbatim replay.** No `stat`/existence check on the recorded
+  dest (upholds the BINDING "record/replay a path, never inspect" invariant).
+- **AF-3 — strictly coupled to the CLI notice.** The hint is appended **only**
+  when the CLI notice actually prints; it shares the same 24h `last_notified`
+  throttle and full suppression matrix; no hint when the CLI is current; absent
+  when no dest is recorded (M21 unchanged).
+
+### Known limitation — repeated `--symlink` recording (deferred to review)
+
+Surfaced by the Step-2 fresh-eyes review (one nit, no blocker). Bound by the
+implementation-choice **OQ-C** (keep M6's single `Path(os.path.expanduser(
+_resolve_install_dest(args))).resolve()` semantics byte-for-byte; see impl-log
+Phase 6). On a **repeated** `docs install-skill --dest <D> --symlink` where
+`<D>` is already the symlink created by a **prior** run, that top-of-function
+`resolve()` chases the existing symlink to the bundled source tree, so the
+no-op re-run records the **source-tree** path instead of `<D>`. The
+recorded-dest hint would then read
+`docs install-skill --dest <source-tree> --force`.
+
+- **Scope is narrow.** Editable installs only (the wheel rejects `--symlink`),
+  and **only** on a repeated `--symlink` install. The *first* install and
+  *every* copy / fresh install record the dest correctly, and any later copy /
+  fresh install **re-corrects** the record (last-write-wins, D3) — so it
+  self-heals.
+- **Not fixed here — it would deviate from a BINDING decision.** The behaviour
+  is a direct consequence of the binding OQ-C decision to preserve M6
+  `resolve()` semantics byte-for-byte, so changing it is out of scope for this
+  step. A fix would record `os.path.abspath(os.path.expanduser(<raw>))` for the
+  **recorded value only**, leaving `_materialise_skill`'s `dest` (which must
+  stay `resolve()`d) untouched.
+- **Deferred to the operator's branch review**, bundled with the existing
+  OQ-1/OQ-2 confirm-at-review flag above (non-TTY = default; separate
+  `XDG_STATE` state file). No code changed for this note.
 
 ## Testing / Quality Gate
 
@@ -331,49 +423,27 @@ real network call** (M21's offline invariant preserved).
 
 M23 is complete when:
 
-- [ ] `install-skill` resolves the dest TTY-aware (`--dest` SoT; TTY may prompt;
+- [x] `install-skill` resolves the dest TTY-aware (`--dest` SoT; TTY may prompt;
       non-TTY never blocks) and **records** the resolved path to the per-user
       state file (path only — no content read).
-- [ ] `install-skill`'s help/description say "agent skill" (no "Claude Code"),
+- [x] `install-skill`'s help/description say "agent skill" (no "Claude Code"),
       reconciled with `cli.md`; a stale-wording grep for "Claude Code" in the
       install-skill surface is clean.
-- [ ] M21's update notice gains a recorded-dest skill-refresh hint on the same
+- [x] M21's update notice gains a recorded-dest skill-refresh hint on the same
       STDERR channel, under the same suppression matrix + throttle; absent when
       no dest is recorded (M21 behaviour unchanged).
-- [ ] No content-inspection of the installed skill; no agent guessing anywhere.
-- [ ] Suite fully offline; bundled refs byte-identical (`test_skill_refs`
+- [x] No content-inspection of the installed skill; no agent guessing anywhere.
+- [x] Suite fully offline; bundled refs byte-identical (`test_skill_refs`
       GREEN); INDEX + frozen snapshot in lockstep.
-- [ ] Version bumped (recommend 1.8.0 — OQ); CHANGELOG entry; `docs --version`
+- [x] Version bumped (**1.8.0** — OQ-4); CHANGELOG entry; `docs --version`
       reflects it; full suite GREEN; gate clean. NO publish (a later milestone
       publishes).
 
 ## OPEN QUESTIONS
 
-Genuine scope/contract forks for a later M23 milestone-setup / planning pass.
-Each: question, why it matters, leaning. **Do not decide here.**
-
-- **OQ-1 — Non-TTY (agent) behaviour when `--dest` is omitted: default vs
-  refuse?** *Why:* an agent must never block on a prompt, so the tool either
-  falls back to a default dest (convenient, but writes to a Claude-Code-shaped
-  path the user may not want) or refuses with "pass `--dest`" (explicit, but
-  one more step for the common agent case). *Leaning:* undecided — both are
-  defensible; resolve at the next planning pass. (Fixed regardless: non-TTY
-  never blocks.)
-- **OQ-2 — Where is the recorded dest stored: a user-level config file vs a key
-  in M21's update-check cache?** *Why:* M21 already owns
-  `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json` (a cache — ephemeral,
-  XDG_CACHE) and has a *deferred* user-config location
-  `${XDG_CONFIG_HOME:-~/.config}/docs-cli/config.toml` (durable, XDG_CONFIG). A
-  recorded dest is arguably durable user state (config), but co-locating it in
-  the update-check cache keeps the notice's replay read trivial. *Leaning:*
-  undecided — weigh durability vs locality.
-- **OQ-3 — Support multiple recorded dests, or last-write-wins single dest?**
-  *Why:* a user may install the skill into more than one location (e.g. two
-  agents/hosts). One recorded dest is simplest; a small set is more faithful but
-  complicates the notice (which dest(s) to name). *Leaning:* start with
-  last-write-wins single dest; revisit if real multi-dest use appears.
-- **OQ-4 — Final version number (recommend 1.8.0).** *Why:* M23 is additive
-  (new resolution behaviour + a recorded-state file + an extra notice line) and
-  the project uses minor bumps for features (1.3→1.7). It ships a later version
-  than M21's 1.7.0. *Leaning:* **1.8.0** — but confirm at planning (e.g. if it
-  is batched with another feature, or if the operator wants a different bucket).
+**All four resolved at the Step-1 planning pass — moved to Decisions ›
+"Resolved (were OPEN QUESTIONS)".** OQ-1 (non-TTY = default) and OQ-2 (separate
+`XDG_STATE` file) were resolved **provisionally while the operator was away**
+and are flagged for confirmation at branch review; OQ-3 (last-write-wins single
+dest) and OQ-4 (version 1.8.0) are firm. AF-1/AF-2/AF-3 (the byte-exact hint
+template, verbatim replay, and CLI-notice coupling) are pinned there too.

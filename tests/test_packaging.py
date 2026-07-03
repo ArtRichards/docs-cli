@@ -36,6 +36,7 @@ edit, the suite skips packaging tests cleanly instead of crashing.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -97,21 +98,22 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_1_7_0() -> None:
-    """A3: `[project].version` is `1.7.0` (M21).
+def test_a3_project_version_is_1_8_0() -> None:
+    """A3: `[project].version` is `1.8.0` (M23).
 
-    M21 Phase 7 bumps the pyproject `version` string from 1.6.5 to 1.7.0
+    M23 Phase 7 bumps the pyproject `version` string from 1.7.0 to 1.8.0
     (the single version source of truth; `__version__` reads it via
-    `importlib.metadata`). The update-check notice is an additive feature, so
-    a minor bump is the right SemVer bucket. 1.7.0 is built locally — a later
-    milestone publishes (the M19→M20, M14+M15→M17 pattern).
+    `importlib.metadata`). Agent-aware install-skill + the recorded-dest
+    skill-refresh hint are additive, so a minor bump is the right SemVer
+    bucket. 1.8.0 is built locally — a later milestone publishes (the
+    M19→M20, M14+M15→M17 pattern).
 
-    Intended RED reason (Phase 4): pyproject still says `version = "1.6.5"`;
-    Phase 7 bumps it to 1.7.0 in lockstep with the B1/B2/C2 pins.
+    Intended RED reason (Phase 4): pyproject still says `version = "1.7.0"`;
+    Phase 7 bumps it to 1.8.0 in lockstep with the B1/B2/C2 pins.
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "1.7.0", (
-        f"[project].version must be '1.7.0'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "1.8.0", (
+        f"[project].version must be '1.8.0'; got {data['project']['version']!r}"
     )
 
 
@@ -194,25 +196,25 @@ def built_dist(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def test_b1_wheel_builds(built_dist: dict) -> None:
-    """B1: `python -m build` produces a wheel named `docs_cli-1.7.0-*.whl`.
+    """B1: `python -m build` produces a wheel named `docs_cli-1.8.0-*.whl`.
 
-    M21 Phase 7 bumped the pyproject `version` to 1.7.0, so the build
-    produces a 1.7.0 wheel (built locally; a later milestone publishes).
+    M23 Phase 7 bumped the pyproject `version` to 1.8.0, so the build
+    produces a 1.8.0 wheel (built locally; a later milestone publishes).
     """
     assert built_dist["wheel"].exists()
-    assert built_dist["wheel"].name.startswith("docs_cli-1.7.0-"), (
-        f"wheel filename must encode version 1.7.0; got {built_dist['wheel'].name}"
+    assert built_dist["wheel"].name.startswith("docs_cli-1.8.0-"), (
+        f"wheel filename must encode version 1.8.0; got {built_dist['wheel'].name}"
     )
 
 
 def test_b2_sdist_builds(built_dist: dict) -> None:
-    """B2: `python -m build` produces an sdist `docs_cli-1.7.0.tar.gz`.
+    """B2: `python -m build` produces an sdist `docs_cli-1.8.0.tar.gz`.
 
-    M21 Phase 7: same bump as B1 — pyproject is at 1.7.0.
+    M23 Phase 7: same bump as B1 — pyproject is at 1.8.0.
     """
     assert built_dist["sdist"].exists()
-    assert built_dist["sdist"].name == "docs_cli-1.7.0.tar.gz", (
-        f"sdist filename must be 'docs_cli-1.7.0.tar.gz'; got {built_dist['sdist'].name}"
+    assert built_dist["sdist"].name == "docs_cli-1.8.0.tar.gz", (
+        f"sdist filename must be 'docs_cli-1.8.0.tar.gz'; got {built_dist['sdist'].name}"
     )
 
 
@@ -327,12 +329,12 @@ def test_c1_docs_on_path_in_venv(wheel_venv: Path) -> None:
     assert wheel_venv.is_file()
 
 
-def test_c2_docs_version_is_1_7_0(wheel_venv: Path) -> None:
-    """C2: `docs --version` prints `1.7.0` (M21).
+def test_c2_docs_version_is_1_8_0(wheel_venv: Path) -> None:
+    """C2: `docs --version` prints `1.8.0` (M23).
 
-    M21 Phase 7 bumped `__version__` (sourced from `importlib.metadata`)
-    to 1.7.0 by bumping the pyproject `version`. The built wheel installed
-    into `wheel_venv` reports 1.7.0.
+    M23 Phase 7 bumped `__version__` (sourced from `importlib.metadata`)
+    to 1.8.0 by bumping the pyproject `version`. The built wheel installed
+    into `wheel_venv` reports 1.8.0.
     """
     result = subprocess.run(
         [str(wheel_venv), "--version"],
@@ -344,12 +346,12 @@ def test_c2_docs_version_is_1_7_0(wheel_venv: Path) -> None:
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     combined = (result.stdout + result.stderr).strip()
-    # Exact-token match: bare substring `"1.7.0" in combined` would also
-    # accept `21.7.0` or `1.7.0.dev0`. Split on whitespace and require the
+    # Exact-token match: bare substring `"1.8.0" in combined` would also
+    # accept `21.8.0` or `1.8.0.dev0`. Split on whitespace and require the
     # version token to appear verbatim.
     tokens = combined.split()
-    assert "1.7.0" in tokens, (
-        f"`docs --version` must print '1.7.0' as a standalone token; got: {combined!r}"
+    assert "1.8.0" in tokens, (
+        f"`docs --version` must print '1.8.0' as a standalone token; got: {combined!r}"
     )
 
 
@@ -385,6 +387,18 @@ def test_c3_docs_help_lists_every_verb(wheel_venv: Path) -> None:
 # --- Group D: `docs install-skill` verb -------------------------------------
 
 
+def _isolated_env(tmp_path: Path) -> dict[str, str]:
+    """A copy of the ambient env with ``XDG_STATE_HOME`` pointed at a tmp dir.
+
+    Group-D tests run ``docs install-skill --dest <tmp>`` as *subprocesses*.
+    Once Phase 6 lands the recording, every success writes
+    ``docs-cli/install-skill.json`` under ``$XDG_STATE_HOME``; isolating it here
+    keeps those writes inside ``tmp_path`` instead of the host's real
+    ``~/.local/state``. (Harmless before recording exists — nothing reads it.)
+    """
+    return {**os.environ, "XDG_STATE_HOME": str(tmp_path / "xdg-state")}
+
+
 def test_d1_install_skill_subcommand_exists(wheel_venv: Path) -> None:
     """D1: `docs install-skill --help` exits 0.
 
@@ -416,6 +430,7 @@ def test_d2_install_skill_default_action_is_copy(wheel_venv: Path, tmp_path: Pat
         [str(wheel_venv), "install-skill", "--dest", str(dest)],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode == 0, (
         f"install-skill exited {result.returncode}:\n"
@@ -440,6 +455,7 @@ def test_d3_install_skill_tree_is_byte_identical(wheel_venv: Path, tmp_path: Pat
         [str(wheel_venv), "install-skill", "--dest", str(dest)],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode == 0, f"install-skill exited {result.returncode}"
     for rel in (
@@ -472,6 +488,7 @@ def test_d4_install_skill_is_idempotent(wheel_venv: Path, tmp_path: Path) -> Non
             [str(wheel_venv), "install-skill", "--dest", str(dest)],
             capture_output=True,
             text=True,
+            env=_isolated_env(tmp_path),
         )
         assert result.returncode == 0, (
             f"{invocation} invocation exited {result.returncode}:\n"
@@ -494,6 +511,7 @@ def test_d5_install_skill_refuses_non_identical_without_force(
         [str(wheel_venv), "install-skill", "--dest", str(dest)],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode != 0, (
         "install-skill must refuse a non-identical existing dest without --force; "
@@ -511,6 +529,7 @@ def test_d5_install_skill_refuses_non_identical_without_force(
         [str(wheel_venv), "install-skill", "--dest", str(dest), "--force"],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert forced.returncode == 0, (
         f"install-skill --force must succeed; exited {forced.returncode}:\nstderr:\n{forced.stderr}"
@@ -533,6 +552,7 @@ def test_d6_install_skill_rejects_symlink_on_wheel_install(
         [str(wheel_venv), "install-skill", "--dest", str(dest), "--symlink"],
         capture_output=True,
         text=True,
+        env=_isolated_env(tmp_path),
     )
     assert result.returncode != 0, (
         f"install-skill --symlink must be rejected on a wheel install; exited {result.returncode}"
