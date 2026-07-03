@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-07-02. 20 docs active, 39 archived._
+_Generated 2026-07-03. 22 docs active, 39 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-07-02.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-07-03.
 
 ### Active — Charter
 
@@ -19,7 +19,7 @@ _Generated 2026-07-02. 20 docs active, 39 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-07-02.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-07-03.
 
 ### Active — Spec
 
@@ -28,12 +28,14 @@ _Generated 2026-07-02. 20 docs active, 39 archived._
 
 ### Active — Milestone
 
+- [m24-pypi-publish.md](m24-pypi-publish.md) — _milestone_ — > **Stub-drafted 2026-07-03**, immediately after M23 was merged to `main` > (merge commit `839daef`). M24 enters active…. Updated 2026-07-03.
 - [m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md) — _milestone_ — - Milestone: M23 (v1.8.0) - Title: Agent-aware install-skill + recorded-dest skill-refresh hint - Surface: `docs…. Updated 2026-07-02.
 - [m21-update-check.md](m21-update-check.md) — _milestone_ — - Milestone: M21 (v1.7.0) - Title: Update-check notification (PyPI new-version notice) - Surface: docs-cli's **first…. Updated 2026-06-29.
 - [m22-root-placement-guidance.md](m22-root-placement-guidance.md) — _milestone_ — - Milestone: M22 - Title: Doc-tree root placement guidance (project ≠ directory) - Surface: documentation-only — the…. Updated 2026-06-24.
 
 ### Active — Log
 
+- [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) — _log_ — Chronological log of work on **M24 — PyPI publish 1.8.0**. Append a section per runbook phase (operator prep →…. Updated 2026-07-03.
 - [m23-agent-aware-install-skill-impl.md](m23-agent-aware-install-skill-impl.md) — _log_ — Chronological log of work on M23 — Agent-aware install-skill + recorded-dest skill-refresh hint. Append a section per…. Updated 2026-07-02.
 - [m21-update-check-impl.md](m21-update-check-impl.md) — _log_ — Chronological log of work on M21 — Update-check notification (PyPI new-version notice). Append a section per TDD phase…. Updated 2026-06-29.
 - [m22-root-placement-guidance-impl.md](m22-root-placement-guidance-impl.md) — _log_ — Chronological log of work on M22 (Doc-tree root placement guidance). Append a section per phase with objective, files…. Updated 2026-06-26.
