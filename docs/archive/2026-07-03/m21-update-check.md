@@ -1,19 +1,19 @@
 # M21 — Update-check notification (PyPI new-version notice)
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-29
+Updated: 2026-07-03
 
 Related:
 - child-of: plan.md
-- parent-of: m21-update-check-impl.md
+- parent-of: archive/2026-07-03/m21-update-check-impl.md
 - implements: charter.md
-- pairs-with: m21-update-check-impl.md
+- pairs-with: archive/2026-07-03/m21-update-check-impl.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: status.md
-- references: m23-agent-aware-install-skill.md
+- references: archive/2026-07-03/m23-agent-aware-install-skill.md
 
 ## Overview
 

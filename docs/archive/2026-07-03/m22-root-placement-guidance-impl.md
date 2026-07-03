@@ -1,12 +1,13 @@
 # M22 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-26
+Updated: 2026-07-03
+Archived-reason: Milestone M22 complete; shipped to PyPI as docs-cli==1.8.0 (batched via M24) 2026-07-03
 
 Related:
-- pairs-with: m22-root-placement-guidance.md
+- pairs-with: archive/2026-07-03/m22-root-placement-guidance.md
 
 ## Overview
 

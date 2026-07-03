@@ -1,17 +1,17 @@
 # M23 — Agent-aware install-skill + recorded-dest skill-refresh hint
 
-Lifecycle: draft
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-07-02
+Updated: 2026-07-03
 
 Related:
 - child-of: plan.md
-- parent-of: m23-agent-aware-install-skill-impl.md
+- parent-of: archive/2026-07-03/m23-agent-aware-install-skill-impl.md
 - implements: charter.md
-- pairs-with: m23-agent-aware-install-skill-impl.md
+- pairs-with: archive/2026-07-03/m23-agent-aware-install-skill-impl.md
 - pairs-with: status.md
-- references: m21-update-check.md
+- references: archive/2026-07-03/m21-update-check.md
 
 ## Overview
 

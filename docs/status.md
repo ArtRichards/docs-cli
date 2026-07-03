@@ -25,39 +25,45 @@ Related:
 - pairs-with: archive/2026-06-12/m19-post-edit-validation.md
 - pairs-with: archive/2026-06-12/m20-pypi-publish.md
 - pairs-with: m20-pypi-publish-impl.md
-- pairs-with: m21-update-check.md
-- pairs-with: m21-update-check-impl.md
-- pairs-with: m23-agent-aware-install-skill.md
-- pairs-with: m23-agent-aware-install-skill-impl.md
-- pairs-with: m24-pypi-publish.md
+- pairs-with: archive/2026-07-03/m21-update-check.md
+- pairs-with: archive/2026-07-03/m21-update-check-impl.md
+- pairs-with: archive/2026-07-03/m23-agent-aware-install-skill.md
+- pairs-with: archive/2026-07-03/m23-agent-aware-install-skill-impl.md
+- pairs-with: archive/2026-07-03/m24-pypi-publish.md
 - pairs-with: m24-pypi-publish-impl.md
 
 **This is the single source of truth for project progress. Update only this file when milestones complete or phases advance.**
 
 ## Current milestone
 
-**M24 — PyPI publish 1.8.0** is **set up (milestone-setup complete,
-2026-07-03) — publish pending**, lifecycle `active`. It is the operator-driven
-publish that ships the whole post-1.6.5 train **batched** as one public
-release, `docs-cli==1.8.0` — **M21** (update-check, built as 1.7.0) + **M22**
-(doc-only root-placement guidance, no bump) + **M23** (agent-aware
-install-skill, 1.8.0) — mirroring M17 (M14+M15 → 1.6.0) and M9 (M6+M7+M8 →
-1.3.0). The tree is already at 1.8.0 (M23 Phase 7, merged to `main` at
-`839daef`); **1.7.0 is a PyPI-skipped version number** (its CHANGELOG entries
-fold into 1.8.0). A runbook-driven operational milestone — **no TDD code
-phases**; the [release-runbook.md](release-runbook.md) sections are the phases
-(M9/M11/M13/M17/M20 shape). Operator decisions locked at setup (2026-07-03):
-**D1** batched publish as 1.8.0; **D2** fold the CHANGELOG `## 1.7.0` entries
-up into the dated `## 1.8.0` section; **D3** "author now, confirm at the gate"
-— the runbook walk starts only on an explicit operator go-ahead and pauses
-before every irreversible/outward-facing step (real PyPI upload, `main` push,
-`v1.8.0` tag, GitHub release); **D4** M23 OQ-1/OQ-2 confirmed as-shipped (flag
-cleared, no re-bump); **D5** the closeout archives the M21 + M22 + M23 pairs +
-the M24 milestone doc. **The runbook walk (Phases 1–5) has not started.** Pair:
-[m24-pypi-publish.md](m24-pypi-publish.md) +
-[m24-pypi-publish-impl.md](m24-pypi-publish-impl.md); the M24 impl log,
-release-runbook, and this status doc stay `Lifecycle: active` through the
-publish.
+**docs-cli 1.8.0 shipped 2026-07-03 — the v1.8.0 train is complete.**
+**M24 — PyPI publish 1.8.0** is **Complete (2026-07-03)**: `docs-cli==1.8.0`
+is live at https://pypi.org/project/docs-cli/1.8.0/, the operator-driven
+**batched** publish of the whole post-1.6.5 train — **M21** (update-check,
+built as 1.7.0) + **M22** (doc-only root-placement guidance, no bump) + **M23**
+(agent-aware install-skill, 1.8.0) — as one public release (mirroring M17 =
+M14+M15 → 1.6.0 and M9 = M6+M7+M8 → 1.3.0). **1.7.0 was skipped on PyPI** — its
+CHANGELOG entries were folded into the dated `## 1.8.0` section (D2). The
+`v1.8.0` annotated tag points at the Phase-4 dated-CHANGELOG commit
+(`1a01f74`); the GitHub release carries the `## 1.8.0` notes. Chain-of-custody
+verified **bit-perfect for both wheel AND sdist** — PyPI-served wheel `29ac3ced…`
++ sdist `62a29285…` byte-identical to the local Phase-4 build; all M21 + M23
+headline contracts hold against the PyPI-served wheel (update notice + M23
+skill-refresh hint fire to STDERR under the seeded-cache probe, exit-parity,
+full suppression matrix; install-skill `--dest` records path-only, non-TTY
+falls back to default, "agent skill" wording). Ran the
+[release-runbook.md](release-runbook.md) on `main` (no TDD code phases) —
+driven under **D3** "author now, confirm at the gate": the operator authorized
+the irreversible upload + `main` push + tag + release at the Phase-4 gate (not
+M20's up-front full-autonomous authorization). **D4:** M23 OQ-1/OQ-2 confirmed
+as-shipped (branch-review flag cleared, no re-bump). The closeout refreshed the
+host-machine skills (`docs install-skill --force` → host `docs` byte-identical;
+workflow-skill sweep found no docs-cli drift this release) per the CLAUDE.md
+skill-update-flow policy, and archived the M21 + M22 + M23 pairs + M24's own
+milestone doc to `archive/2026-07-03/`; the M24 impl log, release-runbook, and
+this status doc stay `Lifecycle: active`. Full publish record + deviations live
+in [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md)'s milestone-completion
+summary.
 
 **M22 — Doc-tree root placement guidance (project ≠ directory)** is
 **implementation-complete (2026-06-24)** — all ten TDD phases done; full
@@ -80,13 +86,13 @@ renumber; milestone numbers here are creation-order, not execution order, as
 M14+M15→M17 / M18+M19→M20 already show). The matching `project-foundation`
 note is a separate companion follow-on in the `agent-playbook-suite` repo
 (tracked with the workflow-skill drift-lint follow-on). Pair:
-[m22-root-placement-guidance.md](m22-root-placement-guidance.md) +
-[m22-root-placement-guidance-impl.md](m22-root-placement-guidance-impl.md);
-stays LIVE at root, lifecycle `active`, until a later milestone sweeps it in.
+[m22-root-placement-guidance.md](archive/2026-07-03/m22-root-placement-guidance.md) +
+[m22-root-placement-guidance-impl.md](archive/2026-07-03/m22-root-placement-guidance-impl.md);
+**shipped to PyPI as `docs-cli==1.8.0` (batched via M24) 2026-07-03; the pair is now archived to `archive/2026-07-03/`.**
 
 **M21 — Update-check notification (PyPI new-version notice)** is
-**implementation-complete (1.7.0 built locally; publish is a later milestone),
-lifecycle `draft`**: **all 10 TDD phases are complete (2026-06-29)** —
+**Complete — shipped to PyPI as `docs-cli==1.8.0` (batched via M24) 2026-07-03;
+pair archived to `archive/2026-07-03/`**: **all 10 TDD phases are complete (2026-06-29)** —
 Phases 1–4 (RED baseline) on branch `m21/phases-1-4`, Phases 5–10 on
 `m21/phases-5-10`. The `update_check.py` seam (cache I/O, numeric fail-closed
 compare, injectable `urllib` fetch hook, suppression predicates, notice
@@ -117,10 +123,9 @@ DEFERRED out of v1.7.0 — OQ-5/5a) — but **deliberately shows on non-TTY**
 update. Ships as **1.7.0** (minor bump — additive feature; 1.6.5 was the
 operator-decreed patch exception); the PyPI publish is a later operator-driven
 milestone (the M19→M20, M14+M15→M17 pattern). The milestone pair is
-[m21-update-check.md](m21-update-check.md) +
-[m21-update-check-impl.md](m21-update-check-impl.md); it stays LIVE at root,
-lifecycle `draft`, until a later milestone sweeps it in (the M14/M15/M18/M19
-precedent). **OPEN QUESTIONS are netted out — none outstanding.** The original
+[m21-update-check.md](archive/2026-07-03/m21-update-check.md) +
+[m21-update-check-impl.md](archive/2026-07-03/m21-update-check-impl.md); the pair was swept to `archive/2026-07-03/` at the M24 closeout (the
+M14/M15/M18/M19 precedent). **OPEN QUESTIONS are netted out — none outstanding.** The original
 OQ-1..OQ-9 are RESOLVED (conductor decisions 2026-06-12, each per the
 recommended default) with one amendment by the re-scope: **OQ-6 (ship D5) is
 REVERSED to NO** (D5 CUT; skill story → M23); the dual-notice ordering question
@@ -128,13 +133,13 @@ is moot (single notice now). Surviving resolved findings: the dedicated
 `update_check.py` module stands (OQ-7; the B3 wheel-contents test tolerates it);
 the suite sets `DOCS_CLI_NO_UPDATE_CHECK=1` in `tests/conftest.py` to stay
 offline; cache timestamps are ISO-8601 UTC; the baseline test count is **543**.
-**Milestone-setup is complete; Phase 1 (Define Contract) is next.** See the
+**Shipped to PyPI as `docs-cli==1.8.0` (batched via M24) 2026-07-03.** See the
 milestone doc's Decisions › "Re-scope to CLI-only".
 
 **M23 — Agent-aware install-skill + recorded-dest skill-refresh hint** is
-**implementation-complete (1.8.0 built locally; publish is a later milestone),
-lifecycle `draft`** — the follow-on that restores the skill-refresh nudge cut
-from M21. **All ten TDD phases are done (2026-07-02)** — Phases 1–4
+**Complete — shipped to PyPI as `docs-cli==1.8.0` (batched via M24) 2026-07-03;
+pair archived to `archive/2026-07-03/`** — the follow-on that restores the
+skill-refresh nudge cut from M21. **All ten TDD phases are done (2026-07-02)** — Phases 1–4
 (Contract & RED baseline) on branch `m23/phases-1-4`, Phases 5–10 on
 `m23/phases-5-10`: the full suite is **636 GREEN**, gate clean tree-wide
 (ruff / format / mypy / `docs check docs/` all clean), `pyproject` at **1.8.0**
@@ -158,11 +163,11 @@ QUESTIONS are resolved** (see the milestone doc Decisions): OQ-1 = non-TTY
 **default** (never refuse), OQ-2 = a **separate** `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json`
 (M21's 3-key cache stays frozen), OQ-3 = last-write-wins single dest, OQ-4 =
 **1.8.0** — OQ-1/OQ-2 were resolved **provisionally while the operator was
-away** and **remain flagged for confirmation at branch review** (do not clear
-this flag). The pair is
-[m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md) +
-[m23-agent-aware-install-skill-impl.md](m23-agent-aware-install-skill-impl.md);
-it stays LIVE at root, lifecycle `draft`.
+away** and were **confirmed as-shipped at the M24 publish gate (D4, 2026-07-03)** —
+the branch-review flag is cleared. The pair is
+[m23-agent-aware-install-skill.md](archive/2026-07-03/m23-agent-aware-install-skill.md) +
+[m23-agent-aware-install-skill-impl.md](archive/2026-07-03/m23-agent-aware-install-skill-impl.md);
+the pair was archived to `archive/2026-07-03/` at the M24 closeout.
 
 **docs-cli 1.6.5 shipped 2026-06-12 — the v1.6.5 train is complete.**
 **M20 — PyPI publish 1.6.5** is **Complete (2026-06-12)**:
@@ -450,42 +455,20 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M24 — PyPI publish 1.8.0 is SET UP (2026-07-03) — publish
-pending.** The post-1.6.5 train (M21 + M22 + M23) is implementation-complete
-locally at 1.8.0 and merged to `main` (`839daef`); M24 will ship it batched as
-`docs-cli==1.8.0`. Per the D3 "author now, confirm at the gate" decision, the
-[release-runbook.md](release-runbook.md) walk (Phases 1–5) starts only on an
-explicit operator go-ahead, pausing before every irreversible step (real PyPI
-upload, `main` push, `v1.8.0` tag, GitHub release). Note `main` is **not yet
-pushed** (the M23 merge `839daef` + this M24 setup commit are local). The M24
-pair is [m24-pypi-publish.md](m24-pypi-publish.md) +
-[m24-pypi-publish-impl.md](m24-pypi-publish-impl.md).
-
-The three milestones M24 ships (all LIVE at root, lifecycle to be swept in at
-the M24 closeout):
-
-**M21 — Update-check notification (PyPI new-version notice)** landed on branches
-`m21/phases-1-4` (RED baseline) + `m21/phases-5-10` (implementation);
-**re-scoped to CLI-only 2026-06-29** (D5 skill-drift CUT; skill story → M23).
-The pair is [m21-update-check.md](m21-update-check.md) +
-[m21-update-check-impl.md](m21-update-check-impl.md). The `update_check.py` seam
-+ the `main()` hook are implemented; `pyproject` is at **1.7.0** (`docs
---version` = `docs 1.7.0` after the editable reinstall); the full suite is
-**604 GREEN** (+4 Step-2 review fold-in) with the gate clean tree-wide; the online path was verified
-against live PyPI and dogfooded end-to-end (pytest stays 100% offline). OPEN
-QUESTIONS are netted out — **none outstanding** (the re-scope resolves or moots
-OQ-1..OQ-9; OQ-6's "ship D5" is REVERSED — see the milestone doc's Decisions ›
-"Re-scope to CLI-only"). The pair stays LIVE at root, lifecycle `draft`, until a
-later milestone sweeps it in; a later operator-driven publish milestone (the
-M19→M20 pattern) ships 1.7.0 to PyPI (NO publish / tag / release in M21). The follow-on **M23 — Agent-aware install-skill +
-recorded-dest skill-refresh hint** (draft) restores the skill-refresh nudge cut
-from M21 — pair [m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md)
-+ [m23-agent-aware-install-skill-impl.md](m23-agent-aware-install-skill-impl.md).
-M18, M19, and M20 are all Complete and their milestone-doc pairs archived to
-`archive/2026-06-12/`. The [release-runbook.md](release-runbook.md) (carrying
-the M20 cumulative lessons) stays the operative reference for the next release.
-The only rolled-forward operator follow-on outside M21/M23 is the PyPI token
-re-scope (async UI work, not a blocker — see Open follow-ons).
+**Next action:** **none scoped — `docs-cli 1.8.0` shipped to PyPI 2026-07-03;
+the next implementation milestone is unscoped.** M24 published the whole
+post-1.6.5 train (M21 update-check + M22 doc guidance + M23 agent-aware
+install-skill) **batched** as `docs-cli==1.8.0` (https://pypi.org/project/docs-cli/1.8.0/);
+`v1.8.0` annotated tag at `1a01f74` + GitHub release; chain-of-custody
+bit-perfect (wheel `29ac3ced…`, sdist `62a29285…`). `main` is pushed through
+the M24 closeout. M21, M22, and M23 are all **Complete** and their milestone-doc
+pairs archived to `archive/2026-07-03/`; **1.7.0 was skipped on PyPI** (folded
+into 1.8.0, D2). M23's OQ-1/OQ-2 were **confirmed as-shipped at the M24 gate**
+(D4). The [release-runbook.md](release-runbook.md) (now carrying the M24
+cumulative lessons) stays the operative reference for the next release. The only
+rolled-forward operator follow-on is the PyPI token re-scope (async UI work, not
+a blocker — see Open follow-ons); the workflow-skill / bundled-skill drift-lint
+candidate also rolls forward (the M24 sweep found no drift this release).
 
 **Open follow-ons (rolled forward):**
 - **Token re-scope** to project-`docs-cli` — async operator UI work, not a
@@ -507,7 +490,7 @@ re-scope (async UI work, not a blocker — see Open follow-ons).
   session; **D5 is CUT from M21**. The honest version — make `install-skill`
   agent-aware via `--dest`, **record** the resolved dest, then extend M21's
   notice channel with a skill-refresh hint pointed at the *recorded* dest — is
-  the follow-on **M23** ([m23-agent-aware-install-skill.md](m23-agent-aware-install-skill.md)).
+  the follow-on **M23** ([m23-agent-aware-install-skill.md](archive/2026-07-03/m23-agent-aware-install-skill.md)).
   Not a loose follow-on any more; it is a scoped (draft) milestone.
 
 **Shipped (cleared follow-ons):**
@@ -720,10 +703,10 @@ for the milestone summary.
 | M18 — Archive edge integrity (intra-archive Related: rewriting) | **Complete / archived** (2026-06-03 impl-complete; correctness fix to `docs archive` — the conditioned archived-skip in `_rewrite_referring_edges` rewrites the moved doc's own archive-subtree `Related:` edges + repoints already-archived referrers; flipped the pinned `test_archive_does_not_rewrite_archive_subtree_edges` → `test_archive_repoints_already_archived_referrer`. `docs mv` own-edge parity (Open Q1 INCLUDED) verified already satisfied — no code change. Phase-9 payoff archived the M1–M9/M12 pairs + M16 trio + 3 stray impl-logs; `docs check docs/` exit 0. 510 GREEN. The M18 pair was archived to `archive/2026-06-12/` at the M20 closeout — it rode along in the 1.6.0 tree as an already-merged fix and added no new public surface to 1.6.5) | [Plan](archive/2026-06-12/m18-archive-edge-integrity.md) | [Log](archive/2026-06-12/m18-archive-edge-integrity-impl.md) |
 | M19 — Post-edit validation ergonomics (touch --check + configurable stale window) (v1.6.5) | **Complete** (2026-06-12; feature milestone — `docs touch --check [--stale N]` folds the existing `check_tree` into the touch loop after the end-of-batch reindex; `.docs.toml [check] stale_days = N` makes the stale window per-tree configurable (CLI `--stale` overrides); cosmetic `docs new --body-from` help-string fix closes the rolled-forward follow-on. No new verb, no new check rule; additive + backward-compatible. **Shipped to PyPI as `docs-cli==1.6.5` via M20 on 2026-06-12.** Q1–Q6 + OQ-1..OQ-5 RESOLVED; threshold-provenance folded into D2. Full suite 540/540 GREEN (533 + the Step-2 review +7), gate clean tree-wide, `docs --version` → `docs 1.6.5`. The M19 pair was archived to `archive/2026-06-12/` at the M20 closeout) | [Plan](archive/2026-06-12/m19-post-edit-validation.md) | [Log](archive/2026-06-12/m19-post-edit-validation-impl.md) |
 | M20 — PyPI publish 1.6.5 | **Complete** (2026-06-12; `docs-cli==1.6.5` on PyPI, the publish-only counterpart to M19 one-to-one as M13 shipped M12; `v1.6.5` annotated tag at the Phase-4 commit `0855466` + GitHub release; chain-of-custody **bit-perfect for both wheel AND sdist** (wheel `aba36e92…`, sdist `f9de1eb4…`); all M19 headline contracts hold against the PyPI-served wheel; ran the [release-runbook.md](release-runbook.md) on `main` (M17 precedent — no TDD code phases). NEW vs M17: the Phase-5 closeout refreshed the host-machine skills (`docs install-skill --force` + a workflow-skill sweep that caught + fixed one stale `--body-from` reference in `project-foundation`) per the CLAUDE.md skill-update-flow policy. Q1 → FULL AUTONOMOUS, Q2 → archive the M18 + M19 pairs + M20's own milestone doc to `archive/2026-06-12/`; the M20 impl log stays `Lifecycle: active`) | [Plan](archive/2026-06-12/m20-pypi-publish.md) | [Log](m20-pypi-publish-impl.md) |
-| M21 — Update-check notification (PyPI new-version notice) (v1.7.0) | **Implementation complete (all 10 TDD phases done 2026-06-29; 1.7.0 built locally — publish is a later milestone), lifecycle `draft`** (scaffolded 2026-06-12; **re-scoped to CLI-only 2026-06-29**; **all 10 TDD phases done 2026-06-29** — Phases 1–4 (RED baseline) on `m21/phases-1-4`, Phases 5–10 on `m21/phases-5-10`: full suite **604 GREEN**, gate clean tree-wide, `pyproject` at 1.7.0, `docs --version` → `docs 1.7.0`; the online path verified against live PyPI + dogfooded end-to-end, pytest 100% offline) — feature milestone introducing docs-cli's **first network surface**: a once-per-24h, fail-silent PyPI version check (stdlib `urllib` only, 1.0s timeout, 24h-cache-gated under a three-key `{last_check, latest_version, last_notified}` cache, zero-dependency wheel preserved) that emits ONE STDERR line nudging the user/agent to update **the CLI** (`pip install -U docs-cli`; wording `docs: update available <current> -> <latest> — run: pip install -U docs-cli`). STDERR-only, never alters the exit code, suppressed under `--quiet`/`--json`/`CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK` (the user-level config opt-out is DEFERRED out of v1.7.0 — OQ-5/5a), but **deliberately shows on non-TTY** (inverting gh's TTY rule — the agent is the actor). The former skill-drift notice (D5) + the dual-action `docs install-skill --force` half are **CUT** (re-scope 2026-06-29 — no skill inspection, no Claude-Code assumption); the skill story moves to follow-on **M23**. Ships as **1.7.0** (minor — additive; 1.6.5 was the operator-decreed patch exception); a later milestone publishes (M19→M20 pattern). **OPEN QUESTIONS netted out — none outstanding** (OQ-1..OQ-9 RESOLVED 2026-06-12; OQ-6 "ship D5" REVERSED by the re-scope). Stays LIVE at root, lifecycle `draft`. | [Plan](m21-update-check.md) | [Log](m21-update-check-impl.md) |
-| M22 — Doc-tree root placement guidance (project ≠ directory) | **Implementation complete** (2026-06-24; all ten TDD phases; documentation-only, M16-shaped — no CLI/code change, no version bump; convention.md §Subdirectories + bundled SKILL.md "where to put `.docs.toml`" guidance: `Project:` is metadata not a directory, and root-relative `Related:` makes a nested lone project prefix every sibling ref; RED-first `tests/test_skill_root_placement.py`; bundled reference mirrored byte-identical; dogfood-snapshot refreshed; CHANGELOG staged under 1.7.0 UNRELEASED. Full suite 543 GREEN, gate clean, Phase-9 dogfood reproduced the redundant-prefix consequence. Ran **before** M21 per the operator's run-order decision 2026-06-24 — number = creation order, not execution order. **Stays LIVE at root, lifecycle `active`** until the next publish closeout sweeps it, M18/M19/M21 + M16 precedent. Companion `project-foundation` note tracked separately in `agent-playbook-suite`) | [Plan](m22-root-placement-guidance.md) | [Log](m22-root-placement-guidance-impl.md) |
-| M23 — Agent-aware install-skill + recorded-dest skill-refresh hint (v1.8.0) | **Implementation complete (all 10 TDD phases done 2026-07-02; 1.8.0 built locally — publish is a later milestone), lifecycle `draft`** (Phases 1–4 (Contract & RED baseline) on `m23/phases-1-4`; Phases 5–10 (implementation → dogfood → closeout) on `m23/phases-5-10`: full suite **636 GREEN**, gate clean tree-wide, `pyproject` at 1.8.0, `docs --version` → `docs 1.8.0`; online path dogfooded against a seeded throwaway cache, pytest 100% offline) — follow-on to the M21 re-scope that restores the skill-refresh nudge cut from M21. Makes `docs install-skill` **agent-aware**: `--dest` is the agent-agnostic source of truth; TTY-aware resolution (human may be prompted; an agent [non-TTY] is **never** blocked → falls back to the default, OQ-1); the resolved dest is **recorded** (path only — **never** content) to a separate `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` (OQ-2; M21's 3-key cache stays frozen); the "Claude Code skill" framing in `install-skill`'s help is neutralised to **"agent skill"** (reconciling with `cli.md`); and M21's update notice gains a skill-refresh hint pointed at the **recorded** dest (riding M21's same suppression matrix + throttle). Replay/remember allowed; content-inspection + agent-guessing NOT. Out of scope: multi-agent skill *formats* + agent auto-detection. **Depends on M21.** Ships **1.8.0** (OQ-4). **The four OPEN QUESTIONS are resolved** (OQ-1 default / OQ-2 separate XDG_STATE file — both **provisional pending operator confirm at branch review**; OQ-3 last-write-wins single dest; OQ-4 1.8.0). Stays LIVE at root, lifecycle `draft`. | [Plan](m23-agent-aware-install-skill.md) | [Log](m23-agent-aware-install-skill-impl.md) |
-| M24 — PyPI publish 1.8.0 | **Set up — publish pending** (2026-07-03; lifecycle `active`) — operator-driven publish shipping the post-1.6.5 train **batched** as `docs-cli==1.8.0`: M21 (update-check, built 1.7.0) + M22 (doc-only, no bump) + M23 (agent-aware install-skill, 1.8.0), mirroring M17 (M14+M15→1.6.0) / M9 (M6+M7+M8→1.3.0). Tree at 1.8.0 (M23 Phase 7, merged `839daef`); **1.7.0 skipped on PyPI** (its CHANGELOG entries fold into 1.8.0, D2). Runbook-driven — no TDD code phases; the [release-runbook.md](release-runbook.md) sections are the phases. Setup decisions: D1 batched 1.8.0; D2 CHANGELOG fold; D3 "author now, confirm at the gate" (runbook starts on explicit go-ahead, pauses before every irreversible step); D4 M23 OQ-1/OQ-2 confirmed as-shipped (flag cleared); D5 closeout archives the M21+M22+M23 pairs + the M24 milestone doc. **Runbook walk (Phases 1–5) not started.** | [Plan](m24-pypi-publish.md) | [Log](m24-pypi-publish-impl.md) |
+| M21 — Update-check notification (PyPI new-version notice) (v1.7.0) | **Complete** (shipped to PyPI as `docs-cli==1.8.0` **batched via M24** 2026-07-03; pair archived to `archive/2026-07-03/`; impl-complete 2026-06-29, all 10 TDD phases; **1.7.0 skipped on PyPI**) (scaffolded 2026-06-12; **re-scoped to CLI-only 2026-06-29**; **all 10 TDD phases done 2026-06-29** — Phases 1–4 (RED baseline) on `m21/phases-1-4`, Phases 5–10 on `m21/phases-5-10`: full suite **604 GREEN**, gate clean tree-wide, `pyproject` at 1.7.0, `docs --version` → `docs 1.7.0`; the online path verified against live PyPI + dogfooded end-to-end, pytest 100% offline) — feature milestone introducing docs-cli's **first network surface**: a once-per-24h, fail-silent PyPI version check (stdlib `urllib` only, 1.0s timeout, 24h-cache-gated under a three-key `{last_check, latest_version, last_notified}` cache, zero-dependency wheel preserved) that emits ONE STDERR line nudging the user/agent to update **the CLI** (`pip install -U docs-cli`; wording `docs: update available <current> -> <latest> — run: pip install -U docs-cli`). STDERR-only, never alters the exit code, suppressed under `--quiet`/`--json`/`CI`/`DOCS_CLI_NO_UPDATE_CHECK`/`DO_NOT_TRACK` (the user-level config opt-out is DEFERRED out of v1.7.0 — OQ-5/5a), but **deliberately shows on non-TTY** (inverting gh's TTY rule — the agent is the actor). The former skill-drift notice (D5) + the dual-action `docs install-skill --force` half are **CUT** (re-scope 2026-06-29 — no skill inspection, no Claude-Code assumption); the skill story moves to follow-on **M23**. Ships as **1.7.0** (minor — additive; 1.6.5 was the operator-decreed patch exception); a later milestone publishes (M19→M20 pattern). **OPEN QUESTIONS netted out — none outstanding** (OQ-1..OQ-9 RESOLVED 2026-06-12; OQ-6 "ship D5" REVERSED by the re-scope). Shipped batched as 1.8.0 via M24; archived 2026-07-03. | [Plan](archive/2026-07-03/m21-update-check.md) | [Log](archive/2026-07-03/m21-update-check-impl.md) |
+| M22 — Doc-tree root placement guidance (project ≠ directory) | **Complete** (impl-complete 2026-06-24; shipped to PyPI as `docs-cli==1.8.0` **batched via M24** 2026-07-03, pair archived; all ten TDD phases; documentation-only, M16-shaped — no CLI/code change, no version bump; convention.md §Subdirectories + bundled SKILL.md "where to put `.docs.toml`" guidance: `Project:` is metadata not a directory, and root-relative `Related:` makes a nested lone project prefix every sibling ref; RED-first `tests/test_skill_root_placement.py`; bundled reference mirrored byte-identical; dogfood-snapshot refreshed; CHANGELOG staged under 1.7.0 UNRELEASED. Full suite 543 GREEN, gate clean, Phase-9 dogfood reproduced the redundant-prefix consequence. Ran **before** M21 per the operator's run-order decision 2026-06-24 — number = creation order, not execution order. Shipped batched as 1.8.0 via M24; archived 2026-07-03 (the publish closeout swept it, M18/M19/M21 + M16 precedent). Companion `project-foundation` note tracked separately in `agent-playbook-suite`) | [Plan](archive/2026-07-03/m22-root-placement-guidance.md) | [Log](archive/2026-07-03/m22-root-placement-guidance-impl.md) |
+| M23 — Agent-aware install-skill + recorded-dest skill-refresh hint (v1.8.0) | **Complete** (shipped to PyPI as `docs-cli==1.8.0` **batched via M24** 2026-07-03; pair archived to `archive/2026-07-03/`; impl-complete 2026-07-02, all 10 TDD phases) (Phases 1–4 (Contract & RED baseline) on `m23/phases-1-4`; Phases 5–10 (implementation → dogfood → closeout) on `m23/phases-5-10`: full suite **636 GREEN**, gate clean tree-wide, `pyproject` at 1.8.0, `docs --version` → `docs 1.8.0`; online path dogfooded against a seeded throwaway cache, pytest 100% offline) — follow-on to the M21 re-scope that restores the skill-refresh nudge cut from M21. Makes `docs install-skill` **agent-aware**: `--dest` is the agent-agnostic source of truth; TTY-aware resolution (human may be prompted; an agent [non-TTY] is **never** blocked → falls back to the default, OQ-1); the resolved dest is **recorded** (path only — **never** content) to a separate `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` (OQ-2; M21's 3-key cache stays frozen); the "Claude Code skill" framing in `install-skill`'s help is neutralised to **"agent skill"** (reconciling with `cli.md`); and M21's update notice gains a skill-refresh hint pointed at the **recorded** dest (riding M21's same suppression matrix + throttle). Replay/remember allowed; content-inspection + agent-guessing NOT. Out of scope: multi-agent skill *formats* + agent auto-detection. **Depends on M21.** Ships **1.8.0** (OQ-4). **The four OPEN QUESTIONS are resolved** (OQ-1 default / OQ-2 separate XDG_STATE file — **confirmed as-shipped at the M24 gate, D4**; OQ-3 last-write-wins single dest; OQ-4 1.8.0). Shipped batched as 1.8.0 via M24; archived 2026-07-03. | [Plan](archive/2026-07-03/m23-agent-aware-install-skill.md) | [Log](archive/2026-07-03/m23-agent-aware-install-skill-impl.md) |
+| M24 — PyPI publish 1.8.0 | **Complete** (2026-07-03; `docs-cli==1.8.0` live on PyPI; `v1.8.0` tag at `1a01f74` + GitHub release; chain-of-custody bit-perfect wheel `29ac3ced…` + sdist `62a29285…`; all M21+M23 contracts hold against the served wheel; host skills refreshed) — operator-driven publish shipping the post-1.6.5 train **batched** as `docs-cli==1.8.0`: M21 (update-check, built 1.7.0) + M22 (doc-only, no bump) + M23 (agent-aware install-skill, 1.8.0), mirroring M17 (M14+M15→1.6.0) / M9 (M6+M7+M8→1.3.0). Tree at 1.8.0 (M23 Phase 7, merged `839daef`); **1.7.0 skipped on PyPI** (its CHANGELOG entries fold into 1.8.0, D2). Runbook-driven — no TDD code phases; the [release-runbook.md](release-runbook.md) sections are the phases. Setup decisions: D1 batched 1.8.0; D2 CHANGELOG fold; D3 "author now, confirm at the gate" (runbook starts on explicit go-ahead, pauses before every irreversible step); D4 M23 OQ-1/OQ-2 confirmed as-shipped (flag cleared); D5 closeout archived the M21+M22+M23 pairs + the M24 milestone doc to `archive/2026-07-03/` (impl log stays active). Ran the release-runbook end-to-end under D3 (operator go at the Phase-4 gate). | [Plan](archive/2026-07-03/m24-pypi-publish.md) | [Log](m24-pypi-publish-impl.md) |
 
 v1 (M1-M5) shipped 2026-05-22. **docs-cli 1.3.0 shipped
 2026-05-25** as the first public PyPI release — M6 (PyPI

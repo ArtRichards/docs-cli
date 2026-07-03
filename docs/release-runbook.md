@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-07-03
 
 Related:
 - pairs-with: archive/2026-05-25/m9-pypi-publish.md
@@ -737,3 +737,46 @@ release closeout; do **not** rewrite past entries.
   Phase 1 — unchanged (`latest: 0.1.0`, author None). The
   `docs-cli-rehearsal` detour continues. Token re-scope to project-`docs-cli`
   rolls forward as the M9 open follow-on.
+
+### From M24 (2026-07-03, `docs-cli==1.8.0`)
+
+- **Interactive gated publish, not fully-autonomous.** Unlike M13/M17/M20 (the
+  operator authorized the irreversible steps up front and the conductor ran the
+  runbook to completion), M24 ran under a "author now, confirm at the gate"
+  decision: Phases 1–3 (prep → local gate → TestPyPI rehearsal) ran
+  autonomously, then the walk **stopped at the Phase-4 gate** for an explicit
+  operator go before the real PyPI upload + `main` push + tag + release. A valid
+  driving mode — record which one a given publish used.
+- **Batched publish of THREE milestones with two accrued version bumps →
+  version skip.** M24 shipped M21 (built 1.7.0) + M22 (doc-only) + M23 (built
+  1.8.0) as one `1.8.0` release. Because two implementation milestones each
+  bumped `pyproject` (1.6.5 → 1.7.0 → 1.8.0), the CHANGELOG carried **two**
+  `— UNRELEASED` sections. **New CHANGELOG shape vs M9/M17:** where those had a
+  single UNRELEASED section to date, M24 had to **fold** the older section
+  (1.7.0 → 1.8.0) and drop its header — `1.7.0` is a version number **skipped on
+  PyPI**. Sixth release; first time a publish skipped an intermediate bumped
+  version. When batching milestones that each bumped the version, decide fold-vs-
+  keep-both at Phase 4 (M24 folded, per operator decision).
+- **Chain-of-custody bit-perfect again (wheel AND sdist).** Sixth release
+  running (M11 + M13 + M17 + M20 + M24). Wheel `29ac3ced…` was byte-identical
+  across Phase 2/3/4 (`src/` unchanged); the sdist moved between phases purely
+  via `docs/` drift and re-anchored at the Phase-4 tag-target commit
+  (`62a29285…`) — the M13/M20 generalisation held.
+- **M21's update-notice cannot be exercised on the TestPyPI rehearsal wheel.**
+  Beyond the `docs 0.0.0+local` version print (M13), the rehearsal-name
+  `0.0.0+local` also **fails M21's fail-closed version compare**, so the notice
+  never fires under the rehearsal name. Verify the notice contract against the
+  canonical **local** wheel (Phase 2) and the **PyPI** wheel (Phase 4), never
+  the rehearsal wheel — the same rule the version string already follows.
+- **Workflow-skill sweep found no drift — the first quiet sweep.** The
+  host-skill refresh (`docs install-skill --force`) came back byte-identical,
+  and the workflow-skill sweep surfaced nothing, because M21/M23 **added**
+  surfaces (update-check, install-skill agent-awareness) rather than **changing**
+  a verb the workflow skills prescribe (contrast M20's stale `--body-from`
+  help). The in-repo drift-lint candidate (diff workflow-skill docs-cli
+  prescriptions vs the bundled `references/` surface) still stands as the
+  durable guard; it rolls forward.
+- **Squatter still parked.** TestPyPI bare `docs-cli` re-checked at M24
+  Phase 1 — unchanged (`latest: 0.1.0`, author None). The `docs-cli-rehearsal`
+  detour continues. Token re-scope to project-`docs-cli` rolls forward as the
+  M9 open follow-on.

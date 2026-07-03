@@ -1,15 +1,16 @@
 # M23 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-07-02
+Updated: 2026-07-03
+Archived-reason: Milestone M23 complete; shipped to PyPI as docs-cli==1.8.0 (batched via M24) 2026-07-03
 
 Related:
-- child-of: m23-agent-aware-install-skill.md
-- pairs-with: m23-agent-aware-install-skill.md
+- child-of: archive/2026-07-03/m23-agent-aware-install-skill.md
+- pairs-with: archive/2026-07-03/m23-agent-aware-install-skill.md
 - pairs-with: status.md
-- references: m21-update-check.md
+- references: archive/2026-07-03/m21-update-check.md
 
 ## Overview
 

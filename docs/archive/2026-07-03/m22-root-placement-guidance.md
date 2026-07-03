@@ -1,12 +1,12 @@
 # M22 — Doc-tree root placement guidance (project ≠ directory)
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-24
+Updated: 2026-07-03
 
 Related:
-- parent-of: m22-root-placement-guidance-impl.md
+- parent-of: archive/2026-07-03/m22-root-placement-guidance-impl.md
 - child-of: plan.md
 - implements: charter.md
 - pairs-with: convention.md

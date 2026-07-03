@@ -1,18 +1,19 @@
 # M24 — PyPI publish 1.8.0
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-07-03
+Archived-reason: Milestone M24 complete; docs-cli==1.8.0 shipped to PyPI 2026-07-03
 
 Related:
 - parent-of: m24-pypi-publish-impl.md
 - child-of: plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
-- pairs-with: m21-update-check.md
-- pairs-with: m22-root-placement-guidance.md
-- pairs-with: m23-agent-aware-install-skill.md
+- pairs-with: archive/2026-07-03/m21-update-check.md
+- pairs-with: archive/2026-07-03/m22-root-placement-guidance.md
+- pairs-with: archive/2026-07-03/m23-agent-aware-install-skill.md
 
 ## Overview
 
@@ -36,14 +37,12 @@ Related:
   (established at M20) — a **host-machine skill refresh** (production ship is
   when the `~/.claude/skills/` copies are re-materialised from the published
   version).
-- Status: **Setup complete (milestone-setup phase) — publish pending.** The
-  runbook walk runs after operator go-ahead at the gate (the "author now,
-  confirm at the gate" decision, 2026-07-03). The success criterion is
-  concrete: a fresh venv on a clean host can `pip install docs-cli==1.8.0`,
-  `docs --version` prints `docs 1.8.0`, the M21 + M23 headline contracts hold
-  against the PyPI-served wheel (see Success Criteria below), `docs check
-  <tree>` exits 0, and the public GitHub repo carries the matching `v1.8.0`
-  tag + release.
+- Status: **COMPLETE (2026-07-03) — `docs-cli==1.8.0` shipped to PyPI.** All
+  five runbook phases done; chain-of-custody bit-perfect for both wheel
+  (`29ac3ced…`) and sdist (`62a29285…`); `v1.8.0` annotated tag at `1a01f74` +
+  GitHub release; host skills refreshed. See the milestone-completion summary
+  below and [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) for the full
+  per-phase record.
 
 ### Goal
 
@@ -160,37 +159,37 @@ verbs; no TDD code phases.
 
 ### Deliverables
 
-- [ ] PyPI release `docs-cli` 1.8.0 published; project page live at
+- [x] PyPI release `docs-cli` 1.8.0 published; project page live at
       `https://pypi.org/project/docs-cli/1.8.0/`.
-- [ ] TestPyPI release `docs-cli-rehearsal` 1.8.0 published as the rehearsal
+- [x] TestPyPI release `docs-cli-rehearsal` 1.8.0 published as the rehearsal
       artifact (continues the M9/M11/M13/M17/M20 disambiguated dist-name
       detour).
-- [ ] `pyproject.toml` `version` confirmed at `1.8.0` (landed at M23 Phase 7;
+- [x] `pyproject.toml` `version` confirmed at `1.8.0` (landed at M23 Phase 7;
       `__version__` flows through `importlib.metadata` per M12 SoT refactor).
-- [ ] `CHANGELOG.md`: `## 1.7.0` entries folded up into `## 1.8.0`; the merged
+- [x] `CHANGELOG.md`: `## 1.7.0` entries folded up into `## 1.8.0`; the merged
       section dated `## 1.8.0 — <publish-date>`; no `UNRELEASED` / 1.7.0
       header survives.
-- [ ] `v1.8.0` git tag pushed; GitHub release created with notes sourced from
+- [x] `v1.8.0` git tag pushed; GitHub release created with notes sourced from
       the CHANGELOG `## 1.8.0` section.
-- [ ] **Host-machine skills refreshed:** `docs install-skill --force`
+- [x] **Host-machine skills refreshed:** `docs install-skill --force`
       re-materialises `~/.claude/skills/` from the published 1.8.0 surface;
       the workflow skills' docs-cli prescriptions swept for the new surface
       (M21 update-check, M23 agent-aware install-skill + recorded-dest).
-- [ ] `docs/status.md`: M21 + M22 + M23 + M24 rows finalised; "Current
+- [x] `docs/status.md`: M21 + M22 + M23 + M24 rows finalised; "Current
       milestone" + "Next action" rewritten post-publish.
-- [ ] `docs/plan.md`: M21 + M22 + M23 + M24 rows finalised; Sequencing
+- [x] `docs/plan.md`: M21 + M22 + M23 + M24 rows finalised; Sequencing
       timeline grew the publish line.
-- [ ] `docs/m24-pypi-publish.md` (this file): Phase Checklist ticked;
+- [x] `docs/m24-pypi-publish.md` (this file): Phase Checklist ticked;
       milestone-completion summary appended; lifecycle archived via
       `docs archive` to `archive/<publish-date>/`.
-- [ ] `docs/m24-pypi-publish-impl.md`: per-phase log entries + final
+- [x] `docs/m24-pypi-publish-impl.md`: per-phase log entries + final
       milestone-completion summary; stays `Lifecycle: active` after
       milestone-doc archive (per the M8/M9/M10/M11/M13/M17/M20 pattern).
-- [ ] `docs/m21-update-check.md` + `docs/m22-root-placement-guidance.md` +
+- [x] `docs/m21-update-check.md` + `docs/m22-root-placement-guidance.md` +
       `docs/m23-agent-aware-install-skill.md` (and their impl logs) archived
       as part of the M24 closeout to `archive/<publish-date>/` — all three
       left LIVE at root awaiting a sweep (M17/M20 Q2 precedent; see Decisions).
-- [ ] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated in
+- [x] `docs/INDEX.md` + `tests/fixtures/expected/docs-INDEX.md` regenerated in
       lockstep.
 
 ## Phase Checklist
@@ -215,20 +214,20 @@ sections are the phases (mirrors M9/M11/M13/M17/M20 exactly):
       name — verified against the canonical local wheel instead). Rename
       reverted clean; canonical wheel `29ac3ced…` byte-identical to Phase 2.
       **GO.**
-- [ ] Real PyPI publish — `docs-cli==1.8.0` LIVE on PyPI; both artefacts
-      twine-check PASS; upload PASS; chain-of-custody bit-perfect (PyPI-served
-      wheel **and sdist** sha256 byte-identical to local Phase-4 build);
-      throwaway-venv install from PyPI succeeded (`docs 1.8.0`); full smoke +
-      the M21 + M23 headline contracts PASS against the PyPI-served wheel.
-- [ ] Post-release — annotated `v1.8.0` tag at the Phase-4 commit pushed to
-      `origin`; GitHub release live with notes sourced from `## 1.8.0`; **host
-      skills refreshed** (`docs install-skill --force` + workflow-skill sweep);
-      doc closeouts (plan/status/INDEX + the M21 + M22 + M23 milestone-doc
-      archival — all three plan + impl pairs) landed; `docs archive` ran (M21 +
-      M22 + M23 pairs **and** the M24 milestone doc archived to
-      `archive/<publish-date>/`; M24 impl log + release-runbook + status stay
-      `Lifecycle: active`). Token re-scope continues to roll forward as the M9
-      open follow-on.
+- [x] Real PyPI publish — `docs-cli==1.8.0` LIVE on PyPI; both artefacts
+      twine-check PASS; upload PASS; chain-of-custody **bit-perfect** (PyPI-served
+      wheel `29ac3ced…` **and sdist** `62a29285…` byte-identical to local
+      Phase-4 build); throwaway-venv install from PyPI succeeded (`docs 1.8.0`);
+      full smoke + the M21 + M23 headline contracts PASS against the PyPI-served
+      wheel. Tag-target commit `1a01f74`.
+- [x] Post-release — annotated `v1.8.0` tag at `1a01f74` pushed to `origin`;
+      GitHub release live with notes sourced from `## 1.8.0`; **host skills
+      refreshed** (`docs install-skill --force` → host `docs` byte-identical;
+      workflow-skill sweep found no docs-cli drift); doc closeouts
+      (plan/status/INDEX + fixture) landed; `docs archive` ran (M21 + M22 + M23
+      pairs **and** the M24 milestone doc archived to `archive/2026-07-03/`; M24
+      impl log + release-runbook + status stay `Lifecycle: active`). Token
+      re-scope continues to roll forward as the M9 open follow-on.
 
 Each ticks as the runbook's corresponding section completes.
 
@@ -313,3 +312,33 @@ M24 is complete when:
   with notes sourced from the CHANGELOG `## 1.8.0` section.
 - Doc closeouts landed: status/plan/INDEX finalised; the M21 + M22 + M23 pairs
   + the M24 milestone doc archived to `archive/<publish-date>/`.
+
+## Milestone-completion summary
+
+**M24 complete — `docs-cli==1.8.0` shipped to PyPI 2026-07-03.** The batched
+publish of the post-1.6.5 train — **M21** (update-check notice) + **M22**
+(doc-tree root-placement guidance) + **M23** (agent-aware install-skill +
+recorded-dest skill-refresh hint) — as one public release (M17 batched
+M14+M15; M9 batched M6+M7+M8). Driven under D3 ("author now, confirm at the
+gate"): the operator authorized the irreversible PyPI upload + `main` push +
+tag + release at the Phase-4 gate. **1.7.0 was skipped on PyPI** — its CHANGELOG
+entries folded into the dated `## 1.8.0` section (D2).
+
+- **PyPI** https://pypi.org/project/docs-cli/1.8.0/ · **GitHub release**
+  https://github.com/ArtRichards/docs-cli/releases/tag/v1.8.0 · **TestPyPI
+  rehearsal** https://test.pypi.org/project/docs-cli-rehearsal/1.8.0/
+- **Published sha256 (chain-of-custody, BIT-PERFECT wheel AND sdist):** wheel
+  `29ac3ced37843dd422cd10f6d6b1689124ca0f19eac8a2063322cda440374f70`; sdist
+  `62a29285bf80326cfdba6154a757ddb33e91e0ad69c31b9a0c3861c50023a17b`. Sixth
+  release running (M11 + M13 + M17 + M20 + M24).
+- **Gate at publish:** 636 passed; ruff / format / mypy clean; `docs check
+  docs/` exit 0; surface parity clean; both `twine check` PASS.
+- **Contracts:** all M21 + M23 headline contracts hold against the PyPI-served
+  wheel (see the impl log Phase 4).
+- **Host skills refreshed:** `~/.claude/skills/docs` byte-identical to the
+  published bundle; workflow-skill sweep found no docs-cli drift.
+- **D4 cleared:** M23 OQ-1/OQ-2 confirmed as-shipped — 1.8.0 published as built,
+  no re-bump.
+
+Full per-phase record + deviations (carried to v1.9+) live in
+[m24-pypi-publish-impl.md](m24-pypi-publish-impl.md).
