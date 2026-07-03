@@ -5,10 +5,27 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.8.0 — UNRELEASED
+## 1.8.0 — 2026-07-03
 
 ### Added
 
+- **PyPI update-check notice** (M21). `docs` now performs a best-effort,
+  once-per-24h check for a newer `docs-cli` release on PyPI and, when one
+  exists, emits a single advisory line to **STDERR**:
+  `docs: update available <current> -> <latest> — run: pip install -U docs-cli`.
+  This is the tool's first and only network surface — a stdlib-`urllib` HTTPS
+  GET to `https://pypi.org/pypi/docs-cli/json` with a 1.0s timeout (the
+  zero-dependency wheel is preserved). It is **fail-silent always** (offline /
+  timeout / non-200 / malformed JSON / corrupt cache all degrade to
+  byte-identical output and exit code, no traceback) and **never** touches
+  stdout or changes the exit code. State is cached per-user at
+  `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json` with two independent
+  24h throttles (one network attempt per day, one notice per day). Unlike `gh`
+  / `npm`, the notice **shows on non-TTY too** — the primary consumer is an
+  agent that is itself the actor who runs the update. Suppression: `--quiet` and
+  `--json` silence the notice (but still warm the cache, keeping `--json` stdout
+  byte-clean); `CI`, `DOCS_CLI_NO_UPDATE_CHECK`, and `DO_NOT_TRACK` (presence,
+  any value) disable the feature entirely — no network, no notice.
 - **Agent-aware `install-skill`** (M23). `docs install-skill` now treats
   `--dest` as the single, agent-agnostic source of truth for where the bundled
   skill lands. When `--dest` is omitted, resolution is **TTY-aware**: an
@@ -30,29 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   actually prints, under the **same** suppression matrix (`--quiet` / `--json` /
   `CI` / `DOCS_CLI_NO_UPDATE_CHECK` / `DO_NOT_TRACK`) and 24h throttle — replays
   the recorded path verbatim (no filesystem check), and is absent when no dest
-  has been recorded (M21 behaviour unchanged).
-
-## 1.7.0 — UNRELEASED
-
-### Added
-
-- **PyPI update-check notice** (M21). `docs` now performs a best-effort,
-  once-per-24h check for a newer `docs-cli` release on PyPI and, when one
-  exists, emits a single advisory line to **STDERR**:
-  `docs: update available <current> -> <latest> — run: pip install -U docs-cli`.
-  This is the tool's first and only network surface — a stdlib-`urllib` HTTPS
-  GET to `https://pypi.org/pypi/docs-cli/json` with a 1.0s timeout (the
-  zero-dependency wheel is preserved). It is **fail-silent always** (offline /
-  timeout / non-200 / malformed JSON / corrupt cache all degrade to
-  byte-identical output and exit code, no traceback) and **never** touches
-  stdout or changes the exit code. State is cached per-user at
-  `${XDG_CACHE_HOME:-~/.cache}/docs-cli/update-check.json` with two independent
-  24h throttles (one network attempt per day, one notice per day). Unlike `gh`
-  / `npm`, the notice **shows on non-TTY too** — the primary consumer is an
-  agent that is itself the actor who runs the update. Suppression: `--quiet` and
-  `--json` silence the notice (but still warm the cache, keeping `--json` stdout
-  byte-clean); `CI`, `DOCS_CLI_NO_UPDATE_CHECK`, and `DO_NOT_TRACK` (presence,
-  any value) disable the feature entirely — no network, no notice.
+  has been recorded.
 
 ### Documentation
 
