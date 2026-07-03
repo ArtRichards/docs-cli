@@ -198,18 +198,23 @@ verbs; no TDD code phases.
 M24 has no TDD code phases — it is an operational milestone. The runbook's
 sections are the phases (mirrors M9/M11/M13/M17/M20 exactly):
 
-- [ ] Operator one-time prep — session-verifiable state captured at M24 start
+- [x] Operator one-time prep — session-verifiable state captured at M24 start
       (`~/.pypirc` intact mode 600; PyPI `docs-cli` at 1.6.5, 1.8.0 slot free;
-      TestPyPI `docs-cli` squatter status re-checked; TestPyPI
-      `docs-cli-rehearsal` 1.8.0 slot free; twine + build tool versions ready).
-- [ ] Pre-publish prep — version verified `1.8.0`, CHANGELOG fold + date
-      staged, tree at the M24 setup commit, quality + surface-parity gate green
-      tree-wide (636 passed), fresh artefacts rebuilt, local-install smoke +
-      the M21 + M23 headline contracts verified against the wheel.
-- [ ] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.8.0`;
-      throwaway-venv install from TestPyPI succeeded; full smoke including the
-      M21 + M23 headline contracts passed against the TestPyPI-served wheel
-      (with the known-expected `docs --version` → `0.0.0+local` caveat).
+      TestPyPI `docs-cli` squatter unchanged; TestPyPI
+      `docs-cli-rehearsal` 1.8.0 slot free; twine 6.2.0 + build 1.5.0 ready).
+- [x] Pre-publish prep — version verified `1.8.0`, CHANGELOG fold deferred to
+      Phase 4, tree at the M24 setup commit `d9b4458`, quality + surface-parity
+      gate green tree-wide (636 passed; wheel `29ac3ced…`, sdist `295ba009…`),
+      fresh artefacts rebuilt, local-install smoke + the M21 + M23 headline
+      contracts verified against the wheel.
+- [x] TestPyPI rehearsal — uploaded as `docs-cli-rehearsal==1.8.0`
+      (test.pypi.org/project/docs-cli-rehearsal/1.8.0/); throwaway-venv install
+      from TestPyPI succeeded first try; M23 install-skill contracts passed
+      against the served wheel; `docs --version` → `0.0.0+local` and the M21
+      notice correctly did not fire (both known-expected under the rehearsal
+      name — verified against the canonical local wheel instead). Rename
+      reverted clean; canonical wheel `29ac3ced…` byte-identical to Phase 2.
+      **GO.**
 - [ ] Real PyPI publish — `docs-cli==1.8.0` LIVE on PyPI; both artefacts
       twine-check PASS; upload PASS; chain-of-custody bit-perfect (PyPI-served
       wheel **and sdist** sha256 byte-identical to local Phase-4 build);
