@@ -334,3 +334,42 @@ def test_mv_rewrites_moved_docs_own_archive_edge(docs_script, tmp_path):
     after = dest.read_text()
     assert "references: archive/2026-05-28/feature.md" in after, after
     assert "references: feature.md\n" not in after, after
+
+
+# --- M25 — reciprocity survives `docs mv` (GREEN at baseline) --------------
+
+
+def _reciprocal_tree(tmp_path: Path, name: str) -> Path:
+    """A complete `precedes`/`follows` pair in a managed root."""
+    root = tmp_path / name
+    root.mkdir()
+    (root / ".docs.toml").write_text(f'[project]\nname = "{name}"\n')
+    (root / "a.md").write_text(
+        f"# A\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: 2026-05-20\n"
+        "\nRelated:\n- precedes: b.md\n\n## Body\n\nProse.\n"
+    )
+    (root / "b.md").write_text(
+        f"# B\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: 2026-05-20\n"
+        "\nRelated:\n- follows: a.md\n\n## Body\n\nProse.\n"
+    )
+    return root
+
+
+def test_mv_preserves_reciprocal_pair(docs_script, tmp_path):
+    """M25 lock: `mv` rewrites BOTH halves of a recognized pair, so the tree
+    stays reciprocity-clean after a move.
+
+    GREEN at baseline — `_cmd_mv` already rewrites every referring edge
+    tree-wide. It must STAY green once M25's hard `missing-inverse` rule
+    lands: a move that repointed only one half would start failing
+    `docs check`.
+    """
+    root = _reciprocal_tree(tmp_path, "mvrecip")
+    proc = _run(docs_script, "mv", str(root / "b.md"), str(root / "sub" / "b.md"))
+    assert proc.returncode == 0, proc.stderr
+
+    assert "- precedes: sub/b.md" in (root / "a.md").read_text()
+    assert "- follows: a.md" in (root / "sub" / "b.md").read_text()
+
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)

@@ -244,7 +244,7 @@ automatic conversion of free-form edges occurs.
 ## Phase checklist
 
 - [x] Phase 1 — Define Contract
-- [ ] Phase 2 — Write Tests (RED)
+- [x] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces

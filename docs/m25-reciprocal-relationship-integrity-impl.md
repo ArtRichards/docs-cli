@@ -22,8 +22,7 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phase 1 — Define Contract complete. Phase 2 — Write Tests (RED)
-  is next.**
+- Progress: **Phases 1–2 complete. Phase 3 — Create Data/Fixtures is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -34,7 +33,7 @@ progress table and milestone checklist synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-08-11 | Inverse map, `missing-inverse`, `docs relate` grammar/output, archive audit, D5 failure contract, version staging frozen. Q1–Q5 + OQ-A/B/D resolved. Zero `cli.py` edits (logged deviation). |
-| 2. Write Tests (RED) | Pending | — | Validation + paired mutation + archive boundaries. |
+| 2. Write Tests (RED) | Complete | 2026-08-11 | +88 items across 6 edited + 2 new files. 724 collected, zero collection errors; ruff/format/mypy clean. |
 | 3. Create Data/Fixtures | Pending | — | Reciprocal, missing, excluded, malformed, archived pairs. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture intended failure set. |
 | 5. Update Base Interfaces | Pending | — | Inverse/edit/audit planning primitives. |
@@ -216,6 +215,81 @@ regenerated `docs/INDEX.md`.
 - `.venv/bin/docs check --root docs` — no violations (exit 0).
 - `git diff --stat src/docs_cli/cli.py` — **empty**, per the logged deviation.
 - `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+
+## Phase 2 — Write Tests (RED) — 2026-08-11
+
+### Objective
+
+Express inverse validation and two-endpoint mutation behaviour before any
+implementation exists, so every Phase-5/6/7 change is answering a written
+test rather than the other way round.
+
+### Authoring rules applied
+
+- **No module-level import of a not-yet-existing symbol.** That is a
+  collection error, which the Phase-4 exit criterion forbids. Every new
+  symbol is reached through a one-line `_m25(name)` helper wrapping
+  `getattr` — runtime gives a clean `AttributeError` (the honest RED), mypy
+  sees `Any` (so `mypy src/ tests/` stays green at baseline), and the
+  variable argument keeps ruff's `B009` quiet.
+- **Every intended-exit-2 test also asserts its contract stderr string.**
+  Argparse already exits 2 on `invalid choice: 'relate'`, so a
+  returncode-only assertion would be *falsely GREEN* for the whole refusal
+  family. Each such test additionally asserts on-disk byte-identity.
+- Each test carries a docstring naming its intended RED reason, and the
+  GREEN-at-baseline locks say so explicitly — including which of them are
+  **degenerate** (passing today only because the rule does not exist).
+
+### Tests written (+88 collected items)
+
+| File | New items | Covers |
+|---|---|---|
+| `tests/test_check.py` | +26 | inverse map exactness/symmetry/case-sensitivity; frozen `missing-inverse` message + source attribution; all three pairs in both directions (parametrized); the free-form / `supersedes` trap; the four applicability exemptions (broken target, excluded, malformed, non-Markdown); parseability-only independence from `bad-vocab`; archived-in-scope; per-triple dedupe; per-doc grouping order; exit code 2; the `Revision` `unknown-field` lock; legacy-fixture no-new-findings (parametrized) |
+| `tests/test_cli_check.py` | +4 | subprocess exit 2 + repair text; JSON record key set unchanged; clean reciprocal tree exits 0; archived one-sided pair exits 2 |
+| `tests/test_edit.py` | +14 | `add_related_edge` (append / create group / no-op / minimal diff / insert before a trailing `Revision:` group / trailing-newline state); `remove_related_edge` (exact bullet only / drop the emptied label / no-op); `append_revision_entry` (create after `Related:` / chronological append under one group / `parse()` round-trip into `Doc.extra` / minimal diff) |
+| `tests/test_relate_plan.py` (new) | +8 | `plan_relate` purity, `present_before`/`present_after`, the archived three-item byte delta, active-side has no `Revision:`; `apply_relate_plan` publish; **rollback on injected second-write failure**; **rollback-failure is reported, not swallowed**; `relate_plan_to_json` exact shape |
+| `tests/test_cli_relate.py` (new) | +32 | help/grammar; happy paths incl. `add`→`check` clean and `remove`→`check` clean; symmetric-invocation byte identity; idempotency (add/remove twice, INDEX included); `--dry-run`; `--json` shape + stdout cleanliness; nine refusals; **both** endpoint-resolution interpretations (OQ-A); five archived cases incl. the no-op-still-needs-`--reason` lock; the writability pre-flight; one-reindex and no-reindex-on-no-op |
+| `tests/test_cli_mv.py` | +1 | `mv` preserves a reciprocal pair (GREEN at baseline) |
+| `tests/test_cli_archive.py` | +2 | archive one endpoint / `--cascade` both endpoints preserve the pair (GREEN at baseline) |
+| `tests/test_skill.py` | +1 | `SKILL.md` verb table + front-matter `description:` name `relate` |
+
+### Decisions / issues
+
+- **`test_relate_symmetric_invocations_produce_identical_trees` builds both
+  trees under the SAME name in different parent dirs.** A first pass named
+  them `forward`/`reverse`, which made the comparison unsatisfiable — the
+  project slug, root title, and INDEX entries all embed the tree name. Same
+  name, different parent, is the only shape in which "byte-identical tree"
+  is a meaningful assertion.
+- **The unwritable-endpoint test is why D5 stage 4 exists.** `atomic_write`
+  publishes via tmpfile + rename, which *succeeds* on a read-only file in a
+  writable directory. Only an explicit `os.access(..., W_OK)` pre-flight
+  honours a read-only archive, so the test pins the pre-flight rather than
+  the write.
+- **Two committed fixture trees were added to the Phase-3 list beyond the
+  Phase-1 plan:** `reciprocal-broken/` (an unresolvable recognized target,
+  proving `broken-ref` keeps ownership) and `reciprocal-archived-complete/`
+  (the reciprocated active↔archived pair, the clean counterpart to
+  `reciprocal-archived-missing/`).
+- The check-side fixture trees land in **Phase 3**, so between this commit
+  and the next the fixture-backed tests fail on an absent directory. That
+  is the intended phase ordering; the classified RED baseline is captured in
+  Phase 4, after the fixtures exist.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q --co` — **724 tests collected**
+  (636 baseline + 88), **zero collection errors**.
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 45 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 46 source files (the `getattr`
+  indirection keeps every new symbol `Any`).
+- The three GREEN-at-baseline mv/archive reciprocity-survival locks run
+  green already: `pytest tests/test_cli_mv.py::test_mv_preserves_reciprocal_pair
+  tests/test_cli_archive.py::test_archive_one_endpoint_preserves_reciprocal_pair
+  tests/test_cli_archive.py::test_archive_cascade_preserves_reciprocal_pair -q`
+  — 3 passed.
+- `git diff --stat src/docs_cli/cli.py` — still empty; no product code moved.
 
 ## Milestone completion summary
 

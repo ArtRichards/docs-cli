@@ -43,8 +43,8 @@ Related:
 ## Current milestone
 
 **M25 — Reciprocal relationship integrity and `docs relate` is the current
-milestone. Phase 1 — Define Contract is complete (2026-08-11); Phase 2 — Write
-Tests (RED) is next.** M25 defines three reciprocal relationship
+milestone. Phases 1–2 are complete (2026-08-11); Phase 3 — Create
+Data/Fixtures is next.** M25 defines three reciprocal relationship
 pairs (`precedes`/`follows`, `depends-on`/`required-by`, and
 `blocks`/`blocked-by`), makes a missing exact inverse a hard `docs check` error,
 and adds explicit two-endpoint `docs relate add/remove` repair, including a
@@ -54,7 +54,9 @@ whole surface in the milestone's *Decisions (Phase 1 — BINDING)* section and i
 finding and its exact message, the `relate` grammar / human / JSON / dry-run
 output, root-relative-first endpoint resolution, the archived `--reason` +
 `Revision:` audit rules, and the staged-publish-with-rollback failure contract.
-All five Phase-1 open questions are RESOLVED. **Version staging (Q5):
+All five Phase-1 open questions are RESOLVED. Phase 2 added **88 test items**
+across six edited and two new test files (724 collected, zero collection
+errors). **Version staging (Q5):
 `docs-cli` stays `1.8.0` through M25–M28; M29 performs the single bump to
 `2.0.0` at publish.** The prepared pair is
 [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md)

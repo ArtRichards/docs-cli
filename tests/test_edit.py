@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+import docs as _cli
 from docs import (
     MetadataError,
     parse,
@@ -157,3 +158,200 @@ def test_scaffold_doc_ends_with_single_trailing_newline():
     text = scaffold_doc("T", "notes", "docs", date(2026, 5, 21))
     assert text.endswith("\n")
     assert not text.endswith("\n\n")
+
+
+# --- M25 (D3 / D4) — reciprocal edge + revision editors ---------------------
+#
+# Phase 2 (written RED). Every test here fails with a clean `AttributeError`
+# from `getattr(_cli, ...)` until Phase 5 lands the three editors. Accessing
+# them via getattr (rather than a module-level import of a missing name)
+# keeps collection clean and keeps mypy honest — the result is `Any`.
+
+NO_RELATED = """\
+# Solo Doc
+
+Lifecycle: active
+Role: spec
+Project: docs
+Updated: 2026-05-20
+
+## Body
+
+First paragraph.
+"""
+
+ARCHIVED_WITH_REVISION = """\
+# Old Doc
+
+Lifecycle: archived
+Role: plan
+Project: docs
+Updated: 2026-01-01
+Archived-reason: completed
+
+Related:
+- required-by: a.md
+
+Revision:
+- 2026-08-11: relate add 'required-by: a.md'; reason: complete the M25 pair
+
+## Body
+
+Prose.
+"""
+
+
+def _m25(name: str):
+    """Fetch an M25 editor that does not exist yet.
+
+    The indirection is deliberate: a module-level import of a missing name
+    would be a COLLECTION error, and a literal `getattr(_cli, "…")` trips
+    ruff's B009. This keeps the RED reason a single clean `AttributeError`
+    and keeps mypy green (the result is `Any`).
+    """
+    return getattr(_cli, name)
+
+
+def _add_related_edge(*args, **kwargs):
+    return _m25("add_related_edge")(*args, **kwargs)
+
+
+def _remove_related_edge(*args, **kwargs):
+    return _m25("remove_related_edge")(*args, **kwargs)
+
+
+def _append_revision_entry(*args, **kwargs):
+    return _m25("append_revision_entry")(*args, **kwargs)
+
+
+def test_add_related_edge_appends_to_existing_group():
+    """The new bullet lands at the end of the existing `Related:` run."""
+    out, changed = _add_related_edge(WELL_FORMED, "precedes", "next.md")
+    assert changed is True
+    assert (
+        "\nRelated:\n- pairs-with: other.md\n- implements: charter.md\n- precedes: next.md\n" in out
+    )
+
+
+def test_add_related_edge_changes_no_other_byte():
+    """M2 surgical minimal-diff contract: exactly one line is inserted."""
+    out, _changed = _add_related_edge(WELL_FORMED, "precedes", "next.md")
+    before = WELL_FORMED.splitlines()
+    after = out.splitlines()
+    assert len(after) == len(before) + 1
+    assert [line for line in after if line != "- precedes: next.md"] == before
+
+
+def test_add_related_edge_creates_the_group_when_absent():
+    """A doc with no `Related:` group gets one, correctly blank-line separated."""
+    out, changed = _add_related_edge(NO_RELATED, "blocks", "other.md")
+    assert changed is True
+    assert "\nRelated:\n- blocks: other.md\n" in out
+    doc = parse(out, _PATH, _ROOT)
+    assert ("blocks", "other.md") in doc.related
+    assert doc.title == "Solo Doc"
+    assert doc.body.strip().startswith("## Body")
+
+
+def test_add_related_edge_result_reparses_and_yields_the_edge():
+    out, _changed = _add_related_edge(WELL_FORMED, "depends-on", "dep.md")
+    doc = parse(out, _PATH, _ROOT)
+    assert ("depends-on", "dep.md") in doc.related
+    # The pre-existing free-form edges survive untouched, in order.
+    assert doc.related[:2] == (("pairs-with", "other.md"), ("implements", "charter.md"))
+
+
+def test_add_related_edge_is_a_no_op_when_present():
+    """Idempotency at the editor seam: unchanged text, `False`."""
+    out, changed = _add_related_edge(WELL_FORMED, "pairs-with", "other.md")
+    assert changed is False
+    assert out == WELL_FORMED
+
+
+def test_add_related_edge_inserts_at_end_of_related_run_not_after_revision():
+    """With a trailing `Revision:` group, the bullet joins the `Related:` run."""
+    out, changed = _add_related_edge(ARCHIVED_WITH_REVISION, "blocks", "b.md")
+    assert changed is True
+    assert "\nRelated:\n- required-by: a.md\n- blocks: b.md\n\nRevision:\n" in out
+    doc = parse(out, _PATH, _ROOT)
+    assert ("blocks", "b.md") in doc.related
+    assert doc.extra["Revision"] == (
+        "2026-08-11: relate add 'required-by: a.md'; reason: complete the M25 pair",
+    )
+
+
+def test_add_related_edge_preserves_absent_trailing_newline():
+    out, _changed = _add_related_edge(WELL_FORMED.rstrip("\n"), "precedes", "next.md")
+    assert not out.endswith("\n")
+
+
+def test_remove_related_edge_removes_only_the_exact_bullet():
+    """Same verb + different target, and same target + different verb, survive."""
+    text = WELL_FORMED.replace(
+        "- implements: charter.md",
+        "- implements: charter.md\n- precedes: next.md\n- precedes: other.md\n- follows: next.md",
+    )
+    out, changed = _remove_related_edge(text, "precedes", "next.md")
+    assert changed is True
+    assert "- precedes: next.md" not in out
+    assert "- precedes: other.md" in out
+    assert "- follows: next.md" in out
+    assert "- pairs-with: other.md" in out
+
+
+def test_remove_related_edge_drops_the_emptied_label():
+    """Removing the last bullet removes the now-empty `Related:` label too."""
+    text = NO_RELATED.replace(
+        "Updated: 2026-05-20\n", "Updated: 2026-05-20\n\nRelated:\n- blocks: b.md\n"
+    )
+    out, changed = _remove_related_edge(text, "blocks", "b.md")
+    assert changed is True
+    assert "Related:" not in out
+    doc = parse(out, _PATH, _ROOT)
+    assert doc.related == ()
+    assert doc.body.strip().startswith("## Body")
+
+
+def test_remove_related_edge_is_a_no_op_when_absent():
+    out, changed = _remove_related_edge(WELL_FORMED, "precedes", "nowhere.md")
+    assert changed is False
+    assert out == WELL_FORMED
+
+
+def test_append_revision_entry_creates_the_group_after_related():
+    """D4: `Revision:` is a bare-label group at the END of the metadata block."""
+    entry = "2026-08-11: relate add 'follows: a.md'; reason: complete the pair"
+    out = _append_revision_entry(WELL_FORMED, entry)
+    assert f"\nRevision:\n- {entry}\n" in out
+    assert out.index("Related:") < out.index("Revision:")
+    assert out.index("Revision:") < out.index("## Body")
+
+
+def test_append_revision_entry_appends_chronologically_under_one_group():
+    entry = "2026-08-12: relate remove 'blocked-by: m30.md'; reason: blocker retired"
+    out = _append_revision_entry(ARCHIVED_WITH_REVISION, entry)
+    assert out.count("Revision:") == 1, "one group, two bullets — never a second label"
+    assert out.index("2026-08-11") < out.index("2026-08-12")
+
+
+def test_append_revision_entry_round_trips_through_parse():
+    entry = "2026-08-12: relate remove 'blocked-by: m30.md'; reason: blocker retired"
+    out = _append_revision_entry(ARCHIVED_WITH_REVISION, entry)
+    doc = parse(out, _PATH, _ROOT)
+    assert doc.extra["Revision"] == (
+        "2026-08-11: relate add 'required-by: a.md'; reason: complete the M25 pair",
+        entry,
+    )
+    # Nothing else about the archived doc moved.
+    assert doc.lifecycle == "archived"
+    assert doc.extra["Archived-reason"] == "completed"
+    assert doc.related == (("required-by", "a.md"),)
+
+
+def test_append_revision_entry_changes_no_other_byte():
+    entry = "2026-08-12: relate remove 'blocked-by: m30.md'; reason: blocker retired"
+    out = _append_revision_entry(ARCHIVED_WITH_REVISION, entry)
+    before = ARCHIVED_WITH_REVISION.splitlines()
+    after = out.splitlines()
+    assert len(after) == len(before) + 1
+    assert [line for line in after if line != f"- {entry}"] == before
