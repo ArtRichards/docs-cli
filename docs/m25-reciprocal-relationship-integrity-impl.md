@@ -22,7 +22,7 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 1–2 complete. Phase 3 — Create Data/Fixtures is next.**
+- Progress: **Phases 1–3 complete. Phase 4 — Run Tests (RED Baseline) is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -34,7 +34,7 @@ progress table and milestone checklist synchronized.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-08-11 | Inverse map, `missing-inverse`, `docs relate` grammar/output, archive audit, D5 failure contract, version staging frozen. Q1–Q5 + OQ-A/B/D resolved. Zero `cli.py` edits (logged deviation). |
 | 2. Write Tests (RED) | Complete | 2026-08-11 | +88 items across 6 edited + 2 new files. 724 collected, zero collection errors; ruff/format/mypy clean. |
-| 3. Create Data/Fixtures | Pending | — | Reciprocal, missing, excluded, malformed, archived pairs. |
+| 3. Create Data/Fixtures | Complete | 2026-08-11 | 9 committed `reciprocal-*` trees + 3 inline builders. Each hand-verified to yield only its intended findings. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture intended failure set. |
 | 5. Update Base Interfaces | Pending | — | Inverse/edit/audit planning primitives. |
 | 6. Implement Offline/Core Path | Pending | — | Checker + coordinated idempotent edits. |
@@ -290,6 +290,74 @@ test rather than the other way round.
   tests/test_cli_archive.py::test_archive_cascade_preserves_reciprocal_pair -q`
   — 3 passed.
 - `git diff --stat src/docs_cli/cli.py` — still empty; no product code moved.
+
+## Phase 3 — Create Data/Fixtures — 2026-08-11
+
+### Objective
+
+Provide small, deterministic trees covering every relationship direction and
+every archived-repair boundary, one semantic per tree.
+
+### Decision — split fixtures
+
+Committed **static trees** for the check-side *semantic* cases (structure, not
+dates: nothing rots, and it matches the existing `archive-pair` / `cross-refs`
+precedent). **Inline `tmp_path` builders** for every mutation-shaped case,
+because those tests write and then byte-compare — a `shutil.copytree` of a
+static tree would be pure overhead, and the parametrised cases vary one edge
+at a time.
+
+### Committed trees — `tests/fixtures/trees/`
+
+| Tree | Contents | Isolates |
+|---|---|---|
+| `reciprocal-clean/` | `a↔b` (`precedes`/`follows`), `c↔d` (`depends-on`/`required-by`), `e↔f` (`blocks`/`blocked-by`) | all three pairs complete → exit 0 |
+| `reciprocal-missing/` | `a.md` declares `precedes: b.md`; `b.md` has a `Related:` group (`references: a.md`) but no `follows` | exactly one `missing-inverse`, against the SOURCE — and the group's presence isolates the missing *inverse* from a missing *group* |
+| `reciprocal-freeform/` | one-sided `pairs-with`, `child-of`, `supersedes`, `superseded-by`, `references` | the supersedes trap: free-form verbs are never flagged |
+| `reciprocal-broken/` | `a.md` declares `precedes: ghost.md` (no such file) | `broken-ref` keeps sole ownership |
+| `reciprocal-excluded/` | `[exclude] dirs = ["vendor"]`; `a.md` declares `precedes: vendor/b.md`; the target file exists | an excluded endpoint yields no finding (and no `broken-ref`, since the file is real) |
+| `reciprocal-malformed/` | `b.md` has no H1 | `malformed` keeps sole ownership |
+| `reciprocal-nonmd/` | `a.md` declares `depends-on: data.yaml`; the YAML file exists | a non-Markdown target cannot declare an inverse → no finding |
+| `reciprocal-archived-missing/` | active `a.md` → `archive/2026-01-01/old.md`; the archived doc has `Lifecycle: archived`, `Archived-reason:`, prose, and **no** `required-by` | the archived RED case **and** the `docs relate --reason` repair target |
+| `reciprocal-archived-complete/` | the same pair, reciprocated | an archived endpoint is not inherently a finding |
+
+`reciprocal-broken/` and `reciprocal-archived-complete/` are additions beyond
+the Phase-1 fixture list: the first proves `broken-ref` ownership with a
+committed tree rather than an inline one, the second is the clean counterpart
+that stops `reciprocal-archived-missing/` from being the only archived
+evidence.
+
+### Inline builders (authored in the Phase-2 commit; recorded here as the Phase-3 surface)
+
+- `tests/test_check.py` — `_pair_root(tmp_path, *, source_edge, target_edge, source_role)`.
+- `tests/test_cli_relate.py` — `_pair_tree(...)` and `_archived_pair_tree(...)`.
+- `tests/test_relate_plan.py` — `_two_doc_root(...)` and `_archived_pair_root(...)`.
+
+### Verification
+
+Each tree was checked **by hand** with the installed 1.8.0 binary — the
+findings below are the complete pre-M25 output, and each is exactly the
+intended one:
+
+| Tree | `docs check` today | exit |
+|---|---|---|
+| `reciprocal-clean` | no violations | 0 |
+| `reciprocal-missing` | no violations (the `missing-inverse` is the Phase-4 RED) | 0 |
+| `reciprocal-freeform` | no violations | 0 |
+| `reciprocal-broken` | `a.md error [broken-ref] … ghost.md` | 2 |
+| `reciprocal-excluded` | no violations | 0 |
+| `reciprocal-malformed` | `b.md error [malformed] missing H1` | 2 |
+| `reciprocal-nonmd` | no violations | 0 |
+| `reciprocal-archived-missing` | no violations (the `missing-inverse` is the Phase-4 RED) | 0 |
+| `reciprocal-archived-complete` | no violations | 0 |
+
+- The `reciprocal-excluded` predicate was verified to actually fire:
+  `_iter_doc_texts` with the compiled predicate yields `['a.md']`, without it
+  `['a.md', 'vendor/b.md']`. The fixture tests the exclusion, not an accident.
+- All dates are static (`2026-05-20` active, `2026-01-01` archived) and **no
+  stale window is ever passed** to these trees, so no committed date rots.
+- One semantic per tree; `git status` showed exactly the 30 intended new
+  fixture files and nothing else.
 
 ## Milestone completion summary
 
