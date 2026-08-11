@@ -54,10 +54,11 @@ whole surface in the milestone's *Decisions (Phase 1 — BINDING)* section and i
 finding and its exact message, the `relate` grammar / human / JSON / dry-run
 output, root-relative-first endpoint resolution, the archived `--reason` +
 `Revision:` audit rules, and the staged-publish-with-rollback failure contract.
-All five Phase-1 open questions are RESOLVED. Phase 2 added **88 test items**
-across six edited and two new test files (724 collected, zero collection
-errors), Phase 3 added nine committed `reciprocal-*` fixture trees, and
-Phase 4 captured the RED baseline: **724 collected, 73 failed, 651 passed**,
+All five Phase-1 open questions are RESOLVED. Phase 2 wrote the RED suite
+across six edited and two new test files, Phase 3 added nine committed
+`reciprocal-*` fixture trees, and Phase 4 captured the classified RED
+baseline. Including the four tests the same-instance audit added, M25 so far
+contributes **92 test items**: **728 collected, 77 failed, 651 passed** —
 every RED matching its classified reason, zero collection errors, and the
 636 pre-existing tests all still GREEN. **Version staging (Q5):
 `docs-cli` stays `1.8.0` through M25–M28; M29 performs the single bump to

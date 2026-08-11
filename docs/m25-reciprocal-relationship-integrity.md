@@ -29,8 +29,8 @@ Related:
 - Progress: **Active / Phases 1–4 complete (2026-08-11).** The contract is
   frozen in *Decisions (Phase 1 — BINDING)* below and in `cli.md` /
   `convention.md`; all five open questions are RESOLVED. The RED suite is
-  written (+88 items) over nine committed `reciprocal-*` fixture trees, and
-  the RED baseline is captured: **724 collected, 73 failed, 651 passed**,
+  written (+92 items) over nine committed `reciprocal-*` fixture trees, and
+  the RED baseline is captured: **728 collected, 77 failed, 651 passed**,
   every RED matching its classified reason and the pre-existing 636 all still
   GREEN. Phase 5 — Update Base Interfaces is next.
 
@@ -368,8 +368,11 @@ no navigational gain.
   plan-dependent. An idempotent no-op naming an archived endpoint still
   requires it, and still writes nothing.
 - `--reason` must be a single non-empty line after stripping. A newline is
-  refused: structurally, a multi-line reason would terminate the metadata
-  block and corrupt the archived doc.
+  refused (`--reason must be a single line`): structurally, a multi-line
+  reason would terminate the metadata block and corrupt the archived doc. An
+  empty/whitespace-only value is refused separately
+  (`--reason must not be empty`) — an empty audit record is indistinguishable
+  from no record. `--reason` is accepted but unused on an all-active pair.
 - The **only** bytes an archived endpoint may change: the one recognized
   `Related:` bullet, the `Updated:` value, and the `Revision:` group.
   Everything else — `Lifecycle: archived`, `Archived-reason:`, `Role:`,

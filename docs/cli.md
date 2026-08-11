@@ -826,7 +826,14 @@ file:
 
 1. `<root>/<arg>` — if that is a file, it is the endpoint.
 2. otherwise `<cwd>/<arg>` — if that is a file, it is the endpoint.
-3. otherwise: not found (exit 1).
+3. otherwise: not found — exit 1 with
+   `docs: relate: file not found: <path>`.
+
+An endpoint that resolves **outside** the resolved root exits 1 with
+`docs: relate: <path> is outside the resolved docs root (<root>)`, and one
+that does not parse exits 1 with the parser's own self-locating message,
+`docs: <path>: <detail>` (the `project set` precedent). All three are
+validate-all-first aborts: nothing is written and no INDEX refresh runs.
 
 Root-relative-first matches how `Related:` paths are written on disk, so
 the argument an agent copies out of a `missing-inverse` finding resolves
@@ -847,7 +854,9 @@ surgical minimal-diff contract).
 
 **`Updated:` policy.** Every endpoint **whose bytes change** gets its
 `Updated:` bumped to `--date` (default: today, rendered with the tree's
-`date_format`). An endpoint that does not change is not touched at all.
+`date_format`). An endpoint that does not change is not touched at all. A
+`--date` that does not parse in the tree's `date_format` exits 2 with
+`docs: relate: --date: <detail>`, before anything is written.
 
 **Idempotency.** `add` writes only the missing half — or nothing. `remove`
 removes only the present half — or nothing. A fully-satisfied invocation
@@ -888,9 +897,17 @@ docs: relate: archive/2026-01-01/old.md is under the archive subtree; --reason i
 
 `--reason` must be a **single non-empty line** after stripping. A value
 containing a newline is refused with exit 2 and
-`docs: relate: --reason must be a single line`. This is structural, not
+`docs: relate: --reason must be a single line`; a value that is empty or
+whitespace-only is refused with exit 2 and
+`docs: relate: --reason must not be empty`. The first is structural, not
 cosmetic: a multi-line reason would terminate the metadata block and
-corrupt the archived doc.
+corrupt the archived doc. The second keeps the audit record meaningful —
+an empty reason is indistinguishable from no reason at all.
+
+`--reason` is **accepted but unused** when both endpoints are active: no
+`Revision:` bullet is written, and the value is still echoed in the
+`--json` record's `reason` field. It is only ever *required* by the
+archive rule above.
 
 **The only bytes an archived endpoint may change** are:
 
@@ -1051,7 +1068,10 @@ docs: no violations found
 - **2** — no `.docs.toml` ancestor or `--root` without one; unknown verb;
   self-edge; malformed `--date`; empty or multi-line `--reason`; an
   archived endpoint without `--reason`; an unwritable endpoint; a
-  coordinated-write failure; an INDEX-refresh failure.
+  coordinated-write failure; an INDEX-refresh failure. Note the last one is
+  a *post-repair* failure: the two endpoints were written correctly and the
+  tree is consistent — only the generated INDEX is stale, and
+  `docs index` (or fixing the malformed sibling) resolves it.
 
 #### Non-goals
 

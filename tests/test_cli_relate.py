@@ -264,6 +264,51 @@ def test_relate_dry_run_json_reports_not_applied(docs_script, tmp_path):
     assert _snapshot(root) == before
 
 
+def test_relate_no_op_json_reports_not_applied(docs_script, tmp_path):
+    """An idempotent no-op is `applied: false` too — not just a dry-run."""
+    root = _pair_tree(
+        tmp_path, "jsonnoop", source_edge="precedes: b.md", target_edge="follows: a.md"
+    )
+    before = _snapshot(root)
+    proc = _run(
+        docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root), "--json"
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    record = json.loads(proc.stdout)
+    assert record["dry_run"] is False
+    assert record["applied"] is False, "nothing was written, so nothing was applied"
+    assert record["index_refreshed"] is False
+    assert [e["change"] for e in record["edits"]] == ["unchanged", "unchanged"]
+    assert _snapshot(root) == before
+
+
+def test_relate_quiet_suppresses_success_but_never_a_refusal(docs_script, tmp_path):
+    """`--quiet` gates the success lines only; refusals always print."""
+    root = _pair_tree(tmp_path, "quiet")
+    ok = _run(
+        docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root), "--quiet"
+    )
+    assert ok.returncode == 0, (ok.stdout, ok.stderr)
+    assert "docs: relate: added" not in ok.stderr
+    assert "- precedes: b.md" in (root / "a.md").read_text(), "the write still happened"
+
+    refused = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "pairs-with",
+        "b.md",
+        "--root",
+        str(root),
+        "--quiet",
+    )
+    assert refused.returncode == 2
+    assert "docs: relate: unknown verb 'pairs-with'" in refused.stderr, (
+        "--quiet must never silence a refusal"
+    )
+
+
 def test_relate_json_stdout_parses_alone(docs_script, tmp_path):
     """`--json` keeps stdout byte-clean: human lines stay on stderr."""
     root = _pair_tree(tmp_path, "jsonclean")
@@ -392,6 +437,27 @@ def test_relate_multiline_reason_refuses(docs_script, tmp_path):
     )
     assert proc.returncode == 2
     assert "docs: relate: --reason must be a single line" in proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_relate_empty_reason_refuses(docs_script, tmp_path):
+    """An empty audit reason is indistinguishable from no reason at all."""
+    root = _archived_pair_tree(tmp_path, "emptyreason", inverse_present=False)
+    before = _snapshot(root)
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "depends-on",
+        "archive/2026-01-01/old.md",
+        "--root",
+        str(root),
+        "--reason",
+        "   ",
+    )
+    assert proc.returncode == 2
+    assert "docs: relate: --reason must not be empty" in proc.stderr
     assert _snapshot(root) == before
 
 
@@ -611,6 +677,26 @@ def test_relate_unwritable_endpoint_refuses_before_any_write(docs_script, tmp_pa
         assert target.read_bytes() == b_before
     finally:
         target.chmod(stat.S_IRUSR | stat.S_IWUSR)
+
+
+def test_relate_does_not_gate_on_whole_tree_health(docs_script, tmp_path):
+    """`relate` validates only its TWO endpoints — never the whole tree.
+
+    A whole-tree pre-flight (the `archive` / `mv` shape) would make repair
+    impossible in exactly the broken tree this verb exists to repair. A
+    malformed SIBLING must therefore not block the repair; it can only fail
+    the end-of-run reindex, after the two endpoints are already correct.
+    """
+    root = _pair_tree(tmp_path, "sibling")
+    (root / "c.md").write_text("no h1 in this sibling\n")
+
+    proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "docs: INDEX refresh failed:" in proc.stderr
+    assert "Traceback" not in proc.stderr
+    # The repair itself LANDED — that is the whole point of the exception.
+    assert "- precedes: b.md" in (root / "a.md").read_text()
+    assert "- follows: a.md" in (root / "b.md").read_text()
 
 
 # --- reindex ---------------------------------------------------------------

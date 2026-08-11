@@ -33,9 +33,9 @@ progress table and milestone checklist synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-08-11 | Inverse map, `missing-inverse`, `docs relate` grammar/output, archive audit, D5 failure contract, version staging frozen. Q1–Q5 + OQ-A/B/D resolved. Zero `cli.py` edits (logged deviation). |
-| 2. Write Tests (RED) | Complete | 2026-08-11 | +88 items across 6 edited + 2 new files. 724 collected, zero collection errors; ruff/format/mypy clean. |
+| 2. Write Tests (RED) | Complete | 2026-08-11 | +92 items across 6 edited + 2 new files (88 at first pass, +4 from the same-instance audit). 728 collected, zero collection errors; ruff/format/mypy clean. |
 | 3. Create Data/Fixtures | Complete | 2026-08-11 | 9 committed `reciprocal-*` trees + 3 inline builders. Each hand-verified to yield only its intended findings. |
-| 4. Run Tests (RED Baseline) | Complete | 2026-08-11 | 724 collected, **73 failed, 651 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-08-11 | 728 collected, **77 failed, 651 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
 | 5. Update Base Interfaces | Pending | — | Inverse/edit/audit planning primitives. |
 | 6. Implement Offline/Core Path | Pending | — | Checker + coordinated idempotent edits. |
 | 7. Update Tool/Wrapper Layer | Pending | — | CLI, JSON/dry-run, docs, bundled skill, version. |
@@ -240,7 +240,7 @@ test rather than the other way round.
   GREEN-at-baseline locks say so explicitly — including which of them are
   **degenerate** (passing today only because the rule does not exist).
 
-### Tests written (+88 collected items)
+### Tests written (+92 collected items)
 
 | File | New items | Covers |
 |---|---|---|
@@ -248,7 +248,7 @@ test rather than the other way round.
 | `tests/test_cli_check.py` | +4 | subprocess exit 2 + repair text; JSON record key set unchanged; clean reciprocal tree exits 0; archived one-sided pair exits 2 |
 | `tests/test_edit.py` | +14 | `add_related_edge` (append / create group / no-op / minimal diff / insert before a trailing `Revision:` group / trailing-newline state); `remove_related_edge` (exact bullet only / drop the emptied label / no-op); `append_revision_entry` (create after `Related:` / chronological append under one group / `parse()` round-trip into `Doc.extra` / minimal diff) |
 | `tests/test_relate_plan.py` (new) | +8 | `plan_relate` purity, `present_before`/`present_after`, the archived three-item byte delta, active-side has no `Revision:`; `apply_relate_plan` publish; **rollback on injected second-write failure**; **rollback-failure is reported, not swallowed**; `relate_plan_to_json` exact shape |
-| `tests/test_cli_relate.py` (new) | +32 | help/grammar; happy paths incl. `add`→`check` clean and `remove`→`check` clean; symmetric-invocation byte identity; idempotency (add/remove twice, INDEX included); `--dry-run`; `--json` shape + stdout cleanliness; nine refusals; **both** endpoint-resolution interpretations (OQ-A); five archived cases incl. the no-op-still-needs-`--reason` lock; the writability pre-flight; one-reindex and no-reindex-on-no-op |
+| `tests/test_cli_relate.py` (new) | +36 | help/grammar; happy paths incl. `add`→`check` clean and `remove`→`check` clean; symmetric-invocation byte identity; idempotency (add/remove twice, INDEX included); `--dry-run`; `--json` shape for apply / dry-run / **no-op**, + stdout cleanliness; `--quiet` gating (success suppressed, refusals never); **eleven** refusals; **both** endpoint-resolution interpretations (OQ-A); six archived cases incl. the no-op-still-needs-`--reason` lock; the writability pre-flight; the **no-whole-tree-pre-flight** lock; one-reindex and no-reindex-on-no-op |
 | `tests/test_cli_mv.py` | +1 | `mv` preserves a reciprocal pair (GREEN at baseline) |
 | `tests/test_cli_archive.py` | +2 | archive one endpoint / `--cascade` both endpoints preserve the pair (GREEN at baseline) |
 | `tests/test_skill.py` | +1 | `SKILL.md` verb table + front-matter `description:` name `relate` |
@@ -278,8 +278,8 @@ test rather than the other way round.
 
 ### Verification
 
-- `.venv/bin/python -m pytest tests/ -q --co` — **724 tests collected**
-  (636 baseline + 88), **zero collection errors**.
+- `.venv/bin/python -m pytest tests/ -q --co` — **728 tests collected**
+  (636 baseline + 92), **zero collection errors**.
 - `.venv/bin/ruff check .` — All checks passed.
 - `.venv/bin/ruff format --check .` — 45 files already formatted.
 - `.venv/bin/mypy src/ tests/` — no issues in 46 source files (the `getattr`
@@ -371,16 +371,17 @@ GREEN-at-baseline lock named.
 
 ```
 .venv/bin/python -m pytest tests/ -q
-73 failed, 651 passed in 29.02s
+77 failed, 651 passed in 29.38s
 
 .venv/bin/python -m pytest tests/ -q --co
-724 tests collected
+728 tests collected
 ```
 
-- **724 collected** (636 pre-M25 + 88 new).
-- **73 failed** — every one of them a new M25 test.
+- **728 collected** (636 pre-M25 + 92 new).
+- **77 failed** — every one of them a new M25 test.
 - **651 passed** = the **636 pre-existing tests, all still GREEN**, plus the
-  15 new GREEN-at-baseline locks.
+  15 new GREEN-at-baseline locks.  (Every one of the 92 new items is either
+  an intended RED or a named GREEN-at-baseline lock: 77 + 15 = 92.)
 - **Zero collection errors, zero tracebacks, zero xfails/xpasses**
   (`grep -c Traceback` → 0; `grep -ci "xfail\|xpass"` → 0).
 - Pre-existing regressions: **0**. Verified mechanically by collecting the
@@ -388,20 +389,33 @@ GREEN-at-baseline lock named.
   636 ids) and intersecting it with the 73 failing ids —
   `comm -12 failed.txt old-tests.txt | wc -l` → **0**.
 
-### RED classification (73 = 23 + 32 + 18)
+### RED classification (77 = 23 + 36 + 18)
 
 | Class | Count | Verified RED reason |
 |---|---|---|
 | `inverse_verb` / `RECIPROCAL_INVERSES` / `RECIPROCAL_VERBS` | 1 | `AttributeError: module 'docs_cli.cli' has no attribute …` via `_m25()` — interfaces land Phase 5 (the documented-honest-RED pattern M19 used for `Config.stale_days`) |
 | editor primitives (`add_related_edge`, `remove_related_edge`, `append_revision_entry`) | 14 | `AttributeError` |
 | `plan_relate` / `apply_relate_plan` / `relate_plan_to_json` / `CoordinatedWriteError` | 8 | `AttributeError` |
-| every `docs relate …` subprocess test | 32 | argparse `invalid choice: 'relate'` → exit 2 + usage banner. **23** fail on the returncode assertion; the **9 intended-exit-2 refusal tests** pass the returncode assertion (argparse also exits 2) and then fail on their **contract stderr assertion** — so none of them is falsely GREEN. Confirmed one-by-one: `unknown verb 'pairs-with'`, `unknown verb 'Precedes'`, `is not under a docs root with .docs.toml; refusing`, `SOURCE and TARGET must be different documents`, `--date:`, `--reason must be a single line`, `--reason is required`, `is under the archive subtree`, `is not writable; refusing before any write` |
+| every `docs relate …` subprocess test | 36 | argparse `invalid choice: 'relate'` → exit 2 + usage banner. **25** fail on the returncode assertion; the **11 intended-exit-2 tests** pass the returncode assertion (argparse also exits 2) and then fail on their **contract stderr assertion** — so none of them is falsely GREEN. Confirmed one-by-one: `unknown verb 'pairs-with'`, `unknown verb 'Precedes'`, `is not under a docs root with .docs.toml; refusing`, `SOURCE and TARGET must be different documents`, `--date:`, `--reason must be a single line`, `--reason must not be empty`, `--reason is required`, `is under the archive subtree`, `is not writable; refusing before any write`, `docs: INDEX refresh failed:` |
 | check-side reciprocity behaviour | 16 | plain assertion — no `missing-inverse` finding is produced (13 in `test_check.py`, 3 in `tests/test_cli_check.py`) |
 | `Revision` `unknown-field` lock | 1 | plain assertion — the warning fires because `_BUILTIN_METADATA_FIELDS` lacks `"Revision"` |
 | `SKILL.md` relate row | 1 | plain assertion — Phase 7 |
 
-Exception-type totals from `pytest --tb=line`: **23 `AttributeError`, 40
-`AssertionError`, 10 bare `assert`** — no other exception class appears.
+Exception-type totals from `pytest --tb=line`: **23 `AttributeError`**, the
+rest `AssertionError` / bare `assert` — no other exception class appears.
+
+**Accepted coverage boundary (recorded, not a gap to fix in this step).** The
+two D5 *CLI-level* rollback strings (`…; rolled back <rel> — the tree is
+unchanged` and `…; ROLLBACK FAILED for <rel> — repair manually: …`) are not
+pinned by a subprocess test: injecting a mid-write `OSError` across a
+`subprocess.run` boundary would need a fragile filesystem trick. The
+**semantics** are pinned at the unit seam
+(`test_apply_relate_plan_rolls_back_when_second_write_fails` and
+`test_apply_relate_plan_rollback_failure_is_reported_not_swallowed` assert
+`CoordinatedWriteError.rolled_back` / `.published` and byte-identity), and
+the strings are frozen in `cli.md`; Phase 7 renders them from those fields.
+Likewise `relate remove --dry-run`'s `would remove …` line is covered only
+by the `add` direction's dry-run test plus the `remove` end-to-end test.
 
 ### GREEN-at-baseline locks (must pass now AND after Phase 6)
 
@@ -445,6 +459,86 @@ Verified together in one run — **17 passed**:
 - `.venv/bin/docs check --root docs` — no violations, exit 0.
 - `git diff --stat 3dca105 -- src/docs_cli/cli.py` — **empty**. Phases 1–4
   moved zero product code, exactly as the logged Phase-1 deviation intends.
+
+## Same-instance consistency audit — Step 1 (Phases 1–4) — 2026-08-11
+
+Run against this step's own work per the ship-milestone consistency-check
+reference, after Phase 4 and before handing back. Findings and fixes:
+
+### Accuracy — tests vs. spec
+
+1. **Three contract strings were asserted by tests but not pinned in
+   `cli.md`.** The `relate` exit-1 family (`file not found:`,
+   `is outside the resolved docs root`, the parser's self-locating
+   `docs: <path>: <detail>`) and the `--date` refusal
+   (`docs: relate: --date: <detail>`) existed only as test expectations.
+   **Fixed** — all four are now pinned in `cli.md`'s *Endpoint resolution*
+   and *`Updated:` policy* paragraphs. A spec the tests can outrun is the
+   exact failure mode this audit exists to catch.
+2. **`--reason` had an unspecified empty case.** D4 says "single non-empty
+   line" but only the multi-line refusal had a message. **Fixed** — `cli.md`
+   and the milestone's D4 now pin
+   `docs: relate: --reason must not be empty` as a *distinct* message
+   (reusing the multi-line one would be actively misleading), plus an
+   explicit statement that `--reason` is **accepted but unused** on an
+   all-active pair.
+
+### Tests genuinely pin the contract (the highest-leverage check)
+
+3. **Two contract points had no test at all.** Added:
+   - `test_relate_does_not_gate_on_whole_tree_health` — a malformed
+     *sibling* must not block the repair; it may only fail the end-of-run
+     reindex, **after** both endpoints are already correct. This is the
+     whole rationale for `relate` skipping the `archive`/`mv` whole-tree
+     pre-flight, and nothing was pinning it.
+   - `test_relate_empty_reason_refuses` — the newly-pinned empty-reason
+     message.
+4. **Two contract points were under-constrained.** Added:
+   - `test_relate_no_op_json_reports_not_applied` — `applied: false` was
+     only pinned for `--dry-run`; the spec also requires it for an
+     idempotent no-op, which is a different code path.
+   - `test_relate_quiet_suppresses_success_but_never_a_refusal` — the
+     "human output gated on `not --quiet`; refusals always print" rule had
+     no lock in either direction.
+5. **One assertion was weaker than the spec.**
+   `test_check_tree_findings_grouped_by_path` asserted the *set* of a doc's
+   rules; the spec pins the intra-doc **order** (`check_doc`'s findings,
+   then any `missing-inverse`). **Fixed** — it now asserts the ordered rule
+   list `["bad-vocab", "missing-inverse", "malformed"]`.
+
+### Consistency — documentation
+
+6. **`docs/plan.md` was stale.** Both the v2.0-train prose and the M25
+   tracker row still read "milestone-setup complete; Phase 1 next".
+   **Fixed** — both now record Phases 1–4 complete on `m25/phases-1-4`, the
+   Q5 version-staging decision, and the RED-baseline counts.
+7. Test counts were restated across `status.md`, the milestone doc, the
+   phase table, and the Phase-2/Phase-4 records after the four added tests
+   (88 → 92 new items; 724 → 728 collected; 73 → 77 failed).
+
+### Verified clean (no fix needed)
+
+- No `TODO`/`FIXME`/placeholder in any new test or fixture; no product code
+  exists to stub.
+- `git diff --stat bf8f273..HEAD` touches only `docs/`, `tests/`, and the two
+  bundled `src/docs_cli/skill/references/` mirrors — no unrelated change.
+- The bundled refs are byte-identical to the sources after the `cli.md` fix
+  (`tests/test_skill_refs.py` — 3 passed); `docs/INDEX.md` and
+  `tests/fixtures/expected/docs-INDEX.md` are in lockstep
+  (`test_index_output_matches_frozen_snapshot` green).
+- Every doc edited this step had `Updated:` bumped via `docs touch`, and
+  `docs check --root docs` exits 0, so every `Related:` edge resolves.
+- New test code follows the existing `_run(script, *args, cwd=…)` subprocess
+  helper shape, `_TREES`/`fixtures_dir` conventions, and the per-file
+  section-comment style.
+- One commit per phase on `m25/phases-1-4`, `m25(phase N): …` messages, no
+  secrets staged.
+
+### Nothing surfaced for an operator decision
+
+No finding changed milestone scope or behaviour intent. Every fix either
+wrote down a contract the tests already assumed, or added a lock for a
+contract the specs already stated.
 
 ## Milestone completion summary
 

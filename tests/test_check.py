@@ -737,10 +737,10 @@ def test_check_tree_findings_grouped_by_path(tmp_path):
     assert names == sorted(names), f"findings must be in root-relative path order, got {names}"
     # a.md's two findings are contiguous, then c.md's.
     assert names == ["a.md", "a.md", "c.md"], names
-    assert {f.rule for f in findings if f.path.name == "a.md"} == {
-        "bad-vocab",
-        "missing-inverse",
-    }
+    # Intra-doc ORDER is pinned too: `check_doc`'s findings first, then any
+    # `missing-inverse` (cli.md / the milestone's Decisions — `check_tree`
+    # interleaves rather than appending a separate tail block).
+    assert [f.rule for f in findings] == ["bad-vocab", "missing-inverse", "malformed"]
 
 
 def test_exit_code_for_missing_inverse_is_2():
