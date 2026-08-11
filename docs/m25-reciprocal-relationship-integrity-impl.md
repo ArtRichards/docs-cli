@@ -22,7 +22,7 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 1–3 complete. Phase 4 — Run Tests (RED Baseline) is next.**
+- Progress: **Phases 1–4 complete (Step 1). Phase 5 — Update Base Interfaces is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -35,7 +35,7 @@ progress table and milestone checklist synchronized.
 | 1. Define Contract | Complete | 2026-08-11 | Inverse map, `missing-inverse`, `docs relate` grammar/output, archive audit, D5 failure contract, version staging frozen. Q1–Q5 + OQ-A/B/D resolved. Zero `cli.py` edits (logged deviation). |
 | 2. Write Tests (RED) | Complete | 2026-08-11 | +88 items across 6 edited + 2 new files. 724 collected, zero collection errors; ruff/format/mypy clean. |
 | 3. Create Data/Fixtures | Complete | 2026-08-11 | 9 committed `reciprocal-*` trees + 3 inline builders. Each hand-verified to yield only its intended findings. |
-| 4. Run Tests (RED Baseline) | Pending | — | Capture intended failure set. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-08-11 | 724 collected, **73 failed, 651 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
 | 5. Update Base Interfaces | Pending | — | Inverse/edit/audit planning primitives. |
 | 6. Implement Offline/Core Path | Pending | — | Checker + coordinated idempotent edits. |
 | 7. Update Tool/Wrapper Layer | Pending | — | CLI, JSON/dry-run, docs, bundled skill, version. |
@@ -358,6 +358,93 @@ intended one:
   stale window is ever passed** to these trees, so no committed date rots.
 - One semantic per tree; `git status` showed exactly the 30 intended new
   fixture files and nothing else.
+
+## Phase 4 — Run Tests (RED Baseline) — 2026-08-11
+
+### Objective
+
+Prove the new tests fail for the intended missing behaviour, and only for
+that — with every RED traced to a classified reason and every
+GREEN-at-baseline lock named.
+
+### Headline
+
+```
+.venv/bin/python -m pytest tests/ -q
+73 failed, 651 passed in 29.02s
+
+.venv/bin/python -m pytest tests/ -q --co
+724 tests collected
+```
+
+- **724 collected** (636 pre-M25 + 88 new).
+- **73 failed** — every one of them a new M25 test.
+- **651 passed** = the **636 pre-existing tests, all still GREEN**, plus the
+  15 new GREEN-at-baseline locks.
+- **Zero collection errors, zero tracebacks, zero xfails/xpasses**
+  (`grep -c Traceback` → 0; `grep -ci "xfail\|xpass"` → 0).
+- Pre-existing regressions: **0**. Verified mechanically by collecting the
+  test-id list from a throwaway worktree at the Phase-1 commit (`3dca105`,
+  636 ids) and intersecting it with the 73 failing ids —
+  `comm -12 failed.txt old-tests.txt | wc -l` → **0**.
+
+### RED classification (73 = 23 + 32 + 18)
+
+| Class | Count | Verified RED reason |
+|---|---|---|
+| `inverse_verb` / `RECIPROCAL_INVERSES` / `RECIPROCAL_VERBS` | 1 | `AttributeError: module 'docs_cli.cli' has no attribute …` via `_m25()` — interfaces land Phase 5 (the documented-honest-RED pattern M19 used for `Config.stale_days`) |
+| editor primitives (`add_related_edge`, `remove_related_edge`, `append_revision_entry`) | 14 | `AttributeError` |
+| `plan_relate` / `apply_relate_plan` / `relate_plan_to_json` / `CoordinatedWriteError` | 8 | `AttributeError` |
+| every `docs relate …` subprocess test | 32 | argparse `invalid choice: 'relate'` → exit 2 + usage banner. **23** fail on the returncode assertion; the **9 intended-exit-2 refusal tests** pass the returncode assertion (argparse also exits 2) and then fail on their **contract stderr assertion** — so none of them is falsely GREEN. Confirmed one-by-one: `unknown verb 'pairs-with'`, `unknown verb 'Precedes'`, `is not under a docs root with .docs.toml; refusing`, `SOURCE and TARGET must be different documents`, `--date:`, `--reason must be a single line`, `--reason is required`, `is under the archive subtree`, `is not writable; refusing before any write` |
+| check-side reciprocity behaviour | 16 | plain assertion — no `missing-inverse` finding is produced (13 in `test_check.py`, 3 in `tests/test_cli_check.py`) |
+| `Revision` `unknown-field` lock | 1 | plain assertion — the warning fires because `_BUILTIN_METADATA_FIELDS` lacks `"Revision"` |
+| `SKILL.md` relate row | 1 | plain assertion — Phase 7 |
+
+Exception-type totals from `pytest --tb=line`: **23 `AttributeError`, 40
+`AssertionError`, 10 bare `assert`** — no other exception class appears.
+
+### GREEN-at-baseline locks (must pass now AND after Phase 6)
+
+Verified together in one run — **17 passed**:
+
+| Lock | Honest status today |
+|---|---|
+| `test_check_tree_complete_pair_clean` | **DEGENERATE** — passes only because the rule does not exist |
+| `test_check_tree_freeform_verbs_never_flagged` | **DEGENERATE** (the supersedes trap; the real over-fire guard after Phase 6) |
+| `test_check_tree_broken_target_owns_the_case` | **DEGENERATE** |
+| `test_check_tree_excluded_endpoint_no_inverse_finding` | **DEGENERATE** |
+| `test_check_tree_malformed_endpoint_no_inverse_finding` | **DEGENERATE** |
+| `test_check_tree_non_markdown_target_no_inverse_finding` | **DEGENERATE** |
+| `test_check_tree_archived_pair_complete_is_clean` | **DEGENERATE** |
+| `test_check_tree_legacy_fixtures_gain_no_new_findings` ×4 (`drift`, `invalid`, `with-archive`, `cross-refs`) | **DEGENERATE** |
+| `test_check_clean_reciprocal_tree_exits_0` | **DEGENERATE** |
+| `test_check_dogfood_repo_docs_is_clean` (pre-existing, `tests/test_cli_check.py`) | **DEGENERATE as an M25 lock**, but a genuine one after Phase 6 — reclassified here: the live `docs/` tree's 20 recognized-verb bullets already form 10 complete pairs, so M25's hard rule keeps this gate green for free |
+| `test_check_json_emits_finding_array` (pre-existing) | **GENUINE** — it already pins `set(rec) == {path,severity,rule,message}` for every record, which is what forces `missing-inverse` to add no JSON field |
+| `test_mv_preserves_reciprocal_pair` | **GENUINE** on the edge-rewrite assertions (`_cmd_mv` already rewrites tree-wide); the trailing `docs check` clean assertion is degenerate |
+| `test_archive_one_endpoint_preserves_reciprocal_pair` | **GENUINE** on the edge-rewrite assertions (M14 — A4) |
+| `test_archive_cascade_preserves_reciprocal_pair` | **GENUINE** on the edge-rewrite assertions (M18 archive-subtree edge integrity) |
+| `test_a3_project_version_is_1_8_0`, `test_b1_wheel_builds`, `test_b2_sdist_builds`, `test_c2_docs_version_is_1_8_0` | **GENUINE** — untouched by M25 and still pinned at `1.8.0` per D6; 4 passed |
+
+### Phase-7 follow-through to record by exact name
+
+- `src/docs_cli/skill/SKILL.md` — the verb table needs a `docs relate` row and
+  the front-matter `description:` verb list needs `relate`
+  (`test_skill_md_documents_relate_verb` is its RED lock, and the existing
+  `test_every_named_verb_is_a_real_subcommand` completeness guard will fail
+  the moment `relate` is registered without this edit).
+- `CHANGELOG.md` — M25's entries under an `UNRELEASED` heading with **no**
+  invented version number (D6); M29 renames and dates it.
+- **No version-pin follow-through.** The version does not move in M25.
+
+### Other gates at the RED baseline
+
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 45 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 46 source files (the `_m25()`
+  getattr indirection keeps every not-yet-existing symbol `Any`).
+- `.venv/bin/docs check --root docs` — no violations, exit 0.
+- `git diff --stat 3dca105 -- src/docs_cli/cli.py` — **empty**. Phases 1–4
+  moved zero product code, exactly as the logged Phase-1 deviation intends.
 
 ## Milestone completion summary
 

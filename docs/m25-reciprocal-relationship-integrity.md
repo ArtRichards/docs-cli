@@ -26,12 +26,13 @@ Related:
   inverses a hard `docs check` error, and add a narrow two-document
   `docs relate add/remove` mutation for explicit repair. The mutation works on
   active docs and, with a reasoned audit record, on archived endpoints.
-- Progress: **Active / Phase 1 — Define Contract complete (2026-08-11).** The
-  inverse map, `missing-inverse` finding, `docs relate` grammar/output,
-  archived-repair audit rules, coordinated-write failure contract, and version
-  staging are frozen in *Decisions (Phase 1 — BINDING)* below and in
-  `cli.md` / `convention.md`. All five open questions are RESOLVED. Phase 2 —
-  Write Tests (RED) is next.
+- Progress: **Active / Phases 1–4 complete (2026-08-11).** The contract is
+  frozen in *Decisions (Phase 1 — BINDING)* below and in `cli.md` /
+  `convention.md`; all five open questions are RESOLVED. The RED suite is
+  written (+88 items) over nine committed `reciprocal-*` fixture trees, and
+  the RED baseline is captured: **724 collected, 73 failed, 651 passed**,
+  every RED matching its classified reason and the pre-existing 636 all still
+  GREEN. Phase 5 — Update Base Interfaces is next.
 
 ### Goal
 
@@ -154,6 +155,7 @@ automatic conversion of free-form edges occurs.
 - [ ] D4 reasoned, narrowly audited archived-endpoint repair.
 - [ ] D5 upgrade guidance, CLI/bundled-skill parity, and release notes.
 - [ ] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage.
+      (RED half complete — Phases 2–4, 2026-08-11.)
 
 ## TDD implementation plan
 
@@ -246,7 +248,7 @@ automatic conversion of free-form edges occurs.
 - [x] Phase 1 — Define Contract
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
-- [ ] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
