@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 Related:
 - child-of: plan.md
@@ -26,9 +26,12 @@ Related:
   inverses a hard `docs check` error, and add a narrow two-document
   `docs relate add/remove` mutation for explicit repair. The mutation works on
   active docs and, with a reasoned audit record, on archived endpoints.
-- Progress: **Active / milestone-setup complete (2026-08-10).** This is the
-  next implementation milestone. No TDD phase has started; Phase 1 must freeze
-  the remaining command/output and archive-audit details before RED tests.
+- Progress: **Active / Phase 1 — Define Contract complete (2026-08-11).** The
+  inverse map, `missing-inverse` finding, `docs relate` grammar/output,
+  archived-repair audit rules, coordinated-write failure contract, and version
+  staging are frozen in *Decisions (Phase 1 — BINDING)* below and in
+  `cli.md` / `convention.md`. All five open questions are RESOLVED. Phase 2 —
+  Write Tests (RED) is next.
 
 ### Goal
 
@@ -144,7 +147,8 @@ automatic conversion of free-form edges occurs.
 
 ## Deliverables
 
-- [ ] D1 inverse vocabulary and semantics documented.
+- [x] D1 inverse vocabulary and semantics documented (Phase 1, 2026-08-11 —
+      `convention.md` › *Reciprocal relationship verbs*).
 - [ ] D2 hard `missing-inverse` rule in human and JSON `docs check` output.
 - [ ] D3 idempotent, validate-all-first `docs relate add/remove` for active docs.
 - [ ] D4 reasoned, narrowly audited archived-endpoint repair.
@@ -158,8 +162,10 @@ automatic conversion of free-form edges occurs.
 - Objective: freeze the inverse map, finding schema/message, command grammar,
   output modes, idempotency, two-file failure behavior, `Revision:` encoding,
   archived reason/date rules, and v2.0 compatibility language.
-- Files: `docs/cli.md`, `docs/convention.md`, this milestone, bundled reference
-  mirrors, and contract-level function signatures in `src/docs_cli/cli.py`.
+- Files: `docs/cli.md`, `docs/convention.md`, this milestone, and the bundled
+  reference mirrors. Contract-level function signatures are frozen in
+  *Decisions* below rather than stubbed in `src/docs_cli/cli.py` — see the
+  logged deviation there; Phase 1 makes **zero** `cli.py` edits.
 - Exit: every remaining open question below is resolved; specs and signatures
   are internally consistent; no business logic lands.
 
@@ -237,7 +243,7 @@ automatic conversion of free-form edges occurs.
 
 ## Phase checklist
 
-- [ ] Phase 1 — Define Contract
+- [x] Phase 1 — Define Contract
 - [ ] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
@@ -261,25 +267,267 @@ automatic conversion of free-form edges occurs.
   exception described in D4.
 - Relationships never grant archive authorization.
 
-## Open questions for Phase 1
+## Decisions (Phase 1 — BINDING)
 
-1. Exact positional grammar and whether machine output is `--json`,
-   `--dry-run --json`, or one stable operation-plan record shared by both.
-   Recommendation: `SOURCE VERB TARGET`, with a JSON record naming both before
-   and after edges.
-2. Exact repeatable `Revision:` representation. Recommendation: a bullet group
-   with one ISO-dated entry per mutation, carrying action, inverse pair, and
-   operator reason.
-3. Coordinated-write failure contract. Recommendation: stage and validate both
-   complete texts first, then publish with rollback on a second write failure;
-   pin recovery behavior with failure injection rather than claiming impossible
-   filesystem-wide transactional guarantees.
-4. Active↔archived audit symmetry. Recommendation: require `--reason` when
-   either endpoint is archived, append `Revision:` only to archived endpoints,
-   and bump `Updated:` on every endpoint whose bytes change.
-5. Version staging. Recommendation: begin the v2.0 train in M25 and publish only
-   through M29; Phase 1 decides whether the local package becomes 2.0.0 here or
-   at a later implementation milestone.
+Frozen 2026-08-11. The authoritative surface lives in `cli.md` (`docs check`
+› *Reciprocal-edge validation*, and the `docs relate` section) and
+`convention.md` (*Reciprocal relationship verbs*, *Optional fields*,
+*Archive subtree* › *Audited relationship repair*). This section records the
+decisions and their rationale; where the two disagree, the specs win.
+
+### D1 — Inverse map (BINDING)
+
+`precedes`↔`follows`, `depends-on`↔`required-by`, `blocks`↔`blocked-by`.
+Symmetric in both directions; exactly six recognized verbs. Matching is
+**case-sensitive exact match**, mirroring the `add_fields` precedent.
+
+Every other verb stays free-form with **no** reciprocal validation.
+`supersedes`/`superseded-by` and `child-of`/`parent-of` are named
+explicitly as deliberate **non**-members so no reader infers symmetry from
+a verb's shape: promoting them would retroactively break existing trees for
+no navigational gain.
+
+### D2 — `missing-inverse` finding (BINDING)
+
+- Rule id `missing-inverse`, severity `error`, exit code 2.
+- The finding attaches to the **source** doc — the one declaring the
+  un-reciprocated edge — consistent with `broken-ref` blaming the referrer.
+  (Resolution of OQ-B.)
+- Frozen single-line message:
+  `Related: '<verb>: <target-rel>' has no inverse; <target-rel> must declare '<inverse>: <source-rel>' (or remove the edge)`.
+  It names source, verb, target, and the exact missing inverse, and offers
+  both repairs without choosing between them.
+- **No new JSON fields.** The record stays exactly
+  `{path, severity, rule, message}` — the key set `tests/test_cli_check.py`
+  already pins for every record.
+- Applicability (all five must hold): both endpoints walked under the
+  effective predicate; the target resolves to a file (else `broken-ref`
+  owns it); the target is a managed `.md` doc in the walked set; **both**
+  texts survive `parse_metadata_block` (else `malformed` owns it); the
+  inverse bullet is absent. Reciprocity depends on metadata-block
+  parseability **only** — a source that also trips `bad-vocab` or
+  `bad-date` is still reciprocity-checked.
+- Archived endpoints are in scope (they are walked). This is precisely why
+  D4 exists.
+- One finding per distinct `(source, verb, target)` triple, even when the
+  bullet is duplicated.
+- **No opt-out knob** (no `[check] reciprocal = false`): the milestone binds
+  "errors, not compatibility warnings". `--exclude` / `.docsignore` remain
+  the only coarse escape. Instead, `cli.md`, `convention.md`, and the
+  CHANGELOG carry an explicit "upgrading from 1.x" paragraph naming a bare
+  `blocked-by:` as the most likely legacy offender — and the pre-M25
+  `convention.md` recommendation that produced it (pair `Lifecycle: blocked`
+  with a one-sided `blocked-by`) is **withdrawn in the same edit**.
+  (Resolution of OQ-D.)
+- No cycle detection and no conflict detection: `A precedes B` together with
+  `A follows B` is accepted (out of scope per this milestone).
+
+### D3 — `docs relate` grammar and output (BINDING)
+
+`docs relate add|remove SOURCE VERB TARGET [--reason TEXT] [--date YYYY-MM-DD] [--json] [--dry-run] [--quiet] [--root DIR]`.
+
+- A **verb namespace** with nested subverbs, shaped like `docs project`.
+  `add`/`remove` inherit the shared `--root`/`--quiet`/`--dry-run` parent
+  and declare `--json` locally (as `check`/`list`/`migrate` do).
+- Positional order `SOURCE VERB TARGET` reads as a sentence and is
+  symmetric: `relate add b.md follows a.md` produces a tree byte-identical
+  to `relate add a.md precedes b.md`.
+- **Endpoint resolution (OQ-A, operator-confirmed).** An absolute path is
+  used as-is. A relative path resolves **root-relative first**, falling back
+  to **cwd-relative** only when the root-relative form is not a file. Both
+  endpoints must resolve under the root. Every message and every JSON field
+  names the **root-relative POSIX** form. Root-relative-first is chosen so
+  the path an agent copies out of a `missing-inverse` finding resolves
+  without translation.
+- **Idempotency.** `add` writes only the missing half (or nothing); `remove`
+  removes only the present half (or nothing). A fully-satisfied invocation
+  writes zero bytes: no `Updated:` bump, no `Revision:` entry, no reindex,
+  exit 0.
+- **One reindex**, at end, only when something changed and not `--dry-run`,
+  honouring `[exclude]`/`.docsignore` (the M14 — A6 shape).
+- **`relate` does not gate on whole-tree health.** Unlike `archive`/`mv`, it
+  validates only its two endpoints — a whole-tree pre-flight would make
+  repair impossible in exactly the broken tree the verb exists to repair. A
+  malformed *sibling* can still fail the end-of-run reindex (exit 2 after
+  the repair landed), matching `touch`/`project set`.
+- **Machine output (Q1).** One stable operation-plan record on stdout, the
+  **same shape** for `--dry-run` and for a real apply, so preview and apply
+  are diffable. `edits` is always `[source, target]` in that order and
+  carries `present_before`/`present_after` — the "before and after edges"
+  the open question asked for.
+- Exit codes: 0 success / no-op / dry-run; 1 endpoint missing, malformed, or
+  outside the root; 2 for every hard refusal (see `cli.md`).
+
+### D4 — Archived-endpoint repair (BINDING)
+
+- **`--reason` is required whenever either named endpoint lies under the
+  archive subtree** (OQ-C, operator-confirmed), evaluated in the
+  validate-all-first pass **before** any planning — predictable rather than
+  plan-dependent. An idempotent no-op naming an archived endpoint still
+  requires it, and still writes nothing.
+- `--reason` must be a single non-empty line after stripping. A newline is
+  refused: structurally, a multi-line reason would terminate the metadata
+  block and corrupt the archived doc.
+- The **only** bytes an archived endpoint may change: the one recognized
+  `Related:` bullet, the `Updated:` value, and the `Revision:` group.
+  Everything else — `Lifecycle: archived`, `Archived-reason:`, `Role:`,
+  `Project:`, other edges, other metadata, H1, prose, location, and the
+  trailing-newline state — is byte-identical.
+- **`Revision:` encoding (Q2).** A repeatable bare-label bullet group at the
+  end of the metadata block (after `Related:`, separated by one blank line —
+  the shape the parser already accepts). One ISO-dated single-line bullet
+  per real mutation, describing **this document's own** change, appended
+  chronologically:
+  `- 2026-08-11: relate add 'follows: m26.md'; reason: complete the M25/M26 sequence pair`.
+- `"Revision"` is added to the built-in always-allowed metadata label set in
+  Phase 5. Otherwise any tree with `[vocabulary] add_fields` set would get
+  an `unknown-field` warning on a label `docs relate` itself writes.
+- **Audit asymmetry (Q4).** `Revision:` is appended **only** to archived
+  endpoints; an active endpoint gets the edge plus the `Updated:` bump and
+  nothing else — its history is the repository's. `Updated:` is bumped (to
+  `--date`, default today, in the tree's `date_format`) on **every** endpoint
+  whose bytes change and on **none** that do not.
+
+### D5 — Coordinated-write failure contract (Q3, BINDING)
+
+Five ordered stages; the first four write nothing: **validate all** →
+**stage both complete texts in memory** → **re-validate the staged texts**
+(a staged text that would not parse aborts before publishing) →
+**writability pre-flight** on each changed endpoint (a read-only archive
+refuses cleanly before any write, the common real failure, needing no
+rollback) → **publish** source-then-target atomically, rolling every
+already-published endpoint back on a later failure. A failed rollback is
+reported as an explicit non-atomic admission naming the file and the edge
+left behind, never swallowed.
+
+Stated plainly in the spec: this is **best-effort staged publish +
+rollback**, not a filesystem-wide transaction — two files cannot be renamed
+atomically as a unit on POSIX. The contract is pinned by failure injection
+rather than asserted.
+
+### D6 — Version staging (Q5, BINDING — operator decision)
+
+**The package version stays `1.8.0` for the whole of M25.** `pyproject.toml`
+is **not** bumped, and the packaging version pins are not re-pinned or
+renamed — they stay exactly as they are and stay GREEN. M25–M28 are all
+**version-neutral**; **M29 performs the single bump to `2.0.0`** at publish
+time. This supersedes the setup-time recommendation to decide the local bump
+inside an implementation milestone: a four-milestone breaking train that
+bumps early would carry a misleading local version through three more
+milestones and force repeated pin churn.
+
+CHANGELOG handling follows the repo's own precedent for unreleased work (see
+`release-runbook.md` › the M9 worked example): M25's entries accumulate under
+an **`UNRELEASED` heading carrying no invented version number**, which M29
+renames and dates at the moment of upload. Phase 7 owns that edit; no
+`## 2.0.0` header is created in M25.
+
+### Frozen Phase-5 signatures (contract only — no code lands in Phase 1)
+
+```python
+# vocabulary
+RECIPROCAL_INVERSES: Mapping[str, str]          # 6 entries, symmetric
+RECIPROCAL_VERBS: frozenset[str]                # frozenset(RECIPROCAL_INVERSES)
+def inverse_verb(verb: str) -> str | None
+
+# editors — beside rewrite_related_refs, same surgical minimal-diff contract
+def add_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]
+def remove_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]
+def append_revision_entry(text: str, entry: str) -> str
+
+# validation — beside check_tree
+def reciprocity_findings(
+    entries: Sequence[tuple[Path, str]], root: Path
+) -> dict[Path, list[Finding]]
+
+# planning / apply — mirrors MigrationPlan / plan_migration / apply_migration
+@dataclass(frozen=True)
+class RelateEdit:
+    path: Path; rel: str; archived: bool; edge: str
+    original: str; new_text: str
+    change: str                       # "added" | "removed" | "unchanged"
+    present_before: bool; present_after: bool
+    updated_bumped: bool; revision_appended: bool
+
+@dataclass(frozen=True)
+class RelatePlan:
+    action: str; verb: str; inverse: str
+    source_rel: str; target_rel: str
+    reason: str | None; date_str: str
+    edits: tuple[RelateEdit, ...]     # always (source, target)
+
+class CoordinatedWriteError(OSError):
+    rolled_back: bool
+    published: tuple[str, ...]
+
+def plan_relate(root: Path, config: Config, *, action: str, source: Path,
+                verb: str, target: Path, reason: str | None,
+                date_str: str) -> RelatePlan
+def apply_relate_plan(plan: RelatePlan) -> None      # publish + rollback
+def relate_plan_to_json(plan: RelatePlan, *, dry_run: bool,
+                        applied: bool, index_refreshed: bool) -> dict[str, object]
+
+# CLI
+def _cmd_relate(args: argparse.Namespace) -> int
+```
+
+`check_tree` changes shape in Phase 5/6 to materialise the walk once and
+interleave the two passes:
+
+```python
+entries = list(_iter_doc_texts(root, config, predicate=predicate))
+recip = reciprocity_findings(entries, root)
+for path, text in entries:
+    findings.extend(check_doc(path, text, root, config, stale, today, stale_source))
+    findings.extend(recip.get(path, ()))
+```
+
+Per-doc order becomes "`check_doc`'s findings, then any `missing-inverse`";
+`check_tree`'s "errors before warnings" docstring sentence is corrected
+accordingly rather than adding a resort (simpler, and nothing asserts
+intra-doc severity order).
+
+### Deviation from the Phase-1 file list (deliberate, logged)
+
+Phase 1 above lists "contract-level function signatures in
+`src/docs_cli/cli.py`" among its files. **Phase 1 makes zero `cli.py`
+edits.** Adding stubs would change the Phase-4 subprocess RED reasons and
+risk baseline behaviour, while the phase's own exit criterion is "no
+business logic lands". The signatures are frozen above and in `cli.md`, and
+land as real code in Phase 5. Approved deviation.
+
+## Resolved questions (Q1–Q5, BINDING)
+
+All five Phase-1 open questions are resolved. The originals are kept so the
+decision trail reads end-to-end.
+
+1. **Positional grammar and machine output.** RESOLVED → D3.
+   `SOURCE VERB TARGET`; machine output is **one stable operation-plan
+   record** shared by `--dry-run` and apply, naming both the before and
+   after edges per endpoint (`present_before` / `present_after`).
+2. **Repeatable `Revision:` representation.** RESOLVED → D4. A bare-label
+   bullet group at the end of the metadata block, one ISO-dated single-line
+   entry per real mutation carrying the action, the edge, and the operator's
+   reason.
+3. **Coordinated-write failure contract.** RESOLVED → D5. Stage and
+   re-validate both complete texts, writability pre-flight, then publish
+   with rollback; failure injection pins recovery; the spec states plainly
+   that this is best-effort staged publish + rollback, not a
+   filesystem-wide transaction.
+4. **Active↔archived audit symmetry.** RESOLVED → D4. `--reason` required
+   when **either** endpoint is archived (checked before planning, so a no-op
+   still requires it); `Revision:` appended to archived endpoints only;
+   `Updated:` bumped on every endpoint whose bytes change and on no other.
+5. **Version staging.** RESOLVED → D6 (operator decision). The package
+   **stays `1.8.0` through M25–M28**; **M29** performs the single bump to
+   `2.0.0` at publish. M25 does not touch `pyproject.toml` or the packaging
+   version pins.
+
+Three further questions surfaced during Phase-1 planning and are resolved
+in the same freeze: **OQ-A** endpoint-path precedence (→ D3,
+operator-confirmed), **OQ-B** which doc a `missing-inverse` finding blames
+(→ D2), and **OQ-D** whether the hard rule gets an opt-out knob (→ D2, it
+does not).
 
 ## Testing and quality gate
 

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 Related:
 - pairs-with: plan.md
@@ -43,15 +43,20 @@ Related:
 ## Current milestone
 
 **M25 — Reciprocal relationship integrity and `docs relate` is the current
-milestone. Milestone setup is complete (2026-08-10); Phase 1 — Define Contract
-is next.** No TDD phase has started. M25 defines three reciprocal relationship
+milestone. Phase 1 — Define Contract is complete (2026-08-11); Phase 2 — Write
+Tests (RED) is next.** M25 defines three reciprocal relationship
 pairs (`precedes`/`follows`, `depends-on`/`required-by`, and
 `blocks`/`blocked-by`), makes a missing exact inverse a hard `docs check` error,
 and adds explicit two-endpoint `docs relate add/remove` repair, including a
-narrow reasoned/audited exception for archived endpoints. Remaining Phase-1
-work is contract-level: exact CLI/JSON/dry-run shape, repeatable `Revision:`
-encoding, coordinated-write rollback behavior, audit symmetry, and version
-staging. The prepared pair is
+narrow reasoned/audited exception for archived endpoints. Phase 1 froze the
+whole surface in the milestone's *Decisions (Phase 1 — BINDING)* section and in
+`cli.md` / `convention.md`: the six-verb inverse map, the `missing-inverse`
+finding and its exact message, the `relate` grammar / human / JSON / dry-run
+output, root-relative-first endpoint resolution, the archived `--reason` +
+`Revision:` audit rules, and the staged-publish-with-rollback failure contract.
+All five Phase-1 open questions are RESOLVED. **Version staging (Q5):
+`docs-cli` stays `1.8.0` through M25–M28; M29 performs the single bump to
+`2.0.0` at publish.** The prepared pair is
 [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md)
 and
 [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md).
@@ -69,7 +74,9 @@ The full breaking safety train is registered in execution order:
 The five plans use reciprocal sequence edges and only real durable dependency
 edges; no `blocks`/`blocked-by` edge exists because planned prerequisites are
 not transient blockers. M26–M29 are draft stubs with no implementation logs or
-phases started.
+phases started. Because those edges are already complete in both directions,
+this tree passes M25's new hard rule as-is — the existing dogfood
+`docs check docs/` gate doubles as an M25 lock.
 
 **docs-cli 1.8.0 shipped 2026-07-03 — the v1.8.0 train is complete.**
 **M24 — PyPI publish 1.8.0** is **Complete (2026-07-03)**: `docs-cli==1.8.0`
