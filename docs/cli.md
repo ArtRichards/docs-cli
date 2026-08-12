@@ -1122,8 +1122,8 @@ failure without saying so on stderr.
 
 ```console
 $ docs check
-docs/m25.md
-  error  missing-inverse  Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
+m25.md
+  error: [missing-inverse] Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
 $ docs relate add m25.md precedes m26.md
 docs: relate: no change — 'precedes: m26.md' already present in m25.md
 docs: relate: added 'follows: m25.md' to m26.md

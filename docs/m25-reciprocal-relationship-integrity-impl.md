@@ -41,7 +41,7 @@ progress table and milestone checklist synchronized.
 | 4. Run Tests (RED Baseline) | Complete | 2026-08-11 (re-baselined 2026-08-12) | 757 collected, **87 failed, 670 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
 | 5. Update Base Interfaces | Complete | 2026-08-12 | Vocabulary, `inverse_verb`, three editors, `RelateEdit`/`RelatePlan`/`CoordinatedWriteError`, `Revision` built-in label, canonical-path + lenient-pairs helpers, `relate_plan_to_json`; three behaviour seams stubbed. **71 failed, 686 passed.** |
 | 6. Implement Offline/Core Path | Complete | 2026-08-12 | `reciprocity_findings`, `check_tree` interleave, `plan_relate`/`_plan_relate_edit`, `apply_relate_plan` + `_rollback_relate`. **44 failed, 713 passed** — every remaining RED is a `docs relate` subprocess test (43) or the SKILL.md lock (1). |
-| 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); six spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); eight spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
 | 8. Run Tests (GREEN) | Complete | 2026-08-12 | **757 passed, 0 failed** (757 collected, zero collection errors). All 636 pre-existing test ids proven still present and GREEN by `comm`. One defective Step-1 assertion corrected under operator approval; `cli.py` byte-unchanged by that commit. |
 | 9. Integrate / Accept / Dogfood | Complete | 2026-08-12 | Eight flows on a throwaway `cp -r docs` copy: detect → repair → re-check, remove/restore/idempotency, audited archived repair (refusal then repair then a second `Revision:` bullet), blast radius (1 of 46 archived files changed), dry-run/JSON, real tree untouched. |
 | 10. Quality, Docs, Refactor | Complete | 2026-08-12 | Placeholder sweep clean; `Finding`'s rule-id list corrected; `architecture.md` + `test-strategy.md` closed; use-case catalog gained the upgrade-and-repair flow; completion summaries written. **757 passed**, gate clean, version still 1.8.0. |
@@ -767,12 +767,14 @@ typecheck; the tests stay honestly RED at the behaviour seam.
   docstrings now and bodies in Phase 6. This makes the Phase-5 commit a
   reviewable contract-in-code.
 - **RED-reason change to record against the Phase-4 classification table.**
-  The 27 tests classified there as `AttributeError` (10 plan/apply/JSON +
-  17 check-side — the latter were plain assertions, so only the 10 move) now
-  fail with `NotImplementedError` instead, and the 17 check-side ones still
-  fail on plain assertions because `check_tree` does not yet call the new
-  pass. That table is a record of the Phase-4 baseline, not a claim about
-  later phases; this note keeps it from being read as stale.
+  Of the 27 tests that stay RED for Phase 6, the **10** plan/apply/JSON ones
+  (classified `AttributeError` in that table) now fail with
+  `NotImplementedError` instead — the symbols exist, the bodies do not. The
+  other **17** (check-side) were classified as plain assertions and still
+  are, because `check_tree` deliberately does not yet call
+  `reciprocity_findings`. The Phase-4 table is a record of the Phase-4
+  baseline, not a claim about later phases; this note keeps it from being
+  read as stale.
 
 ### Verification
 
@@ -935,14 +937,14 @@ recognized edge now exits 2; the withdrawn `Lifecycle: blocked` +
 one-sided-`blocked-by` recommendation), and an `### Upgrading from 1.x`
 worked `check → relate → check` loop. `pyproject.toml` untouched.
 
-**`docs/cli.md` (+ byte-identical mirror re-sync)** — six conductor-resolved
+**`docs/cli.md` (+ byte-identical mirror re-sync)** — eight conductor-resolved
 spec corrections, listed under *Decisions* below.
 
 **Tracker docs** — `docs/plan.md` (v2.0-train prose + the M25 row),
 `docs/status.md` (the Current-milestone narrative, the *Next action*
 paragraph, and the milestone-history row), this log, and the milestone doc.
 
-### Decisions / issues — the six spec corrections (conductor resolutions)
+### Decisions / issues — the eight spec corrections (conductor resolutions)
 
 Each fixes a string the tests do not pin and that would otherwise ship
 wrong or degenerate. None changes milestone scope or behaviour intent.
@@ -1369,6 +1371,104 @@ Host-machine skills are deliberately **not** refreshed here: per the
 project's CLAUDE.md skill-update policy that happens only at a production
 ship (M29), and `docs install-skill --force` from an unpublished tree would
 put pre-release guidance on the host.
+
+## Same-instance consistency audit — Step 2 (Phases 5–10) — 2026-08-12
+
+Run against this step's own work per the ship-milestone consistency-check
+reference, after Phase 10 and before handing back. Findings and fixes:
+
+### Accuracy — code vs. spec
+
+1. **A worked example showed a `docs check` output format the tool does not
+   produce.** `cli.md` › *Worked upgrade example* and both CHANGELOG
+   examples rendered the finding as
+   `  error  missing-inverse  <message>` (two spaces, no colon, no
+   brackets). `_print_check_findings` has emitted
+   `  <severity>: [<rule>] <message>` since M19, and does so today —
+   verified live against `tests/fixtures/trees/reciprocal-missing` and in
+   the Phase-9 dogfood. **Fixed** in `docs/cli.md`, the bundled mirror, and
+   `CHANGELOG.md` (three occurrences). The code was right; the docs were
+   wrong. The defect entered in Phase 1 and was copied forward in Phase 7 —
+   a reminder that an *illustrative* block still has to be executed once.
+2. **The same example was internally inconsistent.** Its `docs check` header
+   read `docs/m25.md` while the following `docs relate add` used bare
+   `m25.md`. That quietly undercuts the very property OQ-A exists to
+   deliver — a path copied out of a finding resolving without translation.
+   **Fixed:** the header now reads `m25.md`, matching the invocation.
+3. **The milestone doc's D3 still carried the pre-R5 unscoped promise**
+   ("Every message and every JSON field names the root-relative POSIX
+   form"), which `cli.md` had already corrected to apply to **resolved**
+   endpoints only. **Fixed** — D3 now matches `cli.md` and additionally
+   records R9 (an excluded endpoint is deliberately allowed).
+4. **The milestone doc's D4 and resolved-question 2 still said
+   "ISO-dated"** where R7 had established that the `Revision:` bullet uses
+   the tree's `date_format` and ISO is merely the default. **Fixed** in both
+   places.
+
+### Accuracy — the two failure branches no test exercises end-to-end
+
+Both were reproduced live during the audit rather than trusted:
+
+- **R3 (`nothing was published`)** is reachable in a *realistic* scenario,
+  not just a theoretical one: a half-satisfied `add` where only the target
+  changes and that single write fails. Reproduced with a `chmod 555`
+  parent directory:
+  `docs: relate: write failed for sub/b.md: [Errno 13] Permission denied: '…/sub/b.md.docs-tmp'; nothing was published — the tree is unchanged`
+  (exit 2). Without R3 this would have read `rolled back  — the tree is
+  unchanged`, with a double space and an empty list.
+- **R4 (both `ROLLBACK FAILED` variants)** reproduced at the unit seam by
+  injecting a failing `atomic_write`:
+  `… ROLLBACK FAILED for a.md — repair manually: a.md still carries 'precedes: b.md'` for `add`, and
+  `… no longer carries 'precedes: b.md'` for `remove`, both with
+  `rolled_back=False` and `published=('a.md',)`. The pre-R4 wording would
+  have told an operator recovering from a failed `remove` that the file
+  *still carries* an edge it no longer has.
+
+### Verified clean (no fix needed)
+
+- **All nine human output forms** in `cli.md` › *Output* were executed live
+  and match the spec block **byte-for-byte**, including the `would remove`
+  form that no test covers end-to-end.
+- Every literal message string `cli.md` pins for `relate` is present in both
+  the spec and `src/docs_cli/cli.py` (23 strings checked pairwise).
+- The exit-code summary row, the `missing-inverse` rule-table entry, the
+  closed JSON key set, the six applicability conditions, the canonical
+  path-matching paragraph, and `convention.md`'s *Reciprocal relationship
+  verbs* / *Audited relationship repair* sections all describe the shipped
+  behaviour accurately.
+- No `TODO`/`FIXME`/`NotImplementedError`/commented-out code in `cli.py`.
+- `git diff --name-only d26086d..HEAD` touches only `docs/`,
+  `src/docs_cli/`, `tests/`, and `CHANGELOG.md`; within `tests/` only the
+  frozen INDEX snapshot and the one operator-approved assertion.
+- Bundled mirrors byte-identical; `docs/INDEX.md` ↔
+  `tests/fixtures/expected/docs-INDEX.md` in lockstep; `docs check --root
+  docs` exit 0, so every `Related:` edge resolves.
+- Every doc edited in this step had `Updated:` bumped via `docs touch`.
+- One commit per phase on `m25/phases-5-10` with `m25(phase N): …`
+  messages; no secrets staged.
+- `pyproject.toml` and `tests/test_packaging.py` byte-untouched across the
+  entire step.
+
+### Fixed during the audit — internal consistency
+
+5. The Phase-7 record said "**six** conductor-resolved spec corrections"
+   while it enumerated eight (R1–R7 plus R9) and the milestone doc, plan,
+   and status all said eight. **Fixed** to eight in all three places in
+   this log.
+6. The Phase-5 record's RED-reason note read as though all 27 Phase-6 tests
+   had been classified `AttributeError`; only the 10 plan/apply/JSON ones
+   were, and only those changed to `NotImplementedError`. **Fixed** to say
+   so precisely.
+
+### Surfaced for an operator decision
+
+Nothing changed milestone scope or behaviour intent, so nothing is blocked
+on an operator. One **non-blocking** style note is handed to the Step-3
+`/simplify` pass rather than churned here: `_print_relate_lines` picks its
+verb with a nested conditional expression
+(`("would add" if dry_run else "added") if adding else (…)`). It is correct
+and covered, but a small mapping would read better — and readability
+refactoring is explicitly `/simplify`'s job, not Phase 10's.
 
 ## Milestone completion summary
 

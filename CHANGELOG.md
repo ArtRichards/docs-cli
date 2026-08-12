@@ -21,7 +21,7 @@ until then._
   actionable one-line finding:
 
   ```
-  error  missing-inverse  Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
+  error: [missing-inverse] Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
   ```
 
   The finding blames the **source** — the doc declaring the un-reciprocated
@@ -75,8 +75,8 @@ Run the repair loop until `docs check` is clean:
 
 ```console
 $ docs check
-docs/m25.md
-  error  missing-inverse  Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
+m25.md
+  error: [missing-inverse] Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
 $ docs relate add m25.md precedes m26.md      # the edge is right — complete it
 $ docs check
 docs: no violations found

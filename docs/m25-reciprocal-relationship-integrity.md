@@ -388,9 +388,14 @@ no navigational gain.
   used as-is. A relative path resolves **root-relative first**, falling back
   to **cwd-relative** only when the root-relative form is not a file. Both
   endpoints must resolve under the root. Every message and every JSON field
-  names the **root-relative POSIX** form. Root-relative-first is chosen so
-  the path an agent copies out of a `missing-inverse` finding resolves
-  without translation.
+  about a **resolved** endpoint names the **root-relative POSIX** form; a
+  *pre-resolution* refusal necessarily names the path it was still working
+  with (R5, Phase 7 — `file not found:` names the root-relative candidate
+  for a relative argument, the outside-root refusal the resolved path).
+  Root-relative-first is chosen so the path an agent copies out of a
+  `missing-inverse` finding resolves without translation. An **excluded**
+  endpoint is deliberately allowed: `relate` runs no whole-tree pre-flight
+  and an explicitly named endpoint beats a coarse exclusion (R9, Phase 7).
 - **Idempotency.** `add` writes only the missing half (or nothing); `remove`
   removes only the present half (or nothing). A fully-satisfied invocation
   writes zero bytes: no `Updated:` bump, no `Revision:` entry, no reindex,
@@ -430,9 +435,12 @@ no navigational gain.
   trailing-newline state — is byte-identical.
 - **`Revision:` encoding (Q2).** A repeatable bare-label bullet group at the
   end of the metadata block (after `Related:`, separated by one blank line —
-  the shape the parser already accepts). One ISO-dated single-line bullet
-  per real mutation, describing **this document's own** change, appended
-  chronologically:
+  the shape the parser already accepts). One dated single-line bullet per
+  real mutation, describing **this document's own** change, appended
+  chronologically. The date is the SAME value written into `Updated:` —
+  `--date` or today, rendered in the tree's `date_format`; "ISO-dated" here
+  describes the **default** format, not a second hardcoded one (R7,
+  Phase 7). Two date spellings in one file would be a defect:
   `- 2026-08-11: relate add 'follows: m26.md'; reason: complete the M25/M26 sequence pair`.
 - `"Revision"` is added to the built-in always-allowed metadata label set in
   Phase 5. Otherwise any tree with `[vocabulary] add_fields` set would get
@@ -570,9 +578,9 @@ decision trail reads end-to-end.
    record** shared by `--dry-run` and apply, naming both the before and
    after edges per endpoint (`present_before` / `present_after`).
 2. **Repeatable `Revision:` representation.** RESOLVED → D4. A bare-label
-   bullet group at the end of the metadata block, one ISO-dated single-line
+   bullet group at the end of the metadata block, one dated single-line
    entry per real mutation carrying the action, the edge, and the operator's
-   reason.
+   reason, in the tree's `date_format` (default ISO — see D4).
 3. **Coordinated-write failure contract.** RESOLVED → D5. Stage and
    re-validate both complete texts, writability pre-flight, then publish
    with rollback; failure injection pins recovery; the spec states plainly
