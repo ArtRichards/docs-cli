@@ -1823,7 +1823,12 @@ def test_cascade_only_unwritable_candidate_refuses_with_exit_2(docs_script, tmp_
         ) in proc.stderr, proc.stderr
         assert _snapshot(root) == before
     finally:
-        (root / "beta.md").chmod(0o644)
+        # At baseline the archive SUCCEEDS and beta.md has already moved, so
+        # the restore must tolerate its absence — otherwise the cleanup's
+        # FileNotFoundError masks this test's real RED reason.
+        for candidate in (root / "beta.md", root / _M26_DATED / "beta.md"):
+            if candidate.exists():
+                candidate.chmod(0o644)
 
 
 # --- M26 — D7 `docs archive --json` -----------------------------------------
@@ -1984,20 +1989,37 @@ def test_archive_json_stdout_is_exactly_one_object(docs_script, fixtures_dir, tm
 
 
 @pytest.mark.parametrize(
-    "extra",
+    ("extra", "expected"),
     [
-        pytest.param(["--cascade"], id="retired-flag"),
-        pytest.param(["--cascade-only", "typo-*"], id="none-matched"),
-        pytest.param(["--cascade-only", ""], id="empty-scope"),
+        pytest.param(["--cascade"], _retirement_message("--cascade"), id="retired-flag"),
+        pytest.param(
+            ["--cascade-only", "typo-*"],
+            "docs: archive: --cascade-only 'typo-*' matched none of the 6 one-hop "
+            "candidate(s); refusing before any write",
+            id="none-matched",
+        ),
+        pytest.param(
+            ["--cascade-only", ""],
+            "docs: archive: --cascade-only must not be empty",
+            id="empty-scope",
+        ),
     ],
 )
-def test_archive_json_emits_no_record_on_a_refusal(docs_script, fixtures_dir, tmp_path, extra):
+def test_archive_json_emits_no_record_on_a_refusal(
+    docs_script, fixtures_dir, tmp_path, extra, expected
+):
     """D7 (Phase-1 Q3): a refusal emits NO record — the exit code plus the
     stderr message is the contract, exactly as M25 pinned for
     `docs relate`.
 
-    RED reason: `--json` is not a recognised flag on `archive` today, and
-    none of these three invocations refuses at all.
+    The contract message is asserted, and argparse's own error is asserted
+    ABSENT. Without that this test would be **falsely GREEN**: `--json` is an
+    unrecognized argument today, so argparse already exits 2 with an empty
+    stdout and an untouched tree, satisfying every other assertion here for
+    entirely the wrong reason. (Caught at the Phase-4 baseline.)
+
+    RED reason: `--json` is not a recognised flag on `archive` today, and none
+    of these three invocations refuses on M26's terms.
     """
     root = _tree(fixtures_dir, tmp_path, "archive-neighborhood")
     before = _snapshot(root)
@@ -2013,6 +2035,10 @@ def test_archive_json_emits_no_record_on_a_refusal(docs_script, fixtures_dir, tm
     )
 
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert expected in proc.stderr, proc.stderr
+    assert "unrecognized arguments" not in proc.stderr, (
+        "this must be the M26 refusal, not argparse rejecting an unknown --json"
+    )
     assert proc.stdout == "", proc.stdout
     assert _snapshot(root) == before
 

@@ -620,8 +620,11 @@ def test_every_preflight_refusal_leaves_the_tree_byte_identical(tmp_path, case):
         assert excinfo.value.published == ()
         assert _snapshot(root) == before
     finally:
-        if locked is not None:
-            (root / locked).chmod(0o755 if (root / locked).is_dir() else 0o644)
+        # Tolerate absence: a future implementation that moved the file before
+        # failing must not have its real failure masked by the cleanup.
+        target = root / locked if locked is not None else None
+        if target is not None and target.exists():
+            target.chmod(0o755 if target.is_dir() else 0o644)
 
 
 # --- D4 — execution and the residual partial-state admission ----------------
