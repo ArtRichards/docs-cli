@@ -96,7 +96,7 @@ Regenerate `INDEX.md` in the docs root.
 
 Exits 0 always (warnings printed to stderr; use `docs check` for hard validation).
 
-### `docs archive <file> [--reason "…"] [--date YYYY-MM-DD] [--cascade | --cascade-dry-run | --cascade-only GLOB | --interactive]`
+### `docs archive <file> [--reason "…"] [--date YYYY-MM-DD] [--cascade-dry-run] [--cascade-only GLOB] [--json] [--dry-run] [--quiet]`
 
 Atomically archive a doc.
 
@@ -105,53 +105,301 @@ Atomically archive a doc.
 3. Moves the file to `<archive_dir>/<YYYY-MM-DD>/<basename>`.
 4. Regenerates INDEX.md.
 
-`--reason` is appended as a free-form `Archived-reason:` metadata line (harvested but uninterpreted).
+`--reason` is appended as a free-form `Archived-reason:` metadata line
+(harvested but uninterpreted). It applies to the **primary document
+only** (M26 — D1): a cascaded candidate never receives an
+`Archived-reason:` line, because the reason explains why *this* archive
+was requested, not why each neighbour moved.
 
-**Invariant: `docs` never prompts unless `--interactive` (M14 — B1).**
-Every verb runs to completion (or refuses with a non-zero exit) without
-ever blocking on stdin, so an autonomous agent never stalls. The
-cascade surface below is the canonical example: bare `--cascade`
-archives the whole one-hop set with no prompt; the legacy `[y/N]`
-prompt is opt-in behind `--interactive`.
+**Invariant: `docs archive` never prompts on stdin at all (M26 — D2).**
+Retiring `--interactive` removed this verb's only stdin-reading path, so
+the M14 (B1) invariant is now unconditional — no flag, and no
+combination of flags, makes `docs archive` read stdin. Every invocation
+runs to completion, or refuses with a non-zero exit, without ever
+blocking. An autonomous agent never stalls.
 
-The cascade follows `Related: pairs-with` and `Related: child-of`
-edges. **One hop only — no transitive cascade.** Without any cascade
-flag, related docs are left in place (potential drift surfaced by
-`docs check`). Four mutually-exclusive flags shape the cascade
-(M14 — B1):
+#### Safe explicit archive selection (M26 — D1)
 
-- **`--cascade`** archives *every* one-hop `pairs-with` / `child-of`
-  relation that still exists on disk, to the same dated directory, with
-  **no prompt**. A loud stderr footer names the cascaded set so the
-  operator (or an agent reading stderr) sees exactly what moved:
-  `docs: cascade archived N related doc(s): <rel1>, <rel2>, …`. When the
-  set is empty the footer is `docs: cascade: no one-hop relations to archive`.
-- **`--cascade-dry-run`** prints the would-be cascade set (one
-  `docs: cascade would archive <rel>` line per related doc, on stderr)
-  and the footer, then **writes nothing** and exits 0. The primary doc
-  is not archived either — `--cascade-dry-run` is a preview of the whole
-  cascade operation, equivalent to `--cascade --dry-run`.
-- **`--cascade-only GLOB`** archives the *subset* of the one-hop set
-  whose related-doc **root-relative POSIX target path** matches `GLOB`.
-  `GLOB` is compiled by the same matcher `compile_exclude_predicate`
-  uses (gitignore-flavoured: `**`, `*`, `?`; bare patterns match any
-  path segment at any depth). The primary doc is always archived;
-  related docs outside the glob are left in place and named in the
-  footer. Composes with `--cascade-dry-run` (preview the filtered
-  subset, write nothing).
-- **`--interactive`** restores the legacy behaviour: each one-hop
-  relation prompts `docs: also archive <rel>? [y/N] ` on stderr and is
-  archived only on a `y`/`yes` answer. This is the **only** way to make
-  `docs archive` read stdin.
+Relationship verbs supply the **candidate set**; they never grant
+**authorization**. Exactly three shapes exist, and no other invocation
+writes a related document:
 
-**Combination matrix.** `--cascade`, `--cascade-only`, and
-`--interactive` are mutually exclusive (argparse rejects any pair with
-exit 2). `--cascade-dry-run` composes with `--cascade-only` (preview the
-filtered subset) but is **rejected together with `--interactive`** via
-an argparse mutually-exclusive group (a dry-run that prompts is
-incoherent). `--cascade-dry-run` alone is shorthand for
-`--cascade --dry-run`. The global `--dry-run` applied to any cascade
-mode previews without writing.
+| Invocation | Writes | Exit |
+|---|---|---|
+| `docs archive FILE` | `FILE` only | 0 |
+| `docs archive FILE --cascade-dry-run [--cascade-only GLOB]` | nothing (preview) | 0 |
+| `docs archive FILE --cascade-only GLOB` | `FILE` plus exactly the one-hop candidates matching `GLOB` | 0 |
+
+`docs archive FILE` stays **quiet** on stderr about the candidates it
+leaves in place: that is the correct safe behaviour, and a notice on
+every single-document archive would be noise. `--cascade-dry-run` is
+where candidates are named in prose; `--json` carries the whole
+candidate set in **every** mode, including a plain `docs archive FILE`.
+
+`--cascade-only GLOB` composes with the global `--dry-run`, producing
+byte-for-byte the same preview as
+`--cascade-dry-run --cascade-only GLOB`.
+
+##### Retired flags (M26 — D2)
+
+`--cascade` and `--interactive` are **retired in docs 2.0**. They stay
+**registered** in argparse — so an obsolete script or workflow skill
+gets a legible, actionable refusal rather than argparse's generic
+`unrecognized arguments` error — and they refuse unconditionally:
+
+```
+docs: archive: --cascade is retired in docs 2.0 and writes nothing; preview with `docs archive <file> --cascade-dry-run`, then write an explicit scope with `docs archive <file> --cascade-only '<glob>'`
+docs: archive: --interactive is retired in docs 2.0 and writes nothing; preview with `docs archive <file> --cascade-dry-run`, then write an explicit scope with `docs archive <file> --cascade-only '<glob>'`
+```
+
+The check runs **first** — immediately after argument parsing, before
+any filesystem access — so it wins over a missing file, a malformed
+`--date`, and a malformed primary. It is independent of `--dry-run`,
+`--cascade-dry-run`, `--cascade-only`, `--json`, `--date`, `--reason`,
+and `--quiet`, so the combination matrix contains no "it depends" cell,
+and it prints **even under `--quiet`**. Exit **2**, **zero bytes
+written**, no `--json` record. When both retired flags are passed,
+`--cascade` is the one reported (declaration order). Neither flag is in
+an argparse mutually-exclusive group any more: the single unconditional
+refusal covers every combination.
+
+A later major version may delete the flags outright.
+
+**Upgrading from 1.x.** `docs archive <slug>.md --cascade` becomes:
+
+```sh
+docs archive <slug>.md --cascade-dry-run          # see the whole neighbourhood
+docs archive <slug>.md --cascade-only '<slug>*'   # write exactly that scope
+```
+
+`--interactive` has no direct replacement — preview, then scope.
+
+##### Candidate discovery (M26 — D3)
+
+A **candidate** is a one-hop `Related: pairs-with` or `Related: child-of`
+edge of the primary document. **One hop only — no transitive cascade**
+(the M2 decision is unchanged). No other verb is ever a candidate; in
+particular M25's six reciprocal verbs (`precedes`/`follows`,
+`depends-on`/`required-by`, `blocks`/`blocked-by`) are not, because
+sequence, dependency, and blocking do not imply archive membership.
+
+- The set is **deduplicated on the canonical root-relative POSIX path**
+  (`posixpath.normpath` of the declared target), so `./b.md`,
+  `sub/../b.md`, and `b.md` are one candidate. **First declaration
+  wins** — it supplies the reported verb — and the surviving order is
+  `Related:` declaration order.
+- `--cascade-only GLOB` is matched against that same **canonical**
+  path, so an unusual spelling can neither dodge nor defeat a scope.
+  `GLOB` is compiled by the matcher `compile_exclude_predicate` uses
+  (gitignore-flavoured: `**`, `*`, `?`; a pattern with no `/` matches
+  any path segment at any depth).
+- A **self-edge** — a candidate whose canonical path equals the
+  primary's — is silently excluded. It is not a candidate and is not
+  reported as ineligible.
+- The candidate scan deliberately does **not** consult `[exclude]` /
+  `.docsignore`. Those govern the tree walks (pre-flight validation and
+  the reindex), not the primary document's own declared edges.
+
+Three conditions make a candidate **ineligible**. An ineligible
+candidate is never written, is named in the preview, and carries a
+machine-stable `reason` in the `--json` record:
+
+| `reason` | Condition |
+|---|---|
+| `already-archived` | The canonical path is the archive subtree itself or lies under it (per `[archive] dir`). Archiving an archived document is meaningless, and doing it silently relocates and re-dates history. |
+| `unresolved-target` | The target does not resolve to a file. `docs check`'s `broken-ref` still owns that finding. |
+| `outside-root` | The canonical path escapes the docs root (e.g. `../escape.md`). |
+
+The fourth `reason`, `not-selected`, is not an ineligibility: it marks
+an eligible candidate that the scope did not select (or that had no
+scope to select it).
+
+##### Preview (M26 — D6)
+
+`--cascade-dry-run`, with or without `--cascade-only`, writes nothing,
+exits 0, and names the primary's destination plus **every** one-hop
+candidate — selected, not selected, or ineligible. A filtered preview
+still names what the scope is leaving behind, because that is exactly
+the judgement the preview exists to support.
+
+Human output goes to **stderr**, gated on `not --quiet`, so `--json`
+stdout stays byte-clean:
+
+```
+docs: archive: would archive <primary-rel> -> <dest-rel>
+docs: archive: candidate <rel> — selected -> <dest-rel>
+docs: archive: candidate <rel> — not selected (outside --cascade-only '<glob>')
+docs: archive: candidate <rel> — not selected (no --cascade-only scope)
+docs: archive: candidate <rel> — ineligible (already archived)
+docs: archive: candidate <rel> — ineligible (target does not resolve to a file)
+docs: archive: candidate <rel> — ineligible (target resolves outside the docs root)
+docs: archive: --cascade-only '<glob>' matched none of the <N> one-hop candidate(s)
+docs: archive: <N> candidate(s): <S> selected, <U> not selected, <I> ineligible
+docs: archive: preview only — nothing was written
+```
+
+Every path is the **canonical root-relative POSIX** form. The `candidate`
+lines and the counts footer are printed only when a cascade flag is
+present (`--cascade-dry-run` or `--cascade-only`); a plain
+`docs archive FILE [--dry-run]` prints just its own line (D1's quiet
+rule). The `matched none` line appears only under a preview whose
+`--cascade-only` selected nothing.
+
+**A preview is never a write, so it never fails.** A `--cascade-only`
+that selects nothing still exits **0** under `--cascade-dry-run` (or the
+global `--dry-run`); the miss stays visible as the `matched none` line
+and as `"selected": []` in the `--json` record. The exit-2 refusal below
+governs the **write** path only.
+
+A real apply prints the same lines, with two differences: the primary's
+line reads `docs: archive: archived <primary-rel> -> <dest-rel>`, and
+the `preview only` line is absent. The `candidate` lines are identical
+in both modes — the plan is what happened, because a scoped write is
+all-or-nothing.
+
+##### The scoped write and its pre-flight (M26 — D4)
+
+`--cascade-only GLOB` builds and validates **one complete plan** before
+mutating anything. The plan covers the primary and every selected
+candidate, and the pre-flight proves, for each member:
+
+- the document parses and has an editable metadata block;
+- the document is **not** already under the archive subtree — an
+  already-archived **primary** is a refusal (see below), not a
+  re-dating;
+- its archive destination is computed and is not already occupied;
+- no two members resolve to the **same** destination (the basename
+  collision that silently dropped a document in 1.x);
+- the source file and the destination directory are writable — checked
+  with an explicit access test, because an atomic write succeeds on a
+  read-only file inside a writable directory. When the dated
+  destination directory does not exist yet, the nearest existing
+  ancestor is checked instead.
+
+The whole-tree pre-flight validation walk (M12 / M14 — A6) still runs,
+still honours `[exclude]` / `.docsignore`, and still exits 1.
+
+Any **handled** failure refuses the whole operation: non-zero exit,
+**zero bytes written**, including the primary, and no `--json` record.
+Only after the plan validates does execution begin.
+
+Pre-flight refusals, each printed even under `--quiet`:
+
+```
+docs: archive: <rel> is already under the archive subtree; refusing before any write
+docs: archive: <relA> and <relB> would both archive to <dest-rel>; refusing before any write
+docs: archive: <rel> is not writable; refusing before any write
+docs: archive: <dest-dir-rel> is not writable; refusing before any write
+docs: archive: <rel> has no editable metadata block; refusing before any write
+docs: archive: archive destination already exists: <dest-rel> (for <rel>); refusing before any write
+```
+
+The archived-primary refusal is unconditional across all three D1
+shapes — `docs archive F`, `docs archive F --cascade-dry-run`, and
+`docs archive F --cascade-only GLOB`. D1's table describes
+authorization, not an exemption from validity checks.
+
+**Residual boundary, stated plainly.** Every failure the tool can
+foresee is handled by the pre-flight. An unexpected `OSError` *during*
+execution is reported as an exact **partial-state admission** — naming
+which documents moved and which remain at their original paths — and is
+**not** rolled back:
+
+```
+docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <relA> -> <newA>, <relB> -> <newB>. Still at their original paths: <relC>, <relD>. Repair manually.
+```
+
+When nothing had moved yet the archived list is rendered as the literal
+word `none` (`Archived: none.`), never as a blank. Exit 2, no `--json`
+record. Extending M25 — D5's staged-publish-plus-rollback contract from
+two documents to N was considered and explicitly declined for M26.
+
+##### An empty selection is a refusal (M26 — D5)
+
+A `--cascade-only GLOB` **write** that selects nothing refuses with exit
+**2** and zero bytes written — the primary is **not** archived — and
+says which case it is:
+
+```
+docs: archive: --cascade-only '<glob>' matched none of the <N> one-hop candidate(s); refusing before any write
+docs: archive: <rel> has no one-hop pairs-with / child-of candidates; refusing before any write (use `docs archive <file>` to archive it alone)
+```
+
+"Matched" means **selected**: eligible *and* in scope. `<N>` is the size
+of the whole deduplicated candidate set, ineligible members included, so
+a glob that only hits an already-archived neighbour reports the first
+message and the preview explains why.
+
+An empty or comment-only pattern is its own refusal, before any
+candidate work:
+
+```
+docs: archive: --cascade-only must not be empty
+```
+
+Primary-only archive already has an unambiguous spelling —
+`docs archive FILE` — so a scope that selects nothing is always a
+mistake, and in 1.x it was indistinguishable from success.
+
+##### `docs archive --json` (M26 — D7)
+
+`--json` is declared locally on the `archive` subparser (as `check`,
+`list`, `migrate`, and `relate` do) and emits **one** operation-plan
+record on stdout, with an **identical shape** for a preview and for a
+real apply, so the two are diffable:
+
+```json
+{
+  "primary": {
+    "source": "docs/m25.md",
+    "path": "m25.md",
+    "destination": "archive/2026-08-12/m25.md"
+  },
+  "date": "2026-08-12",
+  "scope": "m25-*",
+  "candidates": [
+    {"path": "m25-impl.md", "verb": "pairs-with", "selected": true,
+     "destination": "archive/2026-08-12/m25-impl.md", "reason": null},
+    {"path": "cli.md", "verb": "pairs-with", "selected": false,
+     "destination": null, "reason": "not-selected"},
+    {"path": "archive/2026-01-01/old.md", "verb": "pairs-with",
+     "selected": false, "destination": null, "reason": "already-archived"}
+  ],
+  "dry_run": true,
+  "applied": false,
+  "index_refreshed": false
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `primary` | object | `source` is the `FILE` argument exactly as typed; `path` is its canonical root-relative POSIX path; `destination` is the planned archive path. |
+| `date` | string | The archive date actually used (`--date` or today). |
+| `scope` | string \| null | The `--cascade-only` value as typed, or null. |
+| `candidates` | array | The whole deduplicated one-hop set, in `Related:` declaration order. Present in **every** mode, including a plain `docs archive FILE`. |
+| `dry_run` | bool | True under `--dry-run` or `--cascade-dry-run`. |
+| `applied` | bool | True iff bytes were written. |
+| `index_refreshed` | bool | True iff the end-of-batch reindex ran and succeeded. |
+
+Each `candidates` record: `path` (canonical root-relative POSIX),
+`verb` (the discovering verb — `pairs-with` or `child-of`, first
+declaration winning), `selected` (bool), `destination` (canonical
+root-relative POSIX, non-null **iff** `selected`), and `reason` (null
+**iff** `selected`, otherwise one of `not-selected`,
+`already-archived`, `unresolved-target`, `outside-root`).
+
+The top-level key set is **closed** and ordered as shown. Under a plain
+`docs archive FILE` every candidate is reported with
+`"selected": false, "reason": "not-selected"` — the stderr quiet rule
+(D1) governs prose, not the record, and the record exists for the agent
+deciding whether a selection is correct.
+
+**No `--json` record on a refusal.** Every refusal above exits non-zero
+with empty stdout; the exit code plus the stderr message is the
+contract. An **INDEX-refresh** failure is different — it is a
+post-write failure with every document already moved correctly — so the
+record **is** emitted there, with `"applied": true,
+"index_refreshed": false`, and the run exits 2.
 
 Atomicity: the metadata edit happens in a tmp file, fsync'd, renamed; the move happens only after the edit succeeds; the index regen runs last. A failure leaves the original file untouched.
 
@@ -164,7 +412,9 @@ The rewrite is part of the same atomic batch as the move + lifecycle
 edit: a single end-of-batch INDEX refresh covers everything. That
 refresh honours `[exclude]` / `.docsignore` (M14 — A6) — a malformed
 *excluded* file never fails the post-move reindex (same threading as
-`docs touch`, above).
+`docs touch`, above). Because a candidate is deduplicated on its
+canonical path, the rewrite is fed **one pair per declared spelling**,
+so a `./b.md` bullet is repointed exactly like a `b.md` one.
 
 **Archive-subtree edge integrity (M18).** The referring-edge rewrite
 now repoints **two** edge classes to the new
@@ -172,7 +422,7 @@ now repoints **two** edge classes to the new
 docs into the archive subtree never orphans their `Related:` edges:
 
 1. **The moved doc's OWN `Related:` bullets** whose target is *itself* a
-   doc moving in the same archive operation. Under `--cascade` a
+   doc moving in the same archive operation. Under `--cascade-only` a
    pair/trio lands with every intra-archive edge resolved (e.g. a plan
    and its log archived together each end up pointing at the other's new
    archive path); a *solo* archive of a doc whose co-moving target set is
@@ -182,7 +432,7 @@ docs into the archive subtree never orphans their `Related:` edges:
    (previously left dangling, since the rewriter skipped archived docs).
 
 The "targets that moved" set is defined precisely as exactly the batch's
-`moves`: the primary archive target plus every cascaded relation, each
+`moves`: the primary archive target plus every selected candidate, each
 carried as an `(old_rel, new_rel)` pair. An edge is rewritten **iff** its
 current target equals some `old_rel` in that batch — never any other
 archived-doc content. Both classes are handled by the same
@@ -195,17 +445,23 @@ at a doc moving in the same archive operation, which are repointed to the
 new archive path. All other archived-doc content — prose, other metadata,
 and edges to docs that did *not* move — is left byte-identical.
 
-The cascade flags (M12 — OQ-D; M14 — B1) extend this — when the cascade
-archives related docs B, C, …, the referring-edge rewrites for every
-moved doc run as a single atomic batch with one INDEX refresh at the
-end. Per-doc cascade-archive failures still surface but only docs that
-actually moved get their referring edges rewritten. Cascade remains
-one-hop only (M2 decision unchanged).
+The scoped cascade (M12 — OQ-D; M14 — B1; M26 — D1) extends this — when
+the write archives selected candidates B, C, …, the referring-edge
+rewrites for every moved doc run as a single atomic batch with one INDEX
+refresh at the end. A scoped write is all-or-nothing, so there is no
+per-candidate failure to surface. Cascade remains one-hop only (M2
+decision unchanged).
 
-Exits 1 on metadata-edit failure; 2 on archive-dir creation failure, an
-`OSError` raised while rewriting a referring edge after the move
-(M14 — A4), or an invalid cascade-flag combination. `--cascade-dry-run`
-exits 0 and writes nothing.
+##### `docs archive` exit codes (M26 — D2 / D4 / D5)
+
+Exit **1** is reserved for the conditions 1.x already assigned it; every
+**new** M26 refusal exits **2**.
+
+| Exit | Condition |
+|---|---|
+| 0 | Success; any preview (`--dry-run` / `--cascade-dry-run`), including one whose `--cascade-only` selected nothing |
+| 1 | The primary is missing, or does not parse; a plan member has no editable metadata block; the archive destination slot is already occupied; the whole-tree pre-flight walk finds a malformed referring doc (move aborts) |
+| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty or comment-only `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 
 ### `docs mv <old> <new>`
 
@@ -1770,8 +2026,8 @@ M12 / M14 / M15 / M25-specific exit-code shape:
 | `stamp` (M15 — B3) | success / dry-run | a named file is missing or outside the docs root (validate-all-first abort) | invalid `--role`; no `.docs.toml` ancestor or `--root` without `.docs.toml` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
-| `archive` (referring-edge) | success | referring doc has malformed metadata (move aborts) | archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); invalid cascade-flag combination (M14 — B1) |
-| `archive --cascade-dry-run` | preview only; writes nothing (exit 0) | — | — |
+| `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5) | success | the primary is missing or does not parse; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty or comment-only `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
+| `archive --cascade-dry-run` / `--dry-run` | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing | — | — |
 | `mv` (M14 — A1 / A4) | success / dry-run | collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1); `OSError` mid edge-rewrite after the move (A4); both paths outside the docs root |
 | `relate add\|remove` (M25 — D3 / D4 / D5) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; unknown verb; self-edge; malformed `--date`; empty or multi-line `--reason`; an archived endpoint without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
 

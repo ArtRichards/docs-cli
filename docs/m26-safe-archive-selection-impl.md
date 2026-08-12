@@ -22,19 +22,21 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M26 — Safe explicit archive selection
 - Started: 2026-08-12 (milestone setup; no TDD phase started)
-- Progress: **Milestone setup complete, with all seven setup questions
-  RESOLVED (Q1/Q5/Q6 by the operator; Q2/Q3/Q4/Q7 conductor-resolved).
-  Phase 1 — Define Contract is next and does not re-open them.**
+- Progress: **Phase 1 — Define Contract complete (2026-08-12).** All seven
+  setup questions were RESOLVED before Phase 1 (Q1/Q5/Q6 by the operator;
+  Q2/Q3/Q4/Q7 conductor-resolved) and Phase 1 did not re-open them; it froze
+  the exact surface against them, plus the seventeen Step-1 planning
+  questions. Phase 2 — Write Tests (RED) is next.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
-- Branch: `m26/milestone-setup` for setup; implementation branches are chosen
-  when Phase 1 begins.
+- Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
+  (Phases 1–4).
 
 ## TDD phase progress
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | Freeze exact refusal messages/exit codes, candidate/dedup/canonicalization rules, ineligibility reasons, empty-selection messages, preview shape, pre-flight boundary + partial-state admission wording, and the `--json` record schema — against the already-resolved Q1–Q7. |
+| 1. Define Contract | **Done** | 2026-08-12 | Froze the compatibility matrix, the message catalog (refusals, preview/apply lines, partial-state admission), the exit-code split, the `--json` schema and field table, and the Phase-5 signatures. Seventeen Step-1 planning questions recorded as BINDING. No `cli.py` edit (logged deviation). |
 | 2. Write Tests (RED) | Pending | — | E1–E5 regression locks, refusals (bare cascade, `--interactive`, archived primary), preview, scoped write, `--json` preview/apply shape identity, and failure-path locks. |
 | 3. Create Data/Fixtures | Pending | — | One-semantic-per-tree candidate (E1), duplicate (E2), collision (E3), and archived-neighbour (E4) trees. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture the classified failure set; prove no unrelated regression. |
@@ -145,9 +147,173 @@ repository file was mutated during setup.
   in the milestone doc; Phase 1 freezes exact messages, exit codes, and the
   `--json` schema against them rather than re-litigating scope.
 
-## Phase 1 — Define Contract
+## Phase 1 — Define Contract — 2026-08-12
 
-_Not started._
+### Objective
+
+Freeze every byte of surface Phase 2 will assert against: the compatibility
+matrix (no "it depends" cell), the refusal / preview / apply / partial-state
+message catalog, the exit-code split, the candidate discovery, dedup,
+canonicalization and ineligibility rules, the `--json` operation-plan schema
+and its field table, and the Phase-5 signatures. No business logic lands, and
+the seven setup questions are not re-opened.
+
+### Actions taken
+
+**`docs/cli.md`** — the whole `docs archive` section rewritten (the heading's
+flag list now reads `[--cascade-dry-run] [--cascade-only GLOB] [--json]
+[--dry-run] [--quiet]`), with new subsections:
+
+- *Safe explicit archive selection (M26 — D1)* — the three-shape
+  authorization table, the quiet-stderr rule with its `--json` exception, and
+  the `--cascade-only GLOB --dry-run` ≡ `--cascade-dry-run --cascade-only GLOB`
+  equivalence.
+- *Retired flags (M26 — D2)* — both verbatim refusal lines, the
+  runs-first / independent-of-every-flag / prints-under-`--quiet` /
+  no-argparse-mutex statements, the `--cascade`-wins tie-break, and an
+  **Upgrading from 1.x** block with the two replacement invocations.
+- *Candidate discovery (M26 — D3)* — one hop, the never-candidate reciprocal
+  verbs, canonical dedup with first-declaration-wins, canonical scope
+  matching, the silent self-edge exclusion, the explicit
+  no-`[exclude]`-consultation statement, and the three-row ineligibility table
+  (`already-archived`, `unresolved-target`, `outside-root`) plus the
+  `not-selected` non-ineligibility.
+- *Preview (M26 — D6)* — the ten verbatim stderr lines, the
+  cascade-flag-gating of the `candidate` lines, the "a preview is never a
+  write, so it never fails" exit-0 rule, and the two differences an apply
+  shows.
+- *The scoped write and its pre-flight (M26 — D4)* — the five per-member
+  proofs (including the explicit writability access test and the
+  nearest-existing-ancestor rule), the six verbatim pre-flight refusals, the
+  all-three-shapes archived-primary statement, and the residual partial-state
+  admission with its `Archived: none` branch.
+- *An empty selection is a refusal (M26 — D5)* — the two write-path refusals,
+  the definition of "matched" as *selected*, `<N>` counted over the whole
+  deduplicated set, and the empty-pattern refusal.
+- *`docs archive --json` (M26 — D7)* — the worked record, the seven-row field
+  table in the `relate --json` style, the per-candidate key set, the closed
+  key set, the always-present candidate list, and the
+  no-record-on-refusal / record-on-INDEX-refresh-failure boundary.
+- *`docs archive` exit codes* — the Q4 split as its own table.
+- The M12 referring-edge and M18 archive-subtree-edge blocks kept, with
+  `--cascade` prose updated to `--cascade-only`, the per-candidate-failure
+  sentence replaced by the all-or-nothing statement, and a new sentence
+  pinning the one-`(alias, new_rel)`-pair-per-declared-spelling rule.
+- Deleted as now-false: the four-mutually-exclusive-flags paragraph, the
+  `--cascade` / `--interactive` bullets, the "`--cascade-dry-run` alone is
+  shorthand for `--cascade --dry-run`" sentence, the two legacy footer
+  strings, and the old *Invariant: `docs` never prompts unless
+  `--interactive`* paragraph (replaced by the unconditional
+  **`docs archive` never prompts on stdin at all**).
+- `## Exit codes (summary)`: both archive rows rewritten against the Q4 split.
+
+**`docs/convention.md`** — new *Safe explicit archive selection (M26 — D1)*
+paragraph in `## Archive subtree`, beside the M18 and M25 — D4 exceptions:
+entry into the archive is authorized explicitly, never by relationship; the
+three shapes; and the two author-facing rules (an archived doc is never
+re-archived, in either role; `Archived-reason:` is primary-only).
+
+**Milestone doc** — new `## Decisions (Phase 1 — BINDING)` carrying the
+compatibility matrix, the Q4 exit split, the frozen message catalog, the
+`--json` schema, the frozen Phase-5 signatures with their reuse list, the
+seventeen resolved Step-1 planning questions, and the logged Phase-1
+deviation. D1, D2, D3, D5, D6, and D7 amended in place so the binding scope
+and the frozen contract cannot disagree — in particular **the D5/D6
+contradiction is removed, not papered over** (D5 now says "a `--cascade-only`
+**write** that selects nothing"; D6 states the exit-0 preview rule and both
+cross-reference each other). Phase-1 checklist row and deliverable 1 ticked;
+Progress line updated.
+
+**Lockstep chores** — `cp docs/{cli,convention}.md
+src/docs_cli/skill/references/`; `docs touch` on the four edited docs
+(implicit reindex); `tests/fixtures/expected/docs-INDEX.md` re-synced from the
+regenerated `docs/INDEX.md`.
+
+### Decisions / issues
+
+- **Q2 (operator) forced a real amendment, not a footnote.** The setup text
+  had D5 ("an empty selection refuses, exit 2") and D6 ("a preview writes
+  nothing and exits 0") both claiming
+  `archive F --cascade-dry-run --cascade-only <no-match>`. D5 is now scoped to
+  the **write** path in its own heading sentence, and D6 carries the exit-0
+  rule explicitly with the `matched none` line and `"selected": []` named. The
+  compatibility matrix has a dedicated row for the case.
+- **Q4 (operator) — the exit-code split is a table, not prose.** Exit 1 stays
+  for a plan member with no editable metadata block, an occupied destination
+  slot, and the whole-tree pre-flight walk; the five new M26 refusals exit 2.
+  The pre-existing pins (`cli.md`'s matrix row and
+  `test_archive_referring_edge_rewrite_is_atomic`) therefore keep their exact
+  meaning.
+- **The `matched none` preview line is gated on `not --quiet`.** The operator's
+  answer calls it "loud", which it is — it is on stderr and explicit — but
+  making it the one preview line that ignores `--quiet` would add an
+  it-depends rule to the very matrix D2 exists to flatten. `--quiet` plus a
+  preview is already a contradiction in intent, and the `--json` record
+  carries `"selected": []` for the machine consumer. Refusals, by contrast,
+  **do** print under `--quiet` — they are failures, not output.
+- **The `candidate` lines are identical in preview and apply.** Only the
+  primary's verb (`would archive` / `archived`) and the presence of the
+  `preview only — nothing was written` line distinguish the modes. A scoped
+  write is all-or-nothing, so the plan is literally what happened; one form
+  means one string to keep in parity, and it makes a preview/apply stderr diff
+  as small and readable as the `--json` diff.
+- **`docs: archive: <rel> has no editable metadata block; refusing before any
+  write` was added to the catalog.** The Step-1 plan's catalog listed no
+  message for the exit-1 metadata-block pre-flight refusal that its own test
+  #17 (`test_preflight_refuses_a_candidate_without_a_metadata_block`)
+  requires. Added in the same family and the same shape as its neighbours. The
+  **primary**'s malformed case is unchanged — it is still caught by the
+  existing `parse()` call before the plan exists, and still prints
+  `docs: <exc>` at exit 1.
+- **The frozen `--json` key set carries no `reason` field**, so `--reason` is
+  observable only in the archived primary's `Archived-reason:` line, not in
+  the operation-plan record — unlike `relate --json`, which does carry
+  `reason`. The Step-1 plan froze the top-level key set as closed and ordered,
+  so Phase 1 implemented it verbatim rather than widening the contract
+  unilaterally. **Surfaced for the fresh-eyes review**; a Phase-7 addition
+  would be a one-line schema change if the reviewer wants the symmetry.
+- **Deviation (approved, same as M25).** Phase 1 made **zero** `cli.py` edits.
+  Stubs would change the Phase-4 subprocess RED reasons and risk baseline
+  behaviour, and the phase's own exit criterion is "no behavior changes". The
+  signatures are frozen in the milestone doc's Decisions and land in Phase 5.
+- **Phase-7 follow-through recorded by exact name:** `plan.md:454`'s stale
+  resolved-question bullet (still claims `--cascade` prompts `y/N`);
+  `src/docs_cli/skill/SKILL.md:62`'s archive row (lists `--cascade`);
+  `src/docs_cli/skill/references/use-cases.md:25` ("`--cascade` opt-in for
+  one-hop dependents"); `CHANGELOG.md` under `UNRELEASED`. Also noted, and
+  **not** in the Phase-7 list: `docs/agent-native-invocation.md:250`, a
+  `Lifecycle: draft`, `Project: ideas` proposal doc from 2026-06-03 whose
+  Layer-5 bullet still names `--cascade` as a pre-answerable replacement for
+  the prompt. It is a historical proposal record, not a spec on the
+  surface-parity gate; left for the operator to decide.
+
+### Verification
+
+- `grep` for every verbatim string Phase 2 will assert, in `docs/cli.md` — all
+  present (`is retired in docs 2.0 and writes nothing`,
+  `is already under the archive subtree`, `--cascade-only must not be empty`,
+  `matched none of the`, `has no one-hop pairs-with / child-of candidates`,
+  `would both archive to`, `has no editable metadata block`,
+  `archive destination already exists`, `is not writable; refusing before any
+  write`, `candidate `, `— selected -> `, `not selected (outside
+  --cascade-only`, `not selected (no --cascade-only scope)`,
+  `ineligible (already archived)`, `ineligible (target does not resolve to a
+  file)`, `ineligible (target resolves outside the docs root)`,
+  `candidate(s): `, `preview only — nothing was written`,
+  `PARTIAL ARCHIVE — not rolled back`, `Archived: none`, `not-selected`,
+  `already-archived`, `unresolved-target`, `outside-root`).
+- `.venv/bin/python -m pytest tests/test_skill_refs.py tests/test_cli_index.py
+  tests/test_cli_check.py -q` — passed (bundled refs byte-identical; INDEX
+  snapshot re-synced).
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 45 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 46 source files.
+- `.venv/bin/python -m pytest -q` — **777 passed** (unchanged from the Phase-0
+  baseline; no test file and no source file was touched in Phase 1).
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- `git diff --stat src/docs_cli/cli.py` — **empty**, per the logged deviation.
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+
 
 ## Milestone completion summary
 
