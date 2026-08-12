@@ -1,0 +1,6 @@
+[project]
+name = "archive-collision"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

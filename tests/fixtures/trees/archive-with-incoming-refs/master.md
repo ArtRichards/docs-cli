@@ -10,6 +10,7 @@ Related:
 
 ## Body
 
-The "master" half of a pairs-with pair. The cascade-archive test invokes
-`docs archive master.md --cascade` and answers `y`, which moves both
-`master.md` and `sidekick.md` into `archive/<date>/`.
+The "master" half of a pairs-with pair. The scoped-cascade test invokes
+`docs archive master.md --cascade-only 'sidekick.md'`, which moves both
+`master.md` and `sidekick.md` into `archive/<date>/` with no prompt — bare
+`--cascade` is retired (M26 — D2) and `docs archive` never reads stdin.

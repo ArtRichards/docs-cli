@@ -22,12 +22,13 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M26 — Safe explicit archive selection
 - Started: 2026-08-12 (milestone setup; no TDD phase started)
-- Progress: **Phases 1–2 complete (2026-08-12 / 2026-08-13).** All seven
+- Progress: **Phases 1–3 complete (2026-08-12 / 2026-08-13).** All seven
   setup questions were RESOLVED before Phase 1 (Q1/Q5/Q6 by the operator;
   Q2/Q3/Q4/Q7 conductor-resolved) and Phase 1 did not re-open them; it froze
   the exact surface against them, plus the seventeen Step-1 planning
-  questions. Phase 2 wrote the RED suite (863 collected) and closed two
-  Phase-1 gaps. Phase 3 — Create Data/Fixtures is next.
+  questions. Phase 2 wrote the RED suite and closed two Phase-1 gaps; Phase 3
+  added the four `archive-*` fixture trees (867 collected). Phase 4 — Run
+  Tests (RED Baseline) is next.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -39,7 +40,7 @@ the milestone checklist synchronized.
 |---|---|---|---|
 | 1. Define Contract | **Done** | 2026-08-12 | Froze the compatibility matrix, the message catalog (refusals, preview/apply lines, partial-state admission), the exit-code split, the `--json` schema and field table, and the Phase-5 signatures. Seventeen Step-1 planning questions recorded as BINDING. No `cli.py` edit (logged deviation). |
 | 2. Write Tests (RED) | **Done** | 2026-08-13 | +89 items (863 collected): new `tests/test_archive_plan.py` (32), `tests/test_cli_archive.py` (+34, 6 pre-existing ids deliberately changed and 3 deleted/replaced), `tests/test_skill.py` (+2), `tests/test_cli_check.py` (+1). Two Phase-1 gaps closed: ineligibility-reason precedence and the nine-step check order. |
-| 3. Create Data/Fixtures | Pending | — | One-semantic-per-tree candidate (E1), duplicate (E2), collision (E3), and archived-neighbour (E4) trees. |
+| 3. Create Data/Fixtures | **Done** | 2026-08-13 | Four committed trees (`archive-neighborhood` E1, `archive-duplicate-edge` E2, `archive-collision` E3, `archive-archived-neighbour` E4), each `docs check`-clean; three existing fixtures' prose corrected off the retired flag. 863 → 867 collected. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture the classified failure set; prove no unrelated regression. |
 | 5. Update Base Interfaces | Pending | — | Archive plan/move models, candidate-planning helpers, pre-flight validators, `archive_plan_to_json`; no behaviour change. |
 | 6. Implement Offline/Core Path | Pending | — | Validate-all-first planning, deduplication, archived exclusion, collision detection, safe refusal, partial-state admission. |
@@ -492,6 +493,74 @@ invocation that replaces bare `--cascade`.
 - The full RED census is Phase 4's; at the end of Phase 2 the fixture-backed
   tests still fail on a missing `tests/fixtures/trees/archive-*` directory,
   which Phase 3 supplies.
+
+## Phase 3 — Create Data/Fixtures — 2026-08-13
+
+### Objective
+
+Give Phase 2's E1–E5 locks committed trees to run against — one semantic per
+tree, structure-only, static dates — per `test-strategy.md`'s fixture policy,
+and stop the existing fixtures teaching a flag M26 retires.
+
+### Trees added
+
+| Tree | Contents | Isolates |
+|---|---|---|
+| `archive-neighborhood/` | `milestone.md` with `child-of: plan.md` and `pairs-with:` {`milestone-impl.md`, `cli.md`, `convention.md`, `test-strategy.md`, `status.md`}, plus those six docs | **E1** — six one-hop candidates; only the impl log belongs in the archive event, and `--cascade-only 'milestone*'` must name the other five as not selected |
+| `archive-duplicate-edge/` | `a.md` with `pairs-with: b.md` **and** `child-of: b.md`; `b.md` | **E2** — one candidate, first declaration wins, no false failure line |
+| `archive-collision/` | `root.md` with `pairs-with: x/dup.md` and `pairs-with: y/dup.md`; both `dup.md`s | **E3** — two sources, one `archive/<date>/dup.md` destination |
+| `archive-archived-neighbour/` | `plan.md` with `pairs-with: log.md` and `pairs-with: archive/2026-01-01/old.md`; `log.md`; the archived doc with `Lifecycle: archived`, `Archived-reason:`, `Updated: 2026-01-01` | **E4** — the ineligible candidate, the byte/date-immutability target, and the archived-primary refusal target |
+
+Each carries its own `.docs.toml` (`[project] name`, `[archive] dir`,
+`date_format`). Every `Updated:` is static and no test passes a stale window
+to these trees, so no committed date can rot.
+
+**Split decision (the M25 rule, `test-strategy.md`).** Static trees for the
+*shape* semantics above — discovery, dedup, collision, ineligibility — and
+inline `tmp_path` builders for everything that writes and then
+byte-compares: `tests/test_archive_plan.py` in its entirety, the retired-flag
+matrix, the empty-scope and unwritable cases, the canonical-spelling case, and
+the exit-code-split cases. A `copytree` of a static tree would be pure
+overhead there.
+
+**E1 is pinned on the committed fixture, not the live `docs/` tree**
+(Phase-1 Q13), so the lock cannot rot as this project's own neighborhood
+changes. The live-tree run stays Phase-9 dogfood evidence.
+
+### Fixture prose corrected
+
+Three committed fixtures still taught the retired flag in their bodies, which
+would have made them lie the moment Phase 7 lands. No test byte-compares those
+bodies against a snapshot, so the edit is safe:
+
+- `archive-trio/feature.md` — `--cascade` → `--cascade-only 'feature-*.md'`,
+  plus an explicit "bare `--cascade` is retired (M26 — D2)" note.
+- `archive-with-incoming-refs/master.md` — the "invokes `--cascade` and
+  answers `y`" sentence replaced by the scoped, promptless invocation the
+  migrated test now runs.
+- `archive-with-incoming-refs/witness.md` — same substitution.
+
+### Verification
+
+- `.venv/bin/docs check tests/fixtures/trees/<tree>` for all four new trees —
+  **no violations found (exit 0)** in every case. Intended finding set is
+  therefore empty by construction: the trees exercise archive *selection*, not
+  `docs check` rules, so any finding would be an accident. Re-checked
+  `archive-trio`, `archive-with-incoming-refs`, and `archive-pair` after the
+  prose edits — all still clean.
+- **Reciprocal-verb constraint honoured.** None of the four trees uses a
+  recognized reciprocal verb (`precedes`/`follows`, `depends-on`/`required-by`,
+  `blocks`/`blocked-by`), so the four parametrizations they add to
+  `test_check_tree_legacy_fixtures_gain_no_new_findings` (its list is derived
+  from `_TREES.iterdir()`) pass: **23 passed** for that test, up from 19.
+- Collection: 863 → **867** items, exactly the four new parametrizations.
+- Two Phase-2 locks flipped GREEN as intended now that their trees exist:
+  `test_preview_of_a_primary_only_archive_names_no_candidates` (degenerate)
+  and `test_check_clean_after_a_scoped_archive` (the M12/M18 no-regression
+  proof at the check gate).
+- `git status` shows exactly the intended new files: 15 files across four new
+  directories, plus the three prose corrections.
+- No `src/docs_cli/cli.py` change.
 
 ## Milestone completion summary
 
