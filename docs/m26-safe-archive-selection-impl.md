@@ -33,9 +33,10 @@ the milestone checklist synchronized.
   and proved mechanically that 769 of the 777 pre-existing ids are still
   GREEN, the other 8 deliberately changed. **Phases 1–4 changed no product
   code** — `git diff src/docs_cli/cli.py` was empty at the end of Step 1.
-  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–7 —
-  Update Base Interfaces, Implement Core, and Update Wrappers — are complete;
-  every M26 behaviour test is GREEN and the surface is in parity.
+  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–8 are
+  complete — the full suite is **888 GREEN**, with 774 of the 777
+  pre-existing ids mechanically proven present and passing and 3 deliberately
+  removed.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -52,7 +53,7 @@ the milestone checklist synchronized.
 | 5. Update Base Interfaces | **Done** | 2026-08-13 | `CoordinatedWriteError` widened (+ keyword-only `exit_code`, defaulting to today's 2), `ARCHIVE_EXCLUSION_REASONS`, `ArchiveMove` / `ArchivePlan` (+ `moves`), `_is_archived_rel`, `_archive_destination`, `archive_plan_to_json`. No behaviour change; `_cmd_archive` untouched. **781 passed, 103 failed** — exactly the predicted +1. |
 | 6. Implement Offline/Core Path | **Done** | 2026-08-13 | `_candidate_exclusion_reason`, `archive_candidates`, `plan_archive`, `preflight_archive_plan`, `apply_archive_plan`, `_archive_partial_state`. `_archive_one` verbatim; `_cmd_archive` still untouched. **814 passed, 70 failed** — exactly the predicted +33, the whole of `tests/test_archive_plan.py`. |
 | 7. Update Tool/Wrapper Layer | **Done** | 2026-08-13 | argparse (mutex group deleted, both retired flags marked, local `--json`), `_cmd_archive` rewritten in the nine-step check order, `_print_archive_lines`; `_cascade_set` / `_print_cascade_footer` / `_cascade_archive` deleted — the verb's last stdin read goes with them. Surface parity: SKILL.md, `references/use-cases.md`, byte-identical mirrors, `UNRELEASED` CHANGELOG, `cli.md`, `plan.md`. **887 passed, 1 failed of 888** — the one RED is a defective Step-1 test helper, fixed in its own commit. |
-| 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts. |
+| 8. Run Tests (GREEN) | **Done** | 2026-08-13 | **888 collected, 888 passed**, 0 collection errors, 0 tracebacks, 0 xfail/xpass. ruff / format / mypy / `docs check --root docs` clean; mirrors byte-identical; INDEX snapshot in sync. Mechanical proof against `37d7f1a`: 774 of the 777 pre-existing ids present and **all GREEN** (re-run as an explicit id list), 3 deliberately removed, 114 new — 774 + 114 = 888. Ran as uid 1000, so the five root-skipped locks really executed. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Preview + scoped archive of a real milestone pair on a throwaway tree copy. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summaries, hand off to M27. |
 
@@ -1256,6 +1257,83 @@ now do. Every other caller passes an existing `tmp_path`, for which
 Recorded here, and surfaced to the operator and the fresh-eyes review, rather
 than folded silently into the Phase-7 commit — the M25 precedent for a
 defective Step-1 test (`7e4feb1`).
+
+## Phase 8 — Run Tests (GREEN) — 2026-08-13
+
+### Objective
+
+Run every gate, and prove mechanically — not by assertion — that no
+pre-existing test was lost or broken.
+
+### The gate
+
+```
+.venv/bin/python -m pytest tests/ -q --co   →  888 collected, 0 collection errors
+.venv/bin/python -m pytest tests/ -q        →  888 passed, 0 failed
+.venv/bin/ruff check .                      →  All checks passed!
+.venv/bin/ruff format --check .             →  46 files already formatted
+.venv/bin/mypy src/ tests/                  →  Success: no issues found in 47 source files
+.venv/bin/docs check --root docs            →  no violations (exit 0)
+cmp docs/cli.md src/docs_cli/skill/references/cli.md               →  identical
+cmp docs/convention.md src/docs_cli/skill/references/convention.md →  identical
+diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md           →  identical
+```
+
+Zero collection errors, zero xfail, zero xpass, and
+`grep -c "Traceback (most recent call last)"` over the run output → **0**.
+(The Phase-4 false-positive trap still applies in the other direction:
+several tests assert `"Traceback" not in proc.stderr`, so the bare word can
+appear in a failure echo — with no failures there is nothing to echo.)
+
+`id -u` → **1000**, not root, so the five `_SKIP_AS_ROOT` locks really ran:
+two of the six `test_every_preflight_refusal_leaves_the_tree_byte_identical`
+parametrizations plus the unwritable-candidate, mid-execution partial-state,
+and INDEX-refresh-failure CLI tests. Under a root CI those would silently
+skip and the writability and partial-state contracts would go unproven.
+
+### Mechanical no-regression proof
+
+Test-id lists collected from a throwaway `git worktree` at the pre-M26 commit
+`37d7f1a` and from HEAD, then intersected:
+
+```
+pre-existing ids at 37d7f1a                        777
+  deliberately removed at M26 (comm -23)             3
+  carried over to HEAD (comm -12)                  774      777 − 3 = 774 ✓
+carried-over ids re-run explicitly                 774 passed, 0 failed
+new ids added by M26 (comm -13)                    114      774 + 114 = 888 ✓
+```
+
+The three removed ids are the ones M26 deliberately reverses, each named in
+the Phase-2 record and replaced by a test asserting the new contract:
+
+```
+tests/test_cli_archive.py::test_archive_cascade_no_prompt_archives_all_relations
+tests/test_cli_archive.py::test_archive_interactive_no_leaves_related_in_place
+tests/test_cli_archive.py::test_archive_interactive_yes_also_archives_related
+```
+
+The 774 carried ids were re-run as an explicit id list (`pytest -q @ids`),
+not inferred from the full-suite total: **774 passed**. Among them are the
+**5** pre-existing ids that were RED at the Phase-4 baseline and are now
+GREEN — `test_archive_cascade_dry_run_composes_with_cascade_only`,
+`test_archive_cascade_dry_run_rejects_interactive`, and the three
+`test_archive_mutually_exclusive_cascade_flags_rejected` parametrizations —
+so the Phase-4 accounting (769 GREEN + 5 RED + 3 removed = 777) closes
+exactly.
+
+The 114 new ids are Phase 2/3's 110 plus the 4 preview-mode parametrizations
+Phase 7 added for the conductor-resolved malformed-scope carve-out.
+
+A bare "0 regressions" claim would be false: 3 pre-existing ids really are
+gone, deliberately. The arithmetic above is the honest form.
+
+### Defect found and fixed
+
+One, described in full under *Defect in a Step-1 test* above: a missing
+`parents=True` in `_two_relation_tree`, which made
+`test_archive_help_still_registers_the_retired_flags` unsatisfiable by any
+implementation. Fixed in its own labelled commit; no assertion changed.
 
 ## Milestone completion summary
 
