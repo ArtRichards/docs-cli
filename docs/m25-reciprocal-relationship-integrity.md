@@ -36,16 +36,12 @@ Related:
   fresh-eyes review (**no blockers**); the review's two operator-binding
   contract amendments — the **self-edge exemption** and **canonical path
   matching** — are folded into D2 below. **Step 2 is in flight on
-  `m25/phases-5-10`: Phases 5–7 are complete (2026-08-12) — the
+  `m25/phases-5-10`: Phases 5–8 are complete (2026-08-12) — the
   implementation, the `docs relate add|remove` CLI, the bundled-skill row,
   the `UNRELEASED` CHANGELOG (no version bump), and six conductor-resolved
-  `cli.md` corrections have all landed; the suite stands at **756 passed,
-  1 failed**.** Phase 8 — Run Tests (GREEN) is **BLOCKED** on one operator
-  decision: a Step-1 assertion in
-  `test_relate_repeat_archived_repair_appends_a_second_revision_bullet` is
-  unsatisfiable in conjunction with
-  `test_relate_archived_repair_writes_only_the_allowed_bytes`. See the
-  implementation log's *Blocker — Phase-8 GREEN gate*.
+  `cli.md` corrections have all landed, and the full suite is **757 passed,
+  0 failed** with every pre-existing test id proven still GREEN.** Phase 9 —
+  Integrate / Accept / Dogfood is next.
 
 ### Goal
 
@@ -175,9 +171,8 @@ automatic conversion of free-form edges occurs.
       (Phase 7, 2026-08-12 — `cli.md` / `convention.md` / bundled mirrors /
       `SKILL.md` / `CHANGELOG.md` `UNRELEASED`).
 - [ ] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage.
-      (RED half complete — Phases 2–4, 2026-08-11. GREEN half blocked on one
-      unsatisfiable Step-1 assertion — see the implementation log's
-      *Blocker — Phase-8 GREEN gate*.)
+      (RED half complete — Phases 2–4, 2026-08-11; GREEN half complete —
+      Phase 8, 2026-08-12, 757 passed. Dogfood coverage lands in Phase 9.)
 
 ## TDD implementation plan
 

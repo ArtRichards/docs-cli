@@ -785,7 +785,11 @@ def test_relate_repeat_archived_repair_appends_a_second_revision_bullet(docs_scr
     assert text.count("Revision:") == 1, "one group, appended to — never a second label"
     assert "- 2026-08-11: relate add 'required-by: a.md'; reason: complete the pair" in text
     assert "- 2026-08-12: relate remove 'required-by: a.md'; reason: edge was wrong" in text
-    assert text.index("2026-08-11") < text.index("2026-08-12"), "chronological"
+    bullets = [line for line in text.splitlines() if line.startswith("- 2026-")]
+    assert bullets == [
+        "- 2026-08-11: relate add 'required-by: a.md'; reason: complete the pair",
+        "- 2026-08-12: relate remove 'required-by: a.md'; reason: edge was wrong",
+    ], "chronological"
 
 
 def test_relate_active_endpoint_gets_no_revision(docs_script, tmp_path):

@@ -22,9 +22,8 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 5–7 complete (Step 2 in flight). Phase 8 — Run Tests
-  (GREEN) is BLOCKED on one operator decision — see *Blocker — Phase-8 GREEN
-  gate* below.**
+- Progress: **Phases 5–8 complete (Step 2 in flight). Phase 9 — Integrate /
+  Accept / Dogfood is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -990,59 +989,21 @@ action* paragraph and the milestone-history row stale. Both are corrected
 here. The lesson for the next audit: check **every** occurrence of a stale
 claim, not just the first one grep finds.
 
-### Blocker — Phase-8 GREEN gate (needs an operator decision)
+### One Step-1 test carried a defective assertion (raised here, resolved in Phase 8)
 
-`tests/test_cli_relate.py::test_relate_repeat_archived_repair_appends_a_second_revision_bullet`
-**cannot pass under any implementation consistent with the rest of the
-suite.** Its final assertion is
-
-```python
-assert text.index("2026-08-11") < text.index("2026-08-12"), "chronological"
-```
-
-over the **whole archived file**. The second invocation passes
-`--date 2026-08-12`, and D4 requires `Updated:` to be bumped on every
-endpoint whose bytes change — so `Updated: 2026-08-12` sits on line 6,
-*above* the `Revision:` group, and `text.index("2026-08-12")` finds that
-line (offset 62) rather than the second bullet (offset ~200), while
-`text.index("2026-08-11")` finds the first bullet (offset 142).
-
-This is provably a defect in the assertion, not a contract the
-implementation is failing to meet:
-
-- The test's stated intent — the two `Revision:` bullets are appended
-  **chronologically** — is satisfied: the same test's three preceding
-  assertions (one `Revision:` label, both exact bullets present) all pass.
-- Suppressing the `Updated:` bump would contradict
-  `test_relate_archived_repair_writes_only_the_allowed_bytes`, which
-  positively requires `Updated: 2026-08-11` to be added and
-  `Updated: 2026-01-01` removed. The two tests are mutually exclusive.
-- Moving the `Revision:` group above `Updated:` would contradict D4 ("at the
-  END of the metadata block, after `Related:`") and
-  `test_append_revision_entry_creates_the_group_after_related`.
-
-**Not fixed here.** Editing a Step-1 test is outside this step's authority:
-the tests are the contract. The recommended minimal repair — which narrows
-the assertion to what its own message claims, and neither relaxes nor
-weakens anything — is to scope the comparison to the `Revision:` bullets,
-e.g.
-
-```python
-bullets = [line for line in text.splitlines() if line.startswith("- 2026-")]
-assert bullets == [
-    "- 2026-08-11: relate add 'required-by: a.md'; reason: complete the pair",
-    "- 2026-08-12: relate remove 'required-by: a.md'; reason: edge was wrong",
-], "chronological"
-```
-
-Until that is approved, the suite stands at **756 passed, 1 failed** and
-Phases 8–10 are not started.
+Phase 7 ended at **756 passed, 1 failed**, one short of the planned 757.
+The single RED was not missing behaviour: a Step-1 contract test carried an
+assertion no implementation could satisfy. It was raised for an operator
+decision rather than edited — a Step-1 test is the contract, and changing
+one is not this step's call. The full evidence, the operator's binding
+resolution, and the process observation are recorded in the **Phase 8**
+record below.
 
 ### Verification
 
-- `.venv/bin/python -m pytest tests/ -q` — **756 passed, 1 failed**
-  (the blocker above; 42 of the 43 `docs relate` CLI tests and both SKILL.md
-  tests are GREEN).
+- `.venv/bin/python -m pytest tests/ -q` — **756 passed, 1 failed** (the
+  defective assertion noted above; 42 of the 43 `docs relate` CLI tests and
+  both SKILL.md tests are GREEN).
 - `.venv/bin/docs relate --help` / `docs relate add --help` — exit 0,
   documenting `SOURCE`, `VERB`, `TARGET`, `--reason`, `--date`, `--json`,
   `--dry-run`. `docs --help` lists `relate`.
