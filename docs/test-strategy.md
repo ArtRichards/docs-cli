@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-08-12
 
 Related:
 - pairs-with: architecture.md
@@ -29,6 +29,21 @@ Three sources of test docs, in increasing realism:
    - `marker-preservation/` — INDEX.md with hand-edited preamble and trailer outside markers
    - `drift/` — status/location mismatches for `docs check` tests (M3)
    - `foreign/` — non-conforming docs for `docs migrate` tests (M4)
+   - `duplicate-field/` — a doc with two `Related:` labels, for M25's D7
+     rule. Isolates that one semantic: it emits `duplicate-field` and
+     nothing else, deliberately, so it does not also trip the
+     `test_check_tree_legacy_fixtures_gain_no_new_findings` lock. The
+     interaction with `missing-inverse` is pinned inline instead.
+   - `reciprocal-*/` — the M25 family, **one semantic per tree**, for the
+     `missing-inverse` rule: `-clean` (all three pairs complete),
+     `-missing` (the one-sided edge), `-freeform` (the supersedes trap),
+     `-broken` (`broken-ref` keeps ownership), `-excluded`, `-malformed`,
+     `-nonmd`, `-archived-missing` / `-archived-complete`, and
+     `-self-edge` (the amendment-A exemption, spelled non-canonically so
+     amendment B is pinned with it). Structure only, never dates: no stale
+     window is ever passed to them, so nothing rots. Mutation-shaped cases
+     use inline `tmp_path` builders instead, because those tests write and
+     then byte-compare — a `copytree` would be pure overhead.
 3. **`docs/`** (this repo's own docs root) — real-world tree, used for dogfood and integration tests. Anything that breaks here breaks the project's own self-documentation.
 
 ## Critical paths

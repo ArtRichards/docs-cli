@@ -922,3 +922,66 @@ def test_archive_oserror_mid_rewrite_exits_2(docs_script, tmp_path):
         )
     finally:
         os.chmod(locked, 0o755)  # restore so tmp_path teardown can clean up
+
+
+# --- M25 — reciprocity survives `docs archive` (GREEN at baseline) ---------
+
+
+def _reciprocal_archive_tree(tmp_path: Path, name: str) -> Path:
+    """A complete `precedes`/`follows` pair, `pairs-with`-linked for cascade."""
+    root = tmp_path / name
+    root.mkdir()
+    (root / ".docs.toml").write_text(f'[project]\nname = "{name}"\n')
+    (root / "a.md").write_text(
+        f"# A\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: 2026-05-20\n"
+        "\nRelated:\n- precedes: b.md\n- pairs-with: b.md\n\n## Body\n\nProse.\n"
+    )
+    (root / "b.md").write_text(
+        f"# B\n\nLifecycle: active\nRole: notes\nProject: {name}\nUpdated: 2026-05-20\n"
+        "\nRelated:\n- follows: a.md\n- pairs-with: a.md\n\n## Body\n\nProse.\n"
+    )
+    return root
+
+
+def test_archive_one_endpoint_preserves_reciprocal_pair(docs_script, tmp_path):
+    """M25 lock: archiving ONE endpoint repoints the active referrer's edge.
+
+    GREEN at baseline (M14 — A4 referring-edge rewrite). It must STAY green
+    under M25's hard rule: both halves must keep resolving, so the pair is
+    still complete after the move.
+    """
+    root = _reciprocal_archive_tree(tmp_path, "arcrecip")
+    today = date.today().isoformat()
+    proc = _run(docs_script, "archive", str(root / "b.md"), "--reason", "done")
+    assert proc.returncode == 0, proc.stderr
+
+    moved = root / "archive" / today / "b.md"
+    assert moved.is_file()
+    assert f"- precedes: archive/{today}/b.md" in (root / "a.md").read_text()
+    assert "- follows: a.md" in moved.read_text()
+
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)
+
+
+def test_archive_cascade_preserves_reciprocal_pair(docs_script, tmp_path):
+    """M25 lock: `--cascade` moves BOTH endpoints and repoints both halves.
+
+    GREEN at baseline (M18 archive-subtree edge integrity). It must STAY
+    green under M25's hard rule — an intra-archive pair whose edges were
+    left pointing at the old paths would now be a `broken-ref` AND, once
+    repaired, must still be reciprocal.
+    """
+    root = _reciprocal_archive_tree(tmp_path, "cascaderecip")
+    today = date.today().isoformat()
+    proc = _run(docs_script, "archive", str(root / "a.md"), "--cascade", "--reason", "done")
+    assert proc.returncode == 0, proc.stderr
+
+    a_arc = root / "archive" / today / "a.md"
+    b_arc = root / "archive" / today / "b.md"
+    assert a_arc.is_file() and b_arc.is_file()
+    assert f"- precedes: archive/{today}/b.md" in a_arc.read_text()
+    assert f"- follows: archive/{today}/a.md" in b_arc.read_text()
+
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)

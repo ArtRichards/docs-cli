@@ -251,3 +251,31 @@ def test_frontmatter_parser_rejects_extra_keys() -> None:
     assert set(parsed) != {"name", "description"}, (
         "a three-key frontmatter must not pass the exactly-name+description check"
     )
+
+
+# --- M25 — the bundled skill must teach `docs relate` ----------------------
+
+
+def test_skill_md_documents_relate_verb() -> None:
+    """M25: the bundled skill's verb table and trigger description name `relate`.
+
+    Intended RED until Phase 7 — the verb does not exist yet, so the surface
+    parity gate (bundled skill updated in the SAME change as the CLI surface)
+    has nothing to mirror at Phase 2. The existing
+    `test_every_named_verb_is_a_real_subcommand` completeness guard would
+    ALSO start failing the moment `relate` is registered without this edit;
+    this test names the requirement explicitly so it cannot be mistaken for
+    an incidental break.
+    """
+    frontmatter, body = _split_frontmatter(_read_skill())
+    meta = _parse_frontmatter(frontmatter)
+
+    assert "relate" in meta["description"], (
+        "the skill's `description:` verb list must name `relate` so the skill "
+        "triggers on relationship repair"
+    )
+
+    table_rows = [line for line in body.split("\n") if line.startswith("|")]
+    assert any("`docs relate" in row for row in table_rows), (
+        "the skill body's verb table must carry a `docs relate` row"
+    )

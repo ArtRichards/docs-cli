@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-05-28
+Updated: 2026-08-12
 
 Related:
 - implements: charter.md
@@ -80,7 +80,7 @@ version-controlled here, **ships as package data inside the
 
 - `Doc` dataclass (frozen): `path`, `title`, `lifecycle` (M7-renamed from `status`), `role`, `project`, `updated`, `related: tuple[(verb, path), ...]`, `extra: Mapping[str, str | tuple[str, ...]]`, `body`, `archived`.
 - `parse(text: str, path: Path, root: Path) -> Doc` — H1 + metadata block parser, layered on `parse_metadata_block` / `_metadata_line_span`.
-- `parse` is pure (no I/O). M2 writes metadata back with surgical, minimal-diff line edits (`set_metadata_field`, `rewrite_related_refs`, `scaffold_doc`) rather than a full re-serializer — see the M2 milestone Decisions.
+- `parse` is pure (no I/O). M2 writes metadata back with surgical, minimal-diff line edits (`set_metadata_field`, `rewrite_related_refs`, `scaffold_doc`) rather than a full re-serializer — see the M2 milestone Decisions. M25 adds three more editors on the same contract: `add_related_edge` / `remove_related_edge` (one typed `Related:` bullet each way, creating the group when absent and dropping it when it empties, matching targets canonically) and `append_revision_entry` (one bullet into the repeatable `Revision:` audit group at the end of the metadata block). All three share `_bare_label_run` for group location — one label-parameterised scan serving both the `Related:` and `Revision:` groups — and `_metadata_line_span` for block boundaries, so no editor has its own notion of where the block or a group is.
 
 ### `config`
 
@@ -305,6 +305,48 @@ the marker block and the derived content.
 - **Scope boundary** — the active-tree directory layout is left untouched;
   `--apply` adds metadata in place and only ever moves docs out of detected
   archive-style subdirs. No role-bucket flattening or project re-foldering.
+
+### `check`
+
+- `check_doc(path, text, root, config, stale, today, stale_source) -> list[Finding]`
+  — every **single-document** rule (`missing-field`, `bad-vocab`,
+  `bad-date`, `status-drift`, `broken-ref`, `stale`, `malformed`,
+  `unknown-field`, `duplicate-field`). Never raises: a validator must
+  describe malformed input, not blow up on it.
+- M25 (D7) adds `duplicate-field` via `_duplicate_labels(text)`, which
+  counts the metadata block's **raw label lines** rather than reading
+  `parse_metadata_block`'s output. It has to: that function assigns
+  `metadata[label] = tuple(values)`, so a repeated label has already
+  overwritten the earlier one — and discarded its values — by the time the
+  parsed mapping exists. This is the one rule whose evidence is destroyed
+  by parsing.
+- `check_tree(...)` materialises the `_iter_doc_texts` walk **once**, so
+  the one rule that needs more than one document can see the whole set.
+- M25 adds that rule: `reciprocity_findings(entries, root) ->
+  dict[Path, list[Finding]]` is a **cross-document pass** that indexes
+  every parseable walked doc by root-relative path and then requires each
+  recognized reciprocal edge (`inverse_verb(verb) is not None`) to have its
+  exact inverse pointing back. Its results are keyed by source path and
+  interleaved into `check_tree`'s existing per-doc grouping — `check_doc`'s
+  findings first, then any `missing-inverse` — rather than appended as a
+  tail block. A target that is excluded, unresolvable, non-Markdown, or
+  malformed is simply absent from the index, so those four applicability
+  conditions collapse into a single lookup and the owning rules keep their
+  cases.
+
+### `relate` (M25)
+
+- `plan_relate(...) -> RelatePlan` reads both endpoints and stages both
+  complete texts in memory; `apply_relate_plan(plan)` publishes them.
+  The `plan_migration` / `apply_migration` split, applied to a two-file
+  edit.
+- `apply_relate_plan` implements the D5 contract: re-validate the staged
+  texts, `os.access` writability pre-flight on each changed **file**, then
+  publish source-then-target through the module-global `atomic_write`,
+  rolling every already-published endpoint back through the same
+  `atomic_write` on a later failure. Best-effort staged publish + rollback,
+  not a filesystem transaction — two files cannot be renamed atomically as
+  a unit on POSIX, and the spec says so rather than implying otherwise.
 
 ### `cli`
 

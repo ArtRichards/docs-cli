@@ -273,3 +273,92 @@ def test_check_malformed_stale_days_refused_cleanly(docs_script, tmp_path):
     # A clean refusal, not an uncaught crash.
     assert "Traceback" not in proc.stderr
     assert "TypeError" not in proc.stderr
+
+
+# --- M25 (D2) — `missing-inverse` through the CLI --------------------------
+#
+# Phase 2 (written RED). Intended RED: the rule does not exist yet, so the
+# fixture tree exits 0 and prints nothing (plain assertion failure).
+
+TREES = REPO_ROOT / "tests" / "fixtures" / "trees"
+
+
+def test_check_missing_inverse_exits_2_and_names_repair(docs_script):
+    """A one-sided recognized edge is a hard error naming the exact repair."""
+    proc = _run(docs_script, "check", str(TREES / "reciprocal-missing"))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in (proc.stdout + proc.stderr)
+    # Grouping header, not a substring hit: `a.md` also occurs inside the
+    # message body ("must declare 'follows: a.md'"), so only the bare
+    # header line proves the finding is FILED against the source doc.
+    assert "a.md" in proc.stdout.splitlines(), "output is grouped by file; the SOURCE is named"
+    assert "missing-inverse" in proc.stdout
+    assert (
+        "Related: 'precedes: b.md' has no inverse; "
+        "b.md must declare 'follows: a.md' (or remove the edge)"
+    ) in proc.stdout
+
+
+def test_check_missing_inverse_json_record_keys_unchanged(docs_script):
+    """D2: no new JSON field — the record key set stays exactly the M3 four."""
+    proc = _run(docs_script, "check", str(TREES / "reciprocal-missing"), "--json")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    data = json.loads(proc.stdout)
+    records = [rec for rec in data if rec.get("rule") == "missing-inverse"]
+    assert len(records) == 1, f"exactly one missing-inverse record, got {data!r}"
+    rec = records[0]
+    assert set(rec) == {"path", "severity", "rule", "message"}, (
+        "M25 adds NO new JSON field; the repair lives in `message`"
+    )
+    assert rec["severity"] == "error"
+    assert rec["path"] == "a.md", "root-relative POSIX path of the SOURCE doc"
+    assert "follows: a.md" in rec["message"], "the message names the exact missing inverse"
+    assert "b.md" in rec["message"]
+
+
+def test_check_clean_reciprocal_tree_exits_0(docs_script):
+    """All three pairs complete in both directions → clean.
+
+    GREEN-at-baseline but DEGENERATE (passes today only because the rule
+    does not exist); the real over-fire guard after Phase 6.
+    """
+    proc = _run(docs_script, "check", str(TREES / "reciprocal-clean"))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_check_archived_pair_missing_inverse_exits_2(docs_script):
+    """Archived endpoints are walked, so they are reciprocity-checked too.
+
+    The finding an operator can only repair through `docs relate --reason`
+    (D4). Intended RED: no rule yet.
+    """
+    proc = _run(docs_script, "check", str(TREES / "reciprocal-archived-missing"))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "archive/2026-01-01/old.md must declare 'required-by: a.md'" in proc.stdout
+
+
+# --- M25 (D7) — `duplicate-field` through the CLI --------------------------
+
+
+def test_check_duplicate_field_exits_2_and_names_the_label(docs_script):
+    """A repeated metadata label is a hard error naming the label and the loss."""
+    proc = _run(docs_script, "check", str(TREES / "duplicate-field"))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in (proc.stdout + proc.stderr)
+    assert "a.md" in proc.stdout.splitlines(), "output is grouped by file"
+    assert "duplicate-field" in proc.stdout
+    assert (
+        "metadata field 'Related:' appears 2 times; only the last occurrence is read"
+    ) in proc.stdout
+
+
+def test_check_duplicate_field_json_record_shape(docs_script):
+    """The record's key set is closed — `duplicate-field` adds no JSON field."""
+    proc = _run(docs_script, "check", str(TREES / "duplicate-field"), "--json")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    data = json.loads(proc.stdout)
+    records = [rec for rec in data if rec.get("rule") == "duplicate-field"]
+    assert len(records) == 1, f"exactly one duplicate-field record, got {data!r}"
+    assert set(records[0]) == {"path", "severity", "rule", "message"}
+    assert records[0]["severity"] == "error"
+    assert records[0]["path"] == "a.md"

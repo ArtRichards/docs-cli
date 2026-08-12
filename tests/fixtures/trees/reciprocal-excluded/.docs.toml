@@ -1,0 +1,5 @@
+[project]
+name = "reciprocal-excluded"
+
+[exclude]
+dirs = ["vendor"]
