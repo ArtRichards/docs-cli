@@ -22,9 +22,10 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M26 — Safe explicit archive selection
 - Started: 2026-08-12 (milestone setup; no TDD phase started)
-- Progress: **Step 1 (Phases 1–4) complete, audited, and fresh-eyes
-  reviewed — classified RED baseline 2026-08-13: 884 collected, 104 failed,
-  780 passed.** All seven setup
+- Progress: **Implementation-complete — all ten TDD phases done
+  2026-08-13. Full suite 888 GREEN.** Step 1 (Phases 1–4) was complete,
+  audited, and fresh-eyes reviewed at the classified RED baseline of 884
+  collected / 104 failed / 780 passed. All seven setup
   questions were RESOLVED before Phase 1 (Q1/Q5/Q6 by the operator;
   Q2/Q3/Q4/Q7 conductor-resolved) and Phase 1 did not re-open them; it froze
   the exact surface against them, plus the seventeen Step-1 planning
@@ -33,11 +34,12 @@ the milestone checklist synchronized.
   and proved mechanically that 769 of the 777 pre-existing ids are still
   GREEN, the other 8 deliberately changed. **Phases 1–4 changed no product
   code** — `git diff src/docs_cli/cli.py` was empty at the end of Step 1.
-  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–9 are
-  complete — the full suite is **888 GREEN**, with 774 of the 777
-  pre-existing ids mechanically proven present and passing and 3 deliberately
-  removed, and the closeout workflow dogfooded on a throwaway copy of this
-  tree.
+  **Step 2 (Phases 5–10) landed on `m26/phases-5-10`:** the models and
+  planner, the whole seam, the CLI and every parallel surface, the GREEN gate
+  with 774 of the 777 pre-existing ids mechanically proven present and
+  passing (3 deliberately removed, 114 new), the closeout workflow dogfooded
+  on a throwaway copy of this tree, and the simplify-and-close pass. The
+  milestone stays `Lifecycle: active` until the M29 publish closeout.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -56,7 +58,7 @@ the milestone checklist synchronized.
 | 7. Update Tool/Wrapper Layer | **Done** | 2026-08-13 | argparse (mutex group deleted, both retired flags marked, local `--json`), `_cmd_archive` rewritten in the nine-step check order, `_print_archive_lines`; `_cascade_set` / `_print_cascade_footer` / `_cascade_archive` deleted — the verb's last stdin read goes with them. Surface parity: SKILL.md, `references/use-cases.md`, byte-identical mirrors, `UNRELEASED` CHANGELOG, `cli.md`, `plan.md`. **887 passed, 1 failed of 888** — the one RED is a defective Step-1 test helper, fixed in its own commit. |
 | 8. Run Tests (GREEN) | **Done** | 2026-08-13 | **888 collected, 888 passed**, 0 collection errors, 0 tracebacks, 0 xfail/xpass. ruff / format / mypy / `docs check --root docs` clean; mirrors byte-identical; INDEX snapshot in sync. Mechanical proof against `37d7f1a`: 774 of the 777 pre-existing ids present and **all GREEN** (re-run as an explicit id list), 3 deliberately removed, 114 new — 774 + 114 = 888. Ran as uid 1000, so the five root-skipped locks really executed. |
 | 9. Integrate / Accept / Dogfood | **Done** | 2026-08-13 | On a throwaway copy of this docs tree: E1 reproduced and defused (all six candidates named, none authorized), filtered preview, real scoped write of the M25 pair with `docs check` clean and `docs index` a byte no-op, preview/apply records identical, and four refusals each on a fresh copy with zero bytes and no new directory. `--interactive` with no stdin refused in 0s. `git status --porcelain docs/` empty — the live tree was never touched. |
-| 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summaries, hand off to M27. |
+| 10. Quality, Docs, Refactor | **Done** | 2026-08-13 | `/simplify` pass (the `_is_archived_rel` dedup at the two M25 sites; the pre-flight's per-check loops deliberately kept separate); `architecture.md` gains an `archive (M26)` block, `test-strategy.md` the `archive-*` fixture family and two critical paths, the `cli.py` module docstring one M26 sentence; milestone, log, `status.md`, and `plan.md` closed out. `pyproject.toml` untouched — still 1.8.0. Final gate all GREEN. |
 
 ## Setup record — 2026-08-12
 
@@ -1421,6 +1423,141 @@ otherwise pass a files-only comparison.
 `git status --porcelain docs/` → empty. The throwaway trees are not
 committed.
 
+## Phase 10 — Quality, Docs, Refactor — 2026-08-13
+
+### Simplify pass
+
+Two candidates, both from the Step-2 plan:
+
+- **`_is_archived_rel` replaces the duplicated inline idiom.** The
+  `rel == config.archive_dir or rel.startswith(config.archive_dir + "/")`
+  expression existed at five sites; the two M25 `relate` ones
+  (`_plan_relate_edit` and `_cmd_relate`'s archived-endpoint guard) now call
+  the named helper. Suite re-run: **888 passed** — the condition for making
+  the change at all.
+- **`preflight_archive_plan`'s per-check loops stay separate.** Collapsing
+  them into one per-member loop would save four lines and cost the frozen
+  proof order: each loop owns a distinct message and a distinct exit code,
+  and the order across members is what makes the refusal an operator sees
+  deterministic.
+
+The three remaining copies of the idiom (`check_doc`, `_cmd_list`, and
+`project set`, the last against a bare `archive_dir` local rather than a
+`Config`) are left alone: they are outside M26's blast radius, and a
+mechanical sweep of untouched verbs is not what a milestone's simplify pass
+is for. Noted for a future pass.
+
+### Docs closed
+
+- **`docs/architecture.md`** — a new `### archive (M26)` block after
+  `### relate (M25)` with the `archive_candidates` → `plan_archive` →
+  `preflight_archive_plan` → `apply_archive_plan` →
+  `_rewrite_referring_edges` → `_refresh_index` pipeline, and the point that
+  matters most: M26's boundary is **validate-all-first with a residual
+  admission**, deliberately not M25's staged publish plus rollback.
+- **`src/docs_cli/cli.py` module docstring** — one M26 sentence in the
+  milestone paragraph.
+- **`docs/test-strategy.md`** — the `archive-*` fixture family in the
+  fixture-source list, and two *Critical paths* entries: a scope selecting
+  nothing on a write refuses with zero mutation, and a mid-execution
+  `OSError` produces an exact partial-state admission.
+- **Trackers** — this log, the milestone doc (every phase and all eight
+  deliverables ticked, Progress rewritten), `docs/status.md`, and
+  `docs/plan.md`'s M26 row.
+- **`pyproject.toml` untouched.** The package stays `1.8.0`; M29 performs the
+  single bump (M25 — D6). `test_a3_project_version_is_1_8_0` and
+  `test_c2_docs_version_is_1_8_0` are the guards.
+
+### Final gate
+
+```
+.venv/bin/ruff check .            →  All checks passed!
+.venv/bin/ruff format --check .   →  46 files already formatted
+.venv/bin/mypy src/ tests/        →  Success: no issues found in 47 source files
+.venv/bin/python -m pytest -q     →  888 passed
+.venv/bin/docs check --root docs  →  no violations (exit 0)
+cmp docs/{cli,convention}.md src/docs_cli/skill/references/  →  identical
+diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md     →  identical
+```
+
 ## Milestone completion summary
 
-_Not complete._
+**M26 — Safe explicit archive selection is implementation-complete
+(2026-08-13).** All ten TDD phases done: Phases 1–4 on `m26/phases-1-4`,
+Phases 5–10 on `m26/phases-5-10`. The milestone stays `Lifecycle: active`
+until the M29 publish closeout.
+
+### What shipped
+
+Relationship verbs now supply the archive **candidate set** and never grant
+**authorization**. Exactly three shapes write, and no other invocation
+writes a related document:
+
+| Invocation | Writes | Exit |
+|---|---|---|
+| `docs archive FILE` | `FILE` only | 0 |
+| `docs archive FILE --cascade-dry-run [--cascade-only GLOB]` | nothing (preview) | 0 |
+| `docs archive FILE --cascade-only GLOB` | `FILE` plus exactly the one-hop candidates matching `GLOB` | 0 |
+
+- **Bare `--cascade` and `--interactive` are retired** and refuse
+  unconditionally at exit 2, before any filesystem access, naming the
+  replacement invocation. Both stay registered so an obsolete script gets a
+  legible refusal rather than `unrecognized arguments`. Retiring
+  `--interactive` removed the verb's last stdin read: `docs archive` now
+  never prompts on stdin at all, under any flag combination.
+- **The preview names the whole neighborhood** — every one-hop candidate
+  marked selected, not selected, or ineligible — writes nothing, and exits 0
+  even when the scope selects nothing.
+- **A scoped write is one complete plan, validated first**: deduplicated on
+  the canonical root-relative path, destination-collision checked,
+  writability checked with an explicit access test, already-archived
+  candidates excluded and an already-archived primary refused, an empty
+  selection refused with two distinguishable messages. Every handled failure
+  refuses with **zero bytes written**, the primary included.
+- **`docs archive --json`** emits one operation-plan record, identical in
+  shape for a preview and a real apply.
+
+### Evidence against the five reproduced defects
+
+| Evidence | Before (1.8.0) | After |
+|---|---|---|
+| **E1** over-cascade | bare `--cascade` would sweep this project's whole specification spine into the archive, no prompt | refuses at exit 2; the preview names all six candidates and authorizes none — verified on the live tree shape in Phase 9 |
+| **E2** duplicate edge | archived once, then a false `could not archive b.md: [Errno 2]` line | one candidate, first declaration winning the verb, every declared spelling kept as an alias so the edge rewrite still lands |
+| **E3** basename collision | one doc silently dropped, exit **0**, `docs check` clean afterwards | refused before any write, naming both sources, exit 2 |
+| **E4** archived neighbour | silently relocated and re-dated — data corruption | excluded and named ineligible; its bytes stay put, while M18's one move-driven bullet is still repointed and `docs check` stays clean |
+| **E5** typo'd scope | archived the primary, exit **0** | refused at exit 2, primary not archived, "matched none of the N" distinguished from "no candidates at all" |
+
+### Numbers
+
+- **888 tests, all passing.** 774 of the 777 pre-existing ids mechanically
+  proven present and GREEN (re-run as an explicit id list), 3 deliberately
+  removed, 114 new.
+- `ruff` / `ruff format` / `mypy src/ tests/` / `docs check --root docs`
+  clean; bundled `references/cli.md` and `references/convention.md`
+  byte-identical to the specs; the INDEX snapshot in sync.
+- **No version bump.** `pyproject.toml` stays `1.8.0`; CHANGELOG entries
+  accumulate under `UNRELEASED`.
+
+### Deliberate deviations, all logged
+
+1. `CoordinatedWriteError` gained a keyword-only `exit_code` (Phase 5) — the
+   only way a `preflight_archive_plan(plan) -> None` can carry the Q4 split.
+2. `_print_archive_lines` gained a keyword-only `cascade` (Phase 7) — the
+   plan cannot distinguish `--cascade-dry-run` with no scope from a plain
+   `--dry-run`, and D1's quiet rule needs that bit.
+3. A blank / comment-only / negated `--cascade-only` refuses in **every**
+   mode, a preview included (conductor-resolved); `cli.md` now states the
+   carve-out and two tests gained a `preview` parametrization.
+4. One Step-1 test helper was defective — `_two_relation_tree` mkdir'd
+   without `parents=True`, making
+   `test_archive_help_still_registers_the_retired_flags` unsatisfiable by any
+   implementation. Fixed in its own labelled commit; no assertion changed.
+
+Both signature deviations are recorded in the milestone doc's *Step-2
+amendments to the frozen signatures*, so the contract and the code agree.
+
+### Handoff
+
+M27 — Markdown body-link validation is ready to prepare. M28 reuses this
+milestone's move planning for body-link rebasing, and M29 publishes the
+whole v2.0 train.

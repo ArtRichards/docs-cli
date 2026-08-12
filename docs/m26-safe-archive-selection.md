@@ -29,14 +29,20 @@ Related:
   available; every multi-document write requires an explicit
   `--cascade-only GLOB` scope, planned in full before the first byte moves; and
   the whole operation plan is available as one machine-readable record.
-- Progress: **Active / Phase 1 — Define Contract complete (2026-08-12).**
-  M25 is implementation-complete and merged to `main`, so this is the next
-  implementation milestone. **All seven setup questions are RESOLVED** — Q1,
-  Q5, and Q6 by the operator; Q2, Q3, Q4, and Q7 conductor-resolved — and are
-  recorded in *Resolved setup questions (Q1–Q7, BINDING)* below. Phase 1 did
-  not re-open them: it froze the exact refusal messages, the preview and apply
-  lines, the exit-code split, and the `--json` schema against them, plus the
-  seventeen Step-1 planning questions, in *Decisions (Phase 1 — BINDING)*.
+- Progress: **Active / implementation-complete — all ten TDD phases done
+  (2026-08-13).** Step 1 (Phases 1–4) on `m26/phases-1-4`; Step 2
+  (Phases 5–10) on `m26/phases-5-10`. Full suite **888 GREEN**, with 774 of
+  the 777 pre-existing test ids mechanically proven present and passing and
+  3 deliberately removed; the closeout workflow dogfooded on a throwaway copy
+  of this tree, where the unfiltered preview reproduces E1 exactly — all six
+  spine documents named, none authorized. **All seven setup questions were
+  RESOLVED** before Phase 1 — Q1, Q5, and Q6 by the operator; Q2, Q3, Q4, and
+  Q7 conductor-resolved — and are recorded in *Resolved setup questions
+  (Q1–Q7, BINDING)* below. Phase 1 did not re-open them: it froze the exact
+  refusal messages, the preview and apply lines, the exit-code split, and the
+  `--json` schema against them, plus the seventeen Step-1 planning questions,
+  in *Decisions (Phase 1 — BINDING)*. The milestone stays `Lifecycle: active`
+  until the M29 publish closeout.
 
 ### Goal
 
@@ -352,22 +358,22 @@ coverage in *Evidence → regression coverage* below.
 
 - [x] Exact flag / exit-code / message compatibility matrix and the `--json`
       schema frozen in Phase 1, against the resolved Q1–Q7 decisions.
-- [ ] Bare `--cascade` and `--interactive` refuse before any write, registered
+- [x] Bare `--cascade` and `--interactive` refuse before any write, registered
       and refusing, with actionable migration guidance.
-- [ ] Deterministic preview naming every candidate as selected, not-selected,
+- [x] Deterministic preview naming every candidate as selected, not-selected,
       or ineligible, writing nothing.
-- [ ] Deduplicated, canonical-path, collision-checked, writability-checked
+- [x] Deduplicated, canonical-path, collision-checked, writability-checked
       archive plan built before the first mutation, with archived documents
       excluded and an archived primary refused.
-- [ ] Empty-selection refusal with distinct "none matched" / "no candidates"
+- [x] Empty-selection refusal with distinct "none matched" / "no candidates"
       messages.
-- [ ] `docs archive --json` operation-plan record, one shape for preview and
+- [x] `docs archive --json` operation-plan record, one shape for preview and
       apply, carrying primary / candidates / selected / excluded-with-reason /
       destinations / written state.
-- [ ] Regression coverage for E1–E5 plus proof that primary-only archive, the
+- [x] Regression coverage for E1–E5 plus proof that primary-only archive, the
       M12 referring-edge rewrite, and M18 archive-subtree edge integrity are
       unchanged.
-- [ ] Surface parity across `--help`, `cli.md`, `convention.md`, the bundled
+- [x] Surface parity across `--help`, `cli.md`, `convention.md`, the bundled
       skill (byte-identical mirrors), and the `UNRELEASED` CHANGELOG, plus
       v2.0 migration guidance.
 
@@ -506,7 +512,7 @@ coverage in *Evidence → regression coverage* below.
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
 - [x] Phase 9 — Integrate / Accept / Dogfood
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 

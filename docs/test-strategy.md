@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Related:
 - pairs-with: architecture.md
@@ -34,6 +34,14 @@ Three sources of test docs, in increasing realism:
      nothing else, deliberately, so it does not also trip the
      `test_check_tree_legacy_fixtures_gain_no_new_findings` lock. The
      interaction with `missing-inverse` is pinned inline instead.
+   - `archive-*/` — the M26 family, **one semantic per tree**, for safe
+     explicit archive selection: `-neighborhood` (E1 — a milestone with all
+     six one-hop candidates), `-duplicate-edge` (E2 — one doc reachable by
+     two verbs), `-collision` (E3 — two candidates sharing a basename), and
+     `-archived-neighbour` (E4 — an archive-subtree candidate, plus its
+     bullet pointing at the moving primary, so the M18 boundary is pinned
+     with it). Structure only, never dates. Mutation-shaped cases use inline
+     `tmp_path` builders for the same reason as the M25 family.
    - `reciprocal-*/` — the M25 family, **one semantic per tree**, for the
      `missing-inverse` rule: `-clean` (all three pairs complete),
      `-missing` (the one-sided edge), `-freeform` (the supersedes trap),
@@ -59,6 +67,8 @@ Each must have at least one test before merging:
 - CLI: invalid role on `docs new` → exit 2.
 - CLI: missing `.docs.toml` → falls back to cwd defaults, exit 0.
 - Atomic write: simulated failure mid-write leaves original file untouched. (Tested with mock that raises after tmp write but before rename.)
+- Archive planner: a `--cascade-only` scope selecting nothing on a **write** refuses with zero mutation — the primary is not archived either, and the two causes ("none of the N matched" vs "no candidates at all") get different messages.
+- Archive apply: a mid-execution `OSError` produces an exact partial-state admission naming what moved and what did not — never a silent partial write that exits 0.
 
 ## Coverage targets
 

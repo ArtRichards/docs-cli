@@ -19,7 +19,12 @@ by Project then Role. M4 adds the migration verb `migrate`, which adopts
 a non-conforming foreign directory into the convention. M6 packages the
 CLI as `docs-cli` on PyPI and adds the `install-skill` verb. M25 makes a
 one-sided reciprocal `Related:` edge a hard `check` error and adds the
-`relate add|remove` repair verb.
+`relate add|remove` repair verb. M26 separates relationship context from
+archive authorization: `archive` retires bare `--cascade` / `--interactive`,
+previews the whole one-hop neighborhood under `--cascade-dry-run`, requires
+an explicit `--cascade-only GLOB` — validated as one complete plan before
+the first byte moves — for any related-document write, and emits that plan
+as a `--json` record.
 """
 
 from __future__ import annotations
@@ -3589,7 +3594,7 @@ def _plan_relate_edit(
     """
     original = path.read_text()
     edge = f"{verb}: {other_rel}"
-    archived = rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
+    archived = _is_archived_rel(rel, config)
 
     if action == "add":
         new_text, changed = add_related_edge(original, verb, other_rel)
@@ -6093,7 +6098,7 @@ def _cmd_relate(args: argparse.Namespace) -> int:
         # OQ-C: required whenever EITHER endpoint is archived, checked
         # before planning — so an idempotent no-op still refuses.
         for rel in (source_rel, target_rel):
-            if rel == config.archive_dir or rel.startswith(config.archive_dir + "/"):
+            if _is_archived_rel(rel, config):
                 print(
                     f"docs: relate: {rel} is under the archive subtree; --reason is required",
                     file=sys.stderr,
