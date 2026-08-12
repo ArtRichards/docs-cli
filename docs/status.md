@@ -545,9 +545,9 @@ runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
 **Next action:** **prepare M26 — Safe explicit archive selection.** M25 is
-implementation-complete across all ten TDD phases on `m25/phases-5-10`
-(**777 GREEN**, gate clean, dogfood done, fresh-eyes review folded in)
-and stays `Lifecycle: active` until
+complete and **merged to `main`** (2026-08-12, merge `822e086`) across all ten
+TDD phases (**777 GREEN**, gate clean, dogfood done, fresh-eyes review folded
+in) and stays `Lifecycle: active` until
 M29 publishes the train. The Step-3 `/simplify` pass is **done**
 (2026-08-12, `m25/simplify`): three duplicated bare-label scans collapsed
 onto one `_bare_label_run`, `_plan_relate_edit`'s doubled `RelateEdit`
