@@ -22,8 +22,8 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 5–8 complete (Step 2 in flight). Phase 9 — Integrate /
-  Accept / Dogfood is next.**
+- Progress: **Phases 5–9 complete (Step 2 in flight). Phase 10 — Quality,
+  Docs, Refactor is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -42,7 +42,7 @@ progress table and milestone checklist synchronized.
 | 6. Implement Offline/Core Path | Complete | 2026-08-12 | `reciprocity_findings`, `check_tree` interleave, `plan_relate`/`_plan_relate_edit`, `apply_relate_plan` + `_rollback_relate`. **44 failed, 713 passed** — every remaining RED is a `docs relate` subprocess test (43) or the SKILL.md lock (1). |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); six spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
 | 8. Run Tests (GREEN) | Complete | 2026-08-12 | **757 passed, 0 failed** (757 collected, zero collection errors). All 636 pre-existing test ids proven still present and GREEN by `comm`. One defective Step-1 assertion corrected under operator approval; `cli.py` byte-unchanged by that commit. |
-| 9. Integrate / Accept / Dogfood | Pending | — | Real upgrade/repair flows on a throwaway tree. |
+| 9. Integrate / Accept / Dogfood | Complete | 2026-08-12 | Eight flows on a throwaway `cp -r docs` copy: detect → repair → re-check, remove/restore/idempotency, audited archived repair (refusal then repair then a second `Revision:` bullet), blast radius (1 of 46 archived files changed), dry-run/JSON, real tree untouched. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summary. |
 
 ## Setup record — 2026-08-10
@@ -1151,6 +1151,151 @@ closed four:
   }
 ]
 ```
+
+## Phase 9 — Integrate / Accept / Dogfood — 2026-08-12
+
+### Objective
+
+Exercise the real upgrade workflow — detect a deliberately removed inverse,
+repair it, remove an invalid pair, and repair an archived endpoint with an
+audit reason — on a **throwaway copy** of this repo's own docs tree. The
+real `docs/` tree is never the subject.
+
+Setup: `cp -r docs "$T"` into the session scratchpad; every command below
+runs with `--root "$T"`. The copy was deleted at the end.
+
+### Flow 1 — baseline
+
+`docs check --root "$T"` → `docs: no violations found`, exit 0. The live
+tree's recognized pairs are all complete, so the new hard rule is satisfied
+out of the box. Archive baseline captured:
+`find "$T/archive" -type f -name '*.md' | xargs sha256sum | sort` → **46
+files**.
+
+### Flow 2 — detect
+
+Hand-deleted `- follows: m25-reciprocal-relationship-integrity.md` from
+`m26-safe-archive-selection.md` (a plain `grep -v`, not a `docs` verb — this
+simulates the legacy one-sided edge an upgrading tree would have).
+
+`docs check --root "$T"` → **exit 2**, exactly one finding:
+
+```
+m25-reciprocal-relationship-integrity.md
+  error: [missing-inverse] Related: 'precedes: m26-safe-archive-selection.md' has no inverse; m26-safe-archive-selection.md must declare 'follows: m25-reciprocal-relationship-integrity.md' (or remove the edge)
+```
+
+It blames the **source**, and names the source, the verb, the target, and
+the exact missing inverse. `--json`: total findings **1**, `missing-inverse`
+records **1**, key set exactly `['message', 'path', 'rule', 'severity']` —
+M25 adds no JSON field.
+
+### Flow 3 — repair (add)
+
+Paths copied **verbatim out of the finding**, with the invocation run from
+the repo root rather than inside the tree — the root-relative-first
+resolution (OQ-A) is what makes that work without translation:
+
+```console
+$ docs relate add m25-reciprocal-relationship-integrity.md precedes m26-safe-archive-selection.md --root "$T"
+docs: relate: no change — 'precedes: m26-safe-archive-selection.md' already present in m25-reciprocal-relationship-integrity.md
+docs: relate: added 'follows: m25-reciprocal-relationship-integrity.md' to m26-safe-archive-selection.md
+```
+
+exit 0; only the missing half was written. `INDEX.md` was refreshed, and a
+following `docs index --root "$T"` is a **byte no-op** (sha256 before ==
+after) — proving the one end-of-run reindex was complete, not partial.
+`docs check --root "$T"` → exit 0.
+
+### Flow 4 — repair (remove), restore, and idempotency
+
+`docs relate remove …` dropped **both** halves (`grep -c` → 0 in each
+endpoint) and `docs check` stayed at exit 0 — the other valid repair for the
+same finding. `relate add` restored the pair (check exit 0). A **second**
+`relate add` printed two `no change — … already present in …` lines, exit 0,
+and the sha256 manifest of every top-level doc was **identical** before and
+after: a fully-satisfied invocation writes zero bytes.
+
+### Flow 5 — archived repair
+
+**5a — without `--reason`:**
+
+```console
+$ docs relate add status.md depends-on archive/2026-07-03/m24-pypi-publish.md --root "$T"
+docs: relate: archive/2026-07-03/m24-pypi-publish.md is under the archive subtree; --reason is required
+```
+
+exit 2, and the sha256 of **both** endpoints was unchanged — the rule fires
+before planning, so nothing is written.
+
+**5b — with `--reason`:** exit 0, with `recorded revision in
+archive/2026-07-03/m24-pypi-publish.md`. The complete diff of the archived
+doc is exactly the three permitted changes:
+
+```diff
+6c6
+< Updated: 2026-07-03
+---
+> Updated: 2026-08-12
+16a17,20
+> - required-by: status.md
+>
+> Revision:
+> - 2026-08-12: relate add 'required-by: status.md'; reason: M25 Phase-9 dogfood
+```
+
+`Lifecycle: archived`, `Archived-reason:`, `Role: milestone`,
+`Project: docs`, and the H1 each still occur exactly once, and the entire
+body from the first `##` heading down is **byte-identical**
+(sha256 `0d68f196…` before and after).
+
+**5c — `relate remove … --reason "dogfood cleanup"`:** exit 0. The archived
+doc now carries **one** `Revision:` label with two bullets, chronologically:
+
+```
+- 2026-08-12: relate add 'required-by: status.md'; reason: M25 Phase-9 dogfood
+- 2026-08-12: relate remove 'required-by: status.md'; reason: dogfood cleanup
+```
+
+`docs check --root "$T"` → exit 0 throughout.
+
+### Flow 6 — blast radius
+
+Re-hashed the whole archive subtree and joined it against the baseline: the
+file **set** is unchanged (no adds, no removes) and **exactly one** of the
+46 archived files differs —
+`archive/2026-07-03/m24-pypi-publish.md`, the one deliberately repaired.
+The other 45 are byte-identical. The narrow archived exception is narrow in
+practice, not just in the spec.
+
+### Flow 7 — preview and machine output
+
+`--dry-run` on a fresh pair printed the two `would add …` lines and changed
+**zero bytes anywhere in the tree, `INDEX.md` included** (sha256 manifest of
+every `*.md` identical before and after).
+
+`--json` stdout parses standalone while the two human lines go to stderr.
+The preview and the apply records have **identical key sets**
+(`action, applied, date, dry_run, edits, index_refreshed, inverse, reason,
+source, target, verb`), differing only in the three status bits —
+preview `dry_run=True applied=False index_refreshed=False`, apply
+`dry_run=False applied=True index_refreshed=True` — so a preview and an
+apply are diffable, as D3 requires.
+
+### Flow 8 — the real tree is untouched
+
+`git status --short docs/` and `git diff HEAD -- docs/` are both **empty**
+(the Phase-7/8 tracker edits were already committed), and
+`docs check --root docs` exits 0. The throwaway copy was removed.
+
+### Decisions / issues
+
+- Nothing failed and nothing needed a workaround; all eight flows ran
+  unattended.
+- The dogfood confirms the upgrade story end-to-end in the order the
+  CHANGELOG's *Upgrading from 1.x* section prescribes: `check` names the
+  incomplete edge → the agent chooses `relate add` or `relate remove` → the
+  paths copy across without translation → `check` is clean.
 
 ## Milestone completion summary
 

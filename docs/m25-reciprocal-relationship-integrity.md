@@ -36,12 +36,14 @@ Related:
   fresh-eyes review (**no blockers**); the review's two operator-binding
   contract amendments — the **self-edge exemption** and **canonical path
   matching** — are folded into D2 below. **Step 2 is in flight on
-  `m25/phases-5-10`: Phases 5–8 are complete (2026-08-12) — the
+  `m25/phases-5-10`: Phases 5–9 are complete (2026-08-12) — the
   implementation, the `docs relate add|remove` CLI, the bundled-skill row,
   the `UNRELEASED` CHANGELOG (no version bump), and six conductor-resolved
   `cli.md` corrections have all landed, and the full suite is **757 passed,
-  0 failed** with every pre-existing test id proven still GREEN.** Phase 9 —
-  Integrate / Accept / Dogfood is next.
+  0 failed** with every pre-existing test id proven still GREEN, and the
+  eight-flow dogfood ran unattended on a throwaway copy of this tree
+  (detect → repair → re-check, audited archived repair, 1 of 46 archived
+  files touched).** Phase 10 — Quality, Docs, Refactor is next.
 
 ### Goal
 
@@ -172,7 +174,8 @@ automatic conversion of free-form edges occurs.
       `SKILL.md` / `CHANGELOG.md` `UNRELEASED`).
 - [ ] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage.
       (RED half complete — Phases 2–4, 2026-08-11; GREEN half complete —
-      Phase 8, 2026-08-12, 757 passed. Dogfood coverage lands in Phase 9.)
+      Phase 8, 2026-08-12, 757 passed; dogfood — Phase 9, 2026-08-12, eight
+      flows on a throwaway tree copy.)
 
 ## TDD implementation plan
 
@@ -270,7 +273,7 @@ automatic conversion of free-form edges occurs.
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate / Accept / Dogfood
+- [x] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
