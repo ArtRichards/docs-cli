@@ -33,8 +33,9 @@ the milestone checklist synchronized.
   and proved mechanically that 769 of the 777 pre-existing ids are still
   GREEN, the other 8 deliberately changed. **Phases 1–4 changed no product
   code** — `git diff src/docs_cli/cli.py` was empty at the end of Step 1.
-  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phase 5 —
-  Update Base Interfaces is complete (781 passed, 103 failed).
+  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–6 —
+  Update Base Interfaces and Implement Core — are complete (814 passed, 70
+  failed; the whole unit-seam suite GREEN).
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -49,7 +50,7 @@ the milestone checklist synchronized.
 | 3. Create Data/Fixtures | **Done** | 2026-08-13 | Four committed trees (`archive-neighborhood` E1, `archive-duplicate-edge` E2, `archive-collision` E3, `archive-archived-neighbour` E4), each `docs check`-clean; three existing fixtures' prose corrected off the retired flag; +4 parametrizations of `test_check_tree_legacy_fixtures_gain_no_new_findings`. |
 | 4. Run Tests (RED Baseline) | **Done** | 2026-08-13 | **884 collected, 104 failed, 780 passed** (post-review); 0 collection errors, 0 tracebacks, 0 xfail/xpass; 34 `AttributeError` + 70 `AssertionError`. Mechanical proof against `37d7f1a`: 769 of the 777 pre-existing ids still GREEN, the other 8 deliberately changed (3 removed, 5 failing). One falsely-GREEN `--json` refusal test caught and fixed, plus eight audit findings and a fresh-eyes review whose blocker was an unsatisfiable M18 assertion. |
 | 5. Update Base Interfaces | **Done** | 2026-08-13 | `CoordinatedWriteError` widened (+ keyword-only `exit_code`, defaulting to today's 2), `ARCHIVE_EXCLUSION_REASONS`, `ArchiveMove` / `ArchivePlan` (+ `moves`), `_is_archived_rel`, `_archive_destination`, `archive_plan_to_json`. No behaviour change; `_cmd_archive` untouched. **781 passed, 103 failed** — exactly the predicted +1. |
-| 6. Implement Offline/Core Path | Pending | — | Validate-all-first planning, deduplication, archived exclusion, collision detection, safe refusal, partial-state admission. |
+| 6. Implement Offline/Core Path | **Done** | 2026-08-13 | `_candidate_exclusion_reason`, `archive_candidates`, `plan_archive`, `preflight_archive_plan`, `apply_archive_plan`, `_archive_partial_state`. `_archive_one` verbatim; `_cmd_archive` still untouched. **814 passed, 70 failed** — exactly the predicted +33, the whole of `tests/test_archive_plan.py`. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse surface (refusing flags + local `--json`), human output, JSON record, docs, bundled skill, CHANGELOG (no version bump). |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Preview + scoped archive of a real milestone pair on a throwaway tree copy. |
@@ -1032,6 +1033,95 @@ the honest seam. `_cmd_archive` is untouched in this phase.
   as the Step-2 plan sketched: that section is headed *Relationship repair —
   `docs relate` (M25)*, and filing an archive serializer under it would
   mis-shelve it. Cosmetic; no behaviour difference.
+
+## Phase 6 — Implement Offline/Core Path — 2026-08-13
+
+### Objective
+
+Implement the whole archive seam behind the CLI — candidate discovery,
+planning, the validate-all-first pre-flight, ordered execution, and the
+residual partial-state admission — with `_cmd_archive` still untouched, so
+the unit contract goes GREEN on its own and the CLI contract stays honestly
+RED.
+
+### Actions taken
+
+Five functions added to the archive block (`cli.py`), between
+`_archive_destination` and the still-live 1.x cascade helpers:
+
+- **`_candidate_exclusion_reason(rel, root, config)`** — the ineligibility
+  test, written in the frozen precedence order so the order IS the
+  precedence: `outside-root`, `already-archived`, `unresolved-target`. It
+  never returns `not-selected`, which is the scope's verdict, not an
+  ineligibility.
+- **`archive_candidates(doc, root, config, scope)`** — one-hop
+  `pairs-with` / `child-of` edges in declaration order, deduplicated on the
+  canonical path with the first declaration winning the verb and every
+  declared spelling kept in `aliases`; self-edges silently skipped; the scope
+  compiled by `_compile_docsignore_pattern` and matched against the CANONICAL
+  path. It does **not** consult `compile_exclude_predicate` (Phase-1 Q8) and
+  does **not** `parse()` a candidate — an unparseable candidate is still a
+  candidate, and the pre-flight owns that refusal.
+- **`plan_archive(...)`** — pure; builds the primary move and fills
+  destinations for the selected candidates only, which is precisely the
+  record's "destination non-null iff selected" rule.
+- **`preflight_archive_plan(plan)`** — the five proofs, each over the whole
+  plan, raising `CoordinatedWriteError(rolled_back=True, published=())` with
+  `exit_code=1` for the two pre-existing conditions and the default 2 for the
+  four new ones. Exactly **two** `os.access` checks: the source file and the
+  nearest existing ancestor of the dated destination directory.
+- **`apply_archive_plan(plan)`** / **`_archive_partial_state(...)`** —
+  `_archive_one` kept verbatim as the per-document executor, driven in
+  `plan.moves` order with `--reason` on the primary only; returns the
+  canonical `(old_rel, new_rel)` pair per member plus one per declared alias.
+
+### Two traps the tests pin, and how they are handled
+
+- **No source-parent-directory writability check.** A `0o644` file inside a
+  `0o555` directory passes `os.access(file, W_OK)` and still breaks
+  `atomic_write`, which is the engineered trigger behind
+  `test_mid_execution_failure_admits_the_partial_state` — the milestone's
+  only end-to-end partial-state lock. A parent-directory check would convert
+  it into a pre-flight refusal and delete the lock. `apply_relate_plan`
+  (M25 — D5) declines the same check for the same reason; the code now says
+  so in both places.
+- **The dated directory is pruned when nothing had moved.** `_archive_one`
+  does `dest.parent.mkdir(parents=True, exist_ok=True)` BEFORE `atomic_write`,
+  so a first-member failure leaves an empty `archive/<date>/` behind.
+  `_archive_partial_state` removes it (and its parent) with a suppressed
+  `rmdir`, the `_opportunistic_rmdir` idiom, so a non-empty archive directory
+  is left alone. Without it
+  `test_apply_archive_plan_admission_when_nothing_had_moved_yet`'s
+  `assert not (root / "archive").exists()` fails.
+
+`MetadataError` is caught alongside `OSError` in `apply_archive_plan` even
+though the pre-flight makes it unreachable: "unreachable plus an uncaught
+raise" equals a traceback if that reasoning is ever wrong, and several tests
+pin `"Traceback" not in stderr`. The frozen admission wording reads correctly
+for either.
+
+### Evidence
+
+```
+.venv/bin/ruff check .            →  All checks passed!
+.venv/bin/ruff format --check .   →  46 files already formatted
+.venv/bin/mypy src/ tests/        →  Success: no issues found in 47 source files
+.venv/bin/python -m pytest -q     →  814 passed, 70 failed
+.venv/bin/python -m pytest -q tests/test_archive_plan.py  →  34 passed
+```
+
+Exactly the predicted ledger: **+33 GREEN**, the whole of
+`tests/test_archive_plan.py` — the D3 discovery set, the D4 pre-flight set
+including all six `test_every_preflight_refusal_leaves_the_tree_byte_identical`
+parametrizations, the D4 execution set, and the D7 serializer set. The
+remaining 70 failures are all CLI-level (68 in `tests/test_cli_archive.py`,
+2 in `tests/test_skill.py`) and are Phase 7's work.
+
+`git diff -- src/docs_cli/cli.py` for this phase is a single insertion hunk;
+`_cmd_archive` is byte-unchanged, and the 1.x `_cascade_set` /
+`_print_cascade_footer` / `_cascade_archive` helpers are still live because
+`_cmd_archive` still calls them. Phase 7d deletes all three in the same
+change that stops calling them.
 
 ## Milestone completion summary
 

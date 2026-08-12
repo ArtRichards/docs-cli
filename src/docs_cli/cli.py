@@ -4641,6 +4641,328 @@ def _archive_destination(root: Path, config: Config, date_str: str, name: str) -
     return root / config.archive_dir / date_str / name
 
 
+def _candidate_exclusion_reason(rel: str, root: Path, config: Config) -> str | None:
+    """Why `rel` is an INELIGIBLE archive candidate, or None (M26 — D3).
+
+    Two conditions can hold at once (`../ghost.md` both escapes the root and
+    does not exist), so the order here IS the frozen precedence:
+    `outside-root`, then `already-archived`, then `unresolved-target` — the
+    more structural fact wins, and the answer is deterministic.
+
+    `not-selected` is never returned: it is not an ineligibility but the
+    scope's verdict on an otherwise eligible candidate, and ineligibility
+    always wins over it.
+    """
+    if rel.startswith("/") or rel == ".." or rel.startswith("../"):
+        return "outside-root"
+    if _is_archived_rel(rel, config):
+        return "already-archived"
+    if not (root / rel).is_file():
+        return "unresolved-target"
+    return None
+
+
+def archive_candidates(
+    doc: Doc, root: Path, config: Config, scope: str | None
+) -> tuple[ArchiveMove, ...]:
+    """The one-hop archive candidates of `doc`, in declaration order (M26 — D3).
+
+    Pure: reads `doc.related` and stats candidate paths, writes nothing, and
+    computes no destination — `plan_archive` owns that, and only for the
+    selected members.
+
+    The set is the existing one-hop `pairs-with` / `child-of` edges (M2's
+    no-transitive-cascade decision is unchanged), **deduplicated on the
+    canonical root-relative POSIX path** with the first declaration winning
+    the reported verb. Every declared spelling of a deduplicated candidate
+    survives in `aliases`, because `_rewrite_referring_edges` repoints a
+    bullet iff its target exactly equals an `old_rel`. A self-edge — a
+    candidate whose canonical path equals the primary's — is silently
+    excluded and is not reported as ineligible (Phase-1 Q6).
+
+    `scope` is compiled by the matcher `compile_exclude_predicate` uses and
+    matched against the CANONICAL path, so a `./b.md` spelling can neither
+    dodge nor defeat a scope. A pattern that compiles to nothing, or a
+    negated one, selects nothing here — `_cmd_archive` has already refused
+    both at check-order step 2, so this is a defensive fallback, not the
+    contract.
+
+    The scan deliberately does **not** consult `[exclude]` / `.docsignore`
+    (Phase-1 Q8, BINDING): those govern the tree walks — the pre-flight
+    validation walk and the reindex — not the primary's own declared edges.
+    Nor does it `parse()` a candidate: an unparseable candidate is still a
+    candidate, and the pre-flight owns that refusal.
+    """
+    rgx: re.Pattern[str] | None = None
+    if scope is not None:
+        compiled = _compile_docsignore_pattern(scope)
+        if compiled is not None and not compiled[0]:
+            rgx = compiled[1]
+
+    primary_rel = _root_relative(doc.path, root)
+    by_rel: dict[str, ArchiveMove] = {}
+    for verb, target in doc.related:
+        if verb not in _CASCADE_VERBS:
+            continue
+        rel = _canonical_related_target(target)
+        if rel == primary_rel:
+            continue
+        seen = by_rel.get(rel)
+        if seen is not None:
+            if target not in seen.aliases:
+                by_rel[rel] = replace(seen, aliases=(*seen.aliases, target))
+            continue
+        reason = _candidate_exclusion_reason(rel, root, config)
+        selected = reason is None and rgx is not None and bool(rgx.match(rel))
+        by_rel[rel] = ArchiveMove(
+            path=root / rel,
+            rel=rel,
+            aliases=(target,),
+            verb=verb,
+            dest=None,
+            dest_rel=None,
+            selected=selected,
+            exclusion_reason=None if selected else (reason or "not-selected"),
+        )
+    return tuple(by_rel.values())
+
+
+def plan_archive(
+    root: Path,
+    config: Config,
+    *,
+    primary: Path,
+    source: str,
+    doc: Doc,
+    scope: str | None,
+    date_str: str,
+    reason: str | None,
+) -> ArchivePlan:
+    """Build the complete `docs archive` operation plan (M26 — D4).
+
+    The `plan_relate` analogue: everything is read and decided here, and
+    nothing is written — a preview and a real apply differ only in whether
+    `apply_archive_plan` is then called. Destinations are filled for the
+    primary and for the SELECTED candidates only; an ineligible or
+    unselected candidate keeps `dest is None`, which is exactly what the
+    `--json` record's "destination non-null iff selected" rule means.
+
+    Args:
+        root: The resolved docs root.
+        config: The tree's config (supplies `archive_dir`).
+        primary: Absolute path of the named document.
+        source: The `FILE` argument exactly as typed (carried into the
+            `--json` record; never derived from `primary`, which is
+            resolved and therefore always absolute).
+        doc: The parsed primary — its `Related:` edges are the candidate
+            set.
+        scope: The `--cascade-only` value as typed, or None.
+        date_str: The archive date, already in the tree's `date_format`.
+        reason: The `--reason` value, or None; it applies to the primary
+            only.
+    """
+    dest = _archive_destination(root, config, date_str, primary.name)
+    primary_move = ArchiveMove(
+        path=primary,
+        rel=_root_relative(primary, root),
+        aliases=(),
+        verb=None,
+        dest=dest,
+        dest_rel=_root_relative(dest, root),
+        selected=True,
+        exclusion_reason=None,
+    )
+
+    candidates: list[ArchiveMove] = []
+    for candidate in archive_candidates(doc, root, config, scope):
+        if not candidate.selected:
+            candidates.append(candidate)
+            continue
+        cdest = _archive_destination(root, config, date_str, candidate.path.name)
+        candidates.append(replace(candidate, dest=cdest, dest_rel=_root_relative(cdest, root)))
+
+    return ArchivePlan(
+        root=root,
+        config=config,
+        primary=primary_move,
+        candidates=tuple(candidates),
+        scope=scope,
+        date_str=date_str,
+        reason=reason,
+        source=source,
+    )
+
+
+def preflight_archive_plan(plan: ArchivePlan) -> None:
+    """Prove every plan member writable before the first byte moves (M26 — D4).
+
+    Validate-all-first: the five proofs `cli.md` § *The scoped write and its
+    pre-flight* lists, each over the whole plan, so a handled failure refuses
+    the WHOLE operation with zero mutation — the primary included. Each
+    refusal raises `CoordinatedWriteError` with `rolled_back=True` and
+    `published=()`, because the tree is trivially unchanged, and carries the
+    Phase-1 Q4 exit code: **1** for the two conditions 1.x already owned (no
+    editable metadata block; an occupied destination slot), **2** for the
+    four new M26 refusals.
+
+    Deliberately exactly two `os.access` checks — the source FILE and the
+    destination directory. A source-PARENT-directory check is NOT one of
+    them: a `0o644` file inside a `0o555` directory is genuinely writable by
+    that test and must be admitted here, failing later as the D4 residual
+    partial-state admission. That is the milestone's only end-to-end
+    partial-state lock, and it is also why `apply_relate_plan` (M25 — D5)
+    refuses to add the same check.
+
+    Raises:
+        CoordinatedWriteError: any of the five proofs fails.
+    """
+    for move in plan.moves:
+        try:
+            parse_metadata_block(move.path.read_text())
+        except MetadataError as exc:
+            raise CoordinatedWriteError(
+                f"{move.rel} has no editable metadata block; refusing before any write",
+                rolled_back=True,
+                published=(),
+                exit_code=1,
+            ) from exc
+
+    for move in plan.moves:
+        if _is_archived_rel(move.rel, plan.config):
+            raise CoordinatedWriteError(
+                f"{move.rel} is already under the archive subtree; refusing before any write",
+                rolled_back=True,
+                published=(),
+            )
+
+    for move in plan.moves:
+        # Every member of `moves` is selected, so `plan_archive` has filled
+        # its destination.
+        assert move.dest is not None and move.dest_rel is not None
+        if move.dest.exists():
+            raise CoordinatedWriteError(
+                f"archive destination already exists: {move.dest_rel} (for {move.rel}); "
+                "refusing before any write",
+                rolled_back=True,
+                published=(),
+                exit_code=1,
+            )
+
+    claimed: dict[str, str] = {}
+    for move in plan.moves:
+        assert move.dest_rel is not None
+        if move.dest_rel in claimed:
+            raise CoordinatedWriteError(
+                f"{claimed[move.dest_rel]} and {move.rel} would both archive to "
+                f"{move.dest_rel}; refusing before any write",
+                rolled_back=True,
+                published=(),
+            )
+        claimed[move.dest_rel] = move.rel
+
+    for move in plan.moves:
+        if not os.access(move.path, os.W_OK):
+            raise CoordinatedWriteError(
+                f"{move.rel} is not writable; refusing before any write",
+                rolled_back=True,
+                published=(),
+            )
+
+    # The dated directory usually does not exist yet, so the nearest EXISTING
+    # ancestor is the one that has to be writable. The walk terminates: the
+    # docs root exists.
+    assert plan.primary.dest is not None
+    ancestor = plan.primary.dest.parent
+    while not ancestor.exists():
+        ancestor = ancestor.parent
+    if not os.access(ancestor, os.W_OK):
+        raise CoordinatedWriteError(
+            f"{_root_relative(ancestor, plan.root)} is not writable; refusing before any write",
+            rolled_back=True,
+            published=(),
+        )
+
+
+def apply_archive_plan(plan: ArchivePlan) -> list[tuple[str, str]]:
+    """Execute a validated `ArchivePlan` in order (M26 — D4).
+
+    Drives `_archive_one` — unchanged since M2 — over `plan.moves`, primary
+    first. `--reason` is written onto the primary only (Phase-1 Q10).
+
+    Returns the `(old_rel, new_rel)` pairs `_rewrite_referring_edges`
+    consumes: the canonical pair per member plus **one extra pair per
+    declared spelling** (Phase-1 Q5), so a `./b.md` bullet elsewhere in the
+    tree is repointed exactly like a `b.md` one.
+
+    There is no rollback (D4, deliberately). Every failure the tool can
+    foresee was refused by `preflight_archive_plan`; an unexpected `OSError`
+    here — or a `MetadataError` the pre-flight's proof says is unreachable,
+    caught anyway so a wrong assumption surfaces as an admission rather than
+    a traceback — becomes the exact partial-state admission.
+
+    Raises:
+        CoordinatedWriteError: a member's write failed; `published` names
+            what really moved and `rolled_back` is False.
+    """
+    published: list[ArchiveMove] = []
+    pairs: list[tuple[str, str]] = []
+    for index, move in enumerate(plan.moves):
+        try:
+            _archive_one(
+                move.path,
+                plan.root,
+                plan.config,
+                plan.date_str,
+                plan.reason if index == 0 else None,
+            )
+        except (MetadataError, OSError) as exc:
+            raise _archive_partial_state(plan, move, exc, published) from exc
+        published.append(move)
+        assert move.dest_rel is not None
+        pairs.append((move.rel, move.dest_rel))
+        pairs.extend((alias, move.dest_rel) for alias in move.aliases if alias != move.rel)
+    return pairs
+
+
+def _archive_partial_state(
+    plan: ArchivePlan,
+    failed: ArchiveMove,
+    exc: Exception,
+    published: list[ArchiveMove],
+) -> CoordinatedWriteError:
+    """Build the D4 residual partial-state admission for a failed execution.
+
+    Names what moved and what did not, in execution order, so the message is
+    checkable against the disk line by line. An empty archived list renders
+    as the literal word `none` — never as a blank (the M25 `_rollback_relate`
+    lesson).
+
+    When nothing had moved, the dated directory `_archive_one` creates before
+    its first write is pruned: it `mkdir`s the destination parent BEFORE
+    `atomic_write`, so a first-member failure would otherwise leave an empty
+    `archive/<date>/` behind and a refusal that promised zero mutation would
+    have changed the tree. `rmdir` is suppressed because a non-empty
+    directory (an earlier archive on the same date) must be left alone.
+    """
+    if published:
+        archived = ", ".join(f"{move.rel} -> {move.dest_rel}" for move in published)
+    else:
+        archived = "none"
+        assert plan.primary.dest is not None
+        dated = plan.primary.dest.parent
+        for directory in (dated, dated.parent):
+            with contextlib.suppress(OSError):
+                directory.rmdir()
+
+    remaining = ", ".join(move.rel for move in plan.moves[len(published) :])
+    return CoordinatedWriteError(
+        f"write failed for {failed.rel}: {exc}; PARTIAL ARCHIVE — not rolled back. "
+        f"Archived: {archived}. Still at their original paths: {remaining}. Repair manually.",
+        rolled_back=False,
+        published=tuple(move.rel for move in published),
+    )
+
+
 def _cascade_set(doc: Doc, root: Path, cascade_only: str | None) -> list[tuple[str, Path]]:
     """Return the one-hop cascade candidates of `doc`, filtered by `--cascade-only`.
 
