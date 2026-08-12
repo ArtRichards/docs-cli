@@ -505,7 +505,7 @@ coverage in *Evidence → regression coverage* below.
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate / Accept / Dogfood
+- [x] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery

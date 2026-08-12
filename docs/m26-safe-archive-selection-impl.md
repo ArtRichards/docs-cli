@@ -33,10 +33,11 @@ the milestone checklist synchronized.
   and proved mechanically that 769 of the 777 pre-existing ids are still
   GREEN, the other 8 deliberately changed. **Phases 1–4 changed no product
   code** — `git diff src/docs_cli/cli.py` was empty at the end of Step 1.
-  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–8 are
+  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–9 are
   complete — the full suite is **888 GREEN**, with 774 of the 777
   pre-existing ids mechanically proven present and passing and 3 deliberately
-  removed.
+  removed, and the closeout workflow dogfooded on a throwaway copy of this
+  tree.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -54,7 +55,7 @@ the milestone checklist synchronized.
 | 6. Implement Offline/Core Path | **Done** | 2026-08-13 | `_candidate_exclusion_reason`, `archive_candidates`, `plan_archive`, `preflight_archive_plan`, `apply_archive_plan`, `_archive_partial_state`. `_archive_one` verbatim; `_cmd_archive` still untouched. **814 passed, 70 failed** — exactly the predicted +33, the whole of `tests/test_archive_plan.py`. |
 | 7. Update Tool/Wrapper Layer | **Done** | 2026-08-13 | argparse (mutex group deleted, both retired flags marked, local `--json`), `_cmd_archive` rewritten in the nine-step check order, `_print_archive_lines`; `_cascade_set` / `_print_cascade_footer` / `_cascade_archive` deleted — the verb's last stdin read goes with them. Surface parity: SKILL.md, `references/use-cases.md`, byte-identical mirrors, `UNRELEASED` CHANGELOG, `cli.md`, `plan.md`. **887 passed, 1 failed of 888** — the one RED is a defective Step-1 test helper, fixed in its own commit. |
 | 8. Run Tests (GREEN) | **Done** | 2026-08-13 | **888 collected, 888 passed**, 0 collection errors, 0 tracebacks, 0 xfail/xpass. ruff / format / mypy / `docs check --root docs` clean; mirrors byte-identical; INDEX snapshot in sync. Mechanical proof against `37d7f1a`: 774 of the 777 pre-existing ids present and **all GREEN** (re-run as an explicit id list), 3 deliberately removed, 114 new — 774 + 114 = 888. Ran as uid 1000, so the five root-skipped locks really executed. |
-| 9. Integrate / Accept / Dogfood | Pending | — | Preview + scoped archive of a real milestone pair on a throwaway tree copy. |
+| 9. Integrate / Accept / Dogfood | **Done** | 2026-08-13 | On a throwaway copy of this docs tree: E1 reproduced and defused (all six candidates named, none authorized), filtered preview, real scoped write of the M25 pair with `docs check` clean and `docs index` a byte no-op, preview/apply records identical, and four refusals each on a fresh copy with zero bytes and no new directory. `--interactive` with no stdin refused in 0s. `git status --porcelain docs/` empty — the live tree was never touched. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summaries, hand off to M27. |
 
 ## Setup record — 2026-08-12
@@ -1334,6 +1335,91 @@ One, described in full under *Defect in a Step-1 test* above: a missing
 `parents=True` in `_two_relation_tree`, which made
 `test_archive_help_still_registers_the_retired_flags` unsatisfiable by any
 implementation. Fixed in its own labelled commit; no assertion changed.
+
+## Phase 9 — Integrate / Accept / Dogfood — 2026-08-13
+
+### Objective
+
+Run the real milestone-closeout workflow end to end against this project's
+own docs tree — the tree E1 was reproduced on — and then exercise every
+refusal, proving each changes zero bytes.
+
+**On a throwaway copy only.** Everything below ran in
+`…/scratchpad/m26-dogfood/`, never against the live `docs/`. Proof:
+`git status --porcelain docs/` is **empty** afterwards. Each refusal got its
+own fresh `cp -a` copy, so no flow could observe another's mutation.
+
+### 1 — Unfiltered preview: E1, reproduced and defused
+
+`docs archive tree/m25-reciprocal-relationship-integrity.md --cascade-dry-run
+--json --date 2026-08-13` → exit **0**, 71-file tree byte-identical:
+
+```
+docs: archive: would archive m25-reciprocal-relationship-integrity.md -> archive/2026-08-13/m25-reciprocal-relationship-integrity.md
+docs: archive: candidate plan.md — not selected (no --cascade-only scope)
+docs: archive: candidate m25-reciprocal-relationship-integrity-impl.md — not selected (no --cascade-only scope)
+docs: archive: candidate cli.md — not selected (no --cascade-only scope)
+docs: archive: candidate convention.md — not selected (no --cascade-only scope)
+docs: archive: candidate test-strategy.md — not selected (no --cascade-only scope)
+docs: archive: candidate status.md — not selected (no --cascade-only scope)
+docs: archive: 6 candidate(s): 0 selected, 6 not selected, 0 ineligible
+docs: archive: preview only — nothing was written
+```
+
+This is E1 exactly: the six documents 1.x's bare `--cascade` would have
+swept into the archive — this project's entire specification spine — now
+named, counted, and **not** authorized. The record carries all six with
+`"selected": false, "exclusion_reason": "not-selected"`.
+
+### 2 — Filtered preview: what the scope leaves behind
+
+Adding `--cascade-only 'm25-*'` → exit 0, still byte-identical: the impl log
+`selected -> archive/2026-08-13/…`, and the five spine docs each
+`not selected (outside --cascade-only 'm25-*')` —
+`6 candidate(s): 1 selected, 5 not selected, 0 ineligible`, `preview only`.
+The judgement the preview exists to support is visible without running it.
+
+### 3 — The scoped write
+
+Dropping `--cascade-dry-run` → exit **0**. Both M25 documents landed in
+`archive/2026-08-13/`; `plan.md`, `cli.md`, `convention.md`,
+`test-strategy.md`, and `status.md` are still at the root. The stderr is the
+preview's, verbatim, with two differences: `archived` instead of `would
+archive`, and no `preview only` line.
+
+`docs check --root tree` → **no violations** (exit 0). A follow-up
+`docs index` is a **byte no-op**, so the end-of-batch reindex left INDEX
+fully refreshed.
+
+### 4 — The preview and apply records are diffable
+
+Dropping the three state bits and `primary.source`, the scoped preview
+record and the apply record are **identical**, key order included — which is
+the whole point of D7's one-shape rule.
+
+### 5 — Refusals, each on a fresh copy, each byte-verified
+
+| Flow | Exit | stdout | Tree |
+|---|---|---|---|
+| `--cascade` | 2 | empty | byte-identical, no new directory |
+| `--interactive` with `< /dev/null` | 2 | empty | byte-identical; **0** `[y/N]` prompts, elapsed **0s** against a 20s timeout — it never blocks |
+| `--cascade-only 'typo-*' --json` | 2 | empty | byte-identical, no new directory |
+| an already-archived primary (`archive/2026-06-01/m16-…md`) under `--cascade-dry-run --json` | 2 | empty | byte-identical, no new directory |
+
+Each printed its frozen message. The typo'd scope reported
+`matched none of the 6 one-hop candidate(s); refusing before any write` —
+E5, which in 1.x archived the primary and exited 0. The archived primary was
+refused under the **preview** shape, confirming the refusal is not an
+authorization question.
+
+"No new directory" is asserted from a `find -type d` snapshot, not just a
+file-hash set: a refusal that had already created `archive/<date>/` would
+otherwise pass a files-only comparison.
+
+### 6 — The live tree
+
+`git status --porcelain docs/` → empty. The throwaway trees are not
+committed.
 
 ## Milestone completion summary
 
