@@ -353,8 +353,12 @@ class Finding:
             code 2; a warning with no error present drives exit code 1.
         rule: Stable machine-readable rule id — one of ``missing-field``,
             ``bad-vocab``, ``bad-date``, ``status-drift``, ``broken-ref``,
-            ``stale``, ``malformed``. Emitted in ``--json`` output so CI
-            hooks can filter on it.
+            ``stale``, ``malformed``, ``unknown-field`` (M10),
+            ``medium-confidence-inference`` (`docs migrate --triage`), or
+            ``missing-inverse`` (M25). Emitted in ``--json`` output so CI
+            hooks can filter on it. The JSON record's key set is closed at
+            ``{path, severity, rule, message}``; a new rule adds a value
+            here, never a field there.
         message: Human-readable one-line description of the problem.
     """
 

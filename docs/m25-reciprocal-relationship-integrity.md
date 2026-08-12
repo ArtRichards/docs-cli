@@ -26,7 +26,10 @@ Related:
   inverses a hard `docs check` error, and add a narrow two-document
   `docs relate add/remove` mutation for explicit repair. The mutation works on
   active docs and, with a reasoned audit record, on archived endpoints.
-- Progress: **Active / Phases 1–4 complete (2026-08-11; amended 2026-08-12).** The contract is
+- Progress: **Active / implementation-complete — all ten TDD phases done
+  (Phases 1–4 2026-08-11 amended 2026-08-12 on `m25/phases-1-4`; Phases
+  5–10 2026-08-12 on `m25/phases-5-10`). Stays `Lifecycle: active` until
+  the M29 publish closeout.** The contract is
   frozen in *Decisions (Phase 1 — BINDING)* below and in `cli.md` /
   `convention.md`; all five open questions are RESOLVED. The RED suite is
   written (+121 items) over ten committed `reciprocal-*` fixture trees, and
@@ -35,15 +38,20 @@ Related:
   GREEN. Step 1 has been through a same-instance audit and an independent
   fresh-eyes review (**no blockers**); the review's two operator-binding
   contract amendments — the **self-edge exemption** and **canonical path
-  matching** — are folded into D2 below. **Step 2 is in flight on
-  `m25/phases-5-10`: Phases 5–9 are complete (2026-08-12) — the
-  implementation, the `docs relate add|remove` CLI, the bundled-skill row,
-  the `UNRELEASED` CHANGELOG (no version bump), and six conductor-resolved
-  `cli.md` corrections have all landed, and the full suite is **757 passed,
-  0 failed** with every pre-existing test id proven still GREEN, and the
-  eight-flow dogfood ran unattended on a throwaway copy of this tree
-  (detect → repair → re-check, audited archived repair, 1 of 46 archived
-  files touched).** Phase 10 — Quality, Docs, Refactor is next.
+  matching** — are folded into D2 below. **Step 2 (Phases 5–10) is
+  complete on `m25/phases-5-10`:** the implementation, the
+  `docs relate add|remove` CLI, the bundled-skill row and use-case catalog,
+  the `UNRELEASED` CHANGELOG (**no version bump** — the package stays
+  1.8.0), and eight conductor-resolved `cli.md` corrections all landed; the
+  full suite is **757 passed, 0 failed** with every pre-existing test id
+  proven still GREEN by `comm`; and the eight-flow dogfood ran unattended on
+  a throwaway copy of this tree (detect → repair → re-check, audited
+  archived repair, 1 of 46 archived files touched). One Step-1 test
+  assertion was corrected under operator approval — it was unsatisfiable
+  alongside another test in the same file; the replacement is stronger and
+  the shipped behaviour was not changed to accommodate it. **M26 is ready to
+  prepare; a Step-3 `/simplify` pass runs against this implementation
+  next.**
 
 ### Goal
 
@@ -172,10 +180,10 @@ automatic conversion of free-form edges occurs.
 - [x] D5 upgrade guidance, CLI/bundled-skill parity, and release notes
       (Phase 7, 2026-08-12 — `cli.md` / `convention.md` / bundled mirrors /
       `SKILL.md` / `CHANGELOG.md` `UNRELEASED`).
-- [ ] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage.
-      (RED half complete — Phases 2–4, 2026-08-11; GREEN half complete —
-      Phase 8, 2026-08-12, 757 passed; dogfood — Phase 9, 2026-08-12, eight
-      flows on a throwaway tree copy.)
+- [x] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage
+      (RED half — Phases 2–4, 2026-08-11; GREEN half — Phase 8, 2026-08-12,
+      757 passed with zero pre-existing regressions; dogfood — Phase 9,
+      2026-08-12, eight flows on a throwaway tree copy).
 
 ## TDD implementation plan
 
@@ -274,7 +282,7 @@ automatic conversion of free-form edges occurs.
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
 - [x] Phase 9 — Integrate / Accept / Dogfood
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 
@@ -601,14 +609,38 @@ surface parity, archive byte-identity checks, and the live INDEX snapshot.
 
 ## Success criteria
 
-- Every recognized relationship pair is locally navigable in both directions.
-- A one-sided recognized edge makes `docs check` exit 2 with one actionable
-  `missing-inverse` finding; excluded/malformed/non-managed endpoints do not
-  produce a misleading inverse finding.
-- `docs relate add/remove` changes exactly the intended pair, is idempotent,
-  previews without writing, and never leaves a deliberate half-pair after a
-  handled failure.
-- Archived repair preserves lifecycle/history and produces a dated reason audit
-  with no unrelated byte changes.
-- Existing free-form verbs and existing `broken-ref` ownership stay compatible.
-- Full quality and dogfood gates are GREEN, leaving M26 ready to prepare next.
+All six are **met** as of 2026-08-12 (Phase 10). Evidence lives in the
+implementation log's Phase-8/9/10 records.
+
+- [x] **Every recognized relationship pair is locally navigable in both
+      directions.** Six verbs in three symmetric pairs; `inverse_verb`
+      applied twice is the identity, parametrized over all six directions
+      (`test_check_tree_all_three_pairs_both_directions`).
+- [x] **A one-sided recognized edge makes `docs check` exit 2 with one
+      actionable `missing-inverse` finding; excluded/malformed/non-managed
+      endpoints do not produce a misleading inverse finding.** Proven on
+      committed fixture trees for each exemption, and dogfooded on a copy of
+      this tree (Phase 9 flow 2: exactly one finding, naming source, verb,
+      target, and the exact inverse). The inverse must point **back** at the
+      source, not merely exist.
+- [x] **`docs relate add/remove` changes exactly the intended pair, is
+      idempotent, previews without writing, and never leaves a deliberate
+      half-pair after a handled failure.** A repeat invocation is
+      byte-neutral tree-wide; `--dry-run` changes zero bytes including
+      `INDEX.md`; the rollback is pinned end-to-end by a read-only-directory
+      injection and at the unit seam for the `ROLLBACK FAILED` half.
+- [x] **Archived repair preserves lifecycle/history and produces a dated
+      reason audit with no unrelated byte changes.** Phase-9 flow 5: the
+      complete diff is the `Updated:` value, one `Related:` bullet, and the
+      `Revision:` group; the body's sha256 is identical; a second reasoned
+      repair appends under the **one** `Revision:` label. Flow 6: 1 of 46
+      archived files differs.
+- [x] **Existing free-form verbs and existing `broken-ref` ownership stay
+      compatible.** The supersedes trap is locked; all 18 pre-M25 fixture
+      trees gain no finding (derived from the directory, so future trees are
+      covered for free); zero pre-existing regressions, proven by `comm`
+      against the 636 ids at `3dca105`.
+- [x] **Full quality and dogfood gates are GREEN, leaving M26 ready to
+      prepare next.** 757 passed; ruff / format / mypy / `docs check --root
+      docs` clean; mirrors and the INDEX snapshot in lockstep; version still
+      1.8.0 per D6.

@@ -25,7 +25,8 @@ You own the convention from day one.
 | Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. `--cascade` opt-in for one-hop dependents. |
 | Regenerate INDEX | `docs index` | The hand-written preamble is preserved; only the marker-block content is rewritten. |
 | Query the tree | `docs list [filters]` | Human table by default; `--json` for piping. Filter by role, lifecycle, project, stale-after-N-days. |
-| Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata. Exit codes 0/1/2 distinguishable for CI gates. |
+| Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, and one-sided reciprocal edges. Exit codes 0/1/2 distinguishable for CI gates. |
+| Repair a one-sided relationship | `docs relate add\|remove SOURCE VERB TARGET` | Writes both halves of a reciprocal pair as one operation. Idempotent; `--dry-run` previews; `--json` for piping; `--reason` required for an archived endpoint (M25). |
 
 ## Adoption: bring a non-conforming tree under the convention
 
@@ -49,6 +50,29 @@ sibling reference in this same `references/` directory). The
 skill triggers on phrases like *"adopt this directory"*,
 *"migrate this folder"*, and *"bring this into docs
 convention"*.
+
+## Upgrade: repair reciprocal relationships (M25)
+
+Six `Related:` verbs are **reciprocal** — `precedes`/`follows`,
+`depends-on`/`required-by`, `blocks`/`blocked-by`. A recognized edge
+whose target does not declare the exact inverse back is a hard
+`docs check` error, so a tree that passed before the upgrade can
+start failing. The repair is explicit, never automatic: `docs` will
+not guess whether the edge should be completed or deleted.
+
+| Scenario | Verb | Detail |
+|---|---|---|
+| Find the one-sided edges | `docs check` | Each finding names the source, the verb, the target, and the exact missing inverse. `--json` for a machine list; the record keys are unchanged (`path`, `severity`, `rule`, `message`). |
+| The edge is right — complete it | `docs relate add <source> <verb> <target>` | Copy the paths straight out of the finding; relative endpoints resolve root-relative first. Only the missing half is written; INDEX refreshes once. |
+| The edge is wrong — delete the pair | `docs relate remove <source> <verb> <target>` | Removes whichever halves exist. Equally valid; `check` is clean either way. |
+| Preview before touching anything | `docs relate add … --dry-run` | Writes nothing at all, INDEX included. The `--json` record has the same shape as a real apply, so a preview and an apply are diffable. |
+| Repair an archived endpoint | `docs relate add … --reason "…"` | Required whenever either endpoint is under `archive/`. Only the one `Related:` bullet, `Updated:`, and a dated `Revision:` audit bullet may change; lifecycle, `Archived-reason:`, and prose are byte-identical. |
+| Re-run safely | any of the above | Fully idempotent: an already-satisfied invocation writes zero bytes, bumps no `Updated:`, adds no `Revision:` bullet, and does not reindex. |
+
+The loop is `check → relate add|remove → check` until clean. Free-form
+verbs (`pairs-with`, `child-of`/`parent-of`,
+`supersedes`/`superseded-by`, your own) are untouched by all of this —
+they gain no reciprocal validation and `relate` refuses to edit them.
 
 ## Distribution: install + share
 

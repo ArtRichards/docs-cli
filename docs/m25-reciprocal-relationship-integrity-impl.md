@@ -22,8 +22,9 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 5–9 complete (Step 2 in flight). Phase 10 — Quality,
-  Docs, Refactor is next.**
+- Progress: **All ten TDD phases complete (Step 2, 2026-08-12). M25 is
+  implementation-complete and stays `Lifecycle: active` until the M29
+  publish closeout.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -43,7 +44,7 @@ progress table and milestone checklist synchronized.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); six spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
 | 8. Run Tests (GREEN) | Complete | 2026-08-12 | **757 passed, 0 failed** (757 collected, zero collection errors). All 636 pre-existing test ids proven still present and GREEN by `comm`. One defective Step-1 assertion corrected under operator approval; `cli.py` byte-unchanged by that commit. |
 | 9. Integrate / Accept / Dogfood | Complete | 2026-08-12 | Eight flows on a throwaway `cp -r docs` copy: detect → repair → re-check, remove/restore/idempotency, audited archived repair (refusal then repair then a second `Revision:` bullet), blast radius (1 of 46 archived files changed), dry-run/JSON, real tree untouched. |
-| 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summary. |
+| 10. Quality, Docs, Refactor | Complete | 2026-08-12 | Placeholder sweep clean; `Finding`'s rule-id list corrected; `architecture.md` + `test-strategy.md` closed; use-case catalog gained the upgrade-and-repair flow; completion summaries written. **757 passed**, gate clean, version still 1.8.0. |
 
 ## Setup record — 2026-08-10
 
@@ -1297,6 +1298,147 @@ apply are diffable, as D3 requires.
   incomplete edge → the agent chooses `relate add` or `relate remove` → the
   paths copy across without translation → `check` is clean.
 
+## Phase 10 — Quality, Docs, Refactor — 2026-08-12
+
+### Objective
+
+Closure only. A separate `/simplify` pass runs afterwards as Step 3, so
+this phase deliberately does **no** speculative refactoring, abstraction
+hunting, or helper-collapsing sweeps.
+
+### Actions taken
+
+1. **Placeholder sweep.** `grep -n "TODO\|FIXME\|NotImplementedError\|XXX"
+   src/docs_cli/cli.py` → **no matches**. All three Phase-5 stubs have real
+   bodies.
+2. **Docstring accuracy.** `Finding.rule` listed only the seven M3 rule ids
+   and had silently fallen three behind — it now names `unknown-field`
+   (M10), `medium-confidence-inference` (`docs migrate --triage`), and
+   `missing-inverse` (M25), plus an explicit statement that the JSON
+   record's key set is **closed** at `{path, severity, rule, message}` and
+   a new rule adds a value here rather than a field there.
+   (`check_tree`'s ordering sentence and the module docstring's milestone
+   paragraph were already corrected in Phases 6 and 7.)
+3. **Spec closure.** `docs/architecture.md` — the `model` section now names
+   the three M25 editors beside `set_metadata_field` /
+   `rewrite_related_refs` / `scaffold_doc` and records that they share
+   `_related_run` and `_metadata_line_span`; two **new** sections, `check`
+   and `relate`, describe the cross-document reciprocity pass (and why the
+   applicability conditions collapse into one index lookup) and the
+   plan/apply split with its best-effort-publish-plus-rollback contract.
+   The file previously had no `check` section at all.
+   `docs/test-strategy.md` — the enumerated fixture-tree list now carries
+   the `reciprocal-*` family with its one-semantic-per-tree rule, the
+   no-dates-so-nothing-rots note, and the reason mutation-shaped cases use
+   inline `tmp_path` builders instead.
+4. **Use-case catalog.** `src/docs_cli/skill/references/use-cases.md` — a
+   new **Upgrade: repair reciprocal relationships (M25)** section with the
+   six-row scenario table and the `check → relate add|remove → check` loop,
+   plus a `docs relate` row in the greenfield table and the `docs check`
+   row extended to mention one-sided edges. The setup record deferred this
+   to "only when the behavior exists"; it now does.
+5. **Completion summaries.** This log's *Milestone completion summary* and
+   the milestone doc's *Success criteria* filled with evidence; Phases 8–10
+   ticked; `docs touch` + INDEX snapshot re-synced.
+
+### Deliberately NOT done (Step 3 owns it)
+
+No helper was collapsed, no abstraction removed, no "clever code replaced
+with obvious code" sweep. `_related_run`, `_bullet_matches`,
+`_plan_relate_edit`, `_rollback_relate`, and `_print_relate_lines` are all
+single-purpose extractions that already earn their keep; whether any of
+them should fold back into a caller is `/simplify`'s judgement, not this
+phase's.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **757 passed**.
+- `.venv/bin/ruff check .` / `ruff format --check .` / `mypy src/ tests/` —
+  all clean.
+- `.venv/bin/docs check --root docs` — no violations, exit 0.
+- `pyproject.toml` and `tests/test_packaging.py` byte-untouched across the
+  whole step; `docs --version` → `docs 1.8.0`; CHANGELOG still under
+  `## UNRELEASED`.
+
+### Hand-off
+
+M25 is **implementation-complete** and stays `Lifecycle: active` until the
+M29 publish closeout — it ships as part of the batched 2.0.0 release, not
+on its own. **M26 — Safe explicit archive selection is ready to prepare.**
+Host-machine skills are deliberately **not** refreshed here: per the
+project's CLAUDE.md skill-update policy that happens only at a production
+ship (M29), and `docs install-skill --force` from an unpublished tree would
+put pre-release guidance on the host.
+
 ## Milestone completion summary
 
-_Not complete._
+**M25 — Reciprocal relationship integrity and `docs relate` is
+implementation-complete (2026-08-12).** All ten TDD phases are done across
+two branches: Phases 1–4 (contract + RED baseline) on `m25/phases-1-4`,
+Phases 5–10 (implementation → dogfood → closeout) on `m25/phases-5-10`.
+
+### What shipped
+
+- **Six recognized reciprocal verbs** in three symmetric pairs
+  (`precedes`/`follows`, `depends-on`/`required-by`,
+  `blocks`/`blocked-by`), matched case-sensitively. Every other `Related:`
+  verb stays free-form with no reciprocal validation.
+- **A hard `missing-inverse` `docs check` rule** — error, exit 2, attached
+  to the source, one per distinct `(source, verb, canonical target)`
+  triple, with a frozen single-line message that names both possible
+  repairs without choosing. No new JSON field. Excluded, unresolvable,
+  non-Markdown, malformed, and self-referential targets are exempt; the
+  owning rules keep their cases.
+- **`docs relate add|remove SOURCE VERB TARGET`** — idempotent,
+  validate-all-first, two-document coordinated edit with `--dry-run`,
+  `--json`, `--quiet`, `--reason`, `--date`, `--root`; one end-of-run
+  reindex; no whole-tree pre-flight; staged publish with rollback and an
+  explicit non-atomic admission when a rollback itself fails.
+- **Audited archived-endpoint repair** — `--reason` required whenever
+  either endpoint is archived (checked before planning), with the change
+  limited to one `Related:` bullet, `Updated:`, and a dated `Revision:`
+  audit bullet.
+- **Full surface parity** — `cli.md`, `convention.md`, the byte-identical
+  bundled mirrors, `SKILL.md`, the use-case catalog, and a CHANGELOG
+  `UNRELEASED` section carrying the BREAKING notice and an *Upgrading from
+  1.x* worked loop.
+
+### Final ledger
+
+| Gate | Result |
+|---|---|
+| `pytest tests/ -q` | **757 passed, 0 failed** (636 pre-existing + 121 M25) |
+| Pre-existing regressions | **0**, proven by `comm` against `3dca105`'s 636 ids |
+| `ruff check` / `ruff format --check` | clean / 45 files formatted |
+| `mypy src/ tests/` | no issues in 46 source files |
+| `docs check --root docs` | exit 0; `--json` → `[]` |
+| Bundled mirrors | byte-identical to `docs/cli.md` / `docs/convention.md` |
+| INDEX snapshot | `docs/INDEX.md` ↔ `tests/fixtures/expected/docs-INDEX.md` in lockstep |
+| Version | **1.8.0, unmoved** — `pyproject.toml` and `tests/test_packaging.py` byte-untouched across the entire milestone (D6) |
+| Dogfood | eight flows, unattended, on a throwaway tree copy; 1 of 46 archived files touched |
+
+### Deviations from the plan, and why
+
+- **Phase 1 made zero `cli.py` edits** despite its file list naming
+  contract-level signatures (logged and approved at the time); the
+  signatures were frozen in the milestone Decisions and landed in Phase 5.
+- **Eight spec corrections landed in Phase 7** (conductor resolutions
+  R1–R7, R9) that Phase 1 had frozen wrong or left unpinned — most
+  materially a third rollback branch for a first-publish failure (the
+  frozen string degenerated to `rolled back  — …` with an empty list) and a
+  remove-shaped `ROLLBACK FAILED` admission (the frozen wording was
+  add-shaped and would have handed the operator an inverted repair
+  instruction).
+- **One Step-1 test assertion was corrected under operator approval** in
+  Phase 8 — it was unsatisfiable in conjunction with another test in the
+  same file. The replacement is stronger, and the shipped behaviour was not
+  changed to accommodate it. Full evidence in the Phase-8 record.
+
+### Follow-ons
+
+- **M29** renames and dates the `UNRELEASED` CHANGELOG heading and performs
+  the single bump to `2.0.0`; host-machine skills are refreshed there, not
+  here.
+- **M26 — Safe explicit archive selection** is ready to prepare.
+- A **Step-3 `/simplify` pass** runs against this implementation next;
+  Phase 10 deliberately left that work to it.
