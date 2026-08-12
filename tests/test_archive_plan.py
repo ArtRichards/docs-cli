@@ -110,6 +110,7 @@ def _plan(
     scope: str | None = None,
     date_str: str = _DATE,
     reason: str | None = None,
+    source: str | None = None,
 ):
     config = cli.load_config(root)
     path = root / primary
@@ -118,6 +119,7 @@ def _plan(
         root,
         config,
         primary=path,
+        source=str(path) if source is None else source,
         doc=doc,
         scope=scope,
         date_str=date_str,
@@ -246,7 +248,7 @@ def test_scope_matches_the_canonical_path_not_the_declared_spelling(tmp_path):
 
     (candidate,) = _candidates(root, "a.md", "b.md")
     assert candidate.selected is True
-    assert candidate.reason is None
+    assert candidate.exclusion_reason is None
     # `archive_candidates` takes no date, so it cannot compute a destination —
     # that is `plan_archive`'s job, and only for the selected members.
     assert candidate.dest is None and candidate.dest_rel is None
@@ -266,7 +268,7 @@ def test_candidates_exclude_the_primary_itself(tmp_path):
 
     candidates = _candidates(root, "a.md")
     assert [c.rel for c in candidates] == ["b.md"], "the self-edge is not a candidate"
-    assert all(c.reason != "already-archived" for c in candidates)
+    assert all(c.exclusion_reason != "already-archived" for c in candidates)
 
 
 def test_archived_candidate_is_ineligible_with_reason(tmp_path):
@@ -291,7 +293,7 @@ def test_archived_candidate_is_ineligible_with_reason(tmp_path):
     assert set(by_rel) == {"log.md", "archive/2026-01-01/old.md"}
     archived = by_rel["archive/2026-01-01/old.md"]
     assert archived.selected is False
-    assert archived.reason == "already-archived"
+    assert archived.exclusion_reason == "already-archived"
     assert archived.dest is None and archived.dest_rel is None
 
 
@@ -308,7 +310,7 @@ def test_unresolved_candidate_is_ineligible_with_reason(tmp_path):
 
     (candidate,) = _candidates(root, "a.md", "*")
     assert candidate.selected is False
-    assert candidate.reason == "unresolved-target"
+    assert candidate.exclusion_reason == "unresolved-target"
 
 
 def test_candidate_outside_the_root_is_ineligible(tmp_path):
@@ -325,7 +327,7 @@ def test_candidate_outside_the_root_is_ineligible(tmp_path):
 
     (candidate,) = _candidates(root, "a.md", "*")
     assert candidate.selected is False
-    assert candidate.reason == "outside-root"
+    assert candidate.exclusion_reason == "outside-root"
 
 
 @pytest.mark.parametrize(
@@ -351,7 +353,7 @@ def test_ineligibility_reason_precedence_is_pinned(tmp_path, edge, expected):
 
     (candidate,) = _candidates(root, "a.md", "*")
     assert candidate.selected is False
-    assert candidate.reason == expected
+    assert candidate.exclusion_reason == expected
 
 
 def test_unselected_candidate_carries_not_selected(tmp_path):
@@ -366,9 +368,9 @@ def test_unselected_candidate_carries_not_selected(tmp_path):
     _doc(root, "a.md", edges=["pairs-with: b.md", "pairs-with: c.md"])
 
     by_rel = {c.rel: c for c in _candidates(root, "a.md", "b.md")}
-    assert by_rel["b.md"].selected is True and by_rel["b.md"].reason is None
+    assert by_rel["b.md"].selected is True and by_rel["b.md"].exclusion_reason is None
     assert by_rel["c.md"].selected is False
-    assert by_rel["c.md"].reason == "not-selected"
+    assert by_rel["c.md"].exclusion_reason == "not-selected"
     assert by_rel["c.md"].dest_rel is None
 
 
@@ -595,8 +597,13 @@ _REFUSAL_CASES = {
 }
 
 
-@_SKIP_AS_ROOT
-@pytest.mark.parametrize("case", sorted(_REFUSAL_CASES))
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param(c, marks=[_SKIP_AS_ROOT] if c.startswith("unwritable") else [], id=c)
+        for c in sorted(_REFUSAL_CASES)
+    ],
+)
 def test_every_preflight_refusal_leaves_the_tree_byte_identical(tmp_path, case):
     """D4: EVERY handled pre-flight failure refuses with zero mutation, and
     says so — `rolled_back` True (the tree is trivially unchanged) and
@@ -604,6 +611,12 @@ def test_every_preflight_refusal_leaves_the_tree_byte_identical(tmp_path, case):
 
     Whole-tree byte identity, `.docs.toml` and any `INDEX.md` included, is the
     real assertion; `not (root / "archive").exists()` would be a proxy.
+
+    The root skip is applied **per parametrization**, not to the whole test:
+    only the two unwritable cases depend on mode bits, and skipping the other
+    four under a root CI would silently drop the `rolled_back` / `published`
+    assertions for the collision, occupied, archived-primary and
+    malformed-member refusals.
 
     RED reason: `plan_archive` / `preflight_archive_plan` do not exist
     (Phase 5).
@@ -748,6 +761,7 @@ _TOP_LEVEL_KEYS = [
     "primary",
     "date",
     "scope",
+    "reason",
     "candidates",
     "dry_run",
     "applied",
@@ -774,24 +788,30 @@ def _json_root(tmp_path: Path) -> Path:
 
 def test_archive_plan_to_json_preview_shape(tmp_path):
     """D7: the exact record — closed top-level key set in order, per-candidate
-    key set, `destination` non-null iff `selected`, `reason` null iff
+    key set, `destination` non-null iff `selected`, `exclusion_reason` null iff
     `selected`.
+
+    `primary.source` is the `FILE` argument **exactly as typed** (post-review
+    finding 6), which is why `plan_archive` takes it as its own keyword rather
+    than deriving it from the resolved `Path` — `str(primary_path)` is always
+    absolute and could never honour a relative argument.
 
     RED reason: `plan_archive` / `archive_plan_to_json` do not exist (Phase 5).
     """
     root = _json_root(tmp_path)
-    plan = _plan(root, "a.md", scope="b.md")
+    plan = _plan(root, "a.md", scope="b.md", reason="milestone closed out", source="./a.md")
 
     record = _m26("archive_plan_to_json")(plan, dry_run=True, applied=False, index_refreshed=False)
 
     assert list(record) == _TOP_LEVEL_KEYS
     assert record["primary"] == {
-        "source": str(root / "a.md"),
+        "source": "./a.md",
         "path": "a.md",
         "destination": f"{_DATED}/a.md",
     }
     assert record["date"] == _DATE
     assert record["scope"] == "b.md"
+    assert record["reason"] == "milestone closed out"
     assert record["dry_run"] is True
     assert record["applied"] is False
     assert record["index_refreshed"] is False
@@ -801,23 +821,25 @@ def test_archive_plan_to_json_preview_shape(tmp_path):
             "verb": "pairs-with",
             "selected": True,
             "destination": f"{_DATED}/b.md",
-            "reason": None,
+            "exclusion_reason": None,
         },
         {
             "path": "c.md",
             "verb": "child-of",
             "selected": False,
             "destination": None,
-            "reason": "not-selected",
+            "exclusion_reason": "not-selected",
         },
         {
             "path": "archive/2026-01-01/old.md",
             "verb": "pairs-with",
             "selected": False,
             "destination": None,
-            "reason": "already-archived",
+            "exclusion_reason": "already-archived",
         },
     ]
+    # `--reason` applies to the primary only; it never leaks into a candidate.
+    assert all("reason" not in c for c in record["candidates"])
 
 
 def test_archive_plan_to_json_apply_shape_is_identical(tmp_path):
@@ -862,12 +884,13 @@ def test_archive_plan_to_json_lists_candidates_without_a_scope(tmp_path):
     record = _m26("archive_plan_to_json")(plan, dry_run=False, applied=True, index_refreshed=True)
 
     assert record["scope"] is None
+    assert record["reason"] is None
     assert [c["path"] for c in record["candidates"]] == [
         "b.md",
         "c.md",
         "archive/2026-01-01/old.md",
     ]
-    assert [c["reason"] for c in record["candidates"]] == [
+    assert [c["exclusion_reason"] for c in record["candidates"]] == [
         "not-selected",
         "not-selected",
         "already-archived",
@@ -902,9 +925,43 @@ def test_archived_test_honours_the_configured_archive_dir(tmp_path):
     )
 
     by_rel = {c.rel: c for c in _candidates(root, "a.md", "*")}
-    assert by_rel["history/2026-01-01/old.md"].reason == "already-archived"
+    assert by_rel["history/2026-01-01/old.md"].exclusion_reason == "already-archived"
     assert by_rel["history/2026-01-01/old.md"].selected is False
     assert by_rel["archive/notes.md"].selected is True, (
         "`archive/` is an ordinary subdirectory when [archive] dir = 'history'"
     )
-    assert by_rel["archive/notes.md"].reason is None
+    assert by_rel["archive/notes.md"].exclusion_reason is None
+
+
+def test_candidate_scan_ignores_the_exclude_predicate(tmp_path):
+    """D3 (Phase-1 Q8, BINDING): the candidate scan does **not** consult
+    `[exclude]` / `.docsignore`.
+
+    Those govern the tree walks — the pre-flight validation walk and the
+    reindex — not the primary document's own declared edges. An
+    implementation that threaded `compile_exclude_predicate` into
+    `archive_candidates` (an easy and superficially tidy thing to do, since
+    the scope matcher is built from the same `_compile_docsignore_pattern`)
+    would silently drop a declared edge from both the preview and the plan,
+    and nothing else in the suite would notice.
+
+    RED reason: `archive_candidates` does not exist (Phase 5).
+    """
+    root = tmp_path / "excluded"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "excluded"\n\n[archive]\ndir = "archive"\n\n'
+        '[exclude]\ndirs = ["vendor"]\n'
+    )
+    _doc(root, "vendor/x.md")
+    _doc(root, "a.md", edges=["pairs-with: vendor/x.md"])
+    # The predicate really does hide it from a walk — otherwise this test
+    # would pass for the wrong reason.
+    config = cli.load_config(root)
+    predicate = cli.compile_exclude_predicate(config, [])
+    assert [d.path.name for d in cli.walk(root, config, predicate=predicate)] == ["a.md"]
+
+    (candidate,) = _candidates(root, "a.md", "x.md")
+    assert candidate.rel == "vendor/x.md"
+    assert candidate.selected is True, "an excluded path is still a declared edge"
+    assert candidate.exclusion_reason is None

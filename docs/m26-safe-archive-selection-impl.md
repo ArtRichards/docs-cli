@@ -22,8 +22,9 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M26 — Safe explicit archive selection
 - Started: 2026-08-12 (milestone setup; no TDD phase started)
-- Progress: **Step 1 (Phases 1–4) complete and audited — classified RED
-  baseline captured 2026-08-13: 873 collected, 93 failed, 780 passed.** All seven setup
+- Progress: **Step 1 (Phases 1–4) complete, audited, and fresh-eyes
+  reviewed — classified RED baseline 2026-08-13: 884 collected, 104 failed,
+  780 passed.** All seven setup
   questions were RESOLVED before Phase 1 (Q1/Q5/Q6 by the operator;
   Q2/Q3/Q4/Q7 conductor-resolved) and Phase 1 did not re-open them; it froze
   the exact surface against them, plus the seventeen Step-1 planning
@@ -43,9 +44,9 @@ the milestone checklist synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | **Done** | 2026-08-12 | Froze the compatibility matrix, the message catalog (refusals, preview/apply lines, partial-state admission), the exit-code split, the `--json` schema and field table, and the Phase-5 signatures. Seventeen Step-1 planning questions recorded as BINDING. No `cli.py` edit (logged deviation). |
-| 2. Write Tests (RED) | **Done** | 2026-08-13 | New `tests/test_archive_plan.py`, `tests/test_cli_archive.py` (6 pre-existing ids deliberately changed, 3 deleted/replaced), `tests/test_skill.py` (+2), `tests/test_cli_check.py` (+1). Two Phase-1 gaps closed: ineligibility-reason precedence and the nine-step check order. Six more locks added by the Step-1 audit; final total **873 collected**. |
+| 2. Write Tests (RED) | **Done** | 2026-08-13 | New `tests/test_archive_plan.py`, `tests/test_cli_archive.py` (6 pre-existing ids deliberately changed, 3 deleted/replaced), `tests/test_skill.py` (+2), `tests/test_cli_check.py` (+1). Two Phase-1 gaps closed: ineligibility-reason precedence and the nine-step check order. Six more locks from the Step-1 audit and eleven from the fresh-eyes review; final total **884 collected**. |
 | 3. Create Data/Fixtures | **Done** | 2026-08-13 | Four committed trees (`archive-neighborhood` E1, `archive-duplicate-edge` E2, `archive-collision` E3, `archive-archived-neighbour` E4), each `docs check`-clean; three existing fixtures' prose corrected off the retired flag; +4 parametrizations of `test_check_tree_legacy_fixtures_gain_no_new_findings`. |
-| 4. Run Tests (RED Baseline) | **Done** | 2026-08-13 | **873 collected, 93 failed, 780 passed** (post-audit); 0 collection errors, 0 tracebacks, 0 xfail/xpass; 33 `AttributeError` + 60 `AssertionError`. Mechanical proof against `37d7f1a`: 769 of the 777 pre-existing ids still GREEN, the other 8 deliberately changed (3 removed, 5 failing). One falsely-GREEN `--json` refusal test caught and fixed, plus eight audit findings. |
+| 4. Run Tests (RED Baseline) | **Done** | 2026-08-13 | **884 collected, 104 failed, 780 passed** (post-review); 0 collection errors, 0 tracebacks, 0 xfail/xpass; 34 `AttributeError` + 70 `AssertionError`. Mechanical proof against `37d7f1a`: 769 of the 777 pre-existing ids still GREEN, the other 8 deliberately changed (3 removed, 5 failing). One falsely-GREEN `--json` refusal test caught and fixed, plus eight audit findings and a fresh-eyes review whose blocker was an unsatisfiable M18 assertion. |
 | 5. Update Base Interfaces | Pending | — | Archive plan/move models, candidate-planning helpers, pre-flight validators, `archive_plan_to_json`; no behaviour change. |
 | 6. Implement Offline/Core Path | Pending | — | Validate-all-first planning, deduplication, archived exclusion, collision detection, safe refusal, partial-state admission. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse surface (refusing flags + local `--json`), human output, JSON record, docs, bundled skill, CHANGELOG (no version bump). |
@@ -577,11 +578,12 @@ either still passes or was deliberately changed.
 ### Baseline
 
 ```
-.venv/bin/python -m pytest tests/ -q --co   →  873 collected, 0 collection errors
-.venv/bin/python -m pytest tests/ -q        →  93 failed, 780 passed
+.venv/bin/python -m pytest tests/ -q --co   →  884 collected, 0 collection errors
+.venv/bin/python -m pytest tests/ -q        →  104 failed, 780 passed
 ```
 
-(Counts restated after the Step-1 audit below, which added six locks.)
+(Counts restated after the Step-1 audit and the fresh-eyes review fold-in
+below, which added six and eleven locks respectively.)
 
 Zero collection errors, zero tracebacks
 (`grep -c "Traceback (most recent call last)"` → **0**; note the
@@ -589,7 +591,7 @@ false-positive trap: several tests assert `"Traceback" not in proc.stderr`,
 which the failure listing echoes, so the bare word is not a usable probe),
 zero xfail, zero xpass.
 
-Exception-class census over `--tb=line`: **33 `AttributeError`, 60
+Exception-class census over `--tb=line`: **34 `AttributeError`, 70
 `AssertionError`, nothing else.**
 
 ### Mechanical no-regression proof
@@ -600,8 +602,8 @@ Test-id lists collected from a throwaway `git worktree` at the pre-M26 commit
 | Set | Count |
 |---|---|
 | ids at `37d7f1a` | 777 |
-| ids now | 873 |
-| ids added | 99 |
+| ids now | 884 |
+| ids added | 110 |
 | pre-existing ids **removed** | **3** |
 | pre-existing ids **failing** | **5** |
 | pre-existing ids still GREEN | **769** |
@@ -621,11 +623,11 @@ A bare "0 pre-existing regressions" claim would be **false** for M26, and
 hiding that is the failure mode this check exists to catch; the honest number
 is 8 deliberately-moved ids, itemised above.
 
-### RED classification — all 93 traced to a reason
+### RED classification — all 104 traced to a reason (family counts as of the review fold-in)
 
 | Count | Family | RED reason |
 |---|---|---|
-| 33 | `tests/test_archive_plan.py` (whole module) | `AttributeError` through the `_m26()` getattr indirection on `archive_candidates`, `plan_archive` (via `_plan`), and `ARCHIVE_EXCLUSION_REASONS` — all landing in Phase 5 |
+| 34 | `tests/test_archive_plan.py` (whole module) | `AttributeError` through the `_m26()` getattr indirection on `archive_candidates`, `plan_archive` (via `_plan`), and `ARCHIVE_EXCLUSION_REASONS` — all landing in Phase 5 |
 | 28 | Retirement (D2 / E1) | today the outcome varies by cell: `--cascade` alone archives everything at exit 0; `--cascade --cascade-dry-run` previews at exit 0; `--json` is an unrecognized argument; the mutex-group pairs die with argparse's `not allowed with`; `--cascade-dry-run --interactive` prints the bespoke "incoherent" message; `--help` never says `retired`; and the flags are examined only after the file, config, date and primary metadata have already been checked |
 | 8 | Preview (D6) | the candidate-state vocabulary does not exist, and a filtered preview omits every non-matching candidate |
 | 10 | Scoped write (E2–E5) | plain assertions against real 1.8.0 defects: the false `could not archive` line on a deduplicated edge, the partial write at exit 0 on a basename collision, the re-dated archived neighbour, the archived primary re-archived in all three shapes, and the typo'd scope that looks like success |
@@ -668,18 +670,30 @@ moves the file, masking the test's real RED reason. Both unwritable cleanups
 | `test_archive_referring_edge_rewrite_is_atomic`, `…_refreshes_index_once`, `test_archive_repoints_already_archived_referrer`, `test_archive_leaves_unrelated_archived_content_byte_identical`, `test_archive_oserror_mid_rewrite_exits_2`, `test_archive_with_malformed_excluded_file_succeeds_and_reindexes`, `test_archive_one_endpoint_preserves_reciprocal_pair` | genuine, untouched |
 | `test_a3_project_version_is_1_8_0`, `test_c2_docs_version_is_1_8_0`, `test_b1`, `test_b2` | genuine — no version bump in M26 (D8 / M25 — D6) |
 
-### Accepted coverage boundary (recorded, not hidden)
+### ~~Accepted coverage boundary~~ — WITHDRAWN, the claim was false
 
-The mid-execution `OSError` **partial-state admission is not reachable from a
-subprocess test**. Every filesystem arrangement that would trigger it is
-caught first by the D4 pre-flight — that is the entire point of D4. It is
-pinned at the unit seam instead, by
-`test_apply_archive_plan_partial_failure_admits_exactly_what_moved` and
-`test_apply_archive_plan_admission_when_nothing_had_moved_yet`, both driving
-an injected `atomic_write` failure, and the exact string is frozen in
-`cli.md` for Phase 7 to render from `CoordinatedWriteError.published`. This
-is the same shape of honest boundary M25 recorded for its `ROLLBACK FAILED`
-path.
+Phase 4 originally recorded that the mid-execution `OSError` partial-state
+admission "is not reachable from a subprocess test", on the reasoning that
+D4's pre-flight catches every filesystem arrangement that would trigger it.
+**That was wrong**, the fresh-eyes review disproved it, and the claim is
+withdrawn rather than restated: a plan member at mode `0o644` inside a
+`0o555` directory passes `os.access(file, W_OK)` — so the pre-flight
+legitimately admits the plan — while `atomic_write` still raises
+`PermissionError` creating its `.docs-tmp` sibling. The technique was already
+in this very test file, in `_readonly_referrer_tree`, whose docstring says in
+so many words that a read-only *directory* is the portable trigger.
+
+Re-verified directly before the fix was written: on that arrangement today's
+CLI archives the primary, leaves the candidate in place, swallows the
+`OSError` in the cascade loop, and exits **0**.
+`test_mid_execution_failure_admits_the_partial_state` now pins exit 2, the
+admission string **including** the `docs: archive: ` prefix, `stdout == ""`,
+and the disk state the admission claims. The unit-seam tests stay as the
+`Archived: none` and multi-member coverage.
+
+The remaining honest statement is much narrower: the `<err>` span inside the
+admission is the operating system's text and carries an absolute path, so it
+is the one part not asserted verbatim; everything either side of it is.
 
 ### Phase-7 follow-through list (recorded here so it cannot be lost)
 
@@ -828,6 +842,123 @@ one commit per phase, each with the project's `Co-Authored-By` trailer.
   clean.
 - `git diff --stat 37d7f1a..HEAD -- src/docs_cli/cli.py` — **empty** across
   the whole step.
+
+## Step-1 fresh-eyes review fold-in — 2026-08-13
+
+Independent fresh-eyes review of Step 1. It confirmed the suite state, re-derived
+the no-regression arithmetic mechanically, re-did the `ast` message-catalog
+lockstep check independently, and spot-verified the E1–E5 RED reasons against
+real 1.8.0 runs. It returned **one blocker, six should-fixes and nine nits**,
+plus three conductor decisions. All of the blocker and should-fixes and eight
+of the nits are folded in below. **No `src/docs_cli/cli.py` change** — the
+whole step is still contract, tests and fixtures.
+
+### Blocker — an unsatisfiable assertion that hid an M18 regression
+
+`test_cascade_only_excludes_an_archived_neighbour` asserted
+`archived.read_bytes() == archived_before` over
+`archive/2026-01-01/old.md`. But that fixture doc carries
+`- references: plan.md`, and `plan.md` is the **primary moving in that very
+invocation**, so M18 — D1 leg 2 *requires* the bullet to be repointed to
+`archive/2026-05-28/plan.md`. Verified against live 1.8.0 on the committed
+fixture: a plain `docs archive plan.md` rewrites `old.md`
+(`a468745755d540dc` → `f80f3519bfa53735`) while leaving `Lifecycle:`,
+`Updated: 2026-01-01` and `Archived-reason:` byte-stable.
+
+The test was RED at an earlier assertion, so the contradiction would not have
+surfaced until the Phase-8 GREEN gate — the exact M25 "unsatisfiable Step-1
+assertion" failure mode. Worse, the cheapest way to make it pass would have
+been to suppress the referring-edge rewrite for ineligible archived
+candidates, leaving `old.md`'s edge dangling as a `broken-ref` that **no**
+test would catch (`test_archive_repoints_already_archived_referrer` archives
+with no candidates at all, and nothing ran `docs check` on that tree after a
+scoped write).
+
+Now asserted: the file did not move; `Lifecycle:`, `Updated:`,
+`Archived-reason:`, the H1 and the prose are unchanged; the M18 rewrite **did**
+happen (`- references: archive/2026-05-28/plan.md`, and the bare form gone);
+and `docs check` exits 0 on the tree afterwards.
+
+### Should-fixes
+
+| # | Finding | Fix |
+|---|---|---|
+| 2 | The D1 paragraph in `convention.md` overclaimed — "an archived doc's location, `Updated:` value, and **bytes** are never rewritten by a later archive event" — contradicting `cli.md`'s M18 block. This was the root cause of the blocker, and it had already shipped into the bundled mirror. | Narrowed to name exactly what is immutable and to name the one `Related:` bullet M18 does repoint. Mirror re-synced byte-identically; the milestone's E4 coverage row updated to match. |
+| 3 | The recorded "accepted coverage boundary" was **factually wrong** (see the withdrawn section above), leaving the whole `OSError` mid-execution matrix row unpinned. | Withdrawn, not restated. `test_mid_execution_failure_admits_the_partial_state` added on the `0o555`-directory trigger, verified firing before the test was written. |
+| 4 | The one documented exception to "no `--json` record on a refusal" — the INDEX-refresh failure emitting `applied: true, index_refreshed: false` — had zero coverage; suppressing the record there (the natural reading of the rule) passed everything. | `test_archive_json_record_is_emitted_on_an_index_refresh_failure`, on a tree whose docs are writable but whose root is not, so the plan executes and only the end-of-batch `INDEX.md` write fails. Trigger verified first: both docs move, exit 2, no `INDEX.md`. |
+| 5 | Phase-1 Q8 is BINDING and had **zero** coverage: the candidate scan must not consult `[exclude]` / `.docsignore`. An implementation threading `compile_exclude_predicate` into `archive_candidates` passed the whole suite. | Pinned at both seams — `test_candidate_scan_ignores_the_exclude_predicate` (which first asserts the predicate really does hide the file from a walk, so it cannot pass for the wrong reason) and `test_preview_names_a_candidate_the_exclude_predicate_hides`. |
+| 6 | `primary.source` was specified three mutually inconsistent ways, and since `archive_plan_to_json` only sees the plan it could only ever have been `str(plan.primary.path)` — always absolute, so **no** prose reading held. Every test passed an absolute path. | Conductor-binding: `source` IS the `FILE` argument exactly as typed. `ArchivePlan` gains `source: str`; `plan_archive` takes it as a keyword. All three statements aligned; pinned by a unit assertion (`source="./a.md"`) and by `test_archive_json_source_is_the_file_argument_exactly_as_typed`, which invokes the CLI with a relative argument via `cwd=root`. |
+| 7 | The apply-mode `--json` `primary` object was never value-asserted — it was excluded from the preview/apply comparison and read nowhere else, so returning `"destination": null` on apply passed. | Asserted by value on the apply side, with `path`/`destination` cross-checked against the preview. |
+
+### Nits folded in (8–13, 15)
+
+- **8** — `"--cascade" in help.stdout` was satisfied by `--cascade-only` alone,
+  and one global `"retired"` did not prove **both** flags are marked. Now a
+  bare-`--cascade` regex plus `count("retired") >= 2`, and each flag gets its
+  own fresh tree so the first invocation cannot mutate the second's.
+- **9** — `test_none_matched_counts_ineligible_candidates_and_is_not_no_candidates`:
+  `<N>` counts ineligible members, and a glob hitting only an already-archived
+  neighbour is "matched none", not "no candidates". Both halves of `cli.md`'s
+  "matched means *selected*" sentence.
+- **10** — check-order steps 2 and 4 pinned
+  (`test_empty_scope_is_checked_before_the_filesystem`,
+  `test_archived_primary_is_checked_before_the_selection`); only step 1 had a
+  lock. An archived primary with a non-matching scope had an undetermined
+  message.
+- **11** — `--quiet` now asserted to suppress the `would archive` primary line
+  too, not just the candidate lines.
+- **12** — `_snapshot` records directories with a marker, so a refusal that
+  had already `mkdir`'d `archive/<date>/` before aborting is no longer
+  "byte-identical" tree-wide; the collision and none-matched tests also gained
+  the explicit `not (root / "archive").exists()` guard.
+- **13** — `_SKIP_AS_ROOT` narrowed from the whole
+  `test_every_preflight_refusal_leaves_the_tree_byte_identical` to the two
+  parametrizations that need mode bits, so a root CI keeps the
+  `rolled_back` / `published` assertions for the other four.
+- **15** — the `_BARE_CASCADE` regex is stricter than "must not prescribe": it
+  forbids naming the flag at all. That is the intent — the skill's flag column
+  reads as a prescription — so the docstring was corrected to say so rather
+  than the regex loosened.
+
+Nit 14 became conductor decision C below.
+
+### Conductor decisions applied
+
+- **A — `--json` gains a top-level `reason`** carrying `--reason`, mirroring
+  `relate --json`, and the candidate-level `reason` is **renamed
+  `exclusion_reason`** to remove the collision, matching
+  `ARCHIVE_EXCLUSION_REASONS`. The `ArchiveMove` field is renamed in step with
+  the JSON key so code and record cannot drift. Applied to the milestone's
+  BINDING schema and frozen signatures, the `cli.md` field table and example,
+  the bundled mirror, and every test. Cheap now; a breaking change after 2.0.
+- **B — `docs/agent-native-invocation.md` keeps its proposal text** (rewriting
+  it would falsify the record of what was proposed in June) and gains a short
+  dated note pointing at the safe flow. The doc is not restructured.
+- **C — `--cascade-only` refuses a negated (`!`) pattern**, exit 2:
+  `docs: archive: --cascade-only does not support negated ('!') patterns; state the exact bounded selection`.
+  `_compile_docsignore_pattern` returns a `negate` flag that 1.x's
+  `_cascade_set` silently **discarded**, so `!plan.md` behaved as `plan.md` —
+  the opposite of how it reads. And the honest meaning, "everything except X",
+  is the unbounded selection D1 exists to prevent. Documented in `cli.md` and
+  the mirror, added to the frozen catalog and to check-order step 2, pinned by
+  `test_cascade_only_negated_pattern_refuses`.
+
+### Post-fold-in baseline
+
+- **884 collected, 104 failed, 780 passed.** Zero collection errors, zero
+  tracebacks, zero xfail/xpass. Census: **34 `AttributeError`, 70
+  `AssertionError`**, nothing else.
+- Mechanical no-regression proof re-run against `37d7f1a`: **769** of the 777
+  pre-existing ids still GREEN, **5** deliberately failing, **3** deliberately
+  removed (769 + 5 = 774 = 777 − 3) — unchanged by the review fold-in.
+- Both engineered triggers were verified to fire against the shipped 1.8.0
+  binary **before** their tests were written, and the CLI-level RED reason for
+  each is currently argparse rejecting `--json`; each carries the contract
+  assertion behind it that makes the eventual GREEN honest.
+- `ruff check` / `ruff format --check` / `mypy src/ tests/` /
+  `docs check --root docs` — all clean; bundled refs byte-identical; INDEX
+  snapshot re-synced.
+- `git diff --stat 37d7f1a..HEAD -- src/docs_cli/cli.py` — still **empty**.
 
 ## Milestone completion summary
 

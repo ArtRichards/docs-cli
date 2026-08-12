@@ -345,7 +345,7 @@ coverage in *Evidence → regression coverage* below.
 | E1 over-cascade | D2 refusal | bare `--cascade` refuses with exit 2 and zero bytes written; the same tree previews all six candidates under `--cascade-dry-run` |
 | E2 duplicate edge | D3 dedup | a doc reachable by `pairs-with` **and** `child-of` appears once in preview, JSON, and the write; no false failure line |
 | E3 basename collision | D4 pre-flight | two candidates mapping to one destination refuse before any write; both docs still at their original paths; exit non-zero |
-| E4 archived neighbour | D3 exclusion + D4 primary refusal | an archive-subtree candidate is excluded and named ineligible; an already-archived **primary** refuses; the archived doc's bytes, path, and `Updated:` are unchanged |
+| E4 archived neighbour | D3 exclusion + D4 primary refusal | an archive-subtree candidate is excluded and named ineligible; an already-archived **primary** refuses; the archived doc stays at its path with its `Lifecycle:`, `Updated:`, `Archived-reason:`, H1 and prose unchanged — while M18's edge integrity still repoints the one `Related:` bullet of its that points at a document moving in the same operation, and `docs check` is clean afterwards |
 | E5 typo'd scope | D5 empty-selection refusal | a non-matching `--cascade-only` refuses with exit 2, the primary is not archived, and the message distinguishes "none matched" from "no candidates" |
 
 ## Deliverables
@@ -576,6 +576,7 @@ docs: archive: --cascade is retired in docs 2.0 and writes nothing; preview with
 docs: archive: --interactive is retired in docs 2.0 and writes nothing; preview with `docs archive <file> --cascade-dry-run`, then write an explicit scope with `docs archive <file> --cascade-only '<glob>'`
 docs: archive: <rel> is already under the archive subtree; refusing before any write
 docs: archive: --cascade-only must not be empty
+docs: archive: --cascade-only does not support negated ('!') patterns; state the exact bounded selection
 docs: archive: --cascade-only '<glob>' matched none of the <N> one-hop candidate(s); refusing before any write
 docs: archive: <rel> has no one-hop pairs-with / child-of candidates; refusing before any write (use `docs archive <file>` to archive it alone)
 docs: archive: <relA> and <relB> would both archive to <dest-rel>; refusing before any write
@@ -633,8 +634,8 @@ catalog named the four tokens but left the overlap undetermined, which
 
 **Check order** (also added in Phase 2, for the same reason — Q11 fixed only
 the retirement check's position). Every check runs before any write, in this
-fixed order: retired flags; empty `--cascade-only`; root / `.docs.toml` /
-`--date` / primary parses; archived primary; plan built (a preview stops here
+fixed order: retired flags; empty / comment-only / negated `--cascade-only`;
+root / `.docs.toml` / `--date` / primary parses; archived primary; plan built (a preview stops here
 and exits 0); empty-selection refusal; **plan pre-flight**; whole-tree
 validation walk; execution. The plan pre-flight precedes the whole-tree walk
 deliberately: both can fire on the same malformed file, and naming the
@@ -654,13 +655,14 @@ preview and apply (mirroring `relate_plan_to_json`):
   },
   "date": "2026-08-12",
   "scope": "m25-*",
+  "reason": "milestone closed out",
   "candidates": [
     {"path": "m25-impl.md", "verb": "pairs-with", "selected": true,
-     "destination": "archive/2026-08-12/m25-impl.md", "reason": null},
+     "destination": "archive/2026-08-12/m25-impl.md", "exclusion_reason": null},
     {"path": "cli.md", "verb": "pairs-with", "selected": false,
-     "destination": null, "reason": "not-selected"},
+     "destination": null, "exclusion_reason": "not-selected"},
     {"path": "archive/2026-01-01/old.md", "verb": "pairs-with",
-     "selected": false, "destination": null, "reason": "already-archived"}
+     "selected": false, "destination": null, "exclusion_reason": "already-archived"}
   ],
   "dry_run": true,
   "applied": false,
@@ -670,10 +672,17 @@ preview and apply (mirroring `relate_plan_to_json`):
 
 The top-level key set is **closed** and ordered as shown; `candidates` is in
 `Related:` declaration order after dedup; `destination` is non-null **iff**
-`selected`; `reason` is null **iff** `selected`; `primary.source` is the
-`FILE` argument exactly as typed and every other path is canonical
-root-relative POSIX. The field table lands in `cli.md` in the
-`relate --json` style.
+`selected`; `exclusion_reason` is null **iff** `selected`; `primary.source` is
+the `FILE` argument **exactly as typed** (a relative argument stays relative)
+and every other path is canonical root-relative POSIX. The field table lands
+in `cli.md` in the `relate --json` style.
+
+**Post-review amendments (2026-08-13, conductor-binding).** The top-level
+`reason` field carrying `--reason` was **added**, mirroring `relate --json`;
+to remove the name collision the candidate-level `reason` was **renamed**
+`exclusion_reason`, matching the `ARCHIVE_EXCLUSION_REASONS` constant. The
+`ArchiveMove` field is renamed in step with the JSON key. Doing this before
+2.0 ships is cheap; afterwards it would be a breaking change.
 
 ### Frozen Phase-5 signatures (contract only — no code lands in Phase 1)
 
@@ -690,7 +699,7 @@ class ArchiveMove:
     dest: Path | None          # absolute destination; None when not selected
     dest_rel: str | None
     selected: bool
-    reason: str | None         # None iff selected
+    exclusion_reason: str | None   # None iff selected
 
 @dataclass(frozen=True)
 class ArchivePlan:
@@ -701,13 +710,14 @@ class ArchivePlan:
     scope: str | None
     date_str: str
     reason: str | None         # --reason; applies to the primary only
+    source: str                # the FILE argument EXACTLY as typed
     @property
     def moves(self) -> tuple[ArchiveMove, ...]   # primary + selected candidates
 
 def archive_candidates(doc: Doc, root: Path, config: Config,
                        scope: str | None) -> tuple[ArchiveMove, ...]
-def plan_archive(root: Path, config: Config, *, primary: Path, doc: Doc,
-                 scope: str | None, date_str: str,
+def plan_archive(root: Path, config: Config, *, primary: Path, source: str,
+                 doc: Doc, scope: str | None, date_str: str,
                  reason: str | None) -> ArchivePlan
 def preflight_archive_plan(plan: ArchivePlan) -> None
 def apply_archive_plan(plan: ArchivePlan) -> list[tuple[str, str]]
@@ -755,7 +765,7 @@ began.
 | Q7 | A candidate escaping the root | A fourth ineligibility reason, **`outside-root`**. |
 | Q8 | Does the candidate scan consult `[exclude]` / `.docsignore`? | **No** — unchanged, and stated explicitly in `cli.md`. |
 | Q9 | `--cascade-only ''` or a comment-only pattern | Its own refusal, `docs: archive: --cascade-only must not be empty`, exit 2 (M25's `--reason must not be empty` precedent). |
-| Q10 | `--reason` under a cascade | **Unchanged** — `Archived-reason:` on the primary only. Pinned in `cli.md` and a test. |
+| Q10 | `--reason` under a cascade | **Unchanged** — `Archived-reason:` on the primary only. Pinned in `cli.md` and a test. Post-review: it is also carried in the `--json` record as the top-level `reason` field. |
 | Q11 | Ordering of the retirement check | **First**, immediately after argparse and before any filesystem access, so it wins over `file not found`, a bad `--date`, and a malformed primary. |
 | Q12 | argparse mutual exclusion | **Remove `--cascade` and `--interactive` from the mutually-exclusive group** so the unconditional guard produces the single message for every combination. Both stay **registered** (setup Q2) so neither ever yields `unrecognized arguments`. |
 | Q13 | Where E1 is pinned | On the committed `archive-neighborhood/` fixture, **not** the live `docs/` tree; the live-tree run is Phase-9 dogfood evidence only. |
@@ -763,6 +773,31 @@ began.
 | Q15 | The two legacy human lines | **Moved to the new form** — `docs: archive: would archive <rel> -> <dest-rel>` and `docs: archive: archived <rel> -> <dest-rel>` (verb prefix, canonical root-relative paths). No test asserts either string today (grep-verified). |
 | Q16 | The legacy cascade footer strings | **Replaced** by the D6 counts footer; the corresponding `cli.md` bullets are deleted. |
 | Q17 | `plan.md`'s stale `--cascade` bullet | **Corrected in Phase 7** (it still claims `--cascade` prompts `y/N`, false since M14 and about to be doubly false); carried on the Phase-7 follow-through list recorded at Phase 4. |
+
+### Post-review amendments (2026-08-13, conductor-binding)
+
+The independent fresh-eyes review of Step 1 produced three contract decisions,
+folded into the frozen material above and into `cli.md` / `convention.md`:
+
+| # | Decision |
+|---|---|
+| A | **`--json` gains a top-level `reason`** carrying `--reason`, mirroring `relate --json`; the candidate-level `reason` is **renamed `exclusion_reason`** (and the `ArchiveMove` field with it) to remove the collision, matching `ARCHIVE_EXCLUSION_REASONS`. |
+| B | `docs/agent-native-invocation.md`'s 2026-06-03 Layer-5 proposal keeps its text — rewriting it would falsify the record of what was proposed — and gains a short dated note so an agent reading it is not trapped. |
+| C | **`--cascade-only` refuses a negated (`!`) pattern**: `docs: archive: --cascade-only does not support negated ('!') patterns; state the exact bounded selection`, exit 2. `_compile_docsignore_pattern` returns a `negate` flag that 1.x's `_cascade_set` discarded; a negated scope means "everything except X", the unbounded selection D1 exists to prevent. |
+
+Two further corrections the review forced, recorded here because they change
+what the specs assert rather than only what the tests check:
+
+- **`primary.source` is the `FILE` argument EXACTLY as typed** (finding 6).
+  Three places had said three different things, and no test distinguished
+  them. `ArchivePlan` gains a `source: str` field carrying the raw argument;
+  `plan_archive` takes it as a keyword. `str(plan.primary.path)` would always
+  be absolute and could not honour either prose statement.
+- **The M18 exception is stated in `convention.md`, not overclaimed away**
+  (finding 2). The D1 paragraph had said an archived doc's "bytes are never
+  rewritten by a later archive event", which contradicts `cli.md`'s M18 — D1
+  leg 2 and made a Step-1 test unsatisfiable. Narrowed to name the one bullet
+  M18 does repoint.
 
 ### Deviation from the Phase-1 file list (deliberate, logged)
 

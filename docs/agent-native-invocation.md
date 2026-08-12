@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: plan
 Project: ideas
-Updated: 2026-06-03
+Updated: 2026-08-13
 
 Related:
 - pairs-with: cli.md
@@ -254,6 +254,12 @@ them:
   for exactly that reason) with pre-answerable flags
   (`--cascade`, `--cascade-dry-run`, `--cascade-only <glob>`).
   Hooks and MCP both assume verbs never block on stdin.
+  *Note (2026-08-13): this proposal is kept as written. M14
+  delivered the non-interactive flags; M26 then retired bare
+  `--cascade` and `--interactive` outright in docs 2.0 — the safe
+  flow is `docs archive <file> --cascade-dry-run` to preview, then
+  `docs archive <file> --cascade-only '<glob>'` to write. See
+  `cli.md` › `docs archive`.*
 - **`--json` result object on every verb** (today only
   `check`/`list`/`migrate`) with a `changed: true|false` flag —
   so PostToolUse hooks and MCP tools have a structured channel

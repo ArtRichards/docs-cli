@@ -202,9 +202,11 @@ sequence, dependency, and blocking do not imply archive membership.
 
 Three conditions make a candidate **ineligible**. An ineligible
 candidate is never written, is named in the preview, and carries a
-machine-stable `reason` in the `--json` record:
+machine-stable `exclusion_reason` in the `--json` record (named to keep
+it distinct from the record's top-level `reason`, which carries
+`--reason`):
 
-| `reason` | Condition |
+| `exclusion_reason` | Condition |
 |---|---|
 | `already-archived` | The canonical path is the archive subtree itself or lies under it (per `[archive] dir`). Archiving an archived document is meaningless, and doing it silently relocates and re-dates history. |
 | `unresolved-target` | The target does not resolve to a file. `docs check`'s `broken-ref` still owns that finding. |
@@ -216,7 +218,7 @@ root and does not exist), so the reported reason is fixed by
 `unresolved-target`** — the more structural fact wins, and the answer is
 deterministic.
 
-The fourth `reason`, `not-selected`, is not an ineligibility: it marks
+The fourth `exclusion_reason`, `not-selected`, is not an ineligibility: it marks
 an eligible candidate that the scope did not select (or that had no
 scope to select it). Ineligibility always wins over it — an
 already-archived candidate reports `already-archived` whether or not a
@@ -289,7 +291,8 @@ so the message an operator sees always names the most specific cause:
 
 1. the retired flags (`--cascade` / `--interactive`) — before any
    filesystem access at all;
-2. an empty or comment-only `--cascade-only` — purely lexical;
+2. an empty, comment-only, or negated (`!`) `--cascade-only` — purely
+   lexical;
 3. root resolution, `.docs.toml`, `--date`, the primary exists and
    parses;
 4. the primary is not already under the archive subtree;
@@ -357,12 +360,18 @@ of the whole deduplicated candidate set, ineligible members included, so
 a glob that only hits an already-archived neighbour reports the first
 message and the preview explains why.
 
-An empty or comment-only pattern is its own refusal, before any
-candidate work:
+An empty or comment-only pattern, and a **negated** (`!`-prefixed) one,
+are their own refusals, before any candidate work:
 
 ```
 docs: archive: --cascade-only must not be empty
+docs: archive: --cascade-only does not support negated ('!') patterns; state the exact bounded selection
 ```
+
+A negated pattern means "everything except X" — an unbounded selection,
+which is precisely what D1 exists to prevent. `--cascade-only` states
+the exact bounded set to write, so `!` is refused rather than silently
+ignored (1.x compiled the flag and discarded the negation bit).
 
 Primary-only archive already has an unambiguous spelling —
 `docs archive FILE` — so a scope that selects nothing is always a
@@ -384,13 +393,14 @@ real apply, so the two are diffable:
   },
   "date": "2026-08-12",
   "scope": "m25-*",
+  "reason": "milestone closed out",
   "candidates": [
     {"path": "m25-impl.md", "verb": "pairs-with", "selected": true,
-     "destination": "archive/2026-08-12/m25-impl.md", "reason": null},
+     "destination": "archive/2026-08-12/m25-impl.md", "exclusion_reason": null},
     {"path": "cli.md", "verb": "pairs-with", "selected": false,
-     "destination": null, "reason": "not-selected"},
+     "destination": null, "exclusion_reason": "not-selected"},
     {"path": "archive/2026-01-01/old.md", "verb": "pairs-with",
-     "selected": false, "destination": null, "reason": "already-archived"}
+     "selected": false, "destination": null, "exclusion_reason": "already-archived"}
   ],
   "dry_run": true,
   "applied": false,
@@ -400,9 +410,10 @@ real apply, so the two are diffable:
 
 | Field | Type | Notes |
 |---|---|---|
-| `primary` | object | `source` is the `FILE` argument as given on the command line; `path` is its canonical root-relative POSIX path; `destination` is the planned archive path. |
+| `primary` | object | `source` is the `FILE` argument **exactly as typed** — a relative argument stays relative; `path` is its canonical root-relative POSIX path; `destination` is the planned archive path, non-null in every mode (the primary is always selected). |
 | `date` | string | The archive date actually used (`--date` or today). |
 | `scope` | string \| null | The `--cascade-only` value as typed, or null. |
+| `reason` | string \| null | The `--reason` value, or null. It applies to the primary only. |
 | `candidates` | array | The whole deduplicated one-hop set, in `Related:` declaration order. Present in **every** mode, including a plain `docs archive FILE`. |
 | `dry_run` | bool | True under `--dry-run` or `--cascade-dry-run`. |
 | `applied` | bool | True iff bytes were written. |
@@ -411,15 +422,16 @@ real apply, so the two are diffable:
 Each `candidates` record: `path` (canonical root-relative POSIX),
 `verb` (the discovering verb — `pairs-with` or `child-of`, first
 declaration winning), `selected` (bool), `destination` (canonical
-root-relative POSIX, non-null **iff** `selected`), and `reason` (null
-**iff** `selected`, otherwise one of `not-selected`,
-`already-archived`, `unresolved-target`, `outside-root`).
+root-relative POSIX, non-null **iff** `selected`), and
+`exclusion_reason` (null **iff** `selected`, otherwise one of
+`not-selected`, `already-archived`, `unresolved-target`,
+`outside-root`).
 
 The top-level key set is **closed** and ordered as shown. Under a plain
 `docs archive FILE` every candidate is reported with
-`"selected": false, "reason": "not-selected"` — the stderr quiet rule
-(D1) governs prose, not the record, and the record exists for the agent
-deciding whether a selection is correct.
+`"selected": false, "exclusion_reason": "not-selected"` — the stderr
+quiet rule (D1) governs prose, not the record, and the record exists for
+the agent deciding whether a selection is correct.
 
 **No `--json` record on a refusal.** Every refusal above exits non-zero
 with empty stdout; the exit code plus the stderr message is the

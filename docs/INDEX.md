@@ -24,7 +24,7 @@ _Generated 2026-08-13. 23 docs active, 46 archived._
 ### Active — Spec
 
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-13.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-12.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-13.
 
 ### Active — Milestone
 
@@ -62,7 +62,7 @@ _Generated 2026-08-13. 23 docs active, 46 archived._
 
 ### Active — Plan
 
-- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-06-03.
+- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-08-13.
 
 ## Archived
 

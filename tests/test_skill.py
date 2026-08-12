@@ -298,6 +298,12 @@ def test_skill_md_teaches_safe_archive_selection() -> None:
     that now refuses with exit 2, which is exactly the ecosystem risk the
     milestone names.
 
+    The rule is deliberately absolute: the row may not name bare `--cascade`
+    even to mark it retired. The flags column is read as a prescription, the
+    retirement is documented at length in `cli.md`, and `references/cli.md`
+    ships alongside — so the skill row's job is to teach the safe flow, not to
+    carry an obituary.
+
     Intended RED until Phase 7 (the bundled skill lands in the SAME change as
     the CLI surface; there is nothing to mirror at Phase 2).
     """
@@ -316,9 +322,13 @@ def test_skill_md_teaches_safe_archive_selection() -> None:
         "the archive row must teach `--cascade-only GLOB` — the only way to "
         "write a related document"
     )
+    # `_BARE_CASCADE` matches `--cascade` NOT followed by `-` or a word
+    # character, so `--cascade-only` and `--cascade-dry-run` never trip it.
     assert not _BARE_CASCADE.search(joined), (
-        "the archive row must not prescribe bare `--cascade`: it is retired in "
-        f"docs 2.0 and refuses with exit 2. Got: {joined!r}"
+        "the archive row must not NAME bare `--cascade` at all: the row's flag "
+        "column is a prescription, and an agent skimming the table would read "
+        "any mention there as a suggestion. It is retired in docs 2.0 and "
+        f"refuses with exit 2. Got: {joined!r}"
     )
 
 
