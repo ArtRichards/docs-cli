@@ -1744,3 +1744,118 @@ Phases 5–10 (implementation → dogfood → closeout) on `m25/phases-5-10`.
 - **M26 — Safe explicit archive selection** is ready to prepare.
 - A **Step-3 `/simplify` pass** runs against this implementation next;
   Phase 10 deliberately left that work to it.
+
+## `/simplify` pass — Step 3 — 2026-08-12
+
+Post-implementation simplify mode against M25's `src/docs_cli/cli.py` diff
+(`bf8f273...44daab0`). Baseline established first and preserved exactly:
+**777 passed** before and after, `ruff` / `ruff format --check` / `mypy` /
+`docs check --root docs` clean at both ends. Net **-17 lines** in `cli.py`;
+no other source file touched.
+
+**Not a single shipped byte of behaviour moved.** Every string literal in
+the diff appears an even number of times (removed once, re-added once) —
+audited mechanically, not by eye. No test was relaxed, rewritten, or
+deleted; no exit code, JSON field, or output format changed;
+`pyproject.toml` and `tests/test_packaging.py` are byte-untouched and the
+version stays **1.8.0**.
+
+### 1. Three hand-rolled bare-label scans collapsed to one
+
+`_related_run` located the `Related:` group, and the *identical* scan —
+match `_LABEL_RE`, require a bare label, walk the `- ` bullet run — was
+written out twice more by hand for `Revision:`: once in
+`add_related_edge`'s group-creation path (which needs the label index) and
+once in `append_revision_entry` (which needs the run end).
+
+Renamed to **`_bare_label_run(lines, start, end, label)`** — one new
+parameter, no new layer — and the two open-coded copies now call it. The
+helper's docstring already claimed the M25 editors "agree on where the
+group is"; with three separate scans that was aspirational, and it is now
+structurally true. `append_revision_entry`'s twelve-line loop becomes four.
+
+`docs/architecture.md`'s `model` section named `_related_run` as the shared
+group locator; updated to `_bare_label_run` with the label-parameterised
+note. **Not** a mirrored reference — only `cli.md` and `convention.md` are
+byte-mirrored into `src/docs_cli/skill/references/`, and neither changed,
+so `tests/test_skill_refs.py` is untouched.
+
+### 2. `_plan_relate_edit`: one `RelateEdit` construction, not two
+
+The `unchanged` early return built the full eleven-field `RelateEdit` and
+then the changed path built it again, duplicating eight identical field
+values — a shape where adding a twelfth field means remembering to edit two
+places. The early return is now an `if changed:` guard that computes
+`change` / `new_text` / `revision_appended` in place, followed by a single
+constructor. `updated_bumped=changed` states the invariant the two literals
+(`False` / `True`) previously only implied. The contractual ordering the
+archived byte-delta assertion pins — edge, then `Updated:`, then the
+`Revision:` bullet — is unchanged; the docstring's "that single early
+return" now reads "that single `if changed:` guard".
+
+### 3. `_print_relate_lines`: word choices hoisted out of the loop
+
+The handover's candidate. The nested conditional expression
+
+```
+verb = ("would add" if dry_run else "added") if adding
+       else ("would remove" if dry_run else "removed")
+```
+
+was not the real problem — the real problem was that `state`, `verb`,
+`preposition`, and `recorded` are all fixed by `plan.action` and `dry_run`,
+yet three of them were re-derived on every iteration, which is what forced
+the branching into the loop body in the first place. A **mapping was
+considered and rejected**: keying on `(action, dry_run)` adds a lookup
+concept to save nothing. Instead all four are chosen once, in a flat
+`if/else` before the loop, where a reader can see the four add-words and
+the four remove-words side by side and check them against `cli.md` in one
+glance. The loop body is now two straight `print`s and the `continue`
+disappears.
+
+### 4. `_duplicate_labels`: one cursor advance, not two
+
+`idx += 1` appeared on both the no-match and the matched path — two places
+to keep in sync in a hand-driven `while` cursor. Advancing once,
+immediately after the match attempt, leaves the bullet-run skip as the only
+other place the cursor moves.
+
+### Considered and deliberately left alone
+
+- **`apply_relate_plan`'s three rollback branches.** `unrestored` /
+  `published` / neither produce three genuinely different frozen strings
+  with three different operator meanings (R3 and R4 exist precisely because
+  collapsing them was wrong). Any merge re-introduces the degenerate
+  `rolled back  — …` R3 was written to kill.
+- **`atomic_write` call sites.** Left as bare module-global calls in both
+  `apply_relate_plan` and `_rollback_relate` — the D5 binding. Inlining or
+  aliasing would silently delete the rollback tests' only injection point.
+- **The stage-4 writability pre-flight.** Still `os.access` on the **file**
+  only. Adding the "obvious" parent-directory check would convert a
+  stage-5-with-rollback into a stage-4 refusal and break R3's coverage.
+- **`_cmd_relate`'s validate-all-first sequence.** Long, but it is a flat
+  run of guard clauses in refusal order — already the linear form
+  `/simplify` asks for. Any extraction would hide the ordering that makes
+  "every refusal leaves the tree byte-identical" checkable by reading top
+  to bottom.
+- **`_preserve_tail`, `_bullet_matches`, `_related_pairs`,
+  `reciprocity_findings`.** Single-purpose and already minimal;
+  `reciprocity_findings`'s two passes are the reason the five applicability
+  conditions are one index lookup rather than five branches.
+- **The archived-path predicate** (`rel == config.archive_dir or
+  rel.startswith(config.archive_dir + "/")`), which M25 writes twice. A
+  shared helper would have to serve the four *pre-existing* copies too, and
+  rewriting those is out of this pass's scope; a two-site, one-line
+  predicate does not earn a helper on its own.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `.venv/bin/python -m pytest tests/ -q` | **777 passed, 0 failed** — identical to the baseline |
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 45 files already formatted |
+| `.venv/bin/mypy src/ tests/` | no issues in 46 source files |
+| `.venv/bin/docs check --root docs` | no violations, exit 0 |
+| Shipped strings | unchanged — every literal in the diff balanced -/+ |
+| Version | **1.8.0**; `pyproject.toml` / `tests/test_packaging.py` byte-untouched |

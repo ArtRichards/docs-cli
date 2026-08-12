@@ -1332,17 +1332,19 @@ def rewrite_related_refs(text: str, old_rel: str, new_rel: str) -> tuple[str, in
     return "".join(keep), count
 
 
-def _related_run(lines: list[str], start: int, end: int) -> tuple[int, int] | None:
-    """Locate the `Related:` bare-label group inside a metadata-block span.
+def _bare_label_run(lines: list[str], start: int, end: int, label: str) -> tuple[int, int] | None:
+    """Locate a bare-label group (`Related:`, `Revision:`) in a metadata-block span.
 
-    Returns ``(label_idx, run_end)`` — the index of the bare `Related:` line
+    Returns ``(label_idx, run_end)`` — the index of the bare ``<label>:`` line
     and the index one past its last `- ` bullet — or None when the group is
     absent. Uses the same label idiom `rewrite_related_refs` does, so the
-    three M25 editors and `mv`'s rewriter agree on where the group is.
+    three M25 editors and `mv`'s rewriter agree on where a group is; it is
+    called for both bare-label groups M25 touches, so `Related:` and
+    `Revision:` can never drift apart on what "the group" means.
     """
     for idx in range(start, end):
         m = _LABEL_RE.match(lines[idx])
-        if m and m.group(1) == "Related" and not m.group(2).strip():
+        if m and m.group(1) == label and not m.group(2).strip():
             run_end = idx + 1
             while run_end < end and lines[run_end].startswith("- "):
                 run_end += 1
@@ -1405,19 +1407,18 @@ def add_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
     lines, _title, start, end = _metadata_line_span(text)
     keep = text.splitlines(keepends=True)
 
-    located = _related_run(lines, start, end)
+    located = _bare_label_run(lines, start, end, "Related")
     if located is None:
         # Create the group. It must land BEFORE any trailing `Revision:`
         # group, which D4 defines as sitting at the END of the block —
         # reachable when `relate remove` drops the last recognized edge
         # (and its emptied label) and a later `relate add` re-creates it.
         insert_at = end
-        for idx in range(start, end):
-            m = _LABEL_RE.match(lines[idx])
-            if m and m.group(1) == "Revision" and not m.group(2).strip():
-                blank_before = idx > start and lines[idx - 1].strip() == ""
-                insert_at = idx - 1 if blank_before else idx
-                break
+        revision = _bare_label_run(lines, start, end, "Revision")
+        if revision is not None:
+            revision_idx = revision[0]
+            blank_before = revision_idx > start and lines[revision_idx - 1].strip() == ""
+            insert_at = revision_idx - 1 if blank_before else revision_idx
         new_lines = ["\n", "Related:\n", f"- {verb}: {target}\n"]
     else:
         label_idx, run_end = located
@@ -1449,7 +1450,7 @@ def remove_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
     lines, _title, start, end = _metadata_line_span(text)
     keep = text.splitlines(keepends=True)
 
-    located = _related_run(lines, start, end)
+    located = _bare_label_run(lines, start, end, "Related")
     if located is None:
         return text, False
     label_idx, run_end = located
@@ -1488,17 +1489,11 @@ def append_revision_entry(text: str, entry: str) -> str:
     lines, _title, start, end = _metadata_line_span(text)
     keep = text.splitlines(keepends=True)
 
-    insert_at = end
-    new_lines = ["\n", "Revision:\n", f"- {entry}\n"]
-    for idx in range(start, end):
-        m = _LABEL_RE.match(lines[idx])
-        if m and m.group(1) == "Revision" and not m.group(2).strip():
-            run_end = idx + 1
-            while run_end < end and lines[run_end].startswith("- "):
-                run_end += 1
-            insert_at = run_end
-            new_lines = [f"- {entry}\n"]
-            break
+    located = _bare_label_run(lines, start, end, "Revision")
+    if located is None:
+        insert_at, new_lines = end, ["\n", "Revision:\n", f"- {entry}\n"]
+    else:
+        insert_at, new_lines = located[1], [f"- {entry}\n"]
 
     if insert_at > 0 and not keep[insert_at - 1].endswith(("\n", "\r")):
         keep[insert_at - 1] += "\n"
@@ -1830,11 +1825,10 @@ def _duplicate_labels(text: str) -> dict[str, int]:
     idx = start
     while idx < end:
         m = _LABEL_RE.match(lines[idx])
-        if not m:
-            idx += 1
+        idx += 1
+        if m is None:
             continue
         counts[m.group(1)] = counts.get(m.group(1), 0) + 1
-        idx += 1
         if not m.group(2).strip():
             while idx < end and lines[idx].startswith("- "):
                 idx += 1
@@ -3460,8 +3454,8 @@ def _plan_relate_edit(
 
     The ordering is contractual, not incidental — the archived byte-delta
     assertion pins it: apply the edge; if nothing moved, stop (that single
-    early return is the whole of D3's idempotency and D4's "one bullet per
-    REAL mutation"); otherwise bump `Updated:` and, only for an archived
+    `if changed:` guard is the whole of D3's idempotency and D4's "one bullet
+    per REAL mutation"); otherwise bump `Updated:` and, only for an archived
     endpoint, append the `Revision:` audit bullet.
     """
     original = path.read_text()
@@ -3475,30 +3469,18 @@ def _plan_relate_edit(
         new_text, changed = remove_related_edge(original, verb, other_rel)
         present_before, present_after = changed, False
 
-    if not changed:
-        return RelateEdit(
-            path=path,
-            rel=rel,
-            archived=archived,
-            edge=edge,
-            original=original,
-            new_text=original,
-            change="unchanged",
-            present_before=present_before,
-            present_after=present_after,
-            updated_bumped=False,
-            revision_appended=False,
-        )
-
-    new_text = set_metadata_field(new_text, "Updated", date_str)
+    change = "unchanged"
     revision_appended = False
-    if archived:
-        if reason is None:
-            raise ValueError(f"{rel} is under the archive subtree; a reason is required")
-        new_text = append_revision_entry(
-            new_text, f"{date_str}: relate {action} '{edge}'; reason: {reason}"
-        )
-        revision_appended = True
+    if changed:
+        change = "added" if action == "add" else "removed"
+        new_text = set_metadata_field(new_text, "Updated", date_str)
+        if archived:
+            if reason is None:
+                raise ValueError(f"{rel} is under the archive subtree; a reason is required")
+            new_text = append_revision_entry(
+                new_text, f"{date_str}: relate {action} '{edge}'; reason: {reason}"
+            )
+            revision_appended = True
 
     return RelateEdit(
         path=path,
@@ -3507,10 +3489,10 @@ def _plan_relate_edit(
         edge=edge,
         original=original,
         new_text=new_text,
-        change="added" if action == "add" else "removed",
+        change=change,
         present_before=present_before,
         present_after=present_after,
-        updated_bumped=True,
+        updated_bumped=changed,
         revision_appended=revision_appended,
     )
 
@@ -5455,28 +5437,29 @@ def _print_relate_lines(plan: RelatePlan, *, dry_run: bool) -> None:
     `--json`: these go to stderr, so `--json` stdout stays byte-clean
     either way.
     """
-    adding = plan.action == "add"
+    # Every word that varies is fixed by the action and the mode, so they are
+    # all chosen once, side by side, rather than re-derived per endpoint.
+    if plan.action == "add":
+        state, preposition = "already present in", "to"
+        verb = "would add" if dry_run else "added"
+    else:
+        state, preposition = "already absent from", "from"
+        verb = "would remove" if dry_run else "removed"
+    recorded = "would record" if dry_run else "recorded"
+
     for edit in plan.edits:
         if edit.change == "unchanged":
-            state = "already present in" if adding else "already absent from"
             print(f"docs: relate: no change — '{edit.edge}' {state} {edit.rel}", file=sys.stderr)
-            continue
-        verb = (
-            ("would add" if dry_run else "added")
-            if adding
-            else ("would remove" if dry_run else "removed")
-        )
-        preposition = "to" if adding else "from"
-        print(
-            f"docs: relate: {verb} '{edit.edge}' {preposition} {edit.rel}",
-            file=sys.stderr,
-        )
+        else:
+            print(
+                f"docs: relate: {verb} '{edit.edge}' {preposition} {edit.rel}",
+                file=sys.stderr,
+            )
     # A dry-run must preview the audit bullet too — otherwise an archived
     # repair's most consequential effect is invisible in the human preview
     # (the `--json` record has always carried `revision_appended`).
     for edit in plan.edits:
         if edit.revision_appended:
-            recorded = "would record" if dry_run else "recorded"
             print(f"docs: relate: {recorded} revision in {edit.rel}", file=sys.stderr)
 
 
