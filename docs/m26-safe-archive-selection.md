@@ -1,13 +1,15 @@
 # M26 — Safe explicit archive selection
 
-Lifecycle: draft
+Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 Related:
 - child-of: plan.md
+- parent-of: m26-safe-archive-selection-impl.md
 - implements: charter.md
+- pairs-with: m26-safe-archive-selection-impl.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: test-strategy.md
@@ -25,100 +27,562 @@ Related:
 - Surface: decouple relationship context from archive authorization. A named
   archive with no cascade option moves only the named document; preview remains
   available; every multi-document write requires an explicit
-  `--cascade-only GLOB` scope.
-- Progress: **Registered draft (2026-08-10).** M25 runs first. No
-  implementation log or TDD phase has started.
+  `--cascade-only GLOB` scope, planned in full before the first byte moves; and
+  the whole operation plan is available as one machine-readable record.
+- Progress: **Active / milestone-setup complete (2026-08-12).** M25 is
+  implementation-complete and merged to `main`, so this is the next
+  implementation milestone. No TDD phase has started. **All seven setup
+  questions are RESOLVED** — Q1, Q5, and Q6 by the operator; Q2, Q3, Q4, and
+  Q7 conductor-resolved — and are recorded in *Resolved setup questions
+  (Q1–Q7, BINDING)* below. Phase 1 does not re-open them; it freezes the exact
+  messages, exit codes, and JSON schema against them.
 
 ### Goal
 
 Make it impossible for an agent to archive a useful neighborhood merely
 because the documents are related. Previewing candidates should be effortless,
-but a write must state the exact bounded selection the operator intends.
+but a write must state the exact bounded selection the operator intends — and
+the tool must either perform that selection completely or refuse it completely,
+loudly, before anything moves.
 
 ### Primary use-case acceptance
 
-An agent preparing to archive a completed milestone previews the one-hop
-candidates, sees upcoming/paused/context documents without moving them, then
-archives only the named milestone artifacts through an explicit path scope.
-A typo or obsolete unscoped command fails loudly before any document moves.
+- **Preview before deciding.** An agent preparing to archive a completed
+  milestone previews the one-hop candidates and sees the upcoming, paused, and
+  long-lived context documents named without any of them moving — in prose on
+  stderr, or as one JSON operation-plan record.
+- **Write exactly the intended set.** The agent then archives only the named
+  milestone artifacts through an explicit path scope, and the command reports
+  the same set it previewed, in the same record shape.
+- **Fail loudly, not quietly.** A typo, an obsolete unscoped command, a
+  duplicate edge, a destination collision, or an already-archived neighbour
+  fails before any document moves — never as a partial write that exits 0.
 
 ## Binding scope
 
-- Bare `docs archive FILE --cascade` does not write and fails with safe-flow
-  guidance.
-- `docs archive FILE` archives only `FILE`.
-- `--cascade-dry-run` previews the candidate set and writes nothing.
-- A write that includes related documents requires explicit
-  `--cascade-only GLOB` selection.
-- Relationship verbs remain context; none grants archive authorization.
-- Candidate planning is validate-all-first, deduplicated, collision-checked,
-  and all-or-nothing for handled errors before mutation begins.
-- CLI help, `cli.md`, `convention.md`, the bundled docs skill and references,
-  CHANGELOG, and upgrade notes describe the same safe flow. Agent Playbook
-  Suite workflow changes remain a post-M29 cross-repository follow-up.
+The eight decisions below are binding for M26. Each carries the setup question
+it resolves; the reasoning for those resolutions is in *Resolved setup
+questions (Q1–Q7, BINDING)*.
+
+### D1 — Authorization is explicit, never relational
+
+Exactly three archive shapes exist, and no other invocation writes a related
+document:
+
+| Invocation | Writes | Exit |
+|---|---|---|
+| `docs archive FILE` | `FILE` only | 0 |
+| `docs archive FILE --cascade-dry-run [--cascade-only GLOB]` | nothing (preview) | 0 |
+| `docs archive FILE --cascade-only GLOB` | `FILE` plus exactly the one-hop candidates matching `GLOB` | 0 |
+
+Relationship verbs supply the candidate set for preview and for glob matching.
+They never grant authorization. This is the milestone's whole point and the
+operator's confirmed decision in `feedback-log.md` (2026-08-10).
+
+`docs archive FILE` stays **quiet** about candidates it leaves in place
+(Q7): that is the correct safe behavior, and a notice on every single-document
+archive would be noise. `--cascade-dry-run` is where candidates are named.
+
+### D2 — Bare `--cascade` and `--interactive` refuse before any write
+
+`--interactive` is **retired** (Q1) and bare `--cascade` refuses (the
+operator's `feedback-log.md` decision). Both flags stay **registered** in
+argparse (Q2) and refuse **unconditionally** — independent of `--dry-run`,
+`--cascade-dry-run`, `--json`, and every other flag, so the combination matrix
+contains no "it depends" cell. The refusal happens before the primary document
+is touched, exits **2** (the code `cli.md` already assigns to an invalid
+cascade-flag combination), and names the migration path: `--cascade-dry-run`
+to preview, then `--cascade-only GLOB` to write.
+
+The flags are kept registered, rather than deleted, precisely so an obsolete
+script or workflow skill gets a legible, actionable refusal instead of
+argparse's generic `unrecognized arguments` error. `--help` marks them as
+removed and names the replacement. A later major version may delete them.
+
+Retiring `--interactive` removes the only stdin-reading path in `docs archive`,
+so the M14 (B1) invariant strengthens: **`cli.md` may now state that
+`docs archive` never prompts on stdin at all**, rather than "never prompts
+unless `--interactive`". `docs install-skill` keeps its TTY-only,
+never-blocking prompt (M23) and is unaffected.
+
+### D3 — Candidate discovery: unchanged verbs, deduplicated, canonical, active-only
+
+- The candidate set stays the existing one-hop `pairs-with` / `child-of`
+  edges (Q3). **One hop only**; the M2 no-transitive-cascade decision is
+  unchanged. Keeping the discovery set unchanged is defense in depth on top of
+  the scope and preserves compatibility.
+- The six M25 reciprocal verbs (`precedes`/`follows`, `depends-on`/
+  `required-by`, `blocks`/`blocked-by`) are **never** candidates. Sequence,
+  dependency, and blocking do not imply archive membership.
+- A document reachable through more than one edge appears **once**. The set is
+  deduplicated on the canonical root-relative POSIX path, first declaration
+  wins, and the surviving order is `Related:` declaration order — deterministic
+  and traceable back to the source document.
+- `--cascade-only GLOB` matches against that same canonical root-relative
+  path, so a `./name.md` or `sub/../name.md` spelling cannot dodge or defeat a
+  scope. This mirrors M25's post-review canonical-path amendment.
+- A candidate whose target does not resolve to a file is **excluded and named
+  as ineligible** with a reason (`docs check`'s `broken-ref` still owns the
+  finding).
+- **A candidate already under the archive subtree is excluded** and named as
+  ineligible with a reason (Q4). Archiving an archived document is meaningless,
+  and today it silently relocates and re-dates history (evidence E4).
+
+### D4 — Validate-all-first: one complete plan before the first write
+
+The scoped write builds and validates a complete archive plan before mutating
+anything (Q5). The plan covers the primary and every selected candidate, and
+the pre-flight proves, for each:
+
+- the document parses and has an editable metadata block;
+- the document is **not** already under the archive subtree — a primary that
+  is already archived is a **refusal** (Q4), not a re-dating;
+- its archive destination is computed and is not already occupied;
+- no two documents in the plan resolve to the same destination (the basename
+  collision that today silently drops a document);
+- the source file and destination directory are writable.
+
+The existing whole-tree pre-flight walk (M12/M14 — A6) stays. Any **handled**
+failure refuses the whole operation: exit non-zero, **zero bytes written**,
+including the primary. Only after the plan validates does execution begin.
+
+**The residual boundary is stated plainly, not papered over.** An unexpected
+`OSError` *during* execution is reported as an exact **partial-state
+admission** — naming which documents moved and which remain at their original
+paths — and is **not** rolled back. Every failure the tool can foresee is
+handled by the pre-flight; this is the honest description of what remains.
+
+**Considered and declined:** extending M25 — D5's staged-publish-plus-rollback
+contract from two documents to N. It would make an interrupted batch
+recoverable by re-running, but each rollback must undo both a move and a
+metadata edit, and the M12 referring-edge rewrite runs afterwards — a
+materially larger lift than the safety this milestone is buying. Explicitly
+declined for M26 and left available for a later milestone to pick up.
+
+### D5 — An empty selection is a refusal, not a quiet primary-only archive
+
+`--cascade-only GLOB` that selects nothing refuses (exit 2, nothing written)
+and says which case it is: candidates existed but none matched, or the document
+has no one-hop candidates at all. Primary-only archive already has its own
+unambiguous spelling — `docs archive FILE` — so a scope that selects nothing is
+always a mistake, and today it is indistinguishable from success (evidence E5).
+
+### D6 — Preview names the whole neighborhood, not just the selection
+
+`--cascade-dry-run`, with or without `--cascade-only`, lists the primary's
+destination and **every** one-hop candidate marked selected, not-selected, or
+ineligible, writes nothing, and exits 0. Today a filtered preview prints only
+the matching subset, so an operator cannot see what a scope is leaving
+behind — which is exactly the judgement the preview exists to support.
+
+### D7 — One machine-readable operation-plan record (`docs archive --json`)
+
+`docs archive` gains a local `--json` flag (Q6) emitting **one** operation-plan
+record on stdout, reusing M25's `relate --json` pattern: the **same shape** for
+a preview and for a real apply, so the two are diffable. The record carries at
+least:
+
+- the **primary** — source path, canonical root-relative path, destination;
+- the full **candidate** set in deterministic order;
+- which candidates are **selected**;
+- which are **excluded**, each with a **reason** (did not match the scope,
+  already archived, target does not resolve);
+- each planned **destination**;
+- whether anything was **written** (preview vs apply), and the reindex state.
+
+The consumer this milestone exists for is an agent deciding whether a selection
+is correct; parsing prose off stderr is precisely the fragility M25 removed.
+`--json` is declared locally on the `archive` subparser (as `check` / `list` /
+`migrate` / `relate` do), gets its own `cli.md` field table and exit-code row,
+and is mirrored into the bundled skill in the same change.
+
+### D8 — Compatibility, upgrade guidance, and surface parity
+
+- **Breaking, deliberately.** Bare `--cascade` and `--interactive` stop
+  working. That is the point of the 2.0 major version, and the refusal is
+  designed to be the loudest possible failure.
+- **No version bump.** M25 — D6 binds the whole train: the package stays
+  `1.8.0` through M25–M28 and **M29** performs the single bump to `2.0.0`.
+  M26 touches neither `pyproject.toml` nor the packaging version pins; its
+  CHANGELOG entries accumulate under the existing `UNRELEASED` heading.
+- **Surface parity in the same change** (`plan.md` › *Ongoing conventions*;
+  `CLAUDE.md` › *Skill update flow*): argparse `--help`, `docs/cli.md`,
+  `docs/convention.md`, the bundled `src/docs_cli/skill/` (`SKILL.md`,
+  `references/use-cases.md`, and `references/cli.md` /
+  `references/convention.md` kept **byte-identical** to `docs/cli.md` /
+  `docs/convention.md`), and `CHANGELOG.md` all describe the same safe flow,
+  including the new `--json` surface.
+- **Upgrade guidance names the replacement invocation**, because the most
+  common real-world caller is a milestone-completion step:
+  `docs archive <slug>.md --cascade` becomes
+  `docs archive <slug>.md --cascade-only '<slug>*'`, previewed first with
+  `--cascade-dry-run`.
+- **Host-machine and Agent Playbook Suite skills are out of scope.** Per
+  `CLAUDE.md`, host skills under `~/.claude/skills/` refresh only at a
+  production ship, and `plan.md` records the Agent Playbook Suite workflow
+  update (its `create-milestones` skill prescribes the now-refused bare
+  `--cascade`) as a post-M29 cross-repository follow-up.
+
+## Out of scope
+
+- Transitive or multi-hop cascade (the M2 decision stands).
+- Multiple positional `FILE` arguments or an explicit file-list selector as an
+  alternative to globs — a plausible future ergonomic, deliberately not this
+  milestone's contract.
+- Rolling back an interrupted execution batch (M25 — D5's
+  staged-publish-plus-rollback extended to N documents) — considered and
+  explicitly **declined** for M26; see D4 and Q5.
+- Unarchive / undo, or any repair of an archive performed under the old
+  behavior.
+- Changing the recognized relationship vocabulary or its reciprocity rules
+  (M25 owns that surface).
+- Markdown body links in moved documents (M27 detects, M28 rewrites).
+- Generalizing the archive planner or the `--json` plan record to `docs mv` or
+  `docs project set`.
+- The `2.0.0` version bump, CHANGELOG dating, and release notes (M29).
+- Agent Playbook Suite changes; that repository consumes the released v2.0
+  behavior after M29.
 
 ## Current state and risks
 
-- v1.8.0 bare `--cascade` is non-interactive and writes every one-hop
-  `pairs-with`/`child-of` candidate.
-- `--interactive` is another unscoped multi-document write path and therefore
-  conflicts with the confirmed “explicit `--cascade-only` for every related
-  write” invariant unless deliberately redesigned or retired.
-- The current scoped loop can partially archive on a later candidate failure
-  and does not deduplicate a document reached through multiple edges.
-- M18 fixes moved-edge integrity but does not make candidate selection safe.
+Reproduced against docs-cli 1.8.0 during setup; the full evidence table lives
+in the implementation log's setup record. Each numbered item is the grounding
+evidence for a specific piece of this milestone and maps to named regression
+coverage in *Evidence → regression coverage* below.
+
+- **E1 — The over-cascade is real on this very tree.** `docs archive
+  m25-reciprocal-relationship-integrity.md --cascade-dry-run` reports it would
+  archive **six** related documents: `plan.md`, the milestone's impl log,
+  `cli.md`, `convention.md`, `test-strategy.md`, and `status.md`. Bare
+  `--cascade` at a milestone closeout would move this project's entire
+  specification spine into the archive, with no prompt.
+- **E2 — `_cascade_set` does not deduplicate.** A document reachable through
+  both `pairs-with` and `child-of` is archived once and then reported as a
+  failure (`could not archive b.md: [Errno 2] No such file or directory`) — a
+  false error on a successful run.
+- **E3 — Per-candidate failures do not affect the exit code.** A basename
+  collision between two candidates leaves one document unarchived, prints a
+  bare-path message, and exits **0**; `docs check` afterwards reports no
+  violations, so the partial write leaves no detectable drift.
+- **E4 — Already-archived neighbours are silently re-dated.** A `pairs-with`
+  edge into the archive subtree makes `--cascade` relocate
+  `archive/2026-01-01/old.md` to `archive/2026-08-12/old.md` and rewrite its
+  `Updated:` field. This is data corruption, not merely over-reach, and it is
+  load-bearing on the live tree: `status.md` carries more than twenty archive
+  subtree `pairs-with` edges.
+- **E5 — A typo'd scope looks like success.** `--cascade-only 'typo-*'`
+  archives the primary, prints `cascade: no one-hop relations to archive`, and
+  exits 0.
+- **`--interactive` is a second unscoped multi-document write path** and it
+  ignores `--cascade-only` entirely, which is why D2 retires it rather than
+  trying to reconcile it with D1.
+- **Structural risk from the ecosystem.** The `create-milestones` workflow
+  skill prescribes bare `--cascade` at every milestone completion, so the
+  over-cascade is not an unlucky invocation — it is the documented flow. The
+  refusal is the mitigation; the skill update is a post-M29 follow-up.
+- **Mitigating existing strengths.** `_archive_one` is already
+  edit-then-move with `atomic_write`; the M12/M14 whole-tree pre-flight walk
+  already exists; M18 already keeps archive-subtree edges resolvable across a
+  batch; and M25 has just established the validate-all-first,
+  refuse-before-writing, one-JSON-plan-record shape that D4 and D7 extend from
+  two documents to N.
+
+### Evidence → regression coverage
+
+| Evidence | Fixed by | Named coverage (Phases 2–3) |
+|---|---|---|
+| E1 over-cascade | D2 refusal | bare `--cascade` refuses with exit 2 and zero bytes written; the same tree previews all six candidates under `--cascade-dry-run` |
+| E2 duplicate edge | D3 dedup | a doc reachable by `pairs-with` **and** `child-of` appears once in preview, JSON, and the write; no false failure line |
+| E3 basename collision | D4 pre-flight | two candidates mapping to one destination refuse before any write; both docs still at their original paths; exit non-zero |
+| E4 archived neighbour | D3 exclusion + D4 primary refusal | an archive-subtree candidate is excluded and named ineligible; an already-archived **primary** refuses; the archived doc's bytes, path, and `Updated:` are unchanged |
+| E5 typo'd scope | D5 empty-selection refusal | a non-matching `--cascade-only` refuses with exit 2, the primary is not archived, and the message distinguishes "none matched" from "no candidates" |
 
 ## Deliverables
 
-- [ ] Exact flag/exit/message compatibility matrix frozen in Phase 1.
-- [ ] Bare cascade and any unscoped related-write path refuse before writes.
-- [ ] Deterministic preview and explicit-scope planning output.
-- [ ] Deduplicated, preflighted scoped archive batch with failure tests.
-- [ ] Regression coverage for primary-only archive and edge rewriting.
-- [ ] Surface-parity and v2.0 migration guidance.
+- [ ] Exact flag / exit-code / message compatibility matrix and the `--json`
+      schema frozen in Phase 1, against the resolved Q1–Q7 decisions.
+- [ ] Bare `--cascade` and `--interactive` refuse before any write, registered
+      and refusing, with actionable migration guidance.
+- [ ] Deterministic preview naming every candidate as selected, not-selected,
+      or ineligible, writing nothing.
+- [ ] Deduplicated, canonical-path, collision-checked, writability-checked
+      archive plan built before the first mutation, with archived documents
+      excluded and an archived primary refused.
+- [ ] Empty-selection refusal with distinct "none matched" / "no candidates"
+      messages.
+- [ ] `docs archive --json` operation-plan record, one shape for preview and
+      apply, carrying primary / candidates / selected / excluded-with-reason /
+      destinations / written state.
+- [ ] Regression coverage for E1–E5 plus proof that primary-only archive, the
+      M12 referring-edge rewrite, and M18 archive-subtree edge integrity are
+      unchanged.
+- [ ] Surface parity across `--help`, `cli.md`, `convention.md`, the bundled
+      skill (byte-identical mirrors), and the `UNRELEASED` CHANGELOG, plus
+      v2.0 migration guidance.
 
-## TDD plan summary
+## TDD implementation plan
 
-1. Define the compatibility matrix, candidate semantics, no-match behavior,
-   atomicity boundary, and `--interactive` disposition.
-2. Write RED CLI/integration/failure-injection tests.
-3. Create candidate/dedup/collision fixtures.
-4. Capture the RED baseline.
-5. Add an immutable archive-operation plan interface.
-6. Implement validation/deduplication and safe refusal/write behavior.
-7. Reconcile argparse, output, docs, skill, version, and CHANGELOG.
-8. Run the focused and full GREEN gates.
-9. Dogfood preview + explicit selection on a throwaway copy of this tree.
-10. Simplify, close docs, and hand off to M27.
+### Phase 1 — Define Contract
+
+- Objective: freeze — against the already-resolved Q1–Q7 — the exact refusal
+  messages and exit codes, the candidate discovery / deduplication /
+  canonicalization rules, the ineligibility reasons, the empty-selection
+  messages, the preview shape, the pre-flight boundary and the partial-state
+  admission wording, the `--json` record schema and field table, and the
+  compatibility language. No business logic lands. Phase 1 does **not**
+  re-open the setup decisions.
+- Files: `docs/cli.md`, `docs/convention.md`, this milestone, and the bundled
+  reference mirrors. Interface signatures are frozen in a *Decisions
+  (Phase 1 — BINDING)* section here rather than stubbed in
+  `src/docs_cli/cli.py`, following the M25 precedent — stubs would perturb the
+  Phase-4 subprocess RED reasons.
+- Exit: specs, help strings, the `--json` schema, and the frozen signatures are
+  internally consistent; no behavior changes.
+
+### Phase 2 — Write Tests (RED)
+
+- Objective: express refusal, preview, scoped-write, and JSON behavior before
+  any implementation, including every failure path the current code silently
+  swallows.
+- Files: `tests/test_cli_archive.py`, a new focused planning-unit module
+  (`tests/test_archive_plan.py`), and `tests/test_cli_check.py` /
+  skill-parity tests where the surface moves.
+- Exit: the E1–E5 locks in *Evidence → regression coverage*, plus
+  `--interactive` refusal, unfiltered and filtered preview, scoped write,
+  unwritable target, injected mid-execution `OSError` producing the
+  partial-state admission, and the `--json` record (preview and apply having
+  the same shape) are RED **only** for missing M26 behavior. The primary-only,
+  M12 referring-edge, and M18 archive-edge locks stay GREEN throughout and are
+  classified as such.
+
+### Phase 3 — Create Data/Fixtures
+
+- Objective: provide small committed trees isolating one semantic each, per
+  `test-strategy.md`'s fixture policy.
+- Files: new `tests/fixtures/trees/archive-*` trees for the candidate
+  neighborhood (E1), the duplicate edge (E2), the basename collision (E3), and
+  the archived neighbour (E4). Mutation-shaped cases that write and then
+  byte-compare use inline `tmp_path` builders instead (the M25 rule).
+- Exit: fixtures are structure-only (never date-sensitive), parse
+  deterministically, and each yields exactly its intended finding set.
+
+### Phase 4 — Run Tests (RED Baseline)
+
+- Objective: prove the new tests fail for the intended missing behavior and
+  for nothing else.
+- Files: implementation log only.
+- Exit: full baseline captured with exact counts; zero collection errors, zero
+  tracebacks, zero xfails; every pre-existing test still GREEN; every
+  GREEN-at-baseline lock classified explicitly.
+
+### Phase 5 — Update Base Interfaces
+
+- Objective: add the archive planning models and pure helpers without
+  completing behavior — an immutable per-document move record and a whole
+  operation plan (primary plus candidates, each carrying source path, canonical
+  rel path, destination, selected/excluded state and reason), a candidate-set
+  builder with deduplication and canonical matching, the pre-flight validators,
+  and an `archive_plan_to_json` serializer. Shaped after M25's `RelateEdit` /
+  `RelatePlan` / `plan_relate` / `apply_relate_plan` / `relate_plan_to_json`
+  split, which the codebase already proves out.
+- Files: `src/docs_cli/cli.py` and unit tests.
+- Exit: interfaces typecheck and are unit-tested; behavior tests remain
+  honestly RED at the seam.
+
+### Phase 6 — Implement Offline/Core Path
+
+- Objective: implement candidate planning, deduplication, archived-document
+  exclusion, collision and writability pre-flight, the refusal paths, the
+  all-or-nothing scoped execution, and the partial-state admission.
+- Files: `src/docs_cli/cli.py`, planning/archive unit and integration tests.
+- Exit: core and integration tests GREEN; every handled failure refuses before
+  the first write; no unrelated bytes change; M12 and M18 behavior byte-stable.
+
+### Phase 7 — Update Tool/Wrapper Layer
+
+- Objective: reconcile the argparse surface (flag registration, the retired
+  flags' refusal help text, the local `--json` flag, mutual exclusion), human
+  stderr output, the JSON record on stdout, exit codes, the single
+  end-of-batch reindex, `cli.md`, `convention.md`, the bundled skill, and the
+  `UNRELEASED` CHANGELOG with upgrade guidance.
+- Files: CLI parser/dispatch, `docs/cli.md` (the `archive` section, the
+  `--json` field table, and the exit-code summary rows), `docs/convention.md`,
+  `src/docs_cli/skill/` (`SKILL.md`, `references/use-cases.md`, and the
+  byte-identical `cli.md` / `convention.md` mirrors), `CHANGELOG.md`.
+  **Not** `pyproject.toml` or the version pins (M25 — D6).
+- Exit: subprocess tests, the reference byte-identity tests, and the
+  surface-parity grep are GREEN; `docs archive --help` and `cli.md` agree.
+
+### Phase 8 — Run Tests (GREEN)
+
+- Objective: run the focused and full suites plus lint, format, types,
+  reference byte identity, and docs integrity.
+- Files: implementation log only unless a real defect is found.
+- Exit: all gates GREEN with exact counts recorded, and every pre-existing
+  test id mechanically proven still present and GREEN.
+
+### Phase 9 — Integrate / Accept / Dogfood
+
+- Objective: on a throwaway copy of this docs tree, run the real closeout
+  workflow end to end — preview the M25 pair's candidates (E1), confirm the
+  spec spine is named but not selected, archive the pair with an explicit
+  scope, and re-check. Then exercise each refusal (bare cascade,
+  `--interactive`, typo'd scope, archived neighbour) and confirm the tree is
+  byte-identical afterwards. Diff the `--json` preview record against the
+  apply record.
+- Files: throwaway tree only; the committed docs record the evidence.
+- Exit: every flow runs unattended with no stdin, `docs check` is clean
+  afterwards, the refusal flows change zero bytes, the preview and apply JSON
+  records agree, and the real tree is untouched.
+
+### Phase 10 — Quality, Docs, Refactor
+
+- Objective: simplify the implementation, close the surface and upgrade docs,
+  update the shipped use-case catalog, and write the completion summaries.
+- Files: code/docs as justified, this milestone and the implementation log.
+- Exit: full gate GREEN; no placeholders; M26 implementation-complete and
+  ready to hand off to M27, staying `Lifecycle: active` until the M29 publish
+  closeout.
+
+## Phase checklist
+
+- [ ] Phase 1 — Define Contract
+- [ ] Phase 2 — Write Tests (RED)
+- [ ] Phase 3 — Create Data/Fixtures
+- [ ] Phase 4 — Run Tests (RED Baseline)
+- [ ] Phase 5 — Update Base Interfaces
+- [ ] Phase 6 — Implement Offline/Core Path
+- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [ ] Phase 8 — Run Tests (GREEN)
+- [ ] Phase 9 — Integrate / Accept / Dogfood
+- [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 
 - Relationships provide context, never archive permission.
-- Bare cascade must not write.
+- Bare `--cascade` must not write.
 - Preview remains supported.
 - Explicit `--cascade-only` scope is required for a related-document write.
+- Archive selection and relationship semantics are decoupled surfaces; M25
+  owns the graph, M26 owns authorization.
+- The package version stays `1.8.0`; M29 performs the single bump (M25 — D6).
 
-## Open questions for M26 Phase 1
+## Resolved setup questions (Q1–Q7, BINDING)
 
-1. Retire `--interactive` or require it to compose with an explicit scope.
-   Recommendation: retire/refuse it with migration guidance; the explicit
-   non-interactive operation is clearer for both humans and agents.
-2. Candidate verb set. Recommendation: retain the current one-hop
-   `pairs-with`/`child-of` discovery set for compatibility; the scope, not the
-   relationship, grants authorization. New M25 sequence/dependency/blocker
-   verbs never become cascade candidates.
-3. No-match behavior. Recommendation: if candidates exist but the explicit
-   GLOB matches none, fail before archiving the primary so a typo cannot look
-   successful; pin the empty-candidate case separately.
-4. Exact handled-failure atomicity. Recommendation: build and validate the full
-   move/edit plan before the first write and test collisions/duplicates/OSError
-   boundaries explicitly.
+Seven questions were raised at setup and **all seven are resolved before
+Phase 1**. The originals are kept so the decision trail reads end-to-end. Three
+were operator decisions; four were conductor-resolved as determined by the
+specs, `plan.md`, `CLAUDE.md`, or the M14/M18/M25 precedent.
+
+1. **`--interactive` disposition** — retire it, or require it to compose with
+   an explicit scope? **RESOLVED → D2 (operator).** **Retire it.** It refuses
+   with migration guidance pointing at `--cascade-dry-run` (preview) then
+   `--cascade-only GLOB` (scoped write), exit 2. It was a second unscoped
+   multi-document write path, it ignored `--cascade-only` entirely, and it was
+   the only stdin-reading path in `docs archive`. Retiring it lets `cli.md`
+   state the stronger invariant that **`docs archive` never prompts on
+   stdin**.
+2. **Retention shape of the refusing flags** — keep them registered, or delete
+   them? **RESOLVED → D2 (conductor).** **Keep `--cascade` and `--interactive`
+   registered and refusing** for the 2.x line, exit 2, with migration
+   guidance. The value of this breaking change is a legible failure for the
+   scripts and workflow skills still passing the old flag — not an
+   `unrecognized arguments` traceback. A later major may delete them.
+3. **Candidate verb set** — retain, or widen now that the scope grants
+   authorization? **RESOLVED → D3 (conductor).** **Retain the one-hop
+   `pairs-with` / `child-of` discovery set.** The scope, not the relationship,
+   grants authorization; keeping the candidate set unchanged is defense in
+   depth and preserves compatibility. M25's six reciprocal
+   sequence/dependency/blocker verbs never become cascade candidates.
+4. **Already-archived documents** — how are archived candidates and an
+   archived primary handled? **RESOLVED → D3 + D4 (conductor).** **Exclude
+   archived documents from the candidate set**, naming them as ineligible with
+   a reason in the preview and in the `--json` excluded list; and **refuse
+   when the primary itself is already archived.** Evidence E4 — bare
+   `--cascade` relocating and re-dating `archive/2026-01-01/old.md` →
+   `archive/2026-08-12/old.md` and rewriting `Updated:` — is data corruption,
+   squarely in M26's remit, and load-bearing on the live tree, where
+   `status.md` carries 20+ archive-subtree edges. It gets explicit regression
+   coverage. (This was not one of the registered stub's four questions; it was
+   found in the code during setup.)
+5. **Handled-failure atomicity boundary** — how far does "all-or-nothing"
+   reach? **RESOLVED → D4 (operator).** **Pre-flight everything.** Validate
+   parse, metadata block, destination occupancy, intra-plan collision, and
+   writability across the whole plan before the first write, so every handled
+   error refuses with zero mutation. A residual mid-execution `OSError` is
+   reported as an exact partial-state admission — which documents moved, which
+   remain at their original paths — and is **not** rolled back. Extending
+   M25 — D5's staged-publish-plus-rollback to N documents is **explicitly
+   declined** for M26 and recorded as a considered alternative a later
+   milestone may pick up.
+6. **Machine-readable output** — does `docs archive` gain `--json`?
+   **RESOLVED → D7 (operator).** **Yes.** One operation-plan record, the same
+   shape for preview and apply, reusing M25's `relate --json` pattern, and
+   carrying primary, candidates, selected, excluded (each with a reason),
+   destinations, and whether anything was written. In M26 scope, with its own
+   tests and its own `cli.md` / bundled-skill surface-parity rows.
+7. **Primary-only archive notice** — should `docs archive FILE` name the
+   candidates it leaves in place? **RESOLVED → D1 (conductor).** **No.** It is
+   the correct safe behavior, and the line would be noise on every
+   single-document archive. `--cascade-dry-run` is where candidates are named.
+
+### Also settled, without a question
+
+- **Version staging.** The package stays `1.8.0`; **M29** performs the single
+  bump to `2.0.0`. CHANGELOG entries accumulate under `UNRELEASED`
+  (M25 — D6).
+- **Refusal exit code and conditionality.** Every M26 refusal exits **2** and
+  is **unconditional** — independent of `--dry-run`, `--cascade-dry-run`, and
+  `--json`.
+- **Scope matching.** `--cascade-only` matches the **canonical** root-relative
+  POSIX path (M25's post-review amendment-B shape).
+- **Skill channels.** The bundled skill in `src/docs_cli/skill/` updates in the
+  **same change** as the CLI surface, with `references/cli.md` and
+  `references/convention.md` byte-identical to `docs/cli.md` and
+  `docs/convention.md`. Host-machine skills — including `create-milestones`,
+  which prescribes the now-refused bare `--cascade` — refresh only at the M29
+  production ship, and the Agent Playbook Suite update is a post-M29
+  cross-repository follow-up (`CLAUDE.md`; `plan.md`).
+
+## Testing and quality gate
+
+```sh
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+.venv/bin/mypy src/ tests/
+.venv/bin/python -m pytest -q
+.venv/bin/docs check --root docs
+```
+
+Additional gates: `docs archive --json` schema assertions (preview and apply
+records identical in shape), `docs archive --help` / `cli.md` surface parity,
+bundled `references/cli.md` and `references/convention.md` byte identity,
+archive byte-identity checks on every refusal path, and the live INDEX
+snapshot.
 
 ## Success criteria
 
-- No unscoped flag can archive a related document.
-- Preview and scoped output name the deterministic candidate/selected sets.
-- An invalid or empty accidental scope causes no mutation.
-- A valid explicit scope archives exactly the intended documents, keeps all
-  relationships resolvable, refreshes INDEX once, and passes `docs check`.
-- Full quality, compatibility, and dogfood gates are GREEN.
+- No unscoped flag or flag combination can archive a related document; bare
+  `--cascade` and `--interactive` refuse before any write, exit 2, and name
+  the replacement invocation.
+- Preview and scoped output name the same deterministic, deduplicated
+  candidate set, and the preview distinguishes selected, not-selected, and
+  ineligible.
+- `docs archive --json` emits one operation-plan record whose shape is
+  identical for a preview and a real apply, carrying every candidate with its
+  selected/excluded state and the reason for exclusion.
+- An invalid, empty, or accidental scope causes zero mutation — verified
+  byte-for-byte, including `INDEX.md`.
+- A valid explicit scope archives exactly the intended documents, keeps every
+  relationship resolvable (M12 and M18 behavior unchanged), refreshes `INDEX`
+  once, and leaves `docs check` clean.
+- E1–E5 each have named regression coverage: the over-cascade refuses, a
+  duplicate edge appears once with no false failure, a destination collision
+  refuses before any write, an already-archived neighbour is excluded and an
+  archived primary refuses with the archived bytes untouched, and a typo'd
+  scope refuses instead of looking successful.
+- An unexpected mid-execution failure produces an exact partial-state
+  admission naming what moved and what did not — never a silent partial write
+  that exits 0.
+- Full quality, compatibility, and dogfood gates are GREEN, leaving M27 ready
+  to prepare next.

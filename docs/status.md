@@ -34,6 +34,7 @@ Related:
 - pairs-with: m25-reciprocal-relationship-integrity.md
 - pairs-with: m25-reciprocal-relationship-integrity-impl.md
 - pairs-with: m26-safe-archive-selection.md
+- pairs-with: m26-safe-archive-selection-impl.md
 - pairs-with: m27-markdown-body-link-validation.md
 - pairs-with: m28-move-safe-body-link-rewrites.md
 - pairs-with: m29-pypi-publish-2-0-0.md
@@ -42,8 +43,40 @@ Related:
 
 ## Current milestone
 
-**M25 — Reciprocal relationship integrity and `docs relate` is the current
-milestone and is now IMPLEMENTATION-COMPLETE — all ten TDD phases are done
+**M26 — Safe explicit archive selection is the current milestone. Milestone
+setup is complete (2026-08-12); Phase 1 — Define Contract is next.** No TDD
+phase has started. M26 decouples relationship context from archive
+authorization: bare `docs archive FILE --cascade` refuses before any write,
+`--interactive` is retired under the same refusal, `--cascade-dry-run` keeps
+previewing every one-hop candidate (selected, not-selected, or ineligible),
+and every write that includes a related document requires an explicit
+`--cascade-only GLOB` scope whose full plan is validated — deduplicated,
+canonical-path matched, collision- and writability-checked, archived
+neighbours excluded — before the first byte moves. `docs archive` also gains a
+`--json` operation-plan record, one shape for preview and apply, reusing
+M25's `relate --json` pattern. Setup reproduced five concrete v1.8.0 defects
+(**E1–E5**), each now mapped to named regression coverage: the headline is
+that `docs archive m25-reciprocal-relationship-integrity.md --cascade` would
+archive `plan.md`, `cli.md`, `convention.md`, `test-strategy.md`, and
+`status.md` — this project's whole specification spine — with no prompt; a
+basename collision or a typo'd scope leaves a partial archive that exits 0;
+and an archive-subtree `pairs-with` edge makes `--cascade` silently relocate
+and re-date an already-archived document (data corruption, load-bearing here
+because `status.md` carries 20+ archive-subtree edges). **All seven setup
+questions are RESOLVED** — Q1 retire `--interactive`, Q2 keep the refusing
+flags registered, Q3 retain the `pairs-with`/`child-of` candidate set, Q4
+exclude archived candidates and refuse an archived primary, Q5 pre-flight
+everything with a partial-state admission instead of rollback (extending
+M25 — D5's rollback to N docs explicitly declined), Q6 add
+`docs archive --json`, Q7 no primary-only candidate notice. Phase 1 freezes
+exact messages, exit codes, and the JSON schema against them rather than
+re-opening scope. The package version stays **1.8.0** (M25 — D6); CHANGELOG
+entries accumulate under `UNRELEASED` for M29. The prepared pair is
+[m26-safe-archive-selection.md](m26-safe-archive-selection.md) and
+[m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md).
+
+**M25 — Reciprocal relationship integrity and `docs relate` is
+IMPLEMENTATION-COMPLETE — all ten TDD phases are done
 (Phases 1–4 2026-08-11 amended 2026-08-12 on `m25/phases-1-4`; Phases 5–10
 2026-08-12 on `m25/phases-5-10`). It stays `Lifecycle: active` until the
 M29 publish closeout.** M25 defines three reciprocal relationship
@@ -110,8 +143,11 @@ and
 
 The full breaking safety train is registered in execution order:
 
-- **M26 — Safe explicit archive selection:** unscoped related-document writes
-  refuse; preview remains; explicit `--cascade-only` scope is required.
+- **M26 — Safe explicit archive selection (IN FLIGHT, setup complete
+  2026-08-12, all seven setup questions RESOLVED):** unscoped
+  related-document writes refuse; preview remains and names the whole
+  neighborhood; explicit `--cascade-only` scope is required, planned in full
+  before any write; `docs archive --json` emits the operation plan.
 - **M27 — Markdown body-link validation:** bounded scanner, hard local-link
   finding, and an explicit policy for the live tree's legacy archived damage.
 - **M28 — Move-safe body-link rewrites:** depends on M26 + M27; preserves both
@@ -120,8 +156,9 @@ The full breaking safety train is registered in execution order:
 
 The five plans use reciprocal sequence edges and only real durable dependency
 edges; no `blocks`/`blocked-by` edge exists because planned prerequisites are
-not transient blockers. M26–M29 are draft stubs with no implementation logs or
-phases started. Because those edges are already complete in both directions,
+not transient blockers. M26 now has a full task plan and an implementation log;
+M27–M29 remain draft stubs with no implementation logs or phases started.
+Because those edges are already complete in both directions,
 this tree passes M25's new hard rule as-is — the existing dogfood
 `docs check docs/` gate doubles as an M25 lock.
 
@@ -544,7 +581,16 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **prepare M26 — Safe explicit archive selection.** M25 is
+**Next action:** **begin M26 Phase 1 — Define Contract.** M26's milestone setup
+is complete (2026-08-12); no implementation phase has started. Phase 1 must
+freeze — against the already-resolved Q1–Q7 in the
+[M26 plan](m26-safe-archive-selection.md) — the exact refusal messages and
+exit codes, candidate discovery/deduplication/canonicalization, the
+ineligibility reasons, the empty-selection messages, the preview shape, the
+pre-flight boundary and partial-state admission wording, and the
+`docs archive --json` record schema in
+`cli.md` / `convention.md`, then record Phase 1 in the
+[M26 log](m26-safe-archive-selection-impl.md). M25 is
 complete and **merged to `main`** (2026-08-12, merge `822e086`) across all ten
 TDD phases (**777 GREEN**, gate clean, dogfood done, fresh-eyes review folded
 in) and stays `Lifecycle: active` until
@@ -799,7 +845,7 @@ for the milestone summary.
 | M23 — Agent-aware install-skill + recorded-dest skill-refresh hint (v1.8.0) | **Complete** (shipped to PyPI as `docs-cli==1.8.0` **batched via M24** 2026-07-03; pair archived to `archive/2026-07-03/`; impl-complete 2026-07-02, all 10 TDD phases) (Phases 1–4 (Contract & RED baseline) on `m23/phases-1-4`; Phases 5–10 (implementation → dogfood → closeout) on `m23/phases-5-10`: full suite **636 GREEN**, gate clean tree-wide, `pyproject` at 1.8.0, `docs --version` → `docs 1.8.0`; online path dogfooded against a seeded throwaway cache, pytest 100% offline) — follow-on to the M21 re-scope that restores the skill-refresh nudge cut from M21. Makes `docs install-skill` **agent-aware**: `--dest` is the agent-agnostic source of truth; TTY-aware resolution (human may be prompted; an agent [non-TTY] is **never** blocked → falls back to the default, OQ-1); the resolved dest is **recorded** (path only — **never** content) to a separate `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` (OQ-2; M21's 3-key cache stays frozen); the "Claude Code skill" framing in `install-skill`'s help is neutralised to **"agent skill"** (reconciling with `cli.md`); and M21's update notice gains a skill-refresh hint pointed at the **recorded** dest (riding M21's same suppression matrix + throttle). Replay/remember allowed; content-inspection + agent-guessing NOT. Out of scope: multi-agent skill *formats* + agent auto-detection. **Depends on M21.** Ships **1.8.0** (OQ-4). **The four OPEN QUESTIONS are resolved** (OQ-1 default / OQ-2 separate XDG_STATE file — **confirmed as-shipped at the M24 gate, D4**; OQ-3 last-write-wins single dest; OQ-4 1.8.0). Shipped batched as 1.8.0 via M24; archived 2026-07-03. | [Plan](archive/2026-07-03/m23-agent-aware-install-skill.md) | [Log](archive/2026-07-03/m23-agent-aware-install-skill-impl.md) |
 | M24 — PyPI publish 1.8.0 | **Complete** (2026-07-03; `docs-cli==1.8.0` live on PyPI; `v1.8.0` tag at `1a01f74` + GitHub release; chain-of-custody bit-perfect wheel `29ac3ced…` + sdist `62a29285…`; all M21+M23 contracts hold against the served wheel; host skills refreshed) — operator-driven publish shipping the post-1.6.5 train **batched** as `docs-cli==1.8.0`: M21 (update-check, built 1.7.0) + M22 (doc-only, no bump) + M23 (agent-aware install-skill, 1.8.0), mirroring M17 (M14+M15→1.6.0) / M9 (M6+M7+M8→1.3.0). Tree at 1.8.0 (M23 Phase 7, merged `839daef`); **1.7.0 skipped on PyPI** (its CHANGELOG entries fold into 1.8.0, D2). Runbook-driven — no TDD code phases; the [release-runbook.md](release-runbook.md) sections are the phases. Setup decisions: D1 batched 1.8.0; D2 CHANGELOG fold; D3 "author now, confirm at the gate" (runbook starts on explicit go-ahead, pauses before every irreversible step); D4 M23 OQ-1/OQ-2 confirmed as-shipped (flag cleared); D5 closeout archived the M21+M22+M23 pairs + the M24 milestone doc to `archive/2026-07-03/` (impl log stays active). Ran the release-runbook end-to-end under D3 (operator go at the Phase-4 gate). | [Plan](archive/2026-07-03/m24-pypi-publish.md) | [Log](m24-pypi-publish-impl.md) |
 | M25 — Reciprocal relationship integrity and `docs relate` | **Active / implementation-complete — all ten TDD phases** (Phases 1–4 2026-08-11 on `m25/phases-1-4`; Phases 5–10 2026-08-12 on `m25/phases-5-10`; **777 GREEN**, gate clean, dogfood done, fresh-eyes review folded in incl. the operator-approved post-freeze `duplicate-field` rule; Step-3 `/simplify` done 2026-08-12 on `m25/simplify` (-17 lines, 777 GREEN unchanged, no contract moved); stays `Lifecycle: active` until the M29 publish closeout) — hard inverse validation + explicit active/archived repair; first v2.0 implementation milestone. Six recognized verbs, the `missing-inverse` rule, and `docs relate add|remove` (idempotent, `--dry-run`/`--json`, one reindex, staged publish + rollback, audited archived repair) are implemented; the version deliberately stays 1.8.0 (D6) with CHANGELOG entries under `UNRELEASED` for M29 to name. | [Plan](m25-reciprocal-relationship-integrity.md) | [Log](m25-reciprocal-relationship-integrity-impl.md) |
-| M26 — Safe explicit archive selection | **Registered draft** (2026-08-10; no log/phase started) — explicit multi-doc archive scope, safe preview/refusal, deduplicated preflight. | [Plan](m26-safe-archive-selection.md) | _not yet created_ |
+| M26 — Safe explicit archive selection | **Active / milestone-setup complete** (2026-08-12; Phase 1 next, no TDD phase started) — bare `--cascade` and the retired `--interactive` refuse before any write (registered-and-refusing, exit 2, migration guidance), `--cascade-dry-run` previews every one-hop candidate as selected / not-selected / ineligible, a related-document write requires an explicit `--cascade-only GLOB` whose full plan is validated first (deduplicated, canonical-path matched, collision- and writability-checked, archived neighbours excluded, archived primary refused, empty selection refused), and `docs archive --json` emits one operation-plan record whose shape is identical for preview and apply. Registered 2026-08-10, planned in depth 2026-08-12 on `m26/milestone-setup`; setup reproduced five v1.8.0 defects **E1–E5**, each mapped to named regression coverage — bare `--cascade` on the M25 pair proposing to archive `plan.md` + `cli.md` + `convention.md` + `test-strategy.md` + `status.md`; a duplicate edge printing a false failure; a basename collision leaving a partial archive at exit 0 with `docs check` clean; an archive-subtree edge silently relocating and re-dating an archived doc; a typo'd scope looking like success. **All seven setup questions RESOLVED** (Q1/Q5/Q6 operator; Q2/Q3/Q4/Q7 conductor-resolved); extending M25 — D5's staged-publish-plus-rollback to N docs was considered and declined. No version bump (M25 — D6). | [Plan](m26-safe-archive-selection.md) | [Log](m26-safe-archive-selection-impl.md) |
 | M27 — Markdown body-link validation | **Registered draft** (2026-08-10; no log/phase started) — bounded scanner, hard missing-local-link rule, controlled legacy policy. | [Plan](m27-markdown-body-link-validation.md) | _not yet created_ |
 | M28 — Move-safe Markdown body-link rewrites | **Registered draft** (2026-08-10; no log/phase started; depends on M26 + M27) — incoming-target and moved-referrer link rebasing. | [Plan](m28-move-safe-body-link-rewrites.md) | _not yet created_ |
 | M29 — PyPI publish 2.0.0 | **Registered release stub** (2026-08-10; depends on M25–M28; no log/runbook phase started). | [Plan](m29-pypi-publish-2-0-0.md) | _not yet created_ |
