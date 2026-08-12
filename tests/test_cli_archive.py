@@ -176,9 +176,14 @@ def _two_relation_tree(tmp_path: Path) -> Path:
     plus a non-cascade `references: gamma.md`. Used to test `--cascade`
     (takes both alpha + beta, NOT gamma) and `--cascade-only` (glob filter
     on the related-doc root-relative POSIX path).
+
+    `parents=True` because callers that need a FRESH tree inside one test
+    pass a per-case subdirectory of `tmp_path` that does not exist yet (see
+    `test_archive_help_still_registers_the_retired_flags`); for the usual
+    caller, which passes `tmp_path` itself, it is a no-op.
     """
     root = tmp_path / "two-rel"
-    root.mkdir()
+    root.mkdir(parents=True)
     (root / ".docs.toml").write_text('[project]\nname = "two-rel"\n\n[archive]\ndir = "archive"\n')
     hdr = "Lifecycle: active\nRole: notes\nProject: two-rel\n"
     (root / "sub").mkdir()
