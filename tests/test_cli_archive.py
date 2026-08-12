@@ -1344,6 +1344,7 @@ def test_cascade_only_with_global_dry_run_matches_cascade_dry_run(
         "--cascade-only",
         "milestone*",
         "--dry-run",
+        "--json",
         "--date",
         _M26_DATE,
     )
@@ -1354,6 +1355,7 @@ def test_cascade_only_with_global_dry_run_matches_cascade_dry_run(
         "--cascade-dry-run",
         "--cascade-only",
         "milestone*",
+        "--json",
         "--date",
         _M26_DATE,
     )
@@ -1363,6 +1365,13 @@ def test_cascade_only_with_global_dry_run_matches_cascade_dry_run(
         str(root_b), ""
     ), (global_dry.stderr, cascade_dry.stderr)
     assert "docs: archive: candidate plan.md — not selected" in global_dry.stderr
+    # The `--dry-run` matrix row promises a record too, and the same one.
+    record_a = json.loads(global_dry.stdout)
+    record_b = json.loads(cascade_dry.stdout)
+    record_a["primary"].pop("source")
+    record_b["primary"].pop("source")
+    assert record_a == record_b
+    assert record_a["dry_run"] is True and record_a["applied"] is False
 
 
 def test_cascade_dry_run_with_a_non_matching_scope_exits_zero(docs_script, fixtures_dir, tmp_path):
@@ -1432,6 +1441,11 @@ def test_cascade_only_dedups_and_prints_no_false_failure(docs_script, fixtures_d
     assert "No such file or directory" not in proc.stderr, proc.stderr
     assert (root / _M26_DATED / "a.md").is_file()
     assert (root / _M26_DATED / "b.md").is_file()
+    # The apply-mode primary line: `archived`, not `would archive`, and no
+    # `preview only` line — the only two things distinguishing an apply from a
+    # preview on stderr.
+    assert f"docs: archive: archived a.md -> {_M26_DATED}/a.md" in proc.stderr, proc.stderr
+    assert "preview only" not in proc.stderr
     assert "docs: archive: 1 candidate(s): 1 selected, 0 not selected, 0 ineligible" in proc.stderr
 
 
@@ -2104,3 +2118,150 @@ def test_archive_json_records_index_refreshed(docs_script, fixtures_dir, tmp_pat
     assert record["dry_run"] is False
     assert record["index_refreshed"] is True
     assert f"{_M26_DATED}/a.md" in (root / "INDEX.md").read_text()
+
+
+def _mixed_eligibility_tree(tmp_path: Path) -> Path:
+    """`a.md` with one eligible, one unresolved, and one escaping candidate."""
+    root = tmp_path / "mixed"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "mixed"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: mixed\n"
+    (root / "b.md").write_text(f"# B\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\nb.\n")
+    (tmp_path / "escape.md").write_text(
+        "# Escape\n\nLifecycle: active\nRole: notes\nProject: other\nUpdated: 2026-01-01\n"
+    )
+    (root / "a.md").write_text(
+        f"# A\n\n{hdr}Updated: 2026-01-02\n\n"
+        "Related:\n- pairs-with: b.md\n- pairs-with: ghost.md\n"
+        "- pairs-with: ../escape.md\n\n## Body\n\na.\n"
+    )
+    return root
+
+
+def test_preview_names_the_unresolved_and_outside_root_ineligibilities(docs_script, tmp_path):
+    """D6 / D3: the two remaining ineligibility reasons get their own frozen
+    preview lines, and both count as ineligible in the footer.
+
+    `already-archived` is covered by
+    `test_preview_names_an_ineligible_archived_candidate`; without this test
+    the other two rendered lines would be unpinned and Phase 7 could word them
+    however it liked. An escaping candidate is named by its canonical
+    root-relative form, escape included.
+
+    RED reason: no candidate-state vocabulary exists today; a non-resolving
+    target is silently dropped by `_cascade_set`'s `is_file()` filter and an
+    escaping one is dropped the same way, so neither is ever reported.
+    """
+    root = _mixed_eligibility_tree(tmp_path)
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "a.md"),
+        "--cascade-dry-run",
+        "--cascade-only",
+        "b.md",
+        "--date",
+        _M26_DATE,
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert (f"docs: archive: candidate b.md — selected -> {_M26_DATED}/b.md") in proc.stderr, (
+        proc.stderr
+    )
+    assert (
+        "docs: archive: candidate ghost.md — ineligible (target does not resolve to a file)"
+    ) in proc.stderr, proc.stderr
+    assert (
+        "docs: archive: candidate ../escape.md — ineligible (target resolves outside the docs root)"
+    ) in proc.stderr, proc.stderr
+    assert "docs: archive: 3 candidate(s): 1 selected, 0 not selected, 2 ineligible" in proc.stderr
+    assert _snapshot(root) == before
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        pytest.param("missing-file", id="missing-file"),
+        pytest.param("bad-date", id="bad-date"),
+        pytest.param("malformed-primary", id="malformed-primary"),
+    ],
+)
+def test_archive_retired_flag_is_checked_before_any_filesystem_access(docs_script, tmp_path, case):
+    """D2 (Phase-1 Q11): the retirement check runs FIRST — immediately after
+    argument parsing, before any filesystem access — so it wins over a missing
+    file, a malformed `--date`, and a primary that does not parse.
+
+    Without this ordering the refusal would be conditional on the tree's
+    state, which is exactly the "it depends" cell D2 exists to remove.
+
+    RED reason: today `_cmd_archive` checks the file, the config, the date and
+    the primary's metadata before it ever looks at the cascade flags — a
+    missing file exits 1 with `docs: file not found`, and a bad `--date`
+    exits 2 with `docs: --date: …`.
+    """
+    root = _two_relation_tree(tmp_path)
+    target = root / "root.md"
+    args = ["--cascade"]
+    if case == "missing-file":
+        target = root / "no-such-doc.md"
+    elif case == "bad-date":
+        args += ["--date", "not-a-date"]
+    else:
+        target.write_text("no H1, no metadata block — unparseable.\n")
+
+    proc = _run(docs_script, "archive", str(target), *args)
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert _retirement_message("--cascade") in proc.stderr, proc.stderr
+    assert "file not found" not in proc.stderr
+    assert "docs: --date:" not in proc.stderr
+
+
+def test_quiet_silences_the_preview_but_never_a_refusal(docs_script, fixtures_dir, tmp_path):
+    """`--quiet` gates the preview prose, and only the preview prose: a
+    refusal is a failure, not output, so it prints regardless.
+
+    The preview half is GREEN-degenerate today (`--quiet` already suppresses
+    the whole cascade preview); the refusal half is the RED one and pins the
+    rule for a NON-argparse refusal, complementing the retirement matrix's
+    `--quiet` cell.
+
+    RED reason: `--cascade-only 'typo-*'` does not refuse at all today — it
+    archives the primary and exits 0.
+    """
+    quiet_root = _tree(fixtures_dir, tmp_path, "archive-neighborhood", into="quiet")
+    before = _snapshot(quiet_root)
+    preview = _run(
+        docs_script,
+        "archive",
+        str(quiet_root / "milestone.md"),
+        "--cascade-dry-run",
+        "--quiet",
+        "--date",
+        _M26_DATE,
+    )
+    assert preview.returncode == 0, (preview.stdout, preview.stderr)
+    assert "candidate" not in preview.stderr, preview.stderr
+    assert "preview only" not in preview.stderr
+    assert _snapshot(quiet_root) == before
+
+    refuse_root = _tree(fixtures_dir, tmp_path, "archive-neighborhood", into="refuse")
+    refuse_before = _snapshot(refuse_root)
+    refusal = _run(
+        docs_script,
+        "archive",
+        str(refuse_root / "milestone.md"),
+        "--cascade-only",
+        "typo-*",
+        "--quiet",
+        "--date",
+        _M26_DATE,
+    )
+    assert refusal.returncode == 2, (refusal.stdout, refusal.stderr)
+    assert (
+        "docs: archive: --cascade-only 'typo-*' matched none of the 6 one-hop candidate(s); "
+        "refusing before any write"
+    ) in refusal.stderr, "a refusal prints even under --quiet"
+    assert _snapshot(refuse_root) == refuse_before

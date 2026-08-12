@@ -391,6 +391,7 @@ def test_plan_archive_writes_nothing(tmp_path):
     assert plan.primary.rel == "a.md"
     assert plan.primary.selected is True
     assert plan.primary.verb is None, "the primary has no discovering verb"
+    assert plan.primary.aliases == (), "the primary is named, not declared by an edge"
     assert plan.primary.dest_rel == f"{_DATED}/a.md"
     assert plan.scope == "b.md"
     assert plan.date_str == _DATE
@@ -873,3 +874,37 @@ def test_archive_plan_to_json_lists_candidates_without_a_scope(tmp_path):
     ]
     assert all(c["selected"] is False for c in record["candidates"])
     assert all(c["destination"] is None for c in record["candidates"])
+
+
+def test_archived_test_honours_the_configured_archive_dir(tmp_path):
+    """D3: "already archived" is decided by `[archive] dir`, never by a
+    hardcoded directory name.
+
+    `_in_archive_subdir` hardcodes `archive` / `archived` / `project-history`
+    and ignores the configured value, so it is the wrong helper here. On a
+    tree configured with `dir = "history"`, a candidate under `history/` is
+    ineligible and one under a plain `archive/` directory — which is an
+    ordinary subdirectory on this tree — is a perfectly eligible candidate.
+
+    RED reason: `archive_candidates` does not exist (Phase 5).
+    """
+    root = tmp_path / "customdir"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "customdir"\n\n[archive]\ndir = "history"\n'
+    )
+    _doc(root, "history/2026-01-01/old.md", lifecycle="archived", updated="2026-01-01")
+    _doc(root, "archive/notes.md")
+    _doc(
+        root,
+        "a.md",
+        edges=["pairs-with: history/2026-01-01/old.md", "pairs-with: archive/notes.md"],
+    )
+
+    by_rel = {c.rel: c for c in _candidates(root, "a.md", "*")}
+    assert by_rel["history/2026-01-01/old.md"].reason == "already-archived"
+    assert by_rel["history/2026-01-01/old.md"].selected is False
+    assert by_rel["archive/notes.md"].selected is True, (
+        "`archive/` is an ordinary subdirectory when [archive] dir = 'history'"
+    )
+    assert by_rel["archive/notes.md"].reason is None
