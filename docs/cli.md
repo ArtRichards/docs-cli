@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Related:
 - pairs-with: convention.md
@@ -210,9 +210,17 @@ machine-stable `reason` in the `--json` record:
 | `unresolved-target` | The target does not resolve to a file. `docs check`'s `broken-ref` still owns that finding. |
 | `outside-root` | The canonical path escapes the docs root (e.g. `../escape.md`). |
 
+Two of those conditions can hold at once (`../ghost.md` both escapes the
+root and does not exist), so the reported reason is fixed by
+**precedence: `outside-root`, then `already-archived`, then
+`unresolved-target`** — the more structural fact wins, and the answer is
+deterministic.
+
 The fourth `reason`, `not-selected`, is not an ineligibility: it marks
 an eligible candidate that the scope did not select (or that had no
-scope to select it).
+scope to select it). Ineligibility always wins over it — an
+already-archived candidate reports `already-archived` whether or not a
+scope was given.
 
 ##### Preview (M26 — D6)
 
@@ -276,8 +284,27 @@ candidate, and the pre-flight proves, for each member:
   destination directory does not exist yet, the nearest existing
   ancestor is checked instead.
 
-The whole-tree pre-flight validation walk (M12 / M14 — A6) still runs,
-still honours `[exclude]` / `.docsignore`, and still exits 1.
+**Check order.** Every check runs before any write, in this fixed order,
+so the message an operator sees always names the most specific cause:
+
+1. the retired flags (`--cascade` / `--interactive`) — before any
+   filesystem access at all;
+2. an empty or comment-only `--cascade-only` — purely lexical;
+3. root resolution, `.docs.toml`, `--date`, the primary exists and
+   parses;
+4. the primary is not already under the archive subtree;
+5. the plan is built (pure) — and a preview stops here, prints, and
+   exits 0;
+6. the empty-selection refusal (D5);
+7. **the plan pre-flight** — the five per-member proofs above;
+8. the whole-tree validation walk (M12 / M14 — A6), which still honours
+   `[exclude]` / `.docsignore` and still exits 1;
+9. execution.
+
+The plan pre-flight deliberately precedes the whole-tree walk: both can
+be triggered by the same malformed file, and naming the document the
+operator actually asked for is strictly more actionable than naming an
+unrelated referring doc.
 
 Any **handled** failure refuses the whole operation: non-zero exit,
 **zero bytes written**, including the primary, and no `--json` record.
@@ -373,7 +400,7 @@ real apply, so the two are diffable:
 
 | Field | Type | Notes |
 |---|---|---|
-| `primary` | object | `source` is the `FILE` argument exactly as typed; `path` is its canonical root-relative POSIX path; `destination` is the planned archive path. |
+| `primary` | object | `source` is the `FILE` argument as given on the command line; `path` is its canonical root-relative POSIX path; `destination` is the planned archive path. |
 | `date` | string | The archive date actually used (`--date` or today). |
 | `scope` | string \| null | The `--cascade-only` value as typed, or null. |
 | `candidates` | array | The whole deduplicated one-hop set, in `Related:` declaration order. Present in **every** mode, including a plain `docs archive FILE`. |

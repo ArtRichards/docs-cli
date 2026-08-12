@@ -8,6 +8,7 @@ rot as the wall clock advances.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from datetime import date, timedelta
@@ -362,3 +363,41 @@ def test_check_duplicate_field_json_record_shape(docs_script):
     assert set(records[0]) == {"path", "severity", "rule", "message"}
     assert records[0]["severity"] == "error"
     assert records[0]["path"] == "a.md"
+
+
+# --- M26 — a scoped archive leaves the check gate clean --------------------
+
+
+def test_check_clean_after_a_scoped_archive(docs_script, tmp_path):
+    """M26 — D1 through the real `docs check` gate: an explicitly scoped
+    archive of a milestone pair lands with every `Related:` edge resolving.
+
+    This is the M12 / M18 no-regression proof restated for the invocation
+    that replaces bare `--cascade`: `milestone.md` and its impl log move
+    together, the five spine docs stay put, and their edges to the moved
+    pair are repointed into `archive/2026-05-28/`.
+
+    Uses the committed `archive-neighborhood` fixture (M26 — Phase-1 Q13), so
+    the lock does not depend on this repo's live docs tree.
+    """
+    root = tmp_path / "tree"
+    shutil.copytree(TREES / "archive-neighborhood", root)
+
+    archive = _run(
+        docs_script,
+        "archive",
+        str(root / "milestone.md"),
+        "--cascade-only",
+        "milestone*",
+        "--date",
+        "2026-05-28",
+    )
+    assert archive.returncode == 0, (archive.stdout, archive.stderr)
+    assert (root / "archive" / "2026-05-28" / "milestone.md").is_file()
+    assert (root / "archive" / "2026-05-28" / "milestone-impl.md").is_file()
+    # The specification spine is NOT selected and stays in the active tree.
+    for rel in ("plan.md", "cli.md", "convention.md", "test-strategy.md", "status.md"):
+        assert (root / rel).is_file(), f"{rel} must not be archived by a milestone* scope"
+
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)

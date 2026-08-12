@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Related:
 - child-of: plan.md
@@ -498,7 +498,7 @@ coverage in *Evidence → regression coverage* below.
 ## Phase checklist
 
 - [x] Phase 1 — Define Contract
-- [ ] Phase 2 — Write Tests (RED)
+- [x] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
@@ -624,7 +624,21 @@ lesson.
 **Ineligibility reason tokens** (machine-stable `--json` `reason` values):
 `not-selected`, `already-archived`, `unresolved-target`, `outside-root`.
 Ineligibility wins over `not-selected`: an already-archived candidate reports
-`already-archived` whether or not a scope was given.
+`already-archived` whether or not a scope was given. Two ineligibility
+conditions can hold at once (`../ghost.md` both escapes the root and does not
+exist), so the reported reason is fixed by **precedence: `outside-root`, then
+`already-archived`, then `unresolved-target`** (added in Phase 2 — the Phase-1
+catalog named the four tokens but left the overlap undetermined, which
+`test_ineligibility_reason_precedence_is_pinned` cannot tolerate).
+
+**Check order** (also added in Phase 2, for the same reason — Q11 fixed only
+the retirement check's position). Every check runs before any write, in this
+fixed order: retired flags; empty `--cascade-only`; root / `.docs.toml` /
+`--date` / primary parses; archived primary; plan built (a preview stops here
+and exits 0); empty-selection refusal; **plan pre-flight**; whole-tree
+validation walk; execution. The plan pre-flight precedes the whole-tree walk
+deliberately: both can fire on the same malformed file, and naming the
+document the operator asked for is strictly more actionable.
 
 ### `docs archive --json` schema (D7, BINDING)
 

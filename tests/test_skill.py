@@ -279,3 +279,66 @@ def test_skill_md_documents_relate_verb() -> None:
     assert any("`docs relate" in row for row in table_rows), (
         "the skill body's verb table must carry a `docs relate` row"
     )
+
+
+# --- M26 — the bundled skill must teach safe archive selection -------------
+
+
+_BARE_CASCADE = re.compile(r"--cascade(?![-\w])")
+
+
+def test_skill_md_teaches_safe_archive_selection() -> None:
+    """M26 — D8 surface parity: the bundled skill's archive row must teach the
+    two safe flags and must NOT prescribe the retired bare `--cascade`.
+
+    `SKILL.md`'s archive row currently reads
+    `| Archive a finished doc | \\`docs archive <file>\\` | \\`--reason\\`,
+    \\`--date\\`, \\`--cascade\\` |` — i.e. the shipped skill actively recommends
+    the invocation M26 retires. An agent reading it would write a command
+    that now refuses with exit 2, which is exactly the ecosystem risk the
+    milestone names.
+
+    Intended RED until Phase 7 (the bundled skill lands in the SAME change as
+    the CLI surface; there is nothing to mirror at Phase 2).
+    """
+    _frontmatter, body = _split_frontmatter(_read_skill())
+    archive_rows = [
+        line for line in body.split("\n") if line.startswith("|") and "docs archive" in line
+    ]
+    assert archive_rows, "the skill body's verb table must carry a `docs archive` row"
+    joined = "\n".join(archive_rows)
+
+    assert "--cascade-dry-run" in joined, (
+        "the archive row must teach `--cascade-dry-run` — previewing the "
+        "neighborhood is now the first step of every multi-doc archive"
+    )
+    assert "--cascade-only" in joined, (
+        "the archive row must teach `--cascade-only GLOB` — the only way to "
+        "write a related document"
+    )
+    assert not _BARE_CASCADE.search(joined), (
+        "the archive row must not prescribe bare `--cascade`: it is retired in "
+        f"docs 2.0 and refuses with exit 2. Got: {joined!r}"
+    )
+
+
+def test_bundled_use_cases_teaches_safe_archive_selection() -> None:
+    """M26 — D8: the shipped use-case catalog carries the same prescription.
+
+    `references/use-cases.md` currently says "`--cascade` opt-in for one-hop
+    dependents" — the second place the retired flag is recommended to an
+    agent.
+
+    Intended RED until Phase 7.
+    """
+    text = (SKILL_DIR / "references" / "use-cases.md").read_text()
+    archive_rows = [
+        line for line in text.split("\n") if line.startswith("|") and "docs archive" in line
+    ]
+    assert archive_rows, "use-cases.md must carry a `docs archive` row"
+    joined = "\n".join(archive_rows)
+
+    assert "--cascade-only" in joined, "the archive row must name the scoped write"
+    assert not _BARE_CASCADE.search(joined), (
+        f"use-cases.md must not prescribe bare `--cascade`. Got: {joined!r}"
+    )

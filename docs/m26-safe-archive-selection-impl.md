@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Related:
 - child-of: m26-safe-archive-selection.md
@@ -22,11 +22,12 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M26 — Safe explicit archive selection
 - Started: 2026-08-12 (milestone setup; no TDD phase started)
-- Progress: **Phase 1 — Define Contract complete (2026-08-12).** All seven
+- Progress: **Phases 1–2 complete (2026-08-12 / 2026-08-13).** All seven
   setup questions were RESOLVED before Phase 1 (Q1/Q5/Q6 by the operator;
   Q2/Q3/Q4/Q7 conductor-resolved) and Phase 1 did not re-open them; it froze
   the exact surface against them, plus the seventeen Step-1 planning
-  questions. Phase 2 — Write Tests (RED) is next.
+  questions. Phase 2 wrote the RED suite (863 collected) and closed two
+  Phase-1 gaps. Phase 3 — Create Data/Fixtures is next.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -37,7 +38,7 @@ the milestone checklist synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | **Done** | 2026-08-12 | Froze the compatibility matrix, the message catalog (refusals, preview/apply lines, partial-state admission), the exit-code split, the `--json` schema and field table, and the Phase-5 signatures. Seventeen Step-1 planning questions recorded as BINDING. No `cli.py` edit (logged deviation). |
-| 2. Write Tests (RED) | Pending | — | E1–E5 regression locks, refusals (bare cascade, `--interactive`, archived primary), preview, scoped write, `--json` preview/apply shape identity, and failure-path locks. |
+| 2. Write Tests (RED) | **Done** | 2026-08-13 | +89 items (863 collected): new `tests/test_archive_plan.py` (32), `tests/test_cli_archive.py` (+34, 6 pre-existing ids deliberately changed and 3 deleted/replaced), `tests/test_skill.py` (+2), `tests/test_cli_check.py` (+1). Two Phase-1 gaps closed: ineligibility-reason precedence and the nine-step check order. |
 | 3. Create Data/Fixtures | Pending | — | One-semantic-per-tree candidate (E1), duplicate (E2), collision (E3), and archived-neighbour (E4) trees. |
 | 4. Run Tests (RED Baseline) | Pending | — | Capture the classified failure set; prove no unrelated regression. |
 | 5. Update Base Interfaces | Pending | — | Archive plan/move models, candidate-planning helpers, pre-flight validators, `archive_plan_to_json`; no behaviour change. |
@@ -314,6 +315,183 @@ regenerated `docs/INDEX.md`.
 - `git diff --stat src/docs_cli/cli.py` — **empty**, per the logged deviation.
 - `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
 
+
+## Phase 2 — Write Tests (RED) — 2026-08-13
+
+### Objective
+
+Express the retirement, preview, scoped-write, pre-flight, and `--json`
+behaviour before any implementation exists, including every failure path the
+1.8.0 code silently swallows, so each Phase-5/6/7 change answers a written
+test rather than the reverse.
+
+### Authoring rules applied (carried from M25)
+
+- **No module-level import of a Phase-5 symbol.** Each is reached through a
+  one-line `_m26(name)` wrapper over `getattr(cli, name)` — a clean
+  `AttributeError` at run time (never a collection error, which the Phase-4
+  exit criterion forbids), `Any` for mypy, and no ruff `B009`.
+- **Every intended-exit-2 test also asserts its contract stderr string.**
+  Argparse already exits 2 on `unrecognized arguments: --json` and on the
+  mutex group, so a returncode-only assertion would be falsely GREEN for the
+  entire refusal family.
+- **Every refusal test asserts whole-tree byte identity** through a shared
+  `_snapshot(root) -> dict[str, bytes]` over `sorted(root.rglob("*"))`,
+  `INDEX.md` and `.docs.toml` included. That is what makes "zero bytes
+  written" a real assertion instead of a `not (root / "archive").exists()`
+  proxy.
+- Each docstring names its intended RED reason; every GREEN-at-baseline lock
+  says so and says whether it is **degenerate** or **genuine**.
+
+### Pre-existing tests M26 deliberately changes
+
+The complete list — nothing else in the 777 moves. All in
+`tests/test_cli_archive.py`.
+
+| Test | Action | Baseline after edit |
+|---|---|---|
+| `test_archive_interactive_yes_also_archives_related` | **deleted** — the prompt path it pins no longer exists | — |
+| `test_archive_interactive_no_leaves_related_in_place` | **deleted** — same | — |
+| `test_archive_cascade_no_prompt_archives_all_relations` | **replaced** by `test_archive_bare_cascade_refuses_and_writes_nothing`; its take-all/exit-0 contract is exactly what D2 reverses | RED |
+| `test_archive_cascade_dry_run_composes_with_cascade_only` | `assert "beta.md" not in stderr` **inverted** — D6 requires the unselected candidate to be named | RED |
+| `test_archive_cascade_dry_run_rejects_interactive` | retirement-message assertion added; the bespoke "incoherent pair" message is retired | RED |
+| `test_archive_mutually_exclusive_cascade_flags_rejected` (×3) | retirement-message assertion added per case, plus `not allowed with` asserted **absent**; docstring corrected (the mutex group is no longer what produces exit 2 — Phase-1 Q12) | RED |
+| `test_archive_cascade_rewrites_edges_for_both_moves_atomically` | `--cascade` → `--cascade-only "sidekick.md"`, `stdin_text` dropped | GREEN |
+| `test_archive_cascade_rewrites_moved_docs_own_edges` | same | GREEN |
+| `test_archive_cascade_trio_lands_edge_clean` | `--cascade` → `--cascade-only "feature-*.md"`, `stdin_text` dropped | GREEN |
+| `test_archive_cascade_preserves_reciprocal_pair` | `--cascade` → `--cascade-only "b.md"` | GREEN |
+
+`test_archive_cascade_dry_run_previews_and_writes_nothing`,
+`test_archive_cascade_only_filters_by_glob`, and
+`test_archive_pair_leaves_check_clean` need **no** edit and stay GREEN — the
+last one only gained a docstring note that M18 — Q3's "never bare `--cascade`
+on the plan" advice has since become a hard refusal.
+
+The bare `sidekick.md` / `b.md` / `feature-*.md` scopes work because
+`_compile_docsignore_pattern` gives a no-slash pattern gitignore semantics:
+match any path segment at any depth.
+
+### New tests
+
+**`tests/test_archive_plan.py`** (new, 32 items) — the core seam, modelled on
+`tests/test_relate_plan.py`, every tree an inline `tmp_path` builder because
+every test writes and byte-compares:
+
+- **D3 candidate discovery (13):** the two-verb candidate set against all six
+  M25 reciprocal verbs plus `references`/`implements`/`parent-of`;
+  declaration order; dedup across two verbs (E2) and across two spellings,
+  with `aliases` preserved; canonical scope matching (`./b.md` selected by
+  `'b.md'`); the silent self-edge exclusion; `already-archived` (E4),
+  `unresolved-target`, and `outside-root` ineligibility; the reason-precedence
+  parametrization; `not-selected`; and the frozen
+  `ARCHIVE_EXCLUSION_REASONS` token set.
+- **D4 planning purity and pre-flight (13):** `plan_archive` writes nothing;
+  the six refusals each asserting their **exact** message — intra-plan
+  collision (E3), occupied destination, unwritable source, unwritable
+  destination directory, archived primary (E4), member with no metadata
+  block — plus a parametrization over all six asserting
+  `rolled_back is True`, `published == ()`, and whole-tree byte identity.
+- **D4 execution (3):** `apply_archive_plan` returns one `(old_rel, new_rel)`
+  pair per declared spelling; the injected-`OSError` partial-state admission
+  with its exact string, `rolled_back is False` and `published == (…)`,
+  cross-checked against the disk; and the `Archived: none` branch.
+- **D7 serializer (3):** the exact preview record, preview/apply shape
+  identity, and the no-scope record carrying the whole candidate set.
+
+**`tests/test_cli_archive.py`** (+34 items) — the subprocess surface:
+
+- **Retirement / E1 (7 functions, 25 items):** bare `--cascade` refuses and
+  writes nothing; the refusal names both replacement invocations;
+  `--interactive` refuses; `--interactive` refuses **without reading stdin**
+  (no `stdin_text` supplied — today EOF declines the prompt and the primary
+  still archives at exit 0); the 2 × 8 flag matrix that makes "no it-depends
+  cell" real and simultaneously pins refusal-under-`--quiet` and
+  no-record-on-refusal; `--help` still registering both flags with the word
+  `retired` (the **only** lock on the retention shape — without it Phase 7
+  could legally delete the flags and every other retirement test would still
+  pass on argparse's own exit 2); and the three D1 shapes never prompting.
+- **Preview / D6 (6):** the unfiltered preview naming all six candidates; the
+  filtered preview still naming the five spine docs (E1, on the committed
+  fixture per Q13); an ineligible archived candidate named; the primary-only
+  preview naming none (Q7); `--cascade-only … --dry-run` ≡
+  `--cascade-dry-run --cascade-only …`; and the Q2 exit-0 non-matching
+  preview.
+- **Scoped write (8 functions, 12 items):** E2 dedup with no false failure;
+  E3 collision refusing before any write; E4 archived neighbour excluded
+  byte-for-byte; the archived **primary** refused in all three D1 shapes
+  (Q1); E5 none-matched; the distinct no-candidates message; the empty and
+  comment-only scope refusals (Q9); the dotted-edge `docs check` guard; and
+  `--reason` on the primary only (Q10).
+- **The Q4 exit-code split at the CLI (3):** malformed member → 1, occupied
+  destination → 1, unwritable member → 2.
+- **`--json` / D7 (7 functions, 9 items):** preview shape, preview/apply key
+  identity, per-candidate `selected` + `reason`, exactly-one-object stdout,
+  no record on three different refusals (Q3), the no-scope candidate list
+  (Q14), and `index_refreshed`.
+
+**`tests/test_skill.py`** (+2) — the archive row of `SKILL.md` and of
+`references/use-cases.md` must teach `--cascade-dry-run` / `--cascade-only`
+and must not prescribe bare `--cascade`. The "not bare" half is a
+`--cascade(?![-\w])` regex, so `--cascade-only` cannot satisfy it by
+accident. RED until Phase 7.
+
+**`tests/test_cli_check.py`** (+1) — a scoped archive of the neighborhood
+fixture's milestone pair leaves `docs check` at exit 0 and the five spine docs
+in the active tree: the M12/M18 no-regression proof restated for the
+invocation that replaces bare `--cascade`.
+
+### Decisions / issues
+
+- **Two Phase-1 gaps were found by writing the tests, and closed in the specs
+  in this phase** (recorded in the milestone's *Decisions (Phase 1 —
+  BINDING)*, in `cli.md`, and mirrored into the bundled refs):
+  1. **Ineligibility reason precedence.** `../ghost.md` is *both*
+     `outside-root` and `unresolved-target`; `archive/…/ghost.md` is both
+     `already-archived` and `unresolved-target`. Phase 1 named the four tokens
+     but left the overlap undetermined, so
+     `test_ineligibility_reason_precedence_is_pinned` had no answer to assert.
+     Fixed order: **`outside-root`, then `already-archived`, then
+     `unresolved-target`** — the more structural fact wins.
+  2. **Check order.** Q11 fixed only the retirement check's position. The
+     malformed-candidate case exposed the rest: today's whole-tree validation
+     walk raises on the same file the M26 plan pre-flight would name, so
+     without an order the exit-1 message is undetermined. Pinned as a
+     nine-step list, with the **plan pre-flight before the whole-tree walk** —
+     both can fire on one malformed file, and naming the document the operator
+     asked for is strictly more actionable than naming an unrelated referring
+     doc.
+- **`primary.source` wording corrected** from "the `FILE` argument exactly as
+  typed" to "as given on the command line": `plan_archive` receives a `Path`,
+  so `Path("./a.md")` serialises as `a.md`. The looser wording is the one the
+  code can actually honour.
+- **`test_archive_never_prompts_on_stdin` is GREEN-degenerate today** — none
+  of the three D1 shapes reads stdin at baseline either. It is kept because it
+  becomes the load-bearing lock the moment Phase 7 deletes `_cascade_archive`,
+  the verb's last stdin reader.
+- **The four migrated cascade tests are the deliberate GREEN half.** They are
+  the M12 referring-edge and M18 archive-subtree-edge no-regression proof;
+  migrating them to `--cascade-only` (rather than deleting them) is what keeps
+  that proof alive across the D2 retirement.
+- **`tests/test_check.py` needs no edit**, but Phase 3's four new trees
+  automatically add four parametrizations to
+  `test_check_tree_legacy_fixtures_gain_no_new_findings`, whose list is
+  derived from `_TREES.iterdir()`. Those must pass — which constrains the
+  fixtures: no recognized reciprocal verb unless the pair is complete.
+- **No `src/docs_cli/cli.py` change.** `git diff --stat` against the Phase-1
+  commit is empty.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q --co` — **863 collected, zero
+  collection errors** (777 → 863: −3 deleted/replaced ids, +89 new).
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — all files formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 47 source files.
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
+- The full RED census is Phase 4's; at the end of Phase 2 the fixture-backed
+  tests still fail on a missing `tests/fixtures/trees/archive-*` directory,
+  which Phase 3 supplies.
 
 ## Milestone completion summary
 
