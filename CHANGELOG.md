@@ -5,6 +5,88 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## UNRELEASED
+
+_The v2.0 train (M25–M28) accumulates here; M29 names and dates this
+heading at publish time. The package version deliberately stays `1.8.0`
+until then._
+
+### Added
+
+- **`missing-inverse` check rule** (M25). `docs check` now validates
+  **reciprocal relationship edges**. Six `Related:` verbs are recognized in
+  three symmetric pairs — `precedes`/`follows`, `depends-on`/`required-by`,
+  `blocks`/`blocked-by` — and a recognized edge whose target does not
+  declare the exact inverse pointing back is an **error** (exit 2) with an
+  actionable one-line finding:
+
+  ```
+  error  missing-inverse  Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
+  ```
+
+  The finding blames the **source** — the doc declaring the un-reciprocated
+  edge — one per distinct `(source, verb, target)` triple. The `--json`
+  record's key set is unchanged (`path`, `severity`, `rule`, `message`); the
+  repair lives in `message`. Matching is case-sensitive on the verb and
+  **canonical** on the path, so a `./` prefix cannot fail the check. Edges
+  are only checked when both endpoints are walked and parseable; `broken-ref`,
+  exclusion, and `malformed` keep ownership of their cases, and a
+  self-referential edge is exempt. Every other `Related:` verb
+  (`pairs-with`, `child-of`/`parent-of`, `supersedes`/`superseded-by`, your
+  own) stays free-form with no reciprocal validation.
+
+- **`docs relate add|remove SOURCE VERB TARGET`** (M25) — the repair verb for
+  the finding above. Writes (or unwrites) **both halves** of one reciprocal
+  pair as a single coordinated operation, inferring the inverse. Idempotent:
+  a fully-satisfied invocation writes zero bytes, bumps no `Updated:`, and
+  does not reindex. `--dry-run` previews without writing; `--json` emits one
+  operation-plan record with the same shape for a preview and a real apply;
+  `--quiet` suppresses the success lines but never a refusal. `INDEX.md` is
+  refreshed exactly once, at the end, only when something changed. Unlike
+  `archive` / `mv`, `relate` validates only its two named endpoints — a
+  whole-tree gate would make repair impossible in exactly the broken tree
+  the verb exists to repair.
+
+- **Audited archived-endpoint repair** (M25). An endpoint under the archive
+  subtree may be repaired, but only with an explicit `--reason` (a single
+  non-empty line). The **only** bytes that may change are the one recognized
+  `Related:` bullet, the `Updated:` value, and a new dated `Revision:` audit
+  bullet; lifecycle, `Archived-reason:`, role, project, other edges, the H1,
+  and the prose are byte-identical. `Revision:` is a repeatable bare-label
+  group at the end of the metadata block and is a **built-in always-allowed
+  metadata label**, so a tree with a `[vocabulary] add_fields` allowlist
+  never sees `unknown-field` on a label the tool itself writes.
+
+### Changed
+
+- **BREAKING — a one-sided recognized reciprocal edge now exits 2.** Trees
+  that pass `docs check` today can begin failing after upgrading. Nothing is
+  converted automatically and there is deliberately **no opt-out knob**:
+  `--exclude` / `.docsignore` remain the only coarse escape.
+- The `convention.md` recommendation to pair `Lifecycle: blocked` with a
+  one-sided `blocked-by:` edge is **withdrawn** — it is the most likely
+  source of a legacy one-sided edge. `Lifecycle: blocked` and the
+  `blocks`/`blocked-by` edge stay explicitly **uncoupled**: a blocked
+  lifecycle does not require an edge, and an edge does not set a lifecycle.
+
+### Upgrading from 1.x
+
+Run the repair loop until `docs check` is clean:
+
+```console
+$ docs check
+docs/m25.md
+  error  missing-inverse  Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
+$ docs relate add m25.md precedes m26.md      # the edge is right — complete it
+$ docs check
+docs: no violations found
+```
+
+The finding never chooses for you. If the edge is **wrong**, delete the pair
+instead — `docs relate remove m25.md precedes m26.md`. Paths can be copied
+straight out of the finding: relative endpoints resolve root-relative first.
+An archived endpoint additionally needs `--reason "…"`.
+
 ## 1.8.0 — 2026-07-03
 
 ### Added

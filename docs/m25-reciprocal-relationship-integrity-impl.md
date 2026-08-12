@@ -22,8 +22,9 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 5–6 complete (Step 2 in flight). Phase 7 — Update
-  Tool/Wrapper Layer is next.**
+- Progress: **Phases 5–7 complete (Step 2 in flight). Phase 8 — Run Tests
+  (GREEN) is BLOCKED on one operator decision — see *Blocker — Phase-8 GREEN
+  gate* below.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -40,7 +41,7 @@ progress table and milestone checklist synchronized.
 | 4. Run Tests (RED Baseline) | Complete | 2026-08-11 (re-baselined 2026-08-12) | 757 collected, **87 failed, 670 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
 | 5. Update Base Interfaces | Complete | 2026-08-12 | Vocabulary, `inverse_verb`, three editors, `RelateEdit`/`RelatePlan`/`CoordinatedWriteError`, `Revision` built-in label, canonical-path + lenient-pairs helpers, `relate_plan_to_json`; three behaviour seams stubbed. **71 failed, 686 passed.** |
 | 6. Implement Offline/Core Path | Complete | 2026-08-12 | `reciprocity_findings`, `check_tree` interleave, `plan_relate`/`_plan_relate_edit`, `apply_relate_plan` + `_rollback_relate`. **44 failed, 713 passed** — every remaining RED is a `docs relate` subprocess test (43) or the SKILL.md lock (1). |
-| 7. Update Tool/Wrapper Layer | Pending | — | CLI, JSON/dry-run, docs, bundled skill, version. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); six spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Real upgrade/repair flows on a throwaway tree. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summary. |
@@ -881,6 +882,177 @@ D5 publish/rollback contract — with no CLI surface yet.
 - `.venv/bin/ruff check .` / `ruff format --check .` / `mypy src/ tests/` —
   all clean.
 - `git diff --stat pyproject.toml tests/test_packaging.py` — **empty**.
+
+## Phase 7 — Update Tool/Wrapper Layer — 2026-08-12
+
+### Objective
+
+Wire `docs relate add|remove` — parser, endpoint resolution, human/JSON/
+dry-run output, exit codes, the one end-of-run reindex — and bring every
+shipped surface into parity: the bundled skill, the CHANGELOG, the specs,
+and the tracker docs.
+
+### Actions taken
+
+**`src/docs_cli/cli.py`**
+
+- `_add_relate_subverb` beside `_add_exclude_flag`, registering `add` and
+  `remove` with `parents=[common]` (`--root` / `--quiet` / `--dry-run`) plus
+  `SOURCE VERB TARGET`, `--reason`, `--date`, `--json`. **`VERB` uses no
+  argparse `choices=`**: argparse's own "invalid choice" message would
+  replace the frozen `docs: relate: unknown verb '<verb>'; expected one of:
+  …` refusal that eight tests assert.
+- The `relate` namespace registered after the `project` block, shaped
+  identically (`add_subparsers(dest="relate_command", required=True)`).
+- `_resolve_relate_endpoint` — absolute as given, otherwise root-relative
+  first with a cwd-relative fallback; then not-a-file → exit 1, outside the
+  resolved root → exit 1, unparseable → exit 1 with the parser's own
+  self-locating message. It parses through `root / rel` (not the resolved
+  path) so that message names the file the way the tree does.
+- `_print_relate_lines` renders all nine human forms; the caller gates it on
+  `not --quiet` **alone** — not on `--json`, since the lines go to stderr
+  and `--json` stdout stays byte-clean either way.
+- `_cmd_relate` in the D5 stage-1 order: managed root → config → verb →
+  SOURCE → TARGET → self-edge → `--reason` shape (only when the flag is
+  present) → the archived `--reason` requirement (only when it is absent) →
+  `--date` → plan → dry-run/no-op → apply → announce → one reindex → JSON →
+  exit. `return 0 if index_refreshed else 2`.
+- `_dispatch` gained the `relate` branch; `main`'s docstring and the module
+  docstring name the verb.
+
+**`src/docs_cli/skill/SKILL.md`** — front-matter `description:` verb run
+gains `relate add` / `relate remove`; the verb table gains a
+`docs relate add` / `docs relate remove` row; the `docs check` row now says
+a one-sided reciprocal edge is a hard error and names `docs relate` as its
+repair. Both edits land in the same change as the CLI surface, per the
+project's surface-parity gate.
+
+**`CHANGELOG.md`** — a new `## UNRELEASED` section at the top carrying **no
+invented version number** (D6; M29 renames and dates it): `### Added` (the
+`missing-inverse` rule, `docs relate add|remove`, audited archived repair +
+the `Revision` built-in label), `### Changed` (**BREAKING** — a one-sided
+recognized edge now exits 2; the withdrawn `Lifecycle: blocked` +
+one-sided-`blocked-by` recommendation), and an `### Upgrading from 1.x`
+worked `check → relate → check` loop. `pyproject.toml` untouched.
+
+**`docs/cli.md` (+ byte-identical mirror re-sync)** — six conductor-resolved
+spec corrections, listed under *Decisions* below.
+
+**Tracker docs** — `docs/plan.md` (v2.0-train prose + the M25 row),
+`docs/status.md` (the Current-milestone narrative, the *Next action*
+paragraph, and the milestone-history row), this log, and the milestone doc.
+
+### Decisions / issues — the six spec corrections (conductor resolutions)
+
+Each fixes a string the tests do not pin and that would otherwise ship
+wrong or degenerate. None changes milestone scope or behaviour intent.
+
+- **R2 — the stage-3 refusal string is now pinned.** `cli.md`'s stage-3
+  bullet carries `docs: relate: staged text for <rel> would not parse
+  (<detail>); refusing before any write`, plus an explicit statement that it
+  is defensive-only and unreachable in practice. Deliberately **no test**
+  fakes it: a spec the implementation can outrun is what the Step-1 audit
+  caught twice, but a test that fakes an unreachable path pins the fake.
+- **R3 — a third rollback branch.** When the FIRST publish fails there is
+  nothing to roll back and the frozen line degenerated to
+  `rolled back  — the tree is unchanged`. `nothing was published — the tree
+  is unchanged` is now rendered and pinned. Still exit 2, still
+  `rolled_back=True`.
+- **R4 — the `ROLLBACK FAILED` message was add-shaped.** After a failed
+  rollback of a `remove` the file *no longer* carries the edge, so the
+  frozen wording handed the operator a factually inverted repair
+  instruction. Both variants (`still carries` / `no longer carries`) are now
+  rendered and pinned; the literal `ROLLBACK FAILED` token is preserved.
+- **R5 — the root-relative promise is scoped to RESOLVED endpoints.** A
+  pre-resolution refusal cannot name a root-relative form it has not
+  computed. `cli.md` now says so, and `file not found:` names the
+  **root-relative candidate** (`<root>/<arg>`) for a relative argument,
+  since root-relative is the primary interpretation.
+- **R6 — `--json` on failure paths.** No record on a coordinated-write
+  failure (the operation aborted; after a `ROLLBACK FAILED` the `applied`
+  bit is genuinely undefined). A record **is** emitted on an INDEX-refresh
+  failure, `applied: true, index_refreshed: false` — `cli.md` already framed
+  that as a *post-repair* failure with a consistent tree.
+- **R7 — `Revision:` uses the tree's `date_format`.** The same `date_str` as
+  `Updated:`. `cli.md` now says the ISO spelling in its example is the
+  **default** format, not a second hardcoded one.
+- **R1 / R9 (no code change beyond Phase 5) —** `cli.md` › *What gets
+  written* records that bullets are matched on their **canonical** target
+  (else `relate` stops being idempotent on loosely-spelled trees), and
+  *Endpoint resolution* records that `relate` deliberately **allows** an
+  excluded endpoint: an explicitly named endpoint beats a coarse exclusion,
+  and refusing would make the pair unrepairable. The silence is now
+  deliberate rather than accidental.
+
+Also recorded: **R10** — the Step-1 consistency audit fixed only the first
+occurrence of the "Phase 1 next" claim in `status.md`, leaving the *Next
+action* paragraph and the milestone-history row stale. Both are corrected
+here. The lesson for the next audit: check **every** occurrence of a stale
+claim, not just the first one grep finds.
+
+### Blocker — Phase-8 GREEN gate (needs an operator decision)
+
+`tests/test_cli_relate.py::test_relate_repeat_archived_repair_appends_a_second_revision_bullet`
+**cannot pass under any implementation consistent with the rest of the
+suite.** Its final assertion is
+
+```python
+assert text.index("2026-08-11") < text.index("2026-08-12"), "chronological"
+```
+
+over the **whole archived file**. The second invocation passes
+`--date 2026-08-12`, and D4 requires `Updated:` to be bumped on every
+endpoint whose bytes change — so `Updated: 2026-08-12` sits on line 6,
+*above* the `Revision:` group, and `text.index("2026-08-12")` finds that
+line (offset 62) rather than the second bullet (offset ~200), while
+`text.index("2026-08-11")` finds the first bullet (offset 142).
+
+This is provably a defect in the assertion, not a contract the
+implementation is failing to meet:
+
+- The test's stated intent — the two `Revision:` bullets are appended
+  **chronologically** — is satisfied: the same test's three preceding
+  assertions (one `Revision:` label, both exact bullets present) all pass.
+- Suppressing the `Updated:` bump would contradict
+  `test_relate_archived_repair_writes_only_the_allowed_bytes`, which
+  positively requires `Updated: 2026-08-11` to be added and
+  `Updated: 2026-01-01` removed. The two tests are mutually exclusive.
+- Moving the `Revision:` group above `Updated:` would contradict D4 ("at the
+  END of the metadata block, after `Related:`") and
+  `test_append_revision_entry_creates_the_group_after_related`.
+
+**Not fixed here.** Editing a Step-1 test is outside this step's authority:
+the tests are the contract. The recommended minimal repair — which narrows
+the assertion to what its own message claims, and neither relaxes nor
+weakens anything — is to scope the comparison to the `Revision:` bullets,
+e.g.
+
+```python
+bullets = [line for line in text.splitlines() if line.startswith("- 2026-")]
+assert bullets == [
+    "- 2026-08-11: relate add 'required-by: a.md'; reason: complete the pair",
+    "- 2026-08-12: relate remove 'required-by: a.md'; reason: edge was wrong",
+], "chronological"
+```
+
+Until that is approved, the suite stands at **756 passed, 1 failed** and
+Phases 8–10 are not started.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **756 passed, 1 failed**
+  (the blocker above; 42 of the 43 `docs relate` CLI tests and both SKILL.md
+  tests are GREEN).
+- `.venv/bin/docs relate --help` / `docs relate add --help` — exit 0,
+  documenting `SOURCE`, `VERB`, `TARGET`, `--reason`, `--date`, `--json`,
+  `--dry-run`. `docs --help` lists `relate`.
+- `diff docs/cli.md src/docs_cli/skill/references/cli.md` and the
+  `convention.md` pair — identical (`tests/test_skill_refs.py` 3 passed).
+- `.venv/bin/docs check --root docs` — no violations, exit 0.
+- `.venv/bin/ruff check .` / `ruff format --check .` / `mypy src/ tests/` —
+  all clean.
+- `git diff --stat bf8f273..HEAD -- pyproject.toml tests/test_packaging.py`
+  — **empty** across the whole step.
 
 ## Milestone completion summary
 

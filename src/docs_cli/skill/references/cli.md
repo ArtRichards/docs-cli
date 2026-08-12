@@ -855,8 +855,22 @@ validate-all-first aborts: nothing is written and no INDEX refresh runs.
 Root-relative-first matches how `Related:` paths are written on disk, so
 the argument an agent copies out of a `missing-inverse` finding resolves
 without translation. Both endpoints must resolve **under** the root. Every
-human message and every JSON field names the endpoint by its
-**root-relative POSIX** form, whichever spelling was typed.
+human message and every JSON field about a **resolved** endpoint names it
+by its **root-relative POSIX** form, whichever spelling was typed. A
+*pre-resolution* refusal necessarily names the path it was still working
+with: `file not found:` names the **root-relative candidate**
+(`<root>/<arg>`, the primary interpretation) for a relative argument and
+the path as given for an absolute one, and the outside-the-root refusal
+names the resolved path.
+
+**An excluded endpoint is allowed.** `relate` runs no whole-tree
+pre-flight and consults no exclusion predicate when resolving its two
+endpoints, so naming a doc under `[exclude]` / `.docsignore` works
+normally. This is deliberate, not an oversight: an explicitly named
+endpoint beats a coarse exclusion, and refusing would make the pair
+unrepairable. (`docs check` still says nothing about such a pair — an
+excluded doc is never walked, so the `missing-inverse` rule cannot see
+it.) The end-of-run reindex continues to honour the exclusion.
 
 `SOURCE` and `TARGET` must be different documents; a self-edge is refused
 with exit 2 and
@@ -868,6 +882,14 @@ present. Each endpoint's `Related:` group is created when absent and
 dropped when it becomes empty; every other byte of the metadata block, the
 H1, the body, and the file's trailing-newline state are preserved (the M2
 surgical minimal-diff contract).
+
+An existing bullet is matched on its **canonical** target, the same
+normalisation the `missing-inverse` rule uses: a doc already carrying
+`- precedes: ./b.md` is not given a second `- precedes: b.md` bullet, and
+`relate remove … precedes b.md` drops it. Without this, `relate` would
+stop being idempotent on exactly the loosely-spelled trees canonical
+matching exists to tolerate. Newly written bullets always use the
+canonical root-relative POSIX spelling.
 
 **`Updated:` policy.** Every endpoint **whose bytes change** gets its
 `Updated:` bumped to `--date` (default: today, rendered with the tree's
@@ -941,8 +963,11 @@ explains entry into the archive, never a later repair.
 **`Revision:` encoding.** A repeatable bare-label bullet group at the
 **end** of the metadata block (after `Related:`, separated by one blank
 line — the shape the parser already accepts for multi-value groups). One
-ISO-dated, single-line bullet per real mutation, describing **this
-document's own** change, appended chronologically:
+dated, single-line bullet per real mutation, describing **this document's
+own** change, appended chronologically. The date is the same value written
+into `Updated:` — `--date` or today, rendered in the tree's
+`date_format`; the ISO spelling below is the default format, not a second
+hardcoded one (two date spellings in one file would be a defect):
 
 ```markdown
 Revision:
@@ -1025,6 +1050,14 @@ Each `edits` record: `path` (root-relative POSIX), `archived` (bool),
 **`--dry-run`** writes nothing at all — neither endpoint, no INDEX — and
 exits 0.
 
+**No `--json` record on a coordinated-write failure.** When stage 3, 4, or
+5 below refuses or fails, the run exits 2 with the stderr admission and
+emits **no** JSON: the operation aborted, and after a `ROLLBACK FAILED`
+the `applied` bit is genuinely undefined. An **INDEX-refresh** failure is
+different — it is a *post-repair* failure with both endpoints already
+written correctly — so the record **is** emitted there, with
+`"applied": true, "index_refreshed": false`.
+
 #### Coordinated-write failure contract (M25 — D5)
 
 Five ordered stages; the first four write **nothing**:
@@ -1035,7 +1068,15 @@ Five ordered stages; the first four write **nothing**:
 2. **Stage.** Both complete new texts are computed in memory (pure — no
    I/O beyond the two reads).
 3. **Re-validate the staged texts.** Each must itself parse. A staged text
-   that would not parse aborts with exit 2 before anything is published.
+   that would not parse aborts with exit 2 before anything is published:
+
+   ```
+   docs: relate: staged text for <rel> would not parse (<detail>); refusing before any write
+   ```
+
+   Defensive only — the editors cannot remove an H1 or otherwise break the
+   block, so this is unreachable in practice. It exists so that a future
+   editor bug aborts *before* publishing rather than after.
 4. **Writability pre-flight.** Each *changed* endpoint is checked for write
    permission. A read-only archive refuses cleanly before any write — the
    common real failure, and one that needs no rollback:
@@ -1049,12 +1090,26 @@ Five ordered stages; the first four write **nothing**:
    docs: relate: write failed for <rel>: <err>; rolled back <rel> — the tree is unchanged
    ```
 
+   When it is the **first** publish that fails there is nothing to roll
+   back, and the message says so rather than naming an empty list:
+
+   ```
+   docs: relate: write failed for <rel>: <err>; nothing was published — the tree is unchanged
+   ```
+
    If the rollback itself fails, the run exits 2 with an explicit
-   non-atomic admission naming the file and the edge left behind:
+   non-atomic admission naming the file and the edge left behind. The
+   admission describes what the file **actually carries now**, which is the
+   opposite way round for the two actions:
 
    ```
    docs: relate: write failed for <rel>: <err>; ROLLBACK FAILED for <rel> — repair manually: <rel> still carries '<edge>'
+   docs: relate: write failed for <rel>: <err>; ROLLBACK FAILED for <rel> — repair manually: <rel> no longer carries '<edge>'
    ```
+
+   (`still carries` after a failed `add` rollback, `no longer carries`
+   after a failed `remove` rollback — the wrong one would hand the
+   operator a factually inverted repair instruction.)
 
 This is **best-effort staged publish + rollback**, not a filesystem-wide
 transaction. Two files cannot be renamed atomically as a unit on POSIX;

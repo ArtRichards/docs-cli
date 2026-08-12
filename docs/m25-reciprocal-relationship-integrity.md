@@ -36,10 +36,16 @@ Related:
   fresh-eyes review (**no blockers**); the review's two operator-binding
   contract amendments — the **self-edge exemption** and **canonical path
   matching** — are folded into D2 below. **Step 2 is in flight on
-  `m25/phases-5-10`: Phases 5–6 are complete
-  (2026-08-12; 44 failed, 713 passed — every remaining RED is a
-  `docs relate` CLI or bundled-skill surface).** Phase 7 — Update
-  Tool/Wrapper Layer is next.
+  `m25/phases-5-10`: Phases 5–7 are complete (2026-08-12) — the
+  implementation, the `docs relate add|remove` CLI, the bundled-skill row,
+  the `UNRELEASED` CHANGELOG (no version bump), and six conductor-resolved
+  `cli.md` corrections have all landed; the suite stands at **756 passed,
+  1 failed**.** Phase 8 — Run Tests (GREEN) is **BLOCKED** on one operator
+  decision: a Step-1 assertion in
+  `test_relate_repeat_archived_repair_appends_a_second_revision_bullet` is
+  unsatisfiable in conjunction with
+  `test_relate_archived_repair_writes_only_the_allowed_bytes`. See the
+  implementation log's *Blocker — Phase-8 GREEN gate*.
 
 ### Goal
 
@@ -157,12 +163,21 @@ automatic conversion of free-form edges occurs.
 
 - [x] D1 inverse vocabulary and semantics documented (Phase 1, 2026-08-11 —
       `convention.md` › *Reciprocal relationship verbs*).
-- [ ] D2 hard `missing-inverse` rule in human and JSON `docs check` output.
-- [ ] D3 idempotent, validate-all-first `docs relate add/remove` for active docs.
-- [ ] D4 reasoned, narrowly audited archived-endpoint repair.
-- [ ] D5 upgrade guidance, CLI/bundled-skill parity, and release notes.
+- [x] D2 hard `missing-inverse` rule in human and JSON `docs check` output
+      (Phase 6, 2026-08-12 — `reciprocity_findings` interleaved into
+      `check_tree`; no new JSON field).
+- [x] D3 idempotent, validate-all-first `docs relate add/remove` for active
+      docs (Phases 6–7, 2026-08-12).
+- [x] D4 reasoned, narrowly audited archived-endpoint repair (Phases 6–7,
+      2026-08-12 — `Revision:` group, three-item allowed byte set, audit
+      asymmetry).
+- [x] D5 upgrade guidance, CLI/bundled-skill parity, and release notes
+      (Phase 7, 2026-08-12 — `cli.md` / `convention.md` / bundled mirrors /
+      `SKILL.md` / `CHANGELOG.md` `UNRELEASED`).
 - [ ] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage.
-      (RED half complete — Phases 2–4, 2026-08-11.)
+      (RED half complete — Phases 2–4, 2026-08-11. GREEN half blocked on one
+      unsatisfiable Step-1 assertion — see the implementation log's
+      *Blocker — Phase-8 GREEN gate*.)
 
 ## TDD implementation plan
 
@@ -258,7 +273,7 @@ automatic conversion of free-form edges occurs.
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor

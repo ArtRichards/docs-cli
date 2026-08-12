@@ -1,6 +1,6 @@
 ---
 name: docs
-description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, stamp a metadata block onto a file already written, reassign a doc's project, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / stamp / check / migrate / project rename / project set / install-skill) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
+description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, stamp a metadata block onto a file already written, reassign a doc's project, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / stamp / check / migrate / relate add / relate remove / project rename / project set / install-skill) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
 ---
 
 # docs — run the verb, never hand-edit
@@ -63,7 +63,8 @@ separate bodies of work by `Project:` metadata, not by folder. See
 | Rename or move a doc | `docs mv <old> <new>` | rewrites `Related:` tree-wide |
 | List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
 | Bump a doc's `Updated:` | `docs touch <file> [--check [--stale N]]` | reindexes; `--check` folds in `docs check` (touch-then-validate in one invocation; `--stale N` is the check's stale window) |
-| Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors |
+| Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors; a one-sided reciprocal edge is a hard `missing-inverse` error — `docs relate` is its repair |
+| Repair a reciprocal relationship pair | `docs relate add` / `docs relate remove` | `SOURCE VERB TARGET`; writes both halves as one operation; idempotent; `--reason` required for an archived endpoint; `--dry-run`, `--json` |
 | Adopt a foreign tree | `docs migrate <dir>` | dry-run by default; `--apply` to write |
 | Rename the project | `docs project rename <new-name>` | rewrites `.docs.toml` + every `Project:` line; `--dry-run` |
 | Reassign one or more docs' project | `docs project set <doc>... <new-project>` | rewrites only the named docs' `Project:` line; `--new-project` to create a new group; `--dry-run` |

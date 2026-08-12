@@ -17,7 +17,9 @@ mutating verbs `new`, `archive`, `mv`, and `touch`. M3 adds the
 validation and query verbs `check` and `list`, and regroups the INDEX
 by Project then Role. M4 adds the migration verb `migrate`, which adopts
 a non-conforming foreign directory into the convention. M6 packages the
-CLI as `docs-cli` on PyPI and adds the `install-skill` verb.
+CLI as `docs-cli` on PyPI and adds the `install-skill` verb. M25 makes a
+one-sided reciprocal `Related:` edge a hard `check` error and adds the
+`relate add|remove` repair verb.
 """
 
 from __future__ import annotations
@@ -3599,6 +3601,64 @@ def _add_exclude_flag(p: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_relate_subverb(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser],
+    common: argparse.ArgumentParser,
+    action: str,
+) -> None:
+    """Register `docs relate add` / `docs relate remove` (M25 — D3).
+
+    Both subverbs take the identical `SOURCE VERB TARGET` grammar and the
+    same flags; only the help wording differs.
+
+    `VERB` deliberately does NOT use argparse `choices=`: argparse's own
+    "invalid choice" message would replace the frozen
+    ``docs: relate: unknown verb '<verb>'; expected one of: …`` refusal that
+    `cli.md` pins and eight tests assert.
+    """
+    verbing = "Add" if action == "add" else "Remove"
+    p = sub.add_parser(
+        action,
+        parents=[common],
+        help=f"{verbing} one reciprocal relationship pair across two docs.",
+        description=(
+            f"{verbing} the reciprocal relationship pair `VERB` between "
+            "SOURCE and TARGET (M25 — D3). Writes BOTH halves as one "
+            "coordinated operation: SOURCE's `<VERB>: <target>` bullet and "
+            "TARGET's `<inverse>: <source>` bullet. Only the six recognized "
+            "verbs are accepted. Idempotent — a fully-satisfied invocation "
+            "writes zero bytes, bumps no `Updated:`, and does not reindex. "
+            "Every endpoint whose bytes change gets its `Updated:` bumped; "
+            "INDEX.md is refreshed exactly once at the end. An endpoint "
+            "under the archive subtree requires `--reason` and receives a "
+            "dated `Revision:` audit bullet."
+        ),
+    )
+    p.add_argument("source", metavar="SOURCE", help="The declaring document.")
+    p.add_argument(
+        "verb",
+        metavar="VERB",
+        help="One of: precedes, follows, depends-on, required-by, blocks, blocked-by.",
+    )
+    p.add_argument("target", metavar="TARGET", help="The other endpoint.")
+    p.add_argument(
+        "--reason",
+        help=(
+            "Audit reason; REQUIRED when either endpoint is under the "
+            "archive subtree. Single non-empty line."
+        ),
+    )
+    p.add_argument(
+        "--date",
+        help="Date YYYY-MM-DD for Updated:/Revision: (default: today).",
+    )
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the operation-plan record as JSON on stdout.",
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="docs",
@@ -3870,6 +3930,26 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Acknowledge creating a new project group (bypasses the typo guard).",
     )
+
+    # M25 (D3): `docs relate` verb namespace with nested subverbs, shaped
+    # like `docs project`. Deliberately narrow — it edits only the six
+    # recognized reciprocal verbs, only two documents, and only one pair per
+    # invocation. It is the repair verb for `docs check`'s `missing-inverse`.
+    relate_p = subparsers.add_parser(
+        "relate",
+        help="Add or remove one reciprocal relationship pair across two docs.",
+        description=(
+            "Relationship-namespace verbs (M25). Today: `add`, `remove`. "
+            "The repair verb for `docs check`'s `missing-inverse` finding: "
+            "`check` names the incomplete edge, you decide whether it should "
+            "exist, and `relate` writes (or unwrites) both halves as one "
+            "coordinated operation. Not a generic `Related:` editor — free-"
+            "form verbs stay hand-edited."
+        ),
+    )
+    relate_sub = relate_p.add_subparsers(dest="relate_command", required=True)
+    _add_relate_subverb(relate_sub, common, "add")
+    _add_relate_subverb(relate_sub, common, "remove")
 
     # M3 read-only verbs. They take neither --dry-run nor the `common` parent
     # (it carries --dry-run, meaningless when nothing is mutated).
@@ -5228,6 +5308,213 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_relate_endpoint(raw: str, root: Path, root_resolved: Path) -> str | int:
+    """Resolve one `relate` endpoint, or print a refusal and return its exit code.
+
+    M25 (OQ-A): an absolute path is used as given; a relative one resolves
+    **root-relative first**, falling back to cwd-relative only when the
+    root-relative form is not a file. Root-relative-first is what lets an
+    agent paste a path straight out of a `missing-inverse` finding.
+
+    Returns the endpoint's root-relative POSIX form — the spelling every
+    message and JSON field uses — or 1 when it is missing, outside the
+    resolved root, or unparseable (the cross-verb explicit-path-error
+    convention; nothing is written in any of the three cases).
+    """
+    given = Path(raw)
+    if given.is_absolute():
+        candidate = given
+    else:
+        # Root-relative is the primary interpretation, so it is also the
+        # candidate a `file not found:` refusal names (M25 — R5).
+        candidate = root / given
+        if not candidate.is_file():
+            from_cwd = Path.cwd() / given
+            if from_cwd.is_file():
+                candidate = from_cwd
+
+    if not candidate.is_file():
+        print(f"docs: relate: file not found: {candidate}", file=sys.stderr)
+        return 1
+
+    try:
+        rel = candidate.resolve().relative_to(root_resolved).as_posix()
+    except ValueError:
+        print(
+            f"docs: relate: {candidate} is outside the resolved docs root ({root_resolved})",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Parse through `root / rel`, not the resolved path, so the parser's own
+    # self-locating message names the file the way the tree does.
+    endpoint = root / rel
+    try:
+        parse(endpoint.read_text(), endpoint, root)
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: {exc}", file=sys.stderr)
+        return 1
+    return rel
+
+
+def _print_relate_lines(plan: RelatePlan, *, dry_run: bool) -> None:
+    """Print `docs relate`'s human summary to stderr (M25 — D3).
+
+    One line per endpoint plus one `recorded revision in <rel>` line per
+    archived endpoint that gained an audit bullet. Gated by the caller on
+    `not --quiet` alone — NOT on `--json`: these go to stderr, so `--json`
+    stdout stays byte-clean either way.
+    """
+    adding = plan.action == "add"
+    for edit in plan.edits:
+        if edit.change == "unchanged":
+            state = "already present in" if adding else "already absent from"
+            print(f"docs: relate: no change — '{edit.edge}' {state} {edit.rel}", file=sys.stderr)
+            continue
+        verb = (
+            ("would add" if dry_run else "added")
+            if adding
+            else ("would remove" if dry_run else "removed")
+        )
+        preposition = "to" if adding else "from"
+        print(
+            f"docs: relate: {verb} '{edit.edge}' {preposition} {edit.rel}",
+            file=sys.stderr,
+        )
+    if dry_run:
+        return
+    for edit in plan.edits:
+        if edit.revision_appended:
+            print(f"docs: relate: recorded revision in {edit.rel}", file=sys.stderr)
+
+
+def _cmd_relate(args: argparse.Namespace) -> int:
+    # M25 (D3/D4/D5) — add or remove ONE reciprocal relationship pair across
+    # exactly two documents. Validate-all-first: stage 1 below writes
+    # nothing, so every refusal leaves the tree byte-identical.
+    root_or_exit = _resolve_managed_root(args, Path.cwd(), verb="relate")
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    # The verb is validated here rather than by argparse `choices=`: the
+    # frozen refusal names the six recognized verbs in `relate`'s own voice.
+    if inverse_verb(args.verb) is None:
+        print(
+            f"docs: relate: unknown verb {args.verb!r}; "
+            f"expected one of: {', '.join(sorted(RECIPROCAL_VERBS))}",
+            file=sys.stderr,
+        )
+        return 2
+
+    root_resolved = root.resolve()
+    source_rel = _resolve_relate_endpoint(args.source, root, root_resolved)
+    if isinstance(source_rel, int):
+        return source_rel
+    target_rel = _resolve_relate_endpoint(args.target, root, root_resolved)
+    if isinstance(target_rel, int):
+        return target_rel
+
+    if source_rel == target_rel:
+        print("docs: relate: SOURCE and TARGET must be different documents", file=sys.stderr)
+        return 2
+
+    reason: str | None = args.reason
+    if reason is not None:
+        # Shape is only checked when the flag is present, so an archived
+        # pair invoked with `--reason ""` gets the empty-reason message
+        # rather than the archive-rule one.
+        if "\n" in reason:
+            print("docs: relate: --reason must be a single line", file=sys.stderr)
+            return 2
+        if not reason.strip():
+            print("docs: relate: --reason must not be empty", file=sys.stderr)
+            return 2
+    else:
+        # OQ-C: required whenever EITHER endpoint is archived, checked
+        # before planning — so an idempotent no-op still refuses.
+        for rel in (source_rel, target_rel):
+            if rel == config.archive_dir or rel.startswith(config.archive_dir + "/"):
+                print(
+                    f"docs: relate: {rel} is under the archive subtree; --reason is required",
+                    file=sys.stderr,
+                )
+                return 2
+
+    if args.date:
+        try:
+            when = parse_date(args.date, config.date_format)
+        except MetadataError as exc:
+            print(f"docs: relate: --date: {exc}", file=sys.stderr)
+            return 2
+    else:
+        when = date.today()
+    date_str = when.strftime(config.date_format)
+
+    plan = plan_relate(
+        root,
+        config,
+        action=args.relate_command,
+        source=root / source_rel,
+        verb=args.verb,
+        target=root / target_rel,
+        reason=reason,
+        date_str=date_str,
+    )
+
+    def _emit_json(*, applied: bool, index_refreshed: bool) -> None:
+        if args.json:
+            print(
+                json.dumps(
+                    relate_plan_to_json(
+                        plan,
+                        dry_run=args.dry_run,
+                        applied=applied,
+                        index_refreshed=index_refreshed,
+                    ),
+                    indent=2,
+                )
+            )
+
+    # `--dry-run` writes nothing at all — neither endpoint, nor the INDEX.
+    # An all-unchanged plan is the same story with a different cause.
+    if args.dry_run or all(edit.change == "unchanged" for edit in plan.edits):
+        if not args.quiet:
+            _print_relate_lines(plan, dry_run=args.dry_run)
+        _emit_json(applied=False, index_refreshed=False)
+        return 0
+
+    try:
+        apply_relate_plan(plan)
+    except CoordinatedWriteError as exc:
+        # No `--json` record on a coordinated-write failure (M25 — R6): the
+        # operation aborted, and after a failed rollback the `applied` bit
+        # is genuinely undefined. The stderr admission is the contract.
+        print(f"docs: relate: {exc}", file=sys.stderr)
+        return 2
+
+    # Announce only after the publish succeeded — never a write that was
+    # then rolled back.
+    if not args.quiet:
+        _print_relate_lines(plan, dry_run=False)
+
+    index_refreshed = True
+    try:
+        _refresh_index(root, config, predicate=compile_exclude_predicate(config, []))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        index_refreshed = False
+
+    _emit_json(applied=True, index_refreshed=index_refreshed)
+    return 0 if index_refreshed else 2
+
+
 def _replace_or_prepend_h1(text: str, title: str) -> str:
     """Return `text` with its leading H1 replaced by `# {title}` (or one prepended).
 
@@ -5974,6 +6261,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         if args.project_command == "set":
             return _cmd_project_set(args)
         return 2
+    if args.command == "relate":
+        return _cmd_relate(args)
     return 2
 
 
@@ -5986,6 +6275,8 @@ def main(argv: list[str] | None = None) -> int:
         check, list — validation and query verbs (M3).
         migrate — adopt a non-conforming foreign directory (M4).
         install-skill — materialise the bundled agent skill (M6).
+        project rename|set — project-namespace verbs (M12/M15).
+        relate add|remove — reciprocal relationship repair (M25).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).
