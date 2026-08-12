@@ -58,6 +58,21 @@ Related:
 
 The block terminates at the first blank line whose next non-empty line is *not* a bare-label multi-value group. An inline `Label: value` line after a blank line is body content, not metadata — this preserves the rule that anything looking like an isolated `Label: value` outside the block is opaque to the parser.
 
+**Each label appears at most once (M25 — D7).** A metadata block must not
+repeat a label. Repeatability lives in the **bullets** under a bare label,
+never in a second copy of the label: `Related:` carries any number of
+`- <verb>: <path>` bullets and `Revision:` any number of dated entries, but
+each of those labels may occur only **once** in the block. The same holds
+for every inline label — one `Updated:`, one `Role:`, one `Owner:`.
+
+This is structural, not stylistic. The parser builds a dict from the block,
+so a second copy of a label **replaces** the first and every value under the
+earlier one is silently discarded — before any validation, INDEX
+generation, or `Related:` resolution can see it. `docs check` therefore
+treats a repeated label as a hard error (rule `duplicate-field`, exit 2);
+see `cli.md` › `docs check` › *Duplicate metadata labels*. The repair is to
+merge the entries under one label by hand.
+
 ### Required fields
 
 | Field | Type | Meaning |

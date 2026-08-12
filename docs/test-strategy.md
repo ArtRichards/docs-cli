@@ -29,6 +29,11 @@ Three sources of test docs, in increasing realism:
    - `marker-preservation/` — INDEX.md with hand-edited preamble and trailer outside markers
    - `drift/` — status/location mismatches for `docs check` tests (M3)
    - `foreign/` — non-conforming docs for `docs migrate` tests (M4)
+   - `duplicate-field/` — a doc with two `Related:` labels, for M25's D7
+     rule. Isolates that one semantic: it emits `duplicate-field` and
+     nothing else, deliberately, so it does not also trip the
+     `test_check_tree_legacy_fixtures_gain_no_new_findings` lock. The
+     interaction with `missing-inverse` is pinned inline instead.
    - `reciprocal-*/` — the M25 family, **one semantic per tree**, for the
      `missing-inverse` rule: `-clean` (all three pairs complete),
      `-missing` (the one-sided edge), `-freeform` (the supersedes trap),

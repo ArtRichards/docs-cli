@@ -883,3 +883,203 @@ def test_check_tree_no_conflict_detection(tmp_path):
     )
     findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
     assert findings == [], f"conflicting-but-reciprocated edges are clean, got {findings!r}"
+
+
+# --- M25 (D7) — duplicate metadata labels ----------------------------------
+#
+# Written RED first, as a self-contained mini-cycle inside Phase 10 (operator
+# decision 2026-08-12, in response to a fresh-eyes review finding). The rule
+# is per-doc, so it lives in `check_doc`, NOT in `reciprocity_findings`.
+
+
+def _dup(*metadata_lines: str) -> str:
+    """A doc whose metadata block is exactly `metadata_lines`."""
+    body = "\n".join(metadata_lines)
+    return f"# Sample\n\n{body}\n\n## Body\n\nProse.\n"
+
+
+def test_check_doc_duplicate_bare_label_group_is_an_error():
+    """Two `Related:` labels: the parser keeps only the last — silent data loss.
+
+    RED until D7 lands. This is the defect a fresh-eyes review surfaced:
+    `parse_metadata_block` assigns `metadata[label] = tuple(values)`, so the
+    second label REPLACES the first and every bullet under the earlier one
+    is discarded before any rule, the INDEX renderer, or `Related:`
+    resolution ever sees it.
+    """
+    text = _dup(
+        "Lifecycle: active",
+        "Role: spec",
+        "Project: probe",
+        "Updated: 2026-05-20",
+        "",
+        "Related:",
+        "- precedes: b.md",
+        "",
+        "Related:",
+        "- references: b.md",
+    )
+    findings = check_doc(
+        Path("/r/sample.md"), text, Path("/r"), _config(), stale=None, today=_TODAY
+    )
+    dups = [f for f in findings if f.rule == "duplicate-field"]
+    assert len(dups) == 1, f"exactly one duplicate-field finding, got {findings!r}"
+    assert dups[0].severity == "error"
+    assert dups[0].path == Path("/r/sample.md")
+    assert dups[0].message == (
+        "metadata field 'Related:' appears 2 times; only the last occurrence is read"
+    )
+
+
+def test_check_doc_duplicate_scalar_field_is_an_error():
+    """A repeated INLINE label is the same defect — `Updated:` twice."""
+    text = _dup(
+        "Lifecycle: active",
+        "Role: spec",
+        "Project: probe",
+        "Updated: 2026-05-20",
+        "Updated: 2026-05-21",
+    )
+    findings = check_doc(
+        Path("/r/sample.md"), text, Path("/r"), _config(), stale=None, today=_TODAY
+    )
+    dups = [f for f in findings if f.rule == "duplicate-field"]
+    assert len(dups) == 1, f"expected one duplicate-field, got {findings!r}"
+    assert dups[0].message == (
+        "metadata field 'Updated:' appears 2 times; only the last occurrence is read"
+    )
+
+
+def test_check_doc_duplicate_one_bare_and_one_inline_yields_two_findings():
+    """One finding PER repeated label, in metadata-block order."""
+    text = _dup(
+        "Lifecycle: active",
+        "Role: spec",
+        "Project: probe",
+        "Updated: 2026-05-20",
+        "Updated: 2026-05-21",
+        "",
+        "Related:",
+        "- precedes: b.md",
+        "",
+        "Related:",
+        "- references: b.md",
+    )
+    findings = check_doc(
+        Path("/r/sample.md"), text, Path("/r"), _config(), stale=None, today=_TODAY
+    )
+    dups = [f for f in findings if f.rule == "duplicate-field"]
+    assert [f.message for f in dups] == [
+        "metadata field 'Updated:' appears 2 times; only the last occurrence is read",
+        "metadata field 'Related:' appears 2 times; only the last occurrence is read",
+    ]
+
+
+def test_check_doc_thrice_repeated_label_is_still_one_finding():
+    """One finding per repeated LABEL, not per extra occurrence."""
+    text = _dup(
+        "Lifecycle: active",
+        "Role: spec",
+        "Project: probe",
+        "Updated: 2026-05-20",
+        "Owner: a",
+        "Owner: b",
+        "Owner: c",
+    )
+    findings = check_doc(
+        Path("/r/sample.md"), text, Path("/r"), _config(), stale=None, today=_TODAY
+    )
+    dups = [f for f in findings if f.rule == "duplicate-field"]
+    assert len(dups) == 1, f"one finding per repeated label, got {[f.message for f in dups]}"
+    assert dups[0].message == (
+        "metadata field 'Owner:' appears 3 times; only the last occurrence is read"
+    )
+
+
+def test_check_doc_many_bullets_under_one_label_never_fires():
+    """THE NEGATIVE CASE: repeatability lives in the bullets, not the label.
+
+    A long `Related:` run plus a `Revision:` run — the exact shape `docs
+    relate` writes — must never produce a `duplicate-field` finding. A rule
+    that counted bullets rather than labels would fire on every real doc in
+    the tree.
+    """
+    text = _dup(
+        "Lifecycle: archived",
+        "Role: plan",
+        "Project: probe",
+        "Updated: 2026-05-20",
+        "Archived-reason: completed",
+        "",
+        "Related:",
+        "- precedes: b.md",
+        "- follows: c.md",
+        "- references: d.md",
+        "- pairs-with: e.md",
+        "",
+        "Revision:",
+        "- 2026-08-11: relate add 'precedes: b.md'; reason: one",
+        "- 2026-08-12: relate remove 'follows: c.md'; reason: two",
+    )
+    findings = check_doc(
+        Path("/r/sample.md"), text, Path("/r"), _config(), stale=None, today=_TODAY
+    )
+    assert [f for f in findings if f.rule == "duplicate-field"] == [], (
+        "many bullets under ONE label is the convention, not a duplicate"
+    )
+
+
+def test_check_doc_clean_doc_has_no_duplicate_field_finding():
+    findings = check_doc(
+        Path("/r/sample.md"), _valid(), Path("/r"), _config(), stale=None, today=_TODAY
+    )
+    assert [f for f in findings if f.rule == "duplicate-field"] == []
+
+
+def test_check_tree_duplicate_field_fixture_is_an_error():
+    """The committed tree: exit 2, one finding, against the offending doc."""
+    findings = _tree_findings("duplicate-field")
+    dups = [f for f in findings if f.rule == "duplicate-field"]
+    assert len(dups) == 1, f"expected one duplicate-field, got {findings!r}"
+    assert dups[0].path == _TREES / "duplicate-field" / "a.md"
+    assert exit_code_for(findings) == 2
+
+
+def test_check_tree_duplicate_field_diagnoses_the_unfixable_missing_inverse(tmp_path):
+    """Why the rule exists (M25 — D7) — the exact shape the review found.
+
+    `a.md`'s FIRST `Related:` label is free-form and its LAST declares the
+    un-reciprocated `precedes: b.md`. The parser is **last-wins**, so
+    `missing-inverse` fires; the editors are **find-first**, so
+    `remove_related_edge` inspects the first label, finds nothing, and
+    reports "already absent" — the repair the finding names claims success
+    (exit 0) while the finding survives.
+
+    Kept inline rather than committed: the `duplicate-field/` tree isolates
+    ONE semantic, and a committed tree emitting `missing-inverse` would also
+    trip `test_check_tree_legacy_fixtures_gain_no_new_findings`.
+    """
+    root = tmp_path / "unfixable"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "unfixable"\n')
+    (root / "a.md").write_text(
+        "# A\n\nLifecycle: active\nRole: notes\nProject: unfixable\n"
+        "Updated: 2026-05-20\n\nRelated:\n- references: b.md\n\n"
+        "Related:\n- precedes: b.md\n\n## Body\n\nProse.\n"
+    )
+    (root / "b.md").write_text(
+        "# B\n\nLifecycle: active\nRole: notes\nProject: unfixable\n"
+        "Updated: 2026-05-20\n\n## Body\n\nProse.\n"
+    )
+
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    rules = sorted(f.rule for f in findings)
+    assert rules == ["duplicate-field", "missing-inverse"], (
+        "the unfixable finding now travels with the duplicate that causes it"
+    )
+    assert exit_code_for(findings) == 2
+
+    # The repair `missing-inverse` names is a no-op here: the editor reads
+    # the FIRST label, which does not carry the edge.
+    _out, changed = _cli.remove_related_edge((root / "a.md").read_text(), "precedes", "b.md")
+    assert changed is False, "find-first editor vs last-wins parser — this is why D7 must fire too"

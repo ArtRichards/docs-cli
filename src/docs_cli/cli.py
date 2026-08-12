@@ -355,7 +355,7 @@ class Finding:
             ``bad-vocab``, ``bad-date``, ``status-drift``, ``broken-ref``,
             ``stale``, ``malformed``, ``unknown-field`` (M10),
             ``medium-confidence-inference`` (`docs migrate --triage`), or
-            ``missing-inverse`` (M25). Emitted in ``--json`` output so CI
+            ``duplicate-field`` / ``missing-inverse`` (M25). Emitted in ``--json`` output so CI
             hooks can filter on it. The JSON record's key set is closed at
             ``{path, severity, rule, message}``; a new rule adds a value
             here, never a field there.
@@ -1802,6 +1802,45 @@ def _canonical_related_target(target: str) -> str:
     return posixpath.normpath(target)
 
 
+def _duplicate_labels(text: str) -> dict[str, int]:
+    """Labels appearing more than once in `text`'s metadata block (M25 — D7).
+
+    Returns ``{label: occurrence count}`` in first-appearance order, empty
+    when every label is unique. A doc with no H1 / metadata block returns
+    empty — `malformed` owns that case.
+
+    Works on the raw label lines rather than on `parse_metadata_block`'s
+    output, and it has to: that function assigns ``metadata[label] =
+    tuple(values)``, so by the time the parsed mapping exists a repeated
+    label has already overwritten the earlier one and every value under it
+    is gone. Counting labels here is the only place the duplication is still
+    observable.
+
+    Purely structural — inline (`Updated:`) and bare (`Related:`) labels are
+    counted alike, known or not. A bare label's ``- `` bullet run is skipped
+    wholesale, so many bullets under ONE label never count as a duplicate:
+    repeatability lives in the bullets, never in a second label.
+    """
+    try:
+        lines, _title, start, end = _metadata_line_span(text)
+    except MetadataError:
+        return {}
+
+    counts: dict[str, int] = {}
+    idx = start
+    while idx < end:
+        m = _LABEL_RE.match(lines[idx])
+        if not m:
+            idx += 1
+            continue
+        counts[m.group(1)] = counts.get(m.group(1), 0) + 1
+        idx += 1
+        if not m.group(2).strip():
+            while idx < end and lines[idx].startswith("- "):
+                idx += 1
+    return {label: n for label, n in counts.items() if n > 1}
+
+
 def _related_pairs(
     metadata: Mapping[str, str | tuple[str, ...]],
 ) -> tuple[tuple[str, str], ...]:
@@ -1964,6 +2003,24 @@ def check_doc(
                     f"Lifecycle: {lifecycle_value!r} but the file is inside the archive subtree",
                 )
             )
+
+    # --- M25 (D7) duplicate metadata labels ------------------------------
+    # Evaluated against the metadata block's RAW label lines, because by the
+    # time `metadata` exists the evidence is gone: `parse_metadata_block`
+    # builds a dict, so a second copy of a label has already replaced the
+    # first and silently discarded everything under it. That is data loss
+    # affecting every other rule, the INDEX renderer, and `Related:`
+    # resolution alike — hence an error, not a warning.
+    for label, count in _duplicate_labels(text).items():
+        findings.append(
+            Finding(
+                path,
+                "error",
+                "duplicate-field",
+                f"metadata field '{label}:' appears {count} times; "
+                "only the last occurrence is read",
+            )
+        )
 
     # --- broken Related: refs ---
     for _verb, target in _related_pairs(metadata):

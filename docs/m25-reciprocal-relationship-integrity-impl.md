@@ -22,9 +22,10 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **All ten TDD phases complete (Step 2, 2026-08-12). M25 is
-  implementation-complete and stays `Lifecycle: active` until the M29
-  publish closeout.**
+- Progress: **All ten TDD phases complete (Step 2, 2026-08-12), plus the
+  fresh-eyes review fold-in and its operator-approved **D7
+  `duplicate-field`** addition. M25 is implementation-complete and stays
+  `Lifecycle: active` until the M29 publish closeout. 777 passed.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -44,7 +45,7 @@ progress table and milestone checklist synchronized.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); eight spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
 | 8. Run Tests (GREEN) | Complete | 2026-08-12 | **757 passed, 0 failed** (757 collected, zero collection errors). All 636 pre-existing test ids proven still present and GREEN by `comm`. One defective Step-1 assertion corrected under operator approval; `cli.py` byte-unchanged by that commit. |
 | 9. Integrate / Accept / Dogfood | Complete | 2026-08-12 | Eight flows on a throwaway `cp -r docs` copy: detect → repair → re-check, remove/restore/idempotency, audited archived repair (refusal then repair then a second `Revision:` bullet), blast radius (1 of 46 archived files changed), dry-run/JSON, real tree untouched. |
-| 10. Quality, Docs, Refactor | Complete | 2026-08-12 | Placeholder sweep clean; `Finding`'s rule-id list corrected; `architecture.md` + `test-strategy.md` closed; use-case catalog gained the upgrade-and-repair flow; completion summaries written. **757 passed**, gate clean, version still 1.8.0. |
+| 10. Quality, Docs, Refactor | Complete | 2026-08-12 | Placeholder sweep clean; `Finding`'s rule-id list corrected; `architecture.md` + `test-strategy.md` closed; use-case catalog gained the upgrade-and-repair flow; completion summaries written. Later extended by the post-review fold-in: two editor defects fixed, four locks added, and the operator-approved **D7 `duplicate-field`** mini-cycle. **777 passed**, gate clean, version still 1.8.0. |
 
 ## Setup record — 2026-08-10
 
@@ -1354,7 +1355,8 @@ phase's.
 
 ### Verification
 
-- `.venv/bin/python -m pytest tests/ -q` — **757 passed**.
+- `.venv/bin/python -m pytest tests/ -q` — **757 passed** at the time this
+  phase closed. The fresh-eyes fold-in below later took it to **777**.
 - `.venv/bin/ruff check .` / `ruff format --check .` / `mypy src/ tests/` —
   all clean.
 - `.venv/bin/docs check --root docs` — no violations, exit 0.
@@ -1371,6 +1373,137 @@ Host-machine skills are deliberately **not** refreshed here: per the
 project's CLAUDE.md skill-update policy that happens only at a production
 ship (M29), and `docs install-skill --force` from an unpublished tree would
 put pre-release guidance on the host.
+
+## Fresh-eyes review fold-in — Step 2 — 2026-08-12
+
+Independent review of Step 2 returned **no blockers**: the reviewer re-ran
+the full gate, confirmed every parity and version invariant, and reproduced
+the modified-assertion justification end-to-end (unsatisfiable, stronger,
+`cli.py` byte-unchanged in `7e4feb1`). Everything below is defect repair,
+coverage hardening, or one operator-approved scope addition.
+
+### Operator-approved scope addition — D7 `duplicate-field`
+
+**This arrived after the contract froze and after fresh-eyes review.** It is
+not part of the Phase-1 frozen contract and is deliberately not backdated
+into it; see the milestone doc's **D7 (BINDING — added 2026-08-12,
+POST-FREEZE)**.
+
+The reviewer found that a doc with two `Related:` labels yields a
+`missing-inverse` no `docs relate` invocation can clear — the parser is
+**last-wins**, the editors are **find-first**. The conductor traced it to a
+deeper defect: `parse_metadata_block` does
+`metadata[label] = tuple(values)`, so a second copy of ANY label overwrites
+the first and silently discards every value under it, before `docs check`,
+INDEX generation, or `Related:` resolution ever runs. It predates M25; the
+unfixable finding is only the symptom that exposed it.
+
+**Operator-required pre-flight, run BEFORE implementing.** The live `docs/`
+tree (69 docs) and **all 28** committed fixture trees (~300 docs) were
+scanned with the block-aware label counter: **zero duplicate labels**. No
+existing tree needed editing to suit the new rule — the standing
+instruction was to stop and report rather than edit a fixture to fit.
+
+Implemented as a self-contained **test-first mini-cycle** inside Phase 10:
+
+1. **Contract** — `cli.md` gained a rule bullet, a *Duplicate metadata
+   labels* subsection (frozen message, one-per-label dedupe, the data-loss
+   rationale, the manual repair, and why `docs relate` will not do it), the
+   rule-id table entry, and the exit-code-2 list. `convention.md` gained
+   *Each label appears at most once* under *Metadata block*. Mirrors
+   re-synced byte-identically.
+2. **Tests (RED first)** — 8 RED across `tests/test_check.py` (duplicated
+   bare-label group; duplicated scalar; one of each yielding two findings in
+   block order; a thrice-repeated label yielding ONE finding; the committed
+   tree) and `tests/test_cli_check.py` (subprocess exit 2 + message; the
+   `--json` record's closed key set). Plus two negative locks that were
+   GREEN from the start and must stay so: a long `Related:` run beside a
+   `Revision:` run — the exact shape `docs relate` writes — must never fire,
+   and a clean doc must not either. A rule that counted bullets instead of
+   labels would fire on every real doc in the tree.
+3. **Implement** — `_duplicate_labels(text)` beside `_related_pairs`,
+   consumed by **`check_doc`** (a per-doc rule; deliberately NOT in
+   `reciprocity_findings`). It scans the metadata block's raw label lines
+   via `_metadata_line_span` + `_LABEL_RE`, skipping each bare label's
+   bullet run wholesale, and returns `{label: count}` for counts > 1 in
+   first-appearance order. Detecting it from `parse_metadata_block`'s output
+   is impossible — the duplicate is already gone by then.
+4. **GREEN, and the interaction confirmed.** New committed fixture
+   `tests/fixtures/trees/duplicate-field/` isolates the pure case (one
+   semantic per tree, so it emits `duplicate-field` and nothing else — a
+   committed tree that also emitted `missing-inverse` would trip the
+   `test_check_tree_legacy_fixtures_gain_no_new_findings` lock). The
+   co-occurrence is pinned inline by
+   `test_check_tree_duplicate_field_diagnoses_the_unfixable_missing_inverse`,
+   which builds the reviewer's exact shape (first label free-form, last
+   label carrying the un-reciprocated edge), asserts the rules are
+   `["duplicate-field", "missing-inverse"]`, and then asserts that
+   `remove_related_edge` returns `changed is False` — i.e. that the repair
+   `missing-inverse` names really is a no-op there. Verified live too:
+   `docs relate remove` prints `no change — 'precedes: b.md' already absent
+   from a.md` and exits 0 while the finding survives. **The previously
+   silent, unfixable state is now named.**
+
+### should-fix — two real defects in the M25 editors
+
+1. **Trailing-newline state was NOT preserved when the metadata block runs
+   to EOF.** All three editors insert/delete newline-terminated lines, so a
+   doc with no body silently **gained** a trailing newline on
+   `add_related_edge` / `append_revision_entry`, and kept one on a
+   `remove_related_edge` that deleted the unterminated final line. This
+   contradicted `cli.md` › *What gets written*, `convention.md`, and — most
+   seriously — **D4's allowed-byte set**, the milestone's strongest claim.
+   **Fixed in the code, not by narrowing the spec:** a shared
+   `_preserve_tail(original, edited)` strips exactly one trailing newline
+   when the original lacked it.
+   The existing coverage was **falsely reassuring**:
+   `test_add_related_edge_preserves_absent_trailing_newline` used
+   `WELL_FORMED.rstrip("\n")`, which still has a body, so the insertion
+   point was mid-file and the tail was never touched. A `NO_BODY` fixture
+   plus three new tests now exercise the real case for all three editors.
+2. **A re-created `Related:` group landed AFTER a trailing `Revision:`
+   group.** Reachable in a plausible archived sequence: `relate remove`
+   drops the last recognized edge and its emptied label, then `relate add`
+   re-creates the group at the end of the block — past `Revision:`. D4,
+   `cli.md` › *`Revision:` encoding*, `convention.md`, and
+   `append_revision_entry`'s own docstring all place `Revision:` at the END.
+   Shape drift, not corruption (the doc still parsed, `docs check` stayed
+   clean), but the spec said otherwise. The creation branch now inserts
+   before a bare `Revision:` label, at its preceding blank line.
+
+### nits
+
+3. **`--dry-run` never previewed the `Revision:` bullet** — an archived
+   repair's most consequential effect was invisible in the human preview,
+   though `--json` always carried `revision_appended`. Now emits
+   `docs: relate: would record revision in <rel>`; the form is added to
+   `cli.md` › *Output* and locked by a test.
+4. **Four missing locks added.** The `nothing was published` branch
+   end-to-end (a half-satisfied `add` whose only write fails, via a
+   `chmod 555` parent dir — a *realistic* path, not a contrived one); BOTH
+   `ROLLBACK FAILED` message variants asserted verbatim (the existing test
+   reached the branch but asserted only `rolled_back`/`published`, so
+   **R4's entire point — the `remove`-shaped `no longer carries` wording —
+   was unpinned**); `relate`'s canonical-target idempotency at the CLI seam
+   (R1 was pinned for the check rule only); and R9's
+   excluded-endpoint-allowed. Stage-3's `staged text … would not parse`
+   stays deliberately **untested** per R2 — the reviewer agrees a test there
+   would pin a fake.
+5. **Two CHANGELOG examples carried the defect this step's own audit had
+   already fixed in `cli.md`** — a finding line without its file-grouping
+   line or two-space indent, and a `docs relate add` shown producing no
+   output when it always prints two stderr lines. Both now mirror `cli.md`'s
+   worked example verbatim.
+
+### Observation, not a fix
+
+`set_metadata_field` (M2) has the same latent trailing-newline behaviour on
+its *insert* path. It is **not reachable from `relate`**: `plan_relate` only
+calls it for `Updated:`, which is a required field that `parse()` has
+already validated as present, so the replace path — which preserves the
+line ending exactly — always wins. Left alone as out-of-scope M2 code rather
+than widening this step's blast radius; recorded here so it is not
+rediscovered as a surprise.
 
 ## Same-instance consistency audit — Step 2 (Phases 5–10) — 2026-08-12
 
@@ -1470,6 +1603,63 @@ verb with a nested conditional expression
 and covered, but a small mapping would read better — and readability
 refactoring is explicitly `/simplify`'s job, not Phase 10's.
 
+## Same-instance consistency audit — post-review fold-in — 2026-08-12
+
+A second pass of the consistency-check reference, scoped to the fold-in work
+(the two editor fixes, the four added locks, and D7).
+
+### Accuracy — code vs. spec
+
+1. **Verified, not assumed:** the `duplicate-field` message rendered live by
+   `docs check tests/fixtures/trees/duplicate-field` is byte-identical to
+   the string frozen in `cli.md` (`metadata field 'Related:' appears 2
+   times; only the last occurrence is read`), and the `--json` record's key
+   set is still the closed four. The `would record revision in <rel>` form
+   is present in both the code and `cli.md` › *Output*.
+2. `convention.md`'s *Each label appears at most once* and `cli.md`'s
+   *Duplicate metadata labels* agree with each other and with the
+   implementation: structural counting, inline and bare alike, one finding
+   per repeated label, bullets-under-one-label exempt.
+
+### Consistency — documentation (fixed)
+
+3. **Five stale `757` counts.** The milestone doc's Progress line, its
+   RED/GREEN deliverable, and its final Success-criteria line, plus
+   `status.md`'s Step-2 sentence and its *Next action* paragraph, all still
+   claimed 757 after the fold-in took the suite to 777. **Fixed.**
+4. **`status.md` framed the Step-1 figures as the current total** ("M25 so
+   far contributes 121 test items: 757 collected…"). **Fixed** to state
+   them as Step 1's contribution and the RED baseline, which is what they
+   are.
+5. **The Phase-10 record's verification said 757 while the Phase-10 phase-
+   table row said 777.** Rather than rewrite a dated phase record, the
+   verification line now reads "**757 passed** at the time this phase
+   closed. The fresh-eyes fold-in below later took it to **777**." Dated
+   records stay historical; only forward-looking claims were updated. The
+   Phase-4 and Phase-8 records keep their own figures untouched for the
+   same reason.
+
+### Verified clean (no fix needed)
+
+- No `TODO`/`FIXME`/`NotImplementedError`/commented-out code in `cli.py`.
+- Diff scope is still confined to `docs/`, `src/docs_cli/`, `tests/`, and
+  `CHANGELOG.md`.
+- Mirrors byte-identical; `docs/INDEX.md` ↔
+  `tests/fixtures/expected/docs-INDEX.md` in lockstep; `docs check --root
+  docs` exit 0.
+- `pyproject.toml` and `tests/test_packaging.py` byte-untouched across the
+  entire milestone; `docs --version` → `docs 1.8.0`; CHANGELOG still under
+  `## UNRELEASED`.
+- **No-regression re-proven after D7**, which is exactly the kind of new
+  rule that could disturb a pre-existing fixture: 636 ids at `3dca105`,
+  `comm -12` → 636, `comm -23` → **0**, `comm -13` → 141, 777 collected,
+  0 failures.
+
+### Surfaced for an operator decision
+
+Nothing. The one open style note is unchanged and still belongs to the
+Step-3 `/simplify` pass: `_print_relate_lines`'s nested conditional.
+
 ## Milestone completion summary
 
 **M25 — Reciprocal relationship integrity and `docs relate` is
@@ -1498,16 +1688,21 @@ Phases 5–10 (implementation → dogfood → closeout) on `m25/phases-5-10`.
   either endpoint is archived (checked before planning), with the change
   limited to one `Related:` bullet, `Updated:`, and a dated `Revision:`
   audit bullet.
+- **A hard `duplicate-field` rule** (D7, added post-freeze) — a metadata
+  label appears at most once; repeatability lives in the bullets under a
+  bare label. Error, exit 2, one finding per repeated label, detected on the
+  raw block because the parser has already discarded the evidence. Closes a
+  **silent data-loss** defect that predates M25.
 - **Full surface parity** — `cli.md`, `convention.md`, the byte-identical
   bundled mirrors, `SKILL.md`, the use-case catalog, and a CHANGELOG
-  `UNRELEASED` section carrying the BREAKING notice and an *Upgrading from
-  1.x* worked loop.
+  `UNRELEASED` section carrying **two** BREAKING notices and an *Upgrading
+  from 1.x* worked loop covering both rules.
 
 ### Final ledger
 
 | Gate | Result |
 |---|---|
-| `pytest tests/ -q` | **757 passed, 0 failed** (636 pre-existing + 121 M25) |
+| `pytest tests/ -q` | **777 passed, 0 failed** (636 pre-existing + 141 M25) |
 | Pre-existing regressions | **0**, proven by `comm` against `3dca105`'s 636 ids |
 | `ruff check` / `ruff format --check` | clean / 45 files formatted |
 | `mypy src/ tests/` | no issues in 46 source files |
@@ -1533,6 +1728,13 @@ Phases 5–10 (implementation → dogfood → closeout) on `m25/phases-5-10`.
   Phase 8 — it was unsatisfiable in conjunction with another test in the
   same file. The replacement is stronger, and the shipped behaviour was not
   changed to accommodate it. Full evidence in the Phase-8 record.
+- **D7 `duplicate-field` was added POST-FREEZE**, after Phase 10 and after
+  fresh-eyes review, as an operator-approved response to a review finding —
+  it widens the frozen contract and is breaking for existing trees. It is
+  recorded as its own decision rather than folded into D1–D6, so the
+  contract history is not retroactively rewritten. Implemented test-first
+  as a mini-cycle inside Phase 10, after verifying the live tree and all 28
+  fixture trees were duplicate-free.
 
 ### Follow-ons
 

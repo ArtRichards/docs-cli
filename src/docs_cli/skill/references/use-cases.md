@@ -62,6 +62,7 @@ not guess whether the edge should be completed or deleted.
 
 | Scenario | Verb | Detail |
 |---|---|---|
+| Fix duplicated metadata labels FIRST | `docs check` → hand-merge | A label may appear at most once; a second copy silently replaces the first. `duplicate-field` names it. Merge the bullets under one label by hand — `docs relate` will not, and on a duplicated doc a repair can report success while the finding survives. |
 | Find the one-sided edges | `docs check` | Each finding names the source, the verb, the target, and the exact missing inverse. `--json` for a machine list; the record keys are unchanged (`path`, `severity`, `rule`, `message`). |
 | The edge is right — complete it | `docs relate add <source> <verb> <target>` | Copy the paths straight out of the finding; relative endpoints resolve root-relative first. Only the missing half is written; INDEX refreshes once. |
 | The edge is wrong — delete the pair | `docs relate remove <source> <verb> <target>` | Removes whichever halves exist. Equally valid; `check` is clean either way. |

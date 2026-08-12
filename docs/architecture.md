@@ -311,8 +311,15 @@ the marker block and the derived content.
 - `check_doc(path, text, root, config, stale, today, stale_source) -> list[Finding]`
   — every **single-document** rule (`missing-field`, `bad-vocab`,
   `bad-date`, `status-drift`, `broken-ref`, `stale`, `malformed`,
-  `unknown-field`). Never raises: a validator must describe malformed
-  input, not blow up on it.
+  `unknown-field`, `duplicate-field`). Never raises: a validator must
+  describe malformed input, not blow up on it.
+- M25 (D7) adds `duplicate-field` via `_duplicate_labels(text)`, which
+  counts the metadata block's **raw label lines** rather than reading
+  `parse_metadata_block`'s output. It has to: that function assigns
+  `metadata[label] = tuple(values)`, so a repeated label has already
+  overwritten the earlier one — and discarded its values — by the time the
+  parsed mapping exists. This is the one rule whose evidence is destroyed
+  by parsing.
 - `check_tree(...)` materialises the `_iter_doc_texts` walk **once**, so
   the one rule that needs more than one document can see the whole set.
 - M25 adds that rule: `reciprocity_findings(entries, root) ->

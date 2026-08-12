@@ -60,15 +60,15 @@ All five Phase-1 open questions are RESOLVED. Phase 2 wrote the RED suite
 across six edited and two new test files, Phase 3 added ten committed
 `reciprocal-*` fixture trees, and Phase 4 captured the classified RED
 baseline. Including the same-instance audit and the fresh-eyes review
-fold-in, M25 so far contributes **121 test items**: **757 collected,
-87 failed, 670 passed** — every RED matching its classified reason, zero
+fold-in, Step 1 contributed **121 test items** and the RED baseline was
+**757 collected, 87 failed, 670 passed** — every RED matching its classified reason, zero
 collection errors, and the 636 pre-existing tests all still GREEN. The
 review returned **no blockers**; its two operator-binding contract
 amendments (a self-referential recognized edge is **exempt** from
 `missing-inverse`, and reciprocity matches on **canonical** root-relative
 paths so a `./` prefix cannot fail a hard check) are folded into the
 specs, the bundled mirrors, and the tests. **Step 2 (Phases 5–10) is
-complete on `m25/phases-5-10`: the full suite is 757 passed / 0 failed,
+complete on `m25/phases-5-10`: the full suite is 777 passed / 0 failed,
 every one of the 636 pre-existing test ids proven still GREEN by `comm`
 against the Phase-1 commit, and the eight-flow dogfood ran unattended on a
 throwaway copy of this tree.** Phase 5 landed the vocabulary, the three
@@ -89,7 +89,18 @@ file (the replacement is stronger; the shipped behaviour did not move).
 Phase 9 dogfooded detect → repair → re-check plus an audited archived
 repair, touching 1 of 46 archived files. Phase 10 closed
 `architecture.md` / `test-strategy.md`, added the upgrade-and-repair flow to
-the shipped use-case catalog, and wrote the completion summaries.
+the shipped use-case catalog, and wrote the completion summaries. An
+independent fresh-eyes review then returned **no blockers**; its fold-in
+fixed two real editor defects (trailing-newline state was not preserved
+when the metadata block runs to EOF — a D4 allowed-byte violation; and a
+re-created `Related:` group landed after a trailing `Revision:` group),
+added four missing failure-path locks, and carried one
+**operator-approved post-freeze scope addition**: the **`duplicate-field`**
+check rule (D7). A metadata label may now appear at most once — a second
+copy silently replaced the first and discarded its values, a data-loss
+defect predating M25 that also made one `missing-inverse` state unfixable.
+The live tree and all 28 fixture trees were verified duplicate-free before
+it landed. Suite: **777 passed**.
 **Version staging (Q5):
 `docs-cli` stays `1.8.0` through M25–M28; M29 performs the single bump to
 `2.0.0` at publish.** The prepared pair is
@@ -535,7 +546,8 @@ the operative reference for future publishes.
 
 **Next action:** **prepare M26 — Safe explicit archive selection.** M25 is
 implementation-complete across all ten TDD phases on `m25/phases-5-10`
-(757 GREEN, gate clean, dogfood done) and stays `Lifecycle: active` until
+(**777 GREEN**, gate clean, dogfood done, fresh-eyes review folded in)
+and stays `Lifecycle: active` until
 M29 publishes the train. A Step-3 `/simplify` pass runs against the M25
 implementation first. The package version deliberately remains **1.8.0**;
 M25's CHANGELOG entries sit under `## UNRELEASED` for M29 to name and date.
@@ -781,7 +793,7 @@ for the milestone summary.
 | M22 — Doc-tree root placement guidance (project ≠ directory) | **Complete** (impl-complete 2026-06-24; shipped to PyPI as `docs-cli==1.8.0` **batched via M24** 2026-07-03, pair archived; all ten TDD phases; documentation-only, M16-shaped — no CLI/code change, no version bump; convention.md §Subdirectories + bundled SKILL.md "where to put `.docs.toml`" guidance: `Project:` is metadata not a directory, and root-relative `Related:` makes a nested lone project prefix every sibling ref; RED-first `tests/test_skill_root_placement.py`; bundled reference mirrored byte-identical; dogfood-snapshot refreshed; CHANGELOG staged under 1.7.0 UNRELEASED. Full suite 543 GREEN, gate clean, Phase-9 dogfood reproduced the redundant-prefix consequence. Ran **before** M21 per the operator's run-order decision 2026-06-24 — number = creation order, not execution order. Shipped batched as 1.8.0 via M24; archived 2026-07-03 (the publish closeout swept it, M18/M19/M21 + M16 precedent). Companion `project-foundation` note tracked separately in `agent-playbook-suite`) | [Plan](archive/2026-07-03/m22-root-placement-guidance.md) | [Log](archive/2026-07-03/m22-root-placement-guidance-impl.md) |
 | M23 — Agent-aware install-skill + recorded-dest skill-refresh hint (v1.8.0) | **Complete** (shipped to PyPI as `docs-cli==1.8.0` **batched via M24** 2026-07-03; pair archived to `archive/2026-07-03/`; impl-complete 2026-07-02, all 10 TDD phases) (Phases 1–4 (Contract & RED baseline) on `m23/phases-1-4`; Phases 5–10 (implementation → dogfood → closeout) on `m23/phases-5-10`: full suite **636 GREEN**, gate clean tree-wide, `pyproject` at 1.8.0, `docs --version` → `docs 1.8.0`; online path dogfooded against a seeded throwaway cache, pytest 100% offline) — follow-on to the M21 re-scope that restores the skill-refresh nudge cut from M21. Makes `docs install-skill` **agent-aware**: `--dest` is the agent-agnostic source of truth; TTY-aware resolution (human may be prompted; an agent [non-TTY] is **never** blocked → falls back to the default, OQ-1); the resolved dest is **recorded** (path only — **never** content) to a separate `${XDG_STATE_HOME:-~/.local/state}/docs-cli/install-skill.json` (OQ-2; M21's 3-key cache stays frozen); the "Claude Code skill" framing in `install-skill`'s help is neutralised to **"agent skill"** (reconciling with `cli.md`); and M21's update notice gains a skill-refresh hint pointed at the **recorded** dest (riding M21's same suppression matrix + throttle). Replay/remember allowed; content-inspection + agent-guessing NOT. Out of scope: multi-agent skill *formats* + agent auto-detection. **Depends on M21.** Ships **1.8.0** (OQ-4). **The four OPEN QUESTIONS are resolved** (OQ-1 default / OQ-2 separate XDG_STATE file — **confirmed as-shipped at the M24 gate, D4**; OQ-3 last-write-wins single dest; OQ-4 1.8.0). Shipped batched as 1.8.0 via M24; archived 2026-07-03. | [Plan](archive/2026-07-03/m23-agent-aware-install-skill.md) | [Log](archive/2026-07-03/m23-agent-aware-install-skill-impl.md) |
 | M24 — PyPI publish 1.8.0 | **Complete** (2026-07-03; `docs-cli==1.8.0` live on PyPI; `v1.8.0` tag at `1a01f74` + GitHub release; chain-of-custody bit-perfect wheel `29ac3ced…` + sdist `62a29285…`; all M21+M23 contracts hold against the served wheel; host skills refreshed) — operator-driven publish shipping the post-1.6.5 train **batched** as `docs-cli==1.8.0`: M21 (update-check, built 1.7.0) + M22 (doc-only, no bump) + M23 (agent-aware install-skill, 1.8.0), mirroring M17 (M14+M15→1.6.0) / M9 (M6+M7+M8→1.3.0). Tree at 1.8.0 (M23 Phase 7, merged `839daef`); **1.7.0 skipped on PyPI** (its CHANGELOG entries fold into 1.8.0, D2). Runbook-driven — no TDD code phases; the [release-runbook.md](release-runbook.md) sections are the phases. Setup decisions: D1 batched 1.8.0; D2 CHANGELOG fold; D3 "author now, confirm at the gate" (runbook starts on explicit go-ahead, pauses before every irreversible step); D4 M23 OQ-1/OQ-2 confirmed as-shipped (flag cleared); D5 closeout archived the M21+M22+M23 pairs + the M24 milestone doc to `archive/2026-07-03/` (impl log stays active). Ran the release-runbook end-to-end under D3 (operator go at the Phase-4 gate). | [Plan](archive/2026-07-03/m24-pypi-publish.md) | [Log](m24-pypi-publish-impl.md) |
-| M25 — Reciprocal relationship integrity and `docs relate` | **Active / implementation-complete — all ten TDD phases** (Phases 1–4 2026-08-11 on `m25/phases-1-4`; Phases 5–10 2026-08-12 on `m25/phases-5-10`; 757 GREEN, gate clean, dogfood done; stays `Lifecycle: active` until the M29 publish closeout) — hard inverse validation + explicit active/archived repair; first v2.0 implementation milestone. Six recognized verbs, the `missing-inverse` rule, and `docs relate add|remove` (idempotent, `--dry-run`/`--json`, one reindex, staged publish + rollback, audited archived repair) are implemented; the version deliberately stays 1.8.0 (D6) with CHANGELOG entries under `UNRELEASED` for M29 to name. | [Plan](m25-reciprocal-relationship-integrity.md) | [Log](m25-reciprocal-relationship-integrity-impl.md) |
+| M25 — Reciprocal relationship integrity and `docs relate` | **Active / implementation-complete — all ten TDD phases** (Phases 1–4 2026-08-11 on `m25/phases-1-4`; Phases 5–10 2026-08-12 on `m25/phases-5-10`; **777 GREEN**, gate clean, dogfood done, fresh-eyes review folded in incl. the operator-approved post-freeze `duplicate-field` rule; stays `Lifecycle: active` until the M29 publish closeout) — hard inverse validation + explicit active/archived repair; first v2.0 implementation milestone. Six recognized verbs, the `missing-inverse` rule, and `docs relate add|remove` (idempotent, `--dry-run`/`--json`, one reindex, staged publish + rollback, audited archived repair) are implemented; the version deliberately stays 1.8.0 (D6) with CHANGELOG entries under `UNRELEASED` for M29 to name. | [Plan](m25-reciprocal-relationship-integrity.md) | [Log](m25-reciprocal-relationship-integrity-impl.md) |
 | M26 — Safe explicit archive selection | **Registered draft** (2026-08-10; no log/phase started) — explicit multi-doc archive scope, safe preview/refusal, deduplicated preflight. | [Plan](m26-safe-archive-selection.md) | _not yet created_ |
 | M27 — Markdown body-link validation | **Registered draft** (2026-08-10; no log/phase started) — bounded scanner, hard missing-local-link rule, controlled legacy policy. | [Plan](m27-markdown-body-link-validation.md) | _not yet created_ |
 | M28 — Move-safe Markdown body-link rewrites | **Registered draft** (2026-08-10; no log/phase started; depends on M26 + M27) — incoming-target and moved-referrer link rebasing. | [Plan](m28-move-safe-body-link-rewrites.md) | _not yet created_ |

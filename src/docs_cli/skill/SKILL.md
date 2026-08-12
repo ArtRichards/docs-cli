@@ -63,7 +63,7 @@ separate bodies of work by `Project:` metadata, not by folder. See
 | Rename or move a doc | `docs mv <old> <new>` | rewrites `Related:` tree-wide |
 | List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
 | Bump a doc's `Updated:` | `docs touch <file> [--check [--stale N]]` | reindexes; `--check` folds in `docs check` (touch-then-validate in one invocation; `--stale N` is the check's stale window) |
-| Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors; a one-sided reciprocal edge is a hard `missing-inverse` error — `docs relate` is its repair |
+| Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors; a one-sided reciprocal edge is a hard `missing-inverse` error (`docs relate` repairs it) and a repeated metadata label is a hard `duplicate-field` error (hand-merge the bullets under one label) |
 | Repair a reciprocal relationship pair | `docs relate add` / `docs relate remove` | `SOURCE VERB TARGET`; writes both halves as one operation; idempotent; `--reason` required for an archived endpoint; `--dry-run`, `--json` |
 | Adopt a foreign tree | `docs migrate <dir>` | dry-run by default; `--apply` to write |
 | Rename the project | `docs project rename <new-name>` | rewrites `.docs.toml` + every `Project:` line; `--dry-run` |

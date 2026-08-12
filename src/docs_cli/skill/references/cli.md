@@ -297,6 +297,10 @@ Validate the tree. Reports (and exits nonzero on) any of:
   set in M25 because `docs relate` itself writes that label onto an
   archived endpoint (see `docs relate` below) — a label the tool
   writes must never trip the tool's own allowlist warning.
+- (M25 — D7) A **metadata label that appears more than once** in one
+  document's metadata block — `severity: error`, rule `duplicate-field`,
+  exit code 2, one finding per repeated label. See *Duplicate metadata
+  labels* below.
 - (M25 — D2) A **recognized reciprocal `Related:` edge that lacks its
   exact inverse** — `severity: error`, rule `missing-inverse`, exit
   code 2. The six recognized verbs and their inverses are pinned in
@@ -311,7 +315,7 @@ Output is grouped by file; one line per finding. `--json` emits an array of reco
 |---|---|---|
 | `path` | string | Root-relative POSIX path of the doc. |
 | `severity` | string | `error` or `warning`. |
-| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), `unknown-field` (M10), or `missing-inverse` (M25). |
+| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), `unknown-field` (M10), `duplicate-field` (M25), or `missing-inverse` (M25). |
 | `message` | string | Human-readable description of the finding. |
 
 The record's **key set is closed** and unchanged by M25: `missing-inverse`
@@ -322,7 +326,39 @@ source, verb, target, and the exact missing inverse — is carried in
 Exit codes:
 - 0 — clean.
 - 1 — warnings only (stale docs; medium-confidence inferences; unknown-field warnings).
-- 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs, missing inverses).
+- 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs, duplicate metadata labels, missing inverses).
+
+**Duplicate metadata labels (M25 — D7).** A metadata label may appear
+**at most once** per document. Repeatability lives in the **bullets** under
+a bare label — `Related:` and `Revision:` are repeatable in exactly that
+way — never in a second copy of the label itself. A repeated label is an
+error, rule `duplicate-field`, exit code 2, attached to the offending doc,
+**one finding per repeated label** (a label appearing three times still
+yields one finding). The message names the label and states what the parser
+does with it:
+
+```
+metadata field 'Related:' appears 2 times; only the last occurrence is read
+```
+
+This is a **data-loss** rule, not a tidiness rule. The metadata parser
+builds a dict, so a second `Related:` label silently **replaces** the first
+— every bullet under the earlier label is discarded before any other rule,
+the INDEX renderer, or `Related:`-resolution ever sees it. Nothing else in
+`docs check` can surface that, precisely because the evidence is already
+gone by the time the parsed metadata exists; the rule is therefore
+evaluated against the metadata block's raw label lines.
+
+The check is purely structural: it counts label lines inside the metadata
+block and does not care whether a label is inline (`Updated:`) or bare
+(`Related:`), known or unknown, or on the `add_fields` allowlist. Many
+bullets under **one** label are always fine.
+
+The repair is manual and deliberate — merge the bullets under a single
+label, keeping the ones you want. `docs relate` will not do it: its editors
+operate on the *first* matching label while the parser reads the *last*, so
+on a duplicated tree a repair can appear to succeed and leave the finding
+in place. Fixing the duplicate first makes the tree diagnosable again.
 
 **Reciprocal-edge validation (M25 — D2).** A recognized edge
 `<verb>: <target>` in a doc obliges the target doc to carry the exact

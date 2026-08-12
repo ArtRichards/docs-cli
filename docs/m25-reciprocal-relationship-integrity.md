@@ -43,7 +43,7 @@ Related:
   `docs relate add|remove` CLI, the bundled-skill row and use-case catalog,
   the `UNRELEASED` CHANGELOG (**no version bump** — the package stays
   1.8.0), and eight conductor-resolved `cli.md` corrections all landed; the
-  full suite is **757 passed, 0 failed** with every pre-existing test id
+  full suite is **777 passed, 0 failed** with every pre-existing test id
   proven still GREEN by `comm`; and the eight-flow dogfood ran unattended on
   a throwaway copy of this tree (detect → repair → re-check, audited
   archived repair, 1 of 46 archived files touched). One Step-1 test
@@ -180,9 +180,13 @@ automatic conversion of free-form edges occurs.
 - [x] D5 upgrade guidance, CLI/bundled-skill parity, and release notes
       (Phase 7, 2026-08-12 — `cli.md` / `convention.md` / bundled mirrors /
       `SKILL.md` / `CHANGELOG.md` `UNRELEASED`).
+- [x] D7 `duplicate-field` rule — a metadata label appears at most once
+      (**added post-freeze**, Phase 10, 2026-08-12; operator-approved
+      response to a fresh-eyes review finding, implemented test-first).
 - [x] RED/GREEN unit, integration, CLI, failure-injection, and dogfood coverage
       (RED half — Phases 2–4, 2026-08-11; GREEN half — Phase 8, 2026-08-12,
-      757 passed with zero pre-existing regressions; dogfood — Phase 9,
+      777 passed with zero pre-existing regressions (757 at the Phase-8
+      gate, +20 from the fresh-eyes fold-in and D7); dogfood — Phase 9,
       2026-08-12, eight flows on a throwaway tree copy).
 
 ## TDD implementation plan
@@ -494,6 +498,59 @@ an **`UNRELEASED` heading carrying no invented version number**, which M29
 renames and dates at the moment of upload. Phase 7 owns that edit; no
 `## 2.0.0` header is created in M25.
 
+### D7 — `duplicate-field` (BINDING — added 2026-08-12, POST-FREEZE)
+
+**This decision was NOT part of the Phase-1 frozen contract.** It arrived
+after Phases 1–10 were complete and after the Step-2 fresh-eyes review, as
+an **operator-approved response to a review finding**. It is recorded here
+rather than folded into D1–D6 so the decision trail stays honest: the
+contract history is not retroactively rewritten to pretend this was always
+in scope. It was implemented test-first as a self-contained mini-cycle
+inside Phase 10.
+
+**What the review found.** A doc with two `Related:` labels yields a
+`missing-inverse` finding that **no `docs relate` invocation can clear** —
+the parser is *last-wins* (`parse_metadata_block` assigns
+`metadata[label] = tuple(values)`), while the editors are *find-first*
+(`_related_run` returns the first matching label). So `relate remove`
+inspects the first label, finds nothing, reports `no change — already
+absent`, exits 0 — and the finding survives.
+
+**The deeper defect.** The unfixable finding is only the symptom. A second
+copy of any label **overwrites** the first, silently discarding every value
+under it, before `docs check`, INDEX generation, or `Related:` resolution
+ever runs. That is silent data loss on any duplicate label, and it
+**predates M25** entirely.
+
+**The decision.** A metadata label appears **at most once** per document.
+Repeatability lives in the bullets under a bare label (`Related:`,
+`Revision:`), never in a second copy of the label.
+
+- Rule id `duplicate-field`, severity **error**, exit code 2, attached to
+  the offending doc. One finding **per repeated label** (three occurrences
+  of one label is still one finding).
+- Frozen message:
+  `metadata field '<Label>:' appears <n> times; only the last occurrence is read`.
+- **No new JSON field** — the record stays `{path, severity, rule, message}`.
+- Detected from the metadata block's **raw label lines**, not from
+  `parse_metadata_block`'s output: by the time the parsed mapping exists the
+  duplicate is already gone. It is a **per-doc** rule and therefore lives in
+  `check_doc`, not in `reciprocity_findings`.
+- Purely structural: inline and bare labels count alike, known or unknown,
+  allowlisted or not. Many bullets under **one** label never fire.
+- **Breaking**, and knowingly so: a tree carrying a duplicate label passed
+  `docs check` before and now fails. No automatic merge — the repair is a
+  deliberate hand-merge, because `docs` cannot know which entries were
+  meant to survive.
+- The operator was shown that this widens M25's frozen contract and is
+  breaking for existing trees, and chose it anyway.
+
+**Pre-flight before implementing (operator-required).** The live `docs/`
+tree (69 docs) and **all 28** committed fixture trees (~300 docs) were
+scanned and found **free of duplicate labels**, so no existing tree had to
+be edited to suit the new rule. Had one carried a duplicate, the
+instruction was to stop and report rather than edit the fixture.
+
 ### Frozen Phase-5 signatures (contract only — no code lands in Phase 1)
 
 ```python
@@ -648,7 +705,15 @@ implementation log's Phase-8/9/10 records.
       trees gain no finding (derived from the directory, so future trees are
       covered for free); zero pre-existing regressions, proven by `comm`
       against the 636 ids at `3dca105`.
+- [x] **A repeated metadata label is a hard error naming the label and the
+      loss** (D7, added post-freeze). `duplicate-field` fires once per
+      repeated label, on the raw block so the evidence still exists; many
+      bullets under one label never fire; the live tree and all 28 fixture
+      trees were verified duplicate-free before the rule landed. With it,
+      the previously-unfixable `missing-inverse` state is diagnosable —
+      pinned by a test that asserts both findings travel together and that
+      the named repair really is a no-op without it.
 - [x] **Full quality and dogfood gates are GREEN, leaving M26 ready to
-      prepare next.** 757 passed; ruff / format / mypy / `docs check --root
+      prepare next.** 777 passed; ruff / format / mypy / `docs check --root
       docs` clean; mirrors and the INDEX snapshot in lockstep; version still
       1.8.0 per D6.

@@ -49,6 +49,23 @@ until then._
   whole-tree gate would make repair impossible in exactly the broken tree
   the verb exists to repair.
 
+- **`duplicate-field` check rule** (M25). A metadata label may now appear
+  **at most once** per document. A repeated label is an error (exit 2), one
+  finding per repeated label:
+
+  ```console
+  $ docs check
+  a.md
+    error: [duplicate-field] metadata field 'Related:' appears 2 times; only the last occurrence is read
+  ```
+
+  This is a **data-loss** rule, not a tidiness rule. The metadata parser
+  builds a dict, so a second copy of a label silently **replaces** the first
+  — every value under the earlier one is discarded before validation, INDEX
+  generation, or `Related:` resolution can see it. Repeatability lives in
+  the **bullets** under a bare label (`Related:`, `Revision:`), never in a
+  second copy of the label; many bullets under one label are always fine.
+
 - **Audited archived-endpoint repair** (M25). An endpoint under the archive
   subtree may be repaired, but only with an explicit `--reason` (a single
   non-empty line). The **only** bytes that may change are the one recognized
@@ -65,6 +82,10 @@ until then._
   that pass `docs check` today can begin failing after upgrading. Nothing is
   converted automatically and there is deliberately **no opt-out knob**:
   `--exclude` / `.docsignore` remain the only coarse escape.
+- **BREAKING — a repeated metadata label now exits 2.** A tree carrying a
+  duplicate label passed `docs check` before this release, while silently
+  losing every value under the earlier copy. It now fails. There is no
+  automatic merge: `docs` will not guess which entries you meant to keep.
 - The `convention.md` recommendation to pair `Lifecycle: blocked` with a
   one-sided `blocked-by:` edge is **withdrawn** — it is the most likely
   source of a legacy one-sided edge. `Lifecycle: blocked` and the
@@ -90,6 +111,24 @@ The finding never chooses for you. If the edge is **wrong**, delete the pair
 instead — `docs relate remove m25.md precedes m26.md`. Paths can be copied
 straight out of the finding: relative endpoints resolve root-relative first.
 An archived endpoint additionally needs `--reason "…"`.
+
+**Fix `duplicate-field` findings first.** They are repaired by hand — open
+the doc and merge the entries under a single label, keeping the ones you
+want:
+
+```markdown
+Related:                     Related:
+- precedes: m26.md           - precedes: m26.md
+                       →     - references: notes.md
+Related:
+- references: notes.md
+```
+
+Do this before working through `missing-inverse`. On a duplicated doc the
+two rules disagree by construction: the parser reads the **last** copy of a
+label while `docs relate`'s editors act on the **first**, so a repair can
+report success and leave the finding in place. Merging the labels makes the
+tree diagnosable again.
 
 ## 1.8.0 — 2026-07-03
 

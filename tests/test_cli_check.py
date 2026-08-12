@@ -335,3 +335,30 @@ def test_check_archived_pair_missing_inverse_exits_2(docs_script):
     proc = _run(docs_script, "check", str(TREES / "reciprocal-archived-missing"))
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
     assert "archive/2026-01-01/old.md must declare 'required-by: a.md'" in proc.stdout
+
+
+# --- M25 (D7) — `duplicate-field` through the CLI --------------------------
+
+
+def test_check_duplicate_field_exits_2_and_names_the_label(docs_script):
+    """A repeated metadata label is a hard error naming the label and the loss."""
+    proc = _run(docs_script, "check", str(TREES / "duplicate-field"))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in (proc.stdout + proc.stderr)
+    assert "a.md" in proc.stdout.splitlines(), "output is grouped by file"
+    assert "duplicate-field" in proc.stdout
+    assert (
+        "metadata field 'Related:' appears 2 times; only the last occurrence is read"
+    ) in proc.stdout
+
+
+def test_check_duplicate_field_json_record_shape(docs_script):
+    """The record's key set is closed — `duplicate-field` adds no JSON field."""
+    proc = _run(docs_script, "check", str(TREES / "duplicate-field"), "--json")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    data = json.loads(proc.stdout)
+    records = [rec for rec in data if rec.get("rule") == "duplicate-field"]
+    assert len(records) == 1, f"exactly one duplicate-field record, got {data!r}"
+    assert set(records[0]) == {"path", "severity", "rule", "message"}
+    assert records[0]["severity"] == "error"
+    assert records[0]["path"] == "a.md"
