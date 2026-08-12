@@ -891,6 +891,111 @@ def test_relate_second_write_failure_rolls_back_and_says_so(docs_script, tmp_pat
         (root / "sub").chmod(0o755)
 
 
+def test_relate_first_write_failure_says_nothing_was_published(docs_script, tmp_path):
+    """D5 stage 5: when the FIRST publish fails there is nothing to roll back.
+
+    Reachable without any injection: `a.md` already carries its half, so the
+    ONLY changed endpoint is `sub/b.md`, and its write is therefore the
+    first. The generic `rolled back <list>` wording would degenerate to
+    `rolled back  — …` with an empty list here, which is why this branch has
+    its own message. Same `chmod 555` directory trick, same non-root
+    assumption, as the rollback test above.
+    """
+    root = tmp_path / "firstfail"
+    (root / "sub").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "firstfail"\n')
+    (root / "a.md").write_text(_doc("A", "firstfail", "precedes: sub/b.md"))
+    (root / "sub" / "b.md").write_text(_doc("B", "firstfail", None))
+    before = _snapshot(root)
+
+    (root / "sub").chmod(0o555)
+    try:
+        proc = _run(
+            docs_script, "relate", "add", "a.md", "precedes", "sub/b.md", "--root", str(root)
+        )
+        assert proc.returncode == 2, (proc.stdout, proc.stderr)
+        assert "Traceback" not in proc.stderr
+        assert "docs: relate: write failed for sub/b.md:" in proc.stderr
+        assert "nothing was published — the tree is unchanged" in proc.stderr
+        assert "rolled back  —" not in proc.stderr, "the empty-list wording must never appear"
+        assert _snapshot(root) == before
+    finally:
+        (root / "sub").chmod(0o755)
+
+
+def test_relate_add_is_a_no_op_against_a_non_canonical_bullet(docs_script, tmp_path):
+    """R1 at the CLI seam: `- precedes: ./b.md` is the SAME edge as `b.md`.
+
+    `test_check.py` pins canonical matching for the check rule; this pins it
+    for the repair verb. Without it `relate add` would append a duplicate
+    bullet on exactly the loosely-spelled trees canonical matching exists to
+    tolerate — i.e. `relate` would stop being idempotent there.
+    """
+    root = _pair_tree(
+        tmp_path, "canon", source_edge="precedes: ./b.md", target_edge="follows: a.md"
+    )
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "no change — 'precedes: b.md' already present in a.md" in proc.stderr
+    assert _snapshot(root) == before, "a non-canonically spelled edge is still present"
+    assert (root / "a.md").read_text().count("precedes:") == 1, "no duplicate bullet"
+    assert not (root / "INDEX.md").exists(), "no change ⇒ no reindex"
+
+
+def test_relate_allows_an_excluded_endpoint(docs_script, tmp_path):
+    """R9: an explicitly named endpoint beats a coarse exclusion.
+
+    `relate` runs no whole-tree pre-flight and consults no exclusion
+    predicate when resolving its two endpoints — refusing would make the
+    pair unrepairable. The end-of-run reindex still honours the exclusion.
+    """
+    root = tmp_path / "excluded-endpoint"
+    (root / "vendor").mkdir(parents=True)
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "excluded-endpoint"\n\n[exclude]\ndirs = ["vendor"]\n'
+    )
+    (root / "a.md").write_text(_doc("A", "excluded-endpoint", None))
+    (root / "vendor" / "b.md").write_text(_doc("B", "excluded-endpoint", None))
+
+    proc = _run(
+        docs_script, "relate", "add", "a.md", "precedes", "vendor/b.md", "--root", str(root)
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "- precedes: vendor/b.md" in (root / "a.md").read_text()
+    assert "- follows: a.md" in (root / "vendor" / "b.md").read_text()
+    assert "vendor/b.md" not in (root / "INDEX.md").read_text(), (
+        "the reindex still honours [exclude]"
+    )
+
+
+def test_relate_dry_run_previews_the_revision_bullet(docs_script, tmp_path):
+    """An archived repair's audit bullet must be visible in the preview."""
+    root = _archived_pair_tree(tmp_path, "previewrev", inverse_present=False)
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "depends-on",
+        "archive/2026-01-01/old.md",
+        "--root",
+        str(root),
+        "--reason",
+        "preview the audit record",
+        "--dry-run",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "docs: relate: would record revision in archive/2026-01-01/old.md" in proc.stderr, (
+        "a dry-run must announce the Revision: bullet it would write"
+    )
+    assert "docs: relate: recorded revision in" not in proc.stderr
+    assert _snapshot(root) == before
+
+
 # --- reindex ---------------------------------------------------------------
 
 

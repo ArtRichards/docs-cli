@@ -999,7 +999,12 @@ docs: relate: no change — 'follows: m25.md' already absent from m26.md
 docs: relate: would add 'follows: m25.md' to m26.md
 docs: relate: would remove 'follows: m25.md' from m26.md
 docs: relate: recorded revision in archive/2026-01-01/old.md
+docs: relate: would record revision in archive/2026-01-01/old.md
 ```
+
+The last two are emitted once per archived endpoint that gains an audit
+bullet — `would record …` under `--dry-run`, so a preview shows the audit
+record it is about to write, not just the edge.
 
 **`--json`** (stdout) emits **one** object — the operation plan — with an
 identical shape for `--dry-run` and for a real apply, so a preview and an

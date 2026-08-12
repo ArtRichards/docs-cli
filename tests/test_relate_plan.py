@@ -348,6 +348,60 @@ def test_apply_relate_plan_rollback_failure_is_reported_not_swallowed(tmp_path):
     assert "a.md" in excinfo.value.published, (
         "the admission names every endpoint left carrying the new edge"
     )
+    # The MESSAGE is the operator-facing contract, not just the two flags:
+    # `_cmd_relate` prints `docs: relate: {exc}` verbatim.
+    assert str(excinfo.value) == (
+        "write failed for b.md: disk full; ROLLBACK FAILED for a.md — "
+        "repair manually: a.md still carries 'precedes: b.md'"
+    )
+
+
+def test_apply_relate_plan_rollback_failure_of_a_remove_says_no_longer_carries(tmp_path):
+    """M25 — R4: the ROLLBACK FAILED admission is action-shaped.
+
+    After a failed rollback of a `remove`, the published file NO LONGER
+    carries the edge. The add-shaped wording (`still carries`) would hand
+    the operator a factually inverted repair instruction — it would tell
+    them to delete a bullet that is already gone. Nothing else pins this
+    half, so R4's entire point rests here.
+    """
+    root = _two_doc_root(tmp_path, source_edge="precedes: b.md")
+    (root / "b.md").write_text(
+        "# B\n\nLifecycle: active\nRole: notes\nProject: relateprobe\n"
+        "Updated: 2026-05-20\n\nRelated:\n- follows: a.md\n\n## Body\n\nProse.\n"
+    )
+    plan = _plan(
+        root,
+        action="remove",
+        source=root / "a.md",
+        verb="precedes",
+        target=root / "b.md",
+        reason=None,
+        date_str=_DATE,
+    )
+
+    real_write = cli.atomic_write
+    calls: list[Path] = []
+
+    def _failing_write(path: Path, content: str) -> None:
+        calls.append(path)
+        if len(calls) == 1:
+            real_write(path, content)
+            return
+        raise OSError("disk full")
+
+    error_cls = _m25("CoordinatedWriteError")
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(cli, "atomic_write", _failing_write)
+        with pytest.raises(error_cls) as excinfo:
+            _m25("apply_relate_plan")(plan)
+
+    assert excinfo.value.rolled_back is False
+    assert excinfo.value.published == ("a.md",)
+    assert str(excinfo.value) == (
+        "write failed for b.md: disk full; ROLLBACK FAILED for a.md — "
+        "repair manually: a.md no longer carries 'precedes: b.md'"
+    )
 
 
 def test_relate_plan_to_json_shape(tmp_path):

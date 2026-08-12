@@ -201,6 +201,49 @@ Prose.
 """
 
 
+NO_BODY = """\
+# Tail Doc
+
+Lifecycle: active
+Role: spec
+Project: docs
+Updated: 2026-05-20
+
+Related:
+- pairs-with: other.md
+- implements: charter.md
+"""
+
+NO_BODY_SINGLE_EDGE = """\
+# Solo Doc
+
+Lifecycle: active
+Role: spec
+Project: docs
+Updated: 2026-05-20
+
+Related:
+- blocks: b.md
+"""
+
+REVISION_NO_RELATED = """\
+# Stripped Doc
+
+Lifecycle: archived
+Role: plan
+Project: docs
+Updated: 2026-01-01
+Archived-reason: completed
+
+Revision:
+- 2026-08-11: relate remove 'follows: a.md'; reason: wrong
+
+## Body
+
+Prose.
+"""
+
+
 def _m25(name: str):
     """Fetch an M25 editor that does not exist yet.
 
@@ -283,6 +326,56 @@ def test_add_related_edge_inserts_at_end_of_related_run_not_after_revision():
 def test_add_related_edge_preserves_absent_trailing_newline():
     out, _changed = _add_related_edge(WELL_FORMED.rstrip("\n"), "precedes", "next.md")
     assert not out.endswith("\n")
+    # The mid-file case above cannot catch the real defect: the insertion
+    # point is far from EOF, so the file's tail is never touched. NO_BODY's
+    # metadata block runs to EOF, which is where an appended
+    # newline-terminated line silently adds a trailing newline.
+    out, _changed = _add_related_edge(NO_BODY.rstrip("\n"), "precedes", "next.md")
+    assert not out.endswith("\n"), "a metadata block that runs to EOF must not gain a newline"
+    assert out.endswith("- precedes: next.md")
+
+
+def test_remove_related_edge_preserves_absent_trailing_newline():
+    """The deleted line can BE the file's unterminated final line."""
+    out, changed = _remove_related_edge(NO_BODY.rstrip("\n"), "implements", "charter.md")
+    assert changed is True
+    assert not out.endswith("\n")
+    assert out.endswith("- pairs-with: other.md")
+
+
+def test_remove_related_edge_dropping_the_group_preserves_absent_trailing_newline():
+    """Dropping the emptied label removes the file's last three lines."""
+    out, changed = _remove_related_edge(NO_BODY_SINGLE_EDGE.rstrip("\n"), "blocks", "b.md")
+    assert changed is True
+    assert "Related:" not in out
+    assert not out.endswith("\n")
+    assert out.endswith("Updated: 2026-05-20")
+
+
+def test_append_revision_entry_preserves_absent_trailing_newline():
+    out = _append_revision_entry(NO_BODY.rstrip("\n"), "2026-08-12: probe")
+    assert not out.endswith("\n"), "a metadata block that runs to EOF must not gain a newline"
+    assert out.endswith("- 2026-08-12: probe")
+
+
+def test_add_related_edge_creates_the_group_before_a_trailing_revision():
+    """D4: `Revision:` is defined to sit at the END of the metadata block.
+
+    Reachable in a plausible archived sequence: `relate remove` drops the
+    last recognized edge (correctly dropping the emptied `Related:` label),
+    then `relate add` re-creates the group for a different pair. Appending
+    at the end of the block would put `Related:` AFTER `Revision:`.
+    """
+    out, changed = _add_related_edge(REVISION_NO_RELATED, "blocks", "b.md")
+    assert changed is True
+    assert out.index("Related:") < out.index("Revision:"), (
+        "a re-created Related: group belongs BEFORE the trailing Revision: group"
+    )
+    doc = parse(out, _PATH, _ROOT)
+    assert ("blocks", "b.md") in doc.related
+    assert doc.extra["Revision"] == ("2026-08-11: relate remove 'follows: a.md'; reason: wrong",)
+    assert doc.lifecycle == "archived"
+    assert doc.body.strip().startswith("## Body")
 
 
 def test_remove_related_edge_removes_only_the_exact_bullet():

@@ -20,8 +20,10 @@ until then._
   declare the exact inverse pointing back is an **error** (exit 2) with an
   actionable one-line finding:
 
-  ```
-  error: [missing-inverse] Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
+  ```console
+  $ docs check
+  m25.md
+    error: [missing-inverse] Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
   ```
 
   The finding blames the **source** — the doc declaring the un-reciprocated
@@ -78,6 +80,8 @@ $ docs check
 m25.md
   error: [missing-inverse] Related: 'precedes: m26.md' has no inverse; m26.md must declare 'follows: m25.md' (or remove the edge)
 $ docs relate add m25.md precedes m26.md      # the edge is right — complete it
+docs: relate: no change — 'precedes: m26.md' already present in m25.md
+docs: relate: added 'follows: m25.md' to m26.md
 $ docs check
 docs: no violations found
 ```

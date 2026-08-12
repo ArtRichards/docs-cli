@@ -1367,6 +1367,24 @@ def _bullet_matches(line: str, verb: str, target: str) -> bool:
     ) == _canonical_related_target(target)
 
 
+def _preserve_tail(original: str, edited: str) -> str:
+    """Restore `original`'s trailing-newline state on `edited` (M25).
+
+    The three `Related:` / `Revision:` editors insert and delete whole
+    newline-terminated lines. When the metadata block runs to EOF — a doc
+    with no body — the insertion point IS the tail, so a file that lacked a
+    trailing newline would silently gain one (and a deletion that removes
+    the unterminated final line would leave the new last line terminated).
+
+    That would break the M2 surgical contract's trailing-newline promise and,
+    more importantly, D4's "these are the ONLY bytes an archived endpoint may
+    change". Exactly one trailing newline is removed, never more.
+    """
+    if original.endswith(("\n", "\r")) or not edited.endswith("\n"):
+        return edited
+    return edited[:-1]
+
+
 def add_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
     """Ensure `text` carries `- <verb>: <target>` in its `Related:` group.
 
@@ -1389,7 +1407,17 @@ def add_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
 
     located = _related_run(lines, start, end)
     if located is None:
+        # Create the group. It must land BEFORE any trailing `Revision:`
+        # group, which D4 defines as sitting at the END of the block —
+        # reachable when `relate remove` drops the last recognized edge
+        # (and its emptied label) and a later `relate add` re-creates it.
         insert_at = end
+        for idx in range(start, end):
+            m = _LABEL_RE.match(lines[idx])
+            if m and m.group(1) == "Revision" and not m.group(2).strip():
+                blank_before = idx > start and lines[idx - 1].strip() == ""
+                insert_at = idx - 1 if blank_before else idx
+                break
         new_lines = ["\n", "Related:\n", f"- {verb}: {target}\n"]
     else:
         label_idx, run_end = located
@@ -1402,7 +1430,7 @@ def add_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
     if insert_at > 0 and not keep[insert_at - 1].endswith(("\n", "\r")):
         keep[insert_at - 1] += "\n"
     keep[insert_at:insert_at] = new_lines
-    return "".join(keep), True
+    return _preserve_tail(text, "".join(keep)), True
 
 
 def remove_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
@@ -1441,7 +1469,7 @@ def remove_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
 
     for idx in sorted(doomed, reverse=True):
         del keep[idx]
-    return "".join(keep), True
+    return _preserve_tail(text, "".join(keep)), True
 
 
 def append_revision_entry(text: str, entry: str) -> str:
@@ -1475,7 +1503,7 @@ def append_revision_entry(text: str, entry: str) -> str:
     if insert_at > 0 and not keep[insert_at - 1].endswith(("\n", "\r")):
         keep[insert_at - 1] += "\n"
     keep[insert_at:insert_at] = new_lines
-    return "".join(keep)
+    return _preserve_tail(text, "".join(keep))
 
 
 def scaffold_doc(
@@ -5365,9 +5393,10 @@ def _print_relate_lines(plan: RelatePlan, *, dry_run: bool) -> None:
     """Print `docs relate`'s human summary to stderr (M25 — D3).
 
     One line per endpoint plus one `recorded revision in <rel>` line per
-    archived endpoint that gained an audit bullet. Gated by the caller on
-    `not --quiet` alone — NOT on `--json`: these go to stderr, so `--json`
-    stdout stays byte-clean either way.
+    archived endpoint that gained an audit bullet (`would record …` under
+    `--dry-run`). Gated by the caller on `not --quiet` alone — NOT on
+    `--json`: these go to stderr, so `--json` stdout stays byte-clean
+    either way.
     """
     adding = plan.action == "add"
     for edit in plan.edits:
@@ -5385,11 +5414,13 @@ def _print_relate_lines(plan: RelatePlan, *, dry_run: bool) -> None:
             f"docs: relate: {verb} '{edit.edge}' {preposition} {edit.rel}",
             file=sys.stderr,
         )
-    if dry_run:
-        return
+    # A dry-run must preview the audit bullet too — otherwise an archived
+    # repair's most consequential effect is invisible in the human preview
+    # (the `--json` record has always carried `revision_appended`).
     for edit in plan.edits:
         if edit.revision_appended:
-            print(f"docs: relate: recorded revision in {edit.rel}", file=sys.stderr)
+            recorded = "would record" if dry_run else "recorded"
+            print(f"docs: relate: {recorded} revision in {edit.rel}", file=sys.stderr)
 
 
 def _cmd_relate(args: argparse.Namespace) -> int:
