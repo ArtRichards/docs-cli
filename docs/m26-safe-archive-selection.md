@@ -501,7 +501,7 @@ coverage in *Evidence → regression coverage* below.
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
+- [x] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
@@ -729,7 +729,8 @@ def _cmd_archive(args: argparse.Namespace) -> int   # signature unchanged
 
 `preflight_archive_plan` raises `CoordinatedWriteError(rolled_back=True,
 published=())` for every refusal — the tree is trivially unchanged, which is
-what that flag already means. `apply_archive_plan` returns the
+what that flag already means — and carries the Q4 exit-code split on the
+exception (see *Step-2 amendments* below). `apply_archive_plan` returns the
 `(old_rel, new_rel)` pairs `_rewrite_referring_edges` consumes, **one pair per
 alias** plus the canonical one (Phase-1 Q5), and raises
 `CoordinatedWriteError(rolled_back=False, published=(...))` carrying the
@@ -747,6 +748,17 @@ verbatim, with `apply_archive_plan` as its ordered driver. Failure carrier:
 exception class. Batch edge rewrite: `_rewrite_referring_edges` unchanged.
 `_cascade_set`, `_print_cascade_footer`, and `_cascade_archive` are superseded
 and deleted in Phase 6/7, not Phase 1.
+
+### Step-2 amendments to the frozen signatures (conductor-binding)
+
+Two frozen signatures could not be implemented literally. Both were
+conductor-resolved before Phase 5 began; both are recorded here so the
+contract and the code agree, and both are logged in the implementation log's
+phase records.
+
+| # | Amendment | Why the frozen form could not stand |
+|---|---|---|
+| 1 | **`CoordinatedWriteError` gains a keyword-only `exit_code: int = 2`** (Phase 5). | The Q4 split needs exit **1** for two conditions and **2** for four others, and `preflight_archive_plan(plan) -> None` raising one exception class has nowhere else to carry it. Matching on message text is the only alternative and is fragile. This is the widening the *Reuse* note above already sanctions ("widen its docstring; do not add a second exception class"); the default leaves every `docs relate` construction site byte-identical. |
 
 ### Resolved Phase-1 plan questions (Q1–Q17, BINDING)
 

@@ -109,6 +109,16 @@ RECIPROCAL_INVERSES: Mapping[str, str] = {
 }
 RECIPROCAL_VERBS: frozenset[str] = frozenset(RECIPROCAL_INVERSES)
 
+# M26 (D3/D7): the machine-stable `exclusion_reason` values a
+# `docs archive --json` candidate record can carry. `not-selected` is not an
+# ineligibility — it marks an eligible candidate the scope did not select (or
+# that had no scope to select it); the other three are the ineligibilities,
+# reported by the precedence `outside-root`, `already-archived`,
+# `unresolved-target` when more than one holds.
+ARCHIVE_EXCLUSION_REASONS: frozenset[str] = frozenset(
+    {"not-selected", "already-archived", "unresolved-target", "outside-root"}
+)
+
 # M10 (OQ-O + OQ-P): metadata labels the `unknown-field` check rule
 # treats as built-in — always allowed regardless of the
 # `[vocabulary] add_fields` configuration. Covers the required fields
@@ -173,12 +183,18 @@ class VocabularyError(Exception):
 
 
 class CoordinatedWriteError(OSError):
-    """A `docs relate` coordinated two-file publish failed (M25 — D5).
+    """A coordinated multi-file publish failed (M25 — D5; M26 — D4).
 
-    ``str(exc)`` is the fully-rendered operator-facing detail; `_cmd_relate`
-    prints it as ``docs: relate: <exc>`` and exits 2. Raised for every
-    stage-3/4/5 failure — for the pre-write stages ``rolled_back`` is True
-    because the tree is (trivially) unchanged.
+    ``str(exc)`` is the fully-rendered operator-facing detail; the calling
+    verb prints it as ``docs: <verb>: <exc>``. Two producers:
+
+    - `docs relate` (M25 — D5): every stage-3/4/5 failure of the two-file
+      coordinated publish — for the pre-write stages ``rolled_back`` is
+      True because the tree is (trivially) unchanged.
+    - `docs archive` (M26 — D4): every pre-flight refusal (``rolled_back``
+      True, ``published`` empty — nothing was written) and the residual
+      mid-execution partial-state admission (``rolled_back`` False,
+      ``published`` naming what really moved).
 
     Attributes:
         rolled_back: True iff the tree is byte-identical to its pre-publish
@@ -186,12 +202,27 @@ class CoordinatedWriteError(OSError):
             was restored.
         published: Root-relative POSIX paths successfully published before
             the failure, in publish order.
+        exit_code: The process exit code the calling verb returns. Defaults
+            to 2, which is every `docs relate` failure and every NEW M26
+            refusal. `preflight_archive_plan` overrides it with 1 for the
+            two conditions 1.x already assigned that code — a plan member
+            with no editable metadata block, and an occupied destination
+            slot — because `cli.md`'s exit-code matrix pins them and they
+            must not silently change meaning (M26 — Phase-1 Q4).
     """
 
-    def __init__(self, message: str, *, rolled_back: bool, published: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        rolled_back: bool,
+        published: tuple[str, ...],
+        exit_code: int = 2,
+    ) -> None:
         super().__init__(message)
         self.rolled_back = rolled_back
         self.published = published
+        self.exit_code = exit_code
 
 
 # ---------------------------------------------------------------------------
@@ -562,6 +593,104 @@ class RelatePlan:
     reason: str | None
     date_str: str
     edits: tuple[RelateEdit, ...]
+
+
+@dataclass(frozen=True)
+class ArchiveMove:
+    """One document's place in a `docs archive` operation plan (M26 — D3/D4).
+
+    The `RelateEdit` analogue for the archive verb: an immutable,
+    write-free description of one document — the primary or one one-hop
+    candidate — and what the plan intends to do with it. Produced by
+    `archive_candidates` / `plan_archive`, consumed by
+    `preflight_archive_plan`, `apply_archive_plan`, `_print_archive_lines`,
+    and `archive_plan_to_json`.
+
+    Attributes:
+        path: Absolute source path. For an `outside-root` candidate this is
+            ``root / <escaping rel>`` — a path that does not lie under
+            `root` at all. Harmless: an ineligible member is never opened,
+            never pre-flighted, and never written.
+        rel: The canonical root-relative POSIX path
+            (`_canonical_related_target`), which is the identity the set is
+            deduplicated on, the form `--cascade-only` matches against, and
+            the form every human message and JSON field names.
+        aliases: Every declared `Related:` spelling that resolves to `rel`,
+            in declaration order (e.g. ``("./b.md", "b.md")``). Empty for
+            the primary, which is named on the command line rather than
+            declared by an edge. Load-bearing: `_rewrite_referring_edges`
+            rewrites a bullet iff its target EXACTLY equals an `old_rel`,
+            so `apply_archive_plan` returns one pair per alias.
+        verb: The discovering verb — `pairs-with` or `child-of`, first
+            declaration winning. None for the primary.
+        dest / dest_rel: The absolute and canonical root-relative archive
+            destination. Both are None until `plan_archive` fills them, and
+            it fills them for SELECTED members only — `archive_candidates`
+            takes no date, so it cannot compute a destination at all.
+        selected: True iff this member will be written. Always True for the
+            primary.
+        exclusion_reason: None iff `selected`; otherwise one of
+            `ARCHIVE_EXCLUSION_REASONS`.
+    """
+
+    path: Path
+    rel: str
+    aliases: tuple[str, ...]
+    verb: str | None
+    dest: Path | None
+    dest_rel: str | None
+    selected: bool
+    exclusion_reason: str | None
+
+
+@dataclass(frozen=True)
+class ArchivePlan:
+    """A complete, write-free `docs archive` operation (M26 — D4).
+
+    The `RelatePlan` analogue for the archive verb: `plan_archive` builds
+    it by reading the primary's declared edges, `preflight_archive_plan`
+    proves every member writable before a byte moves, `apply_archive_plan`
+    executes it, and `archive_plan_to_json` renders the `--json` record.
+    The same object backs a `--cascade-dry-run` preview and a real apply,
+    which is why the two are diffable.
+
+    Attributes:
+        root: The resolved docs root.
+        config: The tree's config (supplies `archive_dir`).
+        primary: The named document. Always `selected`, always destined.
+        candidates: The whole deduplicated one-hop set in `Related:`
+            declaration order — selected, not-selected, and ineligible
+            alike. Present in every mode, because the `--json` record
+            carries the whole neighborhood even when the prose stays quiet
+            about it (D1 / Phase-1 Q14).
+        scope: The `--cascade-only` value exactly as typed, or None.
+        date_str: The archive date, already in the tree's `date_format`.
+        reason: The `--reason` value, or None. Applies to the PRIMARY only
+            (D1 / Phase-1 Q10).
+        source: The `FILE` argument EXACTLY as typed — a relative argument
+            stays relative. Threaded onto the plan because
+            `archive_plan_to_json` only ever sees the plan, and
+            ``str(primary.path)`` is always absolute.
+    """
+
+    root: Path
+    config: Config
+    primary: ArchiveMove
+    candidates: tuple[ArchiveMove, ...]
+    scope: str | None
+    date_str: str
+    reason: str | None
+    source: str
+
+    @property
+    def moves(self) -> tuple[ArchiveMove, ...]:
+        """The members that will be written: the primary, then the selected.
+
+        Primary first is contractual — it is the order `apply_archive_plan`
+        executes in, so the partial-state admission's "archived / still at
+        their original paths" split reads in execution order.
+        """
+        return (self.primary, *(c for c in self.candidates if c.selected))
 
 
 # ---------------------------------------------------------------------------
@@ -4490,6 +4619,28 @@ def _cmd_new(args: argparse.Namespace) -> int:
 _CASCADE_VERBS = ("pairs-with", "child-of")
 
 
+def _is_archived_rel(rel: str, config: Config) -> bool:
+    """True iff `rel` IS the configured archive subtree or lies under it.
+
+    The idiom `check_doc` and `_cmd_relate` already use, lifted to a named
+    helper because M26 asks it of every plan member. Deliberately NOT
+    `_in_archive_subdir`, which hardcodes `archive` / `archived` /
+    `project-history` and ignores `[archive] dir`: on a tree configured with
+    ``dir = "history"`` a plain `archive/` directory is an ordinary
+    subdirectory whose docs are perfectly eligible candidates.
+    """
+    return rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
+
+
+def _archive_destination(root: Path, config: Config, date_str: str, name: str) -> Path:
+    """The archive destination of a document named `name`.
+
+    One expression, one place: `_archive_one` computes it to write, the
+    planner computes it to preview, and the two must not drift.
+    """
+    return root / config.archive_dir / date_str / name
+
+
 def _cascade_set(doc: Doc, root: Path, cascade_only: str | None) -> list[tuple[str, Path]]:
     """Return the one-hop cascade candidates of `doc`, filtered by `--cascade-only`.
 
@@ -4575,6 +4726,53 @@ def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: 
     atomic_write(path, new_text)
     path.replace(dest)
     return dest
+
+
+def archive_plan_to_json(
+    plan: ArchivePlan, *, dry_run: bool, applied: bool, index_refreshed: bool
+) -> dict[str, object]:
+    """Convert an `ArchivePlan` to its `docs archive --json` record (M26 — D7).
+
+    One object with the same shape for a preview and for a real apply, so
+    the two are diffable (the schema `cli.md` pins). The top-level key set is
+    closed and ordered as written here. `primary.source` is the `FILE`
+    argument exactly as typed; every other path is canonical root-relative
+    POSIX. `candidates` carries the WHOLE deduplicated one-hop set in
+    `Related:` declaration order, in every mode — D1's quiet rule governs
+    stderr prose, not the record (Phase-1 Q14).
+
+    Args:
+        plan: The plan produced by `plan_archive`.
+        dry_run: True under `--dry-run` or `--cascade-dry-run`.
+        applied: True iff bytes were actually written.
+        index_refreshed: True iff the end-of-batch reindex ran and succeeded.
+
+    Returns:
+        A JSON-serialisable record dict.
+    """
+    return {
+        "primary": {
+            "source": plan.source,
+            "path": plan.primary.rel,
+            "destination": plan.primary.dest_rel,
+        },
+        "date": plan.date_str,
+        "scope": plan.scope,
+        "reason": plan.reason,
+        "candidates": [
+            {
+                "path": candidate.rel,
+                "verb": candidate.verb,
+                "selected": candidate.selected,
+                "destination": candidate.dest_rel,
+                "exclusion_reason": candidate.exclusion_reason,
+            }
+            for candidate in plan.candidates
+        ],
+        "dry_run": dry_run,
+        "applied": applied,
+        "index_refreshed": index_refreshed,
+    }
 
 
 def _cascade_archive(

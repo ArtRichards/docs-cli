@@ -32,12 +32,13 @@ the milestone checklist synchronized.
   added the four `archive-*` fixture trees; Phase 4 classified every failure
   and proved mechanically that 769 of the 777 pre-existing ids are still
   GREEN, the other 8 deliberately changed. **Phases 1–4 changed no product
-  code** — `git diff src/docs_cli/cli.py` is empty. Phase 5 — Update Base
-  Interfaces is next (Step 2).
+  code** — `git diff src/docs_cli/cli.py` was empty at the end of Step 1.
+  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phase 5 —
+  Update Base Interfaces is complete (781 passed, 103 failed).
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
-  (Phases 1–4).
+  (Phases 1–4); `m26/phases-5-10` for Step 2 (Phases 5–10).
 
 ## TDD phase progress
 
@@ -47,7 +48,7 @@ the milestone checklist synchronized.
 | 2. Write Tests (RED) | **Done** | 2026-08-13 | New `tests/test_archive_plan.py`, `tests/test_cli_archive.py` (6 pre-existing ids deliberately changed, 3 deleted/replaced), `tests/test_skill.py` (+2), `tests/test_cli_check.py` (+1). Two Phase-1 gaps closed: ineligibility-reason precedence and the nine-step check order. Six more locks from the Step-1 audit and eleven from the fresh-eyes review; final total **884 collected**. |
 | 3. Create Data/Fixtures | **Done** | 2026-08-13 | Four committed trees (`archive-neighborhood` E1, `archive-duplicate-edge` E2, `archive-collision` E3, `archive-archived-neighbour` E4), each `docs check`-clean; three existing fixtures' prose corrected off the retired flag; +4 parametrizations of `test_check_tree_legacy_fixtures_gain_no_new_findings`. |
 | 4. Run Tests (RED Baseline) | **Done** | 2026-08-13 | **884 collected, 104 failed, 780 passed** (post-review); 0 collection errors, 0 tracebacks, 0 xfail/xpass; 34 `AttributeError` + 70 `AssertionError`. Mechanical proof against `37d7f1a`: 769 of the 777 pre-existing ids still GREEN, the other 8 deliberately changed (3 removed, 5 failing). One falsely-GREEN `--json` refusal test caught and fixed, plus eight audit findings and a fresh-eyes review whose blocker was an unsatisfiable M18 assertion. |
-| 5. Update Base Interfaces | Pending | — | Archive plan/move models, candidate-planning helpers, pre-flight validators, `archive_plan_to_json`; no behaviour change. |
+| 5. Update Base Interfaces | **Done** | 2026-08-13 | `CoordinatedWriteError` widened (+ keyword-only `exit_code`, defaulting to today's 2), `ARCHIVE_EXCLUSION_REASONS`, `ArchiveMove` / `ArchivePlan` (+ `moves`), `_is_archived_rel`, `_archive_destination`, `archive_plan_to_json`. No behaviour change; `_cmd_archive` untouched. **781 passed, 103 failed** — exactly the predicted +1. |
 | 6. Implement Offline/Core Path | Pending | — | Validate-all-first planning, deduplication, archived exclusion, collision detection, safe refusal, partial-state admission. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse surface (refusing flags + local `--json`), human output, JSON record, docs, bundled skill, CHANGELOG (no version bump). |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts. |
@@ -959,6 +960,78 @@ Nit 14 became conductor decision C below.
   `docs check --root docs` — all clean; bundled refs byte-identical; INDEX
   snapshot re-synced.
 - `git diff --stat 37d7f1a..HEAD -- src/docs_cli/cli.py` — still **empty**.
+
+## Phase 5 — Update Base Interfaces — 2026-08-13
+
+### Objective
+
+Land the frozen Phase-5 signatures as real code — the archive plan models,
+the two pure helpers, and the `--json` serializer — without completing any
+behaviour, so the behaviour tests stay honestly RED at the seam rather than
+failing for a second, accidental reason.
+
+### Actions taken
+
+- **`CoordinatedWriteError` widened** (`cli.py`) from "a `docs relate`
+  coordinated two-file publish" to a coordinated multi-file publish naming
+  both producers, and given a keyword-only `exit_code: int = 2`. This is the
+  sanctioned widening the frozen reuse note calls for ("widen its docstring;
+  do not add a second exception class"), and it is the only way the frozen
+  `preflight_archive_plan(plan) -> None` signature can carry the Phase-1 Q4
+  exit-code split — see *Deviations* below. The default preserves every M25
+  construction site byte-for-byte.
+- **`ARCHIVE_EXCLUSION_REASONS`** added to the Vocabulary block beside
+  `RECIPROCAL_VERBS`, with the precedence rule in its comment.
+- **`ArchiveMove` / `ArchivePlan`** added to the Models section immediately
+  after `RelatePlan`, verbatim from the frozen signature block, plus the
+  `moves` property (primary first, then the selected candidates — the
+  execution order the partial-state admission reads in). Their docstrings
+  record two facts a reader would otherwise have to derive: `dest` /
+  `dest_rel` are None until `plan_archive` fills them and only for SELECTED
+  members, and an `outside-root` candidate's `path` deliberately does not lie
+  under `root` (it is never opened).
+- **`_is_archived_rel(rel, config)`** — the
+  `rel == config.archive_dir or rel.startswith(config.archive_dir + "/")`
+  idiom already used by `check_doc` and `_cmd_relate`, lifted to a named
+  helper. Explicitly **not** `_in_archive_subdir`, which hardcodes
+  `archive` / `archived` / `project-history` and ignores `[archive] dir`;
+  `test_archived_test_honours_the_configured_archive_dir` exists to catch
+  exactly that substitution.
+- **`_archive_destination(root, config, date_str, name)`** — one expression
+  for the destination `_archive_one` writes and the planner previews, so the
+  two cannot drift.
+- **`archive_plan_to_json(plan, *, dry_run, applied, index_refreshed)`** —
+  modelled on `relate_plan_to_json`, with the closed, ordered top-level key
+  set the schema pins.
+
+### Evidence
+
+```
+.venv/bin/ruff check .            →  All checks passed!
+.venv/bin/ruff format --check .   →  46 files already formatted
+.venv/bin/mypy src/ tests/        →  Success: no issues found in 47 source files
+.venv/bin/python -m pytest -q     →  781 passed, 103 failed
+```
+
+Exactly the predicted ledger: **+1 GREEN**,
+`test_archive_exclusion_reasons_is_the_frozen_token_set`. Every other M26
+test still fails with `AttributeError: archive_candidates / plan_archive` —
+the honest seam. `_cmd_archive` is untouched in this phase.
+
+### Deviations
+
+- **`CoordinatedWriteError` gains `exit_code`** (conductor-resolved, BINDING).
+  The frozen signature block does not mention it. The CLI must exit **1** for
+  two pre-existing conditions and **2** for four new ones, and a
+  `preflight_archive_plan(plan) -> None` that raises a single exception class
+  has nowhere else to carry that split; matching on message text would be the
+  only alternative and is fragile. Defaults to 2, so `docs relate` is
+  byte-identical.
+- **Placement.** `archive_plan_to_json` lands in the archive block with the
+  rest of the M26 planner rather than immediately after `relate_plan_to_json`
+  as the Step-2 plan sketched: that section is headed *Relationship repair —
+  `docs relate` (M25)*, and filing an archive serializer under it would
+  mis-shelve it. Cosmetic; no behaviour difference.
 
 ## Milestone completion summary
 
