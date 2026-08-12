@@ -41,7 +41,7 @@ progress table and milestone checklist synchronized.
 | 5. Update Base Interfaces | Complete | 2026-08-12 | Vocabulary, `inverse_verb`, three editors, `RelateEdit`/`RelatePlan`/`CoordinatedWriteError`, `Revision` built-in label, canonical-path + lenient-pairs helpers, `relate_plan_to_json`; three behaviour seams stubbed. **71 failed, 686 passed.** |
 | 6. Implement Offline/Core Path | Complete | 2026-08-12 | `reciprocity_findings`, `check_tree` interleave, `plan_relate`/`_plan_relate_edit`, `apply_relate_plan` + `_rollback_relate`. **44 failed, 713 passed** — every remaining RED is a `docs relate` subprocess test (43) or the SKILL.md lock (1). |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-12 | `relate` namespace + `add`/`remove` subverbs, `_resolve_relate_endpoint`, `_print_relate_lines`, `_cmd_relate`, dispatch; SKILL.md row + description; `UNRELEASED` CHANGELOG (no version bump); six spec corrections to `cli.md` + mirror re-sync; tracker docs. **756 passed, 1 failed** — the single RED is an unsatisfiable assertion in a Step-1 test (see *Blocker* below), not missing behaviour. |
-| 8. Run Tests (GREEN) | Pending | — | Full product and quality gates. |
+| 8. Run Tests (GREEN) | Complete | 2026-08-12 | **757 passed, 0 failed** (757 collected, zero collection errors). All 636 pre-existing test ids proven still present and GREEN by `comm`. One defective Step-1 assertion corrected under operator approval; `cli.py` byte-unchanged by that commit. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Real upgrade/repair flows on a throwaway tree. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summary. |
 
@@ -1014,6 +1014,143 @@ record below.
   all clean.
 - `git diff --stat bf8f273..HEAD -- pyproject.toml tests/test_packaging.py`
   — **empty** across the whole step.
+
+## Phase 8 — Run Tests (GREEN) — 2026-08-12
+
+### Objective
+
+Run the focused and full suites plus lint, format, types, reference
+byte-identity, and docs integrity; prove the pre-existing suite did not
+regress rather than asserting it.
+
+### The one test correction (operator-approved)
+
+Phase 7 ended one test short of GREEN. The RED was **not** missing
+behaviour:
+`tests/test_cli_relate.py::test_relate_repeat_archived_repair_appends_a_second_revision_bullet`
+carried an assertion no implementation could satisfy.
+
+**The defect.** Its final line compared substring offsets across the
+**whole archived file**:
+
+```python
+assert text.index("2026-08-11") < text.index("2026-08-12"), "chronological"
+```
+
+The second invocation passes `--date 2026-08-12`, and D4 requires
+`Updated:` to be bumped on every endpoint whose bytes change — so
+`Updated: 2026-08-12` sits on line 6, **above** the `Revision:` group.
+`text.index("2026-08-12")` therefore resolved to that line at **offset 62**,
+while `text.index("2026-08-11")` resolved to the first `Revision:` bullet at
+**offset 142**. `142 < 62` is false for every possible implementation.
+
+**Why it is a test defect and not unmet behaviour.** Three independent
+proofs:
+
+1. The test's stated intent — the two `Revision:` bullets are appended
+   chronologically — *is* satisfied. The same test's three preceding
+   assertions (exactly one `Revision:` label; both exact bullet strings
+   present) pass against the shipped code.
+2. Suppressing the `Updated:` bump is impossible: it would break
+   `test_relate_archived_repair_writes_only_the_allowed_bytes`, which
+   positively requires `Updated: 2026-01-01` to be removed and
+   `Updated: 2026-08-11` added. **The two tests are mutually exclusive as
+   written** — no implementation satisfies both.
+3. Moving the `Revision:` group above `Updated:` would break D4 ("at the
+   END of the metadata block, after `Related:`") and
+   `test_append_revision_entry_creates_the_group_after_related`.
+
+**Resolution.** Raised for an operator decision rather than edited in
+Phase 7 — a Step-1 test is the contract, and changing one is not the
+implementation step's call. The **operator approved** narrowing the
+assertion to what its own failure message claims:
+
+```python
+bullets = [line for line in text.splitlines() if line.startswith("- 2026-")]
+assert bullets == [
+    "- 2026-08-11: relate add 'required-by: a.md'; reason: complete the pair",
+    "- 2026-08-12: relate remove 'required-by: a.md'; reason: edge was wrong",
+], "chronological"
+```
+
+The replacement is **stronger, not weaker**: it pins both bullet texts
+*and* their order, where the original pinned two substring offsets (one of
+which was matching an unrelated line). **The shipped behaviour was NOT
+changed to satisfy it** — `git diff src/docs_cli/cli.py` for the correcting
+commit (`7e4feb1`) is empty, and the test passed on the first run against
+the unmodified Phase-7 code, which is the confirmation that the diagnosis
+was complete rather than partial.
+
+**Process observation.** Both the Step-1 same-instance audit and the
+independent fresh-eyes review read this test and neither caught it. The
+failure mode to add to the checklist: **a whole-file substring-offset
+comparison** (`text.index(a) < text.index(b)`) silently matches the first
+occurrence anywhere in the file, so it can assert something quite different
+from what its message claims — and, unlike the Step-1 audit's finding #6
+(an assertion that could never *fail*), this one could never *pass*. Scope
+such comparisons to the lines actually under test.
+
+### Headline
+
+```
+.venv/bin/python -m pytest tests/ -q
+757 passed in 32.17s
+
+.venv/bin/python -m pytest tests/ -q --co
+757 tests collected
+```
+
+### No-regression proof (mechanical, not asserted)
+
+Repeating the Phase-4 technique with `--co -q` id lists against a throwaway
+worktree at the Phase-1 commit `3dca105`:
+
+| Set | Count |
+|---|---|
+| pre-existing ids at `3dca105` | **636** |
+| ids collected today | **757** |
+| `comm -12` (pre-existing ids still present) | **636** |
+| `comm -23` (pre-existing ids missing today) | **0** |
+| `comm -13` (ids added by M25) | **121** |
+
+No pre-existing id was removed or renamed, and the full run reports
+**0 failures**, so all 636 pre-existing tests are GREEN. 636 + 121 = 757.
+
+### Other gates
+
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 45 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 46 source files.
+- `.venv/bin/docs check --root docs` — no violations, exit 0.
+- `.venv/bin/docs check --root docs --json` — `[]` (asserted programmatically).
+- `git diff --stat bf8f273..HEAD -- pyproject.toml tests/test_packaging.py`
+  — **empty** across the whole step. `docs --version` → `docs 1.8.0`;
+  `pyproject.toml` `version = "1.8.0"` (D6).
+- `docs --help` lists `relate`; `docs relate --help` and
+  `docs relate add --help` exit 0.
+
+### Surface evidence recorded
+
+`docs check tests/fixtures/trees/reciprocal-missing` — exit 2, human:
+
+```
+a.md
+  error: [missing-inverse] Related: 'precedes: b.md' has no inverse; b.md must declare 'follows: a.md' (or remove the edge)
+```
+
+`--json` — exit 2, exactly one record, and the key set is the unchanged
+closed four:
+
+```json
+[
+  {
+    "path": "a.md",
+    "severity": "error",
+    "rule": "missing-inverse",
+    "message": "Related: 'precedes: b.md' has no inverse; b.md must declare 'follows: a.md' (or remove the edge)"
+  }
+]
+```
 
 ## Milestone completion summary
 
