@@ -22,12 +22,13 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phases 1–4 complete (Step 1), audited and fresh-eyes reviewed.
-  Phase 5 — Update Base Interfaces is next.**
+- Progress: **Phase 5 complete (Step 2 in flight). Phase 6 — Implement
+  Offline/Core Path is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
-  implementation walk (Phases 1–4).
+  implementation walk (Phases 1–4); `m25/phases-5-10` for the Step-2
+  implementation walk (Phases 5–10).
 
 ## TDD phase progress
 
@@ -37,7 +38,7 @@ progress table and milestone checklist synchronized.
 | 2. Write Tests (RED) | Complete | 2026-08-11 (amended 2026-08-12) | +121 items across 6 edited + 2 new files (88 first pass, +4 same-instance audit, +29 fresh-eyes review fold-in). 757 collected, zero collection errors; ruff/format/mypy clean. |
 | 3. Create Data/Fixtures | Complete | 2026-08-11 (amended 2026-08-12) | 10 committed `reciprocal-*` trees + 3 inline builders. Each hand-verified to yield only its intended findings. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-08-11 (re-baselined 2026-08-12) | 757 collected, **87 failed, 670 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
-| 5. Update Base Interfaces | Pending | — | Inverse/edit/audit planning primitives. |
+| 5. Update Base Interfaces | Complete | 2026-08-12 | Vocabulary, `inverse_verb`, three editors, `RelateEdit`/`RelatePlan`/`CoordinatedWriteError`, `Revision` built-in label, canonical-path + lenient-pairs helpers, `relate_plan_to_json`; three behaviour seams stubbed. **71 failed, 686 passed.** |
 | 6. Implement Offline/Core Path | Pending | — | Checker + coordinated idempotent edits. |
 | 7. Update Tool/Wrapper Layer | Pending | — | CLI, JSON/dry-run, docs, bundled skill, version. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates. |
@@ -699,6 +700,93 @@ sentence), `convention.md`, the milestone's D2, and three tests
   `tests/fixtures/expected/docs-INDEX.md` in lockstep.
 - `ruff check` / `ruff format --check` / `mypy src/ tests/` /
   `docs check --root docs` — all clean.
+
+## Phase 5 — Update Base Interfaces — 2026-08-12
+
+### Objective
+
+Land the vocabulary, the three text editors, the planning models, and the
+`Revision` built-in label — every interface the Phase-1 *Frozen Phase-5
+signatures* block names — without completing any behaviour. Interfaces
+typecheck; the tests stay honestly RED at the behaviour seam.
+
+### Actions taken (all in `src/docs_cli/cli.py`)
+
+- **`import posixpath`** — the one new import, used by amendment B's
+  canonicalisation. `os.path.normpath` would flip separators on Windows;
+  `Related:` targets are POSIX on every platform.
+- **`RECIPROCAL_INVERSES` / `RECIPROCAL_VERBS`** beside `BUILTIN_ROLES`:
+  six entries, three symmetric pairs, with the case-sensitivity and
+  deliberate-non-membership rationale in the comment.
+- **`_BUILTIN_METADATA_FIELDS` gains `"Revision"`**, with the D4 rationale
+  recorded above it: a label `docs relate` itself writes must never trip the
+  tool's own `unknown-field` allowlist warning.
+- **`inverse_verb`** beside `validate_lifecycle` / `validate_role` — the
+  single "this verb gains no reciprocal validation" signal shared by the
+  check pass (skip) and the CLI (refuse).
+- **`CoordinatedWriteError(OSError)`** beside `MetadataError` /
+  `VocabularyError`, carrying `rolled_back` + `published`. `str(exc)` is the
+  fully-rendered operator message (the single-arg `OSError` form), so
+  `_cmd_relate` can print `docs: relate: {exc}` exactly — the
+  `MetadataError(f"{path}: {exc}")` precedent.
+- **`RelateEdit` / `RelatePlan`** after `MigrationPlan`, in exactly the
+  frozen shape. No derived helpers: `edit.change != "unchanged"` is the
+  "did this endpoint move" predicate everywhere.
+- **The three editors** immediately after `rewrite_related_refs`, on the M2
+  surgical minimal-diff contract (`_metadata_line_span` +
+  `splitlines(keepends=True)`): `add_related_edge`, `remove_related_edge`,
+  `append_revision_entry`. Two small shared helpers keep them honest —
+  `_related_run` (the one place that locates the `Related:` bare-label group
+  and its bullet run) and `_bullet_matches` (canonical target comparison).
+- **`_canonical_related_target`** and **`_related_pairs`** beside
+  `_root_relative`.
+- **`relate_plan_to_json`** fully implemented (pure field mapping); its test
+  stays RED because it needs a real `plan_relate`.
+- **Three behaviour seams stubbed** with real signatures + full docstrings
+  and `raise NotImplementedError("M25 Phase 6")` bodies:
+  `reciprocity_findings` (between `check_doc` and `check_tree`),
+  `plan_relate` and `apply_relate_plan` (in a new *Relationship repair —
+  `docs relate` (M25)* section before the `# CLI` banner). `check_tree` is
+  NOT touched in Phase 5, so no stub is ever called.
+
+### Decisions / issues
+
+- **The editors compare targets CANONICALLY (conductor resolution R1).**
+  Both `add_related_edge` and `remove_related_edge` route through
+  `_bullet_matches`, which normalises via `_canonical_related_target`.
+  Without it, `docs relate add a.md precedes b.md` against an existing
+  bullet reading `- precedes: ./b.md` would APPEND A DUPLICATE — `relate`
+  would stop being idempotent on exactly the loosely-spelled trees
+  amendment B exists to tolerate. `rewrite_related_refs` is deliberately
+  left alone: it is `mv`'s tool and M28's territory.
+- **Stubs, not omissions (conductor resolution R8).** The phase objective is
+  "planning models/helpers … without completing behaviour" and its exit
+  criterion is "interfaces typecheck; tests remain honestly RED at the
+  behaviour seam", so the three functions land with signatures and
+  docstrings now and bodies in Phase 6. This makes the Phase-5 commit a
+  reviewable contract-in-code.
+- **RED-reason change to record against the Phase-4 classification table.**
+  The 27 tests classified there as `AttributeError` (10 plan/apply/JSON +
+  17 check-side — the latter were plain assertions, so only the 10 move) now
+  fail with `NotImplementedError` instead, and the 17 check-side ones still
+  fail on plain assertions because `check_tree` does not yet call the new
+  pass. That table is a record of the Phase-4 baseline, not a claim about
+  later phases; this note keeps it from being read as stale.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **71 failed, 686 passed**
+  (exactly the planned Phase-5 ledger: 16 flipped GREEN — 1 inverse-map +
+  14 editor + 1 `Revision` field).
+- `.venv/bin/python -m pytest tests/test_edit.py tests/test_check.py -q` —
+  the 14 editor tests and the `Revision` `unknown-field` lock are GREEN.
+- `.venv/bin/ruff check .` — All checks passed.
+  `.venv/bin/ruff format --check .` — clean.
+  `.venv/bin/mypy src/ tests/` — no issues in 46 source files.
+- `docs relate --help` still exits 2 (`invalid choice`) — the verb is not
+  wired, as intended.
+- `git diff --stat pyproject.toml tests/test_packaging.py` — **empty**; the
+  version stays 1.8.0 (D6).
 
 ## Milestone completion summary
 

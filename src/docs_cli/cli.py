@@ -30,6 +30,7 @@ import importlib.metadata
 import importlib.resources
 import json
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -88,6 +89,24 @@ CANONICAL_ROLE_ORDER: tuple[str, ...] = (
 )
 BUILTIN_ROLES: frozenset[str] = frozenset(CANONICAL_ROLE_ORDER)
 
+# M25 (D1): the recognized reciprocal relationship verbs. Each key maps to
+# the verb the OTHER endpoint must declare back. The map is symmetric —
+# applying it twice is the identity — and matching is case-sensitive exact
+# (the `add_fields` precedent), so `Precedes` is a free-form verb, not a
+# recognized one. Every other `Related:` verb (`pairs-with`, `child-of` /
+# `parent-of`, `supersedes` / `superseded-by`, a user's own) stays free-form
+# and gains NO reciprocal validation: promoting them would retroactively
+# break existing trees for no navigational gain.
+RECIPROCAL_INVERSES: Mapping[str, str] = {
+    "precedes": "follows",
+    "follows": "precedes",
+    "depends-on": "required-by",
+    "required-by": "depends-on",
+    "blocks": "blocked-by",
+    "blocked-by": "blocks",
+}
+RECIPROCAL_VERBS: frozenset[str] = frozenset(RECIPROCAL_INVERSES)
+
 # M10 (OQ-O + OQ-P): metadata labels the `unknown-field` check rule
 # treats as built-in — always allowed regardless of the
 # `[vocabulary] add_fields` configuration. Covers the required fields
@@ -97,8 +116,14 @@ BUILTIN_ROLES: frozenset[str] = frozenset(CANONICAL_ROLE_ORDER)
 # archive-time hint label (`Archived-reason:`, written by
 # `docs archive --reason`). User-extensible metadata vocabulary lives
 # on `Config.fields` (sourced from `[vocabulary] add_fields`).
+#
+# M25 (D4) adds `Revision:` — the repeatable audit group `docs relate`
+# itself writes onto an archived endpoint. A label the tool writes must
+# never trip the tool's own allowlist warning, so it joins the built-in
+# always-allowed set rather than requiring every tree with an
+# `add_fields` allowlist to list it.
 _BUILTIN_METADATA_FIELDS: frozenset[str] = frozenset(
-    {"Lifecycle", "Role", "Project", "Updated", "Related", "Archived-reason"}
+    {"Lifecycle", "Role", "Project", "Updated", "Related", "Archived-reason", "Revision"}
 )
 
 
@@ -143,6 +168,28 @@ class VocabularyError(Exception):
     Distinct from MetadataError because the metadata block parsed
     successfully — the issue is the value, not the structure.
     """
+
+
+class CoordinatedWriteError(OSError):
+    """A `docs relate` coordinated two-file publish failed (M25 — D5).
+
+    ``str(exc)`` is the fully-rendered operator-facing detail; `_cmd_relate`
+    prints it as ``docs: relate: <exc>`` and exits 2. Raised for every
+    stage-3/4/5 failure — for the pre-write stages ``rolled_back`` is True
+    because the tree is (trivially) unchanged.
+
+    Attributes:
+        rolled_back: True iff the tree is byte-identical to its pre-publish
+            state — i.e. nothing was published, or every published endpoint
+            was restored.
+        published: Root-relative POSIX paths successfully published before
+            the failure, in publish order.
+    """
+
+    def __init__(self, message: str, *, rolled_back: bool, published: tuple[str, ...]) -> None:
+        super().__init__(message)
+        self.rolled_back = rolled_back
+        self.published = published
 
 
 # ---------------------------------------------------------------------------
@@ -432,6 +479,85 @@ class MigrationPlan:
     suppressed_exts: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class RelateEdit:
+    """One endpoint's half of a `docs relate` operation (M25 — D3).
+
+    Produced by `plan_relate`, consumed by `apply_relate_plan` and
+    `relate_plan_to_json`. Mirrors `FileMigration`'s role inside a
+    `MigrationPlan`: a fully-staged, write-free description of exactly
+    what this one file's bytes would become.
+
+    Attributes:
+        path: Absolute path of the endpoint.
+        rel: Its root-relative POSIX path — the form every human message
+            and JSON field names, whatever spelling was typed.
+        archived: True iff `rel` lies under the configured archive
+            subtree. Drives the D4 audit rules.
+        edge: The `<verb>: <other-rel>` bullet body as written in THIS
+            document — the forward verb for the source, its inverse for
+            the target.
+        original: The endpoint's text on disk at planning time.
+        new_text: The complete staged text. Equal to `original` when
+            nothing changes.
+        change: ``"added"`` / ``"removed"`` / ``"unchanged"``.
+            ``change != "unchanged"`` is the "did this endpoint move"
+            predicate everywhere.
+        present_before: True iff `edge` was already declared before.
+        present_after: True iff `edge` is declared in `new_text`.
+        updated_bumped: True iff `Updated:` was rewritten — only ever on
+            an endpoint whose bytes change.
+        revision_appended: True iff a `Revision:` bullet was appended —
+            only ever on an archived endpoint that really mutated (D4's
+            audit asymmetry).
+    """
+
+    path: Path
+    rel: str
+    archived: bool
+    edge: str
+    original: str
+    new_text: str
+    change: str
+    present_before: bool
+    present_after: bool
+    updated_bumped: bool
+    revision_appended: bool
+
+
+@dataclass(frozen=True)
+class RelatePlan:
+    """A complete, write-free `docs relate add|remove` operation (M25 — D3).
+
+    The `MigrationPlan` analogue for the relationship verbs: `plan_relate`
+    builds it by reading both endpoints, `apply_relate_plan` publishes it,
+    and `relate_plan_to_json` renders the `--json` operation record. The
+    same object backs a `--dry-run` preview and a real apply, which is why
+    the two are diffable.
+
+    Attributes:
+        action: ``"add"`` or ``"remove"``.
+        verb: The recognized verb as typed.
+        inverse: `verb`'s recognized inverse (`inverse_verb`).
+        source_rel / target_rel: Root-relative POSIX endpoint paths.
+        reason: The `--reason` value, or None. Required by the CLI
+            whenever either endpoint is archived; accepted but unused on
+            an all-active pair.
+        date_str: The date written into `Updated:` and any `Revision:`
+            bullet, already rendered in the tree's `date_format`.
+        edits: Always exactly two, ``(source, target)`` in that order.
+    """
+
+    action: str
+    verb: str
+    inverse: str
+    source_rel: str
+    target_rel: str
+    reason: str | None
+    date_str: str
+    edits: tuple[RelateEdit, ...]
+
+
 # ---------------------------------------------------------------------------
 # Shared utilities
 # ---------------------------------------------------------------------------
@@ -460,6 +586,17 @@ def validate_role(value: str, roles: frozenset[str]) -> None:
     """Raise VocabularyError if `value` is not in `roles`."""
     if value not in roles:
         raise VocabularyError(f"Role: {value!r} not in vocabulary")
+
+
+def inverse_verb(verb: str) -> str | None:
+    """Return `verb`'s recognized reciprocal inverse, or None (M25 — D1).
+
+    Case-sensitive exact match, mirroring the `add_fields` precedent:
+    `Precedes` is a free-form verb, not a recognized one. A None result is
+    the single "this verb gains no reciprocal validation" signal shared by
+    `reciprocity_findings` (skip it) and `_cmd_relate` (refuse it).
+    """
+    return RECIPROCAL_INVERSES.get(verb)
 
 
 _LABEL_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
@@ -1189,6 +1326,152 @@ def rewrite_related_refs(text: str, old_rel: str, new_rel: str) -> tuple[str, in
     return "".join(keep), count
 
 
+def _related_run(lines: list[str], start: int, end: int) -> tuple[int, int] | None:
+    """Locate the `Related:` bare-label group inside a metadata-block span.
+
+    Returns ``(label_idx, run_end)`` — the index of the bare `Related:` line
+    and the index one past its last `- ` bullet — or None when the group is
+    absent. Uses the same label idiom `rewrite_related_refs` does, so the
+    three M25 editors and `mv`'s rewriter agree on where the group is.
+    """
+    for idx in range(start, end):
+        m = _LABEL_RE.match(lines[idx])
+        if m and m.group(1) == "Related" and not m.group(2).strip():
+            run_end = idx + 1
+            while run_end < end and lines[run_end].startswith("- "):
+                run_end += 1
+            return idx, run_end
+    return None
+
+
+def _bullet_matches(line: str, verb: str, target: str) -> bool:
+    """True iff the `- <verb>: <target>` bullet `line` is that exact edge.
+
+    Targets are compared CANONICALLY (M25 — D2 amendment B), so
+    `- precedes: ./b.md` is the same edge as `- precedes: b.md`. Without
+    this, `docs relate add` would append a duplicate bullet on exactly the
+    loosely-spelled trees the canonical-matching amendment exists to
+    tolerate — i.e. `relate` would stop being idempotent there.
+    """
+    verb_part, sep, target_part = line[2:].partition(":")
+    if not sep:
+        return False
+    return verb_part.strip() == verb and _canonical_related_target(
+        target_part.strip()
+    ) == _canonical_related_target(target)
+
+
+def add_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
+    """Ensure `text` carries `- <verb>: <target>` in its `Related:` group.
+
+    Appends the bullet at the END of the existing `Related:` run (never
+    after a trailing `Revision:` group), or creates a blank-line-separated
+    `Related:` group at the end of the metadata block when absent. Returns
+    ``(new_text, changed)``; an already-present edge returns
+    ``(text, False)``.
+
+    The M2 surgical minimal-diff contract: exactly one line is inserted (or
+    three, when the group is created); every other byte, and the file's
+    trailing-newline state, is preserved. Nothing is reflowed, re-sorted, or
+    blank-line-normalised.
+
+    Raises:
+        MetadataError: `text` has no H1 / metadata block.
+    """
+    lines, _title, start, end = _metadata_line_span(text)
+    keep = text.splitlines(keepends=True)
+
+    located = _related_run(lines, start, end)
+    if located is None:
+        insert_at = end
+        new_lines = ["\n", "Related:\n", f"- {verb}: {target}\n"]
+    else:
+        label_idx, run_end = located
+        for idx in range(label_idx + 1, run_end):
+            if _bullet_matches(lines[idx], verb, target):
+                return text, False
+        insert_at = run_end
+        new_lines = [f"- {verb}: {target}\n"]
+
+    if insert_at > 0 and not keep[insert_at - 1].endswith(("\n", "\r")):
+        keep[insert_at - 1] += "\n"
+    keep[insert_at:insert_at] = new_lines
+    return "".join(keep), True
+
+
+def remove_related_edge(text: str, verb: str, target: str) -> tuple[str, bool]:
+    """Remove every `- <verb>: <target>` bullet from `text`'s `Related:` group.
+
+    Only the exact (verb, canonical-target) bullet is removed: the same verb
+    at another target and the same target under another verb survive. When
+    the run empties, the bare `Related:` label — and one immediately
+    preceding blank line, if present — is dropped too, so the metadata block
+    is left in a shape `_metadata_line_span` still accepts. Returns
+    ``(new_text, changed)``.
+
+    Raises:
+        MetadataError: `text` has no H1 / metadata block.
+    """
+    lines, _title, start, end = _metadata_line_span(text)
+    keep = text.splitlines(keepends=True)
+
+    located = _related_run(lines, start, end)
+    if located is None:
+        return text, False
+    label_idx, run_end = located
+
+    doomed = [
+        idx for idx in range(label_idx + 1, run_end) if _bullet_matches(lines[idx], verb, target)
+    ]
+    if not doomed:
+        return text, False
+
+    if len(doomed) == run_end - label_idx - 1:
+        # The run empties: drop the now-bare label, and the blank line that
+        # separated it from the inline metadata run above it.
+        doomed.append(label_idx)
+        if label_idx > start and lines[label_idx - 1].strip() == "":
+            doomed.append(label_idx - 1)
+
+    for idx in sorted(doomed, reverse=True):
+        del keep[idx]
+    return "".join(keep), True
+
+
+def append_revision_entry(text: str, entry: str) -> str:
+    """Append `- <entry>` to `text`'s `Revision:` group (M25 — D4).
+
+    A repeatable bare-label group at the END of the metadata block:
+    appended to the existing bullet run when the group exists (never a
+    second label), otherwise created after `Related:` separated by one blank
+    line — the shape `_metadata_line_span` already accepts for multi-value
+    groups. Exactly one line is added when the group exists, three when it
+    is created; nothing else moves.
+
+    Raises:
+        MetadataError: `text` has no H1 / metadata block.
+    """
+    lines, _title, start, end = _metadata_line_span(text)
+    keep = text.splitlines(keepends=True)
+
+    insert_at = end
+    new_lines = ["\n", "Revision:\n", f"- {entry}\n"]
+    for idx in range(start, end):
+        m = _LABEL_RE.match(lines[idx])
+        if m and m.group(1) == "Revision" and not m.group(2).strip():
+            run_end = idx + 1
+            while run_end < end and lines[run_end].startswith("- "):
+                run_end += 1
+            insert_at = run_end
+            new_lines = [f"- {entry}\n"]
+            break
+
+    if insert_at > 0 and not keep[insert_at - 1].endswith(("\n", "\r")):
+        keep[insert_at - 1] += "\n"
+    keep[insert_at:insert_at] = new_lines
+    return "".join(keep)
+
+
 def scaffold_doc(
     title: str,
     role: str,
@@ -1474,6 +1757,43 @@ def _root_relative(path: Path, root: Path) -> str:
         return path.name
 
 
+def _canonical_related_target(target: str) -> str:
+    """Canonical root-relative POSIX form of a `Related:` target (M25 — D2 amendment B).
+
+    `./b.md`, `sub/../b.md`, and `b.md` are one edge. Purely lexical (no
+    filesystem access, no symlink resolution) so a walked doc's rel key and a
+    bullet's target compare on the same normal form. `posixpath` rather than
+    `os.path` because `Related:` targets are POSIX paths on every platform.
+    """
+    return posixpath.normpath(target)
+
+
+def _related_pairs(
+    metadata: Mapping[str, str | tuple[str, ...]],
+) -> tuple[tuple[str, str], ...]:
+    """`(verb, target)` pairs from a parsed metadata block's `Related:` group.
+
+    The lenient counterpart to `parse`'s strict harvesting: a bullet with no
+    colon or an empty target is skipped rather than raising, matching what
+    `check_doc`'s broken-ref loop and the reciprocity pass both need — a
+    validator must not itself blow up on the malformed input it is there to
+    describe. Targets are returned as written; canonicalisation is the
+    caller's job.
+    """
+    raw = metadata.get("Related")
+    if raw is None:
+        return ()
+    entries = raw if isinstance(raw, tuple) else (raw,)
+    pairs: list[tuple[str, str]] = []
+    for entry in entries:
+        verb, sep, target = entry.partition(":")
+        target = target.strip()
+        if not sep or not target:
+            continue
+        pairs.append((verb.strip(), target))
+    return tuple(pairs)
+
+
 def check_doc(
     path: Path,
     text: str,
@@ -1682,6 +2002,35 @@ def check_doc(
             )
 
     return findings
+
+
+def reciprocity_findings(
+    entries: Sequence[tuple[Path, str]], root: Path
+) -> dict[Path, list[Finding]]:
+    """Cross-document `missing-inverse` findings for a materialised walk (M25 — D2).
+
+    The only rule in `docs check` that needs more than one document, so it
+    runs as a second pass over the same `(path, text)` entries `check_tree`
+    already read, and its results are keyed by source path so `check_tree`
+    can interleave them into its existing per-doc grouping.
+
+    A recognized edge (`inverse_verb(verb) is not None`) obliges its target
+    to declare the exact inverse pointing BACK at the source. Everything
+    else is silence: free-form verbs, a target outside the walked/parseable
+    set (excluded, unresolvable, non-Markdown, or malformed — those rules
+    keep ownership), and a self-edge (amendment A). Paths are compared
+    canonically (amendment B), and one finding is emitted per distinct
+    `(source, verb, canonical-target)` triple.
+
+    Args:
+        entries: `(absolute path, text)` for every walked doc, in walk order.
+        root: The docs root the paths are relative to.
+
+    Returns:
+        A mapping from source path to its findings, in bullet order. Docs
+        with no finding are absent from the mapping.
+    """
+    raise NotImplementedError("M25 Phase 6")
 
 
 def check_tree(
@@ -2864,6 +3213,124 @@ def migration_to_json(plan: MigrationPlan) -> list[dict[str, object]]:
         }
         for fm in plan.files
     ]
+
+
+# ---------------------------------------------------------------------------
+# Relationship repair — `docs relate` (M25)
+# ---------------------------------------------------------------------------
+
+
+def plan_relate(
+    root: Path,
+    config: Config,
+    *,
+    action: str,
+    source: Path,
+    verb: str,
+    target: Path,
+    reason: str | None,
+    date_str: str,
+) -> RelatePlan:
+    """Stage both endpoints' complete new texts without writing (M25 — D3/D5).
+
+    The `plan_migration` analogue for the relationship verbs, and D5's
+    stages 1–2: both files are read, both new texts are computed in memory,
+    and nothing is written. `apply_relate_plan` publishes the result.
+
+    Per endpoint the edit is applied, then — only when the edge actually
+    moved — `Updated:` is bumped and, for an archived endpoint, a
+    `Revision:` bullet is appended. An endpoint whose edge is already in the
+    requested state is `change="unchanged"` with `new_text is original`:
+    that single rule is the whole of D3's idempotency and D4's "one bullet
+    per REAL mutation".
+
+    Args:
+        root: The resolved docs root.
+        config: The tree's config (supplies `archive_dir`).
+        action: ``"add"`` or ``"remove"``.
+        source: Absolute path of the declaring endpoint.
+        verb: A recognized reciprocal verb.
+        target: Absolute path of the other endpoint.
+        reason: The `--reason` value; required when either endpoint is
+            archived (the CLI enforces that before planning).
+        date_str: The date to write, already in the tree's `date_format`.
+
+    Raises:
+        ValueError: `verb` is not recognized, or an archived endpoint would
+            change without a `reason` — both programming errors, refused by
+            `_cmd_relate` long before planning.
+        MetadataError: an endpoint has no H1 / metadata block.
+        OSError: an endpoint cannot be read.
+    """
+    raise NotImplementedError("M25 Phase 6")
+
+
+def apply_relate_plan(plan: RelatePlan) -> None:
+    """Publish a `RelatePlan`, rolling back on a later failure (M25 — D5).
+
+    D5's stages 3–5: re-validate each staged text, pre-flight each changed
+    endpoint for write permission, then publish in plan order (source, then
+    target) via `atomic_write`. A failure at any stage raises
+    `CoordinatedWriteError` carrying the fully-rendered operator message;
+    `_cmd_relate` prints it as ``docs: relate: <exc>`` and exits 2.
+
+    If a publish fails after an earlier one succeeded, every published
+    endpoint is restored — also via `atomic_write`, so the restore inherits
+    the same tmpfile + fsync + rename durability as the write it undoes. A
+    restore that itself fails is reported as an explicit non-atomic
+    admission (`ROLLBACK FAILED`), never swallowed.
+
+    A plan whose edits are all `unchanged` writes nothing and returns.
+
+    Raises:
+        CoordinatedWriteError: any stage-3/4/5 failure.
+    """
+    raise NotImplementedError("M25 Phase 6")
+
+
+def relate_plan_to_json(
+    plan: RelatePlan, *, dry_run: bool, applied: bool, index_refreshed: bool
+) -> dict[str, object]:
+    """Convert a `RelatePlan` to its `docs relate --json` operation record.
+
+    One object with the same shape for a `--dry-run` preview and for a real
+    apply, so the two are diffable (the schema cli.md pins). `edits` is
+    always exactly two records, ``[source, target]`` in that order.
+
+    Args:
+        plan: The plan produced by `plan_relate`.
+        dry_run: True under `--dry-run`.
+        applied: True iff bytes were actually written.
+        index_refreshed: True iff the end-of-run reindex ran and succeeded.
+
+    Returns:
+        A JSON-serialisable record dict.
+    """
+    return {
+        "action": plan.action,
+        "verb": plan.verb,
+        "inverse": plan.inverse,
+        "source": plan.source_rel,
+        "target": plan.target_rel,
+        "reason": plan.reason,
+        "date": plan.date_str,
+        "dry_run": dry_run,
+        "applied": applied,
+        "index_refreshed": index_refreshed,
+        "edits": [
+            {
+                "path": edit.rel,
+                "archived": edit.archived,
+                "edge": edit.edge,
+                "present_before": edit.present_before,
+                "present_after": edit.present_after,
+                "change": edit.change,
+                "updated_bumped": edit.updated_bumped,
+                "revision_appended": edit.revision_appended,
+            }
+            for edit in plan.edits
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------
