@@ -22,8 +22,8 @@ progress table and milestone checklist synchronized.
 - Project: docs
 - Milestone: M25 — Reciprocal relationship integrity and `docs relate`
 - Started: 2026-08-10 (milestone setup); Phase 1 started 2026-08-11.
-- Progress: **Phase 5 complete (Step 2 in flight). Phase 6 — Implement
-  Offline/Core Path is next.**
+- Progress: **Phases 5–6 complete (Step 2 in flight). Phase 7 — Update
+  Tool/Wrapper Layer is next.**
 - Source: the operator-confirmed relationship, repair, archive-audit, and
   release-ordering decisions in `feedback-log.md` (2026-08-09/10).
 - Branch: `m25-m29/milestone-setup` for setup; `m25/phases-1-4` for the Step-1
@@ -39,7 +39,7 @@ progress table and milestone checklist synchronized.
 | 3. Create Data/Fixtures | Complete | 2026-08-11 (amended 2026-08-12) | 10 committed `reciprocal-*` trees + 3 inline builders. Each hand-verified to yield only its intended findings. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-08-11 (re-baselined 2026-08-12) | 757 collected, **87 failed, 670 passed**. Every RED matches its classified reason; zero collection errors, zero tracebacks, zero xfails; pre-existing 636 all still GREEN. |
 | 5. Update Base Interfaces | Complete | 2026-08-12 | Vocabulary, `inverse_verb`, three editors, `RelateEdit`/`RelatePlan`/`CoordinatedWriteError`, `Revision` built-in label, canonical-path + lenient-pairs helpers, `relate_plan_to_json`; three behaviour seams stubbed. **71 failed, 686 passed.** |
-| 6. Implement Offline/Core Path | Pending | — | Checker + coordinated idempotent edits. |
+| 6. Implement Offline/Core Path | Complete | 2026-08-12 | `reciprocity_findings`, `check_tree` interleave, `plan_relate`/`_plan_relate_edit`, `apply_relate_plan` + `_rollback_relate`. **44 failed, 713 passed** — every remaining RED is a `docs relate` subprocess test (43) or the SKILL.md lock (1). |
 | 7. Update Tool/Wrapper Layer | Pending | — | CLI, JSON/dry-run, docs, bundled skill, version. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Real upgrade/repair flows on a throwaway tree. |
@@ -787,6 +787,100 @@ typecheck; the tests stay honestly RED at the behaviour seam.
   wired, as intended.
 - `git diff --stat pyproject.toml tests/test_packaging.py` — **empty**; the
   version stays 1.8.0 (D6).
+
+## Phase 6 — Implement Offline/Core Path — 2026-08-12
+
+### Objective
+
+Implement the cross-document reciprocity pass and the validate-all-first,
+idempotent coordinated edit — including the archived audit boundary and the
+D5 publish/rollback contract — with no CLI surface yet.
+
+### Actions taken (all in `src/docs_cli/cli.py`)
+
+- **`reciprocity_findings`** — two passes over the materialised walk. Pass 1
+  indexes every doc whose metadata block parses, keyed by root-relative
+  path; a `MetadataError` doc is skipped (as source AND as target —
+  `malformed` owns it). Pass 2 walks each indexed source's `Related:` pairs:
+  a free-form verb is skipped, a self-edge is skipped (amendment A), and a
+  target missing from the index is skipped. **That single `index.get`
+  implements four of the five applicability conditions at once** —
+  excluded, unresolvable, and non-Markdown targets were never walked, and
+  malformed ones were dropped in pass 1. Deliberately NOT five branches: per
+  condition special-casing would be dead code Phase 10 would remove.
+- Satisfaction requires the inverse to **point back at the source**
+  (`v == inverse and canonical(t) == source_rel`), not merely to exist —
+  `test_check_tree_inverse_pointing_elsewhere_is_still_missing` exists to
+  catch a "does the target declare `follows` at all?" implementation.
+  Dedupe is on `(verb, canonical target)` per source.
+- **`check_tree`** now materialises the walk once, runs the reciprocity pass
+  over it, and interleaves `recip.get(path, ())` after each doc's
+  `check_doc` findings. Its docstring's "errors before warnings" sentence
+  was corrected to the real rule — `check_doc`'s findings first in its own
+  order, then any `missing-inverse` — rather than adding a resort;
+  `test_check_tree_findings_grouped_by_path` pins the ordered rule list.
+- **Free reuse taken:** `check_doc`'s broken-ref loop was `_related_pairs`
+  inlined, so it now calls `_related_pairs`. One `Related:`-bullet parser in
+  the module. Behaviour-preserving line for line;
+  `test_check_doc_broken_related_ref` is its lock.
+- **`plan_relate` + `_plan_relate_edit`** — pure w.r.t. writes; reads both
+  endpoints; `edits` is always `(source, target)`. Per endpoint: apply the
+  edit, and **if nothing changed, return immediately** with
+  `new_text is original`, `change="unchanged"`, no `Updated:` bump and no
+  `Revision:` bullet. That early return is the whole of D3's idempotency and
+  D4's "one bullet per REAL mutation" — the lock is
+  `test_relate_archived_no_op_with_reason_writes_nothing`. Only after a real
+  change: bump `Updated:`, then append the `Revision:` bullet for an
+  archived endpoint.
+- **`apply_relate_plan` + `_rollback_relate`** — stage 3 re-validates each
+  staged text, stage 4 pre-flights writability, stage 5 publishes in plan
+  order and rolls back on a later failure. Both the publish and the restore
+  call the module-global `atomic_write` by bare name (binding per D5, and
+  the only reason the injected-failure tests can reach the path at all).
+
+### Decisions / issues
+
+- **Stage 4 is `os.access` on the FILE and nothing else.** Two tests bracket
+  it exactly: `test_relate_unwritable_endpoint_refuses_before_any_write`
+  (mode-0400 file → stage 4 must fire) and
+  `test_relate_second_write_failure_rolls_back_and_says_so` (mode-555
+  *directory*, mode-644 file → stage 4 must NOT fire, so stage 5 can).
+  Adding a parent-directory check "for robustness" would break the second
+  and silently delete the rollback's only end-to-end coverage. The code
+  carries that reasoning as a comment so it is not "helpfully" added later.
+- **R3 — the nothing-published rollback branch.** When the FIRST publish
+  fails, the frozen `rolled back <rel>` list is empty and the message
+  degenerates to `rolled back  — the tree is unchanged`. A third branch now
+  renders `write failed for <rel>: <err>; nothing was published — the tree
+  is unchanged` (still exit 2, still `rolled_back=True`). Pinned in `cli.md`
+  in Phase 7. This is a bug fix to a frozen string, not a scope change.
+- **R4 — the ROLLBACK FAILED message was add-shaped.** After a failed
+  rollback of a `remove`, the file no longer carries the edge, so the frozen
+  wording handed the operator a factually inverted repair instruction.
+  `_rollback_relate` now renders `still carries` for `add` and `no longer
+  carries` for `remove`; the literal `ROLLBACK FAILED` token that Phase 1
+  grep-verified is preserved either way. Both variants pinned in `cli.md` in
+  Phase 7.
+- **R7 — `Revision:` uses the tree's `date_format`.** `date_str` (already
+  rendered by the CLI in `config.date_format`) is used for both `Updated:`
+  and the `Revision:` bullet. Two date spellings in one file would be a
+  defect; "ISO-dated" in D4 describes the *default* format.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **44 failed, 713 passed**
+  (exactly the planned Phase-6 ledger: 27 flipped GREEN — 17 check-side +
+  10 plan-seam).
+- **Verified by name, not by count:** all 44 remaining failures are
+  `tests/test_cli_relate.py` (43) and
+  `tests/test_skill.py::test_skill_md_documents_relate_verb` (1) — both
+  Phase-7 surfaces.
+- `.venv/bin/docs check --root docs` — no violations, exit 0. The live
+  tree's 10 complete recognized pairs now pass a rule that actually runs;
+  `test_check_dogfood_repo_docs_is_clean` stops being degenerate.
+- `.venv/bin/ruff check .` / `ruff format --check .` / `mypy src/ tests/` —
+  all clean.
+- `git diff --stat pyproject.toml tests/test_packaging.py` — **empty**.
 
 ## Milestone completion summary
 

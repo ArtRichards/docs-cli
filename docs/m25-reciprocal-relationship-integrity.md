@@ -36,9 +36,10 @@ Related:
   fresh-eyes review (**no blockers**); the review's two operator-binding
   contract amendments — the **self-edge exemption** and **canonical path
   matching** — are folded into D2 below. **Step 2 is in flight on
-  `m25/phases-5-10`: Phase 5 — Update Base Interfaces is complete
-  (2026-08-12; 71 failed, 686 passed).** Phase 6 — Implement Offline/Core
-  Path is next.
+  `m25/phases-5-10`: Phases 5–6 are complete
+  (2026-08-12; 44 failed, 713 passed — every remaining RED is a
+  `docs relate` CLI or bundled-skill surface).** Phase 7 — Update
+  Tool/Wrapper Layer is next.
 
 ### Goal
 
@@ -256,7 +257,7 @@ automatic conversion of free-form edges occurs.
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Offline/Core Path
+- [x] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood

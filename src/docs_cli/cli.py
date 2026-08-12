@@ -1932,23 +1932,16 @@ def check_doc(
             )
 
     # --- broken Related: refs ---
-    raw_related = metadata.get("Related")
-    if raw_related is not None:
-        entries = raw_related if isinstance(raw_related, tuple) else (raw_related,)
-        for entry in entries:
-            _verb, sep, target = entry.partition(":")
-            target = target.strip()
-            if not sep or not target:
-                continue
-            if not (root / target).is_file():
-                findings.append(
-                    Finding(
-                        path,
-                        "error",
-                        "broken-ref",
-                        f"Related: target does not resolve to a file: {target}",
-                    )
+    for _verb, target in _related_pairs(metadata):
+        if not (root / target).is_file():
+            findings.append(
+                Finding(
+                    path,
+                    "error",
+                    "broken-ref",
+                    f"Related: target does not resolve to a file: {target}",
                 )
+            )
 
     # --- stale (warning; only with a stale window, only Lifecycle: active) ---
     if (
@@ -2030,7 +2023,55 @@ def reciprocity_findings(
         A mapping from source path to its findings, in bullet order. Docs
         with no finding are absent from the mapping.
     """
-    raise NotImplementedError("M25 Phase 6")
+    # Pass 1 — index the walked set by root-relative path. A doc whose
+    # metadata block does not parse is SKIPPED: `malformed` owns that case,
+    # both as a source and as a target.
+    index: dict[str, tuple[Path, tuple[tuple[str, str], ...]]] = {}
+    for path, text in entries:
+        try:
+            _title, metadata, _body = parse_metadata_block(text)
+        except MetadataError:
+            continue
+        index[_root_relative(path, root)] = (path, _related_pairs(metadata))
+
+    # Pass 2 — validate. The five applicability conditions are NOT five
+    # branches: they fall out of "the target must be an indexed, parseable,
+    # walked doc that is not me". The single `index` lookup covers excluded
+    # (never walked), unresolvable (never walked), non-Markdown (never
+    # walked), and malformed (skipped above) in one place.
+    findings: dict[Path, list[Finding]] = {}
+    for source_rel, (source_path, pairs) in index.items():
+        seen: set[tuple[str, str]] = set()
+        for verb, raw_target in pairs:
+            inverse = inverse_verb(verb)
+            if inverse is None:
+                continue
+            target_rel = _canonical_related_target(raw_target)
+            if target_rel == source_rel:
+                continue  # amendment A — a self-edge is exempt
+            target = index.get(target_rel)
+            if target is None:
+                continue
+            if (verb, target_rel) in seen:
+                continue  # one finding per (source, verb, canonical target)
+            seen.add((verb, target_rel))
+            # The inverse must point BACK at the source — declaring the
+            # right verb at some other target does not reciprocate.
+            if any(
+                v == inverse and _canonical_related_target(t) == source_rel for v, t in target[1]
+            ):
+                continue
+            findings.setdefault(source_path, []).append(
+                Finding(
+                    source_path,
+                    "error",
+                    "missing-inverse",
+                    f"Related: '{verb}: {target_rel}' has no inverse; "
+                    f"{target_rel} must declare '{inverse}: {source_rel}' "
+                    "(or remove the edge)",
+                )
+            )
+    return findings
 
 
 def check_tree(
@@ -2044,8 +2085,13 @@ def check_tree(
     """Validate every doc under ``root``; return all findings.
 
     Iterates `_iter_doc_texts`, applies `check_doc` to each doc, and
-    concatenates the results in root-relative POSIX path order. Within a doc,
-    findings keep `check_doc`'s order (errors before warnings).
+    concatenates the results in root-relative POSIX path order.
+
+    M25 (D2): the walk is materialised once so the cross-document
+    `reciprocity_findings` pass can see every doc, and its results are
+    interleaved into the existing per-doc grouping rather than appended as a
+    separate tail block. Within a doc the order is therefore `check_doc`'s
+    findings first, in its own order, then any `missing-inverse`.
 
     M8 (F3): the optional ``predicate`` argument is threaded into
     `_iter_doc_texts` so excluded files are skipped before validation.
@@ -2055,8 +2101,11 @@ def check_tree(
     finding's message can name the threshold's provenance.
     """
     findings: list[Finding] = []
-    for path, text in _iter_doc_texts(root, config, predicate=predicate):
+    entries = list(_iter_doc_texts(root, config, predicate=predicate))
+    recip = reciprocity_findings(entries, root)
+    for path, text in entries:
         findings.extend(check_doc(path, text, root, config, stale, today, stale_source))
+        findings.extend(recip.get(path, ()))
     return findings
 
 
@@ -3262,7 +3311,117 @@ def plan_relate(
         MetadataError: an endpoint has no H1 / metadata block.
         OSError: an endpoint cannot be read.
     """
-    raise NotImplementedError("M25 Phase 6")
+    inverse = inverse_verb(verb)
+    if inverse is None:
+        raise ValueError(f"not a recognized reciprocal verb: {verb!r}")
+
+    source_rel = _root_relative(source, root)
+    target_rel = _root_relative(target, root)
+    return RelatePlan(
+        action=action,
+        verb=verb,
+        inverse=inverse,
+        source_rel=source_rel,
+        target_rel=target_rel,
+        reason=reason,
+        date_str=date_str,
+        edits=(
+            _plan_relate_edit(
+                source,
+                source_rel,
+                config,
+                action=action,
+                verb=verb,
+                other_rel=target_rel,
+                reason=reason,
+                date_str=date_str,
+            ),
+            _plan_relate_edit(
+                target,
+                target_rel,
+                config,
+                action=action,
+                verb=inverse,
+                other_rel=source_rel,
+                reason=reason,
+                date_str=date_str,
+            ),
+        ),
+    )
+
+
+def _plan_relate_edit(
+    path: Path,
+    rel: str,
+    config: Config,
+    *,
+    action: str,
+    verb: str,
+    other_rel: str,
+    reason: str | None,
+    date_str: str,
+) -> RelateEdit:
+    """Stage one endpoint's half of a `docs relate` operation (M25 — D3/D4).
+
+    `verb` and `other_rel` are already this document's OWN bullet body: the
+    forward verb at the target for the source, the inverse at the source for
+    the target.
+
+    The ordering is contractual, not incidental — the archived byte-delta
+    assertion pins it: apply the edge; if nothing moved, stop (that single
+    early return is the whole of D3's idempotency and D4's "one bullet per
+    REAL mutation"); otherwise bump `Updated:` and, only for an archived
+    endpoint, append the `Revision:` audit bullet.
+    """
+    original = path.read_text()
+    edge = f"{verb}: {other_rel}"
+    archived = rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
+
+    if action == "add":
+        new_text, changed = add_related_edge(original, verb, other_rel)
+        present_before, present_after = not changed, True
+    else:
+        new_text, changed = remove_related_edge(original, verb, other_rel)
+        present_before, present_after = changed, False
+
+    if not changed:
+        return RelateEdit(
+            path=path,
+            rel=rel,
+            archived=archived,
+            edge=edge,
+            original=original,
+            new_text=original,
+            change="unchanged",
+            present_before=present_before,
+            present_after=present_after,
+            updated_bumped=False,
+            revision_appended=False,
+        )
+
+    new_text = set_metadata_field(new_text, "Updated", date_str)
+    revision_appended = False
+    if archived:
+        if reason is None:
+            raise ValueError(f"{rel} is under the archive subtree; a reason is required")
+        new_text = append_revision_entry(
+            new_text, f"{date_str}: relate {action} '{edge}'; reason: {reason}"
+        )
+        revision_appended = True
+
+    return RelateEdit(
+        path=path,
+        rel=rel,
+        archived=archived,
+        edge=edge,
+        original=original,
+        new_text=new_text,
+        change="added" if action == "add" else "removed",
+        present_before=present_before,
+        present_after=present_after,
+        updated_bumped=True,
+        revision_appended=revision_appended,
+    )
 
 
 def apply_relate_plan(plan: RelatePlan) -> None:
@@ -3285,7 +3444,89 @@ def apply_relate_plan(plan: RelatePlan) -> None:
     Raises:
         CoordinatedWriteError: any stage-3/4/5 failure.
     """
-    raise NotImplementedError("M25 Phase 6")
+    changed = [edit for edit in plan.edits if edit.change != "unchanged"]
+    if not changed:
+        return
+
+    # Stage 3 — re-validate the staged texts. Defensive: the editors cannot
+    # remove an H1, so this is unreachable in practice; it exists so a future
+    # editor bug aborts before publishing rather than after.
+    for edit in changed:
+        try:
+            parse_metadata_block(edit.new_text)
+        except MetadataError as exc:
+            raise CoordinatedWriteError(
+                f"staged text for {edit.rel} would not parse ({exc}); refusing before any write",
+                rolled_back=True,
+                published=(),
+            ) from exc
+
+    # Stage 4 — writability pre-flight on the FILE, and on nothing else.
+    # `atomic_write` publishes via tmpfile + rename, which SUCCEEDS on a
+    # read-only file in a writable directory, so only this explicit check
+    # honours a read-only archive. Scanning every changed endpoint before
+    # publishing any is what keeps the source untouched when the target is
+    # the unwritable one. Deliberately NOT a parent-directory check: an
+    # unwritable directory is a stage-5 failure with a rollback, not a
+    # stage-4 refusal.
+    for edit in changed:
+        if not os.access(edit.path, os.W_OK):
+            raise CoordinatedWriteError(
+                f"{edit.rel} is not writable; refusing before any write",
+                rolled_back=True,
+                published=(),
+            )
+
+    # Stage 5 — publish in plan order, rolling back on a later failure.
+    published: list[RelateEdit] = []
+    for edit in changed:
+        try:
+            atomic_write(edit.path, edit.new_text)
+        except OSError as exc:
+            raise _rollback_relate(plan, edit, exc, published) from exc
+        published.append(edit)
+
+
+def _rollback_relate(
+    plan: RelatePlan,
+    failed: RelateEdit,
+    exc: OSError,
+    published: list[RelateEdit],
+) -> CoordinatedWriteError:
+    """Undo `published` after `failed`'s write raised; build the D5 admission.
+
+    Restores through the module-global `atomic_write` (binding per D5) so a
+    restore inherits the same tmpfile + fsync + rename durability as the
+    write it undoes — a restore torn by a crash is the very failure the
+    rollback exists to prevent.
+    """
+    unrestored: list[RelateEdit] = []
+    for done in reversed(published):
+        try:
+            atomic_write(done.path, done.original)
+        except OSError:
+            unrestored.append(done)
+    unrestored.reverse()
+
+    prefix = f"write failed for {failed.rel}: {exc}"
+    if unrestored:
+        # The admission must describe what each file ACTUALLY carries now,
+        # which is the opposite way round for `remove` (M25 — R4).
+        carries = "still carries" if plan.action == "add" else "no longer carries"
+        names = ", ".join(edit.rel for edit in unrestored)
+        detail = "; ".join(f"{edit.rel} {carries} '{edit.edge}'" for edit in unrestored)
+        message = f"{prefix}; ROLLBACK FAILED for {names} — repair manually: {detail}"
+    elif published:
+        names = ", ".join(edit.rel for edit in published)
+        message = f"{prefix}; rolled back {names} — the tree is unchanged"
+    else:
+        message = f"{prefix}; nothing was published — the tree is unchanged"
+
+    return CoordinatedWriteError(
+        message,
+        rolled_back=not unrestored,
+        published=tuple(edit.rel for edit in published),
+    )
 
 
 def relate_plan_to_json(
