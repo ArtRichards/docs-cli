@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 Related:
 - pairs-with: convention.md
@@ -344,7 +344,7 @@ Both repairs are named and neither is chosen: the agent decides whether the
 source edge is true (add the inverse) or wrong (remove the edge). Paths are
 root-relative POSIX.
 
-*Applicability — all five conditions must hold, else no `missing-inverse`
+*Applicability — all six conditions must hold, else no `missing-inverse`
 finding is produced:*
 
 1. Source **and** target are both yielded by the walk under the effective
@@ -359,17 +359,34 @@ finding is produced:*
    endpoint owns its own case. Reciprocity depends on metadata-block
    parseability **only** — a source that also trips `bad-vocab`,
    `bad-date`, or `status-drift` is still reciprocity-checked.
-5. The inverse bullet is genuinely absent from the target.
+5. The target is **not the source itself**. A recognized edge whose target
+   resolves to the declaring document is **exempt**: `docs check` must
+   never name a repair `docs relate` refuses to perform (`relate` rejects a
+   self-edge outright, see below), and a self-referential edge carries no
+   navigational meaning to complete. This is the same boundary as the
+   milestone's "no cycle or conflict detection" non-goal.
+6. The inverse bullet is genuinely absent from the target.
+
+**Path matching is normalized, not textual.** Both the source's edge target
+and each candidate inverse bullet in the target doc are resolved to their
+**canonical root-relative POSIX** form before comparison — the same
+resolution `broken-ref` already performs via `(root / target)`. So
+`precedes: ./b.md`, `precedes: sub/../b.md`, and `precedes: b.md` are the
+same edge, and an inverse written as `follows: ./a.md` satisfies
+`precedes: b.md` just as `follows: a.md` does. A genuinely reciprocal tree
+must not fail `docs check` over a `./` prefix. (Note the finding's message
+still quotes the **canonical** form of both edges, so the repair it names is
+the one `docs relate` would write.)
 
 Archived endpoints **are** in scope: they are walked, so archived↔active
 and archived↔archived one-sided edges are hard errors. `docs relate`'s
 audited archive exception exists precisely so these are repairable.
 
 Exactly **one** finding is emitted per distinct `(source, verb, target)`
-triple, even when the source repeats the bullet. There is **no** cycle
-detection and **no** conflict detection: a doc may declare both
-`precedes: b.md` and `follows: b.md` and, if `b.md` reciprocates both, the
-tree is clean.
+triple — compared on the canonical target path — even when the source
+repeats the bullet. There is **no** cycle detection and **no** conflict
+detection: a doc may declare both `precedes: b.md` and `follows: b.md` and,
+if `b.md` reciprocates both, the tree is clean.
 
 There is **no opt-out knob** for this rule — no `[check] reciprocal =
 false`. Missing inverses are errors, not compatibility warnings.

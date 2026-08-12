@@ -288,7 +288,10 @@ def test_check_missing_inverse_exits_2_and_names_repair(docs_script):
     proc = _run(docs_script, "check", str(TREES / "reciprocal-missing"))
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
     assert "Traceback" not in (proc.stdout + proc.stderr)
-    assert "a.md" in proc.stdout, "output is grouped by file; the SOURCE is named"
+    # Grouping header, not a substring hit: `a.md` also occurs inside the
+    # message body ("must declare 'follows: a.md'"), so only the bare
+    # header line proves the finding is FILED against the source doc.
+    assert "a.md" in proc.stdout.splitlines(), "output is grouped by file; the SOURCE is named"
     assert "missing-inverse" in proc.stdout
     assert (
         "Related: 'precedes: b.md' has no inverse; "

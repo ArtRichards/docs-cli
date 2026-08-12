@@ -774,17 +774,112 @@ def test_check_doc_revision_field_never_flagged_by_unknown_field(tmp_path):
     assert offenders == [], f"Revision: must never trip unknown-field, got {offenders!r}"
 
 
-@pytest.mark.parametrize("tree", ["drift", "invalid", "with-archive", "cross-refs"])
-def test_check_tree_legacy_fixtures_gain_no_new_findings(fixtures_dir, tree):
-    """M25 must not change any pre-existing fixture tree's finding multiset.
+def _legacy_tree_names() -> list[str]:
+    """Every committed fixture tree that is NOT one of M25's own.
 
-    None of the legacy fixtures uses a recognized verb (verified by grep at
-    Phase-1 planning time), so the new rule must be silent on all of them.
-    GREEN-at-baseline (degenerate), and a genuine regression lock after
-    Phase 6.
+    Deriving the list from the directory (rather than hard-coding four
+    names) means a fixture tree added later is covered for free — and if
+    someone adds a recognized verb to one, this lock catches it.
+    """
+    return sorted(
+        d.name for d in _TREES.iterdir() if d.is_dir() and not d.name.startswith("reciprocal-")
+    )
+
+
+@pytest.mark.parametrize("tree", _legacy_tree_names())
+def test_check_tree_legacy_fixtures_gain_no_new_findings(fixtures_dir, tree):
+    """No pre-M25 fixture tree may gain a `missing-inverse` finding.
+
+    None of them uses a recognized verb, so the new rule must be silent on
+    every one. GREEN-at-baseline (degenerate), and a genuine regression lock
+    after Phase 6 — including for fixture trees added by later milestones.
     """
     root = fixtures_dir / "trees" / tree
     findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
     assert [f for f in findings if f.rule == "missing-inverse"] == [], (
         f"legacy fixture {tree} must gain no missing-inverse findings"
     )
+
+
+def test_check_tree_inverse_pointing_elsewhere_is_still_missing(tmp_path):
+    """The inverse must point BACK AT THE SOURCE — not merely exist.
+
+    `b.md` declares the right verb (`follows`) at the wrong target (`c.md`).
+    An implementation that only asks "does the target declare `follows` at
+    all?" would pass every other test in this file while silently
+    under-reporting real one-sided edges. `c.md` reciprocates `b.md`, so the
+    b↔c pair is complete and the ONE expected finding is isolated.
+
+    RED: plain assertion (no rule yet).
+    """
+    root = _pair_root(tmp_path, source_edge="precedes: b.md", target_edge="follows: c.md")
+    (root / "c.md").write_text(
+        "# C\n\nLifecycle: active\nRole: notes\nProject: pairprobe\n"
+        "Updated: 2026-05-20\n\nRelated:\n- precedes: b.md\n\n## Body\n\nProse.\n"
+    )
+    findings = [
+        f
+        for f in check_tree(root, load_config(root), stale=None, today=_TODAY)
+        if f.rule == "missing-inverse"
+    ]
+    assert len(findings) == 1, f"expected exactly one missing-inverse, got {findings!r}"
+    assert findings[0].path == root / "a.md"
+    assert findings[0].message == (
+        "Related: 'precedes: b.md' has no inverse; "
+        "b.md must declare 'follows: a.md' (or remove the edge)"
+    )
+
+
+def test_check_tree_self_edge_is_exempt():
+    """Amendment A: a recognized edge to the declaring doc is EXEMPT.
+
+    `docs relate` refuses a self-edge (`SOURCE and TARGET must be different
+    documents`), so a finding here would name a repair the repair verb
+    declines to perform. GREEN-at-baseline (degenerate); a genuine
+    over-fire guard after Phase 6.
+    """
+    assert _tree_findings("reciprocal-self-edge") == []
+
+
+def test_check_tree_non_canonical_target_path_still_reciprocal(tmp_path):
+    """Amendment B: `precedes: ./b.md` is the same edge as `precedes: b.md`.
+
+    Paths are compared canonically, not textually — a hard check must not
+    fail over a `./` prefix. GREEN-at-baseline (degenerate).
+    """
+    root = _pair_root(tmp_path, source_edge="precedes: ./b.md", target_edge="follows: a.md")
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    assert findings == [], f"a `./` prefix must not break reciprocity, got {findings!r}"
+
+
+def test_check_tree_non_canonical_inverse_path_still_reciprocal(tmp_path):
+    """Amendment B, converse: the INVERSE bullet may be spelled loosely too."""
+    root = _pair_root(tmp_path, source_edge="precedes: b.md", target_edge="follows: ./a.md")
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    assert findings == [], f"a `./` prefix on the inverse must still count, got {findings!r}"
+
+
+def test_check_tree_dotdot_target_path_still_reciprocal(tmp_path):
+    """Amendment B: a `sub/..`-style detour normalizes to the same edge."""
+    root = _pair_root(tmp_path, source_edge="precedes: sub/../b.md", target_edge="follows: a.md")
+    (root / "sub").mkdir()
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    assert findings == [], f"`sub/../b.md` is `b.md`, got {findings!r}"
+
+
+def test_check_tree_no_conflict_detection(tmp_path):
+    """The "no conflict detection" statement, locked.
+
+    `a.md` declares BOTH `precedes: b.md` and `follows: b.md`; `b.md`
+    reciprocates both. Contradictory as sequencing, but every recognized
+    edge has its exact inverse, so the tree is clean. A naive per-doc
+    implementation that treats a verb and its inverse as mutually exclusive
+    would over-fire here. GREEN-at-baseline (degenerate).
+    """
+    root = _pair_root(
+        tmp_path,
+        source_edge="precedes: b.md\n- follows: b.md",
+        target_edge="follows: a.md\n- precedes: a.md",
+    )
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    assert findings == [], f"conflicting-but-reciprocated edges are clean, got {findings!r}"

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 Related:
 - pairs-with: cli.md
@@ -274,10 +274,21 @@ match** — `Precedes:` is a different, free-form verb.
 error** (rule `missing-inverse`, exit 2), reported against the doc that
 declares the un-reciprocated edge. It fires only when both endpoints are
 included by the effective exclusion predicate, the target resolves to a
-managed Markdown doc in the tree, and both endpoint texts parse — the
-existing `broken-ref`, exclusion, and `malformed` rules keep ownership of
-their own cases. See `cli.md` › `docs check` for the exact message and the
-full applicability list.
+managed Markdown doc in the tree, both endpoint texts parse, and the target
+is **not the declaring document itself** — a self-referential recognized
+edge is exempt, because there is no second document to complete and
+`docs relate` refuses to write one. The existing `broken-ref`, exclusion,
+and `malformed` rules keep ownership of their own cases. See `cli.md` ›
+`docs check` for the exact message and the full applicability list.
+
+Paths are compared **canonically**, not textually: both the edge's target
+and the candidate inverse bullet are resolved to their root-relative POSIX
+form before matching (the same resolution the existing `Related:`
+existence check performs). `precedes: ./b.md`, `precedes: sub/../b.md`, and
+`precedes: b.md` are one edge, and an inverse written `follows: ./a.md`
+satisfies it. Writing the plain root-relative form remains the
+recommendation — `docs relate` always writes it — but a tree that spells a
+path differently is not thereby broken.
 
 Every other verb stays **free-form and unvalidated**: `pairs-with`,
 `child-of` / `parent-of`, `supersedes` / `superseded-by`, `implements`,

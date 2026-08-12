@@ -16,6 +16,7 @@ import json
 import stat
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 
@@ -107,7 +108,10 @@ def test_relate_add_writes_both_endpoints_and_bumps_updated(docs_script, tmp_pat
     b_text = (root / "b.md").read_text()
     assert "- precedes: b.md" in a_text
     assert "- follows: a.md" in b_text
-    assert "Updated: 2026-05-20" not in a_text, "a changed endpoint gets its Updated: bumped"
+    today = date.today().isoformat()
+    assert f"Updated: {today}" in a_text, "a changed endpoint is bumped to today, not blanked"
+    assert f"Updated: {today}" in b_text
+    assert "Updated: 2026-05-20" not in a_text
     assert "Updated: 2026-05-20" not in b_text
     assert (root / "INDEX.md").is_file(), "one end-of-run reindex"
 
@@ -373,6 +377,10 @@ def test_relate_malformed_endpoint_exits_1(docs_script, tmp_path):
     proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
     assert "Traceback" not in proc.stderr
+    # The parser's own self-locating message — a CLEAN refusal, not a lucky
+    # exit 1: it names the offending file and the structural reason.
+    assert str(root / "b.md") in proc.stderr
+    assert "missing H1" in proc.stderr
     assert _snapshot(root) == before
 
 
@@ -508,6 +516,120 @@ def test_relate_falls_back_to_cwd_relative_endpoint(docs_script, tmp_path):
     )
 
 
+def test_relate_endpoint_resolution_prefers_root_relative_over_cwd(docs_script, tmp_path):
+    """OQ-A PRECEDENCE, pinned where the two interpretations actually differ.
+
+    Both `<root>/x.md` and `<cwd>/x.md` exist and are DIFFERENT files. The
+    binding decision is root-relative FIRST, so the edge must land in
+    `<root>/x.md` and `<root>/sub/x.md` must be byte-identical. Without
+    this, a cwd-relative-first implementation passes every other
+    resolution test in this file.
+    """
+    root = tmp_path / "precedence"
+    (root / "sub").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "precedence"\n')
+    (root / "x.md").write_text(_doc("Root X", "precedence", None))
+    (root / "y.md").write_text(_doc("Root Y", "precedence", None))
+    (root / "sub" / "x.md").write_text(_doc("Sub X", "precedence", None))
+    decoy_before = (root / "sub" / "x.md").read_bytes()
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "x.md",
+        "precedes",
+        "y.md",
+        "--root",
+        str(root),
+        cwd=root / "sub",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "- precedes: y.md" in (root / "x.md").read_text(), "root-relative wins"
+    assert (root / "sub" / "x.md").read_bytes() == decoy_before, (
+        "the cwd-relative candidate must not be touched"
+    )
+    assert "- follows: x.md" in (root / "y.md").read_text(), (
+        "the inverse names the ROOT-relative source, not sub/x.md"
+    )
+    assert "docs: relate: added 'precedes: y.md' to x.md" in proc.stderr
+
+
+def test_relate_absolute_endpoint_inside_root_reports_root_relative(docs_script, tmp_path):
+    """An absolute path is used as-is, but every message names the root-relative form."""
+    root = _pair_tree(tmp_path, "absolute")
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        str(root / "a.md"),
+        "precedes",
+        str(root / "b.md"),
+        "--root",
+        str(root),
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "docs: relate: added 'precedes: b.md' to a.md" in proc.stderr
+    assert str(tmp_path) not in proc.stderr, "no absolute path may leak into the output"
+    assert "- precedes: b.md" in (root / "a.md").read_text()
+    assert "- follows: a.md" in (root / "b.md").read_text()
+
+
+def test_relate_root_without_docs_toml_refuses(docs_script, tmp_path):
+    """`--root` bypasses the up-walk ONLY when the directory is managed."""
+    bare = tmp_path / "unmanaged"
+    bare.mkdir()
+    (bare / "a.md").write_text(_doc("A", "unmanaged", None))
+    (bare / "b.md").write_text(_doc("B", "unmanaged", None))
+    before = _snapshot(bare)
+    proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(bare))
+    assert proc.returncode == 2
+    assert f"docs: relate: --root {bare} does not contain .docs.toml; refusing" in proc.stderr
+    assert _snapshot(bare) == before
+
+
+def test_relate_json_echoes_a_non_null_reason(docs_script, tmp_path):
+    """`reason` is echoed verbatim even when the pair is all-active (unused)."""
+    root = _pair_tree(tmp_path, "reasonecho")
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "precedes",
+        "b.md",
+        "--root",
+        str(root),
+        "--json",
+        "--reason",
+        "operator note",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    record = json.loads(proc.stdout)
+    assert record["reason"] == "operator note"
+    assert all(e["revision_appended"] is False for e in record["edits"]), (
+        "--reason on an all-active pair is accepted but unused"
+    )
+
+
+def test_relate_reindex_honours_exclusion(docs_script, tmp_path):
+    """M14 — A6: a malformed EXCLUDED file cannot fail the post-repair reindex."""
+    root = tmp_path / "excluded-reindex"
+    (root / "vendor").mkdir(parents=True)
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "excluded-reindex"\n\n[exclude]\ndirs = ["vendor"]\n'
+    )
+    (root / "a.md").write_text(_doc("A", "excluded-reindex", None))
+    (root / "b.md").write_text(_doc("B", "excluded-reindex", None))
+    (root / "vendor" / "junk.md").write_text("no h1 in this excluded file\n")
+
+    proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "INDEX refresh failed" not in proc.stderr
+    assert (root / "INDEX.md").is_file()
+    assert "junk.md" not in (root / "INDEX.md").read_text()
+
+
 # --- archived endpoints (D4) -----------------------------------------------
 
 
@@ -548,6 +670,39 @@ def test_relate_archived_no_op_still_requires_reason(docs_script, tmp_path):
     assert proc.returncode == 2
     assert "--reason is required" in proc.stderr
     assert _snapshot(root) == before, "and it still writes nothing"
+
+
+def test_relate_archived_no_op_with_reason_writes_nothing(docs_script, tmp_path):
+    """D3 + D4: an already-satisfied archived repair writes ZERO bytes.
+
+    `--reason` is supplied and the archive rule is satisfied, so the run
+    proceeds — and must then find nothing to do. Nothing may append a
+    `Revision:` bullet or bump `Updated:` for a mutation that did not
+    happen: D4 says one bullet per REAL mutation, D3 says a fully-satisfied
+    invocation writes zero bytes. Without this lock, Step 2 can annotate an
+    archived doc on every re-run.
+    """
+    root = _archived_pair_tree(tmp_path, "archivednoop", inverse_present=True)
+    archived = root / "archive" / "2026-01-01" / "old.md"
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "depends-on",
+        "archive/2026-01-01/old.md",
+        "--root",
+        str(root),
+        "--reason",
+        "re-running the same repair",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "no change — " in proc.stderr
+    assert _snapshot(root) == before, "an idempotent archived run is byte-neutral"
+    assert "Revision:" not in archived.read_text(), "no bullet for a mutation that did not happen"
+    assert not (root / "INDEX.md").exists(), "no change ⇒ no reindex"
 
 
 def test_relate_archived_repair_writes_only_the_allowed_bytes(docs_script, tmp_path):
@@ -697,6 +852,39 @@ def test_relate_does_not_gate_on_whole_tree_health(docs_script, tmp_path):
     # The repair itself LANDED — that is the whole point of the exception.
     assert "- precedes: b.md" in (root / "a.md").read_text()
     assert "- follows: a.md" in (root / "b.md").read_text()
+
+
+def test_relate_second_write_failure_rolls_back_and_says_so(docs_script, tmp_path):
+    """D5 stage 5, end-to-end: a failed second publish rolls the first back.
+
+    The injection is the read-only *directory* trick: `sub/` is `chmod 555`
+    while `sub/b.md` keeps mode 644, so `os.access(b.md, W_OK)` is True and
+    the stage-4 writability pre-flight PASSES — then `atomic_write` fails
+    creating `sub/b.md.docs-tmp` inside the unwritable directory, which is
+    exactly the stage-5 path. Assumes a non-root uid, the same assumption
+    `test_cli_archive.py::test_archive_oserror_mid_rewrite_exits_2` makes.
+    """
+    root = tmp_path / "rollback"
+    (root / "sub").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "rollback"\n')
+    (root / "a.md").write_text(_doc("A", "rollback", None))
+    (root / "sub" / "b.md").write_text(_doc("B", "rollback", None))
+    before = _snapshot(root)
+
+    (root / "sub").chmod(0o555)
+    try:
+        proc = _run(
+            docs_script, "relate", "add", "a.md", "precedes", "sub/b.md", "--root", str(root)
+        )
+        assert proc.returncode == 2, (proc.stdout, proc.stderr)
+        assert "Traceback" not in proc.stderr
+        assert "docs: relate: write failed for sub/b.md:" in proc.stderr
+        assert "rolled back a.md — the tree is unchanged" in proc.stderr
+        assert _snapshot(root) == before, (
+            "the already-published source must be restored byte-for-byte"
+        )
+    finally:
+        (root / "sub").chmod(0o755)
 
 
 # --- reindex ---------------------------------------------------------------

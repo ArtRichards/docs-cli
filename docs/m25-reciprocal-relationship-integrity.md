@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 Related:
 - child-of: plan.md
@@ -26,13 +26,17 @@ Related:
   inverses a hard `docs check` error, and add a narrow two-document
   `docs relate add/remove` mutation for explicit repair. The mutation works on
   active docs and, with a reasoned audit record, on archived endpoints.
-- Progress: **Active / Phases 1–4 complete (2026-08-11).** The contract is
+- Progress: **Active / Phases 1–4 complete (2026-08-11; amended 2026-08-12).** The contract is
   frozen in *Decisions (Phase 1 — BINDING)* below and in `cli.md` /
   `convention.md`; all five open questions are RESOLVED. The RED suite is
-  written (+92 items) over nine committed `reciprocal-*` fixture trees, and
-  the RED baseline is captured: **728 collected, 77 failed, 651 passed**,
+  written (+121 items) over ten committed `reciprocal-*` fixture trees, and
+  the RED baseline is captured: **757 collected, 87 failed, 670 passed**,
   every RED matching its classified reason and the pre-existing 636 all still
-  GREEN. Phase 5 — Update Base Interfaces is next.
+  GREEN. Step 1 has been through a same-instance audit and an independent
+  fresh-eyes review (**no blockers**); the review's two operator-binding
+  contract amendments — the **self-edge exemption** and **canonical path
+  matching** — are folded into D2 below. Phase 5 — Update Base Interfaces is
+  next.
 
 ### Goal
 
@@ -302,13 +306,35 @@ no navigational gain.
 - **No new JSON fields.** The record stays exactly
   `{path, severity, rule, message}` — the key set `tests/test_cli_check.py`
   already pins for every record.
-- Applicability (all five must hold): both endpoints walked under the
+- Applicability (all six must hold): both endpoints walked under the
   effective predicate; the target resolves to a file (else `broken-ref`
   owns it); the target is a managed `.md` doc in the walked set; **both**
   texts survive `parse_metadata_block` (else `malformed` owns it); the
-  inverse bullet is absent. Reciprocity depends on metadata-block
-  parseability **only** — a source that also trips `bad-vocab` or
-  `bad-date` is still reciprocity-checked.
+  target is **not the source itself**; the inverse bullet is absent.
+  Reciprocity depends on metadata-block parseability **only** — a source
+  that also trips `bad-vocab` or `bad-date` is still reciprocity-checked.
+- **Post-review contract amendment A (2026-08-12, operator-binding) — the
+  self-edge exemption.** Condition 5 above is new. A recognized edge whose
+  target resolves to the declaring document is exempt from the rule.
+  Rationale: `docs relate` refuses a self-edge outright (exit 2,
+  `SOURCE and TARGET must be different documents`), so without the
+  exemption `docs check` would name a repair the repair verb declines to
+  perform — an unfixable finding. A self-referential edge also has no
+  second document whose context could be completed, which is the whole
+  point of the rule. Consistent with the "no cycle or conflict detection"
+  non-goal.
+- **Post-review contract amendment B (2026-08-12, operator-binding) —
+  canonical path matching.** Both the source edge's target and each
+  candidate inverse bullet are resolved to their canonical root-relative
+  POSIX form **before** comparison, matching how `broken-ref` already
+  resolves via `(root / target).is_file()`. `precedes: ./b.md`,
+  `precedes: sub/../b.md`, and `precedes: b.md` are one edge; an inverse
+  spelled `follows: ./a.md` satisfies `precedes: b.md`. Rationale: a
+  genuinely reciprocal tree must not fail a *hard* check over a `./`
+  prefix — a purely textual match would turn a cosmetic spelling into an
+  exit-2 error with no opt-out. The finding's message still quotes the
+  canonical form, so the repair it names is the one `docs relate` writes.
+  The per-triple dedupe key uses the canonical target too.
 - Archived endpoints are in scope (they are walked). This is precisely why
   D4 exists.
 - One finding per distinct `(source, verb, target)` triple, even when the
@@ -409,6 +435,15 @@ Stated plainly in the spec: this is **best-effort staged publish +
 rollback**, not a filesystem-wide transaction — two files cannot be renamed
 atomically as a unit on POSIX. The contract is pinned by failure injection
 rather than asserted.
+
+**Both the publish and the rollback go through the module-level
+`atomic_write`.** This is a binding part of D5, not an accident of the
+tests: the rollback must inherit exactly the same tmpfile + fsync + rename
+durability as the publish it is undoing — a restore written with a plain
+`Path.write_text` could itself be torn by a crash, which is the failure the
+rollback exists to prevent. It also keeps the seam monkeypatchable, which is
+the only way the failure path is testable at all
+(`tests/test_relate_plan.py` injects there).
 
 ### D6 — Version staging (Q5, BINDING — operator decision)
 

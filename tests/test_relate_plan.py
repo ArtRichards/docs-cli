@@ -201,6 +201,59 @@ def test_plan_relate_archived_edit_appends_revision_and_bumps_updated(tmp_path):
         assert untouched in target_edit.new_text
 
 
+def test_plan_relate_remove_marks_both_halves_removed(tmp_path):
+    """The `remove` direction at the plan seam — the mirror of the `add` test.
+
+    Nothing else pins `present_before`/`present_after` or
+    `change == "removed"` for a removal; the CLI end-to-end test only
+    inspects the resulting file text.
+    """
+    root = _two_doc_root(tmp_path, source_edge="precedes: b.md")
+    (root / "b.md").write_text(
+        "# B\n\nLifecycle: active\nRole: notes\nProject: relateprobe\n"
+        "Updated: 2026-05-20\n\nRelated:\n- follows: a.md\n\n## Body\n\nProse.\n"
+    )
+    plan = _plan(
+        root,
+        action="remove",
+        source=root / "a.md",
+        verb="precedes",
+        target=root / "b.md",
+        reason=None,
+        date_str=_DATE,
+    )
+
+    assert plan.action == "remove"
+    assert plan.inverse == "follows"
+    source_edit, target_edit = plan.edits
+    for edit, edge in ((source_edit, "precedes: b.md"), (target_edit, "follows: a.md")):
+        assert edit.edge == edge
+        assert (edit.present_before, edit.present_after) == (True, False)
+        assert edit.change == "removed"
+        assert edit.updated_bumped is True
+        assert edit.revision_appended is False, "both endpoints are active"
+        assert f"- {edge}" not in edit.new_text
+
+
+def test_plan_relate_remove_of_an_absent_edge_is_unchanged(tmp_path):
+    """Idempotent `remove`: nothing present, nothing planned, nothing bumped."""
+    root = _two_doc_root(tmp_path)
+    plan = _plan(
+        root,
+        action="remove",
+        source=root / "a.md",
+        verb="precedes",
+        target=root / "b.md",
+        reason=None,
+        date_str=_DATE,
+    )
+    for edit in plan.edits:
+        assert (edit.present_before, edit.present_after) == (False, False)
+        assert edit.change == "unchanged"
+        assert edit.updated_bumped is False
+        assert edit.new_text == edit.original
+
+
 def test_apply_relate_plan_writes_both(tmp_path):
     """D5 stage 5: publish source then target; the tree then reads back clean."""
     root = _two_doc_root(tmp_path)

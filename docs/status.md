@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 Related:
 - pairs-with: plan.md
@@ -43,7 +43,8 @@ Related:
 ## Current milestone
 
 **M25 — Reciprocal relationship integrity and `docs relate` is the current
-milestone. Phases 1–4 are complete (2026-08-11); Phase 5 — Update Base
+milestone. Phases 1–4 are complete (2026-08-11, amended 2026-08-12);
+Phase 5 — Update Base
 Interfaces is next.** M25 defines three reciprocal relationship
 pairs (`precedes`/`follows`, `depends-on`/`required-by`, and
 `blocks`/`blocked-by`), makes a missing exact inverse a hard `docs check` error,
@@ -55,12 +56,17 @@ finding and its exact message, the `relate` grammar / human / JSON / dry-run
 output, root-relative-first endpoint resolution, the archived `--reason` +
 `Revision:` audit rules, and the staged-publish-with-rollback failure contract.
 All five Phase-1 open questions are RESOLVED. Phase 2 wrote the RED suite
-across six edited and two new test files, Phase 3 added nine committed
+across six edited and two new test files, Phase 3 added ten committed
 `reciprocal-*` fixture trees, and Phase 4 captured the classified RED
-baseline. Including the four tests the same-instance audit added, M25 so far
-contributes **92 test items**: **728 collected, 77 failed, 651 passed** —
-every RED matching its classified reason, zero collection errors, and the
-636 pre-existing tests all still GREEN. **Version staging (Q5):
+baseline. Including the same-instance audit and the fresh-eyes review
+fold-in, M25 so far contributes **121 test items**: **757 collected,
+87 failed, 670 passed** — every RED matching its classified reason, zero
+collection errors, and the 636 pre-existing tests all still GREEN. The
+review returned **no blockers**; its two operator-binding contract
+amendments (a self-referential recognized edge is **exempt** from
+`missing-inverse`, and reciprocity matches on **canonical** root-relative
+paths so a `./` prefix cannot fail a hard check) are folded into the
+specs, the bundled mirrors, and the tests. **Version staging (Q5):
 `docs-cli` stays `1.8.0` through M25–M28; M29 performs the single bump to
 `2.0.0` at publish.** The prepared pair is
 [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md)
