@@ -33,9 +33,9 @@ the milestone checklist synchronized.
   and proved mechanically that 769 of the 777 pre-existing ids are still
   GREEN, the other 8 deliberately changed. **Phases 1–4 changed no product
   code** — `git diff src/docs_cli/cli.py` was empty at the end of Step 1.
-  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–6 —
-  Update Base Interfaces and Implement Core — are complete (814 passed, 70
-  failed; the whole unit-seam suite GREEN).
+  **Step 2 (Phases 5–10) is under way on `m26/phases-5-10`:** Phases 5–7 —
+  Update Base Interfaces, Implement Core, and Update Wrappers — are complete;
+  every M26 behaviour test is GREEN and the surface is in parity.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
 - Branch: `m26/milestone-setup` for setup; `m26/phases-1-4` for Step 1
@@ -51,7 +51,7 @@ the milestone checklist synchronized.
 | 4. Run Tests (RED Baseline) | **Done** | 2026-08-13 | **884 collected, 104 failed, 780 passed** (post-review); 0 collection errors, 0 tracebacks, 0 xfail/xpass; 34 `AttributeError` + 70 `AssertionError`. Mechanical proof against `37d7f1a`: 769 of the 777 pre-existing ids still GREEN, the other 8 deliberately changed (3 removed, 5 failing). One falsely-GREEN `--json` refusal test caught and fixed, plus eight audit findings and a fresh-eyes review whose blocker was an unsatisfiable M18 assertion. |
 | 5. Update Base Interfaces | **Done** | 2026-08-13 | `CoordinatedWriteError` widened (+ keyword-only `exit_code`, defaulting to today's 2), `ARCHIVE_EXCLUSION_REASONS`, `ArchiveMove` / `ArchivePlan` (+ `moves`), `_is_archived_rel`, `_archive_destination`, `archive_plan_to_json`. No behaviour change; `_cmd_archive` untouched. **781 passed, 103 failed** — exactly the predicted +1. |
 | 6. Implement Offline/Core Path | **Done** | 2026-08-13 | `_candidate_exclusion_reason`, `archive_candidates`, `plan_archive`, `preflight_archive_plan`, `apply_archive_plan`, `_archive_partial_state`. `_archive_one` verbatim; `_cmd_archive` still untouched. **814 passed, 70 failed** — exactly the predicted +33, the whole of `tests/test_archive_plan.py`. |
-| 7. Update Tool/Wrapper Layer | Pending | — | argparse surface (refusing flags + local `--json`), human output, JSON record, docs, bundled skill, CHANGELOG (no version bump). |
+| 7. Update Tool/Wrapper Layer | **Done** | 2026-08-13 | argparse (mutex group deleted, both retired flags marked, local `--json`), `_cmd_archive` rewritten in the nine-step check order, `_print_archive_lines`; `_cascade_set` / `_print_cascade_footer` / `_cascade_archive` deleted — the verb's last stdin read goes with them. Surface parity: SKILL.md, `references/use-cases.md`, byte-identical mirrors, `UNRELEASED` CHANGELOG, `cli.md`, `plan.md`. **887 passed, 1 failed of 888** — the one RED is a defective Step-1 test helper, fixed in its own commit. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Preview + scoped archive of a real milestone pair on a throwaway tree copy. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close docs, completion summaries, hand off to M27. |
@@ -714,8 +714,12 @@ is the one part not asserted verbatim; everything either side of it is.
 5. `docs/agent-native-invocation.md:250` — a `Lifecycle: draft`,
    `Project: ideas` proposal from 2026-06-03 whose Layer-5 bullet still names
    `--cascade` as a pre-answerable replacement for the prompt. It is a
-   historical proposal record, not a spec on the surface-parity gate, so it is
-   listed as **operator's call**, not as a required Phase-7 edit.
+   historical proposal record, not a spec on the surface-parity gate.
+   **Superseded by conductor decision B** (recorded below, and the later
+   binding record): the proposal text is kept verbatim — rewriting it would
+   falsify what was proposed in June — and a short dated note pointing at the
+   safe flow is a **required** edit, so an agent reading the proposal is not
+   trapped. Landed with the review fold-in.
 
 ### Verification
 
@@ -827,9 +831,11 @@ one commit per phase, each with the project's `Co-Authored-By` trailer.
 - **`docs/agent-native-invocation.md:250`** — a `Lifecycle: draft`,
   `Project: ideas` proposal from 2026-06-03 whose Layer-5 bullet still names
   `--cascade` as a pre-answerable replacement for the interactive prompt. It
-  is a historical proposal record, not a spec on the surface-parity gate, so
-  it is left untouched and listed as the operator's call rather than folded
-  into the Phase-7 list.
+  is a historical proposal record, not a spec on the surface-parity gate.
+  **Conductor decision B settled it** and is the later, binding record: keep
+  the proposal text verbatim and add a short dated note pointing at the safe
+  flow — a required edit, not the operator's call. Landed with the review
+  fold-in.
 
 ### Post-audit gates
 
@@ -1122,6 +1128,134 @@ remaining 70 failures are all CLI-level (68 in `tests/test_cli_archive.py`,
 `_print_cascade_footer` / `_cascade_archive` helpers are still live because
 `_cmd_archive` still calls them. Phase 7d deletes all three in the same
 change that stops calling them.
+
+## Phase 7 — Update Tool/Wrapper Layer — 2026-08-13
+
+### Objective
+
+Wire the seam to the command line in the frozen check order, delete the 1.x
+cascade machinery it supersedes, and bring every surface — `--help`,
+`cli.md`, `convention.md`, the bundled skill, and the `UNRELEASED`
+CHANGELOG — into parity in the same change.
+
+### 7a — argparse
+
+- **The mutually-exclusive group is gone.** `--cascade`, `--cascade-only`,
+  and `--interactive` are now plain arguments (Phase-1 Q12). Nothing else may
+  go in a mutex group, or a combination naming a retired flag would still die
+  with argparse's `not allowed with` instead of the M26 refusal.
+- `--cascade` and `--interactive` keep `action="store_true"` and share ONE
+  help string beginning `RETIRED in docs 2.0`, so `--help` marks both.
+- `--json` added locally on the subparser (as `check` / `list` / `migrate` /
+  `relate` do), and the subparser `description` now names the three D1
+  shapes.
+
+### 7b / 7c — `_cmd_archive` in check order
+
+Rewritten end to end as the nine frozen steps. The details that are contract,
+not style:
+
+- **Steps 1 and 2 run before any filesystem access.** The retirement guard is
+  the first statement in the function, so it wins over a missing file, a bad
+  `--date`, and a malformed primary; the `--cascade-only` shape test is purely
+  lexical, so it precedes even the missing-file check.
+- **A blank / comment-only / negated scope refuses in EVERY mode**,
+  a preview included (conductor-resolved). D6's "a preview never fails"
+  governs a *valid glob that selects nothing* — a selection outcome. A
+  malformed pattern is a malformed invocation. `cli.md` § *Preview* now states
+  the carve-out explicitly rather than leaving it to be inferred, and both
+  `test_cascade_only_empty_pattern_refuses` and
+  `test_cascade_only_negated_pattern_refuses` gained a `preview`
+  parametrization (+4 test ids; the suite is now **888 collected**).
+- **`root` and the primary are both resolved once, up front.**
+  `_root_relative` falls back to the bare filename for a path it cannot
+  relativise, which would silently mis-name a `sub/x.md` primary given
+  relatively.
+- **`source=args.file`** — the raw argument, never `str(primary)`.
+- **`CoordinatedWriteError` is caught BEFORE `OSError`** wherever both could
+  apply. It is an `OSError` subclass, so the reverse order silently swallows
+  every refusal into the generic handler.
+- **The post-move `try` is split in two.** `_rewrite_referring_edges` failing
+  is M14 (A4): exit 2, **no record**. `_refresh_index` failing is the one
+  documented post-write exception: exit 2 **with** the record, carrying
+  `"applied": true, "index_refreshed": false`. It catches `OSError` too —
+  `_cmd_relate`'s refresh handler catches only the two metadata errors, and a
+  read-only root raises `OSError`, which is exactly what
+  `test_archive_json_record_is_emitted_on_an_index_refresh_failure` triggers.
+
+`_print_archive_lines(plan, *, dry_run, cascade)` renders the frozen
+preview/apply vocabulary, with `_candidate_state` and a module-level
+`_ARCHIVE_INELIGIBLE_PROSE` mapping keyed on the three ineligibility tokens
+(membership in that mapping is also what the counts footer uses to tell
+"ineligible" from "not selected").
+
+### 7d — deletions
+
+`_cascade_set`, `_print_cascade_footer`, and `_cascade_archive` are deleted.
+`_CASCADE_VERBS` stays, now consumed by `archive_candidates`. Deleting
+`_cascade_archive` removes `docs archive`'s last `sys.stdin` read, which is
+what turns `test_archive_never_prompts_on_stdin` (×3) from a degenerate lock
+into a genuine one. `grep -n "stdin" src/docs_cli/cli.py` now shows only
+`docs new --body-from -` and `docs install-skill`'s TTY prompt.
+
+1.x's `docs: could not create archive directory: <exc>` (exit 2) disappears
+with them: that `OSError` now surfaces as the D4 partial-state admission,
+also exit 2. No test and no spec line asserted the string; `cli.md`'s exit-2
+row no longer lists "archive-dir creation failure" separately, because the
+admission row covers it.
+
+### 7e — surface parity
+
+| Target | Edit |
+|---|---|
+| `src/docs_cli/skill/SKILL.md` | the archive row now teaches `--reason`, `--date`, `--json`, and the preview-then-scope flow. It does not name bare `--cascade` **at all** — the flag column reads as a prescription, and `references/cli.md` ships alongside carrying the retirement in full. |
+| `src/docs_cli/skill/references/use-cases.md` | same prescription in the shipped use-case catalog. |
+| `src/docs_cli/skill/references/{cli,convention}.md` | re-copied after the spec edits; `cmp` byte-identical. |
+| `CHANGELOG.md` (`UNRELEASED`) | `### Added` — the three safe shapes, `--cascade-dry-run`, `--cascade-only`, `--json`. `### Changed` — the two retirements (BREAKING) and the new human vocabulary. `### Upgrading from 1.x` — the two-line replacement recipe. **No version bump, no dating** (M25 — D6 / M29). |
+| `docs/cli.md` | the § *Preview* carve-out sentence, and the exit-2 row corrected. |
+| `docs/plan.md` | the *Resolved questions* bullet still claimed `--cascade` "prompts (`y/N`, defaulting to no)" — false since M14 (B1) and doubly false now. Rewritten to the M26 authorization rule (Phase-1 Q17). |
+| `docs/agent-native-invocation.md` | already carries conductor decision B's dated note (landed with the review fold-in); the Phase-4 follow-through list's "operator's call" wording is corrected here, since decision B is the later binding record. |
+
+### Evidence
+
+```
+.venv/bin/ruff check .            →  All checks passed!
+.venv/bin/ruff format --check .   →  46 files already formatted
+.venv/bin/mypy src/ tests/        →  Success: no issues found in 47 source files
+.venv/bin/python -m pytest -q     →  887 passed, 1 failed  (888 collected)
+```
+
+Every M26 behaviour test is GREEN. The single failure is **not** missing
+behaviour — it is a defect in a Step-1 test's own tree builder, described
+next, and it is fixed in its own labelled commit rather than folded in here.
+
+## Defect in a Step-1 test — `test_archive_help_still_registers_the_retired_flags`
+
+The test's final loop builds a fresh tree per retired flag:
+
+```python
+for flag in ("--cascade", "--interactive"):
+    root = _two_relation_tree(tmp_path / flag.strip("-"))
+```
+
+`_two_relation_tree` does `root = tmp_path / "two-rel"; root.mkdir()` with
+`parents=False`, and `tmp_path / "cascade"` does not exist — so the helper
+raises `FileNotFoundError` **inside the test body, before the CLI is ever
+invoked**. No product code can satisfy it. It was masked at the Phase-4
+baseline because the test failed earlier, on the `--help` assertions, and it
+surfaced the moment Phase 7a made those pass.
+
+The fix is `root.mkdir(parents=True)` in the helper — one word, in a
+directory-creation call. **No assertion is changed, relaxed, or removed**, and
+the fix strictly *strengthens* enforcement: the loop's
+`"unrecognized arguments" not in proc.stderr` assertions — the only lock on
+the flags staying registered rather than deleted — could never run before and
+now do. Every other caller passes an existing `tmp_path`, for which
+`parents=True` is a no-op.
+
+Recorded here, and surfaced to the operator and the fresh-eyes review, rather
+than folded silently into the Phase-7 commit — the M25 precedent for a
+defective Step-1 test (`7e4feb1`).
 
 ## Milestone completion summary
 

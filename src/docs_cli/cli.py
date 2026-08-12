@@ -3955,38 +3955,52 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Set Lifecycle: archived and bump Updated:, move the file to "
             "<archive_dir>/<YYYY-MM-DD>/, then regenerate INDEX.md. The "
-            "metadata edit is atomic; the move runs only after it succeeds."
+            "metadata edit is atomic; the move runs only after it succeeds. "
+            "Exactly three shapes write, and no other invocation writes a "
+            "related document (M26): `docs archive FILE` archives FILE alone; "
+            "`--cascade-dry-run` previews the whole one-hop neighbourhood and "
+            "writes nothing; `--cascade-only GLOB` archives FILE plus exactly "
+            "the candidates matching GLOB, planned in full before the first "
+            "byte moves."
         ),
     )
     archive_p.add_argument("file", help="Path to the doc to archive.")
     archive_p.add_argument("--reason", help="Free-form Archived-reason: metadata line.")
     archive_p.add_argument("--date", help="Archive date YYYY-MM-DD (default: today).")
-    # M14 (B1): the cascade flag set. `--cascade`, `--cascade-only`, and
-    # `--interactive` are mutually exclusive (one shaping mode per run).
-    # `--cascade-dry-run` is NOT in this group: it composes with
-    # `--cascade-only` (preview the filtered subset); its rejection
-    # together with `--interactive` is an imperative guard in
-    # `_cmd_archive` (a dry-run that prompts is incoherent).
-    cascade_group = archive_p.add_mutually_exclusive_group()
-    cascade_group.add_argument(
-        "--cascade",
-        action="store_true",
-        help="Archive every one-hop pairs-with / child-of relation (no prompt).",
+    # M26 (D2): `--cascade` and `--interactive` are RETIRED. They stay
+    # REGISTERED so an obsolete script or workflow skill gets a legible,
+    # actionable refusal rather than argparse's generic `unrecognized
+    # arguments`, and they are deliberately NOT in a mutually-exclusive
+    # group (Phase-1 Q12): the single unconditional refusal at the top of
+    # `_cmd_archive` covers every combination, so no cell is intercepted by
+    # argparse's "not allowed with" error instead.
+    _retired_help = (
+        "RETIRED in docs 2.0 — refuses (exit 2) and writes nothing. Preview "
+        "with --cascade-dry-run, then write with --cascade-only GLOB."
     )
-    cascade_group.add_argument(
+    archive_p.add_argument("--cascade", action="store_true", help=_retired_help)
+    archive_p.add_argument("--interactive", action="store_true", help=_retired_help)
+    archive_p.add_argument(
         "--cascade-only",
         metavar="GLOB",
-        help="Cascade only the one-hop relations whose root-relative path matches GLOB.",
-    )
-    cascade_group.add_argument(
-        "--interactive",
-        action="store_true",
-        help="Prompt [y/N] before archiving each one-hop relation (the only stdin path).",
+        help=(
+            "Also archive exactly the one-hop pairs-with / child-of candidates whose "
+            "CANONICAL root-relative path matches GLOB — the only way to archive a "
+            "related document. A scope that selects nothing refuses (exit 2)."
+        ),
     )
     archive_p.add_argument(
         "--cascade-dry-run",
         action="store_true",
-        help="Preview the cascade set and write nothing (exit 0); composes with --cascade-only.",
+        help=(
+            "Preview the primary plus EVERY one-hop candidate (selected, not selected, "
+            "or ineligible) and write nothing (exit 0); composes with --cascade-only."
+        ),
+    )
+    archive_p.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the operation-plan record as JSON on stdout.",
     )
 
     mv_p = subparsers.add_parser(
@@ -4963,61 +4977,6 @@ def _archive_partial_state(
     )
 
 
-def _cascade_set(doc: Doc, root: Path, cascade_only: str | None) -> list[tuple[str, Path]]:
-    """Return the one-hop cascade candidates of `doc`, filtered by `--cascade-only`.
-
-    Pure helper for the non-interactive `--cascade` / `--cascade-only`
-    paths (M14 — B1): walks `doc`'s `Related:` edges, keeps the
-    `pairs-with` / `child-of` ones whose target file still exists, and
-    returns `(target_rel, candidate_path)` pairs where `target_rel` is the
-    related doc's root-relative POSIX `Related:` target (the source path,
-    used for the footer) and `candidate_path` is the on-disk path to
-    archive. One hop only — the related docs' own relations are not
-    followed. No prompt, no stdin.
-
-    When `cascade_only` is given it is compiled by the same matcher
-    `compile_exclude_predicate` uses (`_compile_docsignore_pattern`,
-    gitignore-flavoured) and matched against each `target_rel` (RQ#3); a
-    pattern that compiles to nothing (a comment / blank) matches nothing.
-    """
-    rgx: re.Pattern[str] | None = None
-    if cascade_only is not None:
-        compiled = _compile_docsignore_pattern(cascade_only)
-        if compiled is None:
-            return []
-        _negate, rgx = compiled
-
-    out: list[tuple[str, Path]] = []
-    for verb, target in doc.related:
-        if verb not in _CASCADE_VERBS:
-            continue
-        if rgx is not None and not rgx.match(target):
-            continue
-        candidate = root / target
-        if not candidate.is_file():
-            continue
-        out.append((target, candidate))
-    return out
-
-
-def _print_cascade_footer(rels: list[str], dry_run: bool) -> None:
-    """Print the M14 (B1) cascade footer to stderr.
-
-    Names the cascaded (or would-cascade) set so an operator or agent
-    reading stderr sees exactly what moved. An empty set prints the
-    no-relations footer (non-dry-run only; a dry-run with an empty set
-    just prints the footer too for symmetry).
-    """
-    if not rels:
-        print("docs: cascade: no one-hop relations to archive", file=sys.stderr)
-        return
-    joined = ", ".join(rels)
-    if dry_run:
-        print(f"docs: cascade would archive {len(rels)} related doc(s): {joined}", file=sys.stderr)
-    else:
-        print(f"docs: cascade archived {len(rels)} related doc(s): {joined}", file=sys.stderr)
-
-
 def _archive_one(path: Path, root: Path, config: Config, date_str: str, reason: str | None) -> Path:
     """Archive a single doc: edit metadata, then move it into the dated dir.
 
@@ -5097,54 +5056,129 @@ def archive_plan_to_json(
     }
 
 
-def _cascade_archive(
-    doc: Doc, root: Path, config: Config, date_str: str, quiet: bool
-) -> list[tuple[str, str]]:
-    """Prompt to archive each one-hop `pairs-with` / `child-of` relation of `doc`.
+# M26 (D6): the human prose for each INELIGIBILITY token. `not-selected` is
+# absent deliberately — it is not an ineligibility, its line depends on
+# whether a scope was given, and membership in this mapping is what the
+# counts footer uses to tell "ineligible" from "not selected".
+_ARCHIVE_INELIGIBLE_PROSE: Mapping[str, str] = {
+    "already-archived": "already archived",
+    "unresolved-target": "target does not resolve to a file",
+    "outside-root": "target resolves outside the docs root",
+}
 
-    Each related doc that still exists prompts for a y/N confirmation on stdin;
-    on `y` it is archived into the same dated directory. Declined docs — and
-    docs whose archive fails — are left in place (drift `docs check` surfaces).
-    The cascade is one hop only: the related docs' own relations are not
-    followed.
 
-    M12 (OQ-D / OQ-δ): returns a list of `(old_rel, new_rel)` moves —
-    one entry per successful cascade archive — so the caller can hand
-    them to `_rewrite_referring_edges` for the single atomic batch
-    rewrite. Failed / declined archives contribute nothing.
+def _candidate_state(candidate: ArchiveMove, scope: str | None) -> str:
+    """The frozen `— <state>` half of a preview/apply `candidate` line."""
+    if candidate.selected:
+        return f"selected -> {candidate.dest_rel}"
+    if candidate.exclusion_reason == "not-selected":
+        if scope is None:
+            return "not selected (no --cascade-only scope)"
+        return f"not selected (outside --cascade-only '{scope}')"
+    # An unselected candidate always carries a reason.
+    assert candidate.exclusion_reason is not None
+    return f"ineligible ({_ARCHIVE_INELIGIBLE_PROSE[candidate.exclusion_reason]})"
+
+
+def _print_archive_lines(plan: ArchivePlan, *, dry_run: bool, cascade: bool) -> None:
+    """Print `docs archive`'s human summary to stderr (M26 — D6).
+
+    The primary's line always; then, only when a cascade flag is present,
+    one line per candidate with its state, the `matched none` line when a
+    scope selected nothing, and the counts footer. That gate is D1's quiet
+    rule: a plain `docs archive FILE` says nothing about the candidates it
+    leaves in place, because a notice on every single-document archive would
+    be noise and the safe behaviour needs no announcement.
+
+    `cascade` is a parameter rather than a property of the plan because the
+    plan cannot distinguish the two invocations that produce it:
+    `--cascade-dry-run` with no scope (candidate lines REQUIRED) and a plain
+    `--dry-run` (candidate lines FORBIDDEN) both yield ``scope is None``.
+
+    The candidate lines are identical in preview and apply — a scoped write
+    is all-or-nothing, so the plan is what happened. Only the primary's verb
+    and the trailing `preview only` line carry the mode.
+
+    Gated by the caller on `not --quiet` alone — NOT on `--json`: these go to
+    stderr, so `--json` stdout stays byte-clean either way.
     """
-    root_resolved = root.resolve()
-    moves: list[tuple[str, str]] = []
-    for verb, target in doc.related:
-        if verb not in _CASCADE_VERBS:
-            continue
-        candidate = root / target
-        if not candidate.is_file():
-            continue
-        print(f"docs: also archive {target}? [y/N] ", end="", file=sys.stderr, flush=True)
-        if sys.stdin.readline().strip().lower() not in ("y", "yes"):
-            if not quiet:
-                print(f"docs: left {target} in place", file=sys.stderr)
-            continue
-        try:
-            dest = _archive_one(candidate, root, config, date_str, None)
-        except (MetadataError, FileExistsError, OSError) as exc:
-            print(f"docs: could not archive {target}: {exc}", file=sys.stderr)
-            continue
-        new_rel = dest.resolve().relative_to(root_resolved).as_posix()
-        moves.append((target, new_rel))
-        if not quiet:
-            print(f"docs: archived {target} -> {dest}", file=sys.stderr)
-    return moves
+    verb = "would archive" if dry_run else "archived"
+    print(
+        f"docs: archive: {verb} {plan.primary.rel} -> {plan.primary.dest_rel}",
+        file=sys.stderr,
+    )
+    if not cascade:
+        return
+
+    for candidate in plan.candidates:
+        print(
+            f"docs: archive: candidate {candidate.rel} — {_candidate_state(candidate, plan.scope)}",
+            file=sys.stderr,
+        )
+
+    selected = sum(1 for c in plan.candidates if c.selected)
+    ineligible = sum(1 for c in plan.candidates if c.exclusion_reason in _ARCHIVE_INELIGIBLE_PROSE)
+    if plan.scope is not None and plan.candidates and not selected:
+        print(
+            f"docs: archive: --cascade-only '{plan.scope}' matched none of the "
+            f"{len(plan.candidates)} one-hop candidate(s)",
+            file=sys.stderr,
+        )
+    print(
+        f"docs: archive: {len(plan.candidates)} candidate(s): {selected} selected, "
+        f"{len(plan.candidates) - selected - ineligible} not selected, "
+        f"{ineligible} ineligible",
+        file=sys.stderr,
+    )
+    if dry_run:
+        print("docs: archive: preview only — nothing was written", file=sys.stderr)
 
 
 def _cmd_archive(args: argparse.Namespace) -> int:
+    # M26 (D1-D7) — the check order `cli.md` freezes, every step before any
+    # write. Steps 1 and 2 run before any filesystem access at all, so
+    # neither refusal can depend on the state of the tree.
+
+    # 1 — the retired flags. One template, two flags, `--cascade` first
+    # (declaration order decides when both are passed). Unconditional: no
+    # other flag, and no combination, changes the outcome (D2).
+    for flag, passed in (("--cascade", args.cascade), ("--interactive", args.interactive)):
+        if passed:
+            print(
+                f"docs: archive: {flag} is retired in docs 2.0 and writes nothing; "
+                "preview with `docs archive <file> --cascade-dry-run`, then write an "
+                "explicit scope with `docs archive <file> --cascade-only '<glob>'`",
+                file=sys.stderr,
+            )
+            return 2
+
+    # 2 — the `--cascade-only` shape. Purely lexical, so it precedes the
+    # missing-file check. A blank / comment-only / negated pattern is a
+    # MALFORMED INVOCATION, not a selection outcome, so it refuses in every
+    # mode — a preview included (D6's "a preview never fails" governs a valid
+    # glob that selects nothing).
+    scope: str | None = args.cascade_only
+    if scope is not None:
+        compiled = _compile_docsignore_pattern(scope)
+        if compiled is None:
+            print("docs: archive: --cascade-only must not be empty", file=sys.stderr)
+            return 2
+        if compiled[0]:
+            print(
+                "docs: archive: --cascade-only does not support negated ('!') patterns; "
+                "state the exact bounded selection",
+                file=sys.stderr,
+            )
+            return 2
+
+    # 3 — the primary exists, the root and config load, `--date` parses, the
+    # primary parses.
     file_path = Path(args.file)
     if not file_path.is_file():
         print(f"docs: file not found: {file_path}", file=sys.stderr)
         return 1
 
-    root = Path(args.root) if args.root else find_root(file_path.parent)
+    root = (Path(args.root) if args.root else find_root(file_path.parent)).resolve()
     try:
         config = load_config(root)
     except tomllib.TOMLDecodeError as exc:
@@ -5161,116 +5195,140 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         archive_date = date.today()
     date_str = archive_date.strftime(config.date_format)
 
-    # Validate the doc has the required metadata before mutating anything.
+    # Both sides resolved before any rel is derived: `_root_relative` falls
+    # back to the bare filename for a path it cannot relativise, which would
+    # silently mis-name a `sub/x.md` primary given relatively.
+    primary = file_path.resolve()
     try:
-        doc = parse(file_path.read_text(), file_path, root)
+        doc = parse(primary.read_text(), primary, root)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
 
-    dest = root / config.archive_dir / date_str / file_path.name
-
-    # M14 (B1): the non-interactive cascade flags. `--cascade-dry-run` and
-    # `--interactive` are an incoherent pair (a dry-run that prompts) and
-    # are rejected here — the argparse mutex group covers the other
-    # forbidden pairs, but `--cascade-dry-run` is outside that group so it
-    # can compose with `--cascade-only`.
-    if args.cascade_dry_run and args.interactive:
+    # 4 — an already-archived primary is a refusal in all three D1 shapes
+    # (Phase-1 Q1), checked before the plan so it wins over an empty
+    # selection: re-archiving history is the more fundamental fact.
+    primary_rel = _root_relative(primary, root)
+    if _is_archived_rel(primary_rel, config):
         print(
-            "docs: --cascade-dry-run cannot be combined with --interactive "
-            "(a dry-run that prompts is incoherent)",
+            f"docs: archive: {primary_rel} is already under the archive subtree; "
+            "refusing before any write",
             file=sys.stderr,
         )
         return 2
 
-    # `--cascade-dry-run` is shorthand for `--cascade --dry-run`. Either a
-    # global `--dry-run` or `--cascade-dry-run` previews without writing.
+    # 5 — the plan. Pure: nothing is written, whatever happens next.
+    plan = plan_archive(
+        root,
+        config,
+        primary=primary,
+        source=args.file,
+        doc=doc,
+        scope=scope,
+        date_str=date_str,
+        reason=args.reason,
+    )
+    # `--cascade-dry-run` previews the neighbourhood with or without a scope;
+    # a bare `--dry-run` does not (D1's quiet rule).
+    cascade = args.cascade_dry_run or scope is not None
     is_dry = args.dry_run or args.cascade_dry_run
-    # The non-interactive cascade is active for `--cascade`, `--cascade-only`,
-    # or `--cascade-dry-run` (which previews the would-be cascade set).
-    cascade_active = args.cascade or args.cascade_only is not None or args.cascade_dry_run
 
-    # M14 (A6): the pre-flight validate walk and the end-of-batch reindex
-    # honour persistent [exclude] / .docsignore (no new CLI flag), so a
-    # malformed *excluded* file never fails either walk.
-    predicate = compile_exclude_predicate(config, [])
+    def _emit_json(*, applied: bool, index_refreshed: bool) -> None:
+        if args.json:
+            print(
+                json.dumps(
+                    archive_plan_to_json(
+                        plan,
+                        dry_run=is_dry,
+                        applied=applied,
+                        index_refreshed=index_refreshed,
+                    ),
+                    indent=2,
+                )
+            )
 
+    # A preview is never a write, so it never fails: it stops here at exit 0
+    # even when the scope selected nothing (D6 / Phase-1 Q2).
     if is_dry:
         if not args.quiet:
-            print(f"docs: would archive {file_path} -> {dest}", file=sys.stderr)
-            # A non-interactive cascade dry-run previews the would-be set.
-            # (`--interactive` is mutually exclusive with the cascade flags,
-            # and a dry-run never prompts, so there is no interactive
-            # preview to print.)
-            if cascade_active:
-                cascade = _cascade_set(doc, root, args.cascade_only)
-                for target_rel, _candidate in cascade:
-                    print(f"docs: cascade would archive {target_rel}", file=sys.stderr)
-                _print_cascade_footer([t for t, _ in cascade], dry_run=True)
+            _print_archive_lines(plan, dry_run=True, cascade=cascade)
+        _emit_json(applied=False, index_refreshed=False)
         return 0
 
-    # M12 / M14 (A6): pre-flight validation walk — catches malformed
-    # referring docs BEFORE the archive move, so a referring-edge rewrite
-    # that would later fail does not leave a half-archived tree. Honours
-    # [exclude] (A6) so an excluded malformed file does not abort the
-    # archive. Mirrors the project-rename validate-all-first pattern.
+    # 6 — an empty selection on a WRITE is a refusal, and says which case it
+    # is (D5). `<N>` counts the whole deduplicated set, ineligible members
+    # included: "matched" means SELECTED.
+    if scope is not None and not any(candidate.selected for candidate in plan.candidates):
+        if plan.candidates:
+            print(
+                f"docs: archive: --cascade-only '{scope}' matched none of the "
+                f"{len(plan.candidates)} one-hop candidate(s); refusing before any write",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"docs: archive: {primary_rel} has no one-hop pairs-with / child-of "
+                "candidates; refusing before any write (use `docs archive <file>` to "
+                "archive it alone)",
+                file=sys.stderr,
+            )
+        return 2
+
+    # 7 — the plan pre-flight, deliberately BEFORE the whole-tree walk: both
+    # can fire on the same malformed file, and naming the document the
+    # operator asked for is strictly more actionable. `CoordinatedWriteError`
+    # is an `OSError` subclass, so it must be caught first wherever both
+    # appear, or every refusal is swallowed by the generic handler.
+    try:
+        preflight_archive_plan(plan)
+    except CoordinatedWriteError as exc:
+        print(f"docs: archive: {exc}", file=sys.stderr)
+        return exc.exit_code
+
+    # 8 — M12 / M14 (A6): the whole-tree validation walk, which catches a
+    # malformed REFERRING doc before the move so a later edge rewrite cannot
+    # leave a half-archived tree. Honours [exclude] / .docsignore, as does
+    # the end-of-batch reindex.
+    predicate = compile_exclude_predicate(config, [])
     try:
         list(walk(root, config, predicate=predicate))
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
 
-    root_resolved = root.resolve()
-    old_rel = file_path.resolve().relative_to(root_resolved).as_posix()
-
+    # 9 — execution. All-or-nothing by construction; the only residual is an
+    # unexpected `OSError`, admitted exactly and never rolled back (D4).
     try:
-        dest = _archive_one(file_path, root, config, date_str, args.reason)
-    except MetadataError as exc:
-        print(f"docs: {exc}", file=sys.stderr)
-        return 1
-    except FileExistsError as exc:
-        print(f"docs: archive destination already exists: {exc}", file=sys.stderr)
-        return 1
-    except OSError as exc:
-        print(f"docs: could not create archive directory: {exc}", file=sys.stderr)
-        return 2
-
-    moves: list[tuple[str, str]] = [(old_rel, dest.resolve().relative_to(root_resolved).as_posix())]
-    if args.interactive:
-        # The only stdin path: prompt [y/N] per one-hop relation (legacy).
-        moves.extend(_cascade_archive(doc, root, config, date_str, args.quiet))
-    elif cascade_active:
-        # Non-interactive: archive the whole filtered one-hop set, no prompt.
-        cascade = _cascade_set(doc, root, args.cascade_only)
-        archived_rels: list[str] = []
-        for target_rel, candidate in cascade:
-            try:
-                cdest = _archive_one(candidate, root, config, date_str, None)
-            except (MetadataError, FileExistsError, OSError) as exc:
-                print(f"docs: could not archive {target_rel}: {exc}", file=sys.stderr)
-                continue
-            new_rel = cdest.resolve().relative_to(root_resolved).as_posix()
-            moves.append((target_rel, new_rel))
-            archived_rels.append(target_rel)
-        if not args.quiet:
-            _print_cascade_footer(archived_rels, dry_run=False)
-
-    # M12: rewrite every active-tree referring Related: edge to point
-    # at the new archive path, atomically with the move. Archive
-    # subtree is skipped by _rewrite_referring_edges (read-only).
-    try:
-        _rewrite_referring_edges(root, config, moves, predicate=predicate)
-        _refresh_index(root, config, predicate=predicate)
-    except (MetadataError, VocabularyError) as exc:
-        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
-        return 2
-    except OSError as exc:
-        # M14 (A4): map an OSError mid edge-rewrite to a clean exit 2.
+        moves = apply_archive_plan(plan)
+    except CoordinatedWriteError as exc:
         print(f"docs: archive: {exc}", file=sys.stderr)
         return 2
+
+    # M12 / M18: repoint every referring `Related:` bullet — active tree and
+    # the narrow archive-subtree exception — in one batch with the move.
+    try:
+        _rewrite_referring_edges(root, config, moves, predicate=predicate)
+    except (MetadataError, VocabularyError, OSError) as exc:
+        # M14 (A4). No `--json` record: the operation did not complete.
+        print(f"docs: archive: {exc}", file=sys.stderr)
+        return 2
+
+    # Announce only what actually happened, and only once the writes landed.
     if not args.quiet:
-        print(f"docs: archived {file_path.name} -> {dest}", file=sys.stderr)
-    return 0
+        _print_archive_lines(plan, dry_run=False, cascade=cascade)
+
+    # The one post-write failure that still emits a record (Phase-1 Q3): every
+    # document moved correctly, so `applied` is true and the caller needs to
+    # know the INDEX is stale.
+    index_refreshed = True
+    try:
+        _refresh_index(root, config, predicate=predicate)
+    except (MetadataError, VocabularyError, OSError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        index_refreshed = False
+
+    _emit_json(applied=True, index_refreshed=index_refreshed)
+    return 0 if index_refreshed else 2
 
 
 def _cmd_mv(args: argparse.Namespace) -> int:

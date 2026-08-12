@@ -503,7 +503,7 @@ coverage in *Evidence → regression coverage* below.
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
@@ -723,7 +723,7 @@ def preflight_archive_plan(plan: ArchivePlan) -> None
 def apply_archive_plan(plan: ArchivePlan) -> list[tuple[str, str]]
 def archive_plan_to_json(plan: ArchivePlan, *, dry_run: bool, applied: bool,
                          index_refreshed: bool) -> dict[str, object]
-def _print_archive_lines(plan: ArchivePlan, *, dry_run: bool) -> None
+def _print_archive_lines(plan: ArchivePlan, *, dry_run: bool, cascade: bool) -> None
 def _cmd_archive(args: argparse.Namespace) -> int   # signature unchanged
 ```
 
@@ -759,6 +759,7 @@ phase records.
 | # | Amendment | Why the frozen form could not stand |
 |---|---|---|
 | 1 | **`CoordinatedWriteError` gains a keyword-only `exit_code: int = 2`** (Phase 5). | The Q4 split needs exit **1** for two conditions and **2** for four others, and `preflight_archive_plan(plan) -> None` raising one exception class has nowhere else to carry it. Matching on message text is the only alternative and is fragile. This is the widening the *Reuse* note above already sanctions ("widen its docstring; do not add a second exception class"); the default leaves every `docs relate` construction site byte-identical. |
+| 2 | **`_print_archive_lines` gains a keyword-only `cascade: bool`** (Phase 7). | The plan carries `scope` but no "was a cascade flag present" bit, so `--cascade-dry-run` with no scope (candidate lines REQUIRED) and a plain `--dry-run` (candidate lines FORBIDDEN) are indistinguishable from the plan alone — D1's quiet rule is unimplementable without it. The helper is private, no test references it, and the rendered strings, which are what the contract actually froze, are unchanged. |
 
 ### Resolved Phase-1 plan questions (Q1–Q17, BINDING)
 

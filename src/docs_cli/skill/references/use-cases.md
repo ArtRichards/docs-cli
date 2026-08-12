@@ -22,7 +22,7 @@ You own the convention from day one.
 | Author a new spec / plan / charter / log / runbook / decision | `docs new <role> <slug>` | Scaffolds the metadata block + H1. Agents author the full body in one Bash call via `docs new <role> <slug> --body-from -` (M8). |
 | Bump a doc's `Updated:` after edit | `docs touch <file>...` | Required after any body or metadata edit. Accepts one or more files; the batch is atomic and the INDEX refreshes exactly once at end (M10). |
 | Rename or relocate a doc | `docs mv <old> <new>` | Rewrites every `Related:` reference tree-wide. Prose markdown links in bodies are not rewritten — that's a deliberate scope cut. |
-| Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. `--cascade` opt-in for one-hop dependents. |
+| Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. Archives that ONE doc; to take related docs too, preview the one-hop neighbourhood with `--cascade-dry-run` and then write the exact set with `--cascade-only GLOB` (M26). `--json` emits the whole operation plan. |
 | Regenerate INDEX | `docs index` | The hand-written preamble is preserved; only the marker-block content is rewritten. |
 | Query the tree | `docs list [filters]` | Human table by default; `--json` for piping. Filter by role, lifecycle, project, stale-after-N-days. |
 | Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, and one-sided reciprocal edges. Exit codes 0/1/2 distinguishable for CI gates. |

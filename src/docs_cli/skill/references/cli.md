@@ -261,6 +261,13 @@ global `--dry-run`); the miss stays visible as the `matched none` line
 and as `"selected": []` in the `--json` record. The exit-2 refusal below
 governs the **write** path only.
 
+That carve-out is about a **valid glob that selects nothing** — a
+selection outcome. An empty, comment-only, or negated (`!`)
+`--cascade-only` is a **malformed invocation**, not a selection outcome,
+and is refused in **every** mode, a preview included: it is rejected at
+check-order step 2, before any candidate work, like any other bad
+argument.
+
 A real apply prints the same lines, with two differences: the primary's
 line reads `docs: archive: archived <primary-rel> -> <dest-rel>`, and
 the `preview only` line is absent. The `candidate` lines are identical
@@ -500,7 +507,7 @@ Exit **1** is reserved for the conditions 1.x already assigned it; every
 |---|---|
 | 0 | Success; any preview (`--dry-run` / `--cascade-dry-run`), including one whose `--cascade-only` selected nothing |
 | 1 | The primary is missing, or does not parse; a plan member has no editable metadata block; the archive destination slot is already occupied; the whole-tree pre-flight walk finds a malformed referring doc (move aborts) |
-| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty or comment-only `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
+| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 
 ### `docs mv <old> <new>`
 

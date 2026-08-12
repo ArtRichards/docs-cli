@@ -59,7 +59,7 @@ separate bodies of work by `Project:` metadata, not by folder. See
 | Create a doc | `docs new <role> <slug>` | `--project`, `--title`, `--body-from`; scaffolds metadata |
 | Stamp a metadata block onto a file you already wrote | `docs stamp <file>...` | `--role` (default `notes`), `--project`, `--title`; write-then-stamp, idempotent re-stamp refreshes `Updated:` |
 | Regenerate the index | `docs index` | idempotent; rewrites only the marker block |
-| Archive a finished doc | `docs archive <file>` | `--reason`, `--date`, `--cascade` |
+| Archive a finished doc | `docs archive <file>` | `--reason`, `--date`, `--json`; archives that ONE doc. To include related docs: preview the whole one-hop neighbourhood with `--cascade-dry-run`, then write exactly the set you meant with `--cascade-only GLOB` |
 | Rename or move a doc | `docs mv <old> <new>` | rewrites `Related:` tree-wide |
 | List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
 | Bump a doc's `Updated:` | `docs touch <file> [--check [--stale N]]` | reindexes; `--check` folds in `docs check` (touch-then-validate in one invocation; `--stale N` is the check's stale window) |

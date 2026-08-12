@@ -1673,12 +1673,24 @@ def test_cascade_only_with_no_candidates_refuses_distinctly(docs_script, tmp_pat
 
 
 @pytest.mark.parametrize(
+    "mode",
+    [pytest.param([], id="write"), pytest.param(["--cascade-dry-run"], id="preview")],
+)
+@pytest.mark.parametrize(
     "pattern",
     [pytest.param("", id="empty"), pytest.param("# just a comment", id="comment-only")],
 )
-def test_cascade_only_empty_pattern_refuses(docs_script, tmp_path, pattern):
+def test_cascade_only_empty_pattern_refuses(docs_script, tmp_path, pattern, mode):
     """D5 (Phase-1 Q9): a pattern that compiles to nothing is its own refusal,
     on the M25 `--reason must not be empty` precedent.
+
+    The refusal is **unconditional, a preview included** (conductor-resolved).
+    D6's "a preview never fails" governs a VALID glob that selects nothing —
+    a selection outcome, which stays exit 0 and is named loudly. A blank or
+    comment-only pattern is a MALFORMED INVOCATION, refused at check-order
+    step 2 before any candidate work, like any other bad argument. Without
+    the `preview` parametrization the intersection of D5 and D6 would be
+    undetermined.
 
     RED reason: today `_cascade_set` returns `[]` for a comment/blank pattern,
     so the primary is archived alone at exit 0.
@@ -1692,6 +1704,7 @@ def test_cascade_only_empty_pattern_refuses(docs_script, tmp_path, pattern):
         str(root / "root.md"),
         "--cascade-only",
         pattern,
+        *mode,
         "--date",
         _M26_DATE,
     )
@@ -2547,10 +2560,14 @@ def test_archive_json_carries_the_reason_flag(docs_script, tmp_path):
 
 
 @pytest.mark.parametrize(
+    "mode",
+    [pytest.param([], id="write"), pytest.param(["--cascade-dry-run"], id="preview")],
+)
+@pytest.mark.parametrize(
     "pattern",
     [pytest.param("!plan.md", id="negated"), pytest.param("!*", id="negated-glob")],
 )
-def test_cascade_only_negated_pattern_refuses(docs_script, fixtures_dir, tmp_path, pattern):
+def test_cascade_only_negated_pattern_refuses(docs_script, fixtures_dir, tmp_path, pattern, mode):
     """D5 (post-review amendment C): a negated (`!`) scope is refused.
 
     `_compile_docsignore_pattern` returns a `negate` flag that 1.x's
@@ -2559,6 +2576,11 @@ def test_cascade_only_negated_pattern_refuses(docs_script, fixtures_dir, tmp_pat
     except X", is exactly the unbounded selection D1 exists to prevent.
     Refusing is the only answer consistent with "state the exact bounded
     selection the operator intends".
+
+    Refused **in every mode, a preview included** (conductor-resolved), for
+    the same reason as the empty pattern above: a negated glob is a malformed
+    invocation, not a selection outcome, so D6's "a preview never fails" does
+    not reach it.
 
     RED reason: today the negation bit is dropped, the pattern matches
     `plan.md`, and the run archives the primary plus `plan.md` at exit 0.
@@ -2572,6 +2594,7 @@ def test_cascade_only_negated_pattern_refuses(docs_script, fixtures_dir, tmp_pat
         str(root / "milestone.md"),
         "--cascade-only",
         pattern,
+        *mode,
         "--date",
         _M26_DATE,
     )
