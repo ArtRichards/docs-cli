@@ -1801,3 +1801,109 @@ amendments to the frozen signatures*, so the contract and the code agree.
 M27 — Markdown body-link validation is ready to prepare. M28 reuses this
 milestone's move planning for body-link rebasing, and M29 publishes the
 whole v2.0 train.
+
+## `/simplify` pass — Step 3 — 2026-08-13
+
+Post-implementation simplify mode against M26's `src/docs_cli/cli.py`
+surface, on `m26/simplify` from `31bdc59` (the review fold-in). Baseline
+established first: **895 passed, 0 failed**, `ruff check` /
+`ruff format --check` / `mypy src/ tests/` / `docs check --root docs` all
+clean.
+
+**Result: no code changes.** `src/docs_cli/cli.py` is byte-identical to the
+baseline, and so is every other source and test file. This is a deliberate
+outcome, not a skipped pass: the Phase-10 pass during Step 2 already took
+the one real win (the `_is_archived_rel` dedup at the two M25 `relate`
+sites), and everything Step 2 left standing was re-examined here against
+the post-review code and found to be load-bearing. The only thing Step 2's
+pass had not seen is the review commit's own 35 lines, and those are four
+guard blocks that cannot merge — see 2 and 3 below.
+
+### What was examined
+
+The whole M26 surface: `ArchiveMove` / `ArchivePlan` (+ `moves`),
+`ARCHIVE_EXCLUSION_REASONS`, `_is_archived_rel`, `_archive_destination`,
+`_candidate_exclusion_reason`, `archive_candidates`, `plan_archive`,
+`preflight_archive_plan`, `apply_archive_plan`, `_archive_partial_state`,
+`archive_plan_to_json`, `_ARCHIVE_INELIGIBLE_PROSE`, `_candidate_state`,
+`_print_archive_lines`, and `_cmd_archive`.
+
+Duplication was checked **mechanically** as well as by eye: an AST/window
+scan for repeated 3-line-or-longer normalized blocks across the whole
+region returns exactly one hit, item 3 below.
+
+### Considered and deliberately left alone
+
+1. **`preflight_archive_plan`'s five per-check loops.** Unchanged from the
+   Step-2 decision, and the reasoning is stronger than "each loop owns a
+   frozen message and the Q4 exit code": the loops are *sequential passes
+   over the whole plan*, so which refusal an operator sees when two members
+   fail two different checks is fixed by check order rather than by member
+   order. Merging them into one per-member loop would make the message
+   depend on `moves` order — a silent behaviour change no test names.
+2. **The four `docs: archive: <exc>` / `return 2` read-failure handlers**
+   (unreadable primary, plan member, referring doc, and the M14 (A4)
+   rewrite failure). Four copies of two lines, but they sit in four
+   *different* `try` blocks with different sibling clauses and different
+   `MetadataError` / `VocabularyError` routing (exit 1 at the parse and
+   walk sites, exit 2 at the rewrite site). A shared handler cannot express
+   per-type routing without a context manager or decorator — strictly more
+   concepts for a `print` and a `return`.
+3. **The one mechanically-detected repeat**, the identical
+   `except (MetadataError, VocabularyError) → 1` / `except OSError → 2`
+   pair at the primary `parse()` (step 3) and the whole-tree `walk()`
+   (step 8). Unmergeable by construction: the two are separated by the
+   already-archived refusal, the plan build, the dry-run return, the
+   empty-selection refusal, and the pre-flight — the check order `cli.md`
+   freezes, including the deliberate pre-flight-before-walk ordering.
+4. **`_cmd_archive`'s `CoordinatedWriteError` / `OSError` clause order.**
+   `CoordinatedWriteError` subclasses `OSError`, so the order is
+   load-bearing at every site; the subclass clause stays first.
+5. **The pre-flight's two `os.access` checks.** Still the source file and
+   the destination directory, with no source-parent-directory check. Same
+   binding as M25 — D5: adding the "obvious" third check converts the
+   engineered mid-execution partial state into a pre-flight refusal and
+   deletes the milestone's only end-to-end partial-state lock.
+6. **`_archive_one`, verbatim.** Kept as the M2 per-document executor
+   driven by `apply_archive_plan`. It recomputes
+   `root / config.archive_dir / date_str / path.name` inline rather than
+   calling `_archive_destination`; routing it through the helper is
+   behaviour-identical and would make the helper's "one expression, one
+   place" docstring literally true, but the verbatim executor is the
+   milestone's contract and three documented claims rest on it. Recorded
+   as an observation for a future pass, not taken here.
+7. **`plan_archive`'s candidate loop.** The `if not selected: append;
+   continue` shape could fold into one `append` by rebinding the loop
+   variable — one line shorter. Rejected: `cli.py` has **zero** instances
+   of loop-variable rebinding in 7000 lines (checked with an AST scan),
+   and the append-then-`continue` guard is the house idiom. Introducing a
+   first-of-its-kind idiom to save one line is a stylistic novelty, not a
+   simplification.
+8. **Every M26 helper earns its keep.** `_candidate_exclusion_reason` and
+   `_candidate_state` are early-return precedence chains whose whole value
+   is being named and flat — inlining either would push a multi-branch
+   chain into an already-dense loop body. `_archive_partial_state` keeps
+   ~20 lines of error construction plus the dated-directory pruning out of
+   `apply_archive_plan`'s `except`, leaving the driver linear.
+   `_archive_destination` is two call sites but is the anti-drift point.
+   `_is_archived_rel` now serves five.
+9. **The three remaining copies of the archived-rel idiom** (`check_doc`,
+   `_cmd_list`, `project set`). Unchanged operator-level decision: outside
+   M26's blast radius.
+10. **The frozen message catalog.** No shipped string, exit code, JSON
+    field, or output format was touched, because nothing was touched.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `.venv/bin/pytest -q` | **895 passed, 0 failed** — identical to the baseline |
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 46 files already formatted |
+| `.venv/bin/mypy src/ tests/` | no issues in 47 source files |
+| `.venv/bin/docs check --root docs` | no violations, exit 0 |
+| `git diff` on `src/` and `tests/` | **empty** — no source or test file changed |
+| Version | **1.8.0**; `pyproject.toml` byte-untouched |
+
+No test was relaxed, rewritten, or deleted. `cli.md` / `convention.md` are
+unchanged, so the bundled `references/` mirrors stay byte-identical.
