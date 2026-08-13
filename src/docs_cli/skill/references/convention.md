@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Related:
 - pairs-with: cli.md
@@ -345,6 +345,8 @@ Lifecycle/location consistency rules:
 **Archive-subtree edge integrity (M18).** Archive-subtree `Related:` edges are maintained across moves. When a doc moves into the archive, both its OWN intra-archive edges (bullets pointing at another doc moving in the same operation) and any already-archived referrers' edges to it are repointed to the new `archive/YYYY-MM-DD/` paths, so they keep resolving. The M3 "archive is read-only" stance is preserved for everything else — only these move-driven edge rewrites touch archived docs; prose, other metadata, and edges to docs that did not move are left byte-identical.
 
 **Audited relationship repair (M25 — D4).** A **second** narrow exception, beside M18's. Because archived docs are walked, they are reciprocity-checked too, so a one-sided recognized edge with an archived endpoint would otherwise be an unfixable `docs check` error. `docs relate add|remove` may therefore touch an archived endpoint — but only when the operator asks explicitly and says why: `--reason TEXT` (a single non-empty line) is **required** whenever either named endpoint is under the archive subtree, and an invocation that would change nothing still requires it. Exactly three things may change in an archived doc: **(1)** the one recognized `Related:` bullet added or removed, **(2)** the `Updated:` value, **(3)** the `Revision:` group — created, or one dated bullet appended recording that document's own change and the reason. `Lifecycle: archived`, the original `Archived-reason:` (which explains entry into the archive, never a later repair), `Role:`, `Project:`, every other `Related:` bullet, every other metadata field, the H1, the prose, the file's location, and its trailing-newline state stay byte-identical. `Revision:` is written to archived endpoints only; an active endpoint gets the edge and the `Updated:` bump and nothing more. This is not general archived-document editing — no other verb and no other field is in scope.
+
+**Safe explicit archive selection (M26 — D1).** Entry into the archive subtree is authorized **explicitly**, never by relationship. A relationship verb supplies the *candidate set* a preview names; it never grants permission to move a document. `docs archive FILE` archives that one document. `docs archive FILE --cascade-dry-run` names every one-hop `pairs-with` / `child-of` candidate as selected, not selected, or ineligible and writes nothing. Only `docs archive FILE --cascade-only GLOB` writes a related document, and then exactly the candidates the glob selects — one complete plan, validated before the first byte moves, refusing outright rather than writing part of it. The 1.x bare `--cascade` and `--interactive` flags are retired and refuse. Two rules follow for authors: a document already under the archive subtree is **never** re-archived — neither as a candidate (it is reported ineligible) nor as the named primary (that is a refusal) — so a later archive event never changes an archived doc's location, `Updated:` value, `Lifecycle:`, `Archived-reason:`, H1, or prose, and changes no `Related:` bullet of its except one pointing at a document moving in that same operation, which M18's edge integrity repoints so it keeps resolving; and an `Archived-reason:` line records why *that* document was archived, so it is written to the named primary only, never to a cascaded candidate.
 
 ## Subdirectories
 

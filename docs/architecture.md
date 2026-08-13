@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Related:
 - implements: charter.md
@@ -23,7 +23,7 @@ inside the same wheel as package data.
 ```
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
-├── cli.py                               ─ the CLI module (~3.8k lines)
+├── cli.py                               ─ the CLI module (~7.0k lines)
 │   ├── dunder version                   (__version__ = importlib.metadata.version("docs-cli"))
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
@@ -32,7 +32,8 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
 │   ├── walker        — directory traversal, filter, archive detection
 │   ├── index         — INDEX.md render with marker-block preservation
 │   ├── archive       — atomic move + lifecycle edit (M2; M7 rename;
-│   │                   M12 referring-edge rewrite)
+│   │                   M12 referring-edge rewrite; M26 plan/pre-flight/
+│   │                   apply + `--json` operation record)
 │   ├── mv            — rename + Related: rewrite across tree (M2)
 │   ├── new           — scaffolded doc creation (M2)
 │   ├── touch         — Updated: bump (M2; M12 outside-root refusal)
@@ -347,6 +348,50 @@ the marker block and the derived content.
   `atomic_write` on a later failure. Best-effort staged publish + rollback,
   not a filesystem transaction — two files cannot be renamed atomically as
   a unit on POSIX, and the spec says so rather than implying otherwise.
+
+### `archive` (M26)
+
+The same plan/apply split as `relate`, one stage longer and with a
+deliberately different failure boundary:
+
+```
+archive_candidates(doc, root, config, scope)   pure — one-hop pairs-with /
+        │                                      child-of edges, deduplicated on
+        ▼                                      the canonical rel, scope matched
+plan_archive(...) -> ArchivePlan               pure — destinations for the
+        │                                      SELECTED members only
+        ▼
+preflight_archive_plan(plan)                   proves all five per-member
+        │                                      properties; raises before any write
+        ▼
+apply_archive_plan(plan) -> [(old, new), ...]  drives `_archive_one` in
+        │                                      plan.moves order, primary first
+        ▼
+_rewrite_referring_edges(root, config, moves)  M12 + M18, one batch
+        │
+        ▼
+_refresh_index(root, config)                   exactly once, at the end
+```
+
+- **Validate-all-first with a residual admission**, in contrast to M25's
+  staged publish plus rollback. Every failure the tool can foresee is a
+  pre-flight refusal with **zero** bytes written — the primary included.
+  There is no rollback: an unexpected `OSError` mid-execution produces an
+  exact partial-state admission naming what moved and what did not.
+  Extending D5's rollback from two documents to N was considered and
+  explicitly declined (M26 — D4), because each undo must reverse both a move
+  and a metadata edit and the referring-edge rewrite runs afterwards.
+- The two exceptions share one carrier. `CoordinatedWriteError` now spans
+  both verbs; `exit_code` on the exception carries M26's exit-1/exit-2 split
+  so `preflight_archive_plan` can stay `-> None`.
+- `_archive_one` is unchanged since M2 — `apply_archive_plan` is only its
+  ordered driver. The per-member work, and its edit-then-move atomicity,
+  live where they always did.
+- **Authorization is a CLI-layer concept, discovery is not.**
+  `archive_candidates` reports the whole neighborhood with each member's
+  state; `_cmd_archive` decides what that means for the exit code. That is
+  why `--json` can carry the full candidate set in every mode while the
+  stderr prose stays quiet under a plain `docs archive FILE`.
 
 ### `cli`
 

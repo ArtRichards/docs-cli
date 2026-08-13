@@ -76,6 +76,59 @@ until then._
   metadata label**, so a tree with a `[vocabulary] add_fields` allowlist
   never sees `unknown-field` on a label the tool itself writes.
 
+- **Safe explicit archive selection** (M26). `docs archive` now separates
+  relationship *context* from archive *authorization*. Relationship verbs
+  supply the candidate set; they never grant permission to move a document.
+  Exactly three shapes exist, and no other invocation writes a related doc:
+
+  ```console
+  $ docs archive m25.md                              # m25.md alone
+  $ docs archive m25.md --cascade-dry-run            # preview, writes nothing
+  $ docs archive m25.md --cascade-only 'm25-*'       # m25.md + exactly that scope
+  ```
+
+- **`docs archive --cascade-dry-run`** (M26) previews the **whole** one-hop
+  neighbourhood — every `pairs-with` / `child-of` candidate marked selected,
+  not selected, or ineligible — writes nothing, and exits 0, so an operator
+  can see what a scope is leaving behind. A filtered preview no longer hides
+  the unselected remainder, and a scope that selects nothing still exits 0
+  with a loud `matched none of the <N> one-hop candidate(s)` line.
+
+  ```console
+  $ docs archive m25.md --cascade-dry-run --cascade-only 'm25-*'
+  docs: archive: would archive m25.md -> archive/2026-08-13/m25.md
+  docs: archive: candidate m25-impl.md — selected -> archive/2026-08-13/m25-impl.md
+  docs: archive: candidate cli.md — not selected (outside --cascade-only 'm25-*')
+  docs: archive: candidate convention.md — not selected (outside --cascade-only 'm25-*')
+  docs: archive: candidate archive/2026-01-01/old.md — ineligible (already archived)
+  docs: archive: 4 candidate(s): 1 selected, 2 not selected, 1 ineligible
+  docs: archive: preview only — nothing was written
+  ```
+
+- **`docs archive --cascade-only GLOB`** (M26) is now the **only** way to
+  archive a related document, and it is validate-all-first: the complete
+  plan — the primary plus every selected candidate — is built and proved
+  before the first byte moves. The pre-flight refuses, with **zero bytes
+  written**, when a member has no editable metadata block, is already under
+  the archive subtree, has an occupied destination slot, collides with
+  another member's destination, or is not writable. The candidate set is
+  deduplicated on the **canonical** root-relative path (so a `./b.md`
+  spelling can neither dodge nor defeat a scope), already-archived
+  neighbours are excluded rather than silently relocated and re-dated, and a
+  scope that selects nothing on a write **refuses** (exit 2) instead of
+  quietly archiving the primary alone. An unexpected `OSError` during
+  execution is reported as an exact partial-state admission naming what
+  moved and what did not.
+
+- **`docs archive --json`** (M26) emits one operation-plan record on stdout,
+  with an identical shape for a preview and a real apply, so the two are
+  diffable: the primary (source / canonical path / destination), the date,
+  the scope, the `--reason`, and the whole deduplicated candidate set with
+  each member's `selected` state, destination, and machine-stable
+  `exclusion_reason` (`not-selected`, `already-archived`,
+  `unresolved-target`, `outside-root`). The candidate set is present in
+  **every** mode, including a plain `docs archive FILE`.
+
 ### Changed
 
 - **BREAKING — a one-sided recognized reciprocal edge now exits 2.** Trees
@@ -86,6 +139,42 @@ until then._
   duplicate label passed `docs check` before this release, while silently
   losing every value under the earlier copy. It now fails. There is no
   automatic merge: `docs` will not guess which entries you meant to keep.
+- **BREAKING — `docs archive --cascade` and `--interactive` are retired.**
+  Both stay **registered** in argparse — so an obsolete script or workflow
+  skill gets a legible, actionable refusal instead of `unrecognized
+  arguments` — and both now refuse **unconditionally**, exit 2, writing
+  nothing:
+
+  ```console
+  $ docs archive m25.md --cascade
+  docs: archive: --cascade is retired in docs 2.0 and writes nothing; preview with `docs archive <file> --cascade-dry-run`, then write an explicit scope with `docs archive <file> --cascade-only '<glob>'`
+  ```
+
+  The refusal runs before any filesystem access, so it wins over a missing
+  file or a malformed `--date`, and it prints even under `--quiet`. Retiring
+  `--interactive` removes `docs archive`'s only stdin-reading path: the verb
+  now **never prompts on stdin at all**, under any flag combination.
+- `docs archive` now **refuses a primary that resolves outside the docs
+  root** — a symlink pointing out of the tree, or a `--root` naming a
+  different tree — before any write, at exit 1 and in the same words `touch`,
+  `stamp`, `project set`, and `relate` already use:
+
+  ```console
+  $ docs archive link.md
+  docs: archive: /elsewhere/real.md is outside the resolved docs root (/docs); refusing before any write
+  ```
+
+  1.x raised an uncaught `ValueError` here, which also stopped before any
+  write; the refusal is the legible form of the same guarantee.
+- **An unreadable file is now a clean refusal, not a traceback.** An
+  unreadable primary, plan member, or referring doc exits 2 with
+  `docs: archive: <error>`. A *malformed* referring doc keeps its exit 1
+  (unchanged).
+- `docs archive`'s human output moved to the M26 vocabulary:
+  `docs: archive: archived <rel> -> <dest-rel>` and the candidate / counts
+  lines replace 1.x's `docs: archived <name> -> <abs-path>` and the
+  `cascade would archive N related doc(s)` footer. Every path is canonical
+  root-relative POSIX.
 - The `convention.md` recommendation to pair `Lifecycle: blocked` with a
   one-sided `blocked-by:` edge is **withdrawn** — it is the most likely
   source of a legacy one-sided edge. `Lifecycle: blocked` and the
@@ -111,6 +200,19 @@ The finding never chooses for you. If the edge is **wrong**, delete the pair
 instead — `docs relate remove m25.md precedes m26.md`. Paths can be copied
 straight out of the finding: relative endpoints resolve root-relative first.
 An archived endpoint additionally needs `--reason "…"`.
+
+**Replace every bare `--cascade` archive.** The most common real-world
+caller is a milestone-completion step, so `docs archive <slug>.md --cascade`
+becomes a preview and then an explicit scope:
+
+```console
+$ docs archive <slug>.md --cascade-dry-run          # see the whole neighbourhood
+$ docs archive <slug>.md --cascade-only '<slug>*'   # write exactly that scope
+```
+
+`--interactive` has no direct replacement — preview, then scope. A scope
+that matches nothing now refuses instead of quietly archiving the primary
+alone, so a typo fails loudly rather than looking like success.
 
 **Fix `duplicate-field` findings first.** They are repaired by hand — open
 the doc and merge the entries under a single label, keeping the ones you

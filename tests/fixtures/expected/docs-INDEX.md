@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-12. 22 docs active, 46 archived._
+_Generated 2026-08-13. 23 docs active, 46 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-08-12.
+- [status.md](status.md) — _status_ — **This is the single source of truth for project progress. Update only this file when milestones complete or phases…. Updated 2026-08-13.
 
 ### Active — Charter
 
@@ -19,23 +19,24 @@ _Generated 2026-08-12. 22 docs active, 46 archived._
 
 ### Active — Plan
 
-- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-08-12.
+- [plan.md](plan.md) — _plan_ — Three milestones to v1, then a migration helper, then a Claude Code skill wrapper. v1.1 picks up with packaging, then…. Updated 2026-08-13.
 
 ### Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-12.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-12.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-13.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-13.
 
 ### Active — Milestone
 
+- [m26-safe-archive-selection.md](m26-safe-archive-selection.md) — _milestone_ — - Milestone: M26 (v2.0 train) - Title: Safe explicit archive selection - Surface: decouple relationship context from…. Updated 2026-08-13.
 - [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md) — _milestone_ — - Milestone: M25 (v2.0 train) - Title: Reciprocal relationship integrity and `docs relate` - Surface: define three…. Updated 2026-08-12.
-- [m26-safe-archive-selection.md](m26-safe-archive-selection.md) — _milestone_ — - Milestone: M26 (v2.0 train) - Title: Safe explicit archive selection - Surface: decouple relationship context from…. Updated 2026-08-10.
 - [m27-markdown-body-link-validation.md](m27-markdown-body-link-validation.md) — _milestone_ — - Milestone: M27 (v2.0 train) - Title: Markdown body-link validation - Surface: parse a deliberately bounded set of…. Updated 2026-08-10.
 - [m28-move-safe-body-link-rewrites.md](m28-move-safe-body-link-rewrites.md) — _milestone_ — - Milestone: M28 (v2.0 train) - Title: Move-safe Markdown body-link rewrites - Surface: extend `docs mv` and `docs…. Updated 2026-08-10.
 - [m29-pypi-publish-2-0-0.md](m29-pypi-publish-2-0-0.md) — _milestone_ — - Milestone: M29 - Title: PyPI publish 2.0.0 - Surface: runbook-driven publication of the complete M25–M28 relationship…. Updated 2026-08-10.
 
 ### Active — Log
 
+- [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.
 - [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-12.
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-10.
 - [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) — _log_ — Chronological log of work on **M24 — PyPI publish 1.8.0**. Append a section per runbook phase (operator prep →…. Updated 2026-07-03.
@@ -53,15 +54,15 @@ _Generated 2026-08-12. 22 docs active, 46 archived._
 
 ### Active — Reference
 
-- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-08-12.
-- [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-08-12.
+- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-08-13.
+- [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-08-13.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 
 ## Project — ideas
 
 ### Active — Plan
 
-- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-06-03.
+- [agent-native-invocation.md](agent-native-invocation.md) — _plan_ — > **Source.** Prompted by ["I read the Claude Code source >…. Updated 2026-08-13.
 
 ## Archived
 

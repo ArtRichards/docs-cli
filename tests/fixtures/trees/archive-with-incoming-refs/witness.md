@@ -12,5 +12,5 @@ Related:
 ## Body
 
 A doc that references both `master.md` and `sidekick.md`. After
-`docs archive master.md --cascade`, both edges must be rewritten to the
-archive paths in a single atomic batch.
+`docs archive master.md --cascade-only 'sidekick.md'`, both edges must be
+rewritten to the archive paths in a single atomic batch.
