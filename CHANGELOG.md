@@ -154,6 +154,22 @@ until then._
   file or a malformed `--date`, and it prints even under `--quiet`. Retiring
   `--interactive` removes `docs archive`'s only stdin-reading path: the verb
   now **never prompts on stdin at all**, under any flag combination.
+- `docs archive` now **refuses a primary that resolves outside the docs
+  root** — a symlink pointing out of the tree, or a `--root` naming a
+  different tree — before any write, at exit 1 and in the same words `touch`,
+  `stamp`, `project set`, and `relate` already use:
+
+  ```console
+  $ docs archive link.md
+  docs: archive: /elsewhere/real.md is outside the resolved docs root (/docs); refusing before any write
+  ```
+
+  1.x raised an uncaught `ValueError` here, which also stopped before any
+  write; the refusal is the legible form of the same guarantee.
+- **An unreadable file is now a clean refusal, not a traceback.** An
+  unreadable primary, plan member, or referring doc exits 2 with
+  `docs: archive: <error>`. A *malformed* referring doc keeps its exit 1
+  (unchanged).
 - `docs archive`'s human output moved to the M26 vocabulary:
   `docs: archive: archived <rel> -> <dest-rel>` and the candidate / counts
   lines replace 1.x's `docs: archived <name> -> <abs-path>` and the

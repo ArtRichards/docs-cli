@@ -5204,11 +5204,33 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     # back to the bare filename for a path it cannot relativise, which would
     # silently mis-name a `sub/x.md` primary given relatively.
     primary = file_path.resolve()
+
+    # ...and that fallback is exactly why the primary must be PROVEN to lie
+    # under the root before anything else happens. A symlink pointing out of
+    # the tree, or a `--root` naming a different tree, otherwise yields a
+    # fabricated in-tree rel — and the archive would move a foreign file INTO
+    # this tree, name it in the record as though it had always lived here, and
+    # exit 0. 1.x raised `ValueError` here and hard-stopped; this restores that
+    # stop, at the same exit 1 and in the same words `touch`, `stamp`,
+    # `project set`, and `relate` already use for the condition.
+    if not primary.is_relative_to(root):
+        print(
+            f"docs: archive: {primary} is outside the resolved docs root ({root}); "
+            "refusing before any write",
+            file=sys.stderr,
+        )
+        return 1
+
     try:
         doc = parse(primary.read_text(), primary, root)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
+    except OSError as exc:
+        # An unreadable primary. Same mapping as an unreadable plan member and
+        # an unreadable referring doc: one clean exit 2, never a traceback.
+        print(f"docs: archive: {exc}", file=sys.stderr)
+        return 2
 
     # 4 — an already-archived primary is a refusal in all three D1 shapes
     # (Phase-1 Q1), checked before the plan so it wins over an empty
@@ -5231,7 +5253,11 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         doc=doc,
         scope=scope,
         date_str=date_str,
-        reason=args.reason,
+        # `--reason ""` is dropped rather than carried: `_archive_one`'s
+        # `if reason:` already declines to write an empty `Archived-reason:`,
+        # so a record carrying `""` would MISDESCRIBE the file it reports on —
+        # the one thing the D7 record exists to prevent.
+        reason=args.reason or None,
     )
     # `--cascade-dry-run` previews the neighbourhood with or without a scope;
     # a bare `--dry-run` does not (D1's quiet rule).
@@ -5309,6 +5335,13 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
+    except OSError as exc:
+        # An unreadable REFERRING doc. Malformed is exit 1 (unchanged since
+        # M12); unreadable is the third face of the same condition as the
+        # unreadable primary and plan member, and gets their single clean
+        # exit 2 rather than a traceback.
+        print(f"docs: archive: {exc}", file=sys.stderr)
+        return 2
 
     # 9 — execution. All-or-nothing by construction; the only residual is an
     # unexpected `OSError`, admitted exactly and never rolled back (D4).

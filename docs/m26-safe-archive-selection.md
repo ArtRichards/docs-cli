@@ -30,10 +30,11 @@ Related:
   `--cascade-only GLOB` scope, planned in full before the first byte moves; and
   the whole operation plan is available as one machine-readable record.
 - Progress: **Active / implementation-complete — all ten TDD phases done
-  (2026-08-13).** Step 1 (Phases 1–4) on `m26/phases-1-4`; Step 2
-  (Phases 5–10) on `m26/phases-5-10`. Full suite **889 GREEN** (888 at the Phase-8 gate, plus one failure-path lock the Step-2 audit added), with 774 of
-  the 777 pre-existing test ids mechanically proven present and passing and
-  3 deliberately removed; the closeout workflow dogfooded on a throwaway copy
+  (2026-08-13), audited and fresh-eyes reviewed.** Step 1 (Phases 1–4) on
+  `m26/phases-1-4`; Step 2 (Phases 5–10) on `m26/phases-5-10`. Full suite
+  **895 GREEN** — 888 at the Phase-8 gate, 889 after the audit's failure-path
+  lock, 895 after the review fold-in's six — with 774 of the 777 pre-existing
+  test ids mechanically proven present and passing and 3 deliberately removed; the closeout workflow dogfooded on a throwaway copy
   of this tree, where the unfiltered preview reproduces E1 exactly — all six
   spine documents named, none authorized. **All seven setup questions were
   RESOLVED** before Phase 1 — Q1, Q5, and Q6 by the operator; Q2, Q3, Q4, and
@@ -215,7 +216,9 @@ behind — which is exactly the judgement the preview exists to support.
 (Phase-1 Q2). `docs archive F --cascade-dry-run --cascade-only 'typo-*'`
 writes nothing, exits **0**, and keeps the typo loudly visible: a
 `matched none of the <N> one-hop candidate(s)` line on stderr and
-`"selected": []` in the `--json` record. The same holds for the equivalent
+every candidate reported `"selected": false` in the `--json` record (there
+is no top-level `selected` key; the key set is closed). The same holds for
+the equivalent
 `--cascade-only GLOB --dry-run` spelling. D5's exit-2 refusal is reserved for
 the invocation that would have written.
 
@@ -541,7 +544,7 @@ Every cell is stated. D2 demands no "it depends".
 | `archive F --cascade-dry-run` | nothing; full neighborhood preview | record | 0 |
 | `archive F --cascade-dry-run --cascade-only G` | nothing; full neighborhood, `G`-selected marked | record | 0 |
 | `archive F --cascade-only G --dry-run` | identical to the row above | record | 0 |
-| `archive F --cascade-dry-run --cascade-only G` (G selects 0) | nothing; preview names the miss | record, `"selected": []` | 0 |
+| `archive F --cascade-dry-run --cascade-only G` (G selects 0) | nothing; preview names the miss | record, every candidate `"selected": false` | 0 |
 | `archive F --cascade-only G` (G selects ≥1) | `F` + exactly the selected set | record | 0 |
 | `archive F --cascade-only G` (G selects 0, candidates exist) | nothing | none | 2 |
 | `archive F --cascade-only G` (no candidates at all) | nothing | none | 2 |
@@ -549,6 +552,7 @@ Every cell is stated. D2 demands no "it depends".
 | `archive F --cascade [+ any other flag]` | nothing | none | 2 |
 | `archive F --interactive [+ any other flag]` | nothing | none | 2 |
 | `archive <already-archived-F> [any flags]` | nothing | none | 2 |
+| `archive F` where `F` resolves outside the root (symlink, or a `--root` naming another tree) | nothing | none | 1 |
 | plan contains an intra-plan destination collision | nothing | none | 2 |
 | plan contains an unwritable source or destination dir | nothing | none | 2 |
 | plan member does not parse / has no metadata block | nothing | none | 1 |
@@ -562,7 +566,11 @@ Every cell is stated. D2 demands no "it depends".
 conditions 1.x already assigned it — a plan member with no editable metadata
 block, an occupied destination slot, and the unchanged whole-tree pre-flight
 walk — because `cli.md`'s exit-code matrix and a passing test pin them and
-they must not silently change meaning. Every **new** M26 refusal exits **2**:
+they must not silently change meaning. A primary that resolves **outside**
+the root joins them at exit **1** (added post-review): it is 1.x's own code
+for the condition and the cross-verb convention `touch` / `stamp` /
+`project set` / `relate` already state, so archive must not invent different
+semantics for it. Every **new** M26 refusal exits **2**:
 retired flag, archived primary, empty / none-selected / non-compiling scope,
 intra-plan destination collision, unwritable source or destination directory.
 
@@ -581,6 +589,7 @@ replaced outright rather than carried (Phase-1 Q15 / Q16).
 docs: archive: --cascade is retired in docs 2.0 and writes nothing; preview with `docs archive <file> --cascade-dry-run`, then write an explicit scope with `docs archive <file> --cascade-only '<glob>'`
 docs: archive: --interactive is retired in docs 2.0 and writes nothing; preview with `docs archive <file> --cascade-dry-run`, then write an explicit scope with `docs archive <file> --cascade-only '<glob>'`
 docs: archive: <rel> is already under the archive subtree; refusing before any write
+docs: archive: <path> is outside the resolved docs root (<root>); refusing before any write
 docs: archive: --cascade-only must not be empty
 docs: archive: --cascade-only does not support negated ('!') patterns; state the exact bounded selection
 docs: archive: --cascade-only '<glob>' matched none of the <N> one-hop candidate(s); refusing before any write
@@ -776,7 +785,7 @@ began.
 | # | Question | Resolution |
 |---|---|---|
 | Q1 | Does the archived-primary refusal apply to all three D1 shapes? | **Yes, unconditionally**, exit 2. D1's table describes authorization, not an exemption from validity checks. |
-| Q2 | `--cascade-dry-run --cascade-only <no-match>` | **Exit 0** (operator). A preview is never a write, so it never fails; the typo stays visible as the `matched none` line and `"selected": []`. D5's refusal governs the write path only — D5/D6 amended above so the contradiction is gone. |
+| Q2 | `--cascade-dry-run --cascade-only <no-match>` | **Exit 0** (operator). A preview is never a write, so it never fails; the typo stays visible as the `matched none` line and every candidate's `"selected": false`. D5's refusal governs the write path only — D5/D6 amended above so the contradiction is gone. |
 | Q3 | A `--json` record on a refusal? | **No.** Empty stdout; exit code + stderr is the contract (M25's precedent). **Do** emit it on an INDEX-refresh failure (`applied: true, index_refreshed: false`). |
 | Q4 | Pre-flight exit codes | **Split**, pinned in a table in `cli.md` (operator). Exit 1 for the two pre-existing conditions and the whole-tree walk; exit 2 for the five new M26 refusals. |
 | Q5 | Declared-spelling aliases | **`ArchiveMove.aliases`** carries every declared `Related:` spelling resolving to the canonical rel; `apply_archive_plan` returns one `(alias, new_rel)` pair per alias plus the canonical one, so `_rewrite_referring_edges`' exact-match matcher still rewrites a `./b.md` bullet. |
@@ -826,6 +835,19 @@ The milestone's Phase-1 file list names "Interface signatures … frozen in a
 stubs would change the Phase-4 subprocess RED reasons and risk baseline
 behaviour, and the phase's own exit criterion is "no behavior changes". The
 signatures above land as real code in Phase 5. This mirrors the M25 precedent.
+
+### Follow-ups recorded for later milestones (post-review)
+
+Raised by the Step-2 fresh-eyes review, judged out of M26's frozen scope, and
+deliberately **not** implemented here:
+
+| # | Follow-up | Home |
+|---|---|---|
+| 1 | **The pre-flight's parse proof could be promoted from `parse_metadata_block` to `parse()`**, catching `VocabularyError` at `exit_code=1`. Today a member with an H1 but a missing or out-of-vocabulary `Lifecycle:` slips past the pre-flight and is caught by the whole-tree walk instead — same exit 1, same zero mutation, less actionable message. `cli.md` now states the narrower proof rather than over-claiming it. | M27+ |
+| 2 | **A preview cannot warn about a pre-flight failure.** The frozen check order exits the preview at step 5 and runs the pre-flight at step 7, so `--cascade-dry-run` on a plan with an intra-plan destination collision cheerfully shows both candidates selected and only the write refuses. Per contract, but D6's stated purpose — showing the operator what the write would do — argues for running the pre-flight in preview as a **warning** (never as a preview failure: D6 keeps exit 0). | M27+ |
+| 3 | **Alias rewriting can leave duplicate `Related:` bullets.** A primary declaring both `beta.md` and `./beta.md` yields one `(alias, new_rel)` pair per spelling (Phase-1 Q5) and both bullets repoint to the same new path, so the moved doc carries two byte-identical bullets. Every edge resolves and `docs check` is clean, so the cost is cosmetic; suppressing it needs `Related:`-block-aware editing rather than `rewrite_related_refs`' per-pair exact-match substitution, and dropping the alias pair instead would leave the `./` bullet dangling — strictly worse. Pinned as current behaviour by `test_two_spellings_of_one_edge_survive_the_rewrite_as_duplicate_bullets`. | M28 (it reworks that rewriter for body links) |
+| 4 | **`--reason ""` is accepted rather than refused.** M26 stops the record misdescribing the file (an empty reason is now `null`, matching the absent `Archived-reason:` line), but `docs relate`'s outright `--reason must not be empty` refusal is not adopted — that would add to the frozen message catalog. | M29 nit |
+| 5 | **`_cmd_relate` has archive's old unreadable-endpoint shape**: `plan_relate` reads both endpoints and an `OSError` there escapes as a traceback. Out of M26's blast radius; the same one-clause fix applies. | M27+ |
 
 ## Resolved setup questions (Q1–Q7, BINDING)
 

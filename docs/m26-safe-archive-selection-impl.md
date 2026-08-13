@@ -23,7 +23,7 @@ the milestone checklist synchronized.
 - Milestone: M26 — Safe explicit archive selection
 - Started: 2026-08-12 (milestone setup; no TDD phase started)
 - Progress: **Implementation-complete — all ten TDD phases done
-  2026-08-13. Full suite 889 GREEN.** Step 1 (Phases 1–4) was complete,
+  2026-08-13, audited and fresh-eyes reviewed. Full suite 895 GREEN.** Step 1 (Phases 1–4) was complete,
   audited, and fresh-eyes reviewed at the classified RED baseline of 884
   collected / 104 failed / 780 passed. All seven setup
   questions were RESOLVED before Phase 1 (Q1/Q5/Q6 by the operator;
@@ -39,8 +39,10 @@ the milestone checklist synchronized.
   with 774 of the 777 pre-existing ids mechanically proven present and
   passing (3 deliberately removed, 114 new), the closeout workflow dogfooded
   on a throwaway copy of this tree, and the simplify-and-close pass. The
-  same-instance audit then added one failure-path lock, so the suite stands at
-  **889**. The
+  same-instance audit added one failure-path lock and the fresh-eyes review
+  fold-in six more — including the fix for its one blocker, a primary resolving
+  outside the docs root being archived into the tree — so the suite stands at
+  **895**. The
   milestone stays `Lifecycle: active` until the M29 publish closeout.
 - Source: the operator-confirmed cascade-safety decision in `feedback-log.md`
   (2026-08-09/10) and the M26 registration in `plan.md` (2026-08-10).
@@ -62,6 +64,7 @@ the milestone checklist synchronized.
 | 9. Integrate / Accept / Dogfood | **Done** | 2026-08-13 | On a throwaway copy of this docs tree: E1 reproduced and defused (all six candidates named, none authorized), filtered preview, real scoped write of the M25 pair with `docs check` clean and `docs index` a byte no-op, preview/apply records identical, and four refusals each on a fresh copy with zero bytes and no new directory. `--interactive` with no stdin refused in 0s. `git status --porcelain docs/` empty — the live tree was never touched. |
 | 10. Quality, Docs, Refactor | **Done** | 2026-08-13 | `/simplify` pass (the `_is_archived_rel` dedup at the two M25 sites; the pre-flight's per-check loops deliberately kept separate); `architecture.md` gains an `archive (M26)` block, `test-strategy.md` the `archive-*` fixture family and two critical paths, the `cli.py` module docstring one M26 sentence; milestone, log, `status.md`, and `plan.md` closed out. `pyproject.toml` untouched — still 1.8.0. Final gate all GREEN. |
 | Step-2 consistency audit | **Done** | 2026-08-13 | Found and fixed a real defect (an unreadable plan member produced a traceback) plus four doc inaccuracies; +1 failure-path lock → **889 passed**. Four items surfaced, not auto-decided. |
+| Step-2 fresh-eyes review fold-in | **Done** | 2026-08-13 | One **blocker** fixed — a primary resolving outside the root (symlink, or a mismatched `--root`) was archived INTO the tree, at exit 0 in one shape, with `docs check` clean afterwards. Plus three should-fixes (the two remaining traceback paths, a `--json` key documented but never emitted, a drifted second exit-code table), four nits, and the `--reason ""` one-liner. +6 locks → **895 passed**. |
 
 ## Setup record — 2026-08-12
 
@@ -252,8 +255,11 @@ regenerated `docs/INDEX.md`.
   nothing and exits 0") both claiming
   `archive F --cascade-dry-run --cascade-only <no-match>`. D5 is now scoped to
   the **write** path in its own heading sentence, and D6 carries the exit-0
-  rule explicitly with the `matched none` line and `"selected": []` named. The
-  compatibility matrix has a dedicated row for the case.
+  rule explicitly with the `matched none` line and the record's every-candidate
+  `"selected": false` named. The compatibility matrix has a dedicated row for
+  the case. (Phase 1 wrote `"selected": []` here and in three other places; the
+  top-level key set is closed and has no `selected` key, so the Step-2 review
+  had all four corrected — see the post-review record below.)
 - **Q4 (operator) — the exit-code split is a table, not prose.** Exit 1 stays
   for a plan member with no editable metadata block, an occupied destination
   slot, and the whole-tree pre-flight walk; the five new M26 refusals exit 2.
@@ -265,7 +271,7 @@ regenerated `docs/INDEX.md`.
   making it the one preview line that ignores `--quiet` would add an
   it-depends rule to the very matrix D2 exists to flatten. `--quiet` plus a
   preview is already a contradiction in intent, and the `--json` record
-  carries `"selected": []` for the machine consumer. Refusals, by contrast,
+  carries every candidate's `"selected": false` for the machine consumer. Refusals, by contrast,
   **do** print under `--quiet` — they are failures, not output.
 - **The `candidate` lines are identical in preview and apply.** Only the
   primary's verb (`would archive` / `archived`) and the presence of the
@@ -1535,7 +1541,7 @@ Run against Step 2's own work after Phase 10, per the ship-milestone
   (the one apparent difference, the `archived <primary-rel>` apply line, is in
   `cli.md` as prose rather than in the fenced block).
 - **Docs.** `status.md`, the milestone, the log, and `plan.md` agree on phase
-  progress, counts (889), dates, and next pointers. No live prescription of
+  progress, counts, dates, and next pointers. No live prescription of
   bare `--cascade` survives anywhere in `docs/` or the bundled skill — the
   remaining mentions are historical logs, the upgrade recipe, and the M26
   contract itself.
@@ -1566,6 +1572,152 @@ Run against Step 2's own work after Phase 10, per the ship-milestone
 - **Three copies of the archived-rel idiom remain** in `check_doc`,
   `_cmd_list`, and `project set` (the last against a bare `archive_dir` local
   rather than a `Config`). Left alone as outside M26's blast radius.
+
+## Step-2 fresh-eyes review fold-in — 2026-08-13
+
+An independent review exercised the built code rather than reading this log.
+It confirmed D1–D8 and E1–E5 genuinely fixed, the Q4 exit-code split correct,
+both frozen-signature amendments matching the code, the mirrors byte-identical,
+the no-regression arithmetic exact, the `_two_relation_tree` claim (by re-running
+the entire Step-1 suite against the implementation and finding exactly that one
+genuine failure, with no assertion weakened anywhere), the +4 preview
+parametrizations genuine, and the Phase-9 dogfood reproducible verbatim on a
+fresh copy. It found **one blocker — a path Step 2 created.**
+
+### Blocker — a primary resolving outside the root was archived INTO the tree
+
+Step 2 replaced 1.x's `file_path.resolve().relative_to(root_resolved)` — which
+raised `ValueError` and hard-stopped **before any write** — with
+`_root_relative()`, whose bare-filename fallback the docstring calls "only
+reachable for the synthetic paths in unit tests". That invariant was **false at
+the new call site**. Two shapes, both reproduced:
+
+- **A symlink out of the tree.** `ln -s /ext/real.md w/link.md; docs archive
+  link.md` → exit 2 with `[Errno 2] No such file or directory`, *after*
+  `/ext/real.md` had already been moved to `w/archive/<date>/real.md`, leaving
+  `w/link.md` dangling and `INDEX.md` stale. 1.x: exit 1, nothing moved.
+- **A mismatched `--root`.** `docs archive /outside/foreign.md --root w` →
+  **exit 0**, the foreign document moved across the tree boundary, every
+  stderr line and the `--json` `primary.path` naming a **fabricated** in-tree
+  rel, and `docs check` afterwards reporting no violations.
+
+The second is precisely the silent, undetectable partial write E3 exists to
+eliminate, in the milestone whose entire purpose is to stop unauthorized
+archive writes — and it was the sole falsification of Step 2's "no pre-existing
+exit code silently changed" claim (1 → 0/2, with a write).
+
+**Fixed** by proving the primary lies under the root immediately after it is
+resolved, before `parse()` and before anything else:
+
+```
+docs: archive: <path> is outside the resolved docs root (<root>); refusing before any write
+```
+
+Exit **1** — 1.x's own code for the condition, and the cross-verb convention
+`cli.md` already states for `touch` / `stamp` / `project set` / `relate`; the
+wording is those verbs' phrase plus M26's frozen-catalog prefix and suffix, so
+archive invents neither new semantics nor new vocabulary. Added to the frozen
+message catalog, the compatibility matrix, the exit-code split paragraph, both
+of `cli.md`'s exit-code tables, the check-order list, the cross-verb convention
+block, and the mirror; pinned by
+`test_primary_reached_through_a_symlink_out_of_the_tree_refuses` and
+`test_primary_outside_an_explicit_root_refuses`, which assert the foreign file
+is byte-unchanged, the dated directory is never created, and no INDEX is
+written.
+
+### Should-fixes
+
+- **The `OSError`-escapes-the-handler fix covered one of three sites.** The
+  Step-2 audit fixed the unreadable plan MEMBER; an unreadable PRIMARY
+  (`parse(primary.read_text(), …)`) and an unreadable REFERRING doc (the
+  whole-tree walk) still tracebacked. Both are 1.x-byte-identical and so not
+  regressions, but M26 had created the inconsistency. All three now share one
+  rule — **an unreadable file is `docs: archive: <exc>` at exit 2, never a
+  traceback** — stated that way in both exit-code tables and pinned by
+  `test_unreadable_primary_exits_cleanly_without_a_traceback` and
+  `test_unreadable_referring_doc_exits_cleanly_without_a_traceback`. A
+  *malformed* referring doc keeps its exit 1 (M12, unchanged).
+  `_cmd_relate` has the same shape via `plan_relate`'s endpoint reads; out of
+  M26's blast radius and recorded as an M27+ follow-up.
+- **`cli.md` documented a `--json` key that does not exist.** Four places said
+  a scope selecting nothing stays visible as `"selected": []` in the record.
+  The top-level key set is **closed** and has no `selected` key — the miss is
+  every candidate's `"selected": false`, so `record["selected"]` is a
+  `KeyError` for the agent this reference is written for. The Step-2 audit
+  checked the schema block and missed the prose. All four sites reworded, plus
+  two more in this log.
+- **`cli.md`'s second (per-verb) exit-code table had drifted from the first.**
+  It still said "empty or comment-only `--cascade-only`" (no negated), still
+  listed "archive-dir creation failure" (deleted in Phase 7), and never
+  mentioned the unreadable member. Brought into step, with the new outside-root
+  row added to **both** tables.
+
+### Nits
+
+- **The pre-flight does not prove the document "parses".**
+  `parse_metadata_block` raises only on a missing H1, so a member with an H1
+  but a missing or out-of-vocabulary `Lifecycle:` slips past and is caught by
+  the whole-tree walk — same exit 1, same zero mutation, less actionable
+  message. `cli.md`'s bullet is **reworded to the narrower truth**; promoting
+  the proof to `parse()` is recorded as follow-up 1 in the milestone doc.
+- **A preview can never warn about a pre-flight failure** (check order exits
+  the preview at step 5, the pre-flight is step 7). Per contract; recorded as
+  follow-up 2, not implemented.
+- **A no-slash `--cascade-only` matches the FINAL segment, not "any segment at
+  any depth"** — the compiled regex is `$`-anchored, so `'sub'` selects nothing
+  while `'sub/'` selects `sub/child.md`. Safe failure mode, misleading wording;
+  `cli.md` and the mirror now say so and name the two working spellings.
+- **`docs/plan.md`'s M26 row conflated the Phase-8 gate with the audit's
+  extra lock** ("889 … 114 new"; 774 + 114 = 888). Corrected — see *Counts*
+  below.
+- **Alias rewriting can leave duplicate `Related:` bullets.** Reproduced: a
+  primary declaring both `beta.md` and `./beta.md` yields one pair per spelling
+  (Phase-1 Q5) and both bullets repoint to the same new path. The fix is **not
+  local** — the duplicate exists because two different `old_rel`s map to one
+  `new_rel`, so suppressing it needs `Related:`-block-aware editing rather than
+  `rewrite_related_refs`' per-pair exact-match substitution, and dropping the
+  alias pair instead would leave the `./` bullet **dangling**, which is
+  strictly worse than a cosmetic duplicate. Taken as the recorded-follow-up
+  branch: milestone follow-up 3 (M28's natural home) plus
+  `test_two_spellings_of_one_edge_survive_the_rewrite_as_duplicate_bullets`
+  documenting today's behaviour so it cannot change silently either way.
+
+### The four surfaced items, decided
+
+- **(a) The unparseable-primary refusal keeps its bare `docs: <exc>` prefix.**
+  Agreed — but the *reason recorded here was wrong*. "Unpinned by a test, so
+  leave it" is **not** this milestone's precedent: Phase-1 Q15/Q16 deliberately
+  moved other unpinned legacy strings to the new form. The right reason is
+  **cross-verb consistency**: the bare form is shared with the whole-tree-walk
+  message and with `mv` / `touch`, so changing archive alone would trade one
+  inconsistency for another.
+- **(b) `--reason ""` — one-line fix taken.** Not the refusal (that would add
+  to the frozen catalog; left as an M29 nit), but `reason=args.reason or None`
+  where the plan is built. `_archive_one`'s `if reason:` has always declined to
+  write an empty `Archived-reason:`, so a record carrying `""` **misdescribed
+  the file it reports on** — the one failure mode D7 exists to prevent. Pinned
+  by `test_empty_reason_is_dropped_from_the_record`.
+- **(c) The three remaining copies of the archived-rel idiom stay.** Agreed:
+  out of blast radius, and the two that were collapsed are exactly the two the
+  helper's docstring cites.
+- **(d) No scope creep, no unmet deliverable or success criterion**, each
+  checked against the built code by the reviewer.
+
+### Counts after the fold-in
+
+```
+.venv/bin/python -m pytest -q   →  895 passed
+pre-existing ids at 37d7f1a                  777
+  deliberately removed (the same three)        3
+  carried over, re-run as an explicit list   774  →  774 passed
+  new                                        121  →  774 + 121 = 895
+```
+
+Checkpoints, so no single number is quoted out of context: **888** at the
+Phase-8 gate (114 new), **889** after the audit's failure-path lock (115), and
+**895** after this fold-in's six (121) — two outside-root locks, two unreadable
+-file locks, the empty-`--reason` lock, and the duplicate-bullet documentation
+test.
 
 ## Milestone completion summary
 
@@ -1616,10 +1768,10 @@ writes a related document:
 
 ### Numbers
 
-- **889 tests, all passing** — 888 at the Phase-8 gate (774 of the 777
-  pre-existing ids mechanically proven present and GREEN, re-run as an
-  explicit id list, 3 deliberately removed, 114 new), plus the one
-  failure-path lock the same-instance audit added.
+- **895 tests, all passing.** 774 of the 777 pre-existing ids mechanically
+  proven present and GREEN (re-run as an explicit id list), 3 deliberately
+  removed, 121 new. Checkpoints: 888 at the Phase-8 gate, 889 after the
+  audit's lock, 895 after the review fold-in's six.
 - `ruff` / `ruff format` / `mypy src/ tests/` / `docs check --root docs`
   clean; bundled `references/cli.md` and `references/convention.md`
   byte-identical to the specs; the INDEX snapshot in sync.

@@ -191,8 +191,10 @@ sequence, dependency, and blocking do not imply archive membership.
 - `--cascade-only GLOB` is matched against that same **canonical**
   path, so an unusual spelling can neither dodge nor defeat a scope.
   `GLOB` is compiled by the matcher `compile_exclude_predicate` uses
-  (gitignore-flavoured: `**`, `*`, `?`; a pattern with no `/` matches
-  any path segment at any depth).
+  (gitignore-flavoured: `**`, `*`, `?`). A pattern with no `/` is matched
+  against the path's **final segment** at any depth, so `'b.md'` selects
+  `sub/b.md` but `'sub'` selects nothing — use `'sub/'` for "everything
+  under `sub/`", or `'sub/**'`.
 - A **self-edge** — a candidate whose canonical path equals the
   primary's — is silently excluded. It is not a candidate and is not
   reported as ineligible.
@@ -258,7 +260,8 @@ rule). The `matched none` line appears only under a preview whose
 **A preview is never a write, so it never fails.** A `--cascade-only`
 that selects nothing still exits **0** under `--cascade-dry-run` (or the
 global `--dry-run`); the miss stays visible as the `matched none` line
-and as `"selected": []` in the `--json` record. The exit-2 refusal below
+and as every candidate reported `"selected": false` in the `--json`
+record. The exit-2 refusal below
 governs the **write** path only.
 
 That carve-out is about a **valid glob that selects nothing** — a
@@ -280,7 +283,12 @@ all-or-nothing.
 mutating anything. The plan covers the primary and every selected
 candidate, and the pre-flight proves, for each member:
 
-- the document parses and has an editable metadata block;
+- the document has an editable metadata block — an H1 followed by a
+  metadata block `parse_metadata_block` can rewrite. This proof is
+  deliberately narrower than a full `parse()`: a member with an H1 but a
+  missing or out-of-vocabulary `Lifecycle:` is caught by the whole-tree
+  validation walk at step 8 instead, also at exit 1 and also before any
+  write, with a less specific message;
 - the document is **not** already under the archive subtree — an
   already-archived **primary** is a refusal (see below), not a
   re-dating;
@@ -300,8 +308,8 @@ so the message an operator sees always names the most specific cause:
    filesystem access at all;
 2. an empty, comment-only, or negated (`!`) `--cascade-only` — purely
    lexical;
-3. root resolution, `.docs.toml`, `--date`, the primary exists and
-   parses;
+3. root resolution, `.docs.toml`, `--date`, the primary exists, resolves
+   **inside** the root, and parses;
 4. the primary is not already under the archive subtree;
 5. the plan is built (pure) — and a preview stops here, prints, and
    exits 0;
@@ -324,6 +332,7 @@ Pre-flight refusals, each printed even under `--quiet`:
 
 ```
 docs: archive: <rel> is already under the archive subtree; refusing before any write
+docs: archive: <path> is outside the resolved docs root (<root>); refusing before any write
 docs: archive: <relA> and <relB> would both archive to <dest-rel>; refusing before any write
 docs: archive: <rel> is not writable; refusing before any write
 docs: archive: <dest-dir-rel> is not writable; refusing before any write
@@ -506,8 +515,8 @@ Exit **1** is reserved for the conditions 1.x already assigned it; every
 | Exit | Condition |
 |---|---|
 | 0 | Success; any preview (`--dry-run` / `--cascade-dry-run`), including one whose `--cascade-only` selected nothing |
-| 1 | The primary is missing, or does not parse; a plan member has no editable metadata block; the archive destination slot is already occupied; the whole-tree pre-flight walk finds a malformed referring doc (move aborts) |
-| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable plan member; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
+| 1 | The primary is missing, does not parse, or resolves **outside** the docs root (a symlink out of the tree, or a `--root` naming a different tree); a plan member has no editable metadata block; the archive destination slot is already occupied; the whole-tree pre-flight walk finds a malformed referring doc (move aborts) |
+| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 
 ### `docs mv <old> <new>`
 
@@ -2072,14 +2081,14 @@ M12 / M14 / M15 / M25-specific exit-code shape:
 | `stamp` (M15 — B3) | success / dry-run | a named file is missing or outside the docs root (validate-all-first abort) | invalid `--role`; no `.docs.toml` ancestor or `--root` without `.docs.toml` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
-| `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5) | success | the primary is missing or does not parse; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty or comment-only `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; archive-dir creation failure; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
+| `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5) | success | the primary is missing, does not parse, or resolves outside the resolved docs root; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 | `archive --cascade-dry-run` / `--dry-run` | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing | — | — |
 | `mv` (M14 — A1 / A4) | success / dry-run | collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1); `OSError` mid edge-rewrite after the move (A4); both paths outside the docs root |
 | `relate add\|remove` (M25 — D3 / D4 / D5) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; unknown verb; self-edge; malformed `--date`; empty or multi-line `--reason`; an archived endpoint without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
 
 **Cross-verb exit-code convention (no-root vs outside-root).** Two distinct
 "out of the tree" conditions map to *different* codes for the explicit-path
-verbs (`touch`, `stamp`, `project set`, `relate`):
+verbs (`touch`, `stamp`, `project set`, `relate`, and — since M26 — `archive`):
 
 - **No docs root** — the cwd has no `.docs.toml` ancestor, or `--root` names a
   directory without `.docs.toml`. This is a **hard refusal → exit 2** (the

@@ -2496,6 +2496,222 @@ def test_archive_json_record_is_emitted_on_an_index_refresh_failure(docs_script,
         root.chmod(0o755)
 
 
+def _outside_root_tree(tmp_path: Path) -> tuple[Path, Path]:
+    """A docs root `w/` next to an `ext/` directory holding a foreign doc."""
+    root = tmp_path / "w"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "w"\n\n[archive]\ndir = "archive"\n')
+    outside = tmp_path / "ext"
+    outside.mkdir()
+    (outside / "real.md").write_text(
+        "# Real\n\nLifecycle: active\nRole: notes\nProject: other\nUpdated: 2026-01-01\n"
+        "\n## Body\n\nA doc that does not live in this tree.\n"
+    )
+    return root, outside
+
+
+def test_primary_reached_through_a_symlink_out_of_the_tree_refuses(docs_script, tmp_path):
+    """A primary that RESOLVES outside the root is refused before any write.
+
+    Found by the Step-2 fresh-eyes review. `_root_relative` falls back to the
+    bare filename for a path it cannot relativise, so without this check a
+    symlink pointing out of the tree yielded a fabricated in-tree rel and the
+    archive moved the FOREIGN file into this tree — leaving the symlink
+    dangling and `INDEX.md` stale — before dying on the follow-up read. 1.x
+    raised `ValueError` here and stopped, so this is a regression guard, at
+    1.x's own exit 1 and in the wording `touch` / `stamp` / `project set` /
+    `relate` already use.
+    """
+    root, outside = _outside_root_tree(tmp_path)
+    (root / "link.md").symlink_to(outside / "real.md")
+    before_outside = (outside / "real.md").read_bytes()
+
+    proc = _run(docs_script, "archive", "link.md", cwd=root, stdin_text="")
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "is outside the resolved docs root" in proc.stderr, proc.stderr
+    assert "refusing before any write" in proc.stderr, proc.stderr
+    assert proc.stdout == ""
+    # The foreign file is untouched and was NOT moved into this tree.
+    assert (outside / "real.md").read_bytes() == before_outside
+    assert not (root / "archive").exists(), "not even the dated directory is created"
+    assert (root / "link.md").is_symlink(), "the symlink must not be left dangling"
+
+
+def test_primary_outside_an_explicit_root_refuses(docs_script, tmp_path):
+    """The same refusal for the second shape: a `--root` naming a different
+    tree than the file.
+
+    This one was the more dangerous of the two — it exited **0**, moved the
+    foreign document across the tree boundary, reported an in-tree rel on
+    stderr and in the `--json` record, and left `docs check` reporting no
+    violations: the silent, undetectable write E3 exists to eliminate.
+    """
+    root, outside = _outside_root_tree(tmp_path)
+    before_outside = (outside / "real.md").read_bytes()
+
+    proc = _run(
+        docs_script,
+        "archive",
+        str(outside / "real.md"),
+        "--root",
+        str(root),
+        "--json",
+        "--date",
+        _M26_DATE,
+    )
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "is outside the resolved docs root" in proc.stderr, proc.stderr
+    assert proc.stdout == "", "a refusal emits no --json record"
+    assert (outside / "real.md").read_bytes() == before_outside
+    assert (outside / "real.md").is_file(), "the foreign doc must not move"
+    assert not (root / _M26_DATED).exists()
+    assert not (root / "INDEX.md").exists(), "nothing was reindexed either"
+
+
+@_SKIP_AS_ROOT
+def test_unreadable_primary_exits_cleanly_without_a_traceback(docs_script, tmp_path):
+    """An unreadable PRIMARY gets the same clean exit 2 as an unreadable plan
+    member — never a traceback.
+
+    Pre-existing behaviour in 1.x (which tracebacked too), but M26 had made it
+    inconsistent: the audit fixed the member case and left the primary and the
+    referring-doc walk raising. All three now share one rule — an unreadable
+    file is `docs: archive: <exc>` at exit 2.
+    """
+    root = tmp_path / "roprimary"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "roprimary"\n\n[archive]\ndir = "archive"\n'
+    )
+    target = root / "a.md"
+    target.write_text(
+        "# A\n\nLifecycle: active\nRole: notes\nProject: roprimary\nUpdated: 2026-01-01\n"
+        "\n## Body\n\na.\n"
+    )
+    before = _snapshot(root)
+    target.chmod(0o000)
+    try:
+        proc = _run(docs_script, "archive", str(target), "--date", _M26_DATE)
+    finally:
+        target.chmod(0o644)
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr, proc.stderr
+    assert "docs: archive: " in proc.stderr, proc.stderr
+    assert _snapshot(root) == before
+
+
+@_SKIP_AS_ROOT
+def test_unreadable_referring_doc_exits_cleanly_without_a_traceback(docs_script, tmp_path):
+    """The third face of the same condition: an unreadable doc found by the
+    whole-tree validation walk (M12 / M14 — A6).
+
+    A MALFORMED referring doc stays exit 1 (unchanged since M12,
+    `test_archive_referring_edge_rewrite_is_atomic`); an UNREADABLE one is not
+    malformed, and gets the clean exit 2 the other two unreadable cases get.
+    """
+    root = tmp_path / "roreferrer"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "roreferrer"\n\n[archive]\ndir = "archive"\n'
+    )
+    hdr = "Lifecycle: active\nRole: notes\nProject: roreferrer\n"
+    (root / "a.md").write_text(f"# A\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\na.\n")
+    other = root / "other.md"
+    other.write_text(f"# Other\n\n{hdr}Updated: 2026-01-02\n\n## Body\n\nother.\n")
+    before = _snapshot(root)
+    other.chmod(0o000)
+    try:
+        proc = _run(docs_script, "archive", str(root / "a.md"), "--date", _M26_DATE)
+    finally:
+        other.chmod(0o644)
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr, proc.stderr
+    assert "docs: archive: " in proc.stderr, proc.stderr
+    assert _snapshot(root) == before, "the walk runs before any write"
+
+
+def test_empty_reason_is_dropped_from_the_record(docs_script, tmp_path):
+    """`--reason ""` leaves no `Archived-reason:` line, so the record must not
+    claim one.
+
+    `_archive_one`'s `if reason:` has always declined to write an empty
+    `Archived-reason:`; carrying `""` into the `--json` record would make the
+    record MISDESCRIBE the file it reports on, which is the one failure mode
+    D7 exists to prevent. Refusing an empty `--reason` outright (the
+    `docs relate` precedent) would add to the frozen message catalog and is
+    deliberately left for M29.
+    """
+    root = _two_relation_tree(tmp_path)
+
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "root.md"),
+        "--reason",
+        "",
+        "--json",
+        "--date",
+        _M26_DATE,
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    record = json.loads(proc.stdout)
+    assert record["reason"] is None, "an empty --reason is not a reason"
+    assert "Archived-reason:" not in (root / _M26_DATED / "root.md").read_text()
+
+
+def test_two_spellings_of_one_edge_survive_the_rewrite_as_duplicate_bullets(docs_script, tmp_path):
+    """DOCUMENTED CURRENT BEHAVIOUR, not an endorsement (M28 follow-up).
+
+    A primary declaring the same candidate twice — `beta.md` and `./beta.md` —
+    produces one `(alias, new_rel)` pair per declared spelling (Phase-1 Q5),
+    which is what keeps a `./` bullet from dangling. Both bullets therefore
+    repoint to the same new path, and the moved doc ends up carrying two
+    byte-identical bullets.
+
+    Every edge resolves and `docs check` is clean, so the cost is cosmetic.
+    The fix is NOT local: the duplicate exists because two different
+    `old_rel`s map to one `new_rel`, so suppressing it needs `Related:`-block
+    aware editing rather than `rewrite_related_refs`' per-pair exact-match
+    substitution — and dropping the alias pair instead would leave `./beta.md`
+    dangling, which is strictly worse than a duplicate. Recorded as an M28
+    follow-up (M28 reworks that rewriter for body links anyway). This test
+    exists so the behaviour cannot change silently in either direction.
+    """
+    root = tmp_path / "dupspell"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "dupspell"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: dupspell\n"
+    (root / "beta.md").write_text(f"# Beta\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\nb.\n")
+    (root / "alpha.md").write_text(
+        f"# Alpha\n\n{hdr}Updated: 2026-01-02\n\n"
+        "Related:\n- pairs-with: beta.md\n- pairs-with: ./beta.md\n\n## Body\n\na.\n"
+    )
+
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "alpha.md"),
+        "--cascade-only",
+        "beta.md",
+        "--date",
+        _M26_DATE,
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    moved = (root / _M26_DATED / "alpha.md").read_text()
+    assert moved.count(f"- pairs-with: {_M26_DATED}/beta.md\n") == 2, (
+        "both declared spellings are repointed — today that leaves two identical bullets"
+    )
+    assert "./beta.md" not in moved, "neither spelling is left dangling"
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, (check.stdout, check.stderr)
+
+
 @_SKIP_AS_ROOT
 def test_unreadable_plan_member_exits_cleanly_without_a_traceback(docs_script, tmp_path):
     """An existing but UNREADABLE plan member is a clean exit 2, never a
