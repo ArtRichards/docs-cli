@@ -23,7 +23,7 @@ inside the same wheel as package data.
 ```
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
-├── cli.py                               ─ the CLI module (~3.8k lines)
+├── cli.py                               ─ the CLI module (~7.0k lines)
 │   ├── dunder version                   (__version__ = importlib.metadata.version("docs-cli"))
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
@@ -32,7 +32,8 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
 │   ├── walker        — directory traversal, filter, archive detection
 │   ├── index         — INDEX.md render with marker-block preservation
 │   ├── archive       — atomic move + lifecycle edit (M2; M7 rename;
-│   │                   M12 referring-edge rewrite)
+│   │                   M12 referring-edge rewrite; M26 plan/pre-flight/
+│   │                   apply + `--json` operation record)
 │   ├── mv            — rename + Related: rewrite across tree (M2)
 │   ├── new           — scaffolded doc creation (M2)
 │   ├── touch         — Updated: bump (M2; M12 outside-root refusal)

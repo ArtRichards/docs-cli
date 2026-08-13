@@ -31,7 +31,7 @@ Related:
   the whole operation plan is available as one machine-readable record.
 - Progress: **Active / implementation-complete — all ten TDD phases done
   (2026-08-13).** Step 1 (Phases 1–4) on `m26/phases-1-4`; Step 2
-  (Phases 5–10) on `m26/phases-5-10`. Full suite **888 GREEN**, with 774 of
+  (Phases 5–10) on `m26/phases-5-10`. Full suite **889 GREEN** (888 at the Phase-8 gate, plus one failure-path lock the Step-2 audit added), with 774 of
   the 777 pre-existing test ids mechanically proven present and passing and
   3 deliberately removed; the closeout workflow dogfooded on a throwaway copy
   of this tree, where the unfiltered preview reproduces E1 exactly — all six

@@ -2496,6 +2496,54 @@ def test_archive_json_record_is_emitted_on_an_index_refresh_failure(docs_script,
         root.chmod(0o755)
 
 
+@_SKIP_AS_ROOT
+def test_unreadable_plan_member_exits_cleanly_without_a_traceback(docs_script, tmp_path):
+    """An existing but UNREADABLE plan member is a clean exit 2, never a
+    traceback.
+
+    Added by the Step-2 same-instance audit, which found the defect: the
+    pre-flight's first proof calls `read_text()` on every member, so a `0o000`
+    candidate raises `PermissionError` before its writability is ever tested —
+    and `PermissionError` is an `OSError`, not a `CoordinatedWriteError`, so it
+    escaped `_cmd_archive`'s refusal handler. This is not one of the five
+    enumerated pre-flight refusals; it is the unenumerated read failure, and it
+    gets the same mapping as the M14 (A4) rewrite failure: `docs: archive: …`
+    at exit 2, with the tree untouched because the pre-flight writes nothing.
+    """
+    root = tmp_path / "unreadable"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "unreadable"\n\n[archive]\ndir = "archive"\n'
+    )
+    hdr = "Lifecycle: active\nRole: notes\nProject: unreadable\n"
+    (root / "a.md").write_text(
+        f"# A\n\n{hdr}Updated: 2026-01-01\n\nRelated:\n- pairs-with: b.md\n\n## Body\n\na.\n"
+    )
+    (root / "b.md").write_text(f"# B\n\n{hdr}Updated: 2026-01-02\n\n## Body\n\nb.\n")
+    # Snapshotted BEFORE the chmod, and the mode restored before the
+    # comparison: `_snapshot` reads every file, so it cannot read a 0o000 one.
+    before = _snapshot(root)
+    (root / "b.md").chmod(0o000)
+    try:
+        proc = _run(
+            docs_script,
+            "archive",
+            str(root / "a.md"),
+            "--cascade-only",
+            "b.md",
+            "--date",
+            _M26_DATE,
+        )
+    finally:
+        (root / "b.md").chmod(0o644)
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr, proc.stderr
+    assert "docs: archive: " in proc.stderr, proc.stderr
+    assert proc.stdout == ""
+    assert _snapshot(root) == before, "the pre-flight writes nothing"
+
+
 def test_archive_json_source_is_the_file_argument_exactly_as_typed(
     docs_script, fixtures_dir, tmp_path
 ):

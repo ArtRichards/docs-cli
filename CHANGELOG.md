@@ -99,7 +99,9 @@ until then._
   docs: archive: would archive m25.md -> archive/2026-08-13/m25.md
   docs: archive: candidate m25-impl.md — selected -> archive/2026-08-13/m25-impl.md
   docs: archive: candidate cli.md — not selected (outside --cascade-only 'm25-*')
-  docs: archive: 6 candidate(s): 1 selected, 5 not selected, 0 ineligible
+  docs: archive: candidate convention.md — not selected (outside --cascade-only 'm25-*')
+  docs: archive: candidate archive/2026-01-01/old.md — ineligible (already archived)
+  docs: archive: 4 candidate(s): 1 selected, 2 not selected, 1 ineligible
   docs: archive: preview only — nothing was written
   ```
 

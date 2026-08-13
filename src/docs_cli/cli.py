@@ -5289,6 +5289,15 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     except CoordinatedWriteError as exc:
         print(f"docs: archive: {exc}", file=sys.stderr)
         return exc.exit_code
+    except OSError as exc:
+        # An unenumerated read failure — an existing but unreadable plan
+        # member reaches the pre-flight's `read_text()` before its writability
+        # is ever tested. Mapped to the same clean exit 2 as the M14 (A4)
+        # rewrite failure rather than a traceback; the pre-flight has written
+        # nothing, so the tree is still untouched. Must come AFTER the
+        # `CoordinatedWriteError` clause, which is a subclass.
+        print(f"docs: archive: {exc}", file=sys.stderr)
+        return 2
 
     # 8 — M12 / M14 (A6): the whole-tree validation walk, which catches a
     # malformed REFERRING doc before the move so a later edge rewrite cannot
