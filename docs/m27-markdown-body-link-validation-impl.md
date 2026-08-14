@@ -40,7 +40,7 @@ the milestone checklist synchronized.
 |---|---|---|---|
 | 1. Define Contract | **Done** | 2026-08-14 | Froze the supported Markdown grammar subset, the masking rules, destination classification/normalisation/resolution, **the containment test and its precedence over existence**, both findings (`broken-body-link`, `outside-root-body-link`) with severity / message template / exit code / ordering, the `BodyLink` span contract M28 consumes, and the legacy-tree policy — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | **Done** | 2026-08-14 | Scanner unit tests over every supported and every excluded form; both rules' integration + subprocess/JSON locks; the no-double-report precedence lock and the never-stat-outside-the-root lock; the E5/E6 false-positive and false-negative locks; the pathological-input runtime lock. |
-| 3. Create Data/Fixtures | Pending | — | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
+| 3. Create Data/Fixtures | **Done** | 2026-08-14 | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
 | 5. Update Base Interfaces | Pending | — | `BodyLink` model, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers; no rule wired yet. The scanner reports every local destination — containment is the rule's job. |
 | 6. Implement Offline/Core Path | Pending | — | Wire both rules into `check_doc`, containment before existence; land the live-tree repair — 139 archived rebases plus `charter.md:52`'s URL conversion — in the same phase so the dogfood gate never sits knowingly RED. |
@@ -614,6 +614,107 @@ unmoved by `git diff` showing **zero** deleted lines in that file.
 - `git diff --stat -- src/docs_cli/cli.py` — **empty**.
 - At the end of Phase 2 the fixture-backed tests still fail on a missing
   `tests/fixtures/trees/bodylink-*` directory, which Phase 3 supplies.
+
+## Phase 3 — Create Data/Fixtures — 2026-08-14
+
+### Objective
+
+Give Phase 2's E1–E8 locks committed trees to run against — one semantic per
+tree, structure-only, static dates — per `test-strategy.md`'s fixture policy,
+without editing a single pre-existing fixture.
+
+### Trees added
+
+17 files across six new directories under `tests/fixtures/trees/`, each with
+its own `.docs.toml`.
+
+| Tree | Contents | Isolates | Intended finding set |
+|---|---|---|---|
+| `bodylink-clean/` | `doc.md`, `target.md`, `data.yaml`, `sub/deep.md`. `doc.md` carries every supported form: plain, `./`, fragment, non-Markdown, **directory** (`sub/`), nested, angle, all three title quotings, and a reference definition | every supported form **resolving** | **none** |
+| `bodylink-broken/` | `doc.md` with exactly one link, `[the plan](plan.md)`, on **line 8**; `plan.md` absent | E3 | exactly **one** `broken-body-link` |
+| `bodylink-excluded-forms/` | one **valid** doc carrying an image, both autolink shapes, a raw-HTML anchor, all three reference *uses*, a backslash-escaped opt-out, empty / fragment-only / `https:` / `mailto:` / protocol-relative / root-absolute destinations, a fenced block with `[<path>](<path>)`, and an inline span containing a link | E5/E8/D2 — **silence** | **none** |
+| `bodylink-nested/` | root `back-inside.md` + `sub/deep.md` linking `../back-inside.md`, `../sub/deep.md`, and **`../sub/../back-inside.md`** | D3 resolution base + escape-then-return | **none** |
+| `bodylink-archived/` | `[archive] dir = "archive"`; `plan.md` at root; `archive/2026-01-01/old-log.md` (`Lifecycle: archived`, `Archived-reason:`, `Updated: 2026-01-01`) carrying the un-rebased `[the plan](plan.md)` on **line 12** | E1/E2 — the exact damage shape, 132/139 of it | exactly **one** `broken-body-link`, candidate `archive/2026-01-01/plan.md` |
+| `bodylink-outside-root/` | one valid `doc.md` with **two** escaping destinations: `../__docs_cli_m27_no_such_dir__/ghost.md`, which cannot exist, and **`../bodylink-outside-root/doc.md`**, self-referential and therefore guaranteed to exist on disk | E7/D4b/Q5 | exactly **two** `outside-root-body-link`, **zero** `broken-body-link` |
+
+### Decisions / issues
+
+- **The two escapes in `bodylink-outside-root` are deliberately different, and
+  the pair is the point.** The unreachable one makes "never stat outside the
+  root" true *by construction* — there is nothing out there to stat. The
+  self-referential one is the harder half of E7: it names a path that provably
+  exists, so an implementation that decided the rule with a stat rather than
+  with arithmetic would report it as resolving and the fixture would catch it.
+  Self-reference is used rather than a sibling fixture so the lock cannot rot
+  when a neighbouring tree is renamed.
+- **No existing fixture was edited.** The setup census measured all 33
+  read-only at zero unresolved destinations and zero escapes, and Phase 3
+  re-confirmed it: `git status` shows exactly six new directories and nothing
+  else. This is what keeps M27's no-regression proof at a clean zero moved
+  ids.
+- **The reciprocal-verb constraint is honoured.** None of the six uses
+  `precedes`/`follows`, `depends-on`/`required-by`, or `blocks`/`blocked-by`
+  — in fact none declares a `Related:` group at all — so the six
+  parametrizations they add to
+  `test_check_tree_legacy_fixtures_gain_no_new_findings` (23 → **29**) all
+  pass, and `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings`
+  stays at exactly **33**.
+- **Every doc is valid, on purpose.** A `malformed` doc early-returns from
+  `check_doc` before any body-link rule, which would make the "silent" locks
+  pass for entirely the wrong reason — especially
+  `bodylink-excluded-forms`, whose whole job is to prove the *rules* are
+  silent rather than that the *document* was skipped. `docs check` exits 0 on
+  all six today, so each tree's finding set is exactly its intended one.
+- **Line numbers are part of the fixture contract.** `bodylink-broken`'s link
+  sits on line 8 and `bodylink-archived`'s on line 12 because Phase 2 asserts
+  both frozen messages verbatim, and `<N>` is in them. The archived doc's
+  line 12 makes its message `cli.md`'s worked instance byte for byte.
+- **`](plan.md)` appears exactly once in `bodylink-archived`**, in the
+  archived log. `test_check_tree_bodylink_archived_repaired_copy_is_clean`
+  rewrites that one token to `](../../plan.md)` and then asserts the reverse
+  substitution reproduces the original file byte for byte and that every other
+  file in the tree is untouched — which only means anything while the token is
+  unique.
+- **Exotic grammar stays inline** (the M25 rule): angle destinations with
+  whitespace, percent- and backslash-escapes, parens at and beyond the frozen
+  depth, the reference-definition line anchor, multi-line labels, and every
+  masking case live in `tests/test_body_links.py`, because they assert on
+  parse output rather than on a tree walk. In particular **no committed
+  fixture filename contains a space** — `tests/` ships in every sdist — so the
+  `%20` end-to-end case is a `tmp_path` builder and only its *parsing* half is
+  an inline string.
+- **No `src/docs_cli/cli.py` change.**
+
+### Verification
+
+- `.venv/bin/docs check tests/fixtures/trees/bodylink-<each>` — **no
+  violations found (exit 0)** for all six. Nothing fires until Phase 6, which
+  is what makes each tree's intended finding set exactly its own.
+- Read-only prototype census over the six trees, under the Phase-1 frozen
+  contract: `bodylink-broken` 1 broken / 0 escapes; `bodylink-archived` 1
+  broken (candidate `archive/2026-01-01/plan.md`) / 0; `bodylink-outside-root`
+  **0 broken / 2 escapes**; `bodylink-clean`, `-excluded-forms` and `-nested`
+  **0 / 0**. Exactly the intended sets.
+- `.venv/bin/python -m pytest tests/ -q --co` — **1064 collected** (1058 →
+  1064: exactly the **+6** parametrizations the new trees add to
+  `test_check_tree_legacy_fixtures_gain_no_new_findings`), zero collection
+  errors.
+- `.venv/bin/python -m pytest -q` — **122 failed, 942 passed** (129 → 122).
+  The **7** locks that flipped GREEN are exactly the ones Phase 2 classified
+  degenerate and predicted: `test_check_tree_bodylink_clean_is_clean`,
+  `…_excluded_forms_is_silent`, `…_nested_resolves_up_and_down`,
+  `…_archived_repaired_copy_is_clean`, `test_check_bodylink_clean_tree_exits_0`,
+  `…_excluded_forms_tree_exits_0`, and
+  `test_check_verdict_is_identical_from_a_relocated_copy`.
+- `test_check_tree_legacy_fixtures_gain_no_new_findings` — **29 passed**
+  (23 + 6). `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings` —
+  **33 passed**.
+- `git status` — exactly six new directories, **no** edit to any pre-existing
+  fixture.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy src/ tests/` —
+  clean. `docs check --root docs` — exit 0. Bundled refs byte-identical;
+  INDEX snapshot identical.
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**.
 
 ## Milestone completion summary
 
