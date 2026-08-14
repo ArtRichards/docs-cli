@@ -78,8 +78,15 @@ Related:
   changed lines with every non-`equal` opcode inside a recorded span, `+3`/`+0`
   net line arithmetic, every metadata invariant held, a re-census at **0
   broken / 0 escapes with the recognised-span count still 393**, and both
-  gates green. Suite: **2 failed, 1077 passed**, the only REDs left being
-  Phase 7's two surface locks. Phase 7 — the wrapper/surface layer — is next.
+  gates green. **Phase 7 (2026-08-14)** reconciled every parallel surface —
+  `docs check`'s argparse description, the bundled `SKILL.md` check row and
+  `references/use-cases.md` (the *Validate in CI* row plus a new M27 upgrade
+  section), and `CHANGELOG.md` under `UNRELEASED` with one `Added` entry per
+  rule, a BREAKING `Changed` entry, and the adopter recipe for **both**
+  repairs. No spec edit was needed, so both mirrors stayed byte-identical and
+  the INDEX snapshot needed no regeneration; no version bump (M25 — D6). The
+  suite is now **fully GREEN at 1079 passed**. Phase 8 — the formal GREEN
+  gate and the mechanical no-regression proof — is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -759,7 +766,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor

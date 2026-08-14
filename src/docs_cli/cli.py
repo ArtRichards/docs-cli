@@ -4821,8 +4821,9 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Walk the docs root and report convention violations: missing or "
             "malformed metadata, unknown vocabulary, status/location drift, "
-            "and broken Related: references. Exit 0 clean, 1 warnings only, "
-            "2 errors."
+            "broken Related: references, and local Markdown body links that "
+            "name no existing path or that leave the docs root. Exit 0 clean, "
+            "1 warnings only, 2 errors."
         ),
     )
     check_p.add_argument(

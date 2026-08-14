@@ -129,6 +129,57 @@ until then._
   `unresolved-target`, `outside-root`). The candidate set is present in
   **every** mode, including a plain `docs archive FILE`.
 
+- **`broken-body-link` check rule** (M27). `docs check` now reads each
+  document's **body** and validates the local Markdown links it finds there.
+  A destination that names no existing path under the docs root is an
+  **error** (exit 2), one finding per occurrence:
+
+  ```console
+  $ docs check
+  archive/2026-01-01/old-log.md
+    error: [broken-body-link] body link at line 12 does not resolve to an existing path: plan.md (resolves to archive/2026-01-01/plan.md)
+  ```
+
+  A body-link destination resolves **relative to the document that contains
+  it** — not root-relative like a `Related:` target — which is why `../` is
+  normal in prose and never appears in a `Related:` bullet. The message
+  carries the 1-based line, the destination **exactly as written**, and the
+  candidate path the tool probed; the `--json` record's key set is unchanged
+  (`path`, `severity`, `rule`, `message`). **Any** existing filesystem entry
+  satisfies a destination — file or directory, any extension. Fragments are
+  preserved and never validated: `docs check` does not check whether the
+  heading exists.
+
+  The scanner recognises a deliberately bounded, CommonMark-*shaped* subset —
+  inline links with plain or `<…>` destinations and an optional title in any
+  of the three quotings, plus reference *definitions*. Images, autolinks, raw
+  HTML, and reference *uses* are out of the grammar. Fenced and inline code
+  are masked before any matching, so a link-shaped example inside a code
+  sample is silent, and a backslash escape (`\[x](y.md)`) always opts a span
+  out. External and schemed URLs, root-absolute and protocol-relative
+  destinations, empty destinations, and fragment-only links produce nothing
+  at all.
+
+- **`outside-root-body-link` check rule** (M27). A body-link destination that
+  resolves outside the docs root is its own **error** (exit 2), with a
+  different repair:
+
+  ```console
+  $ docs check
+  charter.md
+    error: [outside-root-body-link] body link at line 52 leaves the docs root: ../shared/glossary.md (normalises to ../shared/glossary.md); links outside the tree must be URLs
+  ```
+
+  `docs check` **never stats, opens, or follows anything outside its own
+  root**. The escape is decided by path arithmetic alone — lexical
+  normalisation, no `resolve()`, no symlink following — so the same bytes
+  yield the identical verdict from a git clone, a container, or a vendored
+  subtree, which is what makes `docs check` usable as a CI gate. Containment
+  is tested **before** existence, so the two rules never double-report: an
+  escaping destination is reported once, as `outside-root-body-link`, and
+  never additionally as broken. A `../`-escape that normalises back under the
+  root (`../sub/../back-inside.md`) is contained and validated normally.
+
 ### Changed
 
 - **BREAKING — a one-sided recognized reciprocal edge now exits 2.** Trees
@@ -139,6 +190,15 @@ until then._
   duplicate label passed `docs check` before this release, while silently
   losing every value under the earlier copy. It now fails. There is no
   automatic merge: `docs` will not guess which entries you meant to keep.
+- **BREAKING — a broken or escaping local Markdown body link now exits 2.**
+  A tree that has carried unnoticed prose damage starts failing `docs check`.
+  That is deliberate, and it is what the 2.0 major version exists to carry.
+  Nothing is converted automatically, there is **no repair verb** (`docs`
+  will not guess whether a link should be rebased, repointed, or deleted),
+  and there is deliberately **no opt-out knob** — no `[check] body_links =
+  false`. A missing file is a fact, not a style preference. `docs touch
+  --check` inherits both rules; the root-level generated `INDEX.md` is never
+  scanned, and a `malformed` document keeps sole ownership of its case.
 - **BREAKING — `docs archive --cascade` and `--interactive` are retired.**
   Both stay **registered** in argparse — so an obsolete script or workflow
   skill gets a legible, actionable refusal instead of `unrecognized
@@ -231,6 +291,32 @@ two rules disagree by construction: the parser reads the **last** copy of a
 label while `docs relate`'s editors act on the **first**, so a repair can
 report success and leave the finding in place. Merging the labels makes the
 tree diagnosable again.
+
+**Repair the body links.** The two findings ask for different things, and
+the message tells you which:
+
+```console
+$ docs check                  # read the findings: line, raw destination, candidate
+                              # broken-body-link       -> rebase the destination
+                              # outside-root-body-link -> replace it with a URL
+$ docs check                  # clean
+```
+
+The overwhelmingly common cause of `broken-body-link` is a relative link in
+a document an **older `docs` archived**: the destination was correct at the
+document's original location and no version of the tool has ever rebased it,
+so it now needs the `../../` that the move into `archive/YYYY-MM-DD/` should
+have added. The finding prints the candidate path the tool probed, which is
+what makes the missing prefix obvious. `outside-root-body-link` is different
+in kind: the destination names something the tree does not own, so it becomes
+a **URL**.
+
+If a finding names a code sample rather than a real link, fence the sample
+(every code sample in this project's own docs already is), put it in an
+inline code span, or backslash-escape the opening bracket — any of the three
+makes the span invisible to the scanner. There is deliberately **no 4-space
+indented-code rule**: a link indented four spaces inside a blockquote or a
+list continuation is a real link and **is** checked.
 
 ## 1.8.0 — 2026-07-03
 

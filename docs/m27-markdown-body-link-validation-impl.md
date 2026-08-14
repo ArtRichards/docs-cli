@@ -23,8 +23,9 @@ the milestone checklist synchronized.
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
 - Progress: **Step 1 complete on `m27/phases-1-4`; Step 2 in flight on
-  `m27/phases-5-10` — Phases 5 and 6 complete (2026-08-14); the live tree is
-  repaired and `docs check` is clean with both rules in force.** All seven setup questions were RESOLVED at setup
+  `m27/phases-5-10` — Phases 5, 6 and 7 complete (2026-08-14); the live tree
+  is repaired, `docs check` is clean with both rules in force, and the suite
+  is fully GREEN at 1079 passed.** All seven setup questions were RESOLVED at setup
   (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
   not re-open them. Q5 was resolved **against** the setup recommendation and
   then **amended** — the hermetic boundary is kept, and an escaping
@@ -45,7 +46,7 @@ the milestone checklist synchronized.
 | 4. Run Tests (RED Baseline) | **Done** | 2026-08-14 | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
 | 5. Update Base Interfaces | **Done** | 2026-08-14 | The whole pure scanner in one banner section — `BodyLink`, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers and `body_link_findings` — with **no** rule wired, so the 18 rule/CLI/skill tests stay honestly RED at the `check_doc` seam. 119 cleared; both quadratic shapes avoided; `raw` sliced from the ORIGINAL text. Seven grammar points the contract left silent (S1–S6, S9) settled in `cli.md` and its mirror. |
 | 6. Implement Offline/Core Path | **Done** | 2026-08-14 | Both rules wired into `check_doc` (three lines, after the `broken-ref` group and before `stale`) **and** the D6 live-tree repair in the same commit: 140 occurrences over 30 documents, split 132 root-rebase / 5 move-map / 2 playbook-URL / 1 escape-URL, driven by the Phase-5 scanner and spliced by offset. Six independent checks prove no other byte moved; re-census 0 broken / 0 escapes with the span count still 393. |
-| 7. Update Tool/Wrapper Layer | Pending | — | `cli.md` (rule list, exit codes, the explicitly stated out-of-root boundary) / `convention.md` (the inside-the-root invariant, fence-your-samples, the third archived exception) / bundled skill / `UNRELEASED` CHANGELOG and the adopter upgrade recipe. No version bump. |
+| 7. Update Tool/Wrapper Layer | **Done** | 2026-08-14 | `docs check`'s argparse description now names both rules' conditions; the bundled `SKILL.md` check row and `references/use-cases.md` (the *Validate in CI* row plus a new M27 upgrade section) name both rule ids and **both** repairs; `CHANGELOG.md` gains one `Added` entry per rule, a BREAKING `Changed` entry, and the adopter upgrade recipe. No spec edit was needed — `cli.md` and `convention.md` were already current, so both mirrors stayed byte-identical. No version bump. Suite fully GREEN. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay the pre-repair damage on a throwaway copy and walk the documented upgrade recipe; prove hermeticity by re-checking the copy where no sibling `src/` exists; false-positive sweep; measured scan runtime. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close `architecture.md` / `test-strategy.md`, completion summaries, hand the scanner to M28. |
@@ -1345,6 +1346,81 @@ contains exactly one `Revision:` label preceded by a blank line — checks 1 and
   rules in force.
 - `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
 - `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+
+## Phase 7 — Update Tool/Wrapper Layer — 2026-08-14
+
+### Objective
+
+Reconcile every parallel surface with the two new rules. Only 2 RED tests
+remained (`tests/test_skill.py`), but the surface-parity gate is broader than
+the RED set — the whole point of the gate is that a surface can drift without
+a test noticing.
+
+### Actions taken
+
+1. **`docs check`'s argparse `description`** (`src/docs_cli/cli.py`). It ended
+   `"…and broken Related: references."`; it now reads `"…broken Related:
+   references, and local Markdown body links that name no existing path or
+   that leave the docs root."` The word **violations** is retained, because
+   `tests/test_cli_check.py::test_check_help` asserts
+   `"violation" in stdout.lower()`. Phase-1 follow-through item 2, closed.
+2. **`src/docs_cli/skill/SKILL.md`** — the `Validate the tree` row now names
+   both rule ids **and both repairs**, because the flags column of that table
+   is read by an agent as a prescription: `broken-body-link` → rebase the
+   destination (and the row says the destination resolves from the linking
+   document's own directory, which is the fact that makes the rebase
+   obvious); `outside-root-body-link` → replace it with a URL. Body still
+   ~148 lines, far under the 500-line cap; no new `` `docs <verb>` `` span
+   naming a non-verb; no new relative link; no `](../`.
+3. **`src/docs_cli/skill/references/use-cases.md`** — the *Validate in CI* row
+   now says body links are checked, and a new
+   `## Upgrade: repair body links (M27)` section sits after the M25 upgrade
+   section with the adopter's whole loop: find the damage, rebase a
+   `broken-body-link`, use a **URL** for an `outside-root-body-link`, opt a
+   code sample out by fencing / inline-coding / backslash-escaping it,
+   re-check. The document-relative resolution base is stated up front,
+   because it is the one thing an adopter has to internalise before the
+   rebase makes sense.
+4. **`CHANGELOG.md`**, under the existing `UNRELEASED` heading: one `### Added`
+   entry per rule, each with a `console` block showing a real finding, the
+   closed-key-set statement, and the surrounding grammar/masking scope; one
+   BREAKING `### Changed` entry naming the no-repair-verb and no-opt-out-knob
+   decisions; and an `### Upgrading from 1.x` recipe covering both repairs
+   plus the three ways to opt a code sample out. **No version bump** —
+   `pyproject.toml` stays `1.8.0` (M25 — D6), pinned by
+   `test_a3_project_version_is_1_8_0` and `test_c2_docs_version_is_1_8_0`.
+5. **No spec edit was needed in this phase.** `cli.md` already carries the
+   rule list, the closed-record note, the exit-code prose and the explicitly
+   stated out-of-root boundary (Phase 1, extended in Phase 5 by S1–S6/S9), and
+   `convention.md`'s dated exception landed with the repair in Phase 6. Both
+   mirrors were therefore already byte-identical and needed no re-copy, and
+   the INDEX snapshot needed no regeneration.
+
+### Decisions / issues
+
+- **The third authoring trap is now live and was exercised.** Every
+  link-shaped example added in this phase lives inside a fenced block or an
+  inline code span, and nothing became a line-anchored reference definition.
+  The census over the repaired `docs/` after this phase's edits still reads
+  **393 spans, 0 broken, 0 escapes** — unchanged, so no new scannable span was
+  authored.
+- **The suite went fully GREEN one phase early.** That is expected: Phase 8 is
+  a log-and-prove phase, and its exit criterion is the mechanical
+  no-regression proof rather than the flip itself.
+
+### Verification
+
+- `.venv/bin/python -m pytest -q` — **1079 passed, 0 failed**.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy src/ tests/` —
+  clean.
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- `docs check --help` and `cli.md` agree; the help text names both rules'
+  conditions and keeps the word "violations".
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical;
+  `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+- `](../` still **0** across both specs and all six bundled skill `.md` files;
+  `../src/docs_cli/` and `../../../../docs/` still absent from every bundled
+  reference.
 
 ## Milestone completion summary
 
