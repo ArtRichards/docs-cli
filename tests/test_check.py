@@ -1171,8 +1171,12 @@ def test_check_doc_body_link_findings_follow_the_broken_ref_group(tmp_path):
     `broken-ref` group and before the `stale` block, keeping the two
     reference-resolution rules adjacent.
 
-    The doc carries both, so the relative order is observable rather than
-    vacuous.
+    The doc carries all three — an unresolvable `Related:` target, a broken
+    body link, and an `Updated:` old enough to trip the stale window — so BOTH
+    halves of the placement are observable rather than vacuous. Asserting only
+    the pair either side would leave the "before the stale block" half
+    unpinned, and that half is the one an implementation is most likely to get
+    wrong by appending the new rule at the end of `check_doc`.
 
     RED: plain assertion (no rule yet).
     """
@@ -1181,8 +1185,8 @@ def test_check_doc_body_link_findings_follow_the_broken_ref_group(tmp_path):
         "Related:\n- references: nowhere.md\n\n"
         "See [the plan](plan.md).\n"
     )
-    findings = check_doc(tmp_path / "doc.md", text, tmp_path, _config(), stale=None, today=_TODAY)
-    assert [f.rule for f in findings] == ["broken-ref", "broken-body-link"]
+    findings = check_doc(tmp_path / "doc.md", text, tmp_path, _config(), stale=1, today=_TODAY)
+    assert [f.rule for f in findings] == ["broken-ref", "broken-body-link", "stale"]
 
 
 def test_check_doc_malformed_doc_gets_no_body_link_findings(tmp_path):
@@ -1369,6 +1373,37 @@ def test_check_tree_bodylink_nested_resolves_up_and_down():
     GREEN-at-baseline but DEGENERATE; the over-fire guard from Phase 6.
     """
     assert _bodylink_findings("bodylink-nested") == []
+
+
+def test_check_tree_root_index_is_not_scanned_but_a_nested_one_is(tmp_path):
+    """D2: the ROOT-level generated `INDEX.md` is never scanned; a NESTED one is.
+
+    `_iter_doc_texts` already skips the root index for every rule, and its
+    links are regenerated from the tree rather than authored — flagging them
+    would blame the author for the tool's own output. A nested `INDEX.md`,
+    though, is an ordinary managed document: `with-archive` and
+    `real-trees-adopted` both ship one, and `convention.md` scopes the special
+    case to the file at the docs root. `cli.md` states both halves, so both
+    are locked here; without the second half the rule could quietly skip every
+    file named `INDEX.md` at any depth and no other test would notice.
+
+    RED: plain assertion (no rule yet) — for the nested half.
+    """
+    root = tmp_path / "indexes"
+    (root / "sub").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "indexes"\n')
+    (root / "INDEX.md").write_text(
+        "# Indexes\n\n<!-- docs:generated start -->\n"
+        "- [gone](never-existed.md)\n"
+        "<!-- docs:generated end -->\n"
+    )
+    (root / "sub" / "INDEX.md").write_text(
+        _bodylink_doc("indexes", "See [the plan](plan.md) for context.\n")
+    )
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    assert [(f.path.parent.name, f.rule) for f in findings] == [("sub", "broken-body-link")], (
+        "the nested INDEX.md is a regular doc and IS scanned; the root one never is"
+    )
 
 
 def _pre_m27_tree_names() -> list[str]:

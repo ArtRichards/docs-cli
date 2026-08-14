@@ -44,10 +44,11 @@ Related:
   **+163 test ids, zero removed** — against those frozen strings; Phase 3
   authored the six `bodylink-*` fixture trees, each yielding exactly its
   intended finding set with **no** pre-existing fixture edited. Phase 4
-  captured the classified RED baseline — **1064 collected, 122 failed, 942
-  passed**, zero collection errors, zero tracebacks, two exception classes,
-  and **all 895** pre-existing ids mechanically proven present and passing
-  (zero removed, zero regressed). Phase 5 — Update Base Interfaces is next.
+  captured the classified RED baseline, restated after the Step-1
+  same-instance audit's six fixes: **1066 collected, 124 failed, 942 passed**,
+  zero collection errors, zero tracebacks, two exception classes, and **all
+  895** pre-existing ids mechanically proven present and passing (zero
+  removed, zero regressed). Phase 5 — Update Base Interfaces is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -1176,8 +1177,10 @@ implemented here.
 Additional gates: the `docs check --json` closed-key-set assertion (unchanged
 by **both** new rules), `docs check --help` / `cli.md` surface parity, bundled
 `references/cli.md` and `references/convention.md` byte identity, the pre-M27
-fixture-tree no-new-findings lock extended to `broken-body-link` **and**
-`outside-root-body-link`, the no-double-report precedence lock, a
+fixture-tree no-new-findings lock covering `broken-body-link` **and**
+`outside-root-body-link` across all 33 trees (a **sibling** test, per Phase-1
+amendment 3 — `test_check_tree_legacy_fixtures_gain_no_new_findings` is not
+extended and stays byte-identical), the no-double-report precedence lock, a
 pathological-input runtime lock on the scanner, and the live INDEX snapshot.
 
 ## Success criteria

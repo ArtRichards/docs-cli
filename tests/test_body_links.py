@@ -20,6 +20,7 @@ walk. The `bodylink-*` fixture trees Phase 3 authors cover the tree-walk half.
 
 from __future__ import annotations
 
+import dataclasses
 import time
 from pathlib import Path
 
@@ -158,16 +159,17 @@ def test_mask_code_inline_span_does_not_cross_a_line() -> None:
 
 
 def test_mask_code_leaves_every_unmasked_byte_untouched() -> None:
-    """Only code CONTENT is replaced; every other byte is identical."""
+    """Only code CONTENT is replaced; every other byte is identical.
+
+    Asserted as the EXACT expected mask rather than as substring probes: this
+    is the one test that pins what "replaces the contents of code with spaces"
+    means character by character — the fence marker lines survive, the fenced
+    content and the inline span's interior become spaces of the same width,
+    and nothing else moves.
+    """
     text = "alpha [a](x.md)\n```\nsecret\n```\nomega `q` end\n"
-    masked = _mask(text)
-    for i, ch in enumerate(text):
-        if ch == "\n":
-            continue
-        if masked[i] != ch:
-            assert ch in "secretq", f"offset {i} ({ch!r}) is outside code but was masked"
-    assert masked.startswith("alpha [a](x.md)\n")
-    assert masked.endswith("omega ` ` end\n")
+    expected = "alpha [a](x.md)\n```\n      \n```\nomega ` ` end\n"
+    assert _mask(text) == expected
 
 
 def test_mask_code_does_not_mask_four_space_indented_prose() -> None:
@@ -199,17 +201,24 @@ def test_mask_code_masks_fences_before_inline_spans() -> None:
 
 
 def test_mask_code_e5_shapes_from_this_repository() -> None:
-    """E5: the two measured false-positive shapes, verbatim.
+    """E5: every measured false-positive shape in this repository, verbatim.
 
-    Without masking the scan of this repository gains 4 false positives inside
-    fenced code — `architecture.md:182`'s `[<path>](<path>)` — and 3 inside
-    inline code spans, where an `_format_entry` output sample carries
-    `[name](name)`. Both must be silent.
+    Without masking, the scan gains **4** false positives inside fenced code —
+    `architecture.md:182`'s `[<path>](<path>)` — and **3** inside inline code
+    spans. All three inline shapes are taken from the archived logs the setup
+    census measured: `_format_entry`'s `[name](name)` output sample
+    (`m1-parser-and-index-log.md:359`), the `[old-plan.md](old-plan.md)`
+    broken-link diagnosis (`m2-mutating-verbs-log.md:114`), and the
+    `[cli.md](cli.md)` prose-link example (`:523`). Every one must be silent.
     """
     fenced = "```\n- [<path>](<path>) — _role_ — <description>.\n```\n"
-    inline = "`_format_entry` renders `- [name](name) — _role_ — …` per doc.\n"
+    inline_format_entry = "emits `- [name](name) — _role_ — desc. Updated YYYY-MM-DD.`.\n"
+    inline_old_plan = "rendered as `[old-plan.md](old-plan.md)`\n— a broken link.\n"
+    inline_cli = "such as `[cli.md](cli.md)` in doc bodies are left untouched.\n"
     assert _scan(fenced) == ()
-    assert _scan(inline) == ()
+    assert _scan(inline_format_entry) == ()
+    assert _scan(inline_old_plan) == ()
+    assert _scan(inline_cli) == ()
 
 
 # --- grammar (D1) ---------------------------------------------------------
@@ -504,6 +513,21 @@ def test_body_link_kinds_are_frozen() -> None:
     assert _m27("BODY_LINK_KINDS") == frozenset({"inline", "reference-definition"})
 
 
+def test_body_link_record_is_immutable() -> None:
+    """D5: `BodyLink` is a FROZEN dataclass, and that is part of the handoff.
+
+    M28 collects spans, then splices replacements into the original text. A
+    mutable record invites an in-place edit of `raw` or `start` between those
+    two steps, after which every remaining span in the same document is
+    silently wrong. `frozen=True` makes that a `TypeError` at the moment of
+    the mistake instead of a corrupted rewrite.
+    """
+    (link,) = _scan("[a](plan.md)\n")
+    assert isinstance(link, _m27("BodyLink"))
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        link.raw = "other.md"
+
+
 # --- destination classification (D2) --------------------------------------
 
 
@@ -721,6 +745,12 @@ def test_body_link_findings_frozen_broken_message(tmp_path: Path) -> None:
     un-rebased archive shape it was drawn from. Phase-1 amendment 1: D4's
     `does not resolve to a file:` was retired because it contradicts the
     operator-binding Q7 — a DIRECTORY satisfies a destination too.
+
+    Line **12** is also the lock on Phase-1 contract point 10: the scan runs
+    over the WHOLE document text, with offsets into the original. A scanner
+    fed `parse_metadata_block`'s body instead would report this same link at
+    line 4, and every span it handed M28 would be off by the height of the
+    metadata block.
     """
     root = _tiny_root(tmp_path)
     doc = root / "archive" / "2026-01-01" / "old-log.md"
@@ -815,6 +845,11 @@ def test_body_link_findings_never_stats_outside_the_root(tmp_path: Path) -> None
     fixture's by-construction version (a destination that cannot exist) is its
     complement, not its substitute: a fixture cannot prove the absence of a
     probe, only that a probe would have failed.
+
+    Both `Path.exists` and `Path.is_file` are spied, so the lock does not
+    depend on which of the two the existence test happens to call, and
+    `assert probed` is what stops it passing vacuously on an implementation
+    that never probes at all.
     """
     root = _tiny_root(tmp_path)
     (root / "here.md").write_text("# Here\n")
@@ -824,13 +859,19 @@ def test_body_link_findings_never_stats_outside_the_root(tmp_path: Path) -> None
     )
     probed: list[Path] = []
     real_exists = Path.exists
+    real_is_file = Path.is_file
 
-    def _spy(self: Path, *args: object, **kwargs: object) -> bool:
+    def _spy_exists(self: Path, *args: object, **kwargs: object) -> bool:
         probed.append(self)
         return real_exists(self)
 
+    def _spy_is_file(self: Path, *args: object, **kwargs: object) -> bool:
+        probed.append(self)
+        return real_is_file(self)
+
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(Path, "exists", _spy)
+        mp.setattr(Path, "exists", _spy_exists)
+        mp.setattr(Path, "is_file", _spy_is_file)
         findings = _findings(root / "doc.md", text, root)
 
     assert [f.rule for f in findings] == [
