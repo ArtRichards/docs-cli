@@ -23,9 +23,10 @@ the milestone checklist synchronized.
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
 - Progress: **Step 1 complete on `m27/phases-1-4`; Step 2 in flight on
-  `m27/phases-5-10` — Phases 5, 6 and 7 complete (2026-08-14); the live tree
-  is repaired, `docs check` is clean with both rules in force, and the suite
-  is fully GREEN at 1079 passed.** All seven setup questions were RESOLVED at setup
+  `m27/phases-5-10` — Phases 5–8 complete (2026-08-14); the live tree is
+  repaired, `docs check` is clean with both rules in force, and the suite is
+  fully GREEN at **1079 passed / 0 failed** with every pre-existing id
+  mechanically proven still present.** All seven setup questions were RESOLVED at setup
   (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
   not re-open them. Q5 was resolved **against** the setup recommendation and
   then **amended** — the hermetic boundary is kept, and an escaping
@@ -47,7 +48,7 @@ the milestone checklist synchronized.
 | 5. Update Base Interfaces | **Done** | 2026-08-14 | The whole pure scanner in one banner section — `BodyLink`, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers and `body_link_findings` — with **no** rule wired, so the 18 rule/CLI/skill tests stay honestly RED at the `check_doc` seam. 119 cleared; both quadratic shapes avoided; `raw` sliced from the ORIGINAL text. Seven grammar points the contract left silent (S1–S6, S9) settled in `cli.md` and its mirror. |
 | 6. Implement Offline/Core Path | **Done** | 2026-08-14 | Both rules wired into `check_doc` (three lines, after the `broken-ref` group and before `stale`) **and** the D6 live-tree repair in the same commit: 140 occurrences over 30 documents, split 132 root-rebase / 5 move-map / 2 playbook-URL / 1 escape-URL, driven by the Phase-5 scanner and spliced by offset. Six independent checks prove no other byte moved; re-census 0 broken / 0 escapes with the span count still 393. |
 | 7. Update Tool/Wrapper Layer | **Done** | 2026-08-14 | `docs check`'s argparse description now names both rules' conditions; the bundled `SKILL.md` check row and `references/use-cases.md` (the *Validate in CI* row plus a new M27 upgrade section) name both rule ids and **both** repairs; `CHANGELOG.md` gains one `Added` entry per rule, a BREAKING `Changed` entry, and the adopter upgrade recipe. No spec edit was needed — `cli.md` and `convention.md` were already current, so both mirrors stayed byte-identical. No version bump. Suite fully GREEN. |
-| 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof. |
+| 8. Run Tests (GREEN) | **Done** | 2026-08-14 | **1079 collected, 1079 passed, 0 failed**, zero xfail/xpass, zero tracebacks; all gates clean; the `comm` proof against **both** anchors shows 0 ids removed since `d61da1d` and since `ddf0a45`, and **0 added by Step 2** — `git diff ddf0a45 -- tests/*.py` is empty, so no test was touched to reach GREEN. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay the pre-repair damage on a throwaway copy and walk the documented upgrade recipe; prove hermeticity by re-checking the copy where no sibling `src/` exists; false-positive sweep; measured scan runtime. |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close `architecture.md` / `test-strategy.md`, completion summaries, hand the scanner to M28. |
 
@@ -1421,6 +1422,74 @@ a test noticing.
 - `](../` still **0** across both specs and all six bundled skill `.md` files;
   `../src/docs_cli/` and `../../../../docs/` still absent from every bundled
   reference.
+
+## Phase 8 — Run Tests (GREEN) — 2026-08-14
+
+### Objective
+
+Run the full suite and every quality gate, and prove **mechanically** — not
+by assertion — that no pre-existing test id was removed, and that Step 2
+added none either.
+
+### GREEN
+
+```
+.venv/bin/python -m pytest tests/ -q --co   →  1079 collected, 0 collection errors
+.venv/bin/python -m pytest -q               →  1079 passed, 0 failed
+```
+
+Zero xfail, zero xpass, **zero tracebacks**
+(`grep -c "Traceback (most recent call last)"` → **0**; the M26 caveat holds —
+several tests assert `"Traceback" not in proc.stderr`, which a failure listing
+echoes, so the bare word is not a usable probe and the exact phrase is what
+was counted).
+
+The RED baseline's 137 failures cleared in exactly the predicted split:
+
+| Phase | Cleared | Remaining RED |
+|---|---|---|
+| 5 | 119 (`tests/test_body_links.py`, all `AttributeError`) | 18 |
+| 6 | 16 (10 `test_check.py` + 5 `test_cli_check.py` + 1 `test_cli_touch.py`) | 2 |
+| 7 | 2 (`tests/test_skill.py`) | **0** |
+
+### Mechanical no-regression proof
+
+Test-id lists collected from throwaway `git worktree`s at **both** anchors —
+the pre-M27 commit `d61da1d` and the Step-1 head `ddf0a45` — and from HEAD:
+
+```
+base.ids   (d61da1d)   895
+step1.ids  (ddf0a45)  1079
+head.ids   (HEAD)     1079
+
+comm -23 base.ids  head.ids  →  0   ids removed since pre-M27
+comm -23 step1.ids head.ids  →  0   ids removed since Step 1
+comm -13 step1.ids head.ids  →  0   ids ADDED by Step 2
+comm -13 base.ids  head.ids  →  184 ids added by M27 as a whole
+895 + 184 = 1079 ✓
+```
+
+**Step 2 changed no test.** `git diff ddf0a45 -- tests/*.py` is **empty**;
+the only change under `tests/` is `tests/fixtures/expected/docs-INDEX.md`,
+which is a fixture regenerated inside Phase 6's own commit as Phase-1
+follow-through 7 requires. No test was relaxed, weakened, deleted or
+rewritten to reach GREEN, and none needed to be — which is the whole point of
+having written them first.
+
+### Gates
+
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 47 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 48 source files.
+- `.venv/bin/docs check --root docs` — no violations (exit 0), with **both**
+  new rules in force over the repaired tree.
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+- Live-tree census — **393 spans, 0 broken, 0 escapes**.
+
+Milestone deliverables 2, 3, 4 and 5 are ticked here. Deliverable 4 (the test
+coverage) was deliberately parked at this gate by the Step-1 conductor
+decision, because a RED lock is not yet locking.
 
 ## Milestone completion summary
 

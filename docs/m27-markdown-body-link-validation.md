@@ -85,8 +85,15 @@ Related:
   rule, a BREAKING `Changed` entry, and the adopter recipe for **both**
   repairs. No spec edit was needed, so both mirrors stayed byte-identical and
   the INDEX snapshot needed no regeneration; no version bump (M25 — D6). The
-  suite is now **fully GREEN at 1079 passed**. Phase 8 — the formal GREEN
-  gate and the mechanical no-regression proof — is next.
+  suite is now **fully GREEN at 1079 passed**. **Phase 8 (2026-08-14)** ran
+  the formal gate: **1079 collected, 1079 passed, 0 failed**, zero
+  xfail/xpass, zero tracebacks, every quality gate clean, and the `comm`
+  proof against **both** anchors — **0** ids removed since the pre-M27
+  `d61da1d` and since the Step-1 head `ddf0a45`, **0 added by Step 2**, and
+  895 + 184 = 1079. `git diff ddf0a45 -- tests/*.py` is empty: **no test was
+  relaxed, weakened, deleted or rewritten** to reach GREEN, and none needed
+  to be. Deliverables 2–5 are ticked. Phase 9 — integrate / accept / dogfood
+  — is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -568,18 +575,18 @@ in *Evidence → regression coverage* below.
 - [x] Supported Markdown forms, masking rules, resolution and containment
       rules, the two findings, and their precedence frozen in Phase 1 against
       the resolved Q1–Q7.
-- [ ] Pure, stdlib-only, linear scanner with exact destination-token spans and
+- [x] Pure, stdlib-only, linear scanner with exact destination-token spans and
       length-preserving code masking.
-- [ ] `broken-body-link` and `outside-root-body-link` hard errors wired into
+- [x] `broken-body-link` and `outside-root-body-link` hard errors wired into
       `check_doc`, containment tested before existence, with the JSON record's
       key set unchanged.
-- [ ] Unit, fixture, and subprocess coverage for every supported form and every
+- [x] Unit, fixture, and subprocess coverage for every supported form and every
       excluded form, plus the E5/E6 false-positive and false-negative locks, the
       no-double-report precedence lock, the never-stat-outside-the-root lock,
       and a pathological-input runtime lock. *(Written and committed in Step 1;
       deliberately left unticked because a RED lock is not yet locking. Ticked
       at Phase 8, when the suite goes GREEN.)*
-- [ ] Controlled, audited legacy-tree repair — 139 archived breaks plus the one
+- [x] Controlled, audited legacy-tree repair — 139 archived breaks plus the one
       escaping active link — with `convention.md` carrying both the
       inside-the-root invariant and the third archived-document exception with
       its stated blast radius.
@@ -767,7 +774,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
-- [ ] Phase 8 — Run Tests (GREEN)
+- [x] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 
