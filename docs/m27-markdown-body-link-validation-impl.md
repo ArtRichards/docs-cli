@@ -23,8 +23,8 @@ the milestone checklist synchronized.
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
 - Progress: **Step 1 complete on `m27/phases-1-4`; Step 2 in flight on
-  `m27/phases-5-10` — Phase 5 — Update Base Interfaces complete
-  (2026-08-14).** All seven setup questions were RESOLVED at setup
+  `m27/phases-5-10` — Phases 5 and 6 complete (2026-08-14); the live tree is
+  repaired and `docs check` is clean with both rules in force.** All seven setup questions were RESOLVED at setup
   (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
   not re-open them. Q5 was resolved **against** the setup recommendation and
   then **amended** — the hermetic boundary is kept, and an escaping
@@ -44,7 +44,7 @@ the milestone checklist synchronized.
 | 3. Create Data/Fixtures | **Done** | 2026-08-14 | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
 | 4. Run Tests (RED Baseline) | **Done** | 2026-08-14 | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
 | 5. Update Base Interfaces | **Done** | 2026-08-14 | The whole pure scanner in one banner section — `BodyLink`, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers and `body_link_findings` — with **no** rule wired, so the 18 rule/CLI/skill tests stay honestly RED at the `check_doc` seam. 119 cleared; both quadratic shapes avoided; `raw` sliced from the ORIGINAL text. Seven grammar points the contract left silent (S1–S6, S9) settled in `cli.md` and its mirror. |
-| 6. Implement Offline/Core Path | Pending | — | Wire both rules into `check_doc`, containment before existence; land the live-tree repair — 139 archived rebases plus `charter.md:52`'s URL conversion — in the same phase so the dogfood gate never sits knowingly RED. |
+| 6. Implement Offline/Core Path | **Done** | 2026-08-14 | Both rules wired into `check_doc` (three lines, after the `broken-ref` group and before `stale`) **and** the D6 live-tree repair in the same commit: 140 occurrences over 30 documents, split 132 root-rebase / 5 move-map / 2 playbook-URL / 1 escape-URL, driven by the Phase-5 scanner and spliced by offset. Six independent checks prove no other byte moved; re-census 0 broken / 0 escapes with the span count still 393. |
 | 7. Update Tool/Wrapper Layer | Pending | — | `cli.md` (rule list, exit codes, the explicitly stated out-of-root boundary) / `convention.md` (the inside-the-root invariant, fence-your-samples, the third archived exception) / bundled skill / `UNRELEASED` CHANGELOG and the adopter upgrade recipe. No version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay the pre-repair damage on a throwaway copy and walk the documented upgrade recipe; prove hermeticity by re-checking the copy where no sibling `src/` exists; false-positive sweep; measured scan runtime. |
@@ -1200,6 +1200,151 @@ today" is precisely the reasoning that produced 139 broken links.
 - `git diff --stat ddf0a45` touches `src/docs_cli/cli.py`, `docs/cli.md`,
   `src/docs_cli/skill/references/cli.md` and the two milestone documents —
   and nothing else.
+
+## Phase 6 — Implement Offline/Core Path (+ the D6 live-tree repair) — 2026-08-14
+
+### Objective
+
+Wire both rules into `check_doc` — containment before existence, source
+order, per-occurrence granularity, the frozen messages — and, **in the same
+commit**, perform the D6 live-tree repair, because
+`test_check_dogfood_repo_docs_is_clean` and
+`tests/test_cli_index.py::test_index_output_matches_frozen_snapshot` both flip
+RED the instant the rule is wired. Splitting the two would leave the
+repository's own dogfood gate knowingly RED across a commit boundary.
+
+### Actions taken
+
+**1. The wiring — three lines of code.** `findings.extend(body_link_findings(
+path, text, root))` in `check_doc`, between the `Related:` loop and the
+`stale` block, plus the docstring's rule list. Nothing else changed:
+`check_tree`, `exit_code_for`, `finding_to_json`, `_print_check_findings`,
+`_run_touch_check`, `_iter_doc_texts` and the argparse are untouched, exactly
+as the contract's reuse list says. The `malformed` early return already sits
+above the insertion point, so a document with no H1 gets no body-link pile-on
+for free.
+
+`check_tree` appends `missing-inverse` after `check_doc`'s list, so the
+per-document order is now
+`… → broken-ref → body-links → stale → unknown-field → missing-inverse`.
+That satisfies "immediately after the `broken-ref` group and before the
+`stale` block", and no test constrains the `missing-inverse` tail.
+
+**2. The repair — 140 occurrences across 30 documents.** Performed by a
+throwaway script kept **outside the repository** (D6: "no CLI verb performs
+it") that imports the Phase-5 scanner, so the repair is driven by the same
+grammar the rule uses. It collects every offending `(path, start, end, raw)`
+through the `body_link_findings` decision procedure, **asserts the collected
+set is exactly 140 occurrences / 30 documents / 132-5-2-1 and aborts
+otherwise**, then splices only `text[start:end]` per file **by offset,
+right-to-left** — literally the M28 operation, which makes this the first
+live proof that the span contract works. `set_metadata_field` bumps
+`Updated:` on all 30; `append_revision_entry` adds the uniform bullet to the
+**29 archived** documents only (`charter.md` is active — M25 — D4 makes
+`Revision:` archived-only); everything is published through `atomic_write`.
+
+| Class | N | Rule |
+|---|---|---|
+| **Root rebase** | 132 | the destination resolves from the root, so the new token is `"../" * depth + raw` — `depth` is the segment count of the document's directory, always **2** (`archive/YYYY-MM-DD/`) |
+| **Move-map** | 5 | the target itself later moved, so a rebase would still dangle: `m9-pypi-publish.md` → `../2026-05-25/…` ×4 in `archive/2026-05-24/m6-pypi-distribution.md`, and `m2-mutating-verbs.md` → `../2026-05-21/…` ×1 in `archive/2026-05-28/m12-project-rename.md` |
+| **Playbook URL** | 2 | `references/adoption-playbook.md` ×2 in `archive/2026-05-25/m8-adoption-workflow.md` → the canonical GitHub blob URL, `convention.md`'s existing spelling |
+| **Escape URL** | 1 | `charter.md:52` → the sibling GitHub blob URL (Q5's `outside-root-body-link`, the only active-tree edit) |
+
+The four classes are disjoint by construction and the script refuses to guess:
+an occurrence that matches none of them raises rather than being rebased. Two
+traps a naive "rebase everything" pass gets wrong were both handled correctly:
+`archive/2026-05-28/m12-project-rename-impl.md:80` names
+`archive/2026-05-27/m10-adoption-polish.md`, which **is** a pure root rebase
+and must not be mistaken for a move; and the two playbook links sit inside a
+4-space-indented blockquote — E6 in the wild — where the link *text* stays
+untouched and only the parenthesised token moves.
+
+The **uniform** `Revision:` bullet, on all 29 (S8 — per-document detail
+belongs in this table, not in 29 near-identical bullets):
+
+```
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+```
+
+**3. `convention.md`'s promised date is now real (S7).** "repaired once, on a
+stated date" became "was repaired once, on **2026-08-14**" — the actual
+commit date, the same date carried by all 30 `Updated:` bumps and all 29
+`Revision:` bullets. `convention.md` is the document *granting* the third
+archived-editing exception and it ships in the sdist; until now the date it
+promised was stated nowhere an adopter reading that file could reach. Mirrored
+byte-identically in the same commit.
+
+**4. `docs index --root docs` + `tests/fixtures/expected/docs-INDEX.md`
+re-synced**, in this commit (Phase-1 follow-through 7).
+
+### Predicted INDEX churn — mechanical, not a defect
+
+`render_index` sorts every group by `Updated` descending then path ascending.
+Bumping 29 of the 46 archived documents to 2026-08-14 moves all 29 to the
+**top** of `## Archived`, ordered by path, so the snapshot diff is **30
+changed lines** (29 relocated archived entries plus `charter.md`'s
+`Updated 2026-05-24.` → `Updated 2026-08-14.`) and is entirely mechanical. It
+follows from the operator-confirmed Q1 sub-decision that the `Updated:` bump
+is wanted alongside `Revision:`; it is not re-openable and it is not a bug.
+
+### Proving no other byte moved — six independent checks, all run
+
+| # | Check | Result |
+|---|---|---|
+| 1 | **Round-trip reconstruction.** For each of the 30: delete the inserted `Revision:` group, restore the pre-repair `Updated:` value, undo every destination splice at its recorded offset, compare with the pre-repair bytes. | **30/30 byte-identical** |
+| 2 | **Character-level diff classification.** `difflib.SequenceMatcher` old↔new per changed line; every non-`equal` opcode must lie inside a recorded destination span, or the line is the `Updated:` line, or the change is the inserted `Revision:` group. | **166 changed lines, 140 span-covered, 0 unexplained** |
+| 3 | **Line-count arithmetic.** `git diff --numstat -- docs/`: `+3` net for each of the 29 archived documents, `+0` for `charter.md`, and no other file under `docs/` touched besides `INDEX.md` and `convention.md`. | **pass** |
+| 4 | **Metadata invariants.** `parse_metadata_block` before/after on all 30: H1, `Lifecycle`, `Role`, `Project`, `Archived-reason` and the whole `Related` tuple identical; `Updated` bumped on all 30; `Revision` newly present on exactly the 29 and carrying exactly the one uniform bullet; trailing-newline state preserved. | **pass**; **zero** of the 29 carried a `Revision:` label before, so each got the 3-line group-creation shape and `duplicate-field` cannot fire |
+| 5 | **Re-census.** Scanner over the repaired `docs/`. | **0 broken, 0 escapes**, and the total recognised span count **stays 393** — the sharp invariant: a destination-token rewrite must not change how many spans the grammar sees, and the 3 URL conversions stay recognised inline links that merely reclassify `local` → `scheme` |
+| 6 | **Gates.** `docs check --root docs` with both rules live; `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md`. | **exit 0**; **identical** |
+
+Check 2 needed one honest allowance: `difflib` sometimes aligns the inserted
+group's blank separator with an adjacent existing blank line and reports the
+three inserted lines rotated. The rotation is accepted only when the inserted
+multiset is exactly the three expected lines **and** the resulting text
+contains exactly one `Revision:` label preceded by a blank line — checks 1 and
+3 pin the same fact independently.
+
+### Decisions / issues
+
+- **The 7 degenerate GREEN locks are now genuine**, by name:
+  `test_check_doc_malformed_doc_gets_no_body_link_findings`,
+  `test_check_tree_bodylink_clean_is_clean`,
+  `test_check_tree_bodylink_excluded_forms_is_silent`,
+  `test_check_tree_bodylink_nested_resolves_up_and_down`,
+  `test_check_bodylink_clean_tree_exits_0`,
+  `test_check_bodylink_excluded_forms_tree_exits_0`,
+  `test_check_verdict_is_identical_from_a_relocated_copy` — plus
+  `test_check_tree_bodylink_archived_repaired_copy_is_clean`, which is now the
+  proof that the documented recipe works and that its blast radius really is
+  one destination token, and
+  `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings[…]` **×33**,
+  which is now the genuine regression lock across every pre-M27 tree.
+- **The TRANSITIONAL lock closed inside this commit**, as Phase 4 classified
+  it: `test_check_dogfood_repo_docs_is_clean` was GREEN before the wiring,
+  would have been RED between the wiring and the repair, and is GREEN again at
+  the commit boundary. It was never knowingly RED across one.
+- **From this commit the repository's own prose is under the rule.** Every
+  later doc edit must keep the live-tree census at 0 broken / 0 escapes, and
+  every link-shaped example must stay fenced, inline-coded, backslash-escaped
+  or genuinely resolving.
+- **No test edit was needed.** `git diff ddf0a45 -- tests/` still shows only
+  the regenerated `tests/fixtures/expected/docs-INDEX.md`, which is a fixture,
+  not a test.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/test_check.py tests/test_cli_check.py
+  tests/test_cli_touch.py tests/test_cli_index.py -q` — **216 passed**, 0
+  failed (the 16 Phase-6 REDs cleared).
+- `.venv/bin/python -m pytest -q` — **2 failed, 1077 passed**; the only
+  remaining REDs are `tests/test_skill.py`'s two Phase-7 surface locks.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy src/ tests/` —
+  clean.
+- `.venv/bin/docs check --root docs` — **no violations (exit 0)** with both
+  rules in force.
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
 
 ## Milestone completion summary
 

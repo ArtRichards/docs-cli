@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-22/m4-migration-helper-log.md
@@ -13,6 +13,9 @@ Related:
 - pairs-with: cli.md
 - pairs-with: architecture.md
 - pairs-with: test-strategy.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -86,14 +89,14 @@ them, the tool applies the decisions.
 - [x] A `MigrationPlan` / `FileMigration` model carrying per-file decisions,
       confidence, and ambiguity notes; `plan_migration` builds it,
       `apply_migration` executes it.
-- [x] `--json` plan schema pinned in [cli.md](cli.md), stable from M4 on. The
+- [x] `--json` plan schema pinned in [cli.md](../../cli.md), stable from M4 on. The
       record is one flat object per file: `path`, `role`, `project`, `status`,
       `updated` (ISO `YYYY-MM-DD`), `confidence`, `ambiguities`, `archive_move`
       (path or null), `synthesized_h1`, `reconciled_metadata`.
 - [x] `tests/test_migrate.py` (inference + planning units) and
       `tests/test_cli_migrate.py` (CLI dry-run / `--apply` / `--json`).
 - [x] Fixture tree(s) of non-conforming docs under
-      `tests/fixtures/trees/foreign/` (per [test-strategy.md](test-strategy.md))
+      `tests/fixtures/trees/foreign/` (per [test-strategy.md](../../test-strategy.md))
       — including `proj-extra-metadata.md`, which carries non-required
       metadata fields to exercise the extra-field preservation path.
 - [x] Dogfood: a dry-run against a foreign example directory produces a
@@ -140,13 +143,13 @@ Milestone-completion summary at the bottom of this file._
   synthesise the H1), and it must *infer* values the convention requires that
   a foreign doc simply does not carry. Neither inference nor block-insertion
   exists; both are M4.
-- **Foreign-tree fixture:** [test-strategy.md](test-strategy.md) already
+- **Foreign-tree fixture:** [test-strategy.md](../../test-strategy.md) already
   reserves `tests/fixtures/trees/foreign/` "for `docs migrate` tests (M4)" —
   Phase 3 builds it.
 
 ## TDD Implementation Plan
 
-The ten phases follow the fixed methodology in [status.md](status.md). Phases
+The ten phases follow the fixed methodology in [status.md](../../status.md). Phases
 1–4 establish the contract, tests, fixtures, and RED baseline with **no verb
 implementation**; phases 5–10 implement and ship.
 
@@ -253,7 +256,7 @@ implementation**; phases 5–10 implement and ship.
   mapping, errors to stderr.
 - **Files:** `bin/docs` — `apply_migration`, `migration_to_json`, the
   `--apply` / `--json` branches of `_cmd_migrate`.
-- **Exit:** every CLI test green; exit codes match the [cli.md](cli.md) matrix.
+- **Exit:** every CLI test green; exit codes match the [cli.md](../../cli.md) matrix.
 
 ### Phase 8: Run Tests (GREEN)
 
@@ -273,7 +276,7 @@ implementation**; phases 5–10 implement and ship.
 ### Phase 10: Quality, Docs, Refactor
 
 - **Objective:** Close out M4.
-- **Actions:** full quality gate; update [status.md](status.md) (M4 →
+- **Actions:** full quality gate; update [status.md](../../status.md) (M4 →
   Complete, M5 → next). M4 carries **no `plan.md` open question** — the
   operator confirmed (2026-05-22) that none is opened for this milestone, so
   Phase 10 only verifies `plan.md`'s M4 section reads as shipped (and that
@@ -304,13 +307,13 @@ and `dual-status-adr.md`):
 - **`migrate` is dry-run by default; `--apply` is the opt-in to write.**
   (Operator-confirmed, 2026-05-22.) Every other mutating verb (`new`,
   `archive`, `mv`, `touch`) writes by default and takes `--dry-run` to opt
-  *out*. `migrate` inverts that polarity deliberately: [plan.md](plan.md)'s M4
+  *out*. `migrate` inverts that polarity deliberately: [plan.md](../../plan.md)'s M4
   section specifies "produces a dry-run report by default; `--apply` performs
   the edits", and a bulk
   inference-driven rewrite of a foreign tree is exactly the operation a user
   must see before it runs. `migrate` therefore does **not** use the `common`
   parent parser (which carries `--dry-run`); it declares its own `--apply`
-  `store_true`. Its exit-criterion in [plan.md](plan.md) is about the
+  `store_true`. Its exit-criterion in [plan.md](../../plan.md) is about the
   *dry-run plan*, reinforcing dry-run as the primary mode.
 - **`migrate` needs a new block-inserting editor.** `set_metadata_field`
   edits an *existing* block; `scaffold_doc` builds a doc from *nothing*.
@@ -331,7 +334,7 @@ and `dual-status-adr.md`):
   decision or a flagged question — not necessarily *correct*. Correctness is
   the agent's (or human's) job, working from the surfaced ambiguities. This
   realises the charter's "agents … author and maintain docs" audience and
-  [plan.md](plan.md)'s "intended to be agent-driven" note.
+  [plan.md](../../plan.md)'s "intended to be agent-driven" note.
 - **`Role` fallback is `notes`; never guess `Status`/`Role` outside the
   vocabulary.** When no suffix or in-file signal yields a role, inference
   falls back to the `notes` built-in (the convention's designated catch-all)
@@ -345,7 +348,7 @@ and `dual-status-adr.md`):
   duplicate metadata. `_cmd_migrate` refuses with a clear message and a
   non-zero exit when `.docs.toml` is present at the target.
 - **`migrate` takes a positional `<dir>`; no `--root`.** (Operator-confirmed,
-  2026-05-22.) [plan.md](plan.md) notates the verb as `docs migrate <dir>`,
+  2026-05-22.) [plan.md](../../plan.md) notates the verb as `docs migrate <dir>`,
   and `--root` would have nothing to resolve against: a foreign tree by
   definition carries no `.docs.toml` for the up-walk to find. `migrate`
   therefore always takes its target directory as a required positional
@@ -356,7 +359,7 @@ and `dual-status-adr.md`):
   (Operator-confirmed, 2026-05-22.) One flat object per file — `path`, `role`,
   `project`, `status`, `updated` (ISO `YYYY-MM-DD`), `confidence`,
   `ambiguities`, `archive_move` (root-relative destination or null),
-  `synthesized_h1`, `reconciled_metadata` — pinned in [cli.md](cli.md) as a
+  `synthesized_h1`, `reconciled_metadata` — pinned in [cli.md](../../cli.md) as a
   table, mirroring M3's `doc_to_json` / `finding_to_json` flat-record style.
   The `FileMigration` dataclass field names are reconciled to these keys: the
   task plan's draft `has_h1` / `had_metadata` are the inverses of
@@ -441,11 +444,11 @@ copy passes `docs check`.
 M4 is complete when:
 
 - [x] All Phase Checklist items are checked.
-- [x] `docs migrate` works per [cli.md](cli.md): dry-run by default, `--apply`
+- [x] `docs migrate` works per [cli.md](../../cli.md): dry-run by default, `--apply`
       to write, `--json` plan output, the documented exit codes.
 - [x] A dry-run against a foreign example directory produces a **complete**
       migration plan — an explicit decision for every `.md` file, every
-      ambiguous case flagged (the [plan.md](plan.md) M4 exit criterion).
+      ambiguous case flagged (the [plan.md](../../plan.md) M4 exit criterion).
 - [x] `docs migrate --apply` on a copy of that directory yields a tree that
       `docs check` accepts (exit 0) **with the active-tree directory layout
       unchanged** — the only directory moves are archive-style subdirs
@@ -453,9 +456,9 @@ M4 is complete when:
 - [x] `docs migrate --json` output validates against the schema pinned in
       cli.md.
 - [x] All Deliverables above are checked off.
-- [x] [status.md](status.md) reflects M4 → Complete, M5 → next; [cli.md](cli.md)
+- [x] [status.md](../../status.md) reflects M4 → Complete, M5 → next; [cli.md](../../cli.md)
       no longer lists `docs migrate` under "not in v1" (removed at Phase 1).
-      No M4 open question is opened in [plan.md](plan.md) (operator-confirmed).
+      No M4 open question is opened in [plan.md](../../plan.md) (operator-confirmed).
 - [x] [m4-migration-helper-log.md](m4-migration-helper-log.md) contains a
       milestone-completion summary.
 

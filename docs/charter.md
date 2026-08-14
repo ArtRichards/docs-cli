@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: charter
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-08-14
 
 Related:
 - pairs-with: convention.md
@@ -49,7 +49,7 @@ Three pain points in every documentation tree we've worked with:
 
 The concrete catalog — when to reach for `docs`, with the verbs
 mapped to each scenario — lives in the bundled skill at
-[src/docs_cli/skill/references/use-cases.md](../src/docs_cli/skill/references/use-cases.md).
+[src/docs_cli/skill/references/use-cases.md](https://github.com/ArtRichards/docs-cli/blob/main/src/docs_cli/skill/references/use-cases.md).
 Three workflow buckets: **greenfield** (start + maintain a tree),
 **adoption** (bring a foreign tree under the convention), and
 **distribution** (install + share). If your task doesn't fit one

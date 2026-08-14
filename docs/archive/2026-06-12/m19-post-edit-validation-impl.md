@@ -3,13 +3,16 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-08-14
 Archived-reason: Milestone M19 complete; shipped to PyPI as docs-cli==1.6.5 via M20 on 2026-06-12
 
 Related:
 - child-of: archive/2026-06-12/m19-post-edit-validation.md
 - pairs-with: archive/2026-06-12/m19-post-edit-validation.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -100,7 +103,7 @@ v1.7 to **v1.6.5**. Two parts plus a cosmetic fold-in:
   stale spec text).** The one-line `docs new --body-from` argparse
   help-string fix (`src/docs_cli/cli.py:2900-2905`, still describing the
   pre-M15-C4 "first 20 lines" heuristic; correct wording is in the
-  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) Open follow-on note).
+  [m17-pypi-publish-impl.md](../../m17-pypi-publish-impl.md) Open follow-on note).
   → **D3**; closes that follow-on.
 
 Code anchors (verified against the current tree at scaffold time, 2026-06-12):

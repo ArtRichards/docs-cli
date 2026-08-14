@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-08-14
 
 Related:
 - child-of: plan.md
@@ -12,6 +12,9 @@ Related:
 - pairs-with: agent-native-invocation.md
 - pairs-with: cli.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -28,7 +31,7 @@ Related:
 - Status: **Implementation complete (2026-06-02)** — `docs-cli==1.6.0`
   built locally; PyPI publish is M17's. Scaffolded 2026-05-29 from the
   post-1.5.0 multi-agent code+docs review and the
-  [agent-native-invocation.md](agent-native-invocation.md) proposal.
+  [agent-native-invocation.md](../../agent-native-invocation.md) proposal.
 
 ### Goal
 
@@ -272,7 +275,7 @@ packaging hygiene (C1, C3). Both land 1.6.0 locally; **M17** publishes.
   "tree-as-memory" advisory `check` rules. Rationale: these are larger,
   some couple `docs` to a harness schema, and several depend on settling
   a shared `Result` JSON schema first — see
-  [agent-native-invocation.md](agent-native-invocation.md) Layers 1–5.
+  [agent-native-invocation.md](../../agent-native-invocation.md) Layers 1–5.
 - **`mv`-into-archive permissiveness (review N4) left as-is** — drift is
   surfaced by `docs check`; the spec frames archive as read-only by
   convention. Not in scope.

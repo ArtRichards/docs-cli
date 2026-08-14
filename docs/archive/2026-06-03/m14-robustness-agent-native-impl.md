@@ -3,13 +3,16 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-08-14
 Archived-reason: Milestone M14 complete; docs-cli==1.6.0 shipped to PyPI via M17 2026-06-03
 
 Related:
 - child-of: archive/2026-06-03/m14-robustness-agent-native.md
 - pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -25,7 +28,7 @@ decisions.
 - Progress: **Milestone pair scaffolded 2026-05-29** on
   `m14/milestone-setup`, off `main` at the post-1.5.0 review. Scope
   folds the multi-agent review findings (threads A + C) and the
-  [agent-native-invocation.md](agent-native-invocation.md) proposal
+  [agent-native-invocation.md](../../agent-native-invocation.md) proposal
   (thread B). Phase 1 (Define Contract) opens via
   `/ship-milestone M14`.
 
@@ -53,7 +56,7 @@ This section tracks implementation progress, which is distinct.)
   (three Opus reviewers: core code, docs tree, agent skill + packaging).
   Verbatim findings with `cli.py` / test line refs are in the milestone
   doc's Scope section.
-- **Thread B** — [agent-native-invocation.md](agent-native-invocation.md)
+- **Thread B** — [agent-native-invocation.md](../../agent-native-invocation.md)
   (the `ideas`-project proposal): P0-1 non-interactive `--cascade` and
   §5E `docs project set`. The broader agent-native surface in that doc
   is explicitly deferred (see the milestone doc's Decisions).

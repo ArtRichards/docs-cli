@@ -3,11 +3,14 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-21
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-21/m2-mutating-verbs.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Implementation metadata
 
@@ -579,5 +582,5 @@ drift-free against a copy of `docs/`.
 
 Per-phase detail is in the phase logs above; the milestone summary and the
 recorded decisions live in [m2-mutating-verbs.md](m2-mutating-verbs.md) and
-[plan.md](plan.md). Next milestone: M3 — Validation and query (`check`,
+[plan.md](../../plan.md). Next milestone: M3 — Validation and query (`check`,
 `list`).

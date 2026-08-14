@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-07-03
+Updated: 2026-08-14
 Archived-reason: Milestone M24 complete; docs-cli==1.8.0 shipped to PyPI 2026-07-03
 
 Related:
@@ -15,6 +15,9 @@ Related:
 - pairs-with: archive/2026-07-03/m22-root-placement-guidance.md
 - pairs-with: archive/2026-07-03/m23-agent-aware-install-skill.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Stub-drafted 2026-07-03**, immediately after M23 was merged to `main`
@@ -23,7 +26,7 @@ Related:
 > `docs-cli==1.8.0` locally (M23 owns the `pyproject.toml` bump → `1.8.0`,
 > the `tests/test_packaging.py` version-pin flip, and the CHANGELOG
 > sections). The operative checklist is
-> [release-runbook.md](release-runbook.md); this milestone doc exists to
+> [release-runbook.md](../../release-runbook.md); this milestone doc exists to
 > give the publish work a named home, exit criteria, and a log to record
 > what actually happened.
 
@@ -41,7 +44,7 @@ Related:
   five runbook phases done; chain-of-custody bit-perfect for both wheel
   (`29ac3ced…`) and sdist (`62a29285…`); `v1.8.0` annotated tag at `1a01f74` +
   GitHub release; host skills refreshed. See the milestone-completion summary
-  below and [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) for the full
+  below and [m24-pypi-publish-impl.md](../../m24-pypi-publish-impl.md) for the full
   per-phase record.
 
 ### Goal
@@ -341,4 +344,4 @@ entries folded into the dated `## 1.8.0` section (D2).
   no re-bump.
 
 Full per-phase record + deviations (carried to v1.9+) live in
-[m24-pypi-publish-impl.md](m24-pypi-publish-impl.md).
+[m24-pypi-publish-impl.md](../../m24-pypi-publish-impl.md).

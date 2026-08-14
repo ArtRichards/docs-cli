@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-08-14
 Archived-reason: Milestone M11 complete; docs-cli==1.4.0 shipped to PyPI 2026-05-27
 
 Related:
@@ -13,12 +13,15 @@ Related:
 - pairs-with: status.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Stub-drafted 2026-05-27, post M10 closeout.** M11 enters
 > active state immediately — the M10 wheel + sdist already live
 > in local `dist/` and pass `twine check`. The operative
-> checklist is [release-runbook.md](release-runbook.md); this
+> checklist is [release-runbook.md](../../release-runbook.md); this
 > milestone doc exists to give the publish work a named home,
 > exit criteria, and a log to record what actually happened.
 
@@ -231,7 +234,7 @@ rm -rf dist/ && .venv/bin/python -m build
 .venv/bin/twine check dist/*
 ```
 
-Plus the M11-specific dogfood: walk [release-runbook.md](release-runbook.md)
+Plus the M11-specific dogfood: walk [release-runbook.md](../../release-runbook.md)
 end-to-end against TestPyPI then real PyPI, with the smoke set
 covering the headline M10 contracts (`docs migrate --apply --quiet`
 truly silent; `.docs.toml` auto-emitted; `docs check` exit 0).

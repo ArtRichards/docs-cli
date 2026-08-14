@@ -62,8 +62,24 @@ Related:
   documents over `docs/`; 0/0 across all 33 pre-M27 trees and the bundled
   skill), and seven grammar points the frozen contract left silent (S1–S6, S9)
   were settled in `cli.md` and its byte-identical mirror rather than only in
-  the log, because each one changes M28's input. Phase 6 — the wiring plus the
-  D6 live-tree repair, in one commit — is next.
+  the log, because each one changes M28's input. **Phase 6 (2026-08-14)** wired
+  both rules into `check_doc` in three lines — after the `broken-ref` group,
+  before `stale`, with `check_tree`, `exit_code_for`, `finding_to_json`,
+  `_print_check_findings`, `_run_touch_check`, `_iter_doc_texts` and the
+  argparse all untouched — and, in the **same commit**, performed the D6
+  live-tree repair: **140 occurrences across 30 documents**, split **132**
+  root rebases / **5** move-map lookups / **2** playbook URLs / **1** escape
+  URL, driven by the Phase-5 scanner itself and spliced by offset
+  right-to-left, which is literally the M28 operation and the first live proof
+  the span contract works. `Updated:` bumped on all 30 and one uniform dated
+  `Revision:` bullet added to the 29 archived documents; `convention.md`'s
+  promised repair date is now the real one. **Six independent checks** prove no
+  other byte moved — 30/30 round-trip reconstructions byte-identical, 166
+  changed lines with every non-`equal` opcode inside a recorded span, `+3`/`+0`
+  net line arithmetic, every metadata invariant held, a re-census at **0
+  broken / 0 escapes with the recognised-span count still 393**, and both
+  gates green. Suite: **2 failed, 1077 passed**, the only REDs left being
+  Phase 7's two surface locks. Phase 7 — the wrapper/surface layer — is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -742,7 +758,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Offline/Core Path
+- [x] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood

@@ -3,11 +3,14 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-23
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-23/m5-claude-code-skill.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Implementation metadata
 
@@ -29,7 +32,7 @@ section tracks milestone progress, which is distinct.)
 ## Milestone-setup open questions — resolved (2026-05-22)
 
 Four questions were surfaced while authoring the task plan; all four were
-triaged against [plan.md](plan.md) and the M1–M4 precedent and operator-
+triaged against [plan.md](../../plan.md) and the M1–M4 precedent and operator-
 confirmed on 2026-05-22. Each is recorded in full — question, why it matters,
 recommendation, and a **RESOLVED** verdict — under "OPEN QUESTIONS — resolved"
 in [m5-claude-code-skill.md](m5-claude-code-skill.md), and as a Decision
@@ -50,7 +53,7 @@ in [m5-claude-code-skill.md](m5-claude-code-skill.md), and as a Decision
    stays parked as post-v1 work; Phase 10 notes v1 completion. (Conductor
    auto-resolved — conventional, follows the M4 precedent.)
 4. **Skill `name` (OQ4) — RESOLVED: use `docs`.** Consistent with
-   [plan.md](plan.md)'s `~/.claude/skills/docs/` path; no host collision
+   [plan.md](../../plan.md)'s `~/.claude/skills/docs/` path; no host collision
    exists; over-triggering is handled by the `description`, not the name.
    (Conductor auto-resolved — naming with an obvious default.)
 
@@ -96,7 +99,7 @@ Milestone-completion summary at the bottom of this log._
 - **What M5 adds:** **no code.** M5 ships a `SKILL.md` markdown artifact at
   `skills/docs/` plus one new test file (`tests/test_skill.py`) that checks
   the artifact's structural properties. Every `docs` verb the skill names is
-  already shipped, specified in [cli.md](cli.md), and tested.
+  already shipped, specified in [cli.md](../../cli.md), and tested.
 - **Reuse available:** `conftest.py` already loads `bin/docs` as the `docs`
   module — `tests/test_skill.py` reuses that to assert the skill names only
   real subcommands (against `_build_parser()` / the verb list). No new test
@@ -109,7 +112,7 @@ Milestone-completion summary at the bottom of this log._
 - **Gap M1–M4 left:** the verbs exist but nothing makes an agent *use* them —
   an agent working in a docs tree will still hand-edit `INDEX.md` or
   hand-write a metadata block unless a skill redirects it. M5 closes that gap.
-- **Open risk M5 closes:** [definition-of-ready.md](definition-of-ready.md)'s
+- **Open risk M5 closes:** [definition-of-ready.md](../../definition-of-ready.md)'s
   risk register parks "cross-host portability … paths embedded in skill files
   diverge from per-host install paths" explicitly for this milestone. M5
   addresses it by keeping the committed artifact host-agnostic and making the

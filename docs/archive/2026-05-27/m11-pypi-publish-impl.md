@@ -3,13 +3,16 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-27
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -43,7 +46,7 @@ distinct.)
 | 5. Post-release | Complete | 2026-05-27 | m11/milestone-setup ff-merged to main + pushed; v1.4.0 annotated tag pushed; GitHub release created + notes updated to drop stale "deferred to M11" wording; doc closeouts (plan/status/INDEX) committed; CHANGELOG amend committed; m11-pypi-publish.md cascade-archived |
 
 (M11 has no TDD code phases — it is an operational milestone.
-The five rows above mirror the [release-runbook.md](release-runbook.md)
+The five rows above mirror the [release-runbook.md](../../release-runbook.md)
 sections.)
 
 ## Current state analysis (snapshot at milestone kickoff, 2026-05-27)

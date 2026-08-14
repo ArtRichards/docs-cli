@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-25/m9-pypi-publish-log.md
@@ -13,11 +13,14 @@ Related:
 - pairs-with: archive/2026-05-25/m7-migration-accuracy.md
 - pairs-with: archive/2026-05-25/m8-adoption-workflow.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Stub-drafted 2026-05-24, post M6 scope reframe.** M9 enters
 > active state once M8 ships. The operative checklist is
-> [release-runbook.md](release-runbook.md); this milestone doc
+> [release-runbook.md](../../release-runbook.md); this milestone doc
 > exists to give the publish work a named home, exit criteria,
 > and a log to record what actually happened.
 
@@ -172,7 +175,7 @@ rm -rf dist/ && .venv/bin/python -m build
 .venv/bin/twine check dist/*
 ```
 
-Plus the M9-specific dogfood: walk [release-runbook.md](release-runbook.md)
+Plus the M9-specific dogfood: walk [release-runbook.md](../../release-runbook.md)
 end-to-end against TestPyPI then real PyPI.
 
 ## Success Criteria

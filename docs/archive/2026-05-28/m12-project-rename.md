@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-28
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-28/m12-project-rename-impl.md
@@ -15,6 +15,9 @@ Related:
 - pairs-with: release-runbook.md
 - pairs-with: archive/2026-05-27/m11-pypi-publish.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -86,7 +89,7 @@ to touch two files in lockstep.
 - **What `project rename` does NOT touch:**
   - Prose markdown references to the old project name (M2's
     "Related: bullets only, not prose" decision applies — see
-    [m2-mutating-verbs.md](m2-mutating-verbs.md) Phase 9 log).
+    [m2-mutating-verbs.md](../2026-05-21/m2-mutating-verbs.md) Phase 9 log).
   - Files outside the docs root (anything excluded via the
     M8 layered exclusion surface; anything that doesn't carry
     a `Project:` line).

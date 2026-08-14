@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-20
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-20/m1-parser-and-index-log.md
@@ -13,6 +13,9 @@ Related:
 - pairs-with: cli.md
 - pairs-with: architecture.md
 - pairs-with: test-strategy.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -33,7 +36,7 @@ Read the on-disk convention reliably and produce a usable INDEX.md. This is the 
 - Render INDEX.md with marker-block preservation; idempotent output.
 - CLI subcommand `docs index [DIR]` wires walker + renderer; resolves root via `--root` or upward search for `.docs.toml`.
 - No mutating verbs in this milestone (those are M2).
-- Exit codes per [cli.md](cli.md).
+- Exit codes per [cli.md](../../cli.md).
 
 ### Deliverables
 
@@ -62,7 +65,7 @@ Milestone-completion summary at the bottom of this file._
 - **Objective:** Specify types, signatures, exceptions. No implementation.
 - **Files:**
   - `docs` (executable) — top of file: `Doc` dataclass, `Vocab` dataclass, `Config` dataclass, exception classes (`MetadataError`, `VocabularyError`), function signatures (`parse`, `walk`, `render_index`, `load_config`, `find_root`, `main`).
-- **Exit:** Types compile under `python -c "import docs"` (or equivalent ast parse). No business logic. Docstrings reference [convention.md](convention.md) for semantics.
+- **Exit:** Types compile under `python -c "import docs"` (or equivalent ast parse). No business logic. Docstrings reference [convention.md](../../convention.md) for semantics.
 
 > _Deviation: `Vocab` dataclass was not added — `Config.statuses` / `Config.roles` already carry the merged vocab and no consumer needed a standalone `Vocab` value in M1. See the Phase 5 log entry for rationale._
 
@@ -130,8 +133,8 @@ Milestone-completion summary at the bottom of this file._
 - **Actions:**
   - Run full quality gate (see Phase 8).
   - Refactor any code that's grown past the readable budget.
-  - Update [status.md](status.md): set M1 to Complete, M2 to ACTIVE; update Current Milestone block.
-  - Update [plan.md](plan.md) if the M1 work surfaced changes to the M2-M5 plan.
+  - Update [status.md](../../status.md): set M1 to Complete, M2 to ACTIVE; update Current Milestone block.
+  - Update [plan.md](../../plan.md) if the M1 work surfaced changes to the M2-M5 plan.
   - Append milestone-completion summary to [m1-parser-and-index-log.md](m1-parser-and-index-log.md).
   - Append the milestone-completion summary to this file (lessons learned, files added).
 - **Exit:** Quality gate green; docs updated; ready to start M2.
@@ -179,7 +182,7 @@ M1 is complete when:
 - [x] The `docs` executable is committed, executable, and works from `~/bin/docs` (or wherever symlinked).
 - [x] All deliverables above are checked off.
 - [x] `./bin/docs index docs/` reproduces this repo's `docs/INDEX.md` (and matches the spec-compliant snapshot in `tests/fixtures/expected/docs-INDEX.md` byte-for-byte).
-- [x] [status.md](status.md) reflects M1 → Complete, M2 → ACTIVE.
+- [x] [status.md](../../status.md) reflects M1 → Complete, M2 → ACTIVE.
 - [x] [m1-parser-and-index-log.md](m1-parser-and-index-log.md) contains a milestone-completion summary.
 
 ## Milestone-completion summary

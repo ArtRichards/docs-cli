@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-25/m8-adoption-workflow-log.md
@@ -13,6 +13,9 @@ Related:
 - pairs-with: archive/2026-05-25/m7-migration-accuracy.md
 - pairs-with: archive/2026-05-23/m5-claude-code-skill.md
 - pairs-with: archive/2026-05-24/m6-pypi-distribution.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -222,7 +225,7 @@ SKILL.md carrying only a short trigger line + a single link.
     into docs convention", "import existing markdown specs".
   - Add a single sentence near the verb table:
     > **Adopting an existing Markdown directory?** Read
-    > [references/adoption-playbook.md](references/adoption-playbook.md)
+    > [references/adoption-playbook.md](https://github.com/ArtRichards/docs-cli/blob/main/src/docs_cli/skill/references/adoption-playbook.md)
     > first.
 
   Nothing else. SKILL.md stays short.
@@ -445,7 +448,7 @@ surfaced during setup._
 ## TDD Implementation Plan
 
 The ten phases follow the methodology in
-[status.md](status.md). Because M8's load-bearing test is the
+[status.md](../../status.md). Because M8's load-bearing test is the
 **fresh-subagent integration gate at Phase 9** — not the unit
 suite — the earlier phases bias toward making the unit surface
 small and the skill references rich.
@@ -716,7 +719,7 @@ small and the skill references rich.
     specs"). Append to existing description; don't replace.
   - Single new sentence near the verb table:
     > **Adopting an existing Markdown directory?** Read
-    > [references/adoption-playbook.md](references/adoption-playbook.md)
+    > [references/adoption-playbook.md](https://github.com/ArtRichards/docs-cli/blob/main/src/docs_cli/skill/references/adoption-playbook.md)
     > first.
 
   Nothing else. SKILL.md must stay short (the F8 rule).

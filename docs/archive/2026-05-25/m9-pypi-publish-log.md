@@ -3,14 +3,17 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-25/m9-pypi-publish.md
 - pairs-with: release-runbook.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 Per-phase log for M9. Entries appended as the operator walked
-[release-runbook.md](release-runbook.md) post-M8.
+[release-runbook.md](../../release-runbook.md) post-M8.
 
 ## Phase progress
 

@@ -3,11 +3,14 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-24/m6-pypi-distribution.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Implementation metadata
 
@@ -1462,7 +1465,7 @@ docs: no violations found
 
 The implementation agent has prepared every artifact and verified
 every local code path. The actual publish is the operator's. Follow
-[`docs/release-runbook.md`](release-runbook.md) for the full
+[`docs/release-runbook.md`](../../release-runbook.md) for the full
 checklist; the short form is:
 
 1. **TestPyPI rehearsal** (do NOT skip — PyPI is append-only):

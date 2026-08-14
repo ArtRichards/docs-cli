@@ -2649,6 +2649,11 @@ def check_doc(
       ``status-drift``.
     - a ``Related:`` target that does not resolve to a file under ``root`` —
       error, rule ``broken-ref``.
+    - M27 (D4 / D4b): a local Markdown **body** link whose destination names
+      no existing path under ``root`` — error, rule ``broken-body-link``; or
+      whose destination leaves the root, decided by path arithmetic alone —
+      error, rule ``outside-root-body-link``. Containment is tested before
+      existence, so the two never double-report.
     - with ``stale`` set, a ``Lifecycle: active`` doc whose ``Updated:`` is
       more than ``stale`` days before ``today`` — warning, rule ``stale``.
     - M7 (Phase 6): a missing ``Role:`` whose value is resolvable at
@@ -2790,6 +2795,15 @@ def check_doc(
                     f"Related: target does not resolve to a file: {target}",
                 )
             )
+
+    # --- M27 (D4 / D4b) local Markdown body links ------------------------
+    # Immediately after the `broken-ref` group, so the two reference-resolution
+    # rules stay adjacent, and before `stale`. Per-document and per-occurrence:
+    # both rules need only this document's own text and its own directory, so
+    # unlike M25's `missing-inverse` there is no second `check_tree` pass. The
+    # `malformed` early return above already covers a doc with no H1, which is
+    # why a doc that cannot be parsed gets no body-link pile-on.
+    findings.extend(body_link_findings(path, text, root))
 
     # --- stale (warning; only with a stale window, only Lifecycle: active) ---
     if (
