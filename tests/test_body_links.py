@@ -21,6 +21,7 @@ walk. The `bodylink-*` fixture trees Phase 3 authors cover the tree-walk half.
 from __future__ import annotations
 
 import dataclasses
+import os
 import time
 from pathlib import Path
 
@@ -185,6 +186,29 @@ def test_mask_code_does_not_mask_four_space_indented_prose() -> None:
     assert _raws(text) == ["plan.md"]
 
 
+def test_mask_code_unclosed_fence_masks_to_end_of_document() -> None:
+    """D2: an UNCLOSED fence masks to the end of the document (CommonMark).
+
+    The masker's job is to model what actually renders as a link. Every
+    renderer these documents pass through takes an unterminated fence to EOF,
+    so reporting a broken link inside one would flag something no reader ever
+    sees as a link.
+
+    This deliberately differs from the inline-span rule, which is bounded at a
+    line: a lone backtick is a common, invisible accident in prose, so letting
+    it run would buy unbounded false NEGATIVES, while an unclosed fence is
+    rare, line-anchored, three or more characters wide and visually obvious.
+    `_LENGTH_CASES[4]` is this exact shape and asserts only length and newline
+    offsets, so without this test nothing pins which way it goes.
+    """
+    text = "trailing fence never closed\n```\nstill open [a](x.md)\nand [b](y.md) later\n"
+    masked = _mask(text)
+    assert "x.md" not in masked
+    assert "y.md" not in masked, "the mask runs to the end of the document, not to the next line"
+    assert masked.startswith("trailing fence never closed\n```\n")
+    assert _scan(text) == ()
+
+
 def test_mask_code_masks_fences_before_inline_spans() -> None:
     """D2: the ORDER is part of the contract — fences first, spans second.
 
@@ -250,6 +274,9 @@ _SPAN_CASES = [
     ("reference definition", "[plan]: plan.md\n", "plan.md"),
     ("reference definition, title", '[plan]: plan.md "The plan"\n', "plan.md"),
     ("reference definition, angle", "[plan]: <my plan.md>\n", "<my plan.md>"),
+    ("leading whitespace", "[a]( plan.md)", "plan.md"),
+    ("trailing whitespace", "[a](plan.md )", "plan.md"),
+    ("title then trailing whitespace", '[a](plan.md "T" )', "plan.md"),
 ]
 
 
@@ -259,18 +286,27 @@ _SPAN_CASES = [
 def test_scan_span_is_exactly_the_destination_token(label: str, text: str, expected: str) -> None:
     """D5 — THE M28 handoff invariant: `text[link.start:link.end] == link.raw`.
 
-    The span INCLUDES the `<…>` angle brackets and EXCLUDES any title.
+    The span INCLUDES the `<…>` angle brackets, EXCLUDES any title, and
+    excludes the optional whitespace either side of the destination (rule 3).
     Excluding the brackets would break M28 the moment it splices a
     destination containing a space: the replacement would land outside the
     delimiters and the link would stop parsing. This is the single
     highest-leverage assertion in the milestone.
+
+    The prefix deliberately carries **both** kinds of masked region. Masking is
+    length-preserving precisely so that offsets stay offsets into the ORIGINAL
+    text; a prefix of plain prose would let an implementation that reported
+    offsets into the *masked* string pass every case here, since the two
+    strings agree wherever nothing is masked.
     """
-    prefix = "intro\n\n"
+    prefix = "intro\n\n```\nfenced [x](masked.md)\n```\n\nan `inline [y](span.md)` too\n\n"
     body = prefix + text
     (link,) = _scan(body)
     assert link.raw == expected, label
     assert body[link.start : link.end] == link.raw, "the span must BE the destination token"
     assert link.end > link.start
+    assert link.line == body[: link.start].count("\n") + 1
+    assert link.column == link.start - (body.rfind("\n", 0, link.start) + 1) + 1
 
 
 def test_scan_angle_bracket_destination() -> None:
@@ -278,6 +314,21 @@ def test_scan_angle_bracket_destination() -> None:
     (link,) = _scan("See [it](<my plan.md>).\n")
     assert link.raw == "<my plan.md>"
     assert link.path == "my plan.md"
+
+
+def test_scan_angle_destination_does_not_cross_a_newline() -> None:
+    """D1 rule 4: a newline inside `<…>` TERMINATES the candidate.
+
+    Without this bound an unclosed `<` swallows forward until the next `>`
+    anywhere in the document, which is how a bounded scanner turns into an
+    unbounded one. The rule is stated in `cli.md` and locked here; the
+    pathological-input case covers the unterminated-with-no-newline shape,
+    which is a different failure mode.
+    """
+    assert _scan("[a](<my\nplan.md>)\n") == ()
+    assert _raws("[a](<my plan.md>)\n[b](<other\nplan.md>)\n") == ["<my plan.md>"], (
+        "the terminated angle destination survives; the newline-crossing one does not"
+    )
 
 
 @pytest.mark.parametrize(
@@ -361,6 +412,52 @@ def test_scan_percent_escape_that_is_invalid_passes_through() -> None:
     assert bad.path == "50%-off.md"
 
 
+def test_scan_percent_encoded_hash_is_not_a_fragment_delimiter() -> None:
+    """BINDING decode order, consequence 1: the `#` split happens on the RAW
+    text, so a percent-encoded `%23` decodes into the PATH and never delimits
+    a fragment.
+
+    This is the highest-value lock on the frozen order. The natural
+    implementation — `unquote()` first, then `split("#", 1)` — inverts it and
+    would report this destination as `path == "plan"` with
+    `fragment == "x.md"`, i.e. it would go looking for a file named `plan`.
+    Every other percent-escape and fragment test in this module passes under
+    both orders, because none of them contains a `%` and a `#` at once.
+    """
+    (link,) = _scan("[a](plan%23x.md)\n")
+    assert link.raw == "plan%23x.md"
+    assert link.path == "plan#x.md"
+    assert link.fragment is None
+
+
+def test_scan_percent_encoded_slash_is_a_path_separator() -> None:
+    """BINDING decode order, consequence 2: `%2F` decodes BEFORE the join, so
+    it really is a path separator once resolution happens.
+
+    Stated in `cli.md` alongside its `%23` sibling; the two are the same
+    decision seen from opposite sides, and an implementation that decoded
+    neither would pass the `%23` lock while failing this one.
+    """
+    (link,) = _scan("[a](sub%2Fx.md)\n")
+    assert link.raw == "sub%2Fx.md"
+    assert link.path == "sub/x.md"
+    assert _normalise("doc.md", link.path) == "sub/x.md"
+
+
+def test_scan_backslash_cannot_escape_the_fragment_delimiter() -> None:
+    """BINDING decode order, consequence 3: the split precedes unescaping, so
+    `\\#` does NOT keep the `#` out of the fragment.
+
+    Surprising, deliberate, and stated in `cli.md` — the same mechanism as
+    `%23`, seen from the escape side. The left half is then unescaped on its
+    own, and a trailing `\\` before nothing is a literal backslash (rule 7).
+    """
+    (link,) = _scan("[a](plan\\#x.md)\n")
+    assert link.raw == "plan\\#x.md"
+    assert link.fragment == "x.md"
+    assert link.path == "plan\\"
+
+
 def test_scan_fragment_splits_on_the_first_hash() -> None:
     """D3: the split is on the FIRST `#`; everything after it is the fragment."""
     (link,) = _scan("[a](plan.md#a#b)\n")
@@ -398,6 +495,39 @@ def test_scan_reference_definition() -> None:
 def test_scan_reference_definition_requires_the_line_anchor(text: str) -> None:
     """D1 rule 6: line-anchored, 0–3 leading spaces. Anything else is prose."""
     assert _scan(text) == ()
+
+
+def test_scan_reference_definition_destination_must_start_on_the_label_line() -> None:
+    """D1 rule 6(a): the "optional whitespace" after `[label]:` never spans a
+    newline.
+
+    The rule is line-anchored end to end, which is what keeps the scanner
+    bounded — otherwise a bare `[label]:` at the end of a document would send
+    the scan hunting forward for a destination. M28 consumes this output, so
+    the answer matters even where the finding set does not change.
+    """
+    assert _scan("[plan]:\nplan.md\n") == ()
+
+
+def test_scan_reference_definition_trailing_remainder_disqualifies() -> None:
+    """D1 rule 6(b): after the destination only whitespace and at most one
+    title may appear before the end of the line — the same rule the inline
+    form applies (rule 5), stated once and referenced rather than duplicated.
+    """
+    assert _scan("[plan]: plan.md and more\n") == ()
+    assert _raws('[plan]: plan.md "The plan"   \n') == ["plan.md"]
+
+
+def test_scan_reference_definition_with_an_empty_destination_is_not_recognised() -> None:
+    """D1 rule 6(c): `[plan]:` with nothing after it yields NO `BodyLink`.
+
+    Not a `BodyLink` carrying an empty `raw`, which would hand M28 a
+    zero-width span to splice into. `classify_destination("")` exists for the
+    inline `[a]()` form, which is a real link with an empty destination; a
+    reference definition with no destination is simply not one.
+    """
+    assert _scan("[plan]:\n") == ()
+    assert _scan("[plan]:   \n") == ()
 
 
 def test_scan_ignores_an_image() -> None:
@@ -475,13 +605,29 @@ def test_scan_two_links_on_one_line_get_distinct_columns() -> None:
 
 
 def test_scan_line_and_column_are_one_based() -> None:
-    """`line` / `column` locate the destination token's FIRST character, 1-based."""
-    text = "# Title\n\nSee [the plan](plan.md).\n"
+    """`line` / `column` locate the destination token's FIRST character, 1-based.
+
+    The document deliberately carries a fenced block and an inline span BEFORE
+    the link, because masking is length-preserving precisely so positions
+    survive it: an implementation that dropped or collapsed masked regions
+    before scanning would report line 3 here instead of line 7, and would hand
+    M28 spans that no longer index the original text.
+    """
+    text = (
+        "# Title\n"  # 1
+        "\n"  # 2
+        "```\n"  # 3
+        "[x](masked.md)\n"  # 4
+        "```\n"  # 5
+        "\n"  # 6
+        "See `[y](span.md)` and [the plan](plan.md).\n"  # 7
+    )
     (link,) = _scan(text)
-    assert link.line == 3
-    assert link.column == len("See [the plan](") + 1
+    assert link.line == 7
+    assert link.column == len("See `[y](span.md)` and [the plan](") + 1
     lines = text.split("\n")
     assert lines[link.line - 1][link.column - 1 :].startswith(link.raw)
+    assert text[link.start : link.end] == link.raw
 
 
 def test_scan_is_deterministic() -> None:
@@ -561,6 +707,19 @@ def test_classify_fragment_only() -> None:
     """A `#section` link is same-document navigation; there is no path to check."""
     assert _classify("#section") == "fragment"
     assert _classify("<#section>") == "fragment", "the angle pair is stripped first"
+
+
+def test_classify_runs_on_the_token_as_written_not_decoded() -> None:
+    """Classification never decodes first, so `%23x` is `local`, not `fragment`.
+
+    Stated in `cli.md` beside the BINDING decode order, and the same decision
+    as `test_scan_percent_encoded_hash_is_not_a_fragment_delimiter` seen at
+    the classification seam: an implementation that ran `unquote()` before
+    classifying would silence this destination entirely instead of resolving
+    it against a file named `#x`.
+    """
+    assert _classify("%23x") == "local"
+    assert _classify("%2Fabs.md") == "local", "a decoded leading slash is not root-absolute either"
 
 
 @pytest.mark.parametrize(
@@ -682,11 +841,20 @@ def test_containment_treats_the_root_itself_as_contained() -> None:
 
 
 def test_containment_rejects_dotdot_and_dotdot_prefix() -> None:
-    """The predicate is byte-for-byte `docs archive`'s `outside-root` test."""
+    """The predicate is byte-for-byte `docs archive`'s `outside-root` test:
+    the candidate escapes iff it IS `..` or starts with `../`.
+
+    `..foo.md` is the discriminating case. A predicate written
+    `startswith("..")` — the obvious near-miss — would report a perfectly
+    ordinary in-root file whose name happens to begin with two dots as leaving
+    the tree, which is an over-fire with no repair available to the author.
+    """
     assert _contained("..") is False
     assert _contained("../plan.md") is False
     assert _contained("../../src/x.py") is False
     assert _contained("a/b.md") is True
+    assert _contained("..foo.md") is True, "a filename starting with '..' is not an escape"
+    assert _contained("sub/..foo.md") is True
 
 
 # --- body_link_findings (D4 / D4b) ----------------------------------------
@@ -850,6 +1018,12 @@ def test_body_link_findings_never_stats_outside_the_root(tmp_path: Path) -> None
     depend on which of the two the existence test happens to call, and
     `assert probed` is what stops it passing vacuously on an implementation
     that never probes at all.
+
+    Each probed path is **lexically normalised before** the containment
+    comparison. `Path.is_relative_to` is a pure prefix test, so
+    `Path("/root/../../etc/passwd").is_relative_to(Path("/root"))` is `True` —
+    exactly the probe this lock exists to forbid would have been classified as
+    inside the root.
     """
     root = _tiny_root(tmp_path)
     (root / "here.md").write_text("# Here\n")
@@ -880,7 +1054,7 @@ def test_body_link_findings_never_stats_outside_the_root(tmp_path: Path) -> None
         "broken-body-link",
     ]
     assert probed, "the in-root destinations must actually be probed"
-    outside = [p for p in probed if not p.is_relative_to(root)]
+    outside = [p for p in probed if not Path(os.path.normpath(p)).is_relative_to(root)]
     assert outside == [], f"docs check must never stat outside its own root, got {outside!r}"
 
 
@@ -897,6 +1071,29 @@ def test_body_link_findings_source_order_is_line_then_column(tmp_path: Path) -> 
         "one.md",
         "three.md",
     ]
+
+
+def test_body_link_findings_source_order_interleaves_the_two_rules(tmp_path: Path) -> None:
+    """D4: source order means SOURCE order — not grouped by rule.
+
+    The broken destination comes FIRST here and the escaping one second, which
+    is the case no other test covers: every other mixed-rule fixture and unit
+    case happens to put the escape first, so an implementation that emitted
+    every `outside-root-body-link` and then every `broken-body-link` would
+    satisfy all of them. `cli.md` freezes source order (line, then column), and
+    an agent walking a document top to bottom to repair it needs exactly that.
+    """
+    root = _tiny_root(tmp_path)
+    text = (
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: bodyprobe\nUpdated: 2026-01-01\n\n"
+        "[a](missing.md) then [b](../escapes.md)\n"
+    )
+    findings = _findings(root / "doc.md", text, root)
+    assert [f.rule for f in findings] == ["broken-body-link", "outside-root-body-link"], (
+        "findings follow the source, not the rule id"
+    )
+    assert "missing.md" in findings[0].message
+    assert "../escapes.md" in findings[1].message
 
 
 def test_body_link_findings_directory_destination_resolves(tmp_path: Path) -> None:

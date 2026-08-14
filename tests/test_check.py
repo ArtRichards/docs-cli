@@ -1118,14 +1118,6 @@ def _bodylink_findings(name: str) -> list[Finding]:
     return _tree_findings(name)
 
 
-def _body_link_findings_of(name: str) -> list[Finding]:
-    return [
-        f
-        for f in _bodylink_findings(name)
-        if f.rule in {"broken-body-link", "outside-root-body-link"}
-    ]
-
-
 def _bodylink_doc(project: str, body: str, *, lifecycle: str = "active") -> str:
     """A well-formed doc whose only interesting content is its body prose."""
     return (
@@ -1231,7 +1223,7 @@ def test_check_tree_bodylink_archived_reproduces_the_unrebased_shape():
 
     RED: plain assertion (the tree exits 0 today).
     """
-    findings = _body_link_findings_of("bodylink-archived")
+    findings = _bodylink_findings("bodylink-archived")
     assert len(findings) == 1, f"expected exactly one finding, got {findings!r}"
     assert findings[0].rule == "broken-body-link"
     assert findings[0].path.name == "old-log.md"

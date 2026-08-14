@@ -828,10 +828,15 @@ Exactness, pinned rather than implied:
    write one.
 2. **Image exclusion.** An otherwise-recognised inline link whose `[` is
    immediately preceded by an unescaped `!` is an image and is skipped.
-3. **Plain destination.** Begins after the `(` and any leading whitespace, and
-   ends at the first **unescaped whitespace** or at an unescaped `)` at
-   nesting depth 0. Unescaped `(` and `)` inside it nest; the destination is
-   recognised only when they are **balanced** and never nest deeper than
+3. **Plain destination.** Optional whitespace is permitted on **both** sides of
+   the destination — between the `(` and the destination, and between the
+   destination (or its title) and the closing `)`. So `[a]( plan.md)`,
+   `[a](plan.md )`, and `[a](plan.md "T" )` are all recognised links, and none
+   of that whitespace is part of the destination token. The destination itself
+   begins at the first non-whitespace character after the `(` and ends at the
+   first **unescaped whitespace** or at an unescaped `)` at nesting depth 0.
+   Unescaped `(` and `)` inside it nest; the destination is recognised only
+   when they are **balanced** and never nest deeper than
    `MAX_DESTINATION_PAREN_DEPTH = 3`. Beyond that depth, or left unbalanced,
    the span is not a recognised link. A newline is whitespace, so a plain
    destination never spans lines.
@@ -844,15 +849,32 @@ Exactness, pinned rather than implied:
    is **not** a recognised link. The title is never part of the destination
    token and is never validated. **Whitespace is what disambiguates**:
    `[a](foo(bar).md)` is a balanced-paren destination, `[a](foo.md (title))`
-   is a destination plus a parenthesised title. Anything other than a title
-   between the destination and the closing `)` means the span is not a
-   recognised link.
+   is a destination plus a parenthesised title. Between the destination and
+   the closing `)` only whitespace and at most one title may appear (per
+   rule 3, trailing whitespace is fine); any **non-whitespace, non-title**
+   content there means the span is not a recognised link, so
+   `[a](plan.md extra)` is prose.
 6. **Reference definition.** Line-anchored: 0–3 leading spaces, `[label]:`,
    optional whitespace, the destination, then an optional title to end of
    line. The destination is the same plain-or-angle token as in an inline
    link, except that there is no enclosing `)` to close it: a plain
    destination here ends at the first unescaped whitespace or at the end of
-   the line. `kind` is `"reference-definition"`; both rules and both message
+   the line. Three points are settled rather than left to the implementation,
+   because `scan_body_links`' output is M28's handoff and they change it even
+   where the finding set is unchanged:
+   - the destination must **begin on the same line as the label**. The
+     "optional whitespace" above never spans a newline, so a definition whose
+     destination sits on the following line is not recognised. The rule stays
+     line-anchored end to end and the scanner stays bounded.
+   - a **trailing non-title remainder disqualifies** the definition, exactly
+     as in rule 5 for the inline form: after the destination only whitespace
+     and at most one title may appear before the end of the line, so
+     `[plan]: plan.md and more` is prose.
+   - an **empty destination is not a recognised reference definition** at all
+     — `[plan]:` with nothing after it yields no `BodyLink`, rather than a
+     `BodyLink` with an empty `raw`.
+
+   `kind` is `"reference-definition"`; both rules and both message
    templates are otherwise identical — the kind lives on the scanner's record,
    never in the finding.
 7. **Backslash escapes.** A `\` followed by any ASCII punctuation character
@@ -907,7 +929,9 @@ Before any matching, the document text passes through a **length-preserving**
 mask that replaces the *contents* of code with spaces:
 
 - **fenced code blocks** — ``` and `~~~`, 3+ markers, 0–3 leading spaces,
-  closed by a fence of the **same character** and **equal or greater** length;
+  closed by a fence of the **same character** and **equal or greater** length.
+  An **unclosed** fence masks to the **end of the document**, matching
+  CommonMark;
 - **inline code spans** — matched backtick runs of equal length. An inline
   span **never crosses a line boundary**, so one unpaired backtick cannot mask
   the rest of a document.
@@ -915,6 +939,18 @@ mask that replaces the *contents* of code with spaces:
 **The order is part of the contract:** fences are masked first (line-based),
 then inline spans over the already-masked text, so a stray backtick inside a
 fenced block cannot open a phantom span.
+
+**The two unterminated cases deliberately differ, and the reason is what a
+reader actually sees.** The masker's job is to model what renders as a link,
+not to be maximally cautious: every renderer these documents pass through
+takes an unclosed fence to the end of the file, so reporting a "broken link"
+inside one would flag something no reader ever sees as a link — a false
+positive of exactly the kind M27 exists to avoid. A lone backtick is the
+opposite case: it is a common, invisible accident in ordinary prose, so
+letting it mask the remainder of a 112 KB document would buy unbounded false
+*negatives*. An unclosed fence is rare, line-anchored, three or more
+characters wide and visually obvious; bounding the damage is warranted for one
+and not the other.
 
 **Nothing else is code.** In particular there is **no 4-space
 indented-code rule** (M27 — Q3): a link indented four spaces inside a
@@ -1040,7 +1076,7 @@ Worked instances:
 
 ```
 body link at line 12 does not resolve to an existing path: plan.md (resolves to archive/2026-01-01/plan.md)
-body link at line 52 leaves the docs root: ../shared/glossary.md (normalises to ../shared/glossary.md)
+body link at line 52 leaves the docs root: ../shared/glossary.md (normalises to ../shared/glossary.md); links outside the tree must be URLs
 ```
 
 - `<N>` is the **1-based line** of the destination token's first character.

@@ -44,11 +44,14 @@ Related:
   **+163 test ids, zero removed** — against those frozen strings; Phase 3
   authored the six `bodylink-*` fixture trees, each yielding exactly its
   intended finding set with **no** pre-existing fixture edited. Phase 4
-  captured the classified RED baseline, restated after the Step-1
-  same-instance audit's six fixes: **1066 collected, 124 failed, 942 passed**,
-  zero collection errors, zero tracebacks, two exception classes, and **all
-  895** pre-existing ids mechanically proven present and passing (zero
-  removed, zero regressed). Phase 5 — Update Base Interfaces is next.
+  captured the classified RED baseline. After the Step-1 same-instance
+  audit's six fixes and the fresh-eyes review's thirteen further locks:
+  **1079 collected, 137 failed, 942 passed**, zero collection errors, zero
+  tracebacks, two exception classes, and **all 895** pre-existing ids
+  mechanically proven present and passing (zero removed, zero regressed).
+  The review found **no blockers**; its theme was that a wrong-but-plausible
+  Phase-5 implementation could still pass the suite, and every gap it named
+  is now locked. Phase 5 — Update Base Interfaces is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -538,7 +541,9 @@ in *Evidence → regression coverage* below.
 - [ ] Unit, fixture, and subprocess coverage for every supported form and every
       excluded form, plus the E5/E6 false-positive and false-negative locks, the
       no-double-report precedence lock, the never-stat-outside-the-root lock,
-      and a pathological-input runtime lock.
+      and a pathological-input runtime lock. *(Written and committed in Step 1;
+      deliberately left unticked because a RED lock is not yet locking. Ticked
+      at Phase 8, when the suite goes GREEN.)*
 - [ ] Controlled, audited legacy-tree repair — 139 archived breaks plus the one
       escaping active link — with `convention.md` carrying both the
       inside-the-root invariant and the third archived-document exception with
@@ -756,8 +761,8 @@ contract plus the decisions that could not be read off the setup text.
 
 ### Amendments to the setup-frozen material (conductor-binding)
 
-Two frozen items could not stand as written. Both are recorded here so the
-binding scope and the frozen contract cannot disagree.
+Three frozen items could not stand as written. All three are recorded here so
+the binding scope and the frozen contract cannot disagree.
 
 | # | Amendment | Why the frozen form could not stand |
 |---|---|---|
@@ -941,6 +946,7 @@ precedent.
 | 4 | The bundled `references/use-cases.md` — the "Validate in CI" row and a 2.0 upgrade block. | 7 |
 | 5 | `CHANGELOG.md` under the existing `UNRELEASED` heading, with the adopter upgrade recipe for **both** rules. **No** version bump (M25 — D6). | 7 |
 | 6 | `test-strategy.md` › *What we don't test* still says "the body content is opaque" — false the moment M27 lands. (`convention.md`'s twin statement is on the byte-parity gate, so it was corrected in Phase 1.) | 10 |
+| 7 | **`tests/fixtures/expected/docs-INDEX.md` must be regenerated inside Phase 6's own commit.** The D6 repair bumps `Updated:` on 29 archived documents plus `charter.md`, and `test_index_dogfood_repo_docs_snapshot` compares the regenerated index against that frozen snapshot. Its `_normalize_generated_date` helper blanks **only** the `_Generated <date>._` line — every per-entry `Updated YYYY-MM-DD.` is compared **literally**, so all 30 bumps land in the diff. Regenerate it alongside the `test_check_dogfood_repo_docs_is_clean` restoration, in the same commit that wires the rules; deferring it leaves Phase 6's exit criteria knowingly false for the same reason E4 does. | 6 |
 
 ### Authoring traps this contract creates (recorded so Phase 2–7 cannot trip them)
 
