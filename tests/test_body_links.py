@@ -321,9 +321,13 @@ def test_scan_angle_destination_does_not_cross_a_newline() -> None:
 
     Without this bound an unclosed `<` swallows forward until the next `>`
     anywhere in the document, which is how a bounded scanner turns into an
-    unbounded one. The rule is stated in `cli.md` and locked here; the
-    pathological-input case covers the unterminated-with-no-newline shape,
-    which is a different failure mode.
+    unbounded one. The rule is stated in `cli.md` and locked here.
+
+    The bound is a GRAMMAR rule, not a performance one, and the Step-2 review
+    corrected this docstring for saying otherwise: inside one long paragraph
+    the newline bound is vacuous, so the pathological-input lock carries its
+    own many-unterminated-`<` case (`"[a](<" * 8_000`) rather than relying on
+    this rule for linearity.
     """
     assert _scan("[a](<my\nplan.md>)\n") == ()
     assert _raws("[a](<my plan.md>)\n[b](<other\nplan.md>)\n") == ["<my plan.md>"], (
@@ -566,6 +570,36 @@ def test_scan_ignores_an_image() -> None:
 def test_scan_ignores_an_image_but_still_finds_a_following_link() -> None:
     """The `!` rejection must not swallow a real link later on the same line."""
     assert _raws("![diagram](d.png) and [a](plan.md)\n") == ["plan.md"]
+
+
+def test_scan_link_whose_label_is_an_image_reports_the_OUTER_destination() -> None:
+    """D1 rule 2, amended: a nested image consumes one `]`, so the label of
+    `[![diagram](diagram.png)](full-size.md)` ends at the OUTER `]`.
+
+    This is the ordinary badge / thumbnail idiom and it broke twice over. The
+    outer `[` is not preceded by `!`, so the image rule never fired; rule 1's
+    "first unescaped `]`" then ended the label at the *image's* `]`, making
+    `(diagram.png)` the destination. The result was a **false positive** that
+    reports the image as `broken-body-link` — contradicting the success
+    criterion "images … produce no finding" and operator-binding Q2's "a
+    broken image … deserves its own finding wording rather than being folded
+    into `broken-body-link`" — and a **false negative** that never emits
+    `full-size.md` at all, so M28 would never rewrite it.
+
+    Found by the Step-2 fresh-eyes review. Zero occurrences exist in `docs/`,
+    the 39 fixture trees, or the bundled skill, so the census, the dogfood and
+    the green suite were all blind to it.
+    """
+    assert _raws("[![diagram](diagram.png)](full-size.md)\n") == ["full-size.md"], (
+        "the image's destination must not be reported, and the outer one must be"
+    )
+    assert _raws("[a ![b](i.png) c](t.md)\n") == ["t.md"], "the image may sit mid-label"
+    assert _raws("![a [b](c.md)](d.png)\n") == ["c.md"], "…and the converse still holds"
+    assert _scan("![a](x.png)\n") == (), "a plain image is still silent"
+    assert _scan("[a [b] c](x.md)\n") == (), (
+        "a plain bracket pair in a label is NOT an image and still ends the label "
+        "at the first `]` (Phase-1 contract point 2)"
+    )
 
 
 def test_scan_finds_a_link_nested_inside_an_image_label() -> None:
@@ -877,6 +911,37 @@ def test_containment_ignores_symlinks_and_uses_the_lexical_form(tmp_path: Path) 
     assert _m27("body_link_findings")(doc, text, root) == []
 
 
+def test_dangling_symlink_inside_the_root_is_broken(tmp_path: Path) -> None:
+    """S9: existence uses `Path.exists()`, which FOLLOWS symlinks, so a link to
+    a symlink inside the root whose target is missing is `broken-body-link`.
+
+    The counterpart to the test above, and deliberately the opposite verdict:
+    **containment** never follows a link (it is pure path arithmetic), while
+    **existence** does. That split is the whole design — containment asks what
+    the author wrote, existence asks whether a reader can get there — and the
+    destination here is genuinely unreachable, which is what the rule is for.
+
+    `cli.md` states this and nothing pinned it. Written in Step 2 on the
+    conductor's override of the implementing instance's "defer to M28":
+    shipping a documented behaviour with no lock in a 2.0.0 release is the
+    "specified but untested → the next implementer diverges" pattern the
+    milestone spent Step 1 closing.
+    """
+    root = _tiny_root(tmp_path)
+    (root / "real.md").write_text("# Real\n")
+    (root / "dangle.md").symlink_to(root / "nope.md")
+    (root / "live.md").symlink_to(root / "real.md")
+    text = (
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: bodyprobe\nUpdated: 2026-01-01\n\n"
+        "[a](dangle.md) and [b](live.md)\n"
+    )
+    findings = _findings(root / "doc.md", text, root)
+    assert [f.rule for f in findings] == ["broken-body-link"], (
+        "the dangling symlink is broken; the live one resolves through the link"
+    )
+    assert "dangle.md" in findings[0].message
+
+
 def test_containment_treats_the_root_itself_as_contained() -> None:
     """Phase-1 contract point 11: `sub/..` normalises to `.`, which is the root
     directory — an existing entry (Q7), so contained and satisfied. `.`
@@ -1158,6 +1223,58 @@ def test_body_link_findings_never_stats_an_encoded_absolute_path(tmp_path: Path)
     assert _contained("/") is False
 
 
+def test_body_link_findings_message_stays_one_line(tmp_path: Path) -> None:
+    """A percent-decoded control character must not split a finding in two.
+
+    M27 is the first rule to interpolate **percent-decoded** author text into
+    a message, so `[a](x%0Ay.md)` decodes to a candidate carrying a newline
+    and `_print_check_findings` would emit one finding across two lines —
+    breaking the one-line-per-finding guarantee anything parsing the human
+    format relies on. `--json` was never affected. The control character is
+    escaped in both `<raw>` and `<candidate>`, in both templates.
+    """
+    root = _tiny_root(tmp_path)
+    text = (
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: bodyprobe\nUpdated: 2026-01-01\n\n"
+        "[a](x%0Ay.md) [b](%0D%09z.md) [c](../e%0Ascape.md)\n"
+    )
+    findings = _findings(root / "doc.md", text, root)
+    assert [f.rule for f in findings] == [
+        "broken-body-link",
+        "broken-body-link",
+        "outside-root-body-link",
+    ]
+    for finding in findings:
+        assert len(finding.message.splitlines()) == 1, f"message split: {finding.message!r}"
+        assert "\n" not in finding.message and "\r" not in finding.message
+    assert r"(resolves to x\ny.md)" in findings[0].message
+    assert r"(resolves to \r\tz.md)" in findings[1].message
+    assert r"(normalises to ../e\nscape.md)" in findings[2].message
+
+
+def test_body_link_findings_over_long_segment_is_a_finding_not_a_crash(tmp_path: Path) -> None:
+    """An unusable destination is "does not exist", never an `OSError`.
+
+    A path segment over 255 bytes makes `Path.exists()` raise
+    `OSError [Errno 36] File name too long` rather than return False, so a
+    300-character destination in prose crashed `docs check` with a traceback.
+    A validator must describe malformed input, not blow up on it — the rule
+    `check_doc`'s own docstring already states.
+
+    The identical crash was pre-existing at the `broken-ref` site;
+    `tests/test_check.py` locks that half. M27 widened the exposure by roughly
+    400x, since body links vastly outnumber `Related:` targets, so both sites
+    share one probe and both are locked.
+    """
+    root = _tiny_root(tmp_path)
+    text = (
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: bodyprobe\nUpdated: 2026-01-01\n\n"
+        f"[a]({'x' * 300}.md)\n"
+    )
+    findings = _findings(root / "doc.md", text, root)
+    assert [f.rule for f in findings] == ["broken-body-link"]
+
+
 def test_body_link_findings_source_order_is_line_then_column(tmp_path: Path) -> None:
     """D4: within the block, findings are emitted in source order."""
     root = _tiny_root(tmp_path)
@@ -1284,17 +1401,31 @@ def test_body_link_findings_silent_for_every_non_local_kind(tmp_path: Path) -> N
 def test_scan_pathological_input_is_linear() -> None:
     """The scanner must not backtrack catastrophically on adversarial input.
 
-    Three shapes, 310 KB in total, under a 2.0 s wall-clock bound — roughly
+    Six shapes, 490 KB in total, under a 2.0 s wall-clock bound — roughly
     50x the expected cost, so the bound catches a quadratic or exponential
     implementation without being flaky on a loaded CI box. The trade-off is
     deliberate: a tight bound would flake, and a bound this loose still fails
     instantly on the failure mode it exists to catch. `cli.md` is 112 KB and
     the live tree scans in milliseconds.
+
+    The last three shapes were added by the Step-2 fresh-eyes review, which
+    found the first three insufficient. Cases 3 and 5 are the same delimiter
+    unterminated, and only case 5 is quadratic: ONE unterminated `<` is O(n)
+    once, while MANY are O(n) each. Both `<` and a `(…)` title are bounded
+    only by a newline / blank line, which is vacuous inside one long
+    paragraph — measured before the fix at **3.27 s** and **5.96 s** for cases
+    5 and 6 at 40 KB and 72 KB, i.e. already blowing this bound at a fifth of
+    case 2's size, with a clean 4x per doubling. Case 4 covers the nested-image
+    label scan, whose accepted `]` depends on where the label started and so
+    cannot be answered by one cached position.
     """
     cases = [
         "[" * 50_000 + "](x)",
         "[a](" * 40_000,
         "[a](<" + "x" * 100_000,
+        "![" * 25_000 + "]" * 25_000 + "(x)",
+        "[a](<" * 8_000,
+        "[a](<x> (" * 8_000,
     ]
     assert sum(len(c) for c in cases) >= 200_000
     start = time.perf_counter()

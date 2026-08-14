@@ -359,15 +359,25 @@ the marker block and the derived content.
   lets `BodyLink` carry an exact destination-token span
   (`text[start:end] == raw`) that **M28** splices a replacement into. One
   scanner, never a second Markdown parser.
-- The scan is a single linear forward pass with a monotonic blank-line
-  cursor, resumption at the failed candidate's `]`, an early return past
-  `MAX_DESTINATION_PAREN_DEPTH`, and a newline bound on angle destinations.
-  Those four bounds are what the pathological-input runtime lock measures.
-  Resume-at-`]` has exactly **one** exception, and it is a correctness
-  requirement rather than a bound: a rejected **image** resumes at `[` + 1, so
-  a link inside the image's label is still seen, and reuses the cached closing
-  bracket — shared by every candidate that opens before it — so the exception
-  costs no rescan.
+- The scan is a single linear forward pass in which **every inner scan is
+  O(1) amortised**. Two precomputed tables read through monotone cursors do
+  most of it — `_blank_line_starts` for the candidate bound and
+  `_label_closers` for the label's closing `]` — plus resumption at the failed
+  candidate's `]`, an early return past `MAX_DESTINATION_PAREN_DEPTH`, and
+  `_seek_unescaped`'s memo for an unterminated `>` / `"` / `'` / `)`. The
+  newline bound on an angle destination and the blank-line bound on a `(…)`
+  title are **grammar** rules and bound nothing inside one long paragraph, so
+  they are not what keeps the scan linear; the memo is. The
+  pathological-input runtime lock carries a case for each of these, including
+  the two many-unterminated-delimiter shapes the Step-2 review measured at
+  3.27 s and 5.96 s before the memo existed.
+  Resume-at-`]` has **two** exceptions, both correctness requirements rather
+  than bounds, and both O(1) because `_label_closers` answers them from a
+  table: a rejected **image** resumes at `[` + 1, so a link inside the image's
+  label is still seen; and a label that does not close before the candidate's
+  bound resumes at `[` + 1 too, because rule 2's nested-image exception means
+  a later `[` in the same paragraph may still close at a different nesting
+  level.
 - Reuse rather than new machinery: `_root_relative` for the referring
   document's path, `_canonical_related_target`'s `posixpath.normpath` idiom
   for lexical normalisation, and `_candidate_exclusion_reason`'s

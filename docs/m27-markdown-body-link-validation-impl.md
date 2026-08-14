@@ -24,9 +24,9 @@ the milestone checklist synchronized.
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
 - Progress: **Implementation-complete (2026-08-14).** All ten phases done
   across `m27/phases-1-4` (Step 1) and `m27/phases-5-10` (Step 2); every
-  deliverable met; **1082 passed / 0 failed** (1079 at the Phase-10 commit,
-  plus the three locks the Step-2 audit added alongside three real scanner
-  fixes);
+  deliverable met; **1087 passed / 0 failed** (1079 at the Phase-10 commit,
+  plus eight locks added by the Step-2 audit and the fresh-eyes review
+  alongside the seven real defects they found);
   `docs check --root docs` at exit 0 over the repaired tree; the `BodyLink`
   span contract handed to M28.
   The milestone stays `Lifecycle: active` until the M29 publish closeout. All seven setup questions were RESOLVED at setup
@@ -1521,13 +1521,15 @@ point of having written them first.
 **Restated after the Step-2 same-instance audit**, which found **three real behavioural
 defects** in the scanner by reading the contract rather than the tests —
 including a hermeticity hole that let `docs check` stat outside its own root
-— and therefore **added three locks**: the figures above become **1082 collected /
-1082 passed**, `comm -13 step1.ids head.ids` becomes **3**, each named
-(`…::test_body_link_findings_never_stats_an_encoded_absolute_path`,
-`…::test_scan_finds_a_link_nested_inside_an_image_label`,
-`…::test_scan_title_requires_whitespace_after_the_destination`), and the
-arithmetic becomes 895 + 187 = 1082. Both "removed" legs stay **0**, and
-nothing was weakened; the audit section below records why.
+— and therefore **added three locks**. The **fresh-eyes review** that
+followed found a blocker and three more defects and added five more. The
+figures above therefore become **1087 collected / 1087 passed**;
+`comm -13 step1.ids head.ids` becomes **8**, each one a lock on a contract
+clause the implementation had violated; and the arithmetic becomes
+895 + 192 = 1087. Both "removed" legs stay **0**, and no assertion was ever
+loosened — the one pre-existing test either round touched is the runtime
+lock, which gained three inputs. The audit and review sections below record
+each one.
 
 ### Gates
 
@@ -1888,9 +1890,10 @@ scoped. Behaviourally unchanged — a link in an info string is still scanned.
 Step 2's own Phase-8 proof recorded "0 ids added by Step 2". A0, A1 and A2
 were real behavioural defects invisible to the suite, so three locks were
 added and that statement is **restated in place** in the Phase-8 entry:
-1079 → **1082**; `comm -13 step1.ids head.ids` 0 → **3**, each named;
-895 + 187 = 1082. Both "ids removed" legs are still **0**, and **nothing was
-relaxed, weakened, deleted or rewritten** — every added id is a new lock on a
+1079 → **1082** at this point (**1087** after the fresh-eyes review's five
+further locks); `comm -13 step1.ids head.ids` 0 → **3**, each named, and
+**8** in total by the end of the step. Both "ids removed" legs are still
+**0**, and **nothing was relaxed, weakened, deleted or rewritten** — every added id is a new lock on a
 contract clause the implementation had violated.
 
 ### The six documentation findings, all fixed
@@ -1956,14 +1959,20 @@ contract clause the implementation had violated.
    open contradicts D4b and the success criteria outright, and making
    classification decode first would contradict point 7 and break a
    committed test.
-2. **S9's dangling-symlink case is specified but not locked.** `cli.md`
-   states that `Path.exists()` follows symlinks, so a link to a symlink
-   inside the root whose target is missing is `broken-body-link`. No test
-   pins it — it is a documented consequence of `.exists()` rather than a
-   branch in the code, so unlike A0–A2 it is not a divergence. Recommendation:
-   add it in M28, which will be editing this grammar's consumers anyway. Not
-   done here.
-3. **M28's Open question 2 is now answered by M27.**
+2. **S9's dangling-symlink case was specified but not locked.**
+   ~~Recommendation: add it in M28.~~ **CLOSED in this step** — the Step-2
+   fresh-eyes review overrode the deferral (SF2): shipping a documented
+   behaviour with no lock in a 2.0.0 release is the "specified but untested →
+   the next implementer diverges" pattern Step 1's review spent its effort
+   closing, and the test is cheap.
+   `tests/test_body_links.py::test_dangling_symlink_inside_the_root_is_broken`
+   now pins both halves — a dangling in-root symlink is `broken-body-link`,
+   a live one resolves through the link — beside the containment test that
+   pins the opposite behaviour for the *lexical* half.
+3. **M28's Open question 2 is now answered by M27.** *(Settled by the
+   conductor: record it in M27's own follow-ups table, which is now done —
+   row 5 — rather than by editing M28's doc. The instinct not to reach across
+   was right.)*
    `m28-move-safe-body-link-rewrites.md` still carries *"Absolute root paths
    and links escaping the docs root"* as an open question with a
    recommendation, but M27 settled it: an escaping destination is a
@@ -1974,7 +1983,7 @@ contract clause the implementation had violated.
 
 ### Verification after the fixes
 
-- `.venv/bin/python -m pytest -q` — **1082 passed, 0 failed**.
+- `.venv/bin/python -m pytest -q` — **1082 passed, 0 failed** at the audit commit.
 - `comm` against both anchors re-run: **0** removed since `d61da1d`, **0**
   removed since `ddf0a45`, **3** added — the audit's three locks, each named;
   895 + 187 = 1082.
@@ -1995,12 +2004,170 @@ contract clause the implementation had violated.
   **0.15 s** end to end.
 - Mirrors identical; INDEX snapshot identical.
 
+## Step-2 fresh-eyes review fold-in — 2026-08-14
+
+An independent review of Phases 5–10 returned **one blocker, four should-fixes
+and four nits**, all conductor-resolved and all folded in here. It also
+independently reproduced everything else: it constructed the A0 attack itself
+and added a 40,000-case randomised destination fuzz under a `Path.exists` spy
+(**21,747 stats, 0 outside the root, 0 double-reports**) plus an `strace` of a
+real `docs check`; it re-derived the 140-occurrence repair with its own
+destination-stripping regex and round-tripped every file against
+`git show ddf0a45:…` (**30/30 byte-identical**, exactly 140 tokens, 30
+`Updated:` lines, 3 inserted lines x 29, **0** non-destination changes); it
+confirmed the metadata invariants, `git diff ddf0a45 -- tests/` with **0**
+deleted or modified lines, the 393-span census, and Phase 9's hermeticity
+evidence; it fuzzed the mask and span invariants over 20,000 inputs with 0
+failures; and it walked 40 grammar shapes clause-by-clause against the
+contract, **every one matching**, S1–S10 included.
+
+### B1 (BLOCKER) — a link whose label is an image reported the IMAGE
+
+`[![diagram](diagram.png)](full-size.md)` — the ordinary badge / thumbnail
+idiom, and standard CommonMark. The outer `[` is not preceded by `!`, so the
+image rule never fired; rule 1's "first unescaped `]`" then ended the label at
+the **image's** `]`, making `(diagram.png)` the destination. Demonstrated end
+to end: with `diagram.png` missing, `docs check` emitted
+`[broken-body-link] … diagram.png`; with `full-size.md` missing, it reported
+**no violations at all**.
+
+Wrong twice over. The **false positive** falsifies the success criterion
+"images … produce **no** finding" and the *Never cry wolf* acceptance
+criterion, and contradicts operator-binding **Q2** in its own words — "a
+broken image … deserves its own finding wording rather than being folded into
+`broken-body-link`", which is exactly what happened. The **false negative**
+breaks the D5/M28 handoff: `full-size.md` is never emitted, so M28 would never
+rewrite it. It is the mirror of the audit's own A2 with a false positive
+added, and it is A0's class — `grep -rn '\[!\[' docs/ src/ README.md` finds
+**0** hits, so census, dogfood and the green suite were all blind to it.
+
+**The full fix, not the half-fix.** Rule 2 is amended: a label ends at the
+first unescaped `]` **that is not the closer of an image opened inside it**,
+one skipped `]` per unescaped `![`. Rejecting the candidate outright when its
+label contains an unescaped `![` would kill the false positive and keep the
+false negative.
+
+The conductor's caveat about the old `cached_close` is what shaped the
+implementation. Under the amended rule the accepted `]` **depends on where the
+label started** — for `[![a](p.png)](t.md)` the outer label closes at the
+second `]` and the image's own label at the first — so no single cached
+position can represent it, and rescanning with a skip counter is quadratic on
+`"![" * N + "]" * N`. `_label_closers` therefore tabulates the answer for
+every start in one pass: `+1` per `![`, `-1` per `]` makes "the label's own
+`]`" exactly "the next `]` at the level the label started on", which one
+backward pass over the delimiters resolves. The cache is gone; the outer loop
+reads a monotone cursor into that table. Locked by
+`::test_scan_link_whose_label_is_an_image_reports_the_OUTER_destination` over
+all three shapes plus the two negatives, and by the new `"![" * 25_000 + …`
+case in the runtime lock.
+
+### SF1 — two residual quadratics, and three claims that were false
+
+The angle-destination scan and the `(…)` title scan are bounded by a newline
+and a blank line respectively — **vacuous inside one long paragraph**.
+Measured, with a clean 4x per doubling: `"[a](<" * 8_000` (40 KB, one line)
+→ **3.27 s**; `"[a](<x> (" * 8_000` (72 KB) → **5.96 s**. Both already blew
+the 2.0 s bound at a fifth of the locked case's size. The runtime lock's third
+case is a *single* unterminated `<`, which is O(n) **once**; the
+many-occurrence variant is the quadratic one, and nothing covered it.
+
+Fixed with `_seek_unescaped`, a per-delimiter memo of "where we last looked
+and what we found": any later scan whose start lies inside the proven-empty
+span reuses the answer, so an unterminated delimiter costs O(1) per candidate.
+Now **6.7 ms** and **10.8 ms**, and ~2x per doubling instead of 4x.
+
+Three claims asserted a linearity that did not hold and are corrected to what
+is actually measured: `scan_body_links`' docstring ("Three details are what
+keep it linear"), `architecture.md`'s "those four bounds are what the
+pathological-input runtime lock measures", and
+`test_scan_angle_destination_does_not_cross_a_newline`'s "the
+pathological-input case covers the unterminated-with-no-newline shape". All
+three now say the newline / blank-line bounds are **grammar** rules that bound
+nothing inside a paragraph, and that the memo and the two precomputed tables
+are what keep the scan linear.
+
+**The runtime lock gained three cases** — `"![" * 25_000 + "]" * 25_000 +
+"(x)"` for B1's table and the two SF1 shapes — taking it from 310 KB over
+three shapes to 490 KB over six. This is the **only** edit to a pre-existing
+test in the whole of Step 2, it is directed by the review, and it strictly
+strengthens: inputs were added and no assertion was loosened.
+
+### SF2 — the dangling-symlink lock, written rather than deferred
+
+Conductor override of the audit's "add it in M28". See surfaced item 2 above,
+now closed: `::test_dangling_symlink_inside_the_root_is_broken`.
+
+### SF3 — two sentences in the shipped sdist could not both be true
+
+`cli.md` stated absolutely that `docs check` "never stats, opens, or follows
+anything outside the docs root", while S9's clause says `Path.exists()`
+**follows symlinks**. With `docs/link -> /etc` in the tree, `[a](link/passwd)`
+is lexically contained and the probe really does stat `/etc/passwd`. The
+behaviour is right and matches the walker, which already follows directory
+symlinks; the prose was wrong. It now says the boundary is drawn around what
+the **author wrote** — an escaping *destination* is reported without being
+probed — and states explicitly that a symlink **inside** the tree is part of
+the tree and is followed, so containment stays lexical (the verdict cannot
+vary with layout) while existence follows links (the verdict matches what a
+reader can reach).
+
+### N1 / N2 / N3
+
+- **N1** — a link on a preserved fence line is scanned, and the spec was
+  silent in a way a reasonable implementer could read as "blank the info
+  string". `cli.md` now says a fence line's info string is ordinary text and
+  **is** scanned: surviving pass 1 means "not the block's content", never "not
+  prose".
+- **N2** — `[a](x%0Ay.md)` decoded to a candidate containing a newline and
+  split one finding across two lines of human output. M27 is the first rule to
+  interpolate **percent-decoded** author text into a message, so it is M27's
+  to close: `_one_line` escapes control characters in both `<raw>` and
+  `<candidate>` in both templates, the message-template section states it, and
+  `::test_body_link_findings_message_stays_one_line` locks it. `--json` was
+  never affected.
+- **N3** — a 300-character destination made `Path.exists()` raise
+  `OSError [Errno 36]` and crashed `docs check` with a traceback.
+  **Pre-existing and identical at the `broken-ref` site**, so M27 is
+  consistent with the codebase — but M27 widens the exposure by roughly 400x,
+  since body links vastly outnumber `Related:` targets. Both sites now share
+  `_probe_exists`, which treats an `OSError` from the probe as "does not
+  exist" — behaviour-preserving for every input that did not already
+  traceback, and it removes a crash from code this milestone is already
+  touching. A conductor-approved scope addition on the M25 `duplicate-field`
+  precedent, locked at both sites.
+- **N4** — no action, as directed: `[a]( "T")` taking the title as the
+  destination is correct per rule 3 as written.
+
+### SF4 — a completion summary claimed a count the head did not have
+
+The summary said "1079 passed" while three other places in the same section
+said 1082. Rather than patch that one number, every count in this document,
+in the milestone, in `status.md` and in `plan.md` was re-derived from the head
+after these fixes landed.
+
+### Verification after the fold-in
+
+- `.venv/bin/python -m pytest -q` — **1087 passed, 0 failed**.
+- `comm` against both anchors: **0** ids removed since `d61da1d`, **0**
+  removed since `ddf0a45`; **8** added by Step 2, each a lock on a contract
+  clause the implementation had violated; 895 + 192 = 1087.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy src/ tests/` —
+  clean. `.venv/bin/docs check --root docs` — exit 0.
+- Live-tree census **393 spans / 0 broken / 0 escapes**, and a per-file link
+  inventory against `e01adae` showing **no doc lost or gained a span**.
+- Pre-repair replay unchanged: **139 `broken-body-link` + 1
+  `outside-root-body-link` across 30 documents**. The 39-tree sweep still
+  finds M27's three damaged trees and nothing else.
+- Runtime: live tree **83 ms**; the six-shape 490 KB pathological set well
+  inside the 2.0 s bound; `docs check` **0.15 s** end to end.
+- Mirrors identical; INDEX snapshot identical.
+
 ## Milestone completion summary
 
 **M27 — Markdown body-link validation is implementation-complete
 (2026-08-14).** All ten TDD phases are done across two steps
 (`m27/phases-1-4`, `m27/phases-5-10`); every deliverable is met; the suite is
-**1079 passed / 0 failed**; and `docs check --root docs` exits 0 over a tree
+**1087 passed / 0 failed**; and `docs check --root docs` exits 0 over a tree
 that carried 139 broken body links and one escaping link when the milestone
 opened.
 
@@ -2045,10 +2212,10 @@ independent checks including 30/30 byte-identical round-trip reconstructions.
 `convention.md` carries the third — and last — archived-document exception,
 with its blast radius and its real date.
 
-**Numbers.** 187 new test ids — 184 written RED in Step 1 plus the three
-locks the Step-2 audit added alongside three real scanner fixes — and
-**zero** pre-existing ids removed or modified
-across the whole milestone; 1082 collected, 1082 passed; 393 recognised spans
+**Numbers.** 192 new test ids — 184 written RED in Step 1, plus eight locks
+the Step-2 audit and the fresh-eyes review added alongside the seven real
+defects they found — and **zero** pre-existing ids removed or modified
+across the whole milestone; 1087 collected, 1087 passed; 393 recognised spans
 over `docs/` before and after the repair; ~82 ms to scan the 2.5 MB tree and
 ~44 ms for the 303 KB adversarial set, ~45× under the runtime lock. No version
 bump: `pyproject.toml` stays `1.8.0`; **M29** performs the single bump to

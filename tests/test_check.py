@@ -170,6 +170,30 @@ def test_check_doc_broken_related_ref(tmp_path):
     assert "ghost.md" in findings[0].message
 
 
+def test_check_doc_over_long_related_target_is_a_finding_not_a_crash(tmp_path):
+    """An unusable `Related:` target is `broken-ref`, never an `OSError`.
+
+    A path segment over 255 bytes makes `Path.is_file()` raise
+    `OSError [Errno 36] File name too long` rather than return False, so a
+    300-character target crashed `docs check` with a traceback and exit 1.
+    `check_doc`'s own docstring promises it "never raises: a validator must
+    describe malformed input, not blow up on it".
+
+    Pre-existing, and identical at M27's body-link probe — the two sites now
+    share one `_probe_exists` helper, and `tests/test_body_links.py` locks the
+    other half. Fixed together because M27 widened the exposure by roughly
+    400x: body links vastly outnumber `Related:` targets.
+    """
+    text = (
+        "# Sample\n\nLifecycle: active\nRole: spec\nProject: probe\n"
+        f"Updated: 2026-05-20\n\nRelated:\n- pairs-with: {'x' * 300}.md\n\nBody.\n"
+    )
+    findings = check_doc(
+        tmp_path / "sample.md", text, tmp_path, _config(), stale=None, today=_TODAY
+    )
+    assert [f.rule for f in findings] == ["broken-ref"]
+
+
 def test_check_doc_resolvable_related_ref_is_clean(tmp_path):
     (tmp_path / "exists.md").write_text(_valid())
     text = (

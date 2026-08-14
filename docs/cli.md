@@ -841,6 +841,20 @@ Exactness, pinned rather than implied:
    because the scanner's natural resume-after-a-failed-candidate step would
    swallow it, and a span M27 cannot see is a destination M28 will never
    rewrite.
+
+   **A nested image consumes one `]` — an amendment to rule 1.** An image
+   inside a label carries its own `]`, so rule 1's "first unescaped `]`" is
+   not the label's own: a label ends at the first unescaped `]` **that is not
+   the closer of an image opened inside it**, one skipped `]` per unescaped
+   `![`. Without this, `[![diagram](diagram.png)](full-size.md)` — the
+   ordinary badge / thumbnail idiom — ends its label at the image's `]`,
+   which makes `(diagram.png)` the destination. That is wrong twice over: it
+   reports **the image** as `broken-body-link`, contradicting both "images …
+   produce no finding" and Q2's decision that a broken image deserves its own
+   wording rather than being folded into this rule; and it never emits
+   `full-size.md` at all, so M28 would never rewrite the real destination.
+   The rule stays bounded — the exception applies only to `![`, so
+   `[a [b] c](x.md)` is still not a recognised link.
 3. **Plain destination.** Optional whitespace is permitted on **both** sides of
    the destination — between the `(` and the destination, and between the
    destination (or its title) and the closing `)`. So `[a]( plan.md)`,
@@ -981,8 +995,11 @@ mask that replaces the *contents* of code with spaces:
   the block's content**: the marker and its info string survive this pass
   intact, and only the lines between the fences are blanked. (Being an
   ordinary line thereafter, a fence line still goes through the inline-span
-  pass below — the two passes are ordered, not scoped.) An **unclosed** fence
-  masks to the **end of the document**, matching CommonMark;
+  pass below — the two passes are ordered, not scoped — and its **info string
+  is ordinary text that IS scanned**, so a link written there is recognised
+  like any other. Surviving pass 1 means "not the block's content", never "not
+  prose".) An **unclosed** fence masks to the **end of the document**,
+  matching CommonMark;
 - **inline code spans** — matched backtick runs of equal length. An inline
   span **never crosses a line boundary**, so one unpaired backtick cannot mask
   the rest of a document.
@@ -1100,8 +1117,16 @@ what the rule is for. (This is existence, not containment: containment stays
 purely lexical and follows nothing, per the *Symlinks* case above.)
 
 **The out-of-root boundary is specified behaviour, not an implementation
-detail.** `docs check` never stats, opens, or follows anything outside the
-docs root. A check has to be a **function of the tree alone**: a destination
+detail.** `docs check` never stats, opens, or follows a **destination** that
+leaves the docs root. The boundary is drawn around what the *author wrote*:
+a destination whose lexical form escapes is reported without being probed. It
+is not a claim that no syscall ever names a path outside the root — a symlink
+**inside** the tree is part of the tree, and the existence probe follows it
+exactly as the walk already follows a directory symlink, so `[a](link/x.md)`
+where `link` is an in-tree symlink resolves through it. Both halves are
+deliberate: containment is lexical so the *verdict* cannot vary with
+filesystem layout, and existence follows links so the verdict matches what a
+reader can actually reach. A check has to be a **function of the tree alone**: a destination
 that resolves only because of what happens to sit beside the checkout would
 give one verdict in a git clone, another in a container, and a third in a
 vendored subtree — and a result that varies with the tree's surroundings

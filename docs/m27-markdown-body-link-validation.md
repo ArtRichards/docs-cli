@@ -136,8 +136,22 @@ Related:
   input** — the census, the pre-repair replay and the 39-tree sweep are
   unchanged — and all three defects that were reachable are now **locked**,
   taking the suite to **1082**. Three items are surfaced for the operator
-  rather than auto-decided. **M27 is implementation-complete**, with all ten
-  phases done, every deliverable met, **1082 passed / 0 failed**,
+  rather than auto-decided. An independent **fresh-eyes review** then
+  reproduced all of that adversarially — a 40,000-case destination fuzz under
+  a `Path.exists` spy, an `strace`, its own round-trip of the 140-occurrence
+  repair, and 40 grammar shapes walked clause by clause — and returned **one
+  blocker plus eight further items**, every one folded in. The blocker was
+  rule 1's mirror image of the audit's own A2: a link whose *label* is an
+  image (`[![diagram](diagram.png)](full-size.md)`, the badge idiom) ended its
+  label at the image's `]`, so it **reported the image** as
+  `broken-body-link` — against Q2's explicit words — and never emitted the
+  real destination for M28. Rule 2 is amended and rule 1 with it. Two residual
+  quadratics were also closed (many unterminated `<` or `(…)` titles inside
+  one paragraph: 3.27 s and 5.96 s, now 6.7 ms and 10.8 ms), three claims of a
+  linearity that did not hold were corrected, the dangling-symlink lock was
+  written rather than deferred, and a pre-existing `OSError` crash shared with
+  `broken-ref` was fixed at both sites. **M27 is implementation-complete**, with all ten
+  phases done, every deliverable met, **1087 passed / 0 failed**,
   `docs check --root docs` at exit 0 over the repaired tree, and the
   `BodyLink` span contract handed to M28. The milestone stays `Lifecycle: active` until the M29 publish
   closeout.
@@ -897,6 +911,28 @@ are decisions, not restatements.
    are not supported.** Bounded grammar, stated as an exclusion with an escape
    hatch. Verified zero occurrences in `docs/`, the 33 fixture trees, and the
    bundled skill, so it costs nothing today.
+
+   **Amended by the Step-2 fresh-eyes review (conductor-binding): a nested
+   IMAGE consumes one `]`.** The label ends at the first unescaped `]` *that
+   is not the closer of an image opened inside it* — one skipped `]` per
+   unescaped `![`. As frozen, this point made
+   `[![diagram](diagram.png)](full-size.md)`, the ordinary badge / thumbnail
+   idiom, end its label at the image's `]` and take `(diagram.png)` as the
+   destination: a **false positive** that reports the image as
+   `broken-body-link` — contradicting the success criterion "images … produce
+   **no** finding" and operator-binding Q2's "a broken image … deserves its
+   own finding wording rather than being folded into `broken-body-link`" —
+   and a **false negative** that never emits `full-size.md`, so M28 would
+   never rewrite the real destination. The fix restores behaviour Q2 already
+   specified, which makes it a defect rather than a scope change. The
+   exception is narrow — it applies to `![` only, so `[a [b] c](x.md)` is
+   still not a recognised link, and the bounded-grammar claim stands. Zero
+   occurrences of `[![` exist in `docs/`, the 39 fixture trees, or the bundled
+   skill, so no census, dogfood or suite evidence could have caught it.
+   Implemented as a level table (`_label_closers`) rather than a rescan,
+   because the accepted `]` depends on where the label started and a rescan is
+   quadratic on `"![" * N + "]" * N`. Locked by
+   `tests/test_body_links.py::test_scan_link_whose_label_is_an_image_reports_the_OUTER_destination`.
 3. **An inline code span never crosses a line boundary.** Otherwise a single
    unpaired backtick masks the remainder of a 112 KB `cli.md` — unbounded
    false negatives, the exact failure mode E6 exists to prevent. All three
@@ -1270,7 +1306,7 @@ implemented here.
 | 2 | **Autolinks, raw HTML anchors, and reference *uses*.** Same reasoning, lower value — a reference use carries no destination of its own, and raw HTML would drag an HTML parser into a stdlib-only tool. | Later |
 | 3 | **Reference-definition/use consistency** — an undefined `[label][ref]`, or a definition nothing uses. A Markdown well-formedness rule, not a missing-file rule; it belongs to a different family from `broken-body-link`. | Later |
 | 4 | **Heading/anchor validation for fragments.** Explicitly out of scope for M27 *and* M28 by the 2026-08-10 operator decision; recorded so a later milestone can pick it up knowingly rather than rediscover it. | Later |
-| 5 | **M27 hands M28 a simplification, not a question** (Q5): escaping destinations are a *forbidden and reported* condition, so a clean tree contains none and **M28 never has to rewrite one**. Recorded so M28's scope can rely on it rather than re-derive it. | M28 (input) |
+| 5 | **M27 hands M28 a simplification, not a question** (Q5): escaping destinations are a *forbidden and reported* condition, so a clean tree contains none and **M28 never has to rewrite one**. This **answers M28's Open question 2** ("Absolute root paths and links escaping the docs root") outright — recorded here rather than by editing `m28-move-safe-body-link-rewrites.md`, so M28's own Phase 1 stays free to open the question and find it already settled. Note the answer covers the *decoded* form too: `%2F…` and `\/…` normalise to an absolute path and are `outside-root-body-link`, not silent (Step-2 audit A0). | M28 (input) |
 | 6 | **A 4-space indented-code rule**, if the convention's fence-your-samples guidance ever proves insufficient. E6 makes it a net loss today. | Later |
 ## Testing and quality gate
 

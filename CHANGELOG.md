@@ -241,6 +241,17 @@ until then._
   `blocks`/`blocked-by` edge stay explicitly **uncoupled**: a blocked
   lifecycle does not require an edge, and an edge does not set a lifecycle.
 
+### Fixed
+
+- **An over-long path segment no longer crashes `docs check`.** A `Related:`
+  target or a body-link destination with a path segment longer than the
+  filesystem allows made the existence probe raise
+  `OSError [Errno 36] File name too long` instead of returning False, so
+  `docs check` exited with a traceback rather than a finding. Both probes now
+  treat an unusable path as "does not exist" and report `broken-ref` /
+  `broken-body-link` as they should. The `broken-ref` half is a 1.x bug; it is
+  fixed here because M27's body links widen the same exposure by roughly 400x.
+
 ### Upgrading from 1.x
 
 Run the repair loop until `docs check` is clean:
