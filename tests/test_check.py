@@ -6,6 +6,7 @@ rule tests use inline strings; the tree tests point at fixture trees.
 
 from __future__ import annotations
 
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -1083,3 +1084,319 @@ def test_check_tree_duplicate_field_diagnoses_the_unfixable_missing_inverse(tmp_
     # the FIRST label, which does not carry the edge.
     _out, changed = _cli.remove_related_edge((root / "a.md").read_text(), "precedes", "b.md")
     assert changed is False, "find-first editor vs last-wins parser — this is why D7 must fire too"
+
+
+# --- M27 (D4 / D4b) — Markdown body-link validation ------------------------
+#
+# Phase 2 (written RED). Intended RED reasons, per test:
+#
+# - the `broken-body-link` and `outside-root-body-link` rules do not exist
+#   yet, so `check_doc` returns no body-link finding and `check_tree` returns
+#   `[]` for `bodylink-broken` — plain assertion RED.
+#
+# The "no finding" tests are GREEN-at-baseline but DEGENERATE: they pass today
+# only because the rules do not exist. They become meaningful after Phase 6 and
+# are what stops the rules over-firing. Each says so in its own docstring.
+#
+# The pure scanner seam (`scan_body_links`, `_mask_code`,
+# `classify_destination`, `normalise_body_link_target`, `body_link_findings`)
+# is exercised in `tests/test_body_links.py`; this section owns the rule as
+# `check_doc` / `check_tree` expose it.
+
+
+def _bodylink_findings(name: str) -> list[Finding]:
+    """`check_tree` over a committed `bodylink-*` tree, proving it EXISTS first.
+
+    The existence guard is load-bearing, not decoration. `load_config`
+    tolerates a missing directory and the walk then yields nothing, so the
+    three "silent" locks below would pass on a fixture tree that was never
+    written — exactly the falsely-GREEN shape the Phase-2 authoring rules
+    exist to prevent. Between Phase 2 and Phase 3 this assertion is what makes
+    them honestly RED.
+    """
+    assert (_TREES / name).is_dir(), f"missing fixture tree {name!r} (Phase 3 supplies it)"
+    return _tree_findings(name)
+
+
+def _body_link_findings_of(name: str) -> list[Finding]:
+    return [
+        f
+        for f in _bodylink_findings(name)
+        if f.rule in {"broken-body-link", "outside-root-body-link"}
+    ]
+
+
+def _bodylink_doc(project: str, body: str, *, lifecycle: str = "active") -> str:
+    """A well-formed doc whose only interesting content is its body prose."""
+    return (
+        f"# Doc\n\nLifecycle: {lifecycle}\nRole: notes\nProject: {project}\n"
+        f"Updated: 2026-05-20\n\n{body}"
+    )
+
+
+def test_check_doc_broken_body_link_is_an_error(tmp_path):
+    """D4: a local body link naming no existing path is a hard error.
+
+    RED: plain assertion (no rule yet — the body is opaque, E3).
+    """
+    text = _bodylink_doc("probe", "See [the plan](plan.md) for context.\n")
+    findings = check_doc(tmp_path / "doc.md", text, tmp_path, _config(), stale=None, today=_TODAY)
+    body_links = [f for f in findings if f.rule == "broken-body-link"]
+    assert len(body_links) == 1, f"expected exactly one broken-body-link, got {findings!r}"
+    assert body_links[0].severity == "error"
+    assert body_links[0].path == tmp_path / "doc.md"
+    assert body_links[0].message == (
+        "body link at line 8 does not resolve to an existing path: plan.md (resolves to plan.md)"
+    )
+
+
+def test_check_doc_outside_root_body_link_is_an_error(tmp_path):
+    """D4b: a destination that leaves the root is its own hard error.
+
+    RED: plain assertion (no rule yet).
+    """
+    text = _bodylink_doc("probe", "See [the glossary](../shared/glossary.md).\n")
+    findings = check_doc(tmp_path / "doc.md", text, tmp_path, _config(), stale=None, today=_TODAY)
+    escapes = [f for f in findings if f.rule == "outside-root-body-link"]
+    assert len(escapes) == 1, f"expected exactly one outside-root-body-link, got {findings!r}"
+    assert escapes[0].severity == "error"
+    assert escapes[0].message == (
+        "body link at line 8 leaves the docs root: ../shared/glossary.md "
+        "(normalises to ../shared/glossary.md); links outside the tree must be URLs"
+    )
+
+
+def test_check_doc_body_link_findings_follow_the_broken_ref_group(tmp_path):
+    """D4 ordering: body-link findings are emitted immediately AFTER the
+    `broken-ref` group and before the `stale` block, keeping the two
+    reference-resolution rules adjacent.
+
+    The doc carries both, so the relative order is observable rather than
+    vacuous.
+
+    RED: plain assertion (no rule yet).
+    """
+    text = (
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: probe\nUpdated: 2026-05-20\n\n"
+        "Related:\n- references: nowhere.md\n\n"
+        "See [the plan](plan.md).\n"
+    )
+    findings = check_doc(tmp_path / "doc.md", text, tmp_path, _config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["broken-ref", "broken-body-link"]
+
+
+def test_check_doc_malformed_doc_gets_no_body_link_findings(tmp_path):
+    """A `malformed` doc keeps sole ownership of its case (D4).
+
+    `check_doc`'s existing early return on a missing H1 stands, so a doc with
+    no H1 gets its `malformed` finding and no body-link pile-on — mirroring
+    how `reciprocity_findings` skips unparseable docs.
+
+    GREEN-at-baseline but DEGENERATE: passes today only because the rules do
+    not exist. Genuine once the early return is load-bearing.
+    """
+    text = "No H1 here.\n\nSee [the plan](plan.md).\n"
+    findings = check_doc(tmp_path / "doc.md", text, tmp_path, _config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["malformed"]
+
+
+def test_check_tree_bodylink_broken_is_exactly_one_error():
+    """E3 at the tree level: the `bodylink-broken` fixture's single unresolved
+    inline link is one `broken-body-link` and nothing else.
+
+    RED: plain assertion (the tree exits 0 today).
+    """
+    findings = _bodylink_findings("bodylink-broken")
+    assert [f.rule for f in findings] == ["broken-body-link"]
+    assert findings[0].path.name == "doc.md"
+    assert "plan.md" in findings[0].message
+
+
+def test_exit_code_for_broken_body_link_is_2():
+    """D4: `broken-body-link` is an error, so the tree exits 2.
+
+    RED: plain assertion (no rule yet).
+    """
+    assert exit_code_for(_bodylink_findings("bodylink-broken")) == 2
+
+
+def test_check_tree_bodylink_archived_reproduces_the_unrebased_shape():
+    """E1/E2: the un-rebased archive move, which is 132 of this repository's
+    139 breaks — a relative link that was correct at the document's original
+    location and that no version of the tool has ever rebased.
+
+    RED: plain assertion (the tree exits 0 today).
+    """
+    findings = _body_link_findings_of("bodylink-archived")
+    assert len(findings) == 1, f"expected exactly one finding, got {findings!r}"
+    assert findings[0].rule == "broken-body-link"
+    assert findings[0].path.name == "old-log.md"
+    assert "(resolves to archive/2026-01-01/plan.md)" in findings[0].message, (
+        "the message must name the candidate the destination normalises to, "
+        "which is what makes the ../../ rebase obvious"
+    )
+
+
+def test_check_tree_bodylink_archived_repaired_copy_is_clean(tmp_path):
+    """D6: the documented repair recipe works, and touches nothing else.
+
+    A copy of the damaged tree gets a DESTINATION-TOKEN-ONLY rewrite — the
+    `../../` rebase the archive move should have applied — and every other
+    byte in the tree stays identical. That second half is the point: the D6
+    migration's blast radius is destination tokens, `Updated:`, and one
+    `Revision:` bullet, and this proves the recipe an adopter is handed does
+    not need to touch prose.
+
+    GREEN-at-baseline but DEGENERATE: no rule exists yet, so both the damaged
+    and the repaired tree are silent today. It becomes the proof that the
+    recipe works from Phase 6.
+    """
+    src = _TREES / "bodylink-archived"
+    dst = tmp_path / "repaired"
+    shutil.copytree(src, dst)
+
+    doc = dst / "archive" / "2026-01-01" / "old-log.md"
+    before = doc.read_text()
+    after = before.replace("](plan.md)", "](../../plan.md)")
+    assert after != before, "the fixture must carry the un-rebased destination"
+    doc.write_text(after)
+
+    findings = check_tree(dst, load_config(dst), stale=None, today=_TODAY)
+    assert [
+        f for f in findings if f.rule in {"broken-body-link", "outside-root-body-link"}
+    ] == [], f"the repaired copy must be clean, got {findings!r}"
+
+    # Every other byte in the tree is untouched — only the destination token moved.
+    for path in sorted(p for p in src.rglob("*") if p.is_file()):
+        rel = path.relative_to(src)
+        mirror = (dst / rel).read_bytes()
+        if rel.as_posix() == "archive/2026-01-01/old-log.md":
+            assert mirror == after.encode()
+            assert mirror.replace(b"](../../plan.md)", b"](plan.md)") == path.read_bytes()
+        else:
+            assert mirror == path.read_bytes(), f"{rel} must be byte-identical"
+
+
+def test_check_tree_bodylink_outside_root_reports_only_the_containment_rule():
+    """E7/D4b: an escaping destination yields `outside-root-body-link` ONLY.
+
+    Never additionally `broken-body-link` — deciding brokenness would require
+    precisely the stat the boundary forbids.
+
+    RED: plain assertion (the tree exits 0 today).
+    """
+    findings = _bodylink_findings("bodylink-outside-root")
+    assert [f.rule for f in findings] == ["outside-root-body-link"] * 2
+    assert [f.severity for f in findings] == ["error"] * 2
+    assert exit_code_for(findings) == 2
+
+
+def test_check_tree_bodylink_outside_root_reports_a_target_that_does_exist():
+    """E7: "whether or not it would have resolved".
+
+    One of the fixture's two escaping destinations is self-referential —
+    `../bodylink-outside-root/doc.md` — so it is GUARANTEED to exist on disk,
+    and the other names a directory that cannot exist. Both are reported the
+    same way, which is what proves the rule is decided by path arithmetic and
+    not by a stat that happened to fail.
+
+    RED: plain assertion (the tree exits 0 today).
+    """
+    findings = _bodylink_findings("bodylink-outside-root")
+    messages = [f.message for f in findings]
+    assert any("bodylink-outside-root/doc.md" in m for m in messages), (
+        "the escaping destination that DOES exist must still be reported"
+    )
+    assert all(f.rule == "outside-root-body-link" for f in findings)
+    assert (_TREES / "bodylink-outside-root" / "doc.md").is_file(), (
+        "the self-referential escape only proves E7 while its target really exists"
+    )
+
+
+def test_check_tree_indented_link_in_a_blockquote_is_scanned(tmp_path):
+    """E6/Q3: a real link indented four spaces inside a blockquote / list
+    continuation IS scanned — the scanner buys no false negatives to avoid
+    false positives.
+
+    All nine 4-space-indented link-shaped spans in this repository are real
+    links, six of them among the 139 genuine breaks, so an indented-code rule
+    would hide live damage.
+
+    RED: plain assertion (no rule yet).
+    """
+    root = tmp_path / "indented"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "indented"\n')
+    (root / "doc.md").write_text(
+        _bodylink_doc(
+            "indented",
+            "> A quoted paragraph:\n>\n    See [the plan](plan.md) for context.\n",
+        )
+    )
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["broken-body-link"]
+
+
+def test_check_tree_bodylink_clean_is_clean():
+    """Every supported form, resolving: plain, `./`, fragment, non-Markdown,
+    directory, angle, all three title quotings, and a reference definition.
+
+    GREEN-at-baseline but DEGENERATE (passes today only because the rules do
+    not exist); the over-fire guard from Phase 6.
+    """
+    assert _bodylink_findings("bodylink-clean") == []
+
+
+def test_check_tree_bodylink_excluded_forms_is_silent():
+    """E5/E8/D2: every excluded form produces NOTHING.
+
+    Image, autolink, raw HTML, fenced code, inline code, fragment-only,
+    schemed, protocol-relative, root-absolute, all three reference USES, and
+    a backslash-escaped opt-out — on a doc that is otherwise valid, so the
+    silence cannot come from `check_doc`'s malformed early return.
+
+    GREEN-at-baseline but DEGENERATE; the over-fire guard from Phase 6.
+    """
+    assert _bodylink_findings("bodylink-excluded-forms") == []
+
+
+def test_check_tree_bodylink_nested_resolves_up_and_down():
+    """D3: resolution is relative to the REFERRING document, so a nested doc
+    links up with `../` and back down again — including
+    `../sub/../back-inside.md`, which normalises back under the root and is
+    validated normally.
+
+    GREEN-at-baseline but DEGENERATE; the over-fire guard from Phase 6.
+    """
+    assert _bodylink_findings("bodylink-nested") == []
+
+
+def _pre_m27_tree_names() -> list[str]:
+    """Every committed fixture tree that is NOT one of M27's own.
+
+    A SIBLING of `_legacy_tree_names`, not a replacement (Phase-1 amendment
+    3). That list excludes `reciprocal-*`, so it covers 23 trees rather than
+    the 33 the milestone's Phase-3 exit criterion names — and extending its
+    assertion to the two new rules would additionally make M27's three
+    deliberately damaged `bodylink-*` trees fail it. Adding a sibling delivers
+    the stated coverage AND leaves every pre-existing test id in place.
+    """
+    return sorted(
+        d.name for d in _TREES.iterdir() if d.is_dir() and not d.name.startswith("bodylink-")
+    )
+
+
+@pytest.mark.parametrize("tree", _pre_m27_tree_names())
+def test_check_tree_pre_m27_fixtures_gain_no_body_link_findings(fixtures_dir, tree):
+    """No pre-M27 fixture tree may gain either M27 finding.
+
+    The setup census measured all 33 read-only: zero unresolved local
+    destinations and zero escapes in every one of them, so both rules must be
+    silent across the whole set. GREEN-at-baseline (degenerate), and a genuine
+    regression lock after Phase 6 — including for trees added by later
+    milestones.
+    """
+    root = fixtures_dir / "trees" / tree
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    offenders = [f for f in findings if f.rule in {"broken-body-link", "outside-root-body-link"}]
+    assert offenders == [], f"pre-M27 fixture {tree} must gain no body-link findings"

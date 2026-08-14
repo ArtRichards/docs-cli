@@ -849,7 +849,10 @@ Exactness, pinned rather than implied:
    recognised link.
 6. **Reference definition.** Line-anchored: 0–3 leading spaces, `[label]:`,
    optional whitespace, the destination, then an optional title to end of
-   line. `kind` is `"reference-definition"`; both rules and both message
+   line. The destination is the same plain-or-angle token as in an inline
+   link, except that there is no enclosing `)` to close it: a plain
+   destination here ends at the first unescaped whitespace or at the end of
+   the line. `kind` is `"reference-definition"`; both rules and both message
    templates are otherwise identical — the kind lives on the scanner's record,
    never in the finding.
 7. **Backslash escapes.** A `\` followed by any ASCII punctuation character

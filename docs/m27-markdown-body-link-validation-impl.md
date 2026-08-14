@@ -39,7 +39,7 @@ the milestone checklist synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | **Done** | 2026-08-14 | Froze the supported Markdown grammar subset, the masking rules, destination classification/normalisation/resolution, **the containment test and its precedence over existence**, both findings (`broken-body-link`, `outside-root-body-link`) with severity / message template / exit code / ordering, the `BodyLink` span contract M28 consumes, and the legacy-tree policy — against the resolved Q1–Q7. |
-| 2. Write Tests (RED) | Pending | — | Scanner unit tests over every supported and every excluded form; both rules' integration + subprocess/JSON locks; the no-double-report precedence lock and the never-stat-outside-the-root lock; the E5/E6 false-positive and false-negative locks; the pathological-input runtime lock. |
+| 2. Write Tests (RED) | **Done** | 2026-08-14 | Scanner unit tests over every supported and every excluded form; both rules' integration + subprocess/JSON locks; the no-double-report precedence lock and the never-stat-outside-the-root lock; the E5/E6 false-positive and false-negative locks; the pathological-input runtime lock. |
 | 3. Create Data/Fixtures | Pending | — | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
 | 5. Update Base Interfaces | Pending | — | `BodyLink` model, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers; no rule wired yet. The scanner reports every local destination — containment is the rule's job. |
@@ -440,6 +440,180 @@ regenerated `docs/INDEX.md` (both spec `Updated:` values moved to
 - `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
 - `git diff --stat -- src/docs_cli/cli.py` — **empty**, per the logged
   deviation.
+
+## Phase 2 — Write Tests (RED) — 2026-08-14
+
+### Objective
+
+Express scanning, masking, classification, resolution, containment and both
+findings before any implementation exists — including every **exclusion**,
+which must be GREEN at baseline and stay GREEN — so each Phase-5/6/7 change
+answers a written test rather than the reverse.
+
+### Authoring rules applied (carried from M25/M26)
+
+- **No module-level import of a Phase-5 symbol.** Each is reached through a
+  one-line `_m27(name)` wrapper over `getattr(cli, name)` — a clean
+  `AttributeError` at run time (never a collection error, which the Phase-4
+  exit criterion forbids), `Any` for mypy, and no ruff `B009`.
+- **Every intended-exit-2 subprocess test also asserts its contract stdout
+  string.** A `bodylink-*` tree exits 0 today, so a bare returncode assertion
+  would be honest RED — but the message assertion is what stops the test
+  being satisfiable later by an unrelated exit 2 (M26's falsely-GREEN lesson).
+- **Every docstring names its intended RED reason**, and every
+  GREEN-at-baseline lock says so **and** says whether it is *degenerate* or
+  *genuine*.
+- **No test asserts the live `docs/` tree's break count.** 139/1 is Phase-6
+  evidence, not a lock: a test asserting it would have to be inverted in
+  Phase 6.
+- **No inline-built doc body carries accidental link syntax** outside the
+  tests that are about link syntax.
+
+### New tests
+
+**`tests/test_body_links.py`** (new, **105** items) — the pure scanner seam,
+modelled on `tests/test_relate_plan.py` / `tests/test_archive_plan.py`. Every
+exotic case is an **inline string**, not a committed tree (the M25 rule):
+these assert on parse output, not on a tree walk.
+
+- **Masking, D2 (19 items):** length preservation parametrized over 8 texts,
+  asserting `len` **and** identical newline offsets; backtick and tilde
+  fences; the equal-or-longer closing-fence rule in both directions; the exact
+  two-space-indented `architecture.md` fence shape; inline spans; the
+  single-line span rule; unmasked bytes byte-identical; **no** 4-space
+  indented-code rule (E6); fences-before-spans; and the two E5 shapes
+  verbatim.
+- **Grammar, D1 (48 items):** the plain base case; the **13-way parametrized
+  `text[start:end] == raw` span invariant** — the M28 handoff, the single
+  highest-leverage assertion in the milestone; angle destinations; all three
+  title quotings; whitespace-terminated destinations and the non-title
+  trailer; balanced parens at the frozen depth and rejected beyond it;
+  unbalanced parens; the backslash opt-out and in-destination escapes;
+  percent-decoding into `path` but not `raw`, including invalid sequences;
+  first-`#` fragment splitting and the absent/empty cases; reference
+  definitions and their line anchor; images, autolinks, raw HTML and all
+  three reference *uses*; the multi-line label (the exact `convention.md`
+  shape) and the blank-line bound; the first-unescaped-`]` label rule; column
+  distinctness; 1-based line/column; determinism; mask-before-match; the
+  scanner reporting escapes too (D5); and the frozen `BODY_LINK_KINDS`.
+- **Classification, D2 (20 items):** the frozen `DESTINATION_KINDS`, `local`
+  parametrized ×9 (including a `../` escape and an angle token), `empty`,
+  fragment-only including `<#section>`, schemed ×6 (including `C:\…` and
+  `<https://x>`), protocol-relative, root-absolute.
+- **Containment, D3/D4b (6):** the resolution base; the **filesystem
+  sentinel** (`Path.exists` / `is_file` / `resolve` raise if touched);
+  escape-then-return; the **symlink lock**, a `tmp_path` arrangement where
+  `resolve()` gives the OPPOSITE answer to the lexical form; the root itself;
+  and the `..` / `../` predicate.
+- **`body_link_findings`, D4/D4b (12):** one finding per occurrence; both
+  frozen messages verbatim (the broken one is `cli.md`'s worked instance byte
+  for byte); the unconditional candidate parenthetical; **containment wins
+  over existence**, with the escaping destination pointed at a path that
+  really exists; the **`Path.exists` spy** asserting every probe is under the
+  root; source order; Q7's directory and non-Markdown destinations; the
+  excluded-but-existing destination; fragments never validated; `%20`
+  resolution against a `tmp_path`-built `my doc.md`; and silence for all six
+  non-`local` kinds.
+- **Runtime (1):** three adversarial inputs totalling 310 KB under a 2.0 s
+  wall-clock bound, with the flakiness trade-off stated in the docstring.
+
+**`tests/test_check.py`** (+47 items) — the rules as `check_doc` /
+`check_tree` expose them: both messages at the unit seam; the **ordering**
+lock on a doc carrying `broken-ref` **and** a broken body link; the
+`malformed` early return; the `bodylink-broken` / `-archived` /
+`-outside-root` fixture locks; `exit_code_for` == 2; E7's
+"whether or not it would have resolved"; E6's indented blockquote link; the
+three silent trees; the repaired-copy recipe proof with whole-tree byte
+comparison; and the new **33-parametrization**
+`test_check_tree_pre_m27_fixtures_gain_no_body_link_findings`.
+
+**`tests/test_cli_check.py`** (+8) — the subprocess surface: both rules'
+exit-2 + frozen-message locks using the grouping-header idiom
+(`assert "doc.md" in proc.stdout.splitlines()`); both `--json` closed-key-set
+locks; the CLI-level **no-double-report** lock; the two exit-0 trees; and
+`test_check_verdict_is_identical_from_a_relocated_copy`, the hermeticity lock.
+
+**`tests/test_cli_touch.py`** (+1) — `docs touch --check` inherits both rules
+through `_run_touch_check` → `check_tree`; mirrors
+`test_touch_check_broken_ref_tree_exits_2`.
+
+**`tests/test_skill.py`** (+2) — the bundled `SKILL.md` `docs check` row and
+`references/use-cases.md` must name **both** rule ids and both repairs. RED
+until Phase 7, modelled on `test_skill_md_teaches_safe_archive_selection`.
+
+### Pre-existing tests M27 changes
+
+**None.** Nothing was deleted, renamed, or had an assertion altered. The only
+edits to existing files are appended sections plus one added `import shutil`
+in `tests/test_check.py`. In particular
+`test_check_tree_legacy_fixtures_gain_no_new_findings` and
+`_legacy_tree_names()` stay **byte-identical** (Phase-1 amendment 3), and the
+two closed-record pins —
+`tests/test_cli_check.py::test_check_json_emits_finding_array` and
+`::test_check_missing_inverse_json_record_keys_unchanged` — are proven
+unmoved by `git diff` showing **zero** deleted lines in that file.
+
+### Decisions / issues
+
+- **One Phase-1 gap was found by writing the tests, and closed in the specs in
+  this phase** (M26's precedent). The grammar's rule 3 defines a plain
+  destination as ending "at the first unescaped whitespace or at an unescaped
+  `)` at nesting depth 0" — but a **reference definition** has no enclosing
+  `)` to close it, so the rule was under-specified for exactly the one form
+  that is not an inline link. Rule 6 in `cli.md` now says so explicitly: there
+  the destination ends at the first unescaped whitespace or at the end of the
+  line. Mirrored into `references/cli.md` in the same change.
+- **A falsely-GREEN family was caught before it could exist.**
+  `load_config` tolerates a missing directory and `check_tree` then walks
+  nothing, so the three "silent tree" locks
+  (`bodylink-clean`, `-excluded-forms`, `-nested`) and the two exit-0
+  subprocess locks would all have **passed on fixture trees that were never
+  written** — vacuously, for the wrong reason, and indistinguishably from
+  success. Both files now route every `bodylink-*` tree through a helper that
+  asserts the directory exists first (`_bodylink_findings` /
+  `_bodylink_tree`), so between Phase 2 and Phase 3 they are honestly RED on
+  the missing fixture and become degenerate-GREEN only once Phase 3 supplies
+  it. This is the same trap M26 hit from the other direction, where argparse's
+  own exit 2 satisfied a `--json` refusal test.
+- **The symlink lock is a real discriminator, not a restatement.**
+  `root/sub` is a symlink to a directory outside the root, so `sub/deep.md`'s
+  `../inside.md` is **contained** lexically and **escaping** under
+  `Path.resolve()`. The two answers are opposite, which is what makes the test
+  a lock on the D3 decision rather than a description of it.
+- **The never-stat lock is a spy, not a fixture.** The
+  `bodylink-outside-root` tree's unreachable destination proves a probe
+  *would have failed*; only a `Path.exists` spy recording every probed `self`
+  proves **no probe happened**. Both are kept: the fixture is the
+  by-construction complement, not a substitute.
+- **The masking-order test states what it can honestly discriminate.** Given
+  line-anchored fences and single-line inline spans, the two orders coincide
+  on every input — so the test locks the one wrong shape that would otherwise
+  slip through: multi-line inline spans evaluated *before* the fences, which
+  would let a stray backtick inside a fenced block swallow real prose after
+  it. The docstring says exactly that rather than implying a stronger claim.
+- **No test asserts the live tree's 139/1.** That number is Phase-6 evidence
+  and Phase-9 dogfood material; a lock on it would have to be inverted in
+  Phase 6, which is the definition of a test that measures the wrong thing.
+- **No `src/docs_cli/cli.py` change.** `git diff --stat` against the Phase-1
+  commit is empty.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q --co` — **1058 collected, zero
+  collection errors** (895 → 1058: **+163** new ids, **0** removed).
+- `.venv/bin/python -m pytest -q` — **129 failed, 929 passed**. Failures by
+  file: `test_body_links.py` 105, `test_check.py` 13, `test_cli_check.py` 8,
+  `test_cli_touch.py` 1, `test_skill.py` 2. The full classified RED census is
+  Phase 4's.
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 47 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 48 source files.
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**.
+- At the end of Phase 2 the fixture-backed tests still fail on a missing
+  `tests/fixtures/trees/bodylink-*` directory, which Phase 3 supplies.
 
 ## Milestone completion summary
 

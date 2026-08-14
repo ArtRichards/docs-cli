@@ -27,8 +27,8 @@ Related:
 - Surface: parse a deliberately bounded set of real local Markdown body links
   and make a missing destination a hard `docs check` error. This milestone
   detects damage and establishes the shared scanner; M28 owns mutation.
-- Progress: **Active / Phase 1 — Define Contract complete (2026-08-14).** M26
-  is implementation-complete and merged to `main` (`393fb53`), so this is the
+- Progress: **Active / Step 1 in flight on `m27/phases-1-4`; Phases 1–2
+  complete (2026-08-14).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
   next implementation milestone. **All seven setup
   questions are RESOLVED** — Q1, Q2, and Q5 by the operator; Q3, Q4, Q6, and
   Q7 conductor-resolved — and are recorded in *Resolved setup questions
@@ -40,7 +40,9 @@ Related:
   their precedence, **both** message templates, and the `BodyLink` span
   contract against them, in `cli.md`, `convention.md`, and *Decisions
   (Phase 1 — BINDING)* below. Three setup-frozen items were amended under
-  conductor decision and recorded there. Phase 2 — Write Tests (RED) is next.
+  conductor decision and recorded there. Phase 2 wrote the RED suite —
+  **+163 test ids, zero removed** — against those frozen strings; Phase 3
+  authors the six `bodylink-*` fixture trees.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -713,7 +715,7 @@ in *Evidence → regression coverage* below.
 ## Phase checklist
 
 - [x] Phase 1 — Define Contract
-- [ ] Phase 2 — Write Tests (RED)
+- [x] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
