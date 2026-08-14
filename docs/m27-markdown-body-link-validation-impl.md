@@ -22,22 +22,23 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
-- Progress: **Milestone setup complete, with all seven setup questions
-  RESOLVED (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved).
-  Phase 1 — Define Contract is next and does not re-open them.** Q5 was
-  resolved **against** the setup recommendation and then **amended** — the
-  hermetic boundary is kept, and an escaping destination is reported by path
-  arithmetic as a second rule, `outside-root-body-link`, rather than skipped.
+- Progress: **Step 1 in flight on `m27/phases-1-4`. Phase 1 — Define Contract
+  complete (2026-08-14).** All seven setup questions were RESOLVED at setup
+  (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
+  not re-open them. Q5 was resolved **against** the setup recommendation and
+  then **amended** — the hermetic boundary is kept, and an escaping
+  destination is reported by path arithmetic as a second rule,
+  `outside-root-body-link`, rather than skipped.
 - Source: the operator-confirmed body-link decisions in `feedback-log.md`
   (2026-08-09/10) and the M27 registration in `plan.md` (2026-08-10).
-- Branch: `m27/milestone-setup` for setup; implementation branches are chosen
-  when Phase 1 begins.
+- Branch: `m27/milestone-setup` for setup; `m27/phases-1-4` for Step 1
+  (Phases 1–4).
 
 ## TDD phase progress
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | Freeze the supported Markdown grammar subset, the masking rules, destination classification/normalisation/resolution, **the containment test and its precedence over existence**, both findings (`broken-body-link`, `outside-root-body-link`) with severity / message template / exit code / ordering, the `BodyLink` span contract M28 consumes, and the legacy-tree policy — against the resolved Q1–Q7. |
+| 1. Define Contract | **Done** | 2026-08-14 | Froze the supported Markdown grammar subset, the masking rules, destination classification/normalisation/resolution, **the containment test and its precedence over existence**, both findings (`broken-body-link`, `outside-root-body-link`) with severity / message template / exit code / ordering, the `BodyLink` span contract M28 consumes, and the legacy-tree policy — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | Pending | — | Scanner unit tests over every supported and every excluded form; both rules' integration + subprocess/JSON locks; the no-double-report precedence lock and the never-stat-outside-the-root lock; the E5/E6 false-positive and false-negative locks; the pathological-input runtime lock. |
 | 3. Create Data/Fixtures | Pending | — | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
@@ -238,9 +239,207 @@ Full reasoning in the milestone doc's *Resolved setup questions
 | Q6 | A `.docs.toml` opt-out | **No knob** (conductor). The 2.0.0 bump is the migration signal. |
 | Q7 | What satisfies a destination | Any existing filesystem entry — file **or** directory, any extension (conductor), applied within the root. |
 
-## Phase 1 — Define Contract
+## Phase 1 — Define Contract — 2026-08-14
 
-_Not started._
+### Objective
+
+Freeze every byte of surface Phase 2 will assert against: the supported
+grammar and its exactness rules, the length-preserving code-masking contract
+and its ordering, destination classification, the resolution base, the
+containment test and **its precedence over existence**, both findings'
+message templates, the closed JSON record, and the `BodyLink` span contract
+M28 consumes — against the resolved Q1–Q7, which are not re-opened. No
+business logic lands.
+
+### Actions taken
+
+**`docs/cli.md`** — two new rule bullets in the `docs check` reports list, the
+JSON field table's `rule` enumeration extended with both ids, the
+closed-key-set paragraph and the exit-code prose extended, and a new
+`#### Markdown body-link validation (M27 — D1–D4b)` block with seven
+subsections:
+
+- *(preamble)* — what is scanned (the whole document text of every walked
+  doc), the never-scanned root-level `INDEX.md` **and the explicit statement
+  that a nested `INDEX.md` IS scanned**, the `malformed` early-return, the
+  `docs touch --check` inheritance, and the no-knob rule.
+- *The supported grammar (M27 — D1)* — the eight-row recognised/excluded
+  table plus nine numbered exactness rules and the BINDING
+  strip-`<…>` → split-on-`#` → backslash-unescape → percent-decode → join →
+  normalise order with its three stated consequences.
+- *The destination-token span (M27 — D5)* — `text[start:end] == raw`, angle
+  brackets in, title out, and why M28 depends on it.
+- *What the scanner never sees (M27 — D2)* — fences and inline spans only,
+  fences masked **first**, inline spans single-line, no 4-space
+  indented-code rule, length preservation as a testable guarantee.
+- *Destination classification (M27 — D2)* — the six kinds as a table with
+  their test order, the `C:\…`-is-scheme-shaped note, and the
+  classify-on-the-token-as-written rule.
+- *Resolution and containment (M27 — D3 / D4b)* — the three-step pure
+  `posixpath` test, escape-then-return, the deliberate divergence from the
+  `resolve()`-based archive-subtree test, the root-itself case, Q7's
+  any-entry rule, the exclusion-governs-the-walk rule, and the hermeticity
+  argument stated as adopter-predictable behaviour.
+- *Evaluation order — BINDING* and *The two findings* — the three-step
+  fenced order, both frozen templates, both worked instances, and the
+  `<N>` / `<raw>` / `<candidate>` definitions.
+- *Upgrading from 1.x* — the adopter recipe for both rules, with the
+  no-repair-verb statement.
+
+**`docs/convention.md`** — a new `## Body links (M27)` section carrying the
+invariant *a local Markdown body link stays inside the tree root; anything
+outside the tree is a URL* with its **portability** rationale (not as an
+implementation note), the *fence code samples that contain link syntax* rule
+plus the backslash opt-out, the resolution-base contrast with `Related:`, and
+the never-touched external forms. Plus three amendments in place:
+
+- the **third narrow archived-document exception** (M27 — D6) beside M18's
+  and M25 — D4's, with its stated blast radius — destination tokens,
+  `Updated:`, one `Revision:` bullet, **29** archived documents, once, on a
+  stated date; explicitly not a general licence; **no CLI verb performs it**;
+- *Non-Markdown files in the tree* — `Related:` "checks existence regardless
+  of its extension" now says body links inherit the same any-extension,
+  any-kind rule, and names the one difference (resolution base);
+- *What `docs` does not promise* — "No content validation beyond metadata.
+  The body of a doc is opaque to the tool" was about to become **false**, so
+  it is narrowed to metadata-plus-local-body-link-destinations with the
+  remaining non-goals (rendering, anchors, style, structure, link-graph
+  traversal) named. The milestone's Phase-10 list names `test-strategy.md`'s
+  twin sentence but not this one; this one is on the byte-parity gate, so it
+  belongs in Phase 1.
+
+**Milestone doc** — new `## Decisions (Phase 1 — BINDING)` carrying the three
+setup-frozen amendments, both frozen message templates, twelve contract
+points that could not be read off the setup text, the `BodyLink` record and
+the frozen Phase-5 signatures with their reuse list, a Phase-5 linearity
+implementation note, the logged Phase-1 deviation, the Phase-7/10
+follow-through table, and the three authoring traps. D4's proposed message
+and the Phase-3 exit criterion are **amended in place** so the binding scope
+and the frozen contract cannot disagree. Phase-1 checklist row and
+deliverable 1 ticked; Progress line updated.
+
+**Lockstep chores** — `cp docs/{cli,convention}.md
+src/docs_cli/skill/references/`; `docs touch` on the four edited docs
+(implicit reindex); `tests/fixtures/expected/docs-INDEX.md` re-synced from the
+regenerated `docs/INDEX.md` (both spec `Updated:` values moved to
+2026-08-14).
+
+### Decisions / issues
+
+- **Three setup-frozen items could not stand, and all three are recorded as
+  amendments rather than quietly implemented.** (1) D4's
+  `does not resolve to a file:` contradicts the operator-binding Q7 — a
+  **directory** satisfies a destination too — so a correct directory link
+  that later broke would have been reported with prose asserting the wrong
+  test. Frozen as `does not resolve to an existing path:`. (2) D4b named
+  `outside-root-body-link`'s severity, exit code, granularity and precedence
+  but **no message**; Phase 2 asserts contract strings verbatim, so it is
+  specified here. (3) The milestone's Phase-3 exit criterion says
+  `test_check_tree_legacy_fixtures_gain_no_new_findings` is "extended … and
+  passes for all 33 pre-M27 trees" — but that test's list **excludes**
+  `reciprocal-*`, so it covers 23, and extending its assertion would make the
+  three deliberately-damaged `bodylink-*` trees Phase 3 authors fail it. The
+  coverage lands as a **new sibling** instead, which delivers what the
+  milestone asked for and keeps M27's no-regression proof at a clean zero
+  moved test ids.
+- **The prose/literal tension in amendment 2 is recorded, not smoothed
+  over.** The resolution that specified the escaping message also said "both
+  templates name the repair". Only `outside-root-body-link`'s does so in
+  words (`; links outside the tree must be URLs`); `broken-body-link`'s names
+  its repair by **printing the candidate path the tool actually probed**,
+  which is what an agent needs to decide between fixing the link and creating
+  the file. The frozen literal is implemented exactly as given rather than
+  extended with a repair clause nobody froze. **Surfaced for the fresh-eyes
+  review** — adding a clause in Phase 7 would be a one-line change.
+- **A third authoring trap exists and was found by tripping it.** The plan
+  recorded two (`test_bundled_skill_has_no_repo_relative_links`'s raw-line
+  `](../` scan, and Phase 1's own examples becoming scannable after Phase 6).
+  There is a **third**:
+  `tests/test_skill_quality_artifacts.py::test_installed_skill_references_do_not_depend_on_source_checkout`
+  forbids the literal `../src/docs_cli/` in every bundled reference. The
+  natural worked instance for the escaping rule is E7's real destination —
+  `charter.md:52` — and writing it into `cli.md` turned the suite RED the
+  moment the byte-identical mirror was copied. Fenced or not is irrelevant;
+  the test scans raw text. The worked instance now uses a neutral escaping
+  path; E7's real one is named in the milestone and in `charter.md`, neither
+  of which is on that gate. Recorded in the milestone's trap list so Phases
+  2–7 cannot rediscover it.
+- **Several contract points had no answer in the setup text and were
+  settled here**, because Phase 2 cannot assert what is undetermined. The
+  full list is in the milestone's *Contract points that could not be read off
+  the setup text*; the three with real behavioural weight are: a label ends
+  at its **first unescaped `]`** (so balanced brackets inside a label are an
+  explicit, escapable exclusion — verified zero occurrences in the corpus);
+  `classify_destination` strips a surrounding `<…>` pair **before**
+  classifying (otherwise `<https://x>` would classify as `local` and be
+  resolved as a path); and the `#`-split happening on the **raw** text means
+  a backslash cannot escape a `#` out of being the fragment delimiter — the
+  same mechanism the resolution already states for `%23`, now stated for its
+  sibling.
+- **The frozen containment arithmetic reuses two existing idioms verbatim**
+  and says so: `_canonical_related_target`'s `posixpath.normpath` (POSIX on
+  every platform — `os.path` would make the verdict Windows-dependent and
+  destroy the hermeticity property D4b exists to guarantee) and
+  `_candidate_exclusion_reason`'s `rel == ".."` / `rel.startswith("../")`
+  predicate. The one divergence — the `/` leg — is stated as deliberate: a
+  root-absolute *body* destination is classified `root-absolute` and silenced
+  before containment runs, while a root-absolute `Related:` target is
+  `outside-root`.
+- **A read-only prototype of the frozen contract was built and run before the
+  contract was written**, and it reproduces the setup census **exactly**:
+  `docs/` → 139 unresolved local destinations and **1** escape
+  (`charter.md:52`); all **33** committed fixture trees → 0 and 0; the
+  bundled skill → 0 and 0. That is the evidence that the grammar being frozen
+  is the grammar the evidence was measured with, rather than a plausible
+  restatement of it. The prototype lives outside the repository and no
+  repository file was mutated by it.
+- **The linearity risk is real and has a named shape.** The prototype ran the
+  three adversarial inputs Phase 2 will lock (50 000 unmatched `[`, 40 000
+  `[a](`, a 100 KB unterminated angle destination) in 0.004 s / 0.66 s /
+  0.007 s, and the live 112 KB `cli.md` in 0.005 s — but the 0.66 s case
+  exposed the two quadratic shapes a naive implementation falls into. Both
+  are recorded in the milestone as a Phase-5 implementation note (not as a
+  contract term): re-deriving the blank-line bound per candidate, and
+  restarting the outer scan at `open + 1` after a failed candidate instead of
+  at the failed candidate's closing `]`.
+- **Deviation (approved, same as M25 and M26).** Phase 1 made **zero**
+  `cli.py` edits. Stubs would change the Phase-4 subprocess RED reasons and
+  risk baseline behaviour, and the phase's own exit criterion is "no behavior
+  changes". The signatures are frozen in the milestone doc's Decisions and
+  land in Phase 5.
+
+### Verification
+
+- `grep -F` in `docs/cli.md` for **every** verbatim string Phase 2 will
+  assert — all present: `body link at line`,
+  `does not resolve to an existing path:`, `leaves the docs root:`,
+  `(resolves to `, `(normalises to `, `links outside the tree must be URLs`,
+  `broken-body-link`, `outside-root-body-link`.
+- `cmp docs/cli.md src/docs_cli/skill/references/cli.md` and the
+  `convention.md` pair — identical.
+- `grep -c '](\.\./'` over `docs/cli.md`, `docs/convention.md`, and all six
+  bundled skill `.md` files — **0** in every one (trap 1 held).
+- `grep -n '\.\./src/docs_cli/'` over both specs — none (trap 2 held, after
+  the worked instance was corrected).
+- Prototype scan of the edited `docs/cli.md` and `docs/convention.md` —
+  the only recognised spans are the pre-existing ones (five fragment-only
+  links in `cli.md`; `cli.md#common-exclusion` and the canonical GitHub URL
+  in `convention.md`). Phase 1 added **zero** scannable spans, so trap 3
+  held: every new example is inside a fence or an inline code span, and the
+  repository still contains **zero** reference definitions.
+- `.venv/bin/python -m pytest tests/test_skill_refs.py tests/test_cli_index.py
+  tests/test_cli_check.py -q` — 37 passed.
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 46 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 47 source files.
+- `.venv/bin/python -m pytest -q` — **895 passed**, unchanged from the
+  baseline at `d61da1d`. (One intermediate RED —
+  `test_installed_skill_references_do_not_depend_on_source_checkout` — is the
+  third trap above; it was fixed inside this phase, not carried.)
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**, per the logged
+  deviation.
 
 ## Milestone completion summary
 

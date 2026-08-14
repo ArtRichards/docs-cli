@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-13
+Updated: 2026-08-14
 
 Related:
 - pairs-with: cli.md
@@ -330,6 +330,49 @@ bare `blocked-by:` — this spec previously recommended pairing
 `Lifecycle: blocked` with a one-sided `blocked-by` edge, and that
 recommendation is withdrawn (see the Lifecycle table).
 
+## Body links (M27)
+
+Prose links are part of the navigation layer, not decoration. From M27 `docs`
+validates the local Markdown links in a document's **body**, alongside the
+`Related:` edges in its metadata block. Two rules follow for authors.
+
+**Invariant: a local Markdown body link stays inside the tree root; anything
+outside the tree is a URL.** A docs tree has to be **portable**. The same
+bytes get read in a git clone, inside a container, vendored as a subtree, and
+unpacked from a release archive — and a link that resolves only because of
+what happens to sit *beside* the checkout resolves in one of those places and
+dangles in the others. Worse, the tool cannot even tell you which: a check
+whose answer depends on the tree's surroundings is not a check. So a body-link
+destination that climbs out of the root with `..` is a convention violation
+regardless of whether the file it names happens to exist on the machine
+running the check, and the repair is to name the target by URL instead. This
+is the same boundary the tool draws for itself: `docs check` never stats,
+opens, or follows anything outside the root it was pointed at.
+
+**Fence code samples that contain link syntax.** A body link is recognised
+wherever it appears in prose, and the only code the tool recognises is a
+**fenced** block (```` ``` ```` or `~~~`) or an **inline code span**
+(backticks). There is deliberately no 4-space-indented-code rule, because in
+real documents a four-space-indented link is almost always a genuine link
+inside a blockquote or a list continuation, not a code sample. So: put link
+syntax you do **not** want validated inside a fence or backticks — which is
+already the house style — and use a backslash escape (`` `\[label](target.md)` ``)
+when you need to opt a single span out inline.
+
+Resolution differs from `Related:` in exactly one way, and it is the important
+one: a `Related:` path is **root-relative**, while a body-link destination is
+resolved **from the directory of the document that contains it**. So `..` is
+normal and expected in a body link and never appears in a `Related:` bullet.
+Beyond that the two agree: any existing filesystem entry satisfies a
+destination — file **or** directory, any extension — and a `#fragment` is
+preserved but never validated, since `docs` does not read headings.
+
+External destinations are never touched: a URL, a `mailto:`, a
+protocol-relative `//host/path`, a root-absolute `/path`, an image, an
+autolink, and raw HTML all produce nothing at all. See `cli.md` ›
+*Markdown body-link validation* for the exact recognised grammar and both
+finding messages.
+
 ## Archive subtree
 
 Completed work moves to an archive subtree. Default subdir name: `archive/`. Convention: `archive/YYYY-MM-DD/` per archive event. Configurable via `[archive] dir` in `.docs.toml`.
@@ -345,6 +388,8 @@ Lifecycle/location consistency rules:
 **Archive-subtree edge integrity (M18).** Archive-subtree `Related:` edges are maintained across moves. When a doc moves into the archive, both its OWN intra-archive edges (bullets pointing at another doc moving in the same operation) and any already-archived referrers' edges to it are repointed to the new `archive/YYYY-MM-DD/` paths, so they keep resolving. The M3 "archive is read-only" stance is preserved for everything else — only these move-driven edge rewrites touch archived docs; prose, other metadata, and edges to docs that did not move are left byte-identical.
 
 **Audited relationship repair (M25 — D4).** A **second** narrow exception, beside M18's. Because archived docs are walked, they are reciprocity-checked too, so a one-sided recognized edge with an archived endpoint would otherwise be an unfixable `docs check` error. `docs relate add|remove` may therefore touch an archived endpoint — but only when the operator asks explicitly and says why: `--reason TEXT` (a single non-empty line) is **required** whenever either named endpoint is under the archive subtree, and an invocation that would change nothing still requires it. Exactly three things may change in an archived doc: **(1)** the one recognized `Related:` bullet added or removed, **(2)** the `Updated:` value, **(3)** the `Revision:` group — created, or one dated bullet appended recording that document's own change and the reason. `Lifecycle: archived`, the original `Archived-reason:` (which explains entry into the archive, never a later repair), `Role:`, `Project:`, every other `Related:` bullet, every other metadata field, the H1, the prose, the file's location, and its trailing-newline state stay byte-identical. `Revision:` is written to archived endpoints only; an active endpoint gets the edge and the `Updated:` bump and nothing more. This is not general archived-document editing — no other verb and no other field is in scope.
+
+**One-time body-link migration (M27 — D6).** A **third** narrow exception, beside M18's and M25 — D4's, and the last one this convention grants. Because body links are validated uniformly — in archived documents exactly as in active ones, the same reach `broken-ref` and `missing-inverse` already have — a document that an older `docs` moved into `archive/YYYY-MM-DD/` without rebasing its prose links carries damage that is now a hard `docs check` error and would otherwise be unrepairable. This repository's own archive is repaired once, on a stated date, with a **stated blast radius**: only **destination tokens**, the `Updated:` value, and one dated `Revision:` bullet may change, in **29** named archived documents; `Lifecycle:`, `Archived-reason:`, `Role:`, `Project:`, every `Related:` bullet, the H1, and all other prose stay byte-identical. `Revision:` is written to archived documents only — an active document repaired in the same pass gets the destination change and its `Updated:` bump and nothing more (M25 — D4). This is **not** a general licence to edit archived prose, and **no CLI verb performs it**: there is no `docs fix-links`. An adopter upgrading to 2.0 gets the recipe (`cli.md` › *Upgrading from 1.x*), not the migration.
 
 **Safe explicit archive selection (M26 — D1).** Entry into the archive subtree is authorized **explicitly**, never by relationship. A relationship verb supplies the *candidate set* a preview names; it never grants permission to move a document. `docs archive FILE` archives that one document. `docs archive FILE --cascade-dry-run` names every one-hop `pairs-with` / `child-of` candidate as selected, not selected, or ineligible and writes nothing. Only `docs archive FILE --cascade-only GLOB` writes a related document, and then exactly the candidates the glob selects — one complete plan, validated before the first byte moves, refusing outright rather than writing part of it. The 1.x bare `--cascade` and `--interactive` flags are retired and refuse. Two rules follow for authors: a document already under the archive subtree is **never** re-archived — neither as a candidate (it is reported ineligible) nor as the named primary (that is a refusal) — so a later archive event never changes an archived doc's location, `Updated:` value, `Lifecycle:`, `Archived-reason:`, H1, or prose, and changes no `Related:` bullet of its except one pointing at a document moving in that same operation, which M18's edge integrity repoints so it keeps resolving; and an `Archived-reason:` line records why *that* document was archived, so it is written to the named primary only, never to a cascaded candidate.
 
@@ -444,7 +489,7 @@ A docs root frequently contains files that aren't Markdown — HTML review packe
 - They do not need a metadata block.
 - They do not appear as entries in `INDEX.md`.
 - Their absence of metadata is not an error.
-- They may be referenced from `.md` docs via `Related:` (see "Relationship verbs") or via prose links in the body. `Related:` will check that the referenced file exists, regardless of its extension.
+- They may be referenced from `.md` docs via `Related:` (see "Relationship verbs") or via prose links in the body. `Related:` will check that the referenced file exists, regardless of its extension — and from M27 a local **body link** is checked the same way, inheriting the same rule: any existing entry under the root satisfies it, file or directory, whatever the extension (see "Body links"). The two differ only in their resolution base — a `Related:` path is root-relative, a body-link destination is relative to the referring document.
 
 This keeps `docs` focused on the Markdown navigation layer while letting authors keep canonical data, presentation artifacts, and generated outputs co-located with the specs that describe them. The Markdown layer is the navigable map; everything else lives alongside it.
 
@@ -466,4 +511,4 @@ Names are free-form. The metadata block carries the load; the filename is for hu
 
 - No automatic `Updated:` bumping on every write. Use `docs touch` or hand-edit.
 - No link-graph traversal. `Related:` is metadata, not a query target. From M25 the tool validates **one-hop reciprocity** of the six recognized verbs (and repairs a single pair via `docs relate`) — that is the whole of its graph awareness. There is still no graph query, no multi-hop traversal, no cycle or conflict detection, and no rendering.
-- No content validation beyond metadata. The body of a doc is opaque to the tool.
+- No content validation beyond metadata **and local body-link destinations** (M27). The tool reads a document's body for exactly one purpose — resolving the local Markdown links in it (see "Body links") — and is otherwise indifferent to it: no rendering, no heading or anchor validation, no style, spelling, structure, or well-formedness rules, and no link-graph traversal built out of body links.

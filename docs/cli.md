@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-13
+Updated: 2026-08-14
 
 Related:
 - pairs-with: convention.md
@@ -619,6 +619,15 @@ Validate the tree. Reports (and exits nonzero on) any of:
   `precedes`↔`follows`, `depends-on`↔`required-by`,
   `blocks`↔`blocked-by`. Verb matching is **case-sensitive exact
   match** (`Precedes:` is a free-form verb, not a recognized one).
+- (M27 — D4) A **local Markdown body link whose destination names no
+  existing path inside the tree** — `severity: error`, rule
+  `broken-body-link`, exit code 2, one finding per occurrence. See
+  *Markdown body-link validation* below.
+- (M27 — D4b) A **local Markdown body link whose destination leaves the
+  docs root** — `severity: error`, rule `outside-root-body-link`, exit
+  code 2, one finding per occurrence, decided by path arithmetic alone
+  with no filesystem access outside the root. See *Markdown body-link
+  validation* below.
 
 Output is grouped by file; one line per finding. `--json` emits an array of records, one per finding. Schema — **stable from M3 onward**:
 
@@ -626,18 +635,22 @@ Output is grouped by file; one line per finding. `--json` emits an array of reco
 |---|---|---|
 | `path` | string | Root-relative POSIX path of the doc. |
 | `severity` | string | `error` or `warning`. |
-| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), `unknown-field` (M10), `duplicate-field` (M25), or `missing-inverse` (M25). |
+| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), `unknown-field` (M10), `duplicate-field` (M25), `missing-inverse` (M25), `broken-body-link` (M27), or `outside-root-body-link` (M27). |
 | `message` | string | Human-readable description of the finding. |
 
-The record's **key set is closed** and unchanged by M25: `missing-inverse`
-adds **no** new JSON field. Everything an agent needs to repair the edge —
-source, verb, target, and the exact missing inverse — is carried in
-`message`.
+The record's **key set is closed** and unchanged by M25 or M27:
+`missing-inverse`, `broken-body-link`, and `outside-root-body-link` each add
+**no** new JSON field. Everything an agent needs to repair the edge — source,
+verb, target, and the exact missing inverse — is carried in `message`, and
+everything it needs to repair a body link — the 1-based line, the raw
+destination as written, and the path the destination normalises to — is
+carried there too. A new rule adds a value to `rule`, never a field to the
+record.
 
 Exit codes:
 - 0 — clean.
 - 1 — warnings only (stale docs; medium-confidence inferences; unknown-field warnings).
-- 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs, duplicate metadata labels, missing inverses).
+- 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs, duplicate metadata labels, missing inverses, broken body links, body links that leave the docs root).
 
 **Duplicate metadata labels (M25 — D7).** A metadata label may appear
 **at most once** per document. Repeatability lives in the **bullets** under
@@ -755,6 +768,313 @@ docs check                                  # clean
 
 When either endpoint is archived, the same commands need `--reason` (see
 `docs relate` below).
+
+#### Markdown body-link validation (M27 — D1–D4b)
+
+From M27 `docs check` also reads the **body** of every walked document and
+validates the local Markdown links it finds there. Two rules come out of it —
+`broken-body-link` and `outside-root-body-link` — and both are hard errors
+(exit 2). They are emitted **immediately after** the document's `broken-ref`
+group, keeping the two reference-resolution rules adjacent, and within that
+block in source order (line, then column).
+
+`docs touch --check` inherits both rules: it runs the same `check_tree` over
+the same root. There is **no new flag, no new verb, and no opt-out knob** —
+no `[check] body_links = false`. A missing file is a fact, not a style
+preference.
+
+**What is scanned.** Every document `docs check` walks, in full — the raw
+text of the file, metadata block included, not just the prose after it. A
+`Related:` bullet cannot be link-shaped, so scanning the whole text costs
+nothing and gives M28 a single offset base. Two exclusions:
+
+- **The root-level generated `INDEX.md` is never scanned.** The walk already
+  skips it for every rule, and its links are regenerated from the tree rather
+  than authored. This is stated here rather than left as an accident of the
+  walker. A **nested** `INDEX.md` (one inside a subdirectory, e.g. an adopted
+  tree's own per-folder index) is an ordinary document and **is** scanned —
+  `convention.md` › *INDEX file* already scopes the special case to the file
+  at the docs root.
+- **A `malformed` document is never body-link checked.** The existing early
+  return on a missing H1 stands, so a document with no H1 gets its `malformed`
+  finding and no body-link pile-on — mirroring how reciprocity validation
+  skips unparseable documents.
+
+##### The supported grammar (M27 — D1)
+
+The scanner recognises a **deliberately bounded, CommonMark-*shaped* subset**.
+It is not a CommonMark parser and this spec claims no conformance; what it
+recognises is exactly the table below and nothing else.
+
+| Form | Example | Recognised |
+|---|---|---|
+| Inline link, plain destination | `[label](plan.md)` | **yes** — `kind: "inline"` |
+| Inline link, angle destination | `[label](<my plan.md>)` | **yes** — `kind: "inline"` |
+| Inline link with a title | `[label](plan.md "The plan")` | **yes** (`"…"`, `'…'`, `(…)`) |
+| Reference definition | `[plan]: plan.md "The plan"` | **yes** — `kind: "reference-definition"`, 0–3 leading spaces, line-anchored |
+| Shortcut / collapsed / full reference **use** | `[plan]`, `[plan][]`, `[x][plan]` | **no** — a use carries no destination; the *definition* is what gets validated |
+| Image | `![diagram](d.png)` | **no** (M27 — Q2, a scoped exclusion) |
+| Autolink | `<https://x>`, `<plan.md>` | **no** |
+| Raw HTML | `<a href="plan.md">` | **no** |
+
+Exactness, pinned rather than implied:
+
+1. **Label.** Opens at an unescaped `[` and ends at the **first unescaped
+   `]`**. It may span newlines but **never a blank line** — the scan for the
+   closing `]` is bounded at the first blank line. The label is never
+   validated and never resolved. Balanced brackets *inside* a label
+   (`[a [b] c](x.md)`) are **not** supported: the label ends at that first
+   `]`, so the span is not a recognised link. Escape the inner brackets to
+   write one.
+2. **Image exclusion.** An otherwise-recognised inline link whose `[` is
+   immediately preceded by an unescaped `!` is an image and is skipped.
+3. **Plain destination.** Begins after the `(` and any leading whitespace, and
+   ends at the first **unescaped whitespace** or at an unescaped `)` at
+   nesting depth 0. Unescaped `(` and `)` inside it nest; the destination is
+   recognised only when they are **balanced** and never nest deeper than
+   `MAX_DESTINATION_PAREN_DEPTH = 3`. Beyond that depth, or left unbalanced,
+   the span is not a recognised link. A newline is whitespace, so a plain
+   destination never spans lines.
+4. **Angle destination.** `<…>`: whitespace is allowed inside, a literal `>`
+   must be backslash-escaped, and a newline inside the brackets terminates the
+   candidate (not a link). The **angle brackets are part of the destination
+   token** — see *The destination-token span* below.
+5. **Title.** After at least one whitespace character following the
+   destination: `"…"`, `'…'`, or `(…)`. An unterminated title means the span
+   is **not** a recognised link. The title is never part of the destination
+   token and is never validated. **Whitespace is what disambiguates**:
+   `[a](foo(bar).md)` is a balanced-paren destination, `[a](foo.md (title))`
+   is a destination plus a parenthesised title. Anything other than a title
+   between the destination and the closing `)` means the span is not a
+   recognised link.
+6. **Reference definition.** Line-anchored: 0–3 leading spaces, `[label]:`,
+   optional whitespace, the destination, then an optional title to end of
+   line. `kind` is `"reference-definition"`; both rules and both message
+   templates are otherwise identical — the kind lives on the scanner's record,
+   never in the finding.
+7. **Backslash escapes.** A `\` followed by any ASCII punctuation character
+   **or a space** yields that character literally; a `\` before anything else
+   is a literal backslash. The space leg follows from rule 3 (a destination
+   ends at the first *unescaped* whitespace). An escape therefore always lets
+   an author opt a span out: `\[x](y.md)` is not a link.
+8. **Percent-escapes.** Decoded before resolution, invalid sequences passing
+   through unchanged. The **raw** spelling is what the finding reports.
+9. **Fragments.** The destination is split on the **first** `#`; the left side
+   is the path, the right side is the fragment. The fragment is preserved and
+   **never validated** — `docs check` does not check whether the heading
+   exists.
+
+**Order of operations on a destination token — BINDING.** Strip a surrounding
+`<…>` pair → split on the first `#` → backslash-unescape → percent-decode →
+join to the referring document's directory → normalise. Three consequences
+follow from that order and are stated so they are specified rather than
+emergent:
+
+- a percent-encoded `%23` is **not** a fragment delimiter (the split already
+  happened), while a percent-encoded `%2F` **is** a path separator;
+- a backslash cannot escape a `#` out of being the fragment delimiter, for the
+  same reason — the split precedes unescaping;
+- the fragment is carried **verbatim**, neither unescaped nor decoded, because
+  nothing ever resolves it.
+
+##### The destination-token span (M27 — D5)
+
+Each recognised occurrence is recorded with the exact character offsets of its
+**destination token** in the *original* document text, alongside the 1-based
+line and column of that token's first character. Two properties are frozen
+here because **M28** — which rewrites destinations when a document moves —
+depends on them, and because they are what stops this project ever growing a
+second Markdown parser:
+
+- **`raw` is reported; the decoded path is resolved.** The finding always
+  names the destination exactly as written; resolution happens on the
+  unescaped, decoded, fragment-stripped path.
+- **The span is exactly the destination token** — `text[start:end] == raw`.
+  It **includes** the `<…>` angle brackets when the destination has them and
+  **excludes** any title. Splicing a replacement into that span and copying
+  every other byte is how a rewrite preserves labels, titles, quoting form,
+  fragments, and surrounding prose.
+
+M27 itself writes nothing. Validation is read-only; the rewrite is M28's
+milestone.
+
+##### What the scanner never sees (M27 — D2)
+
+Before any matching, the document text passes through a **length-preserving**
+mask that replaces the *contents* of code with spaces:
+
+- **fenced code blocks** — ``` and `~~~`, 3+ markers, 0–3 leading spaces,
+  closed by a fence of the **same character** and **equal or greater** length;
+- **inline code spans** — matched backtick runs of equal length. An inline
+  span **never crosses a line boundary**, so one unpaired backtick cannot mask
+  the rest of a document.
+
+**The order is part of the contract:** fences are masked first (line-based),
+then inline spans over the already-masked text, so a stray backtick inside a
+fenced block cannot open a phantom span.
+
+**Nothing else is code.** In particular there is **no 4-space
+indented-code rule** (M27 — Q3): a link indented four spaces inside a
+blockquote or a list continuation is a real link and **is** scanned. The
+author-facing consequence is a `convention.md` rule — *fence code samples that
+contain link syntax* — plus the backslash escape as an always-available
+opt-out.
+
+**Length preservation is a guarantee, not an implementation detail.** The mask
+has the same length as the input and a newline at every offset the input has
+one, so every character offset the scanner reports is an offset into the
+**original** text. That is what makes the span contract above usable by M28.
+
+##### Destination classification (M27 — D2)
+
+Every recognised destination is classified before any resolution happens.
+Only `local` destinations are ever resolved or reported; the other five kinds
+produce **no finding of any kind, ever**.
+
+| Kind | Test (on the token, angle brackets stripped) | Example |
+|---|---|---|
+| `empty` | the destination is the empty string | `[a]()` |
+| `fragment` | starts with `#` | `[a](#section)` |
+| `protocol-relative` | starts with `//` | `[a](//host/x)` |
+| `root-absolute` | starts with `/` | `[a](/path.md)` |
+| `scheme` | matches `^[A-Za-z][A-Za-z0-9+.-]*:` (case-insensitive) | `[a](https://x)`, `[a](mailto:x@y)` |
+| `local` | anything else | `[a](plan.md)` |
+
+The tests run in that order, so `//host/x` is `protocol-relative` rather than
+`root-absolute`. A **root-absolute** destination names a web-server root, not
+a filesystem path, and is out of scope for a tree-relative tool. Note that a
+Windows-style `C:\docs\plan.md` is **scheme**-shaped and therefore silent —
+deliberate, and stated so it is not mistaken for a gap.
+
+Classification runs on the token **as written**: escapes are not decoded
+first, so a percent-encoded `%23` at the front does not make a destination
+fragment-only.
+
+##### Resolution and containment (M27 — D3 / D4b)
+
+A body-link destination is resolved **from the directory of the document that
+contains it** — the single most important difference from a `Related:` target,
+which is root-relative. `../` is therefore normal and expected in a body link
+and never appears in a `Related:` bullet.
+
+The containment test is **pure path arithmetic**, POSIX on every platform, in
+this fixed order, with **no filesystem access at all**:
+
+1. take the referring document's root-relative POSIX path and drop its last
+   segment, giving the document's directory (empty for a root-level doc);
+2. join the unescaped, decoded destination path to it and normalise it
+   lexically — `..` segments are collapsed textually, symlinks are not
+   followed and `resolve()` is never called;
+3. the destination is **contained** when the result is neither `..` nor
+   prefixed by `../`.
+
+Three cases the contract answers outright:
+
+- **Escape-then-return.** `../sub/../back-inside.md` from `sub/deep.md`
+  normalises back under the root, so it is **contained** and validated
+  normally. The verdict is a function of two strings and cannot vary with
+  filesystem state.
+- **Symlinks.** `Path.resolve()` is **not** used. This deliberately differs
+  from the `resolve()`-based test `docs check` uses to decide whether a file
+  sits in the archive subtree: that test asks *where does this file physically
+  live*, and this one asks *what did the author write*. Following links would
+  let filesystem layout decide whether a rule fires, and could push an in-root
+  destination out or the reverse.
+- **The root itself.** `sub/..` normalises to `.`, which is contained and,
+  being an existing directory, satisfied. `.` therefore never appears in
+  either message.
+
+**Any existing filesystem entry satisfies a contained destination** — file
+**or directory**, any extension (M27 — Q7). `convention.md` already states
+that non-Markdown files may be referenced from prose and that `Related:`
+checks existence regardless of extension; body links inherit that, and a link
+to a directory is a legitimate Markdown link. `[exclude]` / `.docsignore` /
+`--exclude` govern which documents are **walked**, never what a destination
+may point at, so a link to an excluded-but-existing file resolves.
+
+**The out-of-root boundary is specified behaviour, not an implementation
+detail.** `docs check` never stats, opens, or follows anything outside the
+docs root. A check has to be a **function of the tree alone**: a destination
+that resolves only because of what happens to sit beside the checkout would
+give one verdict in a git clone, another in a container, and a third in a
+vendored subtree — and a result that varies with the tree's surroundings
+cannot gate CI. So an escaping destination is detected by path arithmetic and
+**reported**, never probed. Whether its target exists is deliberately not
+knowable to `docs check`. Checking the same bytes from a different location
+yields the identical result.
+
+##### Evaluation order — BINDING (M27 — D4b)
+
+The containment test runs **before** the existence test, so the two rules
+never double-report. Per link occurrence, in this order:
+
+```
+1. classify the destination   → not `local`?   → silence, stop
+2. containment (lexical only) → escapes?       → outside-root-body-link, stop
+3. existence (inside the root) → missing?      → broken-body-link
+```
+
+A destination that leaves the root yields `outside-root-body-link` **only**
+and is *never* additionally reported as `broken-body-link` — deciding whether
+it is broken would require precisely the stat the boundary forbids. This is a
+fixed evaluation order, not an artefact of the order two conditions happen to
+be written in.
+
+##### The two findings (M27 — D4 / D4b)
+
+Both are `severity: error`, exit code **2**, **one finding per occurrence**
+(three broken `[x](plan.md)` links on three lines are three repairs), and
+attached to the **referring** document — blaming the referrer, exactly as
+`broken-ref` and `missing-inverse` do. Both message templates are single
+lines and both are frozen:
+
+```
+body link at line <N> does not resolve to an existing path: <raw> (resolves to <candidate>)
+body link at line <N> leaves the docs root: <raw> (normalises to <candidate>); links outside the tree must be URLs
+```
+
+Worked instances:
+
+```
+body link at line 12 does not resolve to an existing path: plan.md (resolves to archive/2026-01-01/plan.md)
+body link at line 52 leaves the docs root: ../shared/glossary.md (normalises to ../shared/glossary.md)
+```
+
+- `<N>` is the **1-based line** of the destination token's first character.
+- `<raw>` is the destination token **exactly as written** — angle brackets,
+  percent-escapes, backslash escapes and all. The finding reports what the
+  author typed, so the author can find it.
+- `<candidate>` for `broken-body-link` is the canonical **root-relative**
+  POSIX path the destination normalises to; for `outside-root-body-link` it is
+  the lexically normalised `../`-prefixed path. It is printed
+  **unconditionally**, even when it is identical to `<raw>` — there is no
+  "it depends" cell.
+
+The rule ids are `broken-body-link` and `outside-root-body-link`. The second
+reuses the `outside-root` token `docs archive` already uses for exactly this
+condition, so the tool has one name for one idea, and shares the `-body-link`
+suffix so the pair reads as a family.
+
+##### Upgrading from 1.x
+
+A tree that has carried unnoticed prose damage starts failing `docs check`.
+That is deliberate, and it is what the 2.0 major version exists to carry. No
+automatic conversion occurs and there is **no repair verb** — `docs` will not
+guess whether a link should be rebased, repointed, or deleted.
+
+The overwhelmingly common cause of `broken-body-link` is a relative link in a
+document an **older `docs` archived**: the destination was correct at the
+document's original location and no version of the tool has ever rebased it,
+so it now needs the `../../` that the move into `archive/YYYY-MM-DD/` should
+have added. The fix for `outside-root-body-link` is different in kind: the
+destination names something the tree does not own, so it becomes a **URL**.
+
+```sh
+docs check                # read the findings: line, raw destination, candidate
+                          # broken-body-link  → rebase the destination
+                          # outside-root-body-link → replace it with a URL
+docs check                # clean
+```
 
 **Stale-window resolution (M19 — D2).** The stale window the `stale` rule
 applies is resolved as **CLI `--stale` > `[check] stale_days` > unset**:

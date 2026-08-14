@@ -27,16 +27,20 @@ Related:
 - Surface: parse a deliberately bounded set of real local Markdown body links
   and make a missing destination a hard `docs check` error. This milestone
   detects damage and establishes the shared scanner; M28 owns mutation.
-- Progress: **Active / milestone-setup complete (2026-08-14).** M26 is
-  implementation-complete and merged to `main` (`393fb53`), so this is the
-  next implementation milestone. No TDD phase has started. **All seven setup
+- Progress: **Active / Phase 1 — Define Contract complete (2026-08-14).** M26
+  is implementation-complete and merged to `main` (`393fb53`), so this is the
+  next implementation milestone. **All seven setup
   questions are RESOLVED** — Q1, Q2, and Q5 by the operator; Q3, Q4, Q6, and
   Q7 conductor-resolved — and are recorded in *Resolved setup questions
   (Q1–Q7, BINDING)* below. **Q5 was resolved against the setup
   recommendation**: a destination resolving outside the docs root is skipped,
-  not validated. Phase 1 does not re-open any of them; it freezes the exact
-  grammar, the masking contract, the resolution and under-root rules, the
-  finding's message template, and the `BodyLink` span contract against them.
+  not validated — then **amended**, so the escape is *reported* (D4b).
+  Phase 1 did not re-open any of them; it froze the exact
+  grammar, the masking contract, the resolution and containment rules and
+  their precedence, **both** message templates, and the `BodyLink` span
+  contract against them, in `cli.md`, `convention.md`, and *Decisions
+  (Phase 1 — BINDING)* below. Three setup-frozen items were amended under
+  conductor decision and recorded there. Phase 2 — Write Tests (RED) is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -224,14 +228,17 @@ in the frozen contract rather than left to the implementation:
   `missing-inverse` without opening it and M27 does the same. Everything an
   agent needs — 1-based line, raw destination as written, and the resolved
   candidate — is carried in `message`, in a single line frozen in Phase 1.
-  Proposed shape, for Phase 1 to make exact:
+  The shape proposed at setup was
 
   ```
   body link at line <N> does not resolve to a file: <raw-dest> (resolves to <candidate>)
   ```
 
-  `<candidate>` is the contained, root-relative POSIX path the destination
-  normalises to.
+  and Phase 1 **amended it** — see *Decisions (Phase 1 — BINDING)* ›
+  *Amendments to the setup-frozen material*. "to a file" contradicts the
+  operator-binding Q7 (a **directory** also satisfies a destination), so the
+  frozen form reads `does not resolve to an existing path:`. `<candidate>` is
+  the contained, root-relative POSIX path the destination normalises to.
 - **The rule lives in `check_doc`**, not in a second `check_tree` pass. Unlike
   `missing-inverse` it is purely per-document: it needs only the referring
   document's text and its own directory. `check_doc`'s existing early return on
@@ -512,7 +519,7 @@ in *Evidence → regression coverage* below.
 
 ## Deliverables
 
-- [ ] Supported Markdown forms, masking rules, resolution and containment
+- [x] Supported Markdown forms, masking rules, resolution and containment
       rules, the two findings, and their precedence frozen in Phase 1 against
       the resolved Q1–Q7.
 - [ ] Pure, stdlib-only, linear scanner with exact destination-token spans and
@@ -594,11 +601,13 @@ in *Evidence → regression coverage* below.
   definitions) lives in inline strings against the pure scanner — the M25 rule,
   because those cases assert on parse output, not on a tree walk.
 - Exit: fixtures are structure-only (never date-sensitive), parse
-  deterministically, and each yields exactly its intended finding set;
-  `test_check_tree_legacy_fixtures_gain_no_new_findings` is extended to **both**
-  new rules and passes for all 33 pre-M27 trees — which the setup census
-  already predicts, having found zero escapes and zero unresolved local
-  destinations in every one of them.
+  deterministically, and each yields exactly its intended finding set; a
+  **new sibling lock** (`test_check_tree_pre_m27_fixtures_gain_no_body_link_findings`,
+  Phase-1 amendment 3) covers **both** new rules across all 33 pre-M27 trees —
+  which the setup census already predicts, having found zero escapes and zero
+  unresolved local destinations in every one of them — while
+  `test_check_tree_legacy_fixtures_gain_no_new_findings` stays byte-identical
+  and simply gains the six new trees as parametrizations.
 
 ### Phase 4 — Run Tests (RED Baseline)
 
@@ -703,7 +712,7 @@ in *Evidence → regression coverage* below.
 
 ## Phase checklist
 
-- [ ] Phase 1 — Define Contract
+- [x] Phase 1 — Define Contract
 - [ ] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
@@ -726,6 +735,234 @@ in *Evidence → regression coverage* below.
 - Detection (M27) and mutation (M28) are separate milestones sharing **one**
   scanner; there is never a second Markdown parser.
 - The package version stays `1.8.0`; M29 performs the single bump (M25 — D6).
+
+## Decisions (Phase 1 — BINDING)
+
+Phase 1 freezes the surface Phase 2 asserts against. Everything below is
+binding for M27; Phases 5–7 implement it verbatim. The setup decisions
+(D1–D7 plus D4b) and the setup questions (Q1–Q7) are **not** re-opened — this
+section makes them exact. The full author-facing statement lives in
+`cli.md` › *Markdown body-link validation (M27 — D1–D4b)* and
+`convention.md` › *Body links (M27)*; what follows is the machine-facing
+contract plus the decisions that could not be read off the setup text.
+
+### Amendments to the setup-frozen material (conductor-binding)
+
+Two frozen items could not stand as written. Both are recorded here so the
+binding scope and the frozen contract cannot disagree.
+
+| # | Amendment | Why the frozen form could not stand |
+|---|---|---|
+| 1 | **`broken-body-link`'s message becomes `body link at line <N> does not resolve to an existing path: <raw> (resolves to <candidate>)`.** D4's proposed `does not resolve to a file:` is retired. | It contradicts the **operator-binding Q7**: any existing filesystem entry — file **or directory** — satisfies a destination. A correct link to a directory that later broke would have been reported with prose asserting the wrong test, and an agent reading it would look for a missing *file*. D4 is amended in place. |
+| 2 | **`outside-root-body-link`'s message is specified** as `body link at line <N> leaves the docs root: <raw> (normalises to <candidate>); links outside the tree must be URLs`. | D4b named the rule, its severity, its exit code, its granularity and its precedence, but **never gave a message**. Phase 2 asserts contract strings verbatim, so leaving it to Phase 6 would have made the test unwritable. The trailing clause names the repair, mirroring `missing-inverse`'s `(or remove the edge)`; `broken-body-link` names its repair by printing the candidate path the tool probed. |
+| 3 | **The 33-tree no-new-findings lock is a NEW sibling test, not an extension of `test_check_tree_legacy_fixtures_gain_no_new_findings`.** The Phase-3 exit criterion is amended in place below. | The existing test's tree list excludes `reciprocal-*`, so it covers **23** trees, not 33 — extending its assertion would not deliver the stated coverage, and would additionally make the three deliberately-damaged `bodylink-*` trees Phase 3 authors **fail** it. A sibling parametrized over the 33 non-`bodylink-*` trees delivers the coverage the milestone asked for **and** keeps M27's no-regression proof at a clean zero moved test ids. The existing test stays **byte-identical**; the six new trees are swept into it (23 → 29) and pass, because it asserts only `missing-inverse == []`. |
+
+### Frozen message templates (BINDING)
+
+```
+body link at line <N> does not resolve to an existing path: <raw> (resolves to <candidate>)
+body link at line <N> leaves the docs root: <raw> (normalises to <candidate>); links outside the tree must be URLs
+```
+
+`<N>` is the 1-based line of the destination token's first character; `<raw>`
+is the destination token **exactly as written** (angle brackets, percent- and
+backslash-escapes included); `<candidate>` is the canonical root-relative
+POSIX path for `broken-body-link` and the lexically normalised `../`-prefixed
+path for `outside-root-body-link`. `<candidate>` prints **unconditionally**,
+even when it equals `<raw>` — no "it depends" cell (M26's rule).
+
+Both rules: `severity: error`, exit **2** through the unchanged `exit_code_for`
+(the rule adds a value to an enumeration, not a branch to a function); **one
+finding per occurrence**; attached to the **referring** document; JSON key set
+**closed** at `{path, severity, rule, message}`; emitted immediately after the
+document's `broken-ref` group and before the `stale` block, in source order
+(line, then column) within that block.
+
+### Contract points that could not be read off the setup text
+
+Each of these had to be settled for Phase 2's assertions to have an answer.
+All are stated author-facing in `cli.md`; they are itemised here because they
+are decisions, not restatements.
+
+1. **A label may span newlines, but never a blank line.** The scan for the
+   closing `]` is bounded at the first blank line. Forced by real data:
+   `convention.md`'s exclusion cross-reference and `agent-native-invocation.md`'s
+   source note are both real, resolving, load-bearing links whose label wraps.
+   Excluding them would make M27 blind to a link **M28 must rewrite** — so
+   when `cli.md` later moves, M28 would silently leave it broken while M27
+   reported damage its sibling caused but could not see. Measured cost of
+   allowing them: 2 extra spans, **0** extra findings.
+2. **A label ends at its first unescaped `]`; balanced brackets inside a label
+   are not supported.** Bounded grammar, stated as an exclusion with an escape
+   hatch. Verified zero occurrences in `docs/`, the 33 fixture trees, and the
+   bundled skill, so it costs nothing today.
+3. **An inline code span never crosses a line boundary.** Otherwise a single
+   unpaired backtick masks the remainder of a 112 KB `cli.md` — unbounded
+   false negatives, the exact failure mode E6 exists to prevent. All three
+   measured E5 inline-span cases are single-line, so the choice is
+   behaviourally neutral on this tree.
+4. **`MAX_DESTINATION_PAREN_DEPTH = 3`,** counted over parentheses *inside*
+   the destination (the link's own delimiters do not count), and named as a
+   docs-cli bounded-scanner bound — **not** a CommonMark conformance claim
+   (D1 already licenses that framing).
+5. **Backslash escapes cover `\` + any ASCII punctuation character *or a
+   space*.** The space leg is forced by "the destination ends at the first
+   *unescaped* whitespace"; D1's six named characters are a subset.
+6. **Destination decoding order:** strip a surrounding `<…>` pair → split on
+   the first `#` in the remaining **raw** text → backslash-unescape →
+   percent-decode (`urllib.parse.unquote`; invalid sequences pass through) →
+   join → normalise. Consequences, all specified: a decoded `%23` is **not** a
+   fragment delimiter, a decoded `%2F` **is** a path separator, a backslash
+   cannot escape a `#` out of being the fragment delimiter, and the fragment
+   is carried verbatim because nothing resolves it.
+7. **Classification runs on the token as written, with a surrounding `<…>`
+   pair stripped first** — so an angle-wrapped autolink-shaped destination
+   classifies as `scheme` rather than `local`. The six kinds are tested in the
+   order `empty`, `fragment`, `protocol-relative`, `root-absolute`, `scheme`,
+   `local`, which is why `//host/x` is protocol-relative rather than
+   root-absolute.
+8. **Containment uses `posixpath`, explicitly — never `os.path`.** D3's
+   "`os.path.normpath`-style" is a defect: on Windows `os.path.normpath`
+   rewrites `/` to `\` and treats `\` as a separator, making the containment
+   verdict platform-dependent and destroying the exact hermeticity property
+   D4b exists to guarantee. This reuses `_canonical_related_target`'s stated
+   "POSIX paths on every platform" rationale.
+9. **The containment predicate is byte-for-byte the one `docs archive`
+   already uses** for its `outside-root` ineligibility (`rel == ".."` or
+   `rel.startswith("../")`), minus the `/` leg — a root-absolute *body*
+   destination is classified `root-absolute` and silenced **before**
+   containment runs, whereas a root-absolute `Related:` target is
+   `outside-root`. That divergence is deliberate: `/path` in prose names a web
+   root, not a tree path.
+10. **The whole document text is scanned, with offsets into the original
+    text** — not the post-metadata body. A `Related:` bullet cannot be
+    link-shaped (verified: zero reference definitions exist anywhere in the
+    repository), and scanning the body instead would hand M28 a second offset
+    base to reconcile.
+11. **`.` never appears in either message.** `sub/..` normalises to `.`, which
+    is contained and — being the root directory, an existing entry — satisfied.
+12. **Pathological-input runtime bound: ≥200 KB of adversarial input in under
+    2.0 s** (roughly 50× the expected cost), stated with its flakiness
+    trade-off. The bound exists to catch catastrophic backtracking, not to
+    benchmark.
+
+### The `BodyLink` span record and the frozen Phase-5 signatures
+
+Contract only — **no code lands in Phase 1**.
+
+```python
+BODY_LINK_KINDS: frozenset[str] = frozenset({"inline", "reference-definition"})
+DESTINATION_KINDS: frozenset[str] = frozenset(
+    {"local", "empty", "fragment", "scheme", "protocol-relative", "root-absolute"}
+)
+MAX_DESTINATION_PAREN_DEPTH: int = 3
+
+@dataclass(frozen=True)
+class BodyLink:
+    kind: str            # a BODY_LINK_KINDS member
+    line: int            # 1-based line of the destination token's first character
+    column: int          # 1-based column of the same character
+    raw: str             # destination token EXACTLY as written; == text[start:end]
+    path: str            # backslash- then percent-unescaped path part, fragment removed
+    fragment: str | None # text after the FIRST '#', without the '#'; None when absent
+    start: int           # offset into the ORIGINAL text
+    end: int             # one past the last character
+
+def _mask_code(text: str) -> str
+def scan_body_links(text: str) -> tuple[BodyLink, ...]
+def classify_destination(raw: str) -> str                      # a DESTINATION_KINDS member
+def normalise_body_link_target(doc_rel: str, dest_path: str) -> str   # pure posixpath
+def _body_link_is_contained(candidate: str) -> bool
+def body_link_findings(path: Path, text: str, root: Path) -> list[Finding]
+```
+
+- **`text[link.start:link.end] == link.raw` is a named invariant** with its own
+  parametrized test over every supported form. This is *the* M28 handoff:
+  excluding the `<…>` brackets from the span would break M28 the moment it
+  splices a destination containing a space. The span **includes** the angle
+  brackets and **excludes** the title.
+- **`scan_body_links` is a pure function of the text** and reports *every*
+  recognised occurrence, including non-`local` ones. Containment and existence
+  are `body_link_findings`' job (D5). That split is what lets
+  `outside-root-body-link` exist at all and what M28 consumes.
+- **`normalise_body_link_target` takes the referring document's
+  root-relative POSIX path** (e.g. `archive/2026-01-01/old-log.md`) and drops
+  the last segment itself, so callers never pre-compute a directory.
+- **`body_link_findings` is called from `check_doc`**, after the `broken-ref`
+  loop and before the `stale` block. There is **no** second `check_tree` pass:
+  both rules need only the referring document's own text and its own
+  directory. `docs touch --check` inherits them for free through
+  `_run_touch_check` → `check_tree`.
+
+**Reuse — no new machinery is invented.** Root-relative rendering:
+`_root_relative`. Lexical normalisation: the `posixpath.normpath` idiom of
+`_canonical_related_target`. Containment: the predicate in
+`_candidate_exclusion_reason`, minus the `/` leg (point 9 above). Walk and
+`INDEX.md` skip: `_iter_doc_texts`, unchanged. Exit codes: `exit_code_for`,
+unchanged. Human output: `_print_check_findings`, unchanged. Record
+serialisation: `finding_to_json`, unchanged. No new exception class, no new
+flag, no new verb.
+
+**Phase-5 implementation note (not a contract term).** The scanner must stay
+linear on adversarial input. Two shapes to avoid: re-deriving the blank-line
+bound from scratch at every candidate (quadratic on a long fence-free
+document), and restarting the outer scan at `open + 1` after a failed
+candidate. Restarting at the failed candidate's closing `]` is equivalent for
+this grammar — whether a candidate forms a link depends on what follows the
+`]`, not on which `[` found it — except after the image (`!`) rejection, which
+does depend on the opening `[` and therefore needs the cached closing position
+rather than a rescan.
+
+### Deviation from the Phase-1 file list (deliberate, logged)
+
+The milestone's Phase-1 file list names "Interface signatures … frozen in a
+*Decisions (Phase 1 — BINDING)* section here rather than stubbed in
+`src/docs_cli/cli.py`". Phase 1 accordingly made **zero** `cli.py` edits:
+stubs would change the Phase-4 subprocess RED reasons and risk baseline
+behaviour, and the phase's own exit criterion is "no behavior changes". The
+signatures above land as real code in Phase 5. This mirrors the M25 and M26
+precedent.
+
+### Follow-through recorded at Phase 1 (so it cannot be lost)
+
+| # | Item | Phase |
+|---|---|---|
+| 1 | `Finding`'s docstring rule enumeration gains `broken-body-link` and `outside-root-body-link`. | 5 / 6 |
+| 2 | `docs check`'s argparse `description` says "and broken `Related:` references"; it must also name body links (surface-parity gate). | 7 |
+| 3 | The bundled `SKILL.md`'s `docs check` row names neither rule. | 7 |
+| 4 | The bundled `references/use-cases.md` — the "Validate in CI" row and a 2.0 upgrade block. | 7 |
+| 5 | `CHANGELOG.md` under the existing `UNRELEASED` heading, with the adopter upgrade recipe for **both** rules. **No** version bump (M25 — D6). | 7 |
+| 6 | `test-strategy.md` › *What we don't test* still says "the body content is opaque" — false the moment M27 lands. (`convention.md`'s twin statement is on the byte-parity gate, so it was corrected in Phase 1.) | 10 |
+
+### Authoring traps this contract creates (recorded so Phase 2–7 cannot trip them)
+
+1. **`test_bundled_skill_has_no_repo_relative_links` scans raw lines.** It
+   looks for the literal substring `](../` in every bundled skill `.md`,
+   fences included — a fence does not protect you, because the test never
+   masks anything. `references/cli.md` and `references/convention.md` are
+   byte-identical copies of the Phase-1 edits, so **neither spec may ever
+   write a full link whose destination starts with `../`**, even as an
+   example. Both files are at zero occurrences today and Phase 1 keeps them
+   there. Authoring rule: name an escaping destination as a bare path in
+   inline code, never in link form.
+2. **`test_installed_skill_references_do_not_depend_on_source_checkout`
+   forbids the literal `../src/docs_cli/` in any bundled reference** — a
+   **third** gate, found by tripping it. The natural worked instance for
+   `outside-root-body-link` is E7's real destination, `charter.md:52`'s
+   `../src/docs_cli/skill/references/use-cases.md`, and writing it into
+   `cli.md` breaks that test the moment the byte-identical mirror is copied.
+   Fenced or not makes no difference; the test scans raw text. The worked
+   instance therefore uses a neutral escaping path, and the real one is named
+   in E7 and in this milestone (neither is on the bundled-skill gate). The
+   same test also forbids `../../../../docs/`.
+3. **Every example this contract writes becomes scannable once Phase 6
+   lands.** Every link-shaped example in `cli.md`, `convention.md`, and this
+   milestone lives inside a fence or an inline code span — already the house
+   style. Nothing may become a **real** reference definition either: a
+   line-anchored `[plan]: plan.md` in unfenced prose would be one. Verified
+   after the Phase-1 edits: `cli.md` and `convention.md` carry no new
+   scannable span, and the repository still contains zero reference
+   definitions.
 
 ## Resolved setup questions (Q1–Q7, BINDING)
 
