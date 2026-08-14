@@ -41,7 +41,7 @@ the milestone checklist synchronized.
 | 1. Define Contract | **Done** | 2026-08-14 | Froze the supported Markdown grammar subset, the masking rules, destination classification/normalisation/resolution, **the containment test and its precedence over existence**, both findings (`broken-body-link`, `outside-root-body-link`) with severity / message template / exit code / ordering, the `BodyLink` span contract M28 consumes, and the legacy-tree policy — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | **Done** | 2026-08-14 | Scanner unit tests over every supported and every excluded form; both rules' integration + subprocess/JSON locks; the no-double-report precedence lock and the never-stat-outside-the-root lock; the E5/E6 false-positive and false-negative locks; the pathological-input runtime lock. |
 | 3. Create Data/Fixtures | **Done** | 2026-08-14 | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
-| 4. Run Tests (RED Baseline) | Pending | — | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
+| 4. Run Tests (RED Baseline) | **Done** | 2026-08-14 | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
 | 5. Update Base Interfaces | Pending | — | `BodyLink` model, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers; no rule wired yet. The scanner reports every local destination — containment is the rule's job. |
 | 6. Implement Offline/Core Path | Pending | — | Wire both rules into `check_doc`, containment before existence; land the live-tree repair — 139 archived rebases plus `charter.md:52`'s URL conversion — in the same phase so the dogfood gate never sits knowingly RED. |
 | 7. Update Tool/Wrapper Layer | Pending | — | `cli.md` (rule list, exit codes, the explicitly stated out-of-root boundary) / `convention.md` (the inside-the-root invariant, fence-your-samples, the third archived exception) / bundled skill / `UNRELEASED` CHANGELOG and the adopter upgrade recipe. No version bump. |
@@ -715,6 +715,135 @@ its own `.docs.toml`.
   clean. `docs check --root docs` — exit 0. Bundled refs byte-identical;
   INDEX snapshot identical.
 - `git diff --stat -- src/docs_cli/cli.py` — **empty**.
+
+## Phase 4 — Run Tests (RED Baseline) — 2026-08-14
+
+### Objective
+
+Prove the new tests fail for the intended missing behaviour and for nothing
+else, and prove **mechanically** — not by assertion — that every pre-existing
+test is still present and still passing.
+
+### Baseline
+
+```
+.venv/bin/python -m pytest tests/ -q --co   →  1064 collected, 0 collection errors
+.venv/bin/python -m pytest tests/ -q        →  122 failed, 942 passed
+```
+
+Zero collection errors, zero xfail, zero xpass, **zero tracebacks**
+(`grep -c "Traceback (most recent call last)"` → **0**). Note the M26
+false-positive trap: several tests assert `"Traceback" not in proc.stderr`,
+which a failure listing echoes, so the bare word is not a usable probe — here
+both probes read 0, which is the honest way to say it.
+
+Exception-class census over `--tb=line`, one line per failure: **105
+`AttributeError`, 17 `AssertionError`, nothing else** (105 + 17 = 122).
+
+### Mechanical no-regression proof
+
+Test-id lists collected from a throwaway `git worktree` at the pre-M27 commit
+`d61da1d` and from HEAD, then intersected with the failing set:
+
+```
+pre-existing ids at d61da1d                        895
+  deliberately removed at M27 (comm -23)             0
+  carried over to HEAD (comm -12)                  895
+carried-over ids failing (comm -12 failed old)       0
+new ids added by M27 (comm -13)                    169      895 + 169 = 1064 ✓
+```
+
+**M27's claim is cleaner than M26's, and it is stated rather than implied:**
+`comm -23` is **0** and `comm -12 failed old` is **0**, because M27 removes
+and modifies **no** pre-existing test. Phase-1 amendment 3 is what buys that —
+adding a sibling lock instead of narrowing `_legacy_tree_names()` — and it is
+corroborated file by file: `git diff d61da1d -- tests/test_cli_check.py` and
+`… -- tests/test_check.py` show **zero** deleted lines each (the only edit to
+an existing file is an added `import shutil`, which ruff's import sorter
+placed above `from datetime import date`). So
+`test_check_tree_legacy_fixtures_gain_no_new_findings`, `_legacy_tree_names()`,
+and the two closed-record pins
+(`test_check_json_emits_finding_array`,
+`test_check_missing_inverse_json_record_keys_unchanged`) are byte-identical to
+the baseline. M26's log rightly calls hiding a moved id the failure mode this
+check exists to catch; for M27 the honest number really is zero.
+
+### RED classification — all 122 traced to a reason
+
+| Count | Family | RED reason |
+|---|---|---|
+| 105 | `tests/test_body_links.py` (the whole module) | `AttributeError` through the `_m27()` getattr indirection on `BodyLink`, `_mask_code`, `scan_body_links`, `classify_destination`, `normalise_body_link_target`, `_body_link_is_contained`, `body_link_findings`, `BODY_LINK_KINDS`, `DESTINATION_KINDS`, `MAX_DESTINATION_PAREN_DEPTH` — all landing in Phase 5 |
+| 9 | `tests/test_check.py` M27 rule tests | plain assertion — neither rule exists, so `check_doc` returns no body-link finding and `check_tree` returns `[]` for `bodylink-broken`, `bodylink-archived` and `bodylink-outside-root`. Covers both frozen messages, the `broken-ref`-then-body-link ordering, `exit_code_for` == 2, E7's does-exist escape, and E6's indented blockquote link |
+| 5 | `tests/test_cli_check.py` M27 tests | plain assertion — the fixture trees exit **0** today. Each also asserts its frozen message, so none is falsely GREEN |
+| 1 | `tests/test_cli_touch.py` | plain assertion — `docs touch --check` inherits the rules, and there are none yet |
+| 2 | `tests/test_skill.py` | plain assertion — the bundled skill's `docs check` row names neither rule id. Phase 7 |
+
+### GREEN-at-baseline locks, classified by name
+
+47 of the 169 new ids are GREEN at baseline (169 − 122). Every one is
+classified, and the arithmetic closes: 1 + 3 + 2 + 1 + 1 + 33 + 6 = 47.
+
+| Lock | Honest status |
+|---|---|
+| `test_check_dogfood_repo_docs_is_clean` (pre-existing, untouched) | **TRANSITIONAL** — genuine today; would be RED between wiring the rules and repairing the tree; restored inside Phase 6's own commit (E4/D6). The single reason the 140-occurrence repair cannot slip to Phase 9, and the one lock whose meaning changes across a phase boundary |
+| `test_check_doc_malformed_doc_gets_no_body_link_findings` | **degenerate** ×1 — genuine once `check_doc`'s early return is load-bearing |
+| `test_check_tree_bodylink_clean_is_clean`, `…_excluded_forms_is_silent`, `…_nested_resolves_up_and_down` | **degenerate** ×3 — the over-fire guard from Phase 6 |
+| `test_check_bodylink_clean_tree_exits_0`, `…_excluded_forms_tree_exits_0` | **degenerate** ×2 — the same guard at the subprocess surface |
+| `test_check_verdict_is_identical_from_a_relocated_copy` | **degenerate** ×1 — the hermeticity lock from Phase 6 |
+| `test_check_tree_bodylink_archived_repaired_copy_is_clean` | **degenerate** ×1 — becomes the proof that the documented repair recipe works, and that its blast radius really is one destination token |
+| `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings[…]` ×33 | **degenerate** ×33 — the genuine regression lock from Phase 6, and the one that delivers the milestone's "all 33 pre-M27 trees" coverage |
+| `test_check_tree_legacy_fixtures_gain_no_new_findings[bodylink-*]` ×6 | **genuine** ×6 — the six new trees must add no `missing-inverse`, which constrains what Phase 3 could put in them |
+| `test_check_json_emits_finding_array`, `test_check_missing_inverse_json_record_keys_unchanged` | **genuine**, untouched — the closed-key-set pins |
+| `test_bundled_ref_matches_source[cli.md\|convention.md]`, `test_bundled_skill_has_no_repo_relative_links`, `test_installed_skill_references_do_not_depend_on_source_checkout` | **genuine** — Phase 1's spec edits must not break byte identity, introduce `](../`, or name `../src/docs_cli/` |
+| `test_a3_project_version_is_1_8_0`, `test_c2_docs_version_is_1_8_0` | **genuine** — no version bump in M27 (M25 — D6) |
+
+### Falsely-GREEN check at this gate
+
+No falsely-GREEN test was found, and the family that would have been one was
+already caught and fixed **in Phase 2**: `load_config` tolerates a missing
+directory and `check_tree` then walks nothing, so the three silent-tree locks
+and the two exit-0 subprocess locks would have passed on fixture trees that
+were never written. Routing every `bodylink-*` tree through an
+existence-asserting helper made them honestly RED until Phase 3, and their
+flip to GREEN when Phase 3 landed is recorded evidence that the guard worked —
+**7** locks flipped, exactly the set Phase 2 predicted, and not one more.
+
+Each of the 5 subprocess RED tests was re-checked one by one against the M26
+lesson: every one asserts a frozen contract string in addition to its exit
+code, so none can be satisfied later by an unrelated exit 2. The
+`bodylink-*` trees exit **0** today, so the returncode half is honest RED on
+its own — but the message half is what keeps it honest afterwards.
+
+### Phase-5/6/7 follow-through (carried from Phase 1, restated so it cannot be lost)
+
+1. `Finding`'s docstring rule enumeration gains both ids (Phase 5/6).
+2. `docs check`'s argparse `description` — currently "and broken `Related:`
+   references" — must name body links (Phase 7 surface-parity gate).
+3. The bundled `SKILL.md` `docs check` row (Phase 7) — locked by
+   `test_skill_md_teaches_body_link_validation`.
+4. The bundled `references/use-cases.md` validate row and the 2.0 upgrade
+   block (Phase 7) — locked by `test_bundled_use_cases_teaches_body_link_repair`.
+5. `CHANGELOG.md` under the existing `UNRELEASED` heading, with the adopter
+   recipe for both rules. **No** version bump (M25 — D6).
+6. `docs/test-strategy.md` › *What we don't test* — "the body content is
+   opaque" (Phase 10). `convention.md`'s twin statement was corrected in
+   Phase 1 because it is on the byte-parity gate.
+7. The Phase-5 linearity note in the milestone's *Decisions (Phase 1 —
+   BINDING)*: precompute the blank-line bounds, and resume a failed candidate
+   at its closing `]` rather than at the opening `[` — with the cached
+   position reused after the image (`!`) rejection, which is the one case that
+   depends on the opening bracket.
+
+### Verification
+
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 47 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues in 48 source files.
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+- `git diff --stat d61da1d -- src/docs_cli/cli.py` — **empty**. Phases 1–4
+  changed no product code, by design.
 
 ## Milestone completion summary
 

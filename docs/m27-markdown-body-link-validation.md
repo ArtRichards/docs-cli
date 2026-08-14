@@ -27,8 +27,8 @@ Related:
 - Surface: parse a deliberately bounded set of real local Markdown body links
   and make a missing destination a hard `docs check` error. This milestone
   detects damage and establishes the shared scanner; M28 owns mutation.
-- Progress: **Active / Step 1 in flight on `m27/phases-1-4`; Phases 1–3
-  complete (2026-08-14).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
+- Progress: **Active / Step 1 complete on `m27/phases-1-4` — Phases 1–4
+  done (2026-08-14).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
   next implementation milestone. **All seven setup
   questions are RESOLVED** — Q1, Q2, and Q5 by the operator; Q3, Q4, Q6, and
   Q7 conductor-resolved — and are recorded in *Resolved setup questions
@@ -44,7 +44,10 @@ Related:
   **+163 test ids, zero removed** — against those frozen strings; Phase 3
   authored the six `bodylink-*` fixture trees, each yielding exactly its
   intended finding set with **no** pre-existing fixture edited. Phase 4
-  captures the classified RED baseline.
+  captured the classified RED baseline — **1064 collected, 122 failed, 942
+  passed**, zero collection errors, zero tracebacks, two exception classes,
+  and **all 895** pre-existing ids mechanically proven present and passing
+  (zero removed, zero regressed). Phase 5 — Update Base Interfaces is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -719,7 +722,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 1 — Define Contract
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
-- [ ] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
