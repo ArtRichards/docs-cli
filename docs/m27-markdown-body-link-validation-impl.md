@@ -24,8 +24,11 @@ the milestone checklist synchronized.
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
 - Progress: **Implementation-complete (2026-08-14).** All ten phases done
   across `m27/phases-1-4` (Step 1) and `m27/phases-5-10` (Step 2); every
-  deliverable met; **1079 passed / 0 failed**; `docs check --root docs` at
-  exit 0 over the repaired tree; the `BodyLink` span contract handed to M28.
+  deliverable met; **1082 passed / 0 failed** (1079 at the Phase-10 commit,
+  plus the three locks the Step-2 audit added alongside three real scanner
+  fixes);
+  `docs check --root docs` at exit 0 over the repaired tree; the `BodyLink`
+  span contract handed to M28.
   The milestone stays `Lifecycle: active` until the M29 publish closeout. All seven setup questions were RESOLVED at setup
   (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
   not re-open them. Q5 was resolved **against** the setup recommendation and
@@ -1261,8 +1264,47 @@ and must not be mistaken for a move; and the two playbook links sit inside a
 4-space-indented blockquote — E6 in the wild — where the link *text* stays
 untouched and only the parenthesised token moves.
 
+**The 29 archived documents, named** — `convention.md`'s exception promises a
+stated blast radius in *29 named archived documents*, so here they are, with
+their occurrence counts and repair classes. The counts sum to **139**;
+`charter.md` carries the 140th (the one escape), is **active**, and therefore
+gets its destination change and its `Updated:` bump and no `Revision:` bullet
+(M25 — D4).
+
+| Document | Occurrences | Class |
+|---|---|---|
+| `archive/2026-05-20/m1-parser-and-index.md` | 5 | rebase |
+| `archive/2026-05-21/m2-mutating-verbs-log.md` | 1 | rebase |
+| `archive/2026-05-21/m2-mutating-verbs.md` | 12 | rebase |
+| `archive/2026-05-22/m3-validation-and-query-log.md` | 7 | rebase |
+| `archive/2026-05-22/m3-validation-and-query.md` | 14 | rebase |
+| `archive/2026-05-22/m4-migration-helper-log.md` | 2 | rebase |
+| `archive/2026-05-22/m4-migration-helper.md` | 16 | rebase |
+| `archive/2026-05-23/m5-claude-code-skill-log.md` | 4 | rebase |
+| `archive/2026-05-23/m5-claude-code-skill.md` | 31 | rebase |
+| `archive/2026-05-24/m6-pypi-distribution-log.md` | 1 | rebase |
+| `archive/2026-05-24/m6-pypi-distribution.md` | 11 | rebase + **move-map ×4** |
+| `archive/2026-05-25/m7-migration-accuracy.md` | 1 | rebase |
+| `archive/2026-05-25/m8-adoption-workflow.md` | 3 | rebase + **playbook URL ×2** |
+| `archive/2026-05-25/m9-pypi-publish-log.md` | 1 | rebase |
+| `archive/2026-05-25/m9-pypi-publish.md` | 2 | rebase |
+| `archive/2026-05-27/m11-pypi-publish-impl.md` | 1 | rebase |
+| `archive/2026-05-27/m11-pypi-publish.md` | 2 | rebase |
+| `archive/2026-05-28/m12-project-rename-impl.md` | 1 | rebase (**the trap** — its destination *is* an `archive/…` path and is still a pure root rebase) |
+| `archive/2026-05-28/m12-project-rename.md` | 1 | **move-map ×1** |
+| `archive/2026-05-29/m13-pypi-publish-impl.md` | 1 | rebase |
+| `archive/2026-05-29/m13-pypi-publish.md` | 3 | rebase |
+| `archive/2026-06-03/m14-robustness-agent-native-impl.md` | 2 | rebase |
+| `archive/2026-06-03/m14-robustness-agent-native.md` | 2 | rebase |
+| `archive/2026-06-03/m15-agent-native-authoring-impl.md` | 1 | rebase |
+| `archive/2026-06-03/m17-pypi-publish.md` | 4 | rebase |
+| `archive/2026-06-12/m19-post-edit-validation-impl.md` | 1 | rebase |
+| `archive/2026-06-12/m19-post-edit-validation.md` | 2 | rebase |
+| `archive/2026-06-12/m20-pypi-publish.md` | 4 | rebase |
+| `archive/2026-07-03/m24-pypi-publish.md` | 3 | rebase |
+
 The **uniform** `Revision:` bullet, on all 29 (S8 — per-document detail
-belongs in this table, not in 29 near-identical bullets):
+belongs in the two tables above, not in 29 near-identical bullets):
 
 ```
 - 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
@@ -1469,12 +1511,23 @@ comm -13 base.ids  head.ids  →  184 ids added by M27 as a whole
 895 + 184 = 1079 ✓
 ```
 
-**Step 2 changed no test.** `git diff ddf0a45 -- tests/*.py` is **empty**;
-the only change under `tests/` is `tests/fixtures/expected/docs-INDEX.md`,
-which is a fixture regenerated inside Phase 6's own commit as Phase-1
-follow-through 7 requires. No test was relaxed, weakened, deleted or
-rewritten to reach GREEN, and none needed to be — which is the whole point of
-having written them first.
+**Step 2 changed no test to reach GREEN.** `git diff ddf0a45 -- tests/*.py`
+was **empty** at this commit; the only change under `tests/` was
+`tests/fixtures/expected/docs-INDEX.md`, a fixture regenerated inside Phase
+6's own commit as Phase-1 follow-through 7 requires. No test was relaxed,
+weakened, deleted or rewritten, and none needed to be — which is the whole
+point of having written them first.
+
+**Restated after the Step-2 same-instance audit**, which found **three real behavioural
+defects** in the scanner by reading the contract rather than the tests —
+including a hermeticity hole that let `docs check` stat outside its own root
+— and therefore **added three locks**: the figures above become **1082 collected /
+1082 passed**, `comm -13 step1.ids head.ids` becomes **3**, each named
+(`…::test_body_link_findings_never_stats_an_encoded_absolute_path`,
+`…::test_scan_finds_a_link_nested_inside_an_image_label`,
+`…::test_scan_title_requires_whitespace_after_the_destination`), and the
+arithmetic becomes 895 + 187 = 1082. Both "removed" legs stay **0**, and
+nothing was weakened; the audit section below records why.
 
 ### Gates
 
@@ -1641,7 +1694,7 @@ re-derive it:**
 | `_escape_flags` over the live tree | 80.0 ms | **0.3 ms** |
 | `_mask_code` over the live tree | 92.1 ms | **69.6 ms** |
 | `scan_body_links` over the live tree (2.5 MB) | 182.7 ms | **80.7 ms** |
-| the 303 KB adversarial set (2.0 s lock) | 61 ms | **43 ms — 47× headroom** |
+| the 303 KB adversarial set (2.0 s lock) | 61 ms | **~44 ms — ~45× headroom** |
 | `docs check --root docs`, end to end | — | **0.16 s** |
 
 Stopped there deliberately: at 0.16 s for the whole tree the remaining
@@ -1685,6 +1738,262 @@ Stopped there deliberately: at 0.16 s for the whole tree the remaining
   doc edits.
 - `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical;
   `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+
+## Step-2 same-instance audit — 2026-08-14
+
+Consistency / completeness / accuracy audit over Phases 5–10, run by the
+implementing instance before handing back. **Twelve findings, all fixed** —
+**three real behavioural defects in the scanner** (A0–A2, every one now
+locked), **two false docstring claims** (A3–A4), and seven spec /
+documentation corrections (A5–A11). A0 is a hermeticity hole that violates
+the milestone's central guarantee. Three items are surfaced for the operator
+/ reviewer without being auto-decided, and **one BINDING Phase-1 decision is
+amended** (point 9), which is flagged for the operator below.
+
+The audit's method was deliberately not "re-read what I just wrote". Every
+clause of `cli.md`'s frozen grammar section and of *Decisions (Phase 1 —
+BINDING)* was walked against the code **and probed empirically** — importing
+the module and running the shape the clause describes — because the four code
+defects below are all invisible in the finding set, invisible in the test
+suite, and visible only when the contract is read as a specification rather
+than as a description of the code.
+
+### A0 — the hermeticity hole (CODE-WRONG, critical)
+
+**A percent- or backslash-encoded leading slash escaped the boundary
+entirely: `docs check` stat'd `/etc/passwd`.**
+
+The chain, every link of which is individually contract-correct:
+
+1. classification runs on the token **as written** (D2, point 7), so
+   `%2Fetc/passwd` and `\/etc/passwd` are `local`, **not** `root-absolute` —
+   `test_classify_runs_on_the_token_as_written_not_decoded` asserts exactly
+   this;
+2. the BINDING decode order (point 6) then turns both into `/etc/passwd`;
+3. `posixpath.join(dirname, "/etc/passwd")` lets the absolute right-hand side
+   win, so the candidate **is** `/etc/passwd`;
+4. `_body_link_is_contained` tested only `== ".."` / `startswith("../")` —
+   Phase-1 point 9's "minus the `/` leg" — so it returned **True**;
+5. `Path(root) / "/etc/passwd"` collapses to `/etc/passwd`, and `.exists()`
+   stat'd it.
+
+Measured before the fix: `[a](%2Fetc/passwd)` and `[a](\/etc/passwd)`
+produced **no finding at all** and probed `/etc/passwd`;
+`[a](%2Fhome/…/README.md)` resolved because of what sits *beside* the
+checkout. That is a direct violation of D4b, of `cli.md`'s "`docs check`
+**never stats, opens, or follows anything outside the docs root**", and of
+the success criterion "checking the same tree from a different location
+yields the identical result" — the property the whole rule exists to
+guarantee.
+
+**Fix: the leading-`/` leg is restored**, making the predicate byte-for-byte
+`_candidate_exclusion_reason`'s again. Point 9's *stated intent* survives
+untouched — `/path` written literally still means a web root and is still
+silenced by classification, one step earlier — while its unsound *mechanism*
+does not. Both encoded spellings now report `outside-root-body-link` and are
+never probed. Phase-1 point 9 is amended in place in the milestone with the
+full reasoning, `cli.md`'s containment steps gain the third leg with the
+worked case, and `architecture.md`'s "under the root" claim is corrected.
+Locked by
+`tests/test_body_links.py::test_body_link_findings_never_stats_an_encoded_absolute_path`,
+which spies both `Path.exists` and `Path.is_file` and asserts zero probes
+outside the root, both encoded spellings reported, and the literal `/etc/passwd`
+still silent.
+
+### A1 — a title was accepted with no whitespace before it (CODE-WRONG)
+
+`cli.md` rule 5 opens *"After at least one whitespace character following the
+destination"*, and the implementation did not enforce it: `[a](<x.md>"T")`
+and `[plan]: <x.md>"T"` were both recognised, yielding a `BodyLink` with
+`raw == "<x.md>"`.
+
+Only an **angle** destination can reach the question, which is why it
+survived Phase 5 and every test: a plain destination ends *at* whitespace or
+at the closing `)`, so `[a](plan.md"T")` is simply a destination spelled
+`plan.md"T"` and the clause is unobservable there. After `<…>` it is
+observable, and it changes the record **M28** consumes — the span is either a
+link's destination or it is not.
+
+Verdict **CODE-WRONG**: rule 5 is the frozen contract and it is explicit.
+Fixed in `_close_inline` and `_close_reference_definition` (a title is only
+attempted when at least one whitespace character was consumed), with the
+reason recorded in both docstrings. **Zero occurrences** of the shape exist
+in `docs/`, the 39 fixture trees, or the bundled skill, so the correction is
+behaviour-neutral on every real input — the live-tree census is unchanged at
+**393 spans / 0 broken / 0 escapes**, and Phase 9's pre-repair replay re-run
+through the CLI still reports exactly **139 `broken-body-link` + 1
+`outside-root-body-link` across 30 documents** — which is exactly why only
+reading the contract could catch it.
+
+`cli.md` rule 5 (and its byte-identical mirror) gains one clause spelling the
+consequence out, on the same reasoning A.0 applied to S1–S6/S9: the clause is
+invisible in the finding set and visible only in what the scanner hands M28,
+so an implementer working from the spec alone would trip on it exactly as
+this one did.
+
+Locked by
+`tests/test_body_links.py::test_scan_title_requires_whitespace_after_the_destination`,
+covering both forms, all three quotings, and the four positive cases that
+must keep working.
+
+### A2 — a link nested inside an image label was silently dropped (CODE-WRONG)
+
+Rule 2 skips **the image**; rule 1 ends a label at its first unescaped `]`.
+So in `![a [b](c.md)](d.png)` the inner `[` is preceded by a space, not by
+`!`, and `[b](c.md)` is an ordinary recognised link. `scan_body_links`
+returned `()`: the image rejection resumed at the rejected candidate's `]`,
+which is byte-identical to the parse-failure path and skips right over the
+inner `[`.
+
+**The Phase-1 linearity note foresaw exactly this** — "restarting at the
+failed candidate's `]` is equivalent … *except after the image (`!`)
+rejection, which does depend on the opening `[` and therefore needs the
+cached closing position rather than a rescan*" — and the exception was
+unimplemented. A span M27 cannot see is a destination **M28 will never
+rewrite**, which is what makes this more than cosmetic.
+
+**Fix:** the image branch resumes at `[` + 1 and the closing bracket is
+**cached**, because `close` is by construction the closing bracket of every
+candidate opening before it. The rescan-free bound is what the note meant by
+"the cached closing position": `"!" + "[" * 50_000 + "](x)"` and
+`"![" * 25_000` together scan in **2.1 ms**, so the exception costs no
+linearity. Locked by
+`tests/test_body_links.py::test_scan_finds_a_link_nested_inside_an_image_label`.
+
+### A3 / A4 — two docstrings asserted things that were not true (CODE-WRONG)
+
+`scan_body_links`' docstring already claimed the image exception A2 shows was
+missing — the docstring described the intended scanner, the code implemented
+a different one. It is now true. And `BodyLink`'s docstring said mutation
+raises `TypeError`; `@dataclass(frozen=True)` raises
+`dataclasses.FrozenInstanceError` (MRO: `FrozenInstanceError`,
+`AttributeError`, `Exception` — never `TypeError`), which is what
+`test_body_link_record_is_immutable` has been asserting all along. Corrected.
+
+### A5 — "the whole fence line is preserved verbatim" was self-contradictory (SPEC-WRONG)
+
+Phase 5's S4 wording promised the fence line survives verbatim, info string
+included. But the adjacent — and older — ordering clause says inline spans
+run "over the already-masked text", and the code follows that: a fence line
+goes through pass 2 like any other line, so `` ~~~ `x` `` has its `x`
+blanked. The two clauses cannot both hold. The ordering clause is the
+contractual one (it is locked by
+`test_mask_code_masks_fences_before_inline_spans`), so the S4 sentence is
+corrected to say what is actually guaranteed: a fence line is never treated
+as the block's **content**, and the two passes are ordered rather than
+scoped. Behaviourally unchanged — a link in an info string is still scanned.
+
+### The three added locks, logged rather than folded in silently
+
+Step 2's own Phase-8 proof recorded "0 ids added by Step 2". A0, A1 and A2
+were real behavioural defects invisible to the suite, so three locks were
+added and that statement is **restated in place** in the Phase-8 entry:
+1079 → **1082**; `comm -13 step1.ids head.ids` 0 → **3**, each named;
+895 + 187 = 1082. Both "ids removed" legs are still **0**, and **nothing was
+relaxed, weakened, deleted or rewritten** — every added id is a new lock on a
+contract clause the implementation had violated.
+
+### The six documentation findings, all fixed
+
+| # | Finding | Fix |
+|---|---|---|
+| A6 | `architecture.md`'s tree diagram claimed `cli.py (~7.0k lines)`; it is now 7.7k, and its `check` module line named only M3 although M25 and M27 both added rules there. | Both corrected. |
+| A7 | The milestone's Success criteria said the live tree needed *"139 archived **rebases**"*; only **132** are pure rebases — 5 are moved targets and 2 are URL conversions. | Restated as "139 archived repairs (132 pure `../../` rebases, 5 moved targets, 2 URLs) plus one active-tree URL conversion, 140 occurrences over 30 documents". |
+| A8 | `convention.md`'s archived-document exception promises a stated blast radius in *"**29** named archived documents"* — and no surface named them. A promise of an auditable list that no reader can reach is the same defect the milestone exists to remove. | The Phase-6 entry now lists all **29** with their occurrence counts and repair classes, summing to 139, with `charter.md` called out as the active 140th. |
+| A9 | The milestone's `Progress:` line still read "Phases 1–5 done", and `status.md` said "Step 2 is **in flight**" in the same sentence as "all ten phases are complete". | Both corrected to implementation-complete; `status.md`'s duplicated "M27 is implementation-complete" sentence trimmed. |
+| A10 | `CHANGELOG.md`'s `outside-root-body-link` example used the **real** `charter.md` filename with a synthetic destination, mixing a real repaired file with an invented link. | The example file is now a neutral `notes.md`; the destination already matched `cli.md`'s worked instance. |
+| A11 | The Phase-9/10 runtime figures drifted from a re-measurement of the final code (the adversarial set read 43 ms / 47× when first recorded, ~44 ms / ~45× now). | Restated with the tolerance made explicit; the live-tree figure (81 ms) and `docs check` end-to-end (0.15–0.16 s) re-confirmed. |
+
+### Completeness — walked, not remembered
+
+- **Deliverables.** All seven are ticked and were verified against reality,
+  not memory: the scanner and its span contract (Phase 5), the wiring with
+  containment before existence and the JSON key set unchanged (Phase 6), the
+  test coverage (Phase 8, where a RED lock finally locks), the audited
+  legacy-tree repair with `convention.md`'s exception (Phase 6), the live
+  dogfood plus the replayed upgrade walk (Phase 9), and surface parity across
+  both specs, both mirrors, the bundled skill and the `UNRELEASED` CHANGELOG
+  (Phase 7).
+- **Success criteria.** All nine walked one by one against the shipped
+  behaviour; only A3's wording needed correcting.
+- **Out of scope.** All twelve exclusions re-read and none violated — no
+  mutation beyond the one-time D6 migration, no heading validation, no
+  images / autolinks / raw HTML / reference uses, no indented-code rule, no
+  repair verb, no third-party dependency, nothing outside the tree root, and
+  no version bump or CHANGELOG dating.
+- **Phase entries.** All ten rows in the progress table carry a status, a
+  date and an accurate note; no placeholder, no `_Not complete._`, no TODO
+  anywhere in the milestone pair or in `cli.py`.
+
+### Consistency — checked mechanically
+
+- `status.md`, this log, the milestone and `plan.md` agree on phase progress,
+  counts, dates and "next" pointers after A5. Every doc changed since
+  `ddf0a45` carries `Updated: 2026-08-14`, bumped through `docs touch`.
+- `docs check --root docs` → **0 findings**, which is also the proof that
+  every `Related:` edge and every body-link cross-reference in the tree
+  resolves.
+- `docs/INDEX.md` and `tests/fixtures/expected/docs-INDEX.md` identical;
+  `docs/{cli,convention}.md` byte-identical to their bundled mirrors;
+  `](../` still 0 across both specs and all six bundled skill files;
+  `../src/docs_cli/` and `../../../../docs/` still absent from the bundled
+  references.
+- The diff since `ddf0a45` touches `docs/`, `src/`, `CHANGELOG.md`,
+  `README.md` and the INDEX fixture — M27's work and nothing else.
+- Code conventions: private helpers `_`-prefixed, regexes beside their user,
+  frozen dataclass in the *Models* section, milestone-referencing docstrings,
+  one banner section — the house style the rest of the module uses.
+
+### Surfaced for the operator / reviewer — NOT auto-decided
+
+1. **A BINDING Phase-1 decision was amended — point 9.** A0 required
+   restoring the leading-`/` leg the frozen text explicitly dropped. The
+   amendment is recorded in place with its full reasoning and it *preserves*
+   the decision's stated intent while replacing an unsound mechanism, so it
+   is not a scope or intent change — but it is an edit to a section marked
+   BINDING and frozen, and the operator should see it as such rather than
+   discover it. The alternative readings were both worse: leaving the hole
+   open contradicts D4b and the success criteria outright, and making
+   classification decode first would contradict point 7 and break a
+   committed test.
+2. **S9's dangling-symlink case is specified but not locked.** `cli.md`
+   states that `Path.exists()` follows symlinks, so a link to a symlink
+   inside the root whose target is missing is `broken-body-link`. No test
+   pins it — it is a documented consequence of `.exists()` rather than a
+   branch in the code, so unlike A0–A2 it is not a divergence. Recommendation:
+   add it in M28, which will be editing this grammar's consumers anyway. Not
+   done here.
+3. **M28's Open question 2 is now answered by M27.**
+   `m28-move-safe-body-link-rewrites.md` still carries *"Absolute root paths
+   and links escaping the docs root"* as an open question with a
+   recommendation, but M27 settled it: an escaping destination is a
+   **reported and forbidden** condition, so a clean tree contains none and
+   M28 never has to rewrite one (recorded in this milestone's *Follow-ups*,
+   row 5). Editing another milestone's planning doc would pre-empt its own
+   Phase 1, so it is surfaced rather than done.
+
+### Verification after the fixes
+
+- `.venv/bin/python -m pytest -q` — **1082 passed, 0 failed**.
+- `comm` against both anchors re-run: **0** removed since `d61da1d`, **0**
+  removed since `ddf0a45`, **3** added — the audit's three locks, each named;
+  895 + 187 = 1082.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy src/ tests/` —
+  clean. `.venv/bin/docs check --root docs` — exit 0.
+- **All three scanner fixes are behaviour-neutral on every real input**, which
+  is the point: the live-tree census is unchanged at **393 spans / 0 broken /
+  0 escapes**; the Phase-9 pre-repair replay still reports exactly **139
+  `broken-body-link` + 1 `outside-root-body-link` across 30 documents**; and
+  the 39-tree fixture sweep still yields findings in exactly M27's three
+  deliberately damaged trees and nowhere else. Every defect was reachable
+  only from a shape no corpus contains — which is why the contract, not the
+  data, had to be the thing that was read.
+- Runtime re-measured after the image fix: **83 ms** over the 2.5 MB live
+  tree, **44 ms** for the 303 KB adversarial set (**~45×** under the 2.0 s
+  lock), **2.1 ms** for the two new image-shaped adversarial inputs
+  (`"!" + "[" * 50_000 + "](x)"` and `"![" * 25_000`), and `docs check`
+  **0.15 s** end to end.
+- Mirrors identical; INDEX snapshot identical.
 
 ## Milestone completion summary
 
@@ -1736,10 +2045,12 @@ independent checks including 30/30 byte-identical round-trip reconstructions.
 `convention.md` carries the third — and last — archived-document exception,
 with its blast radius and its real date.
 
-**Numbers.** 184 new test ids, **zero** pre-existing ids removed or modified
-across the whole milestone; 1079 collected, 1079 passed; 393 recognised spans
-over `docs/` before and after the repair; 81 ms to scan the 2.5 MB tree and
-43 ms for the 303 KB adversarial set, 47× under the runtime lock. No version
+**Numbers.** 187 new test ids — 184 written RED in Step 1 plus the three
+locks the Step-2 audit added alongside three real scanner fixes — and
+**zero** pre-existing ids removed or modified
+across the whole milestone; 1082 collected, 1082 passed; 393 recognised spans
+over `docs/` before and after the repair; ~82 ms to scan the 2.5 MB tree and
+~44 ms for the 303 KB adversarial set, ~45× under the runtime lock. No version
 bump: `pyproject.toml` stays `1.8.0`; **M29** performs the single bump to
 `2.0.0` (M25 — D6).
 

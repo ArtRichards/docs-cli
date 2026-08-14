@@ -834,7 +834,13 @@ Exactness, pinned rather than implied:
    the end of the document on an unterminated candidate; one bound for the
    whole candidate is what keeps the scanner linear.
 2. **Image exclusion.** An otherwise-recognised inline link whose `[` is
-   immediately preceded by an unescaped `!` is an image and is skipped.
+   immediately preceded by an unescaped `!` is an image and is skipped. What
+   is skipped is the **image**, not whatever its label contains: in
+   `![a [b](c.md)](d.png)` the inner `[` is preceded by a space, so
+   `[b](c.md)` is an ordinary recognised link and **is** reported. Stated
+   because the scanner's natural resume-after-a-failed-candidate step would
+   swallow it, and a span M27 cannot see is a destination M28 will never
+   rewrite.
 3. **Plain destination.** Optional whitespace is permitted on **both** sides of
    the destination — between the `(` and the destination, and between the
    destination (or its title) and the closing `)`. So `[a]( plan.md)`,
@@ -877,6 +883,14 @@ Exactness, pinned rather than implied:
    bound like the rest of the candidate, and the `(…)` form is scanned to its
    **first unescaped `)` with no nesting** — the simplest rule that keeps this
    whitespace-based disambiguation honest, and one Phase 1 did not state.
+
+   The "at least one whitespace character" is **load-bearing and easy to
+   miss**, because only an *angle* destination can reach it: a plain
+   destination ends *at* whitespace or at the closing `)`, so `[a](plan.md"T")`
+   is just a destination spelled `plan.md"T"`. After `<…>` the clause bites —
+   `[a](<x.md>"T")` and `[plan]: <x.md>"T"` are **not** recognised links,
+   while `[a](<x.md> "T")` is. Spelled out because the difference is invisible
+   in the finding set and visible only in what the scanner hands M28.
 6. **Reference definition.** Line-anchored: 0–3 leading spaces, `[label]:`,
    optional whitespace, the destination, then an optional title to end of
    line. The destination is the same plain-or-angle token as in an inline
@@ -963,10 +977,12 @@ mask that replaces the *contents* of code with spaces:
 - **fenced code blocks** — ``` and `~~~`, 3+ markers, 0–3 leading spaces,
   closed by a fence of the **same character** and **equal or greater** length
   with **only whitespace after the marker** (CommonMark — a marker followed by
-  an info string opens, it never closes). The **whole fence line is preserved
-  verbatim**, info string included; only the block's contents are blanked. An
-  **unclosed** fence masks to the **end of the document**, matching
-  CommonMark;
+  an info string opens, it never closes). A fence line is **never treated as
+  the block's content**: the marker and its info string survive this pass
+  intact, and only the lines between the fences are blanked. (Being an
+  ordinary line thereafter, a fence line still goes through the inline-span
+  pass below — the two passes are ordered, not scoped.) An **unclosed** fence
+  masks to the **end of the document**, matching CommonMark;
 - **inline code spans** — matched backtick runs of equal length. An inline
   span **never crosses a line boundary**, so one unpaired backtick cannot mask
   the rest of a document.
@@ -1039,8 +1055,20 @@ this fixed order, with **no filesystem access at all**:
 2. join the unescaped, decoded destination path to it and normalise it
    lexically — `..` segments are collapsed textually, symlinks are not
    followed and `resolve()` is never called;
-3. the destination is **contained** when the result is neither `..` nor
-   prefixed by `../`.
+3. the destination is **contained** when the result is neither `..`, nor
+   prefixed by `../`, nor **absolute** (prefixed by `/`).
+
+The absolute leg is not redundant with the `root-absolute` classification
+above, and the Step-2 audit found it the hard way. Classification runs on the
+token **as written**, so `%2Fetc/passwd` and `\/etc/passwd` are `local`, not
+`root-absolute`; the BINDING decode order then turns both into
+`/etc/passwd`, and joining an absolute path to a directory yields the
+absolute path. Without this leg such a destination reads as contained and
+gets **stat'd outside the docs root** — precisely what the boundary below
+forbids. Both are now reported as `outside-root-body-link`, while a slash the
+author wrote *literally* is still silenced one step earlier, by
+classification. The predicate is therefore byte-for-byte the one
+`docs archive` uses for its own `outside-root` ineligibility.
 
 Three cases the contract answers outright:
 
@@ -1125,9 +1153,10 @@ body link at line 52 leaves the docs root: ../shared/glossary.md (normalises to 
   author typed, so the author can find it.
 - `<candidate>` for `broken-body-link` is the canonical **root-relative**
   POSIX path the destination normalises to; for `outside-root-body-link` it is
-  the lexically normalised `../`-prefixed path. It is printed
-  **unconditionally**, even when it is identical to `<raw>` — there is no
-  "it depends" cell.
+  the lexically normalised path that leaves the tree — `../`-prefixed for the
+  ordinary case, absolute for a destination that *decodes* to a leading slash.
+  It is printed **unconditionally**, even when it is identical to `<raw>` —
+  there is no "it depends" cell.
 
 The rule ids are `broken-body-link` and `outside-root-body-link`. The second
 reuses the `outside-root` token `docs archive` already uses for exactly this

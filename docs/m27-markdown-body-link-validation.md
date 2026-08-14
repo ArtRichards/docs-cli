@@ -27,8 +27,8 @@ Related:
 - Surface: parse a deliberately bounded set of real local Markdown body links
   and make a missing destination a hard `docs check` error. This milestone
   detects damage and establishes the shared scanner; M28 owns mutation.
-- Progress: **Active / Step 1 complete on `m27/phases-1-4`; Step 2 in flight
-  on `m27/phases-5-10` — Phases 1–5 done (2026-08-14).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
+- Progress: **Implementation-complete (2026-08-14) — all ten phases done
+  across `m27/phases-1-4` (Step 1) and `m27/phases-5-10` (Step 2).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
   next implementation milestone. **All seven setup
   questions are RESOLVED** — Q1, Q2, and Q5 by the operator; Q3, Q4, Q6, and
   Q7 conductor-resolved — and are recorded in *Resolved setup questions
@@ -117,10 +117,29 @@ Related:
   summary, and folded in the Phase-9 quality item: the live-tree scan went
   from **183 ms to 81 ms** with `docs check` end-to-end at **0.16 s**, from
   two early-outs that make the code read better rather than worse.
-  **M27 is implementation-complete**, with all ten phases done, every
-  deliverable met, **1079 passed / 0 failed**, `docs check --root docs` at
-  exit 0 over the repaired tree, and the `BodyLink` span contract handed to
-  M28. The milestone stays `Lifecycle: active` until the M29 publish
+  The **Step-2 same-instance audit** then found **twelve** issues and fixed
+  all twelve — **three of them real behavioural defects in the scanner**,
+  every one invisible to the finding set and to the suite, and reachable only
+  by reading the frozen contract as a specification. The critical one is a **hermeticity hole**: a
+  percent- or backslash-encoded leading slash (`%2Fetc/passwd`) classifies
+  `local`, decodes to `/etc/passwd`, wins the `posixpath.join`, and — because
+  Phase-1 point 9 dropped the containment predicate's leading-`/` leg — read
+  as *contained*, so `docs check` **stat'd a path outside its own root**, the
+  single thing D4b exists to forbid. Point 9's leg is restored (its stated
+  intent survives; only its unsound mechanism does not) and **point 9 is
+  amended in place — a BINDING Phase-1 decision, flagged for the operator**.
+  The other two: a link nested inside an image label was silently dropped,
+  which the Phase-1 linearity note had foreseen and which would have left M28
+  unable to rewrite that destination; rule 5's *"at least one whitespace
+  character"* before a title was not enforced; and two docstrings asserted
+  things that were false. All four are **behaviour-neutral on every real
+  input** — the census, the pre-repair replay and the 39-tree sweep are
+  unchanged — and all three defects that were reachable are now **locked**,
+  taking the suite to **1082**. Three items are surfaced for the operator
+  rather than auto-decided. **M27 is implementation-complete**, with all ten
+  phases done, every deliverable met, **1082 passed / 0 failed**,
+  `docs check --root docs` at exit 0 over the repaired tree, and the
+  `BodyLink` span contract handed to M28. The milestone stays `Lifecycle: active` until the M29 publish
   closeout.
 
 ### Goal
@@ -910,12 +929,26 @@ are decisions, not restatements.
    D4b exists to guarantee. This reuses `_canonical_related_target`'s stated
    "POSIX paths on every platform" rationale.
 9. **The containment predicate is byte-for-byte the one `docs archive`
-   already uses** for its `outside-root` ineligibility (`rel == ".."` or
-   `rel.startswith("../")`), minus the `/` leg — a root-absolute *body*
-   destination is classified `root-absolute` and silenced **before**
-   containment runs, whereas a root-absolute `Related:` target is
-   `outside-root`. That divergence is deliberate: `/path` in prose names a web
-   root, not a tree path.
+   already uses** for its `outside-root` ineligibility — `rel.startswith("/")`
+   or `rel == ".."` or `rel.startswith("../")`.
+
+   **Amended by the Step-2 audit (conductor-binding).** Phase 1 wrote this as
+   "minus the `/` leg", reasoning that a root-absolute *body* destination is
+   classified `root-absolute` and silenced **before** containment runs. That
+   reasoning holds only for a slash the author wrote **literally**.
+   Classification runs on the token *as written* (point 7), so `%2Fetc/passwd`
+   and `\/etc/passwd` classify `local`; the BINDING decode order (point 6)
+   then turns both into `/etc/passwd`, and `posixpath.join` lets an absolute
+   right-hand side win. Without the `/` leg the candidate read as **contained**
+   and `docs check` stat'd a path **outside its own root** — a direct
+   violation of D4b, of `cli.md`'s "never stats, opens, or follows anything
+   outside the docs root", and of the success criterion that the verdict is a
+   function of the tree alone. The leg is restored, both encoded spellings are
+   now `outside-root-body-link`, and a literally-written `/path` is still
+   silenced one step earlier by classification — so the *stated intent* of the
+   original divergence ("`/path` in prose names a web root, not a tree path")
+   survives intact while the unsound mechanism does not. Locked by
+   `tests/test_body_links.py::test_body_link_findings_never_stats_an_encoded_absolute_path`.
 10. **The whole document text is scanned, with offsets into the original
     text** — not the post-metadata body. A `Related:` bullet cannot be
     link-shaped (verified: zero reference definitions exist anywhere in the
@@ -1280,8 +1313,9 @@ pathological-input runtime lock on the scanner, and the live INDEX snapshot.
 - All 33 pre-M27 fixture trees and the bundled skill gain zero findings of
   either kind.
 - The live tree has a documented, auditable path to a clean result — 139
-  archived rebases plus one active-tree URL conversion — and the repository's
-  own `docs check` is clean with both rules in force.
+  archived repairs (132 pure `../../` rebases, 5 moved targets, 2 URLs) plus
+  one active-tree URL conversion, 140 occurrences over 30 documents — and the
+  repository's own `docs check` is clean with both rules in force.
 - The scanner is reusable by M28 without duplicating parsing logic: `BodyLink`
   carries exact destination-token spans into the original text, and code
   masking is length-preserving so those spans stay valid.

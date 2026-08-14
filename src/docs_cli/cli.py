@@ -733,7 +733,8 @@ class BodyLink:
     - the record is frozen. M28 collects spans and then splices; an in-place
       edit of `raw` or `start` between those two steps would silently
       invalidate every remaining span in the same document, so mutation is a
-      `TypeError` at the moment of the mistake instead of a corrupted rewrite.
+      `dataclasses.FrozenInstanceError` at the moment of the mistake instead
+      of a corrupted rewrite.
 
     Attributes:
         kind: A `BODY_LINK_KINDS` member — the Markdown form the destination
@@ -2363,11 +2364,18 @@ def _close_inline(masked: str, escaped: bytearray, pos: int, bound: int) -> int 
     Between the destination and the closing `)` only whitespace and at most
     one title may appear (D1 rules 3 and 5). None means the span is not a
     recognised link.
+
+    Rule 5 requires **at least one whitespace character** before a title, so
+    `k == pos` disqualifies the span. Only an angle destination can reach that
+    test: a plain destination ends *at* whitespace or at the closing `)`, so
+    there the clause is unobservable — but `[a](<x.md>"T")` is observably not
+    a link, and getting it wrong would hand M28 a record for a span no
+    renderer treats as one.
     """
     k = _skip_spaces(masked, pos, bound)
     if k < bound and masked[k] == ")" and not escaped[k]:
         return k + 1
-    if k >= bound:
+    if k == pos or k >= bound:
         return None
     after_title = _scan_title(masked, escaped, k, bound)
     if after_title is None:
@@ -2383,10 +2391,15 @@ def _close_reference_definition(masked: str, escaped: bytearray, pos: int, bound
 
     D1 rule 6(b): a trailing non-title remainder disqualifies the definition
     exactly as it does the inline form, so `[plan]: plan.md and more` is prose.
+    Rule 5's "at least one whitespace character before a title" applies here
+    too, for the same reason and with the same single observable case — an
+    angle destination followed immediately by a quote.
     """
     k = _skip_spaces(masked, pos, bound)
     if k >= bound:
         return True
+    if k == pos:
+        return False
     after_title = _scan_title(masked, escaped, k, bound)
     if after_title is None:
         return False
@@ -2413,9 +2426,11 @@ def scan_body_links(text: str) -> tuple[BodyLink, ...]:
     - a candidate whose `]` is missing resumes at its blank-line bound, and a
       candidate that fails to form a link resumes at its `]` — never at the
       opening `[` + 1. Whether a candidate forms a link depends on what
-      follows the `]`, not on which `[` found it; the one exception is the
-      image rejection, which does depend on the `[` and therefore reuses the
-      cached closing position rather than rescanning;
+      follows the `]`, not on which `[` found it. The one exception is the
+      image rejection, which DOES depend on the `[`: it resumes at `i + 1` so
+      a link inside the image's label is still seen, and reuses the cached
+      closing position — shared by every candidate opening before it — rather
+      than rescanning for one;
     - the destination parser bails the moment parentheses nest too deep, and
       bounds an angle destination at the newline.
     """
@@ -2428,6 +2443,7 @@ def scan_body_links(text: str) -> tuple[BodyLink, ...]:
     links: list[BodyLink] = []
     blank_cursor = 0
     line_cursor = 0
+    cached_close = -1
     i = 0
     while True:
         i = masked.find("[", i)
@@ -2444,13 +2460,21 @@ def scan_body_links(text: str) -> tuple[BodyLink, ...]:
             blank_cursor += 1
         limit = blank_starts[blank_cursor] if blank_cursor < len(blank_starts) else end_of_text
 
-        close = -1
-        j = i + 1
-        while j < limit:
-            if masked[j] == "]" and not escaped[j]:
-                close = j
-                break
-            j += 1
+        # `close` is the first unescaped `]` after `i`, so it is ALSO the
+        # closing bracket of every candidate opening between `i` and it. The
+        # cache is what lets the image branch below resume at `i + 1` without
+        # rescanning — reuse, not a second scan.
+        if cached_close > i:
+            close = cached_close
+        else:
+            close = -1
+            j = i + 1
+            while j < limit:
+                if masked[j] == "]" and not escaped[j]:
+                    close = j
+                    break
+                j += 1
+            cached_close = close
         if close == -1:
             # No `]` before the blank line — and no later `[` in this
             # paragraph can find one either.
@@ -2458,7 +2482,13 @@ def scan_body_links(text: str) -> tuple[BodyLink, ...]:
             continue
 
         if i and masked[i - 1] == "!" and not escaped[i - 1]:
-            i = close + 1  # an image (D1 rule 2 / Q2), rejected after the fact
+            # An image (D1 rule 2 / Q2). Resume at `i + 1`, NOT at `close + 1`:
+            # rule 2 skips the image, not whatever the image's LABEL contains,
+            # and a `[` inside that label is not preceded by the `!`. This is
+            # the one place where resuming at the candidate's `]` is not
+            # equivalent, exactly as the Phase-1 linearity note says — and the
+            # cached close is what keeps the rescan-free bound.
+            i += 1
             continue
 
         while line_cursor + 1 < len(line_starts) and line_starts[line_cursor + 1] <= i:
@@ -2570,17 +2600,23 @@ def normalise_body_link_target(doc_rel: str, dest_path: str) -> str:
 def _body_link_is_contained(candidate: str) -> bool:
     """True when a normalised body-link candidate stays inside the root (M27 — D4b).
 
-    `_candidate_exclusion_reason`'s `outside-root` predicate MINUS its leading
-    `/` leg, and the divergence is deliberate: a root-absolute *body*
-    destination names a web-server root rather than a tree path, so it is
-    classified `root-absolute` and silenced before containment ever runs,
-    whereas a root-absolute `Related:` target is `outside-root`.
+    Byte-for-byte `_candidate_exclusion_reason`'s `outside-root` predicate,
+    **including its leading-`/` leg**. M27's Phase-1 point 9 dropped that leg,
+    reasoning that a root-absolute destination is classified `root-absolute`
+    and silenced before containment ever runs — true only of a slash the
+    author wrote *literally*. Classification runs on the token **as written**
+    (D2), so `%2Fetc/passwd` and `\\/etc/passwd` classify `local`; the decode
+    order then turns them into `/etc/passwd`, `posixpath.join` lets the
+    absolute path win, and without this leg the candidate reads as contained
+    and gets stat'd **outside the root** — the one thing D4b exists to forbid.
+    The leg is restored and the Step-2 audit records the amendment.
 
-    The test is `== ".."` or `startswith("../")`, never `startswith("..")` —
-    `..foo.md` is an ordinary in-root file whose name happens to begin with
-    two dots, and reporting it would be an over-fire with no repair available.
+    The `..` test is `== ".."` or `startswith("../")`, never
+    `startswith("..")` — `..foo.md` is an ordinary in-root file whose name
+    happens to begin with two dots, and reporting it would be an over-fire
+    with no repair available.
     """
-    return not (candidate == ".." or candidate.startswith("../"))
+    return not (candidate.startswith("/") or candidate == ".." or candidate.startswith("../"))
 
 
 def body_link_findings(path: Path, text: str, root: Path) -> list[Finding]:
@@ -2600,9 +2636,11 @@ def body_link_findings(path: Path, text: str, root: Path) -> list[Finding]:
     the reader's point of view.
 
     The single `.exists()` on an already-contained, already-normalised
-    candidate is the only filesystem access in the whole scanner. That is what
-    makes `docs check` a function of the tree alone: the same bytes checked
-    from a different location yield the identical verdict.
+    candidate is the only filesystem access in the whole scanner, and
+    containment having rejected every `..`-escape **and every absolute
+    candidate** is what keeps that probe under the root. That is what makes
+    `docs check` a function of the tree alone: the same bytes checked from a
+    different location yield the identical verdict.
     """
     doc_rel = _root_relative(path, root)
     findings: list[Finding] = []

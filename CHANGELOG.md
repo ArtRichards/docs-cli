@@ -166,7 +166,7 @@ until then._
 
   ```console
   $ docs check
-  charter.md
+  notes.md
     error: [outside-root-body-link] body link at line 52 leaves the docs root: ../shared/glossary.md (normalises to ../shared/glossary.md); links outside the tree must be URLs
   ```
 

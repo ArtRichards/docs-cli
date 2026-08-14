@@ -343,6 +343,34 @@ def test_scan_title_in_all_three_quotings(text: str) -> None:
     assert link.path == "plan.md"
 
 
+def test_scan_title_requires_whitespace_after_the_destination() -> None:
+    """D1 rule 5: a title needs **at least one whitespace character** after the
+    destination.
+
+    Only an angle destination can reach the question: a plain destination ends
+    *at* whitespace or at the closing `)`, so `[a](plan.md"T")` is simply a
+    destination spelled `plan.md"T"` and the clause is unobservable. After a
+    `<…>` destination it is observable, and it changes the record M28
+    consumes — `[a](<x.md>"T")` is not a recognised link at all, rather than a
+    link whose title happens to be unseparated.
+
+    Added by the Step-2 same-instance audit, which found the implementation
+    accepting the unseparated form against the frozen rule. No occurrence
+    exists in `docs/`, the 39 fixture trees, or the bundled skill, so the
+    correction is behaviour-neutral on every real input — which is exactly why
+    only reading the contract could catch it.
+    """
+    assert _scan('[a](<x.md>"T")\n') == ()
+    assert _scan("[a](<x.md>'T')\n") == ()
+    assert _scan("[a](<x.md>(T))\n") == ()
+    assert _scan('[plan]: <x.md>"T"\n') == ()
+
+    assert _raws('[a](<x.md> "T")\n') == ["<x.md>"], "one space is enough"
+    assert _raws('[plan]: <x.md> "T"\n') == ["<x.md>"]
+    assert _raws("[a](<x.md>)\n") == ["<x.md>"], "a bare angle destination still closes"
+    assert _raws("[plan]: <x.md>\n") == ["<x.md>"]
+
+
 def test_scan_destination_ends_at_first_unescaped_whitespace() -> None:
     """D1 rule 3 + rule 5: whitespace ends the destination, and what follows
     must be a title or nothing — a bare extra token is not a link at all.
@@ -538,6 +566,24 @@ def test_scan_ignores_an_image() -> None:
 def test_scan_ignores_an_image_but_still_finds_a_following_link() -> None:
     """The `!` rejection must not swallow a real link later on the same line."""
     assert _raws("![diagram](d.png) and [a](plan.md)\n") == ["plan.md"]
+
+
+def test_scan_finds_a_link_nested_inside_an_image_label() -> None:
+    """D1 rule 2 skips the IMAGE, not whatever its label contains.
+
+    In `![a [b](c.md)](d.png)` the inner `[` is preceded by a space, not by an
+    unescaped `!`, so by rules 1 and 2 `[b](c.md)` is an otherwise-recognised
+    inline link and must be reported. Resuming the outer scan at the rejected
+    image's `]` swallows it silently — which is exactly the one case the
+    Phase-1 linearity note carves out ("the image (`!`) rejection … does
+    depend on the opening `[`"), and it is the case where a missed span means
+    **M28 never rewrites that destination**.
+
+    Added by the Step-2 same-instance audit; the fix resumes at `i + 1` while
+    reusing the cached closing bracket, so the bound stays linear.
+    """
+    assert _raws("![a [b](c.md)](d.png)\n") == ["c.md"]
+    assert _scan("![a b](d.png)\n") == (), "a plain image is still skipped"
 
 
 def test_scan_ignores_an_autolink() -> None:
@@ -1056,6 +1102,60 @@ def test_body_link_findings_never_stats_outside_the_root(tmp_path: Path) -> None
     assert probed, "the in-root destinations must actually be probed"
     outside = [p for p in probed if not Path(os.path.normpath(p)).is_relative_to(root)]
     assert outside == [], f"docs check must never stat outside its own root, got {outside!r}"
+
+
+def test_body_link_findings_never_stats_an_encoded_absolute_path(tmp_path: Path) -> None:
+    """D4b: an ENCODED leading slash must not smuggle a probe outside the root.
+
+    The hole this closes, in order: classification runs on the token **as
+    written** (D2), so `%2Fetc/passwd` and `\\/etc/passwd` are `local`, not
+    `root-absolute`; the BINDING decode order then turns both into
+    `/etc/passwd`; `posixpath.join` lets an absolute right-hand side win, so
+    the candidate IS `/etc/passwd`; and a containment predicate testing only
+    `..` / `../` calls that contained. `root / "/etc/passwd"` is
+    `/etc/passwd`, so `docs check` stats a path outside the tree it was
+    pointed at — the single thing D4b exists to forbid, and a verdict that
+    varies with what happens to sit beside the checkout.
+
+    M27's Phase-1 point 9 dropped `_candidate_exclusion_reason`'s leading-`/`
+    leg on the reasoning that classification silences root-absolute
+    destinations first. That is true only of a slash written literally, which
+    is why the literal case below stays silent while the two encoded ones are
+    now reported. Found and fixed by the Step-2 same-instance audit.
+    """
+    root = _tiny_root(tmp_path)
+    text = (
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: bodyprobe\nUpdated: 2026-01-01\n\n"
+        "[a](%2Fetc/passwd)\n[b](\\/etc/passwd)\n[c](/etc/passwd)\n"
+    )
+    probed: list[Path] = []
+    real_exists = Path.exists
+    real_is_file = Path.is_file
+
+    def _spy_exists(self: Path, *args: object, **kwargs: object) -> bool:
+        probed.append(self)
+        return real_exists(self)
+
+    def _spy_is_file(self: Path, *args: object, **kwargs: object) -> bool:
+        probed.append(self)
+        return real_is_file(self)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(Path, "exists", _spy_exists)
+        mp.setattr(Path, "is_file", _spy_is_file)
+        findings = _findings(root / "doc.md", text, root)
+
+    assert [f.rule for f in findings] == ["outside-root-body-link"] * 2, (
+        "both encoded spellings escape the root and must be REPORTED, never probed"
+    )
+    assert [f.message.split(": ", 1)[1].split(" ")[0] for f in findings] == [
+        "%2Fetc/passwd",
+        "\\/etc/passwd",
+    ], "the finding names the destination exactly as written"
+    outside = [p for p in probed if not Path(os.path.normpath(p)).is_relative_to(root)]
+    assert outside == [], f"docs check must never stat outside its own root, got {outside!r}"
+    assert _contained("/etc/passwd") is False
+    assert _contained("/") is False
 
 
 def test_body_link_findings_source_order_is_line_then_column(tmp_path: Path) -> None:

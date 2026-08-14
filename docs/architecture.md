@@ -23,7 +23,7 @@ inside the same wheel as package data.
 ```
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
-├── cli.py                               ─ the CLI module (~7.0k lines)
+├── cli.py                               ─ the CLI module (~7.7k lines)
 │   ├── dunder version                   (__version__ = importlib.metadata.version("docs-cli"))
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
@@ -37,7 +37,8 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
 │   ├── mv            — rename + Related: rewrite across tree (M2)
 │   ├── new           — scaffolded doc creation (M2)
 │   ├── touch         — Updated: bump (M2; M12 outside-root refusal)
-│   ├── check         — validation rules + exit-code matrix (M3)
+│   ├── check         — validation rules + exit-code matrix (M3;
+│   │                   M25 reciprocity; M27 body-link scanner)
 │   ├── list          — query view, human + --json (M3)
 │   ├── migrate       — foreign-tree inference + plan/apply (M4)
 │   ├── project       — rename verb (M12)
@@ -345,8 +346,11 @@ the marker block and the derived content.
   `scan_body_links(text) -> tuple[BodyLink, ...]` →
   `classify_destination(raw)` → `normalise_body_link_target(doc_rel, path)` →
   `_body_link_is_contained(candidate)` → one `.exists()`. Only
-  `body_link_findings` touches the filesystem, and only on an
-  already-contained, already-normalised candidate under the root.
+  `body_link_findings` touches the filesystem, and only on a candidate
+  containment has already proved to be neither a `..`-escape nor **absolute**
+  — the absolute leg matters because a percent- or backslash-encoded leading
+  slash reaches containment classified `local`, and `posixpath.join` lets it
+  win the join.
 - **`_mask_code` is length-preserving, and that is what makes the whole
   thing work.** It blanks the *contents* of fenced blocks and inline code
   spans with spaces, leaving the mask the same length as the input with a
@@ -359,10 +363,15 @@ the marker block and the derived content.
   cursor, resumption at the failed candidate's `]`, an early return past
   `MAX_DESTINATION_PAREN_DEPTH`, and a newline bound on angle destinations.
   Those four bounds are what the pathological-input runtime lock measures.
+  Resume-at-`]` has exactly **one** exception, and it is a correctness
+  requirement rather than a bound: a rejected **image** resumes at `[` + 1, so
+  a link inside the image's label is still seen, and reuses the cached closing
+  bracket — shared by every candidate that opens before it — so the exception
+  costs no rescan.
 - Reuse rather than new machinery: `_root_relative` for the referring
   document's path, `_canonical_related_target`'s `posixpath.normpath` idiom
   for lexical normalisation, and `_candidate_exclusion_reason`'s
-  `outside-root` predicate minus its `/` leg for containment.
+  `outside-root` predicate — all three legs — for containment.
   `_iter_doc_texts`, `exit_code_for`, `finding_to_json` and
   `_print_check_findings` are all unchanged. The stdlib-only pin holds:
   `urllib.parse`, `posixpath`, `string`, `re`.
