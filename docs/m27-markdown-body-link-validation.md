@@ -92,8 +92,22 @@ Related:
   `d61da1d` and since the Step-1 head `ddf0a45`, **0 added by Step 2**, and
   895 + 184 = 1079. `git diff ddf0a45 -- tests/*.py` is empty: **no test was
   relaxed, weakened, deleted or rewritten** to reach GREEN, and none needed
-  to be. Deliverables 2–5 are ticked. Phase 9 — integrate / accept / dogfood
-  — is next.
+  to be. Deliverables 2–5 are ticked. **Phase 9 (2026-08-14)** replayed the
+  pre-repair damage on throwaway copies (140 findings, 139 + 1, exit 2, 30
+  documents) and walked the **documented** recipe from `docs check --json`
+  alone — never the scanner API — reaching exit 0 with the same 132/5/3 split
+  and **0 destination-token mismatches** against the repaired tree, which is
+  what proves the recipe an adopter is handed reaches where the milestone
+  did. Hermeticity was proven end to end on the pre-repair copy — the only
+  one where the escaping link still exists: identical stdout and exit code
+  from a location with a resolving sibling `src/` and from a bare one, with
+  **0 probes outside the root** under a `Path.exists` / `Path.is_file` spy.
+  All 39 fixture trees and the bundled skill sweep clean bar M27's three
+  deliberately damaged ones, which yield exactly their intended sets. Runtime
+  recorded: 183 ms over the 2.5 MB live tree, and 61 ms for the 303 KB
+  adversarial set — **33× under the 2.0 s lock**, linear with no sign of
+  backtracking. The real tree was never written to. Phase 10 — quality, docs,
+  refactor — is next, carrying one measured quality item.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -590,7 +604,7 @@ in *Evidence → regression coverage* below.
       escaping active link — with `convention.md` carrying both the
       inside-the-root invariant and the third archived-document exception with
       its stated blast radius.
-- [ ] Live-tree dogfood clean, plus a replayed pre-repair upgrade walk and
+- [x] Live-tree dogfood clean, plus a replayed pre-repair upgrade walk and
       documented migration evidence.
 - [ ] Surface parity across `cli.md`, `convention.md`, the bundled skill
       (byte-identical mirrors), and the `UNRELEASED` CHANGELOG.
@@ -775,7 +789,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate / Accept / Dogfood
+- [x] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery

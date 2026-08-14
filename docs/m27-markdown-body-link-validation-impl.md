@@ -23,7 +23,7 @@ the milestone checklist synchronized.
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
 - Progress: **Step 1 complete on `m27/phases-1-4`; Step 2 in flight on
-  `m27/phases-5-10` — Phases 5–8 complete (2026-08-14); the live tree is
+  `m27/phases-5-10` — Phases 5–9 complete (2026-08-14); the live tree is
   repaired, `docs check` is clean with both rules in force, and the suite is
   fully GREEN at **1079 passed / 0 failed** with every pre-existing id
   mechanically proven still present.** All seven setup questions were RESOLVED at setup
@@ -49,7 +49,7 @@ the milestone checklist synchronized.
 | 6. Implement Offline/Core Path | **Done** | 2026-08-14 | Both rules wired into `check_doc` (three lines, after the `broken-ref` group and before `stale`) **and** the D6 live-tree repair in the same commit: 140 occurrences over 30 documents, split 132 root-rebase / 5 move-map / 2 playbook-URL / 1 escape-URL, driven by the Phase-5 scanner and spliced by offset. Six independent checks prove no other byte moved; re-census 0 broken / 0 escapes with the span count still 393. |
 | 7. Update Tool/Wrapper Layer | **Done** | 2026-08-14 | `docs check`'s argparse description now names both rules' conditions; the bundled `SKILL.md` check row and `references/use-cases.md` (the *Validate in CI* row plus a new M27 upgrade section) name both rule ids and **both** repairs; `CHANGELOG.md` gains one `Added` entry per rule, a BREAKING `Changed` entry, and the adopter upgrade recipe. No spec edit was needed — `cli.md` and `convention.md` were already current, so both mirrors stayed byte-identical. No version bump. Suite fully GREEN. |
 | 8. Run Tests (GREEN) | **Done** | 2026-08-14 | **1079 collected, 1079 passed, 0 failed**, zero xfail/xpass, zero tracebacks; all gates clean; the `comm` proof against **both** anchors shows 0 ids removed since `d61da1d` and since `ddf0a45`, and **0 added by Step 2** — `git diff ddf0a45 -- tests/*.py` is empty, so no test was touched to reach GREEN. |
-| 9. Integrate / Accept / Dogfood | Pending | — | Replay the pre-repair damage on a throwaway copy and walk the documented upgrade recipe; prove hermeticity by re-checking the copy where no sibling `src/` exists; false-positive sweep; measured scan runtime. |
+| 9. Integrate / Accept / Dogfood | **Done** | 2026-08-14 | Pre-repair damage replayed through the CLI (140 findings, 139 + 1, exit 2); the documented recipe walked from `--json` alone reaches exit 0 with **0 destination-token mismatches** against the repaired tree; identical stdout and exit code from a with-sibling and a bare location, 0 stats outside the root under a spy; all 39 fixture trees + the bundled skill sweep clean bar M27's three damaged ones; runtimes recorded (183 ms live tree, 61 ms for the 303 KB adversarial set — 33× under the 2.0 s bound). |
 | 10. Quality, Docs, Refactor | Pending | — | Simplify, close `architecture.md` / `test-strategy.md`, completion summaries, hand the scanner to M28. |
 
 ## Setup record — 2026-08-14
@@ -1490,6 +1490,119 @@ having written them first.
 Milestone deliverables 2, 3, 4 and 5 are ticked here. Deliverable 4 (the test
 coverage) was deliberately parked at this gate by the Step-1 conductor
 decision, because a RED lock is not yet locking.
+
+## Phase 9 — Integrate / Accept / Dogfood — 2026-08-14
+
+### Objective
+
+Replay the pre-repair damage on throwaway copies, walk the **documented**
+upgrade recipe an adopter is handed rather than the Phase-6 script, prove
+hermeticity end to end, sweep for false positives, and measure runtime. The
+real tree is not touched at any point.
+
+### 1. The pre-repair damage, replayed
+
+`docs/` reconstructed from `ddf0a45` into a throwaway copy and checked with
+the **new** `docs check` from HEAD:
+
+```
+exit 2 — 140 findings across 30 documents
+Counter({'broken-body-link': 139, 'outside-root-body-link': 1})
+```
+
+Exactly the census E1/E5/E7 predicted, reproduced through the CLI rather than
+through the scanner API.
+
+### 2. The documented recipe, walked
+
+Walked by a script that consumes **only `docs check --json`** — `path`,
+`severity`, `rule`, `message` — and never imports the scanner. It follows
+`cli.md` › *Upgrading from 1.x* literally: `broken-body-link` → rebase the
+destination the way the spec describes it (prefix the `../` the move into
+`archive/YYYY-MM-DD/` should have added); if the rebased destination still
+does not resolve, the target itself moved, so look it up by basename inside
+the tree; if it is not in the tree at all it is not the tree's to own, so it
+becomes a URL. `outside-root-body-link` → a URL, per the message's own
+trailing clause.
+
+```
+before: exit 2, 140 findings
+applied: {'rebase': 132, 'moved': 5, 'url': 3}
+after:  exit 0 — docs: no violations found
+```
+
+**The split it derives is the Phase-6 split**, and comparing the walked copy
+against the repository's repaired `docs/` across all 30 documents — audit
+lines (`Updated:`, the `Revision:` group) ignored — gives **0
+destination-token mismatches**. The recipe an adopter is handed reaches
+exactly the place the milestone did, and it reaches it from the finding text
+alone.
+
+### 3. Hermeticity, end to end, on the pre-repair copy
+
+The pre-repair copy is the only one where the escaping link still exists, so
+it is the only one that can prove anything. The identical bytes were checked
+from two locations:
+
+- `with-sibling/docs`, which has a real
+  `src/docs_cli/skill/references/use-cases.md` beside it, so `charter.md:52`
+  **would** resolve;
+- `bare/docs`, with nothing beside it at all.
+
+```
+with-sibling: exit 2   |  bare: exit 2   |  cmp stdout -> IDENTICAL
+```
+
+Re-run in-process under a `Path.exists` / `Path.is_file` spy: **140 findings
+and 756 stats in both, and 0 probes outside the root in either** — each probed
+path lexically normalised before the containment comparison, because
+`Path.is_relative_to` is a pure prefix test. The verdict is a function of the
+tree and nothing else.
+
+### 4. False-positive sweep
+
+`docs check` over **all 39** committed fixture trees: every tree exits 0 with
+zero body-link findings **except** M27's three deliberately damaged ones,
+which yield exactly their intended sets —
+
+```
+bodylink-archived      exit 2  {'broken-body-link': 1}
+bodylink-broken        exit 2  {'broken-body-link': 1}
+bodylink-outside-root  exit 2  {'outside-root-body-link': 2}
+```
+
+The bundled skill sweeps clean too: **18 recognised spans, 0 broken, 0
+escapes**.
+
+### 5. Runtime
+
+| Input | Size | Time |
+|---|---|---|
+| the live tree (70 docs, 393 spans) | 2.5 MB | **183 ms** |
+| `cli.md` alone | 132 KB | **9.5 ms** |
+| `"[" * 50_000 + "](x)"` | 49 KB | **4.0 ms** |
+| `"[a](" * 40_000` | 156 KB | **49.4 ms** |
+| `"[a](<" + "x" * 100_000` | 98 KB | **7.9 ms** |
+| all three adversarial cases (the runtime lock's input) | 303 KB | **61 ms — 33× under the 2.0 s bound** |
+
+Linear, with no sign of backtracking: the adversarial inputs cost about what
+their size predicts, which is the property the lock exists to check.
+
+**One quality item carried to Phase 10.** The live-tree figure is 183 ms, not
+the single-digit milliseconds the Step-2 plan guessed — the plan's estimate
+was anchored on `cli.md`'s 132 KB and the tree is 2.5 MB. A stage profile
+puts 92 ms in `_mask_code` and 80 ms in `_escape_flags`, both of which walk
+every character in Python. Nothing bounds this and no test is at risk, but
+two obvious early-outs remove most of it, and they make the code read better
+rather than worse, so they belong in the Phase-10 quality pass rather than
+here.
+
+### Verification
+
+- Every artefact above lives outside the repository. `git status` is **clean**
+  after the dogfood; the real tree was never written to.
+- Both throwaway `git worktree`s (`d61da1d`, `ddf0a45`) removed;
+  `git worktree list` shows only the checkout.
 
 ## Milestone completion summary
 
