@@ -27,8 +27,8 @@ Related:
 - Surface: parse a deliberately bounded set of real local Markdown body links
   and make a missing destination a hard `docs check` error. This milestone
   detects damage and establishes the shared scanner; M28 owns mutation.
-- Progress: **Active / Step 1 complete on `m27/phases-1-4` — Phases 1–4
-  done (2026-08-14).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
+- Progress: **Active / Step 1 complete on `m27/phases-1-4`; Step 2 in flight
+  on `m27/phases-5-10` — Phases 1–5 done (2026-08-14).** M26 is implementation-complete and merged to `main` (`393fb53`), so this is the
   next implementation milestone. **All seven setup
   questions are RESOLVED** — Q1, Q2, and Q5 by the operator; Q3, Q4, Q6, and
   Q7 conductor-resolved — and are recorded in *Resolved setup questions
@@ -51,7 +51,19 @@ Related:
   mechanically proven present and passing (zero removed, zero regressed).
   The review found **no blockers**; its theme was that a wrong-but-plausible
   Phase-5 implementation could still pass the suite, and every gap it named
-  is now locked. Phase 5 — Update Base Interfaces is next.
+  is now locked. **Phase 5 (2026-08-14)** landed the whole pure scanner in one
+  new banner section of `src/docs_cli/cli.py` — `BodyLink`, the
+  length-preserving `_mask_code`, `scan_body_links`, `classify_destination`,
+  the resolution/containment helpers and `body_link_findings` — with **no**
+  rule wired, so the 18 rule/CLI/skill tests stay honestly RED at the
+  `check_doc` seam: **18 failed, 1061 passed**, every remaining failure an
+  `AssertionError` and none an `AttributeError`. The scanner reproduces every
+  published census number exactly (393 spans / 139 broken / 1 escape / 30
+  documents over `docs/`; 0/0 across all 33 pre-M27 trees and the bundled
+  skill), and seven grammar points the frozen contract left silent (S1–S6, S9)
+  were settled in `cli.md` and its byte-identical mirror rather than only in
+  the log, because each one changes M28's input. Phase 6 — the wiring plus the
+  D6 live-tree repair, in one commit — is next.
   The milestone stays `Lifecycle: active` until the M29 publish closeout.
 
 ### Goal
@@ -729,7 +741,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
+- [x] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
@@ -946,7 +958,7 @@ precedent.
 | 4 | The bundled `references/use-cases.md` — the "Validate in CI" row and a 2.0 upgrade block. | 7 |
 | 5 | `CHANGELOG.md` under the existing `UNRELEASED` heading, with the adopter upgrade recipe for **both** rules. **No** version bump (M25 — D6). | 7 |
 | 6 | `test-strategy.md` › *What we don't test* still says "the body content is opaque" — false the moment M27 lands. (`convention.md`'s twin statement is on the byte-parity gate, so it was corrected in Phase 1.) | 10 |
-| 7 | **`tests/fixtures/expected/docs-INDEX.md` must be regenerated inside Phase 6's own commit.** The D6 repair bumps `Updated:` on 29 archived documents plus `charter.md`, and `test_index_dogfood_repo_docs_snapshot` compares the regenerated index against that frozen snapshot. Its `_normalize_generated_date` helper blanks **only** the `_Generated <date>._` line — every per-entry `Updated YYYY-MM-DD.` is compared **literally**, so all 30 bumps land in the diff. Regenerate it alongside the `test_check_dogfood_repo_docs_is_clean` restoration, in the same commit that wires the rules; deferring it leaves Phase 6's exit criteria knowingly false for the same reason E4 does. | 6 |
+| 7 | **`tests/fixtures/expected/docs-INDEX.md` must be regenerated inside Phase 6's own commit.** The D6 repair bumps `Updated:` on 29 archived documents plus `charter.md`, and `tests/test_cli_index.py::test_index_output_matches_frozen_snapshot` compares the regenerated index against that frozen snapshot. Its `_normalize_generated_date` helper blanks **only** the `_Generated <date>._` line — every per-entry `Updated YYYY-MM-DD.` is compared **literally**, so all 30 bumps land in the diff. Regenerate it alongside the `test_check_dogfood_repo_docs_is_clean` restoration, in the same commit that wires the rules; deferring it leaves Phase 6's exit criteria knowingly false for the same reason E4 does. | 6 |
 
 ### Authoring traps this contract creates (recorded so Phase 2–7 cannot trip them)
 

@@ -22,8 +22,9 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
-- Progress: **Step 1 in flight on `m27/phases-1-4`. Phase 1 — Define Contract
-  complete (2026-08-14).** All seven setup questions were RESOLVED at setup
+- Progress: **Step 1 complete on `m27/phases-1-4`; Step 2 in flight on
+  `m27/phases-5-10` — Phase 5 — Update Base Interfaces complete
+  (2026-08-14).** All seven setup questions were RESOLVED at setup
   (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
   not re-open them. Q5 was resolved **against** the setup recommendation and
   then **amended** — the hermetic boundary is kept, and an escaping
@@ -32,7 +33,7 @@ the milestone checklist synchronized.
 - Source: the operator-confirmed body-link decisions in `feedback-log.md`
   (2026-08-09/10) and the M27 registration in `plan.md` (2026-08-10).
 - Branch: `m27/milestone-setup` for setup; `m27/phases-1-4` for Step 1
-  (Phases 1–4).
+  (Phases 1–4); `m27/phases-5-10` for Step 2 (Phases 5–10).
 
 ## TDD phase progress
 
@@ -42,7 +43,7 @@ the milestone checklist synchronized.
 | 2. Write Tests (RED) | **Done** | 2026-08-14 | Scanner unit tests over every supported and every excluded form; both rules' integration + subprocess/JSON locks; the no-double-report precedence lock and the never-stat-outside-the-root lock; the E5/E6 false-positive and false-negative locks; the pathological-input runtime lock. |
 | 3. Create Data/Fixtures | **Done** | 2026-08-14 | `bodylink-*` trees, one semantic each, including `-outside-root` (escape aimed at a path that cannot exist) and the `../sub/../back-inside.md` normalise-back case; exotic grammar as inline strings (the M25 rule). |
 | 4. Run Tests (RED Baseline) | **Done** | 2026-08-14 | Classified failure set; the transitional classification of `test_check_dogfood_repo_docs_is_clean`. |
-| 5. Update Base Interfaces | Pending | — | `BodyLink` model, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers; no rule wired yet. The scanner reports every local destination — containment is the rule's job. |
+| 5. Update Base Interfaces | **Done** | 2026-08-14 | The whole pure scanner in one banner section — `BodyLink`, length-preserving `_mask_code`, `scan_body_links`, `classify_destination`, the containment/resolution helpers and `body_link_findings` — with **no** rule wired, so the 18 rule/CLI/skill tests stay honestly RED at the `check_doc` seam. 119 cleared; both quadratic shapes avoided; `raw` sliced from the ORIGINAL text. Seven grammar points the contract left silent (S1–S6, S9) settled in `cli.md` and its mirror. |
 | 6. Implement Offline/Core Path | Pending | — | Wire both rules into `check_doc`, containment before existence; land the live-tree repair — 139 archived rebases plus `charter.md:52`'s URL conversion — in the same phase so the dogfood gate never sits knowingly RED. |
 | 7. Update Tool/Wrapper Layer | Pending | — | `cli.md` (rule list, exit codes, the explicitly stated out-of-root boundary) / `convention.md` (the inside-the-root invariant, fence-your-samples, the third archived exception) / bundled skill / `UNRELEASED` CHANGELOG and the adopter upgrade recipe. No version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof. |
@@ -844,8 +845,9 @@ its own — but the message half is what keeps it honest afterwards.
 6b. **`tests/fixtures/expected/docs-INDEX.md` must be regenerated inside
    Phase 6's own commit** (added by the fresh-eyes review). The D6 repair bumps
    `Updated:` on 29 archived documents plus `charter.md`;
-   `test_index_dogfood_repo_docs_snapshot` compares the regenerated index
-   against that snapshot, and `_normalize_generated_date` blanks **only** the
+   `tests/test_cli_index.py::test_index_output_matches_frozen_snapshot`
+   compares the regenerated index against that snapshot, and
+   `_normalize_generated_date` blanks **only** the
    `_Generated <date>._` line — every per-entry `Updated YYYY-MM-DD.` is
    compared literally, so all 30 bumps land in the diff. It rides with the
    `test_check_dogfood_repo_docs_is_clean` restoration, for the same E4
@@ -1016,8 +1018,9 @@ prevent, so these are contract-integrity fixes rather than polish.
 
 - **SF7 — a Phase-6 trap that would have surfaced as a mystery failure.** The
   D6 repair bumps `Updated:` on 29 archived documents plus `charter.md`, and
-  `test_index_dogfood_repo_docs_snapshot` compares the regenerated index
-  against `tests/fixtures/expected/docs-INDEX.md`. Its
+  `tests/test_cli_index.py::test_index_output_matches_frozen_snapshot`
+  compares the regenerated index against
+  `tests/fixtures/expected/docs-INDEX.md`. Its
   `_normalize_generated_date` helper blanks **only** the `_Generated <date>._`
   line — every per-entry `Updated YYYY-MM-DD.` is compared **literally**, so
   all 30 bumps land in the diff. The snapshot must be regenerated **inside
@@ -1065,6 +1068,138 @@ prevent, so these are contract-integrity fixes rather than polish.
   `](../` still **0** in both specs and all six bundled skill files;
   `../src/docs_cli/` still absent. INDEX snapshot identical.
 - `git diff --stat d61da1d -- src/docs_cli/cli.py` — **empty**.
+
+## Phase 5 — Update Base Interfaces — 2026-08-14
+
+### Objective
+
+Land the whole pure scanner — the `BodyLink` record, the length-preserving
+`_mask_code`, the `scan_body_links` grammar, `classify_destination`, the
+resolution/containment helpers, **and `body_link_findings`** — while wiring
+**no** rule, so the 18 rule/CLI/skill tests stay honestly RED at the seam.
+
+`body_link_findings` lands here rather than in Phase 6 because
+`tests/test_body_links.py` calls it directly in 12 tests; `check_doc` is the
+seam, and it is untouched.
+
+### Actions taken
+
+One product file, `src/docs_cli/cli.py`, plus the spec amendments below.
+**No test file was edited** — Step 1 wrote all 184 of M27's ids and Step 2
+needs none of them changed.
+
+1. **Imports and docstring.** `string` and `urllib.parse` join the stdlib
+   block (`posixpath` was already there); the module docstring gains one M27
+   sentence beside the M25/M26 ones. Still stdlib-only.
+2. **Vocabulary.** `BODY_LINK_KINDS`, `DESTINATION_KINDS` and
+   `MAX_DESTINATION_PAREN_DEPTH` next to `ARCHIVE_EXCLUSION_REASONS`.
+3. **Model.** `BodyLink` — a frozen dataclass — after `ArchivePlan`, with a
+   docstring naming M28 as the second consumer and stating why the record is
+   frozen and why the span includes the angle brackets.
+4. **A new banner section**, *Markdown body links — the shared scanner
+   (M27 — D1/D2/D5)*, between `_related_pairs` and `check_doc`; `check_doc`
+   and everything after it now sit under a *Check rules, query, and JSON
+   records (M3)* banner. Contents, in order: `_FENCE_RE`, `_SCHEME_RE`,
+   `_ESCAPABLE`, `_mask_inline_spans`, `_mask_code`, `_escape_flags`,
+   `_line_starts`, `_blank_line_starts`, `_unescape_backslashes`,
+   `_split_destination`, `_scan_destination`, `_scan_title`, `_skip_spaces`,
+   `_close_inline`, `_close_reference_definition`, `scan_body_links`,
+   `classify_destination`, `normalise_body_link_target`,
+   `_body_link_is_contained`, `body_link_findings`.
+5. **`Finding`'s docstring rule enumeration** gains `broken-body-link` and
+   `outside-root-body-link` (Phase-1 follow-through item 1, done here rather
+   than in Phase 6 so the enumeration never lags the vocabulary).
+6. **`docs/cli.md` + its byte-identical mirror** gain the seven grammar
+   resolutions below.
+
+The six frozen signatures landed verbatim. Three implementation points are
+load-bearing and easy to lose, so they are recorded here as well as in the
+code's docstrings:
+
+- **`raw` is sliced from the ORIGINAL text** (`raw = text[start:stop]`), never
+  from the mask. That is what makes `text[start:end] == raw` true *by
+  construction* rather than by coincidence. An implementation that builds
+  `raw` from the masked string passes 15 of the 16 `_SPAN_CASES` — every case
+  whose destination contains no masked byte — and hands M28 a subtly wrong
+  record.
+- **Both quadratic shapes the Phase-1 linearity note names are avoided.** The
+  blank-line bound comes from a monotonic cursor into a precomputed
+  `_blank_line_starts` list, never from a fresh `find("\n\n", i)` per
+  candidate; and the outer scan resumes at the candidate's `]` (or, when no
+  `]` exists before the bound, at the bound itself), never at the opening
+  `[` + 1. The image rejection is the one case that depends on the opening
+  bracket, and it reuses the cached closing position rather than rescanning.
+  Two further bounds do the same job inside the destination parser: the
+  depth-4 early return, and the newline bound on an angle destination.
+- **`_mask_inline_spans` builds its partner index in one backward pass.** The
+  obvious "scan forward from every opener" is quadratic on a line of
+  unmatched backtick runs.
+
+### Grammar resolutions recorded in `cli.md` (S1–S6, S9)
+
+Seven points the frozen contract left silent had to be settled for the
+scanner to exist. Every one of them changes either what `scan_body_links`
+returns — M28's input — or which links the masker lets through, so all seven
+are **adopter-visible grammar** and are recorded in `docs/cli.md` (mirrored
+byte-identically into `src/docs_cli/skill/references/cli.md`), not only here.
+`cli.md` is the contract that ships in the sdist and that M28 will be
+implemented against; a grammar point settled only in an implementation log is
+a point where the next implementer silently diverges, and "zero occurrences
+today" is precisely the reasoning that produced 139 broken links.
+
+| # | Resolution | Why the frozen form could not stand | Where |
+|---|---|---|---|
+| S1 | **`[a]()` IS a recognised inline link**, with a **zero-width** destination token at the first non-whitespace character after the `(`, classified `empty` and therefore silent. | Rule 6(c) disqualifies the empty *reference-definition* form as an explicit **exception**, which only reads as one if the inline form is recognised — and `cli.md`'s classification table already gives `[a]()` as the `empty` example. `bodylink-excluded-forms` goes from 5 recognised spans to 6; **zero findings change**. | `cli.md` rule 3 |
+| S2 | **A newline is ordinary whitespace on both sides of an inline destination**, so a destination on its own line between the `(` and the `)` is a link. | Rule 3 permits "optional whitespace on both sides" and rule 3 itself calls a newline whitespace, but never says whether the two sentences compose. Matches CommonMark and keeps one bound for the whole candidate. Measured behaviour-neutral: **zero occurrences** in `docs/`, the 39 fixture trees, or the bundled skill. | `cli.md` rule 3 |
+| S3 | **A blank line is a whitespace-only line** (CommonMark), and **one bound covers the whole candidate** — label, destination and title alike. | Phase 1 stated the bound only for the label scan. Bounding only the label leaves the destination parser free to run to EOF on an unterminated candidate, which is exactly the linearity the runtime lock measures. | `cli.md` rule 1 |
+| S4 | **A closing fence is the same character, length ≥ the opening marker, and only whitespace after the marker**; the **entire opening fence line is preserved verbatim**, info string included. | "Closed by a fence of the same character and equal or greater length" says nothing about an info string on the closing line, and nothing about whether the marker line is content. The second half was already pinned by `test_mask_code_leaves_every_unmasked_byte_untouched`'s exact expected mask, so recording it documents locked behaviour rather than choosing it. | `cli.md` › *What the scanner never sees* |
+| S5 | **A reference definition's label opens and closes on ONE line**, and an unescaped `)` at depth 0 terminates a refdef destination exactly as it does an inline one (the trailing-remainder rule then disqualifies the definition). | "Line-anchored end to end" is what rule 6(a) already claims, but the label half was never said; and rule 6 defines the destination as "the same plain-or-angle token", which leaves the `)` question open. **Zero occurrences either way** — the repository contains no reference definitions at all. | `cli.md` rule 6 |
+| S6 | **A title stays inside the candidate's blank-line bound, and a `(…)` title is scanned to its first unescaped `)` with NO nesting.** | Rule 5 names the three quotings and the disambiguation rule but not the `(…)` form's own nesting behaviour. No nesting is the simplest rule that keeps rule 5's whitespace-based destination/title split honest. | `cli.md` rule 5 |
+| S9 | **`Path.exists()` is kept, so a dangling symlink inside the root is `broken-body-link`.** | Q7 says "any existing filesystem entry", which is silent on a link whose target is missing. `.exists()` follows symlinks, and reporting is correct: the destination is unreachable from the reader's point of view, which is what the rule is for. Switching to `os.path.lexists` would also weaken the `Path.exists` / `Path.is_file` spy lock. This is **existence**, not containment — containment stays lexical and follows nothing. | `cli.md` › *Resolution and containment* |
+
+### Decisions / issues
+
+- **The rule is deliberately not wired.** `check_doc` is byte-identical to
+  `d61da1d`, so `docs check --root docs` still exits **0** on a tree that the
+  scanner says carries **139 broken destinations and 1 escape**. That gap is
+  the honest state of Phase 5 and it closes inside Phase 6's own commit,
+  which is why the repair and the wiring are one change.
+- **A census re-run against the Phase-5 scanner reproduces every published
+  number exactly**: `docs/` → **393 recognised spans, 139 broken, 1 escape,
+  30 damaged documents**; the three deliberately damaged `bodylink-*` trees →
+  1, 1 and 2 findings of exactly the intended rules; **all 33 pre-M27 trees,
+  the three clean `bodylink-*` trees and the bundled skill → 0 broken /
+  0 escapes**. The real implementation agrees with the read-only prototype
+  the contract was validated against, which is the point of measuring twice.
+- **The `cli.md` edits add no scannable span.** The span count over `docs/`
+  is **393** both before and after them (authoring trap 3 — every
+  link-shaped example is inside an inline code span, and nothing became a
+  line-anchored reference definition).
+- **No test edit was needed.** `git diff ddf0a45 -- tests/` is empty.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/test_body_links.py -q` — **119 passed**
+  (the whole pure-scanner module, first run).
+- `.venv/bin/python -m pytest tests/test_check.py tests/test_cli_check.py
+  tests/test_cli_touch.py tests/test_skill.py -q` — **18 failed, 203
+  passed**; the exception census over `--tb=line` is **18 `AssertionError`,
+  zero `AttributeError`**, which is the Phase-5 exit criterion: every
+  remaining RED is now a missing *rule*, not a missing *symbol*.
+- `.venv/bin/python -m pytest -q` — **18 failed, 1061 passed** (was 137 /
+  942); 119 cleared, exactly the predicted split.
+- `.venv/bin/ruff check .` — All checks passed. `ruff format --check .` —
+  47 files already formatted. `.venv/bin/mypy src/ tests/` — no issues in 48
+  source files.
+- `.venv/bin/docs touch docs/cli.md --check` — touched, **no violations**
+  (exit 0). `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` —
+  identical (every `Updated:` in the tree was already 2026-08-14).
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical.
+  `](../` still **0** across both specs and all six bundled skill files;
+  `../src/docs_cli/` still absent from the bundled references.
+- `git diff --stat ddf0a45` touches `src/docs_cli/cli.py`, `docs/cli.md`,
+  `src/docs_cli/skill/references/cli.md` and the two milestone documents —
+  and nothing else.
 
 ## Milestone completion summary
 

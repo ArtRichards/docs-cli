@@ -24,7 +24,9 @@ archive authorization: `archive` retires bare `--cascade` / `--interactive`,
 previews the whole one-hop neighborhood under `--cascade-dry-run`, requires
 an explicit `--cascade-only GLOB` — validated as one complete plan before
 the first byte moves — for any related-document write, and emits that plan
-as a `--json` record.
+as a `--json` record. M27 adds a pure, stdlib-only Markdown body-link
+scanner and makes an unresolved (`broken-body-link`) or escaping
+(`outside-root-body-link`) local body-link destination a hard `check` error.
 """
 
 from __future__ import annotations
@@ -40,8 +42,10 @@ import os
 import posixpath
 import re
 import shutil
+import string
 import sys
 import tomllib
+import urllib.parse
 
 # M12 — version SoT. `pyproject.toml`'s `[project] version` is the single
 # source of truth; `__version__` is read at import time via
@@ -123,6 +127,19 @@ RECIPROCAL_VERBS: frozenset[str] = frozenset(RECIPROCAL_INVERSES)
 ARCHIVE_EXCLUSION_REASONS: frozenset[str] = frozenset(
     {"not-selected", "already-archived", "unresolved-target", "outside-root"}
 )
+
+# M27 (D1/D2): the closed vocabularies of the body-link scanner. `BodyLink.kind`
+# names the Markdown form a destination was written in — a third member would
+# mean a grammar change, not a tweak. `classify_destination` returns a
+# `DESTINATION_KINDS` member and only `local` is ever resolved or reported.
+# `MAX_DESTINATION_PAREN_DEPTH` bounds how deep balanced parentheses may nest
+# inside a plain destination; it is a docs-cli bounded-scanner bound, NOT a
+# CommonMark conformance claim (D1 licenses that framing).
+BODY_LINK_KINDS: frozenset[str] = frozenset({"inline", "reference-definition"})
+DESTINATION_KINDS: frozenset[str] = frozenset(
+    {"local", "empty", "fragment", "scheme", "protocol-relative", "root-absolute"}
+)
+MAX_DESTINATION_PAREN_DEPTH: int = 3
 
 # M10 (OQ-O + OQ-P): metadata labels the `unknown-field` check rule
 # treats as built-in — always allowed regardless of the
@@ -390,8 +407,10 @@ class Finding:
         rule: Stable machine-readable rule id — one of ``missing-field``,
             ``bad-vocab``, ``bad-date``, ``status-drift``, ``broken-ref``,
             ``stale``, ``malformed``, ``unknown-field`` (M10),
-            ``medium-confidence-inference`` (`docs migrate --triage`), or
-            ``duplicate-field`` / ``missing-inverse`` (M25). Emitted in ``--json`` output so CI
+            ``medium-confidence-inference`` (`docs migrate --triage`),
+            ``duplicate-field`` / ``missing-inverse`` (M25), or
+            ``broken-body-link`` / ``outside-root-body-link`` (M27).
+            Emitted in ``--json`` output so CI
             hooks can filter on it. The JSON record's key set is closed at
             ``{path, severity, rule, message}``; a new rule adds a value
             here, never a field there.
@@ -696,6 +715,53 @@ class ArchivePlan:
         their original paths" split reads in execution order.
         """
         return (self.primary, *(c for c in self.candidates if c.selected))
+
+
+@dataclass(frozen=True)
+class BodyLink:
+    """One recognised Markdown body-link destination occurrence (M27 — D5).
+
+    `scan_body_links` produces these; `body_link_findings` validates the
+    `local` ones. **M28 is the other consumer**: it rewrites destinations when
+    a document moves, by splicing a replacement into `[start, end)` and copying
+    every other byte. Two properties make that safe and are frozen:
+
+    - ``text[start:end] == raw`` — the span IS the destination token. It
+      includes the ``<…>`` angle brackets when the destination has them and
+      excludes any title, so a replacement containing a space lands inside the
+      delimiters rather than outside them.
+    - the record is frozen. M28 collects spans and then splices; an in-place
+      edit of `raw` or `start` between those two steps would silently
+      invalidate every remaining span in the same document, so mutation is a
+      `TypeError` at the moment of the mistake instead of a corrupted rewrite.
+
+    Attributes:
+        kind: A `BODY_LINK_KINDS` member — the Markdown form the destination
+            was written in. Both rules and both message templates are
+            otherwise identical: the kind lives here, never in a `Finding`.
+        line: 1-based line of the destination token's first character.
+        column: 1-based column of that same character.
+        raw: The destination token EXACTLY as written — angle brackets,
+            percent-escapes and backslash escapes included. This is what a
+            finding reports, so the author can find what they typed.
+        path: The path part: a surrounding ``<…>`` pair stripped, the fragment
+            removed, then backslash-unescaped and percent-decoded. This is
+            what resolution runs on.
+        fragment: Everything after the FIRST ``#``, without the ``#``, carried
+            verbatim (neither unescaped nor decoded, because nothing ever
+            resolves it). None when the destination carries no ``#``.
+        start: Offset of the token's first character into the ORIGINAL text.
+        end: One past the token's last character.
+    """
+
+    kind: str
+    line: int
+    column: int
+    raw: str
+    path: str
+    fragment: str | None
+    start: int
+    end: int
 
 
 # ---------------------------------------------------------------------------
@@ -1993,6 +2059,569 @@ def _related_pairs(
             continue
         pairs.append((verb.strip(), target))
     return tuple(pairs)
+
+
+# ---------------------------------------------------------------------------
+# Markdown body links — the shared scanner (M27 — D1/D2/D5)
+# ---------------------------------------------------------------------------
+#
+# A pure, stdlib-only scanner over a deliberately bounded, CommonMark-*shaped*
+# subset. It is not a CommonMark parser and claims no conformance; what it
+# recognises is exactly `cli.md` › *Markdown body-link validation*. M27
+# validates; M28 rewrites. There is one scanner and there is never a second
+# Markdown parser.
+#
+# Everything here is a pure function of the text except `body_link_findings`,
+# whose only filesystem call is one `.exists()` on an already-contained,
+# already-normalised candidate under the root.
+
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+
+# D1 rule 7: a `\` followed by any ASCII punctuation character OR A SPACE
+# yields that character literally; a `\` before anything else is a literal
+# backslash. The space leg follows from rule 3 — a plain destination ends at
+# the first *unescaped* whitespace — and is what makes `my\ doc.md` work.
+_ESCAPABLE: frozenset[str] = frozenset(string.punctuation) | {" "}
+
+
+def _mask_inline_spans(line: str) -> str:
+    """Blank the contents of matched backtick runs within one line (D2).
+
+    A span never crosses a line boundary, so this is called per line: one
+    unpaired backtick can mask at most the rest of its own line, never the
+    remainder of a 112 KB document.
+
+    The `next_same` index is built by a single BACKWARD pass over the runs.
+    The obvious alternative — scan forward from every opener looking for a
+    partner — is O(line^2) on an adversarial line of unmatched runs, and the
+    pathological-input runtime lock is what measures that.
+    """
+    runs: list[tuple[int, int]] = []
+    i = 0
+    while i < len(line):
+        if line[i] != "`":
+            i += 1
+            continue
+        j = i
+        while j < len(line) and line[j] == "`":
+            j += 1
+        runs.append((i, j - i))
+        i = j
+    if len(runs) < 2:
+        return line
+
+    next_same: dict[int, int] = {}
+    last_seen: dict[int, int] = {}
+    for idx in range(len(runs) - 1, -1, -1):
+        length = runs[idx][1]
+        if length in last_seen:
+            next_same[idx] = last_seen[length]
+        last_seen[length] = idx
+
+    chars = list(line)
+    idx = 0
+    while idx < len(runs):
+        partner = next_same.get(idx)
+        if partner is None:
+            idx += 1
+            continue
+        for k in range(runs[idx][0] + runs[idx][1], runs[partner][0]):
+            chars[k] = " "
+        idx = partner + 1
+    return "".join(chars)
+
+
+def _mask_code(text: str) -> str:
+    """Replace the CONTENTS of code with spaces, preserving every offset (D2).
+
+    The result has the same length as `text` and a newline at every offset
+    `text` has one, so every span the scanner reports is an offset into the
+    ORIGINAL text. That is the guarantee M28's rewrite rests on.
+
+    Two passes, and **the order is part of the contract**: fenced blocks
+    first (line-based), then inline spans over the already-masked text, so a
+    stray backtick inside a fenced block cannot open a phantom span that
+    swallows real prose after the block.
+
+    Fences: ``` and ~~~, three or more markers, 0–3 leading spaces, closed by
+    the SAME character at EQUAL OR GREATER length with only whitespace after
+    the marker. The whole fence line — info string included — is kept
+    verbatim; only the block's contents are blanked. An UNCLOSED fence masks
+    to the end of the document, matching CommonMark and matching what a reader
+    actually sees.
+
+    Nothing else is code: there is deliberately no 4-space indented-code rule
+    (Q3 / E6), because every 4-space-indented link-shaped span in this
+    repository is a real link in a blockquote or list continuation.
+    """
+    open_marker: str | None = None
+    fenced: list[str] = []
+    for line in text.split("\n"):
+        match = _FENCE_RE.match(line)
+        if open_marker is None:
+            fenced.append(line)
+            if match is not None:
+                open_marker = match.group(1)
+        elif (
+            match is not None
+            and match.group(1)[0] == open_marker[0]
+            and len(match.group(1)) >= len(open_marker)
+            and not match.group(2).strip()
+        ):
+            open_marker = None
+            fenced.append(line)
+        else:
+            fenced.append(" " * len(line))
+    return "\n".join(_mask_inline_spans(line) for line in fenced)
+
+
+def _escape_flags(text: str) -> bytearray:
+    """One flag per character: 1 where the character is backslash-escaped (D1 rule 7).
+
+    Computed in a single forward pass so `\\\\[` reads correctly — the first
+    backslash escapes the second, leaving the `[` unescaped and able to open a
+    link. Every "is this delimiter real?" test in the scanner is a lookup here
+    rather than a backward walk, which is what keeps the scan linear.
+    """
+    flags = bytearray(len(text))
+    i = 0
+    while i < len(text):
+        if text[i] == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+            flags[i + 1] = 1
+            i += 2
+        else:
+            i += 1
+    return flags
+
+
+def _line_starts(text: str) -> list[int]:
+    """Offset of every line's first character, ascending (always starts at 0)."""
+    starts = [0]
+    idx = text.find("\n")
+    while idx != -1:
+        starts.append(idx + 1)
+        idx = text.find("\n", idx + 1)
+    return starts
+
+
+def _blank_line_starts(text: str, line_starts: list[int]) -> list[int]:
+    """Offsets of the whitespace-only lines, ascending (CommonMark's blank line).
+
+    Precomputed once per document so the per-candidate bound is a monotonic
+    cursor into this list. Re-deriving the bound from scratch at each
+    candidate is quadratic on a long fence-free document — one of the two
+    shapes the Phase-1 linearity note names.
+    """
+    blanks: list[int] = []
+    for idx, start in enumerate(line_starts):
+        end = line_starts[idx + 1] - 1 if idx + 1 < len(line_starts) else len(text)
+        if not text[start:end].strip():
+            blanks.append(start)
+    return blanks
+
+
+def _unescape_backslashes(token: str) -> str:
+    """Resolve D1 rule 7 escapes: `\\x` → `x` for escapable `x`, else a literal `\\`."""
+    out: list[str] = []
+    i = 0
+    while i < len(token):
+        if token[i] == "\\" and i + 1 < len(token) and token[i + 1] in _ESCAPABLE:
+            out.append(token[i + 1])
+            i += 2
+        else:
+            out.append(token[i])
+            i += 1
+    return "".join(out)
+
+
+def _split_destination(raw: str) -> tuple[str, str | None]:
+    """Split a destination token into `(path, fragment)` — the BINDING order.
+
+    Strip a surrounding `<…>` pair → split on the FIRST `#` in the remaining
+    **raw** text → backslash-unescape the left half → percent-decode it
+    (invalid sequences pass through unchanged). The fragment is carried
+    verbatim, neither unescaped nor decoded, because nothing ever resolves it.
+
+    Three consequences are specified rather than emergent, and all three fall
+    out of doing it in exactly this order in exactly one place:
+
+    - a percent-encoded `%23` is NOT a fragment delimiter (the split already
+      happened), so `plan%23x.md` is a path named `plan#x.md`;
+    - a percent-encoded `%2F` IS a path separator, because decoding precedes
+      the join;
+    - a backslash cannot escape a `#` out of being the fragment delimiter, for
+      the same reason — the split precedes unescaping.
+    """
+    token = raw[1:-1] if len(raw) >= 2 and raw.startswith("<") and raw.endswith(">") else raw
+    path_part, sep, fragment = token.partition("#")
+    return urllib.parse.unquote(_unescape_backslashes(path_part)), fragment if sep else None
+
+
+def _scan_destination(
+    masked: str, escaped: bytearray, pos: int, bound: int
+) -> tuple[int, int] | None:
+    """`(start, end)` of the destination token at/after `pos`, or None (D1 rules 3/4).
+
+    A zero-width `(k, k)` span means an EMPTY destination: the inline form
+    `[a]()` is a recognised link with an empty destination token, while the
+    reference-definition form rejects it (rule 6(c)). The caller decides.
+
+    Plain destinations end at the first unescaped whitespace or at an
+    unescaped `)` at nesting depth 0. Unescaped parentheses nest and must
+    balance; exceeding `MAX_DESTINATION_PAREN_DEPTH` returns None IMMEDIATELY
+    rather than scanning on, which is what keeps `"[a](" * 40_000` constant
+    per candidate. An angle destination is bounded at the newline for the same
+    reason: an unterminated `<` must not swallow the rest of the document.
+    """
+    k = pos
+    while k < bound and masked[k].isspace():
+        k += 1
+    if k >= bound:
+        return (k, k)
+    if masked[k] == "<" and not escaped[k]:
+        eol = masked.find("\n", k)
+        stop = bound if eol == -1 else min(bound, eol)
+        j = k + 1
+        while j < stop:
+            if masked[j] == ">" and not escaped[j]:
+                return (k, j + 1)
+            j += 1
+        return None
+    if masked[k] == ")" and not escaped[k]:
+        return (k, k)
+
+    depth = 0
+    j = k
+    while j < bound:
+        if escaped[j]:
+            j += 1
+            continue
+        char = masked[j]
+        if char.isspace():
+            break
+        if char == "(":
+            depth += 1
+            if depth > MAX_DESTINATION_PAREN_DEPTH:
+                return None
+        elif char == ")":
+            if depth == 0:
+                break
+            depth -= 1
+        j += 1
+    return None if depth else (k, j)
+
+
+def _scan_title(masked: str, escaped: bytearray, pos: int, bound: int) -> int | None:
+    """One past a `"…"` / `'…'` / `(…)` title starting at `pos`, or None (D1 rule 5).
+
+    The `(…)` form is scanned to its first unescaped `)` with NO nesting — the
+    simplest rule that keeps rule 5's whitespace-based destination/title
+    disambiguation honest. An unterminated title, or a non-title trailer, is
+    None: the whole span is then not a recognised link, so `[a](plan.md extra)`
+    is prose.
+    """
+    closers = {'"': '"', "'": "'", "(": ")"}
+    closer = closers.get(masked[pos])
+    if closer is None or escaped[pos]:
+        return None
+    j = pos + 1
+    while j < bound:
+        if masked[j] == closer and not escaped[j]:
+            return j + 1
+        j += 1
+    return None
+
+
+def _skip_spaces(masked: str, pos: int, bound: int) -> int:
+    """First offset at/after `pos` that is not whitespace (bounded by `bound`)."""
+    k = pos
+    while k < bound and masked[k].isspace():
+        k += 1
+    return k
+
+
+def _close_inline(masked: str, escaped: bytearray, pos: int, bound: int) -> int | None:
+    """One past the `)` closing an inline link whose destination ended at `pos`.
+
+    Between the destination and the closing `)` only whitespace and at most
+    one title may appear (D1 rules 3 and 5). None means the span is not a
+    recognised link.
+    """
+    k = _skip_spaces(masked, pos, bound)
+    if k < bound and masked[k] == ")" and not escaped[k]:
+        return k + 1
+    if k >= bound:
+        return None
+    after_title = _scan_title(masked, escaped, k, bound)
+    if after_title is None:
+        return None
+    k = _skip_spaces(masked, after_title, bound)
+    if k < bound and masked[k] == ")" and not escaped[k]:
+        return k + 1
+    return None
+
+
+def _close_reference_definition(masked: str, escaped: bytearray, pos: int, bound: int) -> bool:
+    """True when only whitespace and at most one title follow a refdef destination.
+
+    D1 rule 6(b): a trailing non-title remainder disqualifies the definition
+    exactly as it does the inline form, so `[plan]: plan.md and more` is prose.
+    """
+    k = _skip_spaces(masked, pos, bound)
+    if k >= bound:
+        return True
+    after_title = _scan_title(masked, escaped, k, bound)
+    if after_title is None:
+        return False
+    return _skip_spaces(masked, after_title, bound) >= bound
+
+
+def scan_body_links(text: str) -> tuple[BodyLink, ...]:
+    """Every recognised body-link destination occurrence in `text`, in source order.
+
+    A pure function of the text (D5). It reports EVERY recognised occurrence,
+    in-root or not, `local` or not — containment and existence are
+    `body_link_findings`' job. That split is what lets
+    `outside-root-body-link` exist at all, and it is what M28 consumes.
+
+    The whole document is scanned, metadata block included, with offsets into
+    the original text: a `Related:` bullet cannot be link-shaped, so scanning
+    the whole text costs nothing and gives M28 a single offset base.
+
+    One linear forward pass over the masked text. Three details are what keep
+    it linear on adversarial input, and all three are easy to lose:
+
+    - the blank-line bound comes from a MONOTONIC cursor into a precomputed
+      list, never from a fresh search per candidate;
+    - a candidate whose `]` is missing resumes at its blank-line bound, and a
+      candidate that fails to form a link resumes at its `]` — never at the
+      opening `[` + 1. Whether a candidate forms a link depends on what
+      follows the `]`, not on which `[` found it; the one exception is the
+      image rejection, which does depend on the `[` and therefore reuses the
+      cached closing position rather than rescanning;
+    - the destination parser bails the moment parentheses nest too deep, and
+      bounds an angle destination at the newline.
+    """
+    masked = _mask_code(text)
+    escaped = _escape_flags(masked)
+    line_starts = _line_starts(masked)
+    blank_starts = _blank_line_starts(masked, line_starts)
+    end_of_text = len(masked)
+
+    links: list[BodyLink] = []
+    blank_cursor = 0
+    line_cursor = 0
+    i = 0
+    while True:
+        i = masked.find("[", i)
+        if i == -1:
+            break
+        if escaped[i]:
+            i += 1
+            continue
+
+        # One bound for the WHOLE candidate — label, destination and title
+        # alike. Bounding only the label would let the destination parser run
+        # to EOF.
+        while blank_cursor < len(blank_starts) and blank_starts[blank_cursor] <= i:
+            blank_cursor += 1
+        limit = blank_starts[blank_cursor] if blank_cursor < len(blank_starts) else end_of_text
+
+        close = -1
+        j = i + 1
+        while j < limit:
+            if masked[j] == "]" and not escaped[j]:
+                close = j
+                break
+            j += 1
+        if close == -1:
+            # No `]` before the blank line — and no later `[` in this
+            # paragraph can find one either.
+            i = limit
+            continue
+
+        if i and masked[i - 1] == "!" and not escaped[i - 1]:
+            i = close + 1  # an image (D1 rule 2 / Q2), rejected after the fact
+            continue
+
+        while line_cursor + 1 < len(line_starts) and line_starts[line_cursor + 1] <= i:
+            line_cursor += 1
+
+        span: tuple[int, int] | None = None
+        kind = ""
+        resume = close + 1
+        after = close + 1
+        if after < end_of_text and masked[after] == "(":
+            found = _scan_destination(masked, escaped, after + 1, limit)
+            if found is not None:
+                closed = _close_inline(masked, escaped, found[1], limit)
+                if closed is not None:
+                    span, kind, resume = found, "inline", closed
+        elif after < end_of_text and masked[after] == ":":
+            indent = masked[line_starts[line_cursor] : i]
+            eol = masked.find("\n", i)
+            eol = end_of_text if eol == -1 else eol
+            if len(indent) <= 3 and not indent.strip(" ") and close < eol:
+                bound = min(eol, limit)
+                found = _scan_destination(masked, escaped, after + 1, bound)
+                # Rule 6(c): an empty destination is not a recognised
+                # reference definition at all — not a `BodyLink` carrying an
+                # empty `raw`, which would hand M28 a zero-width span.
+                if (
+                    found is not None
+                    and found[1] > found[0]
+                    and _close_reference_definition(masked, escaped, found[1], bound)
+                ):
+                    span, kind, resume = found, "reference-definition", bound
+
+        if span is None:
+            i = close + 1
+            continue
+
+        start, stop = span
+        while line_cursor + 1 < len(line_starts) and line_starts[line_cursor + 1] <= start:
+            line_cursor += 1
+        # `raw` is sliced from the ORIGINAL text, never from the mask, which
+        # is what makes `text[start:end] == raw` true by construction.
+        raw = text[start:stop]
+        path, fragment = _split_destination(raw)
+        links.append(
+            BodyLink(
+                kind=kind,
+                line=line_cursor + 1,
+                column=start - line_starts[line_cursor] + 1,
+                raw=raw,
+                path=path,
+                fragment=fragment,
+                start=start,
+                end=stop,
+            )
+        )
+        i = resume
+    return tuple(links)
+
+
+def classify_destination(raw: str) -> str:
+    """Classify a destination token as a `DESTINATION_KINDS` member (M27 — D2).
+
+    Runs on the token AS WRITTEN — escapes are not decoded first, so a
+    percent-encoded `%23` at the front does not make a destination
+    fragment-only — with one exception: a surrounding `<…>` pair is stripped
+    first, or an angle-wrapped autolink-shaped destination would classify as
+    `local` and be resolved as a path.
+
+    The order of the tests is contractual: `//host/x` is `protocol-relative`
+    rather than `root-absolute`. Only `local` is ever resolved or reported;
+    the other five produce no finding of any kind, ever. A Windows-style
+    `C:\\docs\\plan.md` is therefore scheme-shaped and silent — deliberate,
+    and stated in `cli.md` so it is not mistaken for a gap.
+    """
+    token = raw[1:-1] if len(raw) >= 2 and raw.startswith("<") and raw.endswith(">") else raw
+    if token == "":
+        return "empty"
+    if token.startswith("#"):
+        return "fragment"
+    if token.startswith("//"):
+        return "protocol-relative"
+    if token.startswith("/"):
+        return "root-absolute"
+    if _SCHEME_RE.match(token):
+        return "scheme"
+    return "local"
+
+
+def normalise_body_link_target(doc_rel: str, dest_path: str) -> str:
+    """Resolve `dest_path` against the REFERRING document's directory (M27 — D3).
+
+    `doc_rel` is the referring document's root-relative POSIX path (e.g.
+    `archive/2026-01-01/old-log.md`); this drops the last segment itself, so
+    callers never pre-compute a directory. The single most important
+    difference from a `Related:` target, which is root-relative — `../` is
+    normal and expected in a body link and never appears in a `Related:`
+    bullet.
+
+    Purely lexical: `..` segments collapse textually, `resolve()` is never
+    called and no symlink is followed, so the verdict is a function of two
+    strings and cannot vary with filesystem state. `posixpath` rather than
+    `os.path` for `_canonical_related_target`'s stated reason — on Windows
+    `os.path.normpath` rewrites `/` to `\\` and treats `\\` as a separator,
+    which would make containment platform-dependent and destroy exactly the
+    hermeticity property D4b exists to guarantee.
+    """
+    return posixpath.normpath(posixpath.join(posixpath.dirname(doc_rel), dest_path))
+
+
+def _body_link_is_contained(candidate: str) -> bool:
+    """True when a normalised body-link candidate stays inside the root (M27 — D4b).
+
+    `_candidate_exclusion_reason`'s `outside-root` predicate MINUS its leading
+    `/` leg, and the divergence is deliberate: a root-absolute *body*
+    destination names a web-server root rather than a tree path, so it is
+    classified `root-absolute` and silenced before containment ever runs,
+    whereas a root-absolute `Related:` target is `outside-root`.
+
+    The test is `== ".."` or `startswith("../")`, never `startswith("..")` —
+    `..foo.md` is an ordinary in-root file whose name happens to begin with
+    two dots, and reporting it would be an over-fire with no repair available.
+    """
+    return not (candidate == ".." or candidate.startswith("../"))
+
+
+def body_link_findings(path: Path, text: str, root: Path) -> list[Finding]:
+    """`broken-body-link` / `outside-root-body-link` for one document (M27 — D4/D4b).
+
+    The BINDING evaluation order, per occurrence: classify (not `local` →
+    silence, stop), then containment by path arithmetic alone (escapes →
+    `outside-root-body-link`, stop), then existence inside the root (missing →
+    `broken-body-link`). An escaping destination is therefore NEVER also
+    reported as broken — deciding whether it is broken would require precisely
+    the stat the hermetic boundary forbids.
+
+    Any existing filesystem entry satisfies a contained destination — file or
+    directory, any extension (Q7) — so this calls `.exists()`, not
+    `.is_file()`. A dangling symlink inside the root reports broken, because
+    `.exists()` follows links and the destination really is unreachable from
+    the reader's point of view.
+
+    The single `.exists()` on an already-contained, already-normalised
+    candidate is the only filesystem access in the whole scanner. That is what
+    makes `docs check` a function of the tree alone: the same bytes checked
+    from a different location yield the identical verdict.
+    """
+    doc_rel = _root_relative(path, root)
+    findings: list[Finding] = []
+    for link in scan_body_links(text):
+        if classify_destination(link.raw) != "local":
+            continue
+        candidate = normalise_body_link_target(doc_rel, link.path)
+        if not _body_link_is_contained(candidate):
+            findings.append(
+                Finding(
+                    path,
+                    "error",
+                    "outside-root-body-link",
+                    f"body link at line {link.line} leaves the docs root: {link.raw} "
+                    f"(normalises to {candidate}); links outside the tree must be URLs",
+                )
+            )
+            continue
+        if not (root / candidate).exists():
+            findings.append(
+                Finding(
+                    path,
+                    "error",
+                    "broken-body-link",
+                    f"body link at line {link.line} does not resolve to an existing path: "
+                    f"{link.raw} (resolves to {candidate})",
+                )
+            )
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Check rules, query, and JSON records (M3)
+# ---------------------------------------------------------------------------
 
 
 def check_doc(

@@ -826,6 +826,13 @@ Exactness, pinned rather than implied:
    (`[a [b] c](x.md)`) are **not** supported: the label ends at that first
    `]`, so the span is not a recognised link. Escape the inner brackets to
    write one.
+
+   A **blank line** is a line whose content is whitespace-only (CommonMark),
+   and that first blank line bounds the **whole candidate** — label,
+   destination and title alike, not just the label. Phase 1 stated the bound
+   only for the label scan, which left the destination parser free to run to
+   the end of the document on an unterminated candidate; one bound for the
+   whole candidate is what keeps the scanner linear.
 2. **Image exclusion.** An otherwise-recognised inline link whose `[` is
    immediately preceded by an unescaped `!` is an image and is skipped.
 3. **Plain destination.** Optional whitespace is permitted on **both** sides of
@@ -840,6 +847,19 @@ Exactness, pinned rather than implied:
    `MAX_DESTINATION_PAREN_DEPTH = 3`. Beyond that depth, or left unbalanced,
    the span is not a recognised link. A newline is whitespace, so a plain
    destination never spans lines.
+
+   Two points Phase 1 left silent, settled because they change what
+   `scan_body_links` hands M28 even where no finding moves. **A newline is
+   ordinary whitespace on both sides of the destination**, so a destination
+   written on its own line between the `(` and the `)` is a recognised link —
+   the candidate is bounded by rule 1's blank line, not by the line the `(`
+   opened on. And an **empty inline destination is recognised**: `[a]()` is a
+   link whose destination token is **zero-width**, positioned at the first
+   non-whitespace character after the `(`, classified `empty` and therefore
+   silent. That has to be said, because rule 6 disqualifies the empty
+   *reference-definition* form as an explicit exception — which only reads as
+   an exception if the inline form is recognised — and the classification
+   table below already gives `[a]()` as its `empty` example.
 4. **Angle destination.** `<…>`: whitespace is allowed inside, a literal `>`
    must be backslash-escaped, and a newline inside the brackets terminates the
    candidate (not a link). The **angle brackets are part of the destination
@@ -853,7 +873,10 @@ Exactness, pinned rather than implied:
    the closing `)` only whitespace and at most one title may appear (per
    rule 3, trailing whitespace is fine); any **non-whitespace, non-title**
    content there means the span is not a recognised link, so
-   `[a](plan.md extra)` is prose.
+   `[a](plan.md extra)` is prose. A title stays inside rule 1's blank-line
+   bound like the rest of the candidate, and the `(…)` form is scanned to its
+   **first unescaped `)` with no nesting** — the simplest rule that keeps this
+   whitespace-based disambiguation honest, and one Phase 1 did not state.
 6. **Reference definition.** Line-anchored: 0–3 leading spaces, `[label]:`,
    optional whitespace, the destination, then an optional title to end of
    line. The destination is the same plain-or-angle token as in an inline
@@ -873,6 +896,15 @@ Exactness, pinned rather than implied:
    - an **empty destination is not a recognised reference definition** at all
      — `[plan]:` with nothing after it yields no `BodyLink`, rather than a
      `BodyLink` with an empty `raw`.
+
+   "Line-anchored end to end" means the **label itself opens and closes on one
+   line** as well: a `[label]:` whose `]` sits on a later line is not a
+   definition. And an unescaped `)` at nesting depth 0 terminates a
+   reference-definition destination exactly as it terminates an inline one —
+   it is "the same plain-or-angle token" — after which rule 6's
+   trailing-remainder clause disqualifies the definition. Both were left
+   implicit in Phase 1 and both are settled here, because they are M28's
+   input.
 
    `kind` is `"reference-definition"`; both rules and both message
    templates are otherwise identical — the kind lives on the scanner's record,
@@ -929,8 +961,11 @@ Before any matching, the document text passes through a **length-preserving**
 mask that replaces the *contents* of code with spaces:
 
 - **fenced code blocks** — ``` and `~~~`, 3+ markers, 0–3 leading spaces,
-  closed by a fence of the **same character** and **equal or greater** length.
-  An **unclosed** fence masks to the **end of the document**, matching
+  closed by a fence of the **same character** and **equal or greater** length
+  with **only whitespace after the marker** (CommonMark — a marker followed by
+  an info string opens, it never closes). The **whole fence line is preserved
+  verbatim**, info string included; only the block's contents are blanked. An
+  **unclosed** fence masks to the **end of the document**, matching
   CommonMark;
 - **inline code spans** — matched backtick runs of equal length. An inline
   span **never crosses a line boundary**, so one unpaired backtick cannot mask
@@ -1029,7 +1064,12 @@ that non-Markdown files may be referenced from prose and that `Related:`
 checks existence regardless of extension; body links inherit that, and a link
 to a directory is a legitimate Markdown link. `[exclude]` / `.docsignore` /
 `--exclude` govern which documents are **walked**, never what a destination
-may point at, so a link to an excluded-but-existing file resolves.
+may point at, so a link to an excluded-but-existing file resolves. Existence
+is tested with `Path.exists()`, which **follows symlinks**, so a link to a
+symlink inside the root whose target is missing is `broken-body-link` — the
+destination really is unreachable from the reader's point of view, and that is
+what the rule is for. (This is existence, not containment: containment stays
+purely lexical and follows nothing, per the *Symlinks* case above.)
 
 **The out-of-root boundary is specified behaviour, not an implementation
 detail.** `docs check` never stats, opens, or follows anything outside the
