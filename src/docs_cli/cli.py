@@ -2219,13 +2219,14 @@ def _blank_line_starts(text: str, line_starts: list[int]) -> list[int]:
     cursor into this list. Re-deriving the bound from scratch at each
     candidate is quadratic on a long fence-free document — one of the two
     shapes the Phase-1 linearity note names.
+
+    `split("\\n")` yields exactly one piece per line start, newline excluded,
+    so the two zip one-to-one; `strict=True` says so and would raise rather
+    than silently truncate if that ever stopped holding.
     """
-    blanks: list[int] = []
-    for idx, start in enumerate(line_starts):
-        end = line_starts[idx + 1] - 1 if idx + 1 < len(line_starts) else len(text)
-        if not text[start:end].strip():
-            blanks.append(start)
-    return blanks
+    return [
+        start for start, line in zip(line_starts, text.split("\n"), strict=True) if not line.strip()
+    ]
 
 
 def _unescape_backslashes(token: str) -> str:
@@ -2386,11 +2387,14 @@ def _label_closers(masked: str, escaped: bytearray) -> tuple[list[int], list[int
     """
     events: list[tuple[int, int]] = []
     end = len(masked)
-    q = masked.find("!")
+    q = masked.find("![")
     while q != -1:
-        if not escaped[q] and q + 1 < end and masked[q + 1] == "[" and not escaped[q + 1]:
+        # Only the `!` can carry an escape: `\![` is a literal `!` followed by
+        # an ordinary link opener. The `[` never can — the character before it
+        # is the `!`, so nothing is there to escape it.
+        if not escaped[q]:
             events.append((q, 1))
-        q = masked.find("!", q + 1)
+        q = masked.find("![", q + 1)
     q = masked.find("]")
     while q != -1:
         if not escaped[q]:

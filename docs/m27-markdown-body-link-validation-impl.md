@@ -2162,6 +2162,86 @@ after these fixes landed.
   inside the 2.0 s bound; `docs check` **0.15 s** end to end.
 - Mirrors identical; INDEX snapshot identical.
 
+## Post-review `/simplify` pass — 2026-08-14
+
+Phase 10 already ran `/simplify` over this code, so this pass was run against
+the **head**, not against Phase 10's tree — and that is where the findings
+were. `_label_closers` and `_seek_unescaped`'s memo did not exist when
+Phase 10 ran; the Step-2 fresh-eyes review introduced them *afterwards*. Those
+two functions had never been through a simplify pass, and one of them carried
+half of what this pass found. The rest of the scanner was re-read and left
+alone.
+
+**Applied — two changes, each proven behaviour-identical *before* it was
+made:**
+
+| Change | Why it simplifies |
+|---|---|
+| `_blank_line_starts`' index arithmetic → one `zip(line_starts, text.split("\n"), strict=True)` comprehension | The loop recovered each line's end from the **next** line's start (`line_starts[idx + 1] - 1`), with an out-of-range branch for the last line — five lines of offset bookkeeping to reconstruct exactly the strings `split("\n")` already returns. One concept instead of three, the same linear cost, and `strict=True` turns the one-to-one pairing from an unstated invariant into a checked one. `_mask_code` already reads lines this way, so the module now says it one way |
+| `_label_closers`' image scan: `find("!")` + `masked[q + 1] == "["` → `find("![")`, dropping two conditions that can never fire | With a two-character needle `q + 1 < end` cannot fail, and `not escaped[q + 1]` cannot fail at all — `escaped[j]` is set only when the character *before* `j` is a backslash, and here that character is the `!`. Removing two dead tests leaves the one live test, the `!` itself, which `\![` really does escape; and the `![` and `]` loops now read as one loop written twice with a different needle instead of two different-looking loops. A comment states why only one escape test survives, so a reviewer does not re-add the other |
+
+**The proof came first, and it is empirical.** Both changes were run as
+differential oracles *before* being applied: old implementation vs new over
+**30,609 inputs** — every `.md` in the repository plus 30,000 random strings
+over the alphabet ``![]()`\ \n\t~"'#.:<>`` — asserting identical output at
+every one. The second change's load-bearing claim was asserted directly
+rather than argued: at every offset where the mask holds `![`,
+`escaped[q + 1]` is 0.
+
+**Linearity re-measured, not assumed.** The milestone paid for this twice
+(3.27 s and 5.96 s shipped quadratic, then fixed), so the pass ends with a
+before/after measurement rather than a claim that nothing moved:
+
+| | before (`b69b837`) | after |
+|---|---|---|
+| adversarial 485 KB / 6 shapes (2.0 s lock) | 80.6 ms | **81.2 ms** |
+| live `docs/` tree — 2.5 MB, 71 docs | 84.5 ms | **83.3 ms** |
+| `"[a](<" * n`, n = 2k → 16k | 1.2 → 14.8 ms (2.2–2.5× per doubling) | **1.2 → 14.9 ms (2.2–2.5×)** |
+| `"[a](<x> (" * n`, n = 2k → 16k | 2.1 → 25.6 ms (2.2–2.5× per doubling) | **2.1 → 25.7 ms (2.2–2.5×)** |
+
+Both formerly-quadratic shapes keep their ~2× per doubling. The memo and the
+two tables are still doing the work.
+
+**Considered and rejected — with the reason, so a later pass need not
+re-derive it.** (Phase 10's own rejection table still stands; these are the
+candidates that pass did not reach.)
+
+| Candidate | Why it stays |
+|---|---|
+| "Simplify" `_seek_unescaped`'s memo, `_escape_flags`' flag table, `_label_closers`' level table, or `scan_body_links`' monotone cursors back into rescans | Every one of them exists because the obvious implementation is quadratic, and two of those quadratics were measured in this milestone at 3.27 s and 5.96 s. The table above is the standing measurement that they still earn their keep |
+| Rebuild `_mask_inline_spans`' `next_same` index with a forward pass instead of the backward one | A genuine toss-up, which is not a simplification. Forward gains `enumerate` and loses the reversed range; it pays for that with `next_same[previous[length]] = idx`, a double indirection harder to read than `next_same[idx] = last_seen[length]`. Same length, same cost, no clearer |
+| Drop `_one_line`'s `if token.isprintable(): return token` fast path (the loop returns the identical string without it) | Behaviour-identical, but the guard is the function's one-line statement of the common case — every ordinary destination passes through untouched — and removing it would trade two clear lines for nothing |
+| Move `scan_body_links`' first `line_cursor` advance into the reference-definition branch, its only consumer | Locality gained, checkability lost: with both advances at one nesting level a reader can see the cursor is monotone across the loop at a glance, and burying one in a branch makes that a two-step argument instead. Net zero at best |
+| Spell the label-closer cursor's `closer_at[closer_cursor] < i + 1` as `<= i`, matching the blank-line cursor immediately above it | Identical predicate (and in fact no event position can equal `i` at all, since a `![` event is recorded at the `!`). Cosmetic only |
+| Fuse `_label_closers`' `positions` comprehension into the `levels` loop, or drop `levels` entirely by running the level counter backwards | The fusion is one pass fewer and one line **more**. The backward counter is cleverer, not simpler: a forward table of "the level a label starting here would be at" is the thing the backward pass is actually indexed by, and it should stay visible |
+| Delete `BodyLink.kind` / `.column` / `.fragment` — `body_link_findings` reads none of them | Not dead code: they are D5's handoff to M28, documented as such on the dataclass and locked by tests. `scan_body_links` reports occurrences; the finding rules consume a subset. That split is the milestone's design |
+| Delete `BODY_LINK_KINDS` / `DESTINATION_KINDS` — no code path reads either | Closed-vocabulary constants, the same pattern as `ARCHIVE_EXCLUSION_REASONS`, referenced by the docstrings that define the contract and pinned by tests. A third member would be a grammar change |
+| Split `_probe_exists`' `files_only` flag into two functions | One call site each, and splitting would duplicate the `try` / `except OSError` that is the entire point of the helper — the N3 crash fix, shared by `broken-ref` and both body-link rules |
+
+**One documentation inaccuracy found and fixed, no code involved.** The
+*Milestone completion summary* stated the runtime lock in the present tense as
+"~44 ms for the 303 KB adversarial set, ~45× under the runtime lock". That was
+Phase 9's and Phase 10's **three**-shape lock; the fresh-eyes review had since
+taken it to six shapes and 485 KB. The per-phase figures are correct as
+history and are left alone; the summary is re-derived from the head at
+~81 ms / ~25×. Nothing in `cli.md`'s frozen contract was touched, and no
+disagreement between that contract and the code was found.
+
+### Verification
+
+- `.venv/bin/python -m pytest -q` — **1087 passed, 0 failed**, identical to
+  the baseline at `b69b837`. **No test was relaxed, weakened, deleted or
+  rewritten**; the test files are byte-unchanged.
+- `ruff format` (one file, and only the comprehension this pass wrote),
+  `ruff check src/ tests/` — all checks passed, `mypy` — success, 48 files.
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- Live-tree census after this section's doc edits — **393 spans, 0 broken,
+  0 escapes**.
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — byte-identical.
+- Diff reviewed against `b69b837`: 13 insertions / 9 deletions, all inside
+  `_blank_line_starts` and `_label_closers`. No prior-phase code was
+  overwritten.
+
 ## Milestone completion summary
 
 **M27 — Markdown body-link validation is implementation-complete
@@ -2217,7 +2297,11 @@ the Step-2 audit and the fresh-eyes review added alongside the seven real
 defects they found — and **zero** pre-existing ids removed or modified
 across the whole milestone; 1087 collected, 1087 passed; 393 recognised spans
 over `docs/` before and after the repair; ~82 ms to scan the 2.5 MB tree and
-~44 ms for the 303 KB adversarial set, ~45× under the runtime lock. No version
+~81 ms for the 485 KB adversarial set, ~25× under the runtime lock. (The
+`~44 ms / ~45×` recorded in Phase 9 and Phase 10 was the **three**-shape,
+303 KB lock those phases measured; the fresh-eyes review then took the lock
+to six shapes and 485 KB, so the per-phase figures above stand as history and
+this one is re-derived from the head.) No version
 bump: `pyproject.toml` stays `1.8.0`; **M29** performs the single bump to
 `2.0.0` (M25 — D6).
 
