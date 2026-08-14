@@ -2097,6 +2097,8 @@ def _mask_inline_spans(line: str) -> str:
     partner — is O(line^2) on an adversarial line of unmatched runs, and the
     pathological-input runtime lock is what measures that.
     """
+    if "`" not in line:
+        return line
     runs: list[tuple[int, int]] = []
     i = 0
     while i < len(line):
@@ -2183,15 +2185,19 @@ def _escape_flags(text: str) -> bytearray:
     backslash escapes the second, leaving the `[` unescaped and able to open a
     link. Every "is this delimiter real?" test in the scanner is a lookup here
     rather than a backward walk, which is what keeps the scan linear.
+
+    The pass steps between backslashes with `str.find` rather than over every
+    character: a document is overwhelmingly not backslashes, and the C-speed
+    skip is what keeps a 2.5 MB tree scan in the tens of milliseconds.
     """
     flags = bytearray(len(text))
-    i = 0
-    while i < len(text):
-        if text[i] == "\\" and i + 1 < len(text) and text[i + 1] in _ESCAPABLE:
+    i = text.find("\\")
+    while i != -1 and i + 1 < len(text):
+        if text[i + 1] in _ESCAPABLE:
             flags[i + 1] = 1
-            i += 2
+            i = text.find("\\", i + 2)  # an escaped `\` cannot escape the next character
         else:
-            i += 1
+            i = text.find("\\", i + 1)
     return flags
 
 
@@ -2235,6 +2241,19 @@ def _unescape_backslashes(token: str) -> str:
     return "".join(out)
 
 
+def _strip_angle_pair(raw: str) -> str:
+    """A destination token with a surrounding `<…>` pair removed, if it has one.
+
+    The first step of BOTH the decode order and classification, stated once so
+    the two cannot drift: an angle-wrapped autolink-shaped destination has to
+    classify on what is inside the brackets, or `<https://x>` would read as a
+    `local` path.
+    """
+    if len(raw) >= 2 and raw.startswith("<") and raw.endswith(">"):
+        return raw[1:-1]
+    return raw
+
+
 def _split_destination(raw: str) -> tuple[str, str | None]:
     """Split a destination token into `(path, fragment)` — the BINDING order.
 
@@ -2253,9 +2272,16 @@ def _split_destination(raw: str) -> tuple[str, str | None]:
     - a backslash cannot escape a `#` out of being the fragment delimiter, for
       the same reason — the split precedes unescaping.
     """
-    token = raw[1:-1] if len(raw) >= 2 and raw.startswith("<") and raw.endswith(">") else raw
-    path_part, sep, fragment = token.partition("#")
+    path_part, sep, fragment = _strip_angle_pair(raw).partition("#")
     return urllib.parse.unquote(_unescape_backslashes(path_part)), fragment if sep else None
+
+
+def _skip_spaces(masked: str, pos: int, bound: int) -> int:
+    """First offset at/after `pos` that is not whitespace (bounded by `bound`)."""
+    k = pos
+    while k < bound and masked[k].isspace():
+        k += 1
+    return k
 
 
 def _scan_destination(
@@ -2274,9 +2300,7 @@ def _scan_destination(
     per candidate. An angle destination is bounded at the newline for the same
     reason: an unterminated `<` must not swallow the rest of the document.
     """
-    k = pos
-    while k < bound and masked[k].isspace():
-        k += 1
+    k = _skip_spaces(masked, pos, bound)
     if k >= bound:
         return (k, k)
     if masked[k] == "<" and not escaped[k]:
@@ -2331,14 +2355,6 @@ def _scan_title(masked: str, escaped: bytearray, pos: int, bound: int) -> int | 
             return j + 1
         j += 1
     return None
-
-
-def _skip_spaces(masked: str, pos: int, bound: int) -> int:
-    """First offset at/after `pos` that is not whitespace (bounded by `bound`)."""
-    k = pos
-    while k < bound and masked[k].isspace():
-        k += 1
-    return k
 
 
 def _close_inline(masked: str, escaped: bytearray, pos: int, bound: int) -> int | None:
@@ -2448,16 +2464,15 @@ def scan_body_links(text: str) -> tuple[BodyLink, ...]:
         while line_cursor + 1 < len(line_starts) and line_starts[line_cursor + 1] <= i:
             line_cursor += 1
 
-        span: tuple[int, int] | None = None
-        kind = ""
-        resume = close + 1
+        # (kind, start, end, resume) once a form is recognised, else None.
+        parsed: tuple[str, int, int, int] | None = None
         after = close + 1
         if after < end_of_text and masked[after] == "(":
             found = _scan_destination(masked, escaped, after + 1, limit)
             if found is not None:
                 closed = _close_inline(masked, escaped, found[1], limit)
                 if closed is not None:
-                    span, kind, resume = found, "inline", closed
+                    parsed = ("inline", found[0], found[1], closed)
         elif after < end_of_text and masked[after] == ":":
             indent = masked[line_starts[line_cursor] : i]
             eol = masked.find("\n", i)
@@ -2473,13 +2488,13 @@ def scan_body_links(text: str) -> tuple[BodyLink, ...]:
                     and found[1] > found[0]
                     and _close_reference_definition(masked, escaped, found[1], bound)
                 ):
-                    span, kind, resume = found, "reference-definition", bound
+                    parsed = ("reference-definition", found[0], found[1], bound)
 
-        if span is None:
+        if parsed is None:
             i = close + 1
             continue
 
-        start, stop = span
+        kind, start, stop, resume = parsed
         while line_cursor + 1 < len(line_starts) and line_starts[line_cursor + 1] <= start:
             line_cursor += 1
         # `raw` is sliced from the ORIGINAL text, never from the mask, which
@@ -2517,7 +2532,7 @@ def classify_destination(raw: str) -> str:
     `C:\\docs\\plan.md` is therefore scheme-shaped and silent — deliberate,
     and stated in `cli.md` so it is not mistaken for a gap.
     """
-    token = raw[1:-1] if len(raw) >= 2 and raw.startswith("<") and raw.endswith(">") else raw
+    token = _strip_angle_pair(raw)
     if token == "":
         return "empty"
     if token.startswith("#"):

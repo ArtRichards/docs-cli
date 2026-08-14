@@ -106,9 +106,22 @@ Related:
   deliberately damaged ones, which yield exactly their intended sets. Runtime
   recorded: 183 ms over the 2.5 MB live tree, and 61 ms for the 303 KB
   adversarial set — **33× under the 2.0 s lock**, linear with no sign of
-  backtracking. The real tree was never written to. Phase 10 — quality, docs,
-  refactor — is next, carrying one measured quality item.
-  The milestone stays `Lifecycle: active` until the M29 publish closeout.
+  backtracking. The real tree was never written to. **Phase 10 (2026-08-14)**
+  ran the `/simplify` pass over the scanner — every candidate recorded,
+  considered and rejected or applied — closed the last two stale spec
+  statements (`architecture.md`'s `check` section now carries the pipeline,
+  the per-document-not-cross-document contrast with `reciprocity_findings`,
+  the length-preserving mask as the reason offsets stay valid, and the span
+  record as M28's input; `test-strategy.md`'s *What we don't test* no longer
+  claims the body is opaque), extended the README's one-line `docs check`
+  summary, and folded in the Phase-9 quality item: the live-tree scan went
+  from **183 ms to 81 ms** with `docs check` end-to-end at **0.16 s**, from
+  two early-outs that make the code read better rather than worse.
+  **M27 is implementation-complete**, with all ten phases done, every
+  deliverable met, **1079 passed / 0 failed**, `docs check --root docs` at
+  exit 0 over the repaired tree, and the `BodyLink` span contract handed to
+  M28. The milestone stays `Lifecycle: active` until the M29 publish
+  closeout.
 
 ### Goal
 
@@ -606,7 +619,7 @@ in *Evidence → regression coverage* below.
       its stated blast radius.
 - [x] Live-tree dogfood clean, plus a replayed pre-repair upgrade walk and
       documented migration evidence.
-- [ ] Surface parity across `cli.md`, `convention.md`, the bundled skill
+- [x] Surface parity across `cli.md`, `convention.md`, the bundled skill
       (byte-identical mirrors), and the `UNRELEASED` CHANGELOG.
 
 ## TDD implementation plan
@@ -790,7 +803,7 @@ in *Evidence → regression coverage* below.
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
 - [x] Phase 9 — Integrate / Accept / Dogfood
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 

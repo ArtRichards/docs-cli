@@ -22,11 +22,11 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M27 — Markdown body-link validation
 - Started: 2026-08-14 (milestone setup; no TDD phase started)
-- Progress: **Step 1 complete on `m27/phases-1-4`; Step 2 in flight on
-  `m27/phases-5-10` — Phases 5–9 complete (2026-08-14); the live tree is
-  repaired, `docs check` is clean with both rules in force, and the suite is
-  fully GREEN at **1079 passed / 0 failed** with every pre-existing id
-  mechanically proven still present.** All seven setup questions were RESOLVED at setup
+- Progress: **Implementation-complete (2026-08-14).** All ten phases done
+  across `m27/phases-1-4` (Step 1) and `m27/phases-5-10` (Step 2); every
+  deliverable met; **1079 passed / 0 failed**; `docs check --root docs` at
+  exit 0 over the repaired tree; the `BodyLink` span contract handed to M28.
+  The milestone stays `Lifecycle: active` until the M29 publish closeout. All seven setup questions were RESOLVED at setup
   (Q1/Q2/Q5 by the operator; Q3/Q4/Q6/Q7 conductor-resolved) and Phase 1 did
   not re-open them. Q5 was resolved **against** the setup recommendation and
   then **amended** — the hermetic boundary is kept, and an escaping
@@ -50,7 +50,7 @@ the milestone checklist synchronized.
 | 7. Update Tool/Wrapper Layer | **Done** | 2026-08-14 | `docs check`'s argparse description now names both rules' conditions; the bundled `SKILL.md` check row and `references/use-cases.md` (the *Validate in CI* row plus a new M27 upgrade section) name both rule ids and **both** repairs; `CHANGELOG.md` gains one `Added` entry per rule, a BREAKING `Changed` entry, and the adopter upgrade recipe. No spec edit was needed — `cli.md` and `convention.md` were already current, so both mirrors stayed byte-identical. No version bump. Suite fully GREEN. |
 | 8. Run Tests (GREEN) | **Done** | 2026-08-14 | **1079 collected, 1079 passed, 0 failed**, zero xfail/xpass, zero tracebacks; all gates clean; the `comm` proof against **both** anchors shows 0 ids removed since `d61da1d` and since `ddf0a45`, and **0 added by Step 2** — `git diff ddf0a45 -- tests/*.py` is empty, so no test was touched to reach GREEN. |
 | 9. Integrate / Accept / Dogfood | **Done** | 2026-08-14 | Pre-repair damage replayed through the CLI (140 findings, 139 + 1, exit 2); the documented recipe walked from `--json` alone reaches exit 0 with **0 destination-token mismatches** against the repaired tree; identical stdout and exit code from a with-sibling and a bare location, 0 stats outside the root under a spy; all 39 fixture trees + the bundled skill sweep clean bar M27's three damaged ones; runtimes recorded (183 ms live tree, 61 ms for the 303 KB adversarial set — 33× under the 2.0 s bound). |
-| 10. Quality, Docs, Refactor | Pending | — | Simplify, close `architecture.md` / `test-strategy.md`, completion summaries, hand the scanner to M28. |
+| 10. Quality, Docs, Refactor | **Done** | 2026-08-14 | `/simplify` pass with every candidate recorded (four applied, six considered and rejected); `architecture.md` › `check` and `test-strategy.md` › *What we don't test* closed, README's one-line summary extended; the Phase-9 quality item folded in (live-tree scan 183 ms → 81 ms, `docs check` 0.16 s end to end); completion summaries written. |
 
 ## Setup record — 2026-08-14
 
@@ -1604,6 +1604,147 @@ here.
 - Both throwaway `git worktree`s (`d61da1d`, `ddf0a45`) removed;
   `git worktree list` shows only the checkout.
 
+## Phase 10 — Quality, Docs, Refactor — 2026-08-14
+
+### Objective
+
+Simplify the scanner, close the two specs that still described a pre-M27
+world, and write the completion summaries.
+
+### The `/simplify` pass — every candidate recorded
+
+**Applied — four changes, all net simplifications:**
+
+| Change | Why it simplifies |
+|---|---|
+| `_scan_destination`'s own leading-whitespace loop → `_skip_spaces(...)`, and `_skip_spaces` moved above its first user | The three-line loop was a verbatim copy of a helper that already existed four lines away. One statement of "skip whitespace", not two |
+| `_strip_angle_pair(raw)` extracted; `_split_destination` and `classify_destination` both route through it | The same `raw[1:-1] if … startswith("<") …` expression appeared in both, and it is a **contract rule** ("strip a surrounding `<…>` pair first"), not an incidental detail. Stated once, it cannot drift; the two long conditional expressions become two short calls |
+| `scan_body_links`' `span` / `kind` / `resume` trio collapsed into one `parsed: tuple[str, int, int, int] \| None` | Removes a dead `resume = close + 1` initializer and a `kind = ""` sentinel that was a lie — the empty string is not a `BODY_LINK_KINDS` member. One "did a form match?" variable instead of three that had to be kept in step |
+| `_mask_inline_spans` gains `if "\`" not in line: return line`; `_escape_flags` steps between backslashes with `str.find` instead of over every character | Both state the common case up front — most lines carry no backtick, most documents are not backslashes — and both were the whole of the Phase-9 runtime finding |
+
+**Considered and rejected — with the reason, so a later pass need not
+re-derive it:**
+
+| Candidate | Why it stays |
+|---|---|
+| Fold `_mask_inline_spans` into `_mask_code` | `_mask_code` is contractually **two passes in a fixed order**, and the named call is what makes "fences first, spans second" visible in one line. Inlining a per-line char loop into the fence walker would bury that |
+| Collapse `_split_destination` into `scan_body_links` (it is single-use) | It is the **BINDING decode order** — the most subtle contract in the file, with three specified consequences in its docstring. Inlining it would put that in the middle of a loop body, where no one will find it |
+| Replace `_escape_flags`' `bytearray` with an `is_escaped` closure | The array is O(n) once and O(1) per lookup; a closure would have to walk backwards from each query, which is quadratic on the exact adversarial input the runtime lock exists to catch. The array earns its keep |
+| Merge `_close_inline` and `_close_reference_definition` behind a `closer: str \| None` parameter | Saves ~8 lines and costs more than it saves: the reader would have to carry "None means end-of-line" through both branches, where today each function states its own rule linearly |
+| Hoist `_scan_title`'s three-entry `closers` dict to a module constant | It would separate the definition from its only use for no gain; titles are rare, so nothing is rebuilt hot |
+| Pre-filter `_FENCE_RE` with a cheap `line[:4]` test | It would state what a fence looks like a **second** time, next to the regex that already states it — a real correctness risk if the regex ever changes — for a few milliseconds on a run that is already 0.16 s end to end |
+
+**The Phase-9 quality item, closed and re-measured:**
+
+| | before | after |
+|---|---|---|
+| `_escape_flags` over the live tree | 80.0 ms | **0.3 ms** |
+| `_mask_code` over the live tree | 92.1 ms | **69.6 ms** |
+| `scan_body_links` over the live tree (2.5 MB) | 182.7 ms | **80.7 ms** |
+| the 303 KB adversarial set (2.0 s lock) | 61 ms | **43 ms — 47× headroom** |
+| `docs check --root docs`, end to end | — | **0.16 s** |
+
+Stopped there deliberately: at 0.16 s for the whole tree the remaining
+`_mask_code` cost is not worth a second statement of the fence grammar.
+
+### Documentation closed
+
+- **`docs/architecture.md` › `check`** gains the M27 bullets after the M25
+  reciprocity bullet: the pure pipeline (`_mask_code` → `scan_body_links` →
+  `classify_destination` → `normalise_body_link_target` →
+  `_body_link_is_contained` → one `.exists()`); the fact that these are
+  **per-document** rules inside `check_doc` with **no** second `check_tree`
+  pass — the deliberate contrast with `reciprocity_findings`, and the reason
+  `docs touch --check` inherits them for free; the length-preserving mask as
+  the reason offsets stay offsets into the original text, and therefore as
+  the reason `BodyLink`'s span is usable by M28; the four bounds that keep
+  the scan linear; and the reuse list. The stdlib-only pin is noted intact
+  (`urllib.parse`, `posixpath`, `string`, `re`). `check_doc`'s rule
+  enumeration in the same section gains both ids.
+- **`docs/test-strategy.md` › *What we don't test*** said "Markdown
+  rendering. The tool reads metadata; the body content is opaque." — false
+  the moment M27 landed. It now scopes the exclusion honestly: rendering,
+  headings and anchors, prose style and document structure stay untested, and
+  the body is read for exactly **one** purpose, resolving the destinations of
+  a bounded set of local links. (`convention.md`'s twin sentence was already
+  corrected in Phase 1, because it is on the byte-parity gate.)
+- **Use-case catalogs swept.** `src/docs_cli/skill/references/use-cases.md`
+  was updated in Phase 7. `docs/agent-native-invocation.md` names `docs check`
+  three times but never enumerates its report, so it needed no change. The
+  only other surface listing what `docs check` validates is `README.md`'s
+  one-line CLI table, which now ends "…status/location drift, body links."
+
+### Verification
+
+- `.venv/bin/python -m pytest -q` — **1079 passed, 0 failed**, before and
+  after every simplification step.
+- `.venv/bin/ruff check .`, `ruff format --check .`, `mypy src/ tests/` —
+  clean.
+- `.venv/bin/docs check --root docs` — no violations (exit 0).
+- Live-tree census — **393 spans, 0 broken, 0 escapes** after this phase's
+  doc edits.
+- `cmp docs/{cli,convention}.md src/docs_cli/skill/references/` — identical;
+  `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+
 ## Milestone completion summary
 
-_Not complete._
+**M27 — Markdown body-link validation is implementation-complete
+(2026-08-14).** All ten TDD phases are done across two steps
+(`m27/phases-1-4`, `m27/phases-5-10`); every deliverable is met; the suite is
+**1079 passed / 0 failed**; and `docs check --root docs` exits 0 over a tree
+that carried 139 broken body links and one escaping link when the milestone
+opened.
+
+**What shipped.** A pure, stdlib-only, linear scanner over a deliberately
+bounded, CommonMark-*shaped* grammar — inline links with plain and `<…>`
+destinations and an optional title in all three quotings, plus reference
+definitions — behind a **length-preserving** fenced- and inline-code mask.
+Destinations resolve **relative to the referring document**, the opposite of
+a `Related:` target. Two hard errors come out of it: `broken-body-link` for a
+destination that names no existing path inside the root, and
+`outside-root-body-link` for one that leaves it, decided by path arithmetic
+alone. Containment is tested **before** existence, so the two never
+double-report. Both are `severity: error`, exit 2, one finding per
+occurrence, attached to the referring document, with the JSON record's key
+set left **closed** at `{path, severity, rule, message}`.
+
+**Three properties are the milestone's real output.**
+
+1. **`text[start:end] == raw`, by construction.** `BodyLink` carries the exact
+   character span of each destination token in the *original* text, which is
+   what lets **M28** rewrite destinations by splicing and copying every other
+   byte — and what stops this project ever growing a second Markdown parser.
+   Phase 6 used that operation on 140 live occurrences, so the contract is
+   proven rather than promised.
+2. **The check is a function of the tree alone.** `docs check` never stats,
+   opens, or follows anything outside its own root. Proven end to end: the
+   same bytes checked from a location where the escaping link *would* resolve
+   and from a bare one produce byte-identical output, with zero probes
+   outside the root under a `Path.exists` / `Path.is_file` spy.
+3. **The upgrade path is real, not asserted.** The pre-repair damage was
+   replayed on a throwaway copy and repaired by walking the documented recipe
+   from `docs check --json` alone — never the scanner API — reaching exit 0
+   with **0 destination-token mismatches** against the tree the milestone
+   itself repaired.
+
+**The live-tree repair (D6)** was 140 occurrences across 30 documents — 132
+root rebases, 5 moved targets, 2 playbook URLs, 1 escape URL — landed in the
+same commit as the wiring so the dogfood gate was never knowingly RED across
+a commit boundary, audited with an `Updated:` bump on all 30 and one uniform
+dated `Revision:` bullet on the 29 archived ones, and proven by six
+independent checks including 30/30 byte-identical round-trip reconstructions.
+`convention.md` carries the third — and last — archived-document exception,
+with its blast radius and its real date.
+
+**Numbers.** 184 new test ids, **zero** pre-existing ids removed or modified
+across the whole milestone; 1079 collected, 1079 passed; 393 recognised spans
+over `docs/` before and after the repair; 81 ms to scan the 2.5 MB tree and
+43 ms for the 303 KB adversarial set, 47× under the runtime lock. No version
+bump: `pyproject.toml` stays `1.8.0`; **M29** performs the single bump to
+`2.0.0` (M25 — D6).
+
+**Handed to M28**, as simplifications rather than questions: the `BodyLink`
+span contract; the guarantee that a clean tree contains **no** escaping
+destination, so M28 never has to rewrite one; and one scanner, shared.
+
+The milestone stays `Lifecycle: active` until the M29 publish closeout.

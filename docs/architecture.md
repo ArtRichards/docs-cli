@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-13
+Updated: 2026-08-14
 
 Related:
 - implements: charter.md
@@ -312,7 +312,8 @@ the marker block and the derived content.
 - `check_doc(path, text, root, config, stale, today, stale_source) -> list[Finding]`
   — every **single-document** rule (`missing-field`, `bad-vocab`,
   `bad-date`, `status-drift`, `broken-ref`, `stale`, `malformed`,
-  `unknown-field`, `duplicate-field`). Never raises: a validator must
+  `unknown-field`, `duplicate-field`, `broken-body-link`,
+  `outside-root-body-link`). Never raises: a validator must
   describe malformed input, not blow up on it.
 - M25 (D7) adds `duplicate-field` via `_duplicate_labels(text)`, which
   counts the metadata block's **raw label lines** rather than reading
@@ -334,6 +335,37 @@ the marker block and the derived content.
   malformed is simply absent from the index, so those four applicability
   conditions collapse into a single lookup and the owning rules keep their
   cases.
+- M27 (D1/D2/D5) adds `broken-body-link` and `outside-root-body-link` as
+  **per-document** rules inside `check_doc` — deliberately *unlike*
+  `reciprocity_findings`, and the contrast is the design point: both rules
+  need only the referring document's own text and its own directory, so
+  there is **no** second `check_tree` pass and `docs touch --check` inherits
+  them for free through `_run_touch_check` → `check_tree`.
+- The pipeline behind them is pure and stdlib-only: `_mask_code(text)` →
+  `scan_body_links(text) -> tuple[BodyLink, ...]` →
+  `classify_destination(raw)` → `normalise_body_link_target(doc_rel, path)` →
+  `_body_link_is_contained(candidate)` → one `.exists()`. Only
+  `body_link_findings` touches the filesystem, and only on an
+  already-contained, already-normalised candidate under the root.
+- **`_mask_code` is length-preserving, and that is what makes the whole
+  thing work.** It blanks the *contents* of fenced blocks and inline code
+  spans with spaces, leaving the mask the same length as the input with a
+  newline at every offset the input has one. Every offset the scanner
+  reports is therefore an offset into the **original** text — which is what
+  lets `BodyLink` carry an exact destination-token span
+  (`text[start:end] == raw`) that **M28** splices a replacement into. One
+  scanner, never a second Markdown parser.
+- The scan is a single linear forward pass with a monotonic blank-line
+  cursor, resumption at the failed candidate's `]`, an early return past
+  `MAX_DESTINATION_PAREN_DEPTH`, and a newline bound on angle destinations.
+  Those four bounds are what the pathological-input runtime lock measures.
+- Reuse rather than new machinery: `_root_relative` for the referring
+  document's path, `_canonical_related_target`'s `posixpath.normpath` idiom
+  for lexical normalisation, and `_candidate_exclusion_reason`'s
+  `outside-root` predicate minus its `/` leg for containment.
+  `_iter_doc_texts`, `exit_code_for`, `finding_to_json` and
+  `_print_check_findings` are all unchanged. The stdlib-only pin holds:
+  `urllib.parse`, `posixpath`, `string`, `re`.
 
 ### `relate` (M25)
 
