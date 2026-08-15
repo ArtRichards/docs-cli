@@ -51,10 +51,11 @@ Related:
   parametrizations from 29 to 36 and from 33 to 40 and taking the suite to
   **1283 collected, 180 failed, 1103 passed**. A read-only prototype census
   under the Phase-1 contract confirmed each tree yields exactly its intended
-  plan, line numbers included. Phase 4 captured the baseline: **1283
-  collected, 180 failed, 1103 passed**, zero collection errors, zero xfail /
+  plan, line numbers included. Phase 4 captured the baseline: **1286
+  collected, 182 failed, 1104 passed** (restated after the Step-1
+  same-instance audit), zero collection errors, zero xfail /
   xpass, exactly **two** exception classes (152 `AttributeError` from the
-  pure seam, 28 `AssertionError` from the CLI and skill locks), and a
+  pure seam, 30 `AssertionError` from the CLI and skill locks), and a
   mechanical proof against the pre-M28 commit that **0** test ids were removed
   and **0** pre-existing ids fail. No product code changed in any of the four
   phases — `git diff --stat 58955ef -- src/docs_cli/cli.py` is empty by
@@ -1450,7 +1451,7 @@ docs: mv: rewrite <doc-rel>:<line> <old-token> -> <new-token>
 docs: mv: <R> destination(s) in <D> document(s), <E> Related: bullet(s)
 docs: mv: preview only — nothing was written
 docs: mv: <rel> is not writable; refusing before any write
-docs: mv: write failed for <rel>: <err>; PARTIAL MOVE — not rolled back. Moved: <…>. Rewritten: <…>. Not written: <…>. Repair manually.
+docs: mv: write failed for <rel>: <err>; PARTIAL MOVE — not rolled back. Moved: <old-rel> -> <new-rel>. Rewritten: <rel>, <rel>. Not written: <rel>. Repair manually.
 
 docs: archive: rewrite <doc-rel>:<line> <old-token> -> <new-token>
 docs: archive: <R> destination(s) in <D> document(s) rebased

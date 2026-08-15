@@ -437,6 +437,74 @@ def test_mv_dry_run_names_every_planned_rewrite(docs_script, fixtures_dir, tmp_p
     assert (root / "plan.md").is_file() and not (root / "milestone-plan.md").exists()
 
 
+def test_mv_apply_names_every_rewrite_and_the_move(docs_script, fixtures_dir, tmp_path):
+    """The apply path prints the SAME rewrite lines and footer as the preview,
+    plus the `moved` line in place of `would move` — R3: everything prints
+    unless `--quiet`, in preview and apply alike.
+
+    Without this the frozen `docs: mv: moved …` line has no lock at all and a
+    Phase-6 implementation could print anything on success.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "docs: mv: moved plan.md -> milestone-plan.md" in proc.stderr
+    assert "docs: mv: would move" not in proc.stderr
+    assert "docs: mv: rewrite note.md:13 plan.md -> milestone-plan.md" in proc.stderr
+    assert "docs: mv: rewrite sub/deep.md:10 ../plan.md -> ../milestone-plan.md" in proc.stderr
+    assert "docs: mv: 2 destination(s) in 2 document(s), 1 Related: bullet(s)" in proc.stderr
+    assert "preview only" not in proc.stderr
+
+
+def test_mv_quiet_suppresses_every_line_but_prints_a_refusal(docs_script, fixtures_dir, tmp_path):
+    """R3: `--quiet` governs the ordinary prose — the move line, every rewrite
+    line and the footer — while a refusal still prints, as every refusal does.
+    """
+    quiet_root = _movelink_tree(fixtures_dir, tmp_path / "a", "movelink-incoming")
+    proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", "--quiet", cwd=quiet_root)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == "", f"--quiet must silence the whole apply summary, got {proc.stderr!r}"
+
+    malformed = _mv_malformed_tree(fixtures_dir, tmp_path / "b")
+    refused = _run(docs_script, "mv", "good-a.md", "good-b.md", "--quiet", cwd=malformed)
+    assert refused.returncode == 2
+    assert "broken.md" in refused.stderr, "a refusal prints even under --quiet"
+
+
+@pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0,
+    reason="root bypasses 0o555 directory write protection; the OSError trigger does not fire",
+)
+def test_mv_oserror_mid_execution_admits_the_partial_state(docs_script, tmp_path):
+    """R9 / D4: the residual mid-execution `OSError` is admitted EXACTLY, in
+    M26's partial-state shape extended by a `Rewritten:` clause — naming what
+    moved, what was rewritten, and what was not written.
+
+    This is the boundary M26 — D4 froze and M28 inherits: a `0o644` file inside
+    a `0o555` directory passes the pre-flight's `os.access` test and must be
+    admitted there, failing later as the residual admission. Exit 2 and the
+    no-traceback guarantee are unchanged; only the message is upgraded.
+
+    RED reason: `_cmd_mv` prints the bare `docs: mv: <OSError>` today (Phase 6).
+    """
+    root, source, locked = _readonly_referrer_tree(tmp_path)
+    try:
+        proc = _run(docs_script, "mv", str(source), str(root / "renamed.md"))
+    finally:
+        os.chmod(locked, 0o755)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr
+    assert "docs: mv: write failed for " in proc.stderr
+    assert "PARTIAL MOVE — not rolled back." in proc.stderr
+    assert "Moved: source.md -> renamed.md." in proc.stderr
+    assert "Rewritten: " in proc.stderr
+    assert "Not written: locked/referrer.md." in proc.stderr
+    assert "Repair manually." in proc.stderr
+    assert proc.stdout == ""
+
+
 def test_mv_json_record_shape(docs_script, fixtures_dir, tmp_path):
     """D7: `docs mv --json` emits ONE record with the closed, ordered key set
     `cli.md` pins — and no `strands` key, because a rename produces no

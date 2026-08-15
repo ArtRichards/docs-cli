@@ -53,7 +53,7 @@ table and the milestone checklist synchronized.
 | 1. Define Contract | **Complete** | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(M), three amendments to setup-frozen material, eleven Step-1 resolutions (R1–R11). Author-facing halves in `cli.md` (*Move-safe body-link rewrites (M28 — D1–D7)*, the rewritten `docs mv` section, the amended archive check order, the widened `archive --json` schema, three exit tables) and `convention.md` (M18's widened exception, M27 — D6's reconciled sentence, the author-facing move guarantee). Zero product-code change. Original objective: Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | **Complete** | 2026-08-15 | 182 new ids: `tests/test_move_links.py` (153, the pure seam) plus 12 `mv`, 14 `archive`, 1 `check` and 2 skill locks. Suite 1269 collected / 181 failed / 1088 passed; the 1087 pre-existing ids all present and GREEN; zero collection errors; zero deleted test lines. Original objective: Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
 | 3. Create Data/Fixtures | **Complete** | 2026-08-15 | Seven `movelink-*` trees authored — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`, `-closeout` — each `docs check`-clean as committed; every existing fixture byte-identical; the two directory-derived sweeps 29→36 and 33→40; suite 1283 / 180 failed / 1103 passed. A read-only prototype census confirmed every intended plan, line numbers included. Original objective: `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
-| 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1283 collected / 180 failed / 1103 passed; 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (152 `AttributeError`, 28 `AssertionError`); mechanically proven 0 removed ids and 0 failing pre-existing ids against `58955ef`. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
+| 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1286 collected / 182 failed / 1104 passed (restated after the Step-1 audit); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (152 `AttributeError`, 28 `AssertionError`); mechanically proven 0 removed ids and 0 failing pre-existing ids against `58955ef`. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
@@ -573,14 +573,19 @@ else, and prove mechanically that no pre-existing test id moved.
 ### The baseline
 
 ```
-.venv/bin/python -m pytest tests/ -q --co   ->  1283 collected, 0 collection errors
-.venv/bin/python -m pytest tests/ -q        ->  180 failed, 1103 passed
+.venv/bin/python -m pytest tests/ -q --co   ->  1286 collected, 0 collection errors
+.venv/bin/python -m pytest tests/ -q        ->  182 failed, 1104 passed
 ```
 
-Arithmetic, and it closes: **1087** pre-existing + **182** authored ids +
+*(Restated after the Step-1 same-instance audit, which added three `docs mv`
+locks — see* Step-1 same-instance audit *below. The pre-audit figures were
+1283 / 180 / 1103.)*
+
+Arithmetic, and it closes: **1087** pre-existing + **185** authored ids +
 **14** swept ids (7 into `test_check_tree_legacy_fixtures_gain_no_new_findings`,
 7 into `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings`) =
-**1283**. Of the 196 new ids, **180** are RED and **16** are GREEN at baseline.
+**1286**. Of the 199 new ids, **182** are RED and **17** are GREEN at
+baseline.
 
 ### Probes, stated honestly
 
@@ -604,7 +609,7 @@ Exactly **two** classes, and the arithmetic closes:
 | Class | Count | Where | Why |
 |---|---|---|---|
 | `AttributeError` | 152 | the whole of `tests/test_move_links.py` | every M28 symbol is fetched through `_m28(name)`, so the RED reason is one clean missing attribute rather than a collection error |
-| `AssertionError` | 28 | 12 `docs mv`, 14 `docs archive`, 2 bundled-skill locks | the behaviour is absent, not the symbol; 27 carry a message and 1 is a bare `assert` pytest rewrote |
+| `AssertionError` | 30 | 14 `docs mv`, 14 `docs archive`, 2 bundled-skill locks | the behaviour is absent, not the symbol; 28 carry a message and 2 are bare `assert`s pytest rewrote |
 
 An earlier run showed a third class — **3 `KeyError: 'strands'`** from indexing
 a record that has no such key. That is a weaker RED reason than an assertion
@@ -620,9 +625,9 @@ Test ids were collected from a throwaway `git worktree` at the pre-M28 commit
 | Measure | Result |
 |---|---|
 | ids at `58955ef` | **1087** |
-| ids at HEAD | **1283** |
+| ids at HEAD | **1286** |
 | `comm -23 old new` — **removed** ids | **0** |
-| `comm -13 old new` — added ids | **196** (153 `test_move_links.py`, 14 `test_cli_archive.py`, 14 `test_check.py` sweeps, 12 `test_cli_mv.py`, 2 `test_skill.py`, 1 `test_cli_check.py`) |
+| `comm -13 old new` — added ids | **199** (153 `test_move_links.py`, 15 `test_cli_mv.py`, 14 `test_cli_archive.py`, 14 `test_check.py` sweeps, 2 `test_skill.py`, 1 `test_cli_check.py`) |
 | `comm -12 failed old` — pre-existing ids now FAILING | **0** |
 | `git diff --numstat 58955ef -- tests/` | **0** deleted lines in every test file |
 | `git diff --stat 58955ef -- src/docs_cli/cli.py` | **empty** |
@@ -636,7 +641,7 @@ reached into.
 | # | Family | Landing |
 |---|---|---|
 | 152 | **The pure seam** (`tests/test_move_links.py`): the formula and both classes, the no-op rule and idempotence, out-of-reach destinations, the never-creates-an-escape invariant, the emitted spelling, the re-encoding round-trip, the splicer, the pipeline order, purity, both strand legs, the pre-flight, the shared record | **Phase 5** — `LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`, `MOVE_STRAND_KINDS`, `plan_body_link_rewrites`, `render_destination_token`, `splice_body_links`, `plan_move`, `preflight_move_plan`, `apply_move_plan`, `move_plan_to_json` |
-| 10 | **`docs mv` behaviour**: class-2 rebasing, nested both-directions, E1's post-rename `docs check`-clean, the archived referrer's byte boundary and its no-`Revision:` sibling, prose and code untouched, the zero-mutation refusal, the malformed-tree preview at exit 2, idempotence, and the preview's rewrite lines | **Phase 6** — invert `_cmd_mv` to plan before it moves |
+| 12 | **`docs mv` behaviour**: class-2 rebasing, nested both-directions, E1's post-rename `docs check`-clean, the archived referrer's byte boundary and its no-`Revision:` sibling, prose and code untouched, the zero-mutation refusal, the malformed-tree preview at exit 2, idempotence, the preview's rewrite lines, the apply path's identical lines, and the mid-execution partial-state admission | **Phase 6** — invert `_cmd_mv` to plan before it moves |
 | 2 | **`docs mv` surface**: `--json`'s record and its preview/apply equality | **Phase 7** — `--json` on the `mv` subparser (`cli.py:4852`) |
 | 14 | **`docs archive` behaviour and surface**: E2, E3, E5, leg 1's refusal and its `--quiet` sibling, leg 1's preview at exit 0, the over-fire lock, leg 2's stderr report in both modes, the widened `--json` key set, `strands` on a completing plan and in a refusing plan's preview, empty-array-not-missing, preview/apply rewrite equality, and the malformed-tree preview at exit 1 | **Phase 6** (behaviour) and **Phase 7** (the record and the amended check order) |
 | 2 | **Bundled skill parity**: `SKILL.md`'s `mv` / `archive` rows and `references/use-cases.md` | **Phase 7** — the bundled skill lands in the same change as the CLI surface |
@@ -651,6 +656,7 @@ The 16 new GREEN ids:
 | `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings[movelink-*]` ×7 | **degenerate** now; genuine afterwards — a Phase-6 rewrite that emitted a wrong spelling would break them |
 | `test_check_every_movelink_fixture_tree_is_clean_as_committed` | **genuine**; it landed at Phase 3, and it is what makes every post-move clean assertion measure the MOVE rather than pre-existing fixture damage |
 | `test_relpath_of_a_root_level_target_needs_no_special_case` | **degenerate** now; genuine afterwards — it pins the `posixpath` behaviour item (B) step 6 relies on, so a Phase-5 implementation cannot "fix" it with an `or '.'` that changes every emitted spelling |
+| `test_mv_quiet_suppresses_every_line_but_prints_a_refusal` | **degenerate** now (`docs mv --quiet` prints nothing today because there is nothing to print); genuine at Phase 6, when the move line, every rewrite line and the counts footer exist and `--quiet` must still silence all of them while the refusal survives |
 
 Pre-existing locks whose expected state is worth naming, all verified GREEN at
 this gate:
@@ -712,6 +718,116 @@ Done mechanically over every M28 subprocess test, test by test:
 - `.venv/bin/docs check --root docs` — no violations found (exit 0).
 - `git diff --stat 58955ef -- src/docs_cli/cli.py` — **empty**. Phases 1–4
   change no product code, by design.
+
+## Step-1 same-instance audit — 2026-08-15
+
+Run against Phases 1–4 after the last phase and before returning, per the
+ship-milestone consistency / completeness / accuracy checklist. Seven issues
+found; all seven fixed here. Three items are **surfaced** for the operator
+rather than auto-decided, because each touches intent rather than accuracy.
+
+### Issues found and fixed
+
+1. **`status.md` was stale in four places.** The *Current milestone* block
+   still said "Milestone setup is complete … Phase 1 is next … **No TDD phase
+   has started**", the roadmap bullet said "setup complete", the *Next action*
+   said "begin M28 Phase 1 — Define Contract", and the *Milestone progress*
+   row said "Phase 1 next, no TDD phase started". All four now state Step 1
+   (Phases 1–4) complete on `m28/phases-1-4`, with the per-phase narrative and
+   the real counts, and the next action is Phase 5.
+2. **`plan.md` was stale in two places** — the M28 narrative paragraph and the
+   milestone-table row, both still asserting "Phase 1 is next". Both updated;
+   the v2.0 sequencing sentence now says M28 is *in flight* rather than *next*.
+3. **The `mv` partial-state line disagreed between the two surfaces.** A
+   mechanical cross-check of item (J)'s catalogue against every
+   `docs: mv: ` / `docs: archive: ` line in `cli.md` found the same template
+   written with different placeholders — `Moved: <…>` in (J) against
+   `Moved: <old-rel> -> <new-rel>` in `cli.md`. (J) now carries `cli.md`'s
+   concrete form, so the frozen catalogue and the spec are byte-comparable.
+4. **Two frozen catalogue lines had no test at all**, found by the same
+   cross-check, and both are load-bearing:
+   - `docs: mv: moved <old-rel> -> <new-rel>` — the apply path's success line.
+     A Phase-6 implementation could have printed anything on success and
+     passed. Fixed by `test_mv_apply_names_every_rewrite_and_the_move`, which
+     also pins that the apply path prints the **same** rewrite lines and
+     counts footer as the preview (R3).
+   - The whole `PARTIAL MOVE — not rolled back. Moved: … Rewritten: … Not
+     written: …` admission — R9's upgrade of `mv`'s residual `OSError` message.
+     The pre-existing `test_mv_oserror_mid_rewrite_exits_2` asserts only exit 2
+     and no traceback, so an implementation that kept today's bare
+     `docs: mv: <OSError>` would have passed. Fixed by
+     `test_mv_oserror_mid_execution_admits_the_partial_state`, which exercises
+     M26 — D4's own documented boundary: a `0o644` file inside a `0o555`
+     directory passes the pre-flight's `os.access` test, must be admitted
+     there, and fails later as the residual admission.
+5. **R3's quiet rule had no `mv` lock.** Added
+   `test_mv_quiet_suppresses_every_line_but_prints_a_refusal` — GREEN at
+   baseline and **degenerate** (there is nothing to suppress yet), genuine at
+   Phase 6 when the move line, every rewrite line and the footer exist and
+   `--quiet` must silence all of them while the refusal survives.
+6. **`test_archive_leg_1_refuses_even_under_quiet` asserted a substring rather
+   than the frozen refusal line**, so an unrelated exit 2 mentioning
+   `child-of` could have satisfied it. It now asserts both frozen lines plus
+   the absence of the ordinary prose `--quiet` suppresses. (Found at the
+   Phase-4 falsely-GREEN gate and recorded there too.)
+7. **Three RED reasons were `KeyError: 'strands'` rather than assertions**,
+   which is both a weaker signal and a failure to pin the very
+   present-and-empty property those tests exist for. All three now assert
+   `"strands" in record` first, which is what makes the Phase-4
+   exception-class census two classes by construction. (Also recorded at
+   Phase 4.)
+
+The baseline is restated accordingly: **1286 collected, 182 failed, 1104
+passed** (from 1283 / 180 / 1103), still exactly two exception classes, still
+zero deleted test lines and zero removed ids against `58955ef`.
+
+### Checked clean
+
+- Deliverable 1 — the only deliverable in this step's phase range — is
+  genuinely met and ticked; deliverables 2–10 and every success criterion are
+  Phase 5+ outcomes and stay unticked, on M27's precedent.
+- No placeholder, `NotImplementedError`, TODO or commented-out code anywhere
+  in the step's diff.
+- Every frozen `--json` key set agrees between `cli.md`, item (K) and the
+  tests, in order: `archive` at `primary, date, scope, reason, candidates,
+  rewrites, strands, dry_run, applied, index_refreshed`; `mv` at `old, new,
+  rewrites, dry_run, applied, index_refreshed`; `rewrites[]` at `path, line,
+  column, old, new`; `strands[]` at `path, target, kind, verb, line`.
+- Every other line of item (J) is asserted verbatim somewhere in the suite.
+- `cli.md`'s check-order sub-steps 8b / 8c / 8d match item (I); the `mv` and
+  `archive` exit tables agree with the global exit-code table.
+- Both bundled mirrors byte-identical; both specs at **0** occurrences of the
+  three forbidden substrings; the frozen dogfood INDEX snapshot identical to
+  `docs/INDEX.md`; `docs check --root docs` exit 0; every doc edited this step
+  bumped via `docs touch`.
+- `git diff --numstat 58955ef -- 'tests/*.py'` — **0** deleted lines; the diff
+  contains only M28 work.
+- Lint, format and types clean tree-wide; one commit per phase on
+  `m28/phases-1-4` following the project's convention.
+
+### Surfaced for the operator (not auto-decided)
+
+1. **The two encode-set residuals** (item (C) › *Known residuals*,
+   *Follow-ups* item 7). The frozen set is the grammar-derived minimal one, and
+   two inputs fall outside it: a path component carrying whitespace other than
+   space or tab, and a **colon in the first path segment**, which would make
+   `classify_destination` read the emitted token as `scheme` and silence a link
+   that worked before the move. Neither is reachable from a filename this tool
+   creates, and Phase 2 asserts nothing about either, so closing them later
+   flips no test — but closing the colon case costs `%3A` in every legitimately
+   colon-bearing destination, which is an intent decision.
+2. **The check-order refinement in item (I).** The Step-1 plan put the
+   whole-tree walk at 5b for **both** paths; the frozen contract puts it at 5b
+   for the preview and at **8** for the write path, because the plan's ordering
+   would have silently inverted the message precedence `cli.md` freezes and
+   turned a `--cascade-only` write selecting nothing from exit 2 into exit 1.
+   This *preserves* M26's frozen behaviour rather than changing it, but it is a
+   deviation from the plan of record and should be seen.
+3. **`cli.md` describes Phase-6/7 behaviour ahead of the code** — the
+   `docs mv` heading advertises `[--json]`, and the M28 block specifies
+   rewrites that no verb performs yet. This is the M26/M27 precedent for
+   Phases 1–4 (the spec *is* the frozen contract), recorded here rather than
+   "fixed", so it is a deliberate state and not an oversight.
 
 ## Milestone completion summary
 
