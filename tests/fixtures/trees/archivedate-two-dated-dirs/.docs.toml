@@ -1,0 +1,6 @@
+[project]
+name = "archivedate-two-dated-dirs"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

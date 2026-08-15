@@ -57,7 +57,7 @@ the milestone checklist synchronized.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(H), five amendments to setup-frozen material, and nine Step-1 resolutions (OQ-1 … OQ-9). Author-facing halves landed in `cli.md` and `convention.md`; both bundled mirrors re-synced. No product code. Suite still **1341 passed**. Original scope: freeze **both legs**. Leg 1: the field's name (`Archived:`), its `date_format` rendering, its position in the metadata block, and the every-member write rule; the vocabulary changes (`_BUILTIN_METADATA_FIELDS`, `parse()`'s `known` set, `[vocabulary] add_fields`); the `archive-date-drift` predicate as a corroboration test, its severity and exit, its position in `check_doc`'s append order, its independence from `status-drift`, and its frozen message forms. Leg 2: D5's `docs mv` refusal predicate, its frozen message beside `archive-date-drift`'s, its exit code, its position in M28's existing plan-before-move window (Phase-1 amendment 2 places it one step earlier, before the `--dry-run` branch), its three enumerated permitted neighbours and its documented escape. Plus the present-only compatibility contract; `docs migrate`'s non-write; the three archived-immutability paragraphs that must name the field; and the Phase-5 signatures. |
 | 2. Write Tests (RED) | Complete | 2026-08-16 | 131 authored ids across ten test files; 1472 collected, **68 RED / 63 GREEN** at baseline, 0 pre-existing ids failing. Two weak RED reasons (`TypeError`) rewritten into signature assertions, and one falsely-GREEN keyword-only test corrected. Original scope: **both legs.** Pure-rule unit tests over every corroboration shape; `docs archive` writer locks including a cascaded closeout where **every** member carries the field; D5's refusal proven with **and** without the witness present, with zero bytes written, plus the three permitted neighbours proven to complete; the present-only silence lock over all 46 field-less archived documents; `migrate` non-write and demotion locks; byte-identity locks for `touch` / `relate` / the M18-M28 widened exception; the closed four-key `Finding` record. |
-| 3. Create Data/Fixtures | Pending | — | New `archivedate-*` trees, one semantic each — `-clean`, `-drifted`, `-absent`, `-outside`, `-undated`, and `-two-dated-dirs` for D5's refusal and its permitted same-directory rename — plus the hand-written registration tuple and the two whole-corpus sweep tests that a deliberately drifted tree would otherwise trip. |
+| 3. Create Data/Fixtures | Complete | 2026-08-16 | Six committed `archivedate-*` trees, one semantic each, structure-only with fixed past dates. Suite: 1484 collected, **58 RED / 85 GREEN** of the 143 new ids; every pre-M28a fixture tree byte-identical (`git diff --numstat -- tests/fixtures/` empty; the six trees are additions only). Original scope: new `archivedate-*` trees, one semantic each — `-clean`, `-drifted`, `-absent`, `-outside`, `-undated`, and `-two-dated-dirs` for D5's refusal and its permitted same-directory rename — plus the hand-written registration tuple and the two whole-corpus sweep tests that a deliberately drifted tree would otherwise trip. |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1341-test baseline; every GREEN-at-baseline lock named. |
 | 5. Update Base Interfaces | Pending | — | `Archived` into `_BUILTIN_METADATA_FIELDS`; a config-aware dated-archive-directory reader; the pure `archive_date_findings(...)` helper — wired nowhere, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Pending | — | One `set_metadata_field` call in `_archive_one` at the frozen position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. |
@@ -491,9 +491,65 @@ every case that must stay GREEN at baseline.
 - `git diff --stat -- src/docs_cli/cli.py` — **empty**.
 - `.venv/bin/docs check --root docs` — no violations found (exit 0).
 
-## Phase 3 — Create Data/Fixtures
+## Phase 3 — Create Data/Fixtures — 2026-08-16
 
-_Not started._
+### Objective
+
+Author the six committed trees Phase 2's locks point at — one semantic each,
+structure-only, with fixed past dates rather than wall-clock-relative ones —
+and update the whole-corpus sweeps in the same change, so a deliberately
+drifted fixture cannot trip a sweep that promises silence.
+
+### The six trees
+
+| Tree | Contents | `docs check` as committed | After Phase 6 |
+|---|---|---|---|
+| `archivedate-clean` | `active.md`; `archive/2026-01-01/first.md` (witness + `pairs-with` the other dated directory); `archive/2026-03-04/second.md` (witness + the reciprocal bullet); `archive/2026-01-01/sub/nested.md` (deeper-path corroboration) | exit 0 | exit 0 — **the E5 decline, locked** |
+| `archivedate-drifted` | `active.md`; `archive/2026-03-04/moved.md` carrying `Archived: 2026-01-01` | exit 0 | exit 2, one `archive-date-drift` (form A) |
+| `archivedate-absent` | `active.md`; `archive/2026-01-01/old.md` with `Archived-reason:` and **no** witness | exit 0 | exit 0 — the whole compatibility story |
+| `archivedate-outside` | `escaped.md` (`Lifecycle: active` + witness — Q7's motivating case); `stale-both.md` (`Lifecycle: archived` outside the archive + witness) | exit 2, one `status-drift` | exit 2; 2 × `archive-date-drift` + 1 × `status-drift` |
+| `archivedate-undated` | `active.md`; `archive/misc/filed.md` (`Lifecycle: archived` + witness) | exit 0 | exit 2, one `archive-date-drift` (form B), **no** `status-drift` |
+| `archivedate-two-dated-dirs` | `active.md`; `archive/2026-01-01/with-witness.md`; `archive/2026-01-01/no-witness.md`; `archive/2026-03-04/other.md`; `archive/notes/keep.md` | exit 0 | exit 0 — so every `docs mv` assertion measures the move |
+
+Each carries a `.docs.toml` with `[project] name` and the explicit
+`[archive] dir = "archive"` / `date_format = "%Y-%m-%d"` pair. No `Related:`
+edge exists anywhere except the deliberate `-clean` cross-dated pair, which is
+what E5's decline is about; `pairs-with` is free-form, so it produces no
+`missing-inverse`. No fixture body carries a Markdown link, so the M27 sweep
+stays silent, and no fixture filename carries a space or a parenthesis (M28's
+sdist rule).
+
+### Decisions / issues
+
+- **Every non-default `date_format` / `[archive] dir` case stays an inline
+  `tmp_path` builder** (the M25 rule): those assert on written bytes or need a
+  non-default sidecar, so a committed tree would only add a `copytree` step.
+  The same goes for the `2026-1-1` neighbour, the migrate demotion, and the
+  `touch` / `relate` byte-identity locks.
+- **`archivedate-two-dated-dirs` carries a witness-less member on purpose.**
+  It is what makes Leg 2's independence from the field observable through a
+  real `docs mv`, and it is the endpoint of D8's second residual.
+- **Sweep bookkeeping, verified against the code rather than assumed.**
+  `_legacy_tree_names()` excludes `reciprocal-*` and so picks up all six
+  (**+6 ids**, GREEN — none uses a recognized reciprocal verb);
+  `_pre_m27_tree_names()` excludes `bodylink-*` and picks up all six (**+6
+  ids**, GREEN — no fixture body carries a link); `_pre_m28a_tree_names()`
+  excludes `archivedate-*` and therefore does **not** grow.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q --co` — **1484 collected**, 0
+  collection errors (1341 pre-existing + 131 authored + 12 swept).
+- `.venv/bin/python -m pytest tests/ -q` — **58 failed, 1426 passed**. Of the
+  143 new ids, 58 RED and 85 GREEN at baseline.
+- `git diff --numstat -- tests/fixtures/` — **empty**; the six trees are
+  additions only, so every pre-M28a fixture tree is byte-identical.
+- Each tree's finding set as committed, measured with `docs check`, matches the
+  table above.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
 
 ## Phase 4 — Run Tests (RED Baseline)
 
