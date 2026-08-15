@@ -905,3 +905,408 @@ def test_mv_second_equivalent_move_changes_nothing(docs_script, fixtures_dir, tm
     after = _snapshot(root)
     assert {rel: raw for rel, raw in after.items() if rel != "INDEX.md"} == before
     assert "INDEX.md" in after
+
+
+# ===========================================================================
+# M28a — Leg 2: `docs mv` refuses a cross-dated archived relocation.
+#
+# The contract under test is the milestone's *Decisions (Phase 1 — BINDING)*
+# items (E) and (F), and `cli.md` › `docs mv` ›
+# *Cross-dated archived relocations*. Every test below asserts a frozen
+# contract string as well as an exit code.
+# ===========================================================================
+
+_M28A_REFUSAL = (
+    "docs: mv: archive/2026-01-01/{name} -> archive/2026-03-04/{name} "
+    "crosses dated archive directories (2026-01-01 to 2026-03-04); "
+    "refusing before any write"
+)
+_M28A_ESCAPE = (
+    "docs: mv: the dated directory records when a document was archived; to "
+    "correct a genuinely mis-dated archive, move the file by hand, correct its "
+    "`Archived:` line, and re-run `docs check`"
+)
+
+
+def _archivedate_tree(fixtures_dir: Path, tmp_path: Path, name: str) -> Path:
+    """Copy an `archivedate-*` fixture tree into tmp_path; return its root.
+
+    Asserts the SOURCE tree exists, so between Phase 2 and Phase 3 these tests
+    are honestly RED on a missing fixture rather than vacuously green on an
+    empty copy.
+    """
+    source = fixtures_dir / "trees" / name
+    assert source.is_dir(), f"Phase 3 must author the `{name}` fixture tree"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+    return root
+
+
+def _cross_dated(docs_script: Path, fixtures_dir: Path, tmp_path: Path, name: str, *extra: str):
+    """Attempt the E1d relocation of `name` between the two dated directories.
+
+    Returns `(root, snapshot_before, completed_process)` so every caller can
+    assert the zero-bytes guarantee as well as the exit code.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    before = _snapshot(root)
+    proc = _run(
+        docs_script,
+        "mv",
+        f"archive/2026-01-01/{name}",
+        f"archive/2026-03-04/{name}",
+        *extra,
+        cwd=root,
+    )
+    return root, before, proc
+
+
+def test_mv_refuses_a_cross_dated_relocation_of_a_witness_carrying_document(
+    docs_script, fixtures_dir, tmp_path
+):
+    """E1d, prevented. The exact relocation that completes at exit 0 today,
+    rewrites every stale reference so nothing dangles, and leaves `docs check`
+    clean — the one silent path in the tool's own surface.
+
+    Both frozen lines, exit 2, ZERO bytes written, and no `--json` record.
+    `--json` is deliberate: without the flag an implementation that emitted a
+    record would still satisfy the empty-stdout assertion.
+    """
+    root, before, proc = _cross_dated(
+        docs_script, fixtures_dir, tmp_path, "with-witness.md", "--json"
+    )
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr
+    assert _M28A_ESCAPE in proc.stderr, "the escape ships in the same breath as the refusal"
+    assert proc.stdout == "", "no --json record on a refusal (M26's frozen rule)"
+    assert _snapshot(root) == before, "a refusal writes zero bytes"
+
+
+def test_mv_refuses_the_same_relocation_without_the_witness(docs_script, fixtures_dir, tmp_path):
+    """D5's whole point, and the case Leg 1 alone can NEVER reach: the
+    predicate is decided from the two paths alone, so it protects the 46
+    documents this tree archived before the field existed and every archived
+    document in every tree upgrading from 1.x.
+    """
+    root, before, proc = _cross_dated(docs_script, fixtures_dir, tmp_path, "no-witness.md")
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "\nArchived:" not in (root / "archive" / "2026-01-01" / "no-witness.md").read_text(), (
+        "the fixture member must carry NO witness"
+    )
+    assert _M28A_REFUSAL.format(name="no-witness.md") in proc.stderr
+    assert _M28A_ESCAPE in proc.stderr
+    assert _snapshot(root) == before, "a refusal writes zero bytes"
+
+
+def test_mv_dry_run_refuses_the_cross_dated_relocation_too(docs_script, fixtures_dir, tmp_path):
+    """Phase-1 amendment 2: the refusal sits BEFORE the `--dry-run` branch, so
+    it refuses in every mode.
+
+    `_cmd_mv` returns at that branch before `preflight_move_plan` runs, so
+    D5's literal "inside the pre-flight" reading would leave this printing
+    `would move …` at exit 0 for an operation the apply refuses — a preview
+    that lies, in the milestone whose whole point is that nothing silently
+    falsifies the archive record.
+    """
+    root, before, proc = _cross_dated(
+        docs_script, fixtures_dir, tmp_path, "with-witness.md", "--dry-run"
+    )
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "would move" not in proc.stderr, "a preview must not promise a move the apply refuses"
+    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr
+    assert _M28A_ESCAPE in proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_mv_quiet_still_prints_both_refusal_lines(docs_script, fixtures_dir, tmp_path):
+    """Item (E): both lines print even under `--quiet`, as every refusal does."""
+    root, before, proc = _cross_dated(
+        docs_script, fixtures_dir, tmp_path, "with-witness.md", "--quiet"
+    )
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr
+    assert _M28A_ESCAPE in proc.stderr
+    assert "moved" not in proc.stderr, "--quiet still suppresses the ordinary prose"
+    assert _snapshot(root) == before
+
+
+def test_mv_cross_dated_refusal_precedes_the_whole_tree_walk(docs_script, fixtures_dir, tmp_path):
+    """Item (F) reason 3, and M26's stated precedence: naming the document the
+    operator asked for is strictly more actionable than naming an unrelated
+    malformed sibling.
+
+    The refusal is decidable from the two arguments alone, so it must win over
+    the validate-all-first walk — which would otherwise report the malformed
+    document and leave the operator repairing the wrong thing.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    (root / "broken.md").write_text("no h1 at all\n")
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/with-witness.md",
+        "archive/2026-03-04/with-witness.md",
+        cwd=root,
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr
+    assert "broken.md" not in proc.stderr, (
+        "the cross-dated refusal is reported, not the unrelated malformed sibling"
+    )
+    assert _snapshot(root) == before
+
+
+# --- item (F)'s permitted neighbours: each one COMPLETES -------------------
+
+
+def test_mv_neighbour_1_rename_within_one_dated_directory_completes(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Neighbour 1: the basename changes, the date does not."""
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/with-witness.md",
+        "archive/2026-01-01/renamed.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert (root / "archive" / "2026-01-01" / "renamed.md").is_file()
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout
+
+
+def test_mv_neighbour_1_rename_into_a_subdirectory_of_one_dated_directory_completes(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Neighbour 1's depth half: `archive/D/sub/b.md` still corroborates `D`,
+    because corroboration reads the FIRST segment under the archive dir."""
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/with-witness.md",
+        "archive/2026-01-01/sub/with-witness.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout
+
+
+def test_mv_neighbour_2_out_of_the_archive_completes_with_only_status_drift(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Neighbour 2 / E1b: `status-drift` already owns this at exit 2, and D5
+    does NOT double-report it. Uses the member with no witness, so
+    `status-drift` is provably the only finding."""
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(docs_script, "mv", "archive/2026-01-01/no-witness.md", "escaped.md", cwd=root)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    check = _run(docs_script, "check", str(root), "--json")
+    assert check.returncode == 2
+    assert [(r["path"], r["rule"]) for r in json.loads(check.stdout)] == [
+        ("escaped.md", "status-drift")
+    ]
+
+
+def test_mv_neighbour_2_out_of_the_archive_with_a_witness_adds_the_drift_finding(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The same neighbour, on a witness-carrying document: `status-drift` AND
+    `archive-date-drift` (message form B), independently, on one document.
+
+    Q7's independence rule, observed through a real move rather than a
+    hand-built fixture.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(docs_script, "mv", "archive/2026-01-01/with-witness.md", "escaped.md", cwd=root)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    check = _run(docs_script, "check", str(root), "--json")
+    assert check.returncode == 2
+    assert [(r["path"], r["rule"]) for r in json.loads(check.stdout)] == [
+        ("escaped.md", "status-drift"),
+        ("escaped.md", "archive-date-drift"),
+    ]
+
+
+def test_mv_neighbour_2_into_a_dated_directory_completes_with_only_status_drift(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Neighbour 2's other direction / E1c: an active document moved INTO the
+    archive subtree. `status-drift` owns it, and no archive-date finding can
+    exist — the document carries no witness, because only `docs archive`
+    writes one."""
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(docs_script, "mv", "active.md", "archive/2026-03-04/active.md", cwd=root)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    check = _run(docs_script, "check", str(root), "--json")
+    assert check.returncode == 2
+    assert [(r["path"], r["rule"]) for r in json.loads(check.stdout)] == [
+        ("archive/2026-03-04/active.md", "status-drift")
+    ]
+
+
+def test_mv_neighbour_3_to_an_undated_archive_subdirectory_completes(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Neighbour 3: the destination segment does not parse as a date, so there
+    is no pair of dates to disagree. Both directions."""
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    out = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/no-witness.md",
+        "archive/notes/no-witness.md",
+        cwd=root,
+    )
+    assert out.returncode == 0, (out.stdout, out.stderr)
+
+    back = _run(
+        docs_script,
+        "mv",
+        "archive/notes/keep.md",
+        "archive/2026-03-04/keep.md",
+        cwd=root,
+    )
+    assert back.returncode == 0, (back.stdout, back.stderr)
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout
+
+
+def test_mv_neighbour_3_to_the_archive_root_completes_and_leg_1_reports_it(
+    docs_script, fixtures_dir, tmp_path
+):
+    """OQ-7 (OPERATOR): the predicate is deliberately NOT widened to refuse
+    this. `archive/x.md` has no dated segment, so there is no pair of dates —
+    and refusing it would also refuse a legitimate reorganisation of the
+    archive subtree, which `convention.md` permits.
+
+    What the milestone owes instead is honesty about the cost, and this is the
+    lock for the half that IS covered: on a witness-carrying document the move
+    completes and `docs check` then reports message form B. `status-drift` is
+    silent, because the destination is still inside the archive subtree — which
+    is exactly why D8 names this as its second residual.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/with-witness.md",
+        "archive/with-witness.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    check = _run(docs_script, "check", str(root), "--json")
+    assert check.returncode == 2
+    records = json.loads(check.stdout)
+    assert [(r["path"], r["rule"]) for r in records] == [
+        ("archive/with-witness.md", "archive-date-drift")
+    ], records
+    assert records[0]["message"] == (
+        "Archived: 2026-01-01 but the file is not under a dated archive/ directory "
+        "(move it back, or remove the field)"
+    )
+
+
+def test_mv_neighbour_3_to_the_archive_root_is_silent_without_a_witness(
+    docs_script, fixtures_dir, tmp_path
+):
+    """D8's second residual, locked as the KNOWN GAP rather than left to be
+    discovered: the same move on a pre-2.0 document destroys the only
+    archive-date record it has and nothing reports it.
+
+    Recorded as *Follow-ups* item 7. If a later milestone closes it, this test
+    is the one that must be revisited — deliberately, not by accident.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/no-witness.md",
+        "archive/no-witness.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout
+
+
+def test_mv_neighbour_4_two_spellings_of_one_date_completes(docs_script, tmp_path):
+    """Neighbour 4 (implied by Q2): the predicate compares PARSED dates, so
+    `2026-01-01` and `2026-1-1` are the same date and there is nothing to
+    refuse.
+
+    An implementation that compared the raw segments would refuse this — it
+    passes every other Leg-2 test in this file and fails only here.
+
+    GREEN at baseline (degenerate — nothing refuses anything yet) and one of
+    the four locks that keep the Phase-6 predicate from creeping.
+    """
+    root = tmp_path / "unpadded"
+    (root / "archive" / "2026-01-01").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "unpadded"\n')
+    (root / "archive" / "2026-01-01" / "old.md").write_text(
+        "# Old\n\nLifecycle: archived\nRole: notes\nProject: unpadded\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\n\n## Body\n\nProse.\n"
+    )
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/old.md",
+        "archive/2026-1-1/old.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert (root / "archive" / "2026-1-1" / "old.md").is_file()
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout
+
+
+def test_mv_of_an_archived_document_leaves_its_witness_byte_identical(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The M18/M28-widened move-driven exception, extended to the witness
+    (D9 / Q6): a move-driven destination or bullet rewrite in an ARCHIVED
+    referrer changes the moving destination and nothing else.
+
+    `Archived:` sits on the byte-identical side beside `Archived-reason:` in
+    all three of `convention.md`'s immutability paragraphs, and this is the
+    lock that makes that promise real for a move.
+
+    RED until Phase 3 (the fixture), then GREEN and degenerate — the witness it
+    preserves is hand-authored in the fixture, because no verb writes one until
+    Phase 6 — and genuine from Phase 6 on.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-clean")
+    referrer = root / "archive" / "2026-03-04" / "second.md"
+    before = referrer.read_text()
+    assert "Archived: 2026-03-04" in before, "the fixture referrer must carry the witness"
+
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/first.md",
+        "archive/2026-01-01/renamed-first.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    after = referrer.read_text()
+    expected = before.replace(
+        "pairs-with: archive/2026-01-01/first.md",
+        "pairs-with: archive/2026-01-01/renamed-first.md",
+    )
+    assert after == expected, "only the moving bullet may change"
+    assert "Archived: 2026-03-04" in after, "the witness is byte-identical"

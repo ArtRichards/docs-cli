@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
 
 Related:
 - child-of: plan.md
@@ -30,11 +30,12 @@ Related:
   does not corroborate (**detect**); `docs mv` refuses a move whose source and
   destination are different dated archive directories, before it writes
   anything (**prevent**).
-- Progress: **Phase 1 — Define Contract complete (2026-08-15); Phase 2 —
-  Write Tests (RED) is next.** The machine-facing contract is frozen in
-  *Decisions (Phase 1 — BINDING)* below, with five amendments to
+- Progress: **Phases 1–2 complete (Phase 1 2026-08-15, Phase 2 2026-08-16);
+  Phase 3 — Create Data/Fixtures is next.** The machine-facing contract is
+  frozen in *Decisions (Phase 1 — BINDING)* below, with five amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
-  an operator decision). M28 is implementation-complete
+  an operator decision), and Phase 2 authored 131 test ids against it — 68 RED
+  and 63 GREEN at baseline, with no pre-existing id failing. M28 is implementation-complete
   and merged to `main` (`b1ec74b`), so M28a is the last implementation
   milestone in the v2.0 train before the M29 publish. Setup measured this
   repository read-only and reproduced the reported drift on throwaway copies,
@@ -612,7 +613,7 @@ coverage* below.
 
 | Evidence | Addressed by | Named coverage (Phases 2–3) |
 |---|---|---|
-| E1 one silent relocation — **prevented** | D5 | `docs mv archive/<D1>/x.md archive/<D2>/x.md` **refuses** at exit 2 with **zero bytes written**, naming both dates, proven identically on a document **with** and **without** the witness; the refusal is asserted to fire inside the pre-flight, before the move |
+| E1 one silent relocation — **prevented** | D5 | `docs mv archive/<D1>/x.md archive/<D2>/x.md` **refuses** at exit 2 with **zero bytes written**, naming both dates, proven identically on a document **with** and **without** the witness; the refusal is asserted to fire in the plan-before-move window (Phase-1 amendment 2: before the `--dry-run` branch), before the move, with `--dry-run` and `--quiet` each proven to refuse too |
 | E1 the permitted neighbours | D5 | a rename **within** one dated archive directory, a move with one end outside the archive subtree, and a move whose two segments do not both parse as dates each **complete**; the two `status-drift` paths keep their existing locks and gain no second finding; every pre-M28a `docs mv` behaviour is proven byte-stable. The neighbour that costs something — `docs mv archive/<D>/x.md archive/x.md`, D8's second residual — is proven both to **complete** and, on a witness-carrying document, to be reported by Leg 1's second message form (Phase-1 amendment 1) |
 | E1 one silent relocation — **detected** | D1 + D3 | an `archivedate-drifted` fixture — a document carrying the witness in a *different* dated directory — yields exactly one `archive-date-drift` error naming both dates, at exit 2, however the relocation was produced |
 | E2 M28 silenced the alarm | D1 + D3 + D5 | the E1d relocation replayed end-to-end inside the suite: `docs mv` now refuses it outright, and a hand-made equivalent relocation of a witness-carrying document leaves a tree that `docs check` **fails** — where both flows were silent before |
@@ -631,8 +632,8 @@ coverage* below.
       name, value source, rendering, block position and every-member write
       rule; the vocabulary changes; the corroboration predicate and the rule's
       severity / exit / cardinality / message forms; the `docs mv` refusal
-      predicate, its message, its exit code, its pre-flight position and its
-      documented escape; the present-only contract; and the Phase-5
+      predicate, its message, its exit code, its plan-before-move position and
+      its documented escape; the present-only contract; and the Phase-5
       signatures.
 - [ ] The structured archive-date field written by `docs archive` to **every**
       document the operation moves, at the pinned block position, with the same
@@ -668,7 +669,8 @@ coverage* below.
       milestone closeout writes the witness to every member and leaves
       `docs check` clean.
 - [ ] **Leg 2** — `docs mv`'s refusal of a cross-dated archived relocation
-      (D5), evaluated inside M28's existing plan-before-move pre-flight, with
+      (D5), evaluated in M28's plan-before-move window at the position
+      Phase-1 amendment 2 froze, with
       its frozen message, exit 2, its zero-bytes-written guarantee, its three
       enumerated permitted neighbours, and its escape documented in the same
       paragraph in both `cli.md` and `convention.md`.
@@ -690,8 +692,8 @@ coverage* below.
   the present-only contract and its consequence for upgrade; `docs migrate`'s
   non-write and non-promotion; the exact `convention.md` wording for all three
   archived-immutability paragraphs; **D5's refusal predicate, its frozen
-  message beside `archive-date-drift`'s, its exit code, its position inside
-  `docs mv`'s existing pre-flight, its three enumerated permitted neighbours
+  message beside `archive-date-drift`'s, its exit code, its position in
+  `docs mv`'s plan-before-move window, its enumerated permitted neighbours
   and its documented escape**; and the Phase-5 signatures. No business logic
   lands. Phase 1 does **not** re-open the setup decisions.
 - Files: `docs/cli.md` (the `docs archive` step list, the `docs check` rule
@@ -780,8 +782,10 @@ coverage* below.
 
 - Objective: wire both ends — one `set_metadata_field` call in `_archive_one`
   at the pinned position, and one `findings.extend(archive_date_findings(...))`
-  in `check_doc` at the frozen position; and D5's refusal inside `docs mv`'s
-  existing plan-before-move pre-flight, before the first byte moves.
+  in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s
+  plan-before-move window at the position Phase-1 amendment 2 froze —
+  immediately after `old_rel` / `new_rel` are derived, before the `--dry-run`
+  branch and before the first byte moves.
 - Files: `src/docs_cli/cli.py`, the archive/check/mv unit and integration
   tests.
 - Exit: core and integration tests GREEN; a normal archive writes the witness
@@ -863,7 +867,7 @@ coverage* below.
 ## Phase checklist
 
 - [x] Phase 1 — Define Contract
-- [ ] Phase 2 — Write Tests (RED)
+- [x] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
@@ -1096,8 +1100,10 @@ phrasing choice:
   M28 built one milestone ago, and it names both dates.
 
 **The adopted scope.** One predicate in `docs mv`'s existing plan-before-move
-pre-flight — reusing M28's refuse-with-zero-mutation machinery rather than
-inventing a second refusal mechanism — one frozen message pinned in Phase 1
+window — reusing M28's refuse-with-zero-mutation machinery rather than
+inventing a second refusal mechanism; Phase-1 amendment 2 fixes its exact
+position, one step earlier than the pre-flight call, so it reaches
+`--dry-run` — one frozen message pinned in Phase 1
 beside `archive-date-drift`'s, one exit code, one `cli.md` paragraph, one
 `convention.md` sentence, and locks for both the refusal and the three
 *permitted* neighbours that must keep working: a rename **within** one dated

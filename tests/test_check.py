@@ -6,6 +6,8 @@ rule tests use inline strings; the tree tests point at fixture trees.
 
 from __future__ import annotations
 
+import dataclasses
+import inspect
 import shutil
 from datetime import date
 from pathlib import Path
@@ -18,6 +20,7 @@ from docs import (
     BUILTIN_STATUSES,
     Config,
     Finding,
+    MetadataError,
     check_doc,
     check_tree,
     compile_exclude_predicate,
@@ -1451,3 +1454,654 @@ def test_check_tree_pre_m27_fixtures_gain_no_body_link_findings(fixtures_dir, tr
     findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
     offenders = [f for f in findings if f.rule in {"broken-body-link", "outside-root-body-link"}]
     assert offenders == [], f"pre-M27 fixture {tree} must gain no body-link findings"
+
+
+# ===========================================================================
+# M28a — the archive-date witness: the pure seam and the `archive-date-drift`
+# rule.
+#
+# The contract under test is the milestone's *Decisions (Phase 1 — BINDING)* —
+# items (A) through (H) — and `cli.md` › `docs check` ›
+# *Archive-date corroboration*.
+#
+# Every M28a symbol is reached through `_m28a(name)` rather than a module-level
+# import: a missing name at import time would be a COLLECTION error (the
+# Phase-4 exit criterion forbids those), so this keeps the RED reason a single
+# clean `AttributeError` and keeps `mypy src/ tests/` green at baseline.
+# ===========================================================================
+
+
+def _m28a(name: str):
+    """Fetch an M28a symbol that does not exist until Phase 5."""
+    return getattr(_cli, name)
+
+
+def _m28a_config(*, archive_dir: str = "archive", date_format: str = "%Y-%m-%d") -> Config:
+    return Config(
+        project="probe",
+        archive_dir=archive_dir,
+        date_format=date_format,
+        lifecycles=BUILTIN_STATUSES,
+        roles=BUILTIN_ROLES,
+    )
+
+
+def _archive_dir_date(rel: str, config: Config | None = None):
+    return _m28a("archive_dir_date")(rel, config if config is not None else _m28a_config())
+
+
+def _archive_date_findings(rel: str, metadata, config: Config | None = None) -> list[Finding]:
+    """Run the pure rule for a document at root-relative `rel` under `/r`."""
+    cfg = config if config is not None else _m28a_config()
+    return _m28a("archive_date_findings")(Path("/r") / rel, metadata, Path("/r"), cfg)
+
+
+def _witness_doc(
+    *,
+    lifecycle: str = "archived",
+    updated: str = "2026-01-01",
+    archived: str | None = "2026-01-01",
+) -> str:
+    """A well-formed doc, optionally carrying the witness."""
+    text = f"# Sample\n\nLifecycle: {lifecycle}\nRole: spec\nProject: probe\nUpdated: {updated}\n"
+    if archived is not None:
+        text += f"Archived: {archived}\n"
+    return text + "\n## Body\n\nBody paragraph.\n"
+
+
+# --- (C) `archive_dir_date` ------------------------------------------------
+
+
+def test_archive_dir_date_reads_the_dated_directory():
+    """The headline shape: `archive/<date>/x.md` yields `<date>`."""
+    assert _archive_dir_date("archive/2026-01-01/x.md") == date(2026, 1, 1)
+
+
+def test_archive_dir_date_reads_the_first_segment_of_a_deeper_path():
+    """Item (C): corroboration reads the FIRST segment under the archive dir,
+    matching how `status-drift` and `_is_archived_rel` already treat the
+    subtree — so `archive/<date>/sub/x.md` corroborates `<date>`.
+
+    Without this an implementation that required exactly three segments would
+    silently report every nested archived document as drifted.
+    """
+    assert _archive_dir_date("archive/2026-01-01/sub/x.md") == date(2026, 1, 1)
+    assert _archive_dir_date("archive/2026-01-01/sub/deeper/x.md") == date(2026, 1, 1)
+
+
+def test_archive_dir_date_is_none_for_a_document_in_the_archive_root():
+    """`archive/x.md` has no dated directory — `len(parts) < 3` (item (C)).
+
+    This is the shape D8's second residual leaves behind, and it is why the
+    rule's message form B exists.
+    """
+    assert _archive_dir_date("archive/x.md") is None
+
+
+def test_archive_dir_date_is_none_for_an_undated_subdirectory():
+    """The convention permits an undated subdirectory of the archive; it is
+    simply not a *dated* one."""
+    assert _archive_dir_date("archive/misc/x.md") is None
+    assert _archive_dir_date("archive/misc/deeper/x.md") is None
+
+
+def test_archive_dir_date_is_none_outside_the_archive_subtree():
+    """Condition 1 of item (C): the first segment must be the archive dir.
+
+    The second case is the trap: a *date-shaped* directory somewhere else in
+    the tree must not be mistaken for an archive event.
+    """
+    assert _archive_dir_date("x.md") is None
+    assert _archive_dir_date("sub/x.md") is None
+    assert _archive_dir_date("sub/2026-01-01/x.md") is None
+
+
+def test_archive_dir_date_honours_a_non_default_date_format():
+    """D3: the segment is parsed with `config.date_format`, never with
+    `parse()`'s hardcoded ISO default (defect E8, deliberately not inherited).
+    """
+    cfg = _m28a_config(date_format="%d-%m-%Y")
+    assert _archive_dir_date("archive/04-03-2026/x.md", cfg) == date(2026, 3, 4)
+    assert _archive_dir_date("archive/2026-03-04/x.md", cfg) is None, (
+        "the ISO spelling is not a date in this tree's format"
+    )
+
+
+def test_archive_dir_date_honours_a_non_default_archive_dir():
+    """D3: config-aware, unlike `detect_archive_layout`, which hardcodes the
+    literal `archive` and `%Y-%m-%d` and takes no `Config` at all (E7).
+    """
+    cfg = _m28a_config(archive_dir="attic")
+    assert _archive_dir_date("attic/2026-01-01/x.md", cfg) == date(2026, 1, 1)
+    assert _archive_dir_date("archive/2026-01-01/x.md", cfg) is None, (
+        "on a tree configured with dir = 'attic', a plain archive/ directory is "
+        "an ordinary subdirectory"
+    )
+
+
+def test_archive_dir_date_accepts_an_unpadded_spelling():
+    """Q2: comparison is on PARSED dates, so `2026-1-1` and `2026-01-01` are
+    the same date. Pinned here because it is the ground truth the neighbour-4
+    `docs mv` lock depends on.
+    """
+    assert _archive_dir_date("archive/2026-1-1/x.md") == _archive_dir_date(
+        "archive/2026-01-01/x.md"
+    )
+
+
+def test_archive_dir_date_never_touches_the_filesystem():
+    """D3: no filesystem access of any kind.
+
+    `pytest.MonkeyPatch.context()` rather than the `monkeypatch` fixture: the
+    fixture reverts at TEARDOWN, so a failure inside the block would leave
+    `Path.exists` poisoned while pytest renders the traceback.
+    """
+
+    def _boom(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("archive_dir_date touched the filesystem")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(Path, "exists", _boom)
+        mp.setattr(Path, "is_file", _boom)
+        mp.setattr(Path, "is_dir", _boom)
+        mp.setattr(Path, "resolve", _boom)
+        mp.setattr(Path, "open", _boom)
+        result = _archive_dir_date("archive/2026-01-01/x.md")
+
+    assert result == date(2026, 1, 1)
+
+
+# --- (C) `archive_date_findings` — the pure rule ---------------------------
+
+
+def test_archive_date_findings_absent_field_is_silent():
+    """D6, present-only: the whole compatibility story, at the seam."""
+    assert _archive_date_findings("archive/2026-03-04/x.md", {"Lifecycle": "archived"}) == []
+
+
+def test_archive_date_findings_blank_field_is_silent():
+    """A blank value is not a recorded date (item (C) step 1)."""
+    assert _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "   "}) == []
+
+
+def test_archive_date_findings_bare_label_group_is_treated_as_absent():
+    """`parse_metadata_block` yields a bare `Archived:` bullet group as a
+    TUPLE. Item (C) step 1 pins that as *absent*, mirroring how `check_doc`
+    already silently skips a tuple-valued `Updated:`.
+
+    Without this pin an implementation that called `.strip()` on the value
+    would raise `AttributeError` inside `check_doc` — which never raises.
+    """
+    assert _archive_date_findings("archive/2026-03-04/x.md", {"Archived": ("2026-01-01",)}) == []
+    assert _archive_date_findings("archive/2026-03-04/x.md", {"Archived": ()}) == []
+
+
+def test_archive_date_findings_corroborated_witness_is_silent():
+    assert _archive_date_findings("archive/2026-01-01/x.md", {"Archived": "2026-01-01"}) == []
+
+
+def test_archive_date_findings_deeper_corroborated_witness_is_silent():
+    assert _archive_date_findings("archive/2026-01-01/sub/x.md", {"Archived": "2026-01-01"}) == []
+
+
+def test_archive_date_findings_different_dated_directory_is_form_a():
+    """Message form A, verbatim — the headline case (E1d), naming BOTH dates.
+
+    The exact string is contract, not cosmetics: it is what an agent parses to
+    repair, and `Finding`'s key set is closed at four, so both dates can only
+    travel in `message`.
+    """
+    findings = _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-01-01"})
+    assert len(findings) == 1, findings
+    assert findings[0].rule == "archive-date-drift"
+    assert findings[0].severity == "error"
+    assert findings[0].message == (
+        "Archived: 2026-01-01 but the file is in archive/2026-03-04/ "
+        "(move it back, or correct the recorded date)"
+    )
+
+
+def test_archive_date_findings_outside_the_archive_is_form_b():
+    """Q7's motivating case: a document moved OUT of the archive whose
+    `Lifecycle:` was then hand-edited, so `status-drift` is silent and the
+    stale witness is the only evidence left.
+    """
+    findings = _archive_date_findings("escaped.md", {"Archived": "2026-01-01"})
+    assert len(findings) == 1, findings
+    assert findings[0].rule == "archive-date-drift"
+    assert findings[0].message == (
+        "Archived: 2026-01-01 but the file is not under a dated archive/ directory "
+        "(move it back, or remove the field)"
+    )
+
+
+def test_archive_date_findings_undated_subdirectory_is_form_b():
+    """Q7's second shape, and D8's second residual: the SAME message form.
+    Making it a second rule id would split one assertion across two vocabulary
+    entries for no gain.
+    """
+    undated = _archive_date_findings("archive/misc/x.md", {"Archived": "2026-01-01"})
+    archive_root = _archive_date_findings("archive/x.md", {"Archived": "2026-01-01"})
+    expected = (
+        "Archived: 2026-01-01 but the file is not under a dated archive/ directory "
+        "(move it back, or remove the field)"
+    )
+    assert [f.rule for f in undated] == ["archive-date-drift"]
+    assert undated[0].message == expected
+    assert [f.rule for f in archive_root] == ["archive-date-drift"]
+    assert archive_root[0].message == expected
+
+
+def test_archive_date_findings_message_names_the_configured_archive_dir():
+    """Both message forms interpolate `config.archive_dir`, never the literal
+    `archive` — otherwise a tree configured with `dir = "attic"` would be told
+    to look at a directory it does not have.
+    """
+    cfg = _m28a_config(archive_dir="attic")
+    drifted = _archive_date_findings("attic/2026-03-04/x.md", {"Archived": "2026-01-01"}, cfg)
+    outside = _archive_date_findings("elsewhere.md", {"Archived": "2026-01-01"}, cfg)
+    assert drifted[0].message == (
+        "Archived: 2026-01-01 but the file is in attic/2026-03-04/ "
+        "(move it back, or correct the recorded date)"
+    )
+    assert outside[0].message == (
+        "Archived: 2026-01-01 but the file is not under a dated attic/ directory "
+        "(move it back, or remove the field)"
+    )
+
+
+def test_archive_date_findings_unparseable_value_is_one_bad_date_and_no_drift():
+    """OQ-2: `bad-date` owns an `Archived:` value that does not parse — one
+    finding for the document, message form C, and NO drift finding, because
+    there is no date to compare.
+
+    The document is in a dated directory that DISAGREES with the (unparseable)
+    recorded value, so an implementation that reported drift as well would be
+    caught here rather than by inspection.
+    """
+    findings = _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-13-01"})
+    assert [f.rule for f in findings] == ["bad-date"], findings
+    assert findings[0].severity == "error"
+    assert findings[0].message == "Archived: malformed date '2026-13-01' (expected %Y-%m-%d)"
+
+
+def test_archive_date_findings_unparseable_value_names_the_configured_format():
+    """Form C is `parse_date`'s own message with its `label` set to
+    `Archived` (OQ-3), so the expected format is the tree's, not the default.
+    """
+    cfg = _m28a_config(date_format="%d-%m-%Y")
+    findings = _archive_date_findings("archive/04-03-2026/x.md", {"Archived": "2026-03-04"}, cfg)
+    assert [f.rule for f in findings] == ["bad-date"], findings
+    assert findings[0].message == "Archived: malformed date '2026-03-04' (expected %d-%m-%Y)"
+
+
+def test_archive_date_findings_compares_parsed_dates_not_strings():
+    """Q2 / E8: `archive/2026-1-1/` corroborates `Archived: 2026-01-01`.
+
+    A string comparison passes every other test in this file and fails only
+    here, which is exactly why the case is pinned.
+    """
+    assert _archive_date_findings("archive/2026-1-1/x.md", {"Archived": "2026-01-01"}) == []
+    assert _archive_date_findings("archive/2026-01-01/x.md", {"Archived": "2026-1-1"}) == []
+
+
+def test_archive_date_findings_parses_both_sides_in_the_tree_format():
+    """E8 lock at the seam: on a `%d-%m-%Y` tree the agreeing pair is silent
+    and the disagreeing pair fires — neither decided by string equality, and
+    neither raising the hardcoded-ISO `MetadataError`.
+    """
+    cfg = _m28a_config(date_format="%d-%m-%Y")
+    assert _archive_date_findings("archive/04-03-2026/x.md", {"Archived": "04-03-2026"}, cfg) == []
+    fired = _archive_date_findings("archive/04-03-2026/x.md", {"Archived": "01-01-2026"}, cfg)
+    assert [f.rule for f in fired] == ["archive-date-drift"], fired
+    assert fired[0].message == (
+        "Archived: 01-01-2026 but the file is in archive/04-03-2026/ "
+        "(move it back, or correct the recorded date)"
+    )
+
+
+def test_archive_date_findings_record_key_set_stays_closed_at_four():
+    """D4 / M27 — D4: a new rule adds a value to `rule`, never a field to the
+    record. Both dates travel in `message`."""
+    findings = _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-01-01"})
+    assert len(findings) == 1
+    assert {f.name for f in dataclasses.fields(findings[0])} == {
+        "path",
+        "severity",
+        "rule",
+        "message",
+    }
+
+
+def test_archive_date_findings_reports_the_document_it_was_given():
+    """The finding's `path` is the document's own path — `check_tree` groups
+    output by it, so a rule that reported the archive directory instead would
+    print under the wrong heading."""
+    findings = _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-01-01"})
+    assert findings[0].path == Path("/r/archive/2026-03-04/x.md")
+
+
+def test_archive_date_findings_never_touches_the_filesystem():
+    """D3: pure. In particular the rule must use `_root_relative`, never
+    `path.resolve().relative_to(root.resolve())` (OQ-4) — `.resolve()` is
+    filesystem access, and `body_link_findings` is the precedent.
+    """
+
+    def _boom(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("archive_date_findings touched the filesystem")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(Path, "exists", _boom)
+        mp.setattr(Path, "is_file", _boom)
+        mp.setattr(Path, "is_dir", _boom)
+        mp.setattr(Path, "resolve", _boom)
+        mp.setattr(Path, "open", _boom)
+        findings = _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-01-01"})
+
+    assert [f.rule for f in findings] == ["archive-date-drift"]
+
+
+# --- (D) the rule's wiring into `check_doc` --------------------------------
+
+
+def test_check_doc_reports_archive_date_drift_at_the_frozen_position(tmp_path):
+    """Item (D): the rule is appended immediately AFTER the lifecycle/location
+    `status-drift` block and BEFORE the M25 `duplicate-field` block, so the two
+    location-versus-metadata rules stay adjacent.
+
+    Asserted as an exact rule sequence on a document that trips several rules
+    at once, because a position is not observable any other way.
+    """
+    doc = tmp_path / "archive" / "2026-03-04" / "x.md"
+    doc.parent.mkdir(parents=True)
+    text = (
+        "# Sample\n\n"
+        "Lifecycle: active\n"
+        "Role: spec\n"
+        "Project: probe\n"
+        "Updated: 2026-01-01\n"
+        "Archived: 2026-01-01\n"
+        "Role: spec\n"
+        "\n## Body\n\nBody.\n"
+    )
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == [
+        "status-drift",
+        "archive-date-drift",
+        "duplicate-field",
+    ], findings
+
+
+def test_check_doc_archive_date_drift_and_status_drift_are_independent(tmp_path):
+    """D3 / Q7: they report different facts and may both fire on one document.
+
+    A deliberate departure from M27's non-overlap rule, which applied because
+    that milestone's two rules were mutually exclusive classifications of one
+    destination.
+    """
+    doc = tmp_path / "stale-both.md"
+    text = _witness_doc(lifecycle="archived", archived="2026-01-01")
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["status-drift", "archive-date-drift"], findings
+
+
+def test_check_doc_archive_date_drift_fires_where_status_drift_is_silent(tmp_path):
+    """Q7's motivating case, end to end at `check_doc`: a document moved out of
+    the archive whose `Lifecycle:` was then hand-edited to `active`. The
+    lifecycle now agrees with the location, so `status-drift` says nothing —
+    and the stale witness is the only evidence the move ever happened.
+    """
+    doc = tmp_path / "escaped.md"
+    text = _witness_doc(lifecycle="active", archived="2026-01-01")
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["archive-date-drift"], findings
+
+
+def test_check_doc_is_silent_on_a_corroborated_witness(tmp_path):
+    """The over-fire guard: a normally archived document says nothing.
+
+    GREEN at baseline (degenerate — the rule does not exist, so nothing can
+    fire); the over-fire guard proper after Phase 6.
+    """
+    doc = tmp_path / "archive" / "2026-01-01" / "old.md"
+    doc.parent.mkdir(parents=True)
+    text = _witness_doc()
+    doc.write_text(text)
+    assert check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY) == []
+
+
+def test_check_doc_is_silent_on_an_archived_document_with_no_witness(tmp_path):
+    """D6 at `check_doc`: the pre-2.0 population, which is every archived
+    document in every tree that upgrades from 1.x.
+
+    GREEN at baseline (degenerate); genuine after Phase 6, when it is the
+    single assertion the whole compatibility story rests on.
+    """
+    doc = tmp_path / "archive" / "2026-01-01" / "old.md"
+    doc.parent.mkdir(parents=True)
+    text = _witness_doc(archived=None)
+    doc.write_text(text)
+    assert check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY) == []
+
+
+def test_check_doc_malformed_document_never_reaches_the_rule(tmp_path):
+    """Item (C): `check_doc` returns early on a missing H1, so a document that
+    cannot be parsed gets no archive-date pile-on.
+
+    GREEN at baseline (degenerate); genuine after Phase 6, when an
+    implementation that ran the rule before the early return would add a
+    second finding here.
+    """
+    doc = tmp_path / "archive" / "2026-03-04" / "x.md"
+    doc.parent.mkdir(parents=True)
+    text = "Lifecycle: archived\nArchived: 2026-01-01\n\nNo H1 above.\n"
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["malformed"], findings
+
+
+def test_check_doc_bad_updated_and_bad_archived_are_two_findings(tmp_path):
+    """Both date fields are owned by `bad-date`, and each names its own field.
+
+    The ORDER is the frozen one: `Updated:`'s finding comes from the existing
+    date block, `Archived:`'s from the rule at item (D)'s position.
+    """
+    doc = tmp_path / "archive" / "2026-03-04" / "x.md"
+    doc.parent.mkdir(parents=True)
+    text = (
+        "# Sample\n\nLifecycle: archived\nRole: spec\nProject: probe\n"
+        "Updated: not-a-date\nArchived: also-not-a-date\n\n## Body\n\nBody.\n"
+    )
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["bad-date", "bad-date"], findings
+    assert findings[0].message == "Updated: malformed date 'not-a-date' (expected %Y-%m-%d)"
+    assert findings[1].message == "Archived: malformed date 'also-not-a-date' (expected %Y-%m-%d)"
+
+
+def test_check_doc_duplicate_archived_label_still_fires_duplicate_field(tmp_path):
+    """M25 — D7 is unaffected: a doubled `Archived:` label is still
+    `duplicate-field`, and the rule reads the LAST occurrence, as every rule
+    does.
+
+    GREEN at baseline (degenerate); genuine after Phase 6, when an
+    implementation that read the FIRST occurrence would add a spurious
+    `archive-date-drift` beside the duplicate-field finding.
+    """
+    doc = tmp_path / "archive" / "2026-01-01" / "old.md"
+    doc.parent.mkdir(parents=True)
+    text = (
+        "# Sample\n\nLifecycle: archived\nRole: spec\nProject: probe\n"
+        "Updated: 2026-01-01\nArchived: 2026-03-04\nArchived: 2026-01-01\n"
+        "\n## Body\n\nBody.\n"
+    )
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, _m28a_config(), stale=None, today=_TODAY)
+    assert [f.rule for f in findings] == ["duplicate-field"], (
+        "the last occurrence corroborates, so only duplicate-field fires"
+    )
+
+
+def test_exit_code_for_archive_date_drift_is_2():
+    """D4: severity `error`, so the tree exits 2 through the existing
+    `exit_code_for` — no new exit code and no opt-out.
+
+    GREEN at baseline and DEGENERATE by construction: `exit_code_for` keys on
+    `severity`, never on `rule`. Kept deliberately as the ground truth that
+    makes "no new exit code" a property rather than a promise.
+    """
+    finding = Finding(Path("/r/x.md"), "error", "archive-date-drift", "…")
+    assert exit_code_for([finding]) == 2
+
+
+# --- (B) the vocabulary: `Archived:` never trips `unknown-field` -----------
+
+
+@pytest.mark.parametrize(
+    "toml",
+    [
+        '[project]\nname = "probe"\n',
+        '[project]\nname = "probe"\n\n[vocabulary]\nadd_fields = ["Owner"]\n',
+        '[project]\nname = "probe"\n\n[vocabulary]\nadd_fields = ["Archived-reason"]\n',
+    ],
+    ids=["no-add-fields", "unrelated-add-fields", "add-fields-without-the-label"],
+)
+def test_check_doc_archived_field_never_flagged_by_unknown_field(tmp_path, toml):
+    """E6 / D1: `Archived` joins `_BUILTIN_METADATA_FIELDS` for exactly M25's
+    `Revision:` reason — a label the tool writes must never trip the tool's own
+    allowlist warning.
+
+    The exact shape of `test_check_doc_revision_field_never_flagged_by_unknown_field`.
+    """
+    (tmp_path / ".docs.toml").write_text(toml)
+    cfg = load_config(tmp_path)
+    doc = tmp_path / "archive" / "2026-01-01" / "old.md"
+    doc.parent.mkdir(parents=True)
+    text = _witness_doc()
+    doc.write_text(text)
+    findings = check_doc(doc, text, tmp_path, cfg, stale=None, today=_TODAY)
+    offenders = [f for f in findings if f.rule == "unknown-field" and "Archived" in f.message]
+    assert offenders == [], f"Archived: must never trip unknown-field, got {offenders!r}"
+
+
+# --- the present-only sweep over every pre-M28a fixture tree ---------------
+
+
+def _pre_m28a_tree_names() -> list[str]:
+    """Every committed fixture tree that is NOT one of M28a's own.
+
+    A SIBLING of `_legacy_tree_names` and `_pre_m27_tree_names`, never a
+    widening of either: widening one would move pre-existing parametrized test
+    ids, and extending its assertion would additionally make M28a's three
+    deliberately drifted `archivedate-*` trees fail it.
+    """
+    return sorted(
+        d.name for d in _TREES.iterdir() if d.is_dir() and not d.name.startswith("archivedate-")
+    )
+
+
+@pytest.mark.parametrize("tree", _pre_m28a_tree_names())
+def test_check_tree_pre_m28a_fixtures_gain_no_archive_date_findings(fixtures_dir, tree):
+    """D6, swept: no pre-M28a fixture tree may gain an `archive-date-drift`
+    finding, nor an `Archived:`-sourced `bad-date` one.
+
+    E9 measured it: no fixture anywhere carries an archive-date field, because
+    none existed. GREEN-at-baseline (degenerate), and a genuine regression lock
+    after Phase 6 — including for trees added by later milestones.
+    """
+    root = fixtures_dir / "trees" / tree
+    findings = check_tree(root, load_config(root), stale=None, today=_TODAY)
+    offenders = [
+        f
+        for f in findings
+        if f.rule == "archive-date-drift"
+        or (f.rule == "bad-date" and f.message.startswith("Archived:"))
+    ]
+    assert offenders == [], f"pre-M28a fixture {tree} must gain no archive-date findings"
+
+
+def test_check_tree_dogfood_repo_docs_gains_no_archive_date_drift():
+    """The compatibility story, measured rather than asserted.
+
+    GREEN at baseline (degenerate — the rule does not exist yet) and the
+    milestone's headline compatibility claim after Phase 6.
+
+    Phrased as the DURABLE property (OQ-9): this tree yields zero
+    `archive-date-drift` findings over an archive holding at least 46
+    documents. Deliberately NOT "no archived document carries `Archived:`" —
+    that becomes false the first time a later milestone archives anything,
+    while the property this rule promises never does.
+    """
+    root = Path(__file__).resolve().parents[1] / "docs"
+    config = load_config(root)
+    findings = check_tree(root, config, stale=None, today=_TODAY)
+    archived = [
+        p
+        for p in root.rglob("*.md")
+        if p.relative_to(root).as_posix().startswith(config.archive_dir + "/")
+        and p.name != "INDEX.md"
+    ]
+    assert len(archived) >= 46, (
+        f"the dogfood corpus must still hold at least 46 archived documents, found {len(archived)}"
+    )
+    offenders = [f for f in findings if f.rule == "archive-date-drift"]
+    assert offenders == [], f"the live docs tree must gain no archive-date-drift: {offenders!r}"
+
+
+# --- (H) / OQ-3 — one date parser, two labels, no drift between them -------
+
+
+def test_parse_date_defaults_to_the_updated_label():
+    """OQ-3: `parse_date` gains a keyword-only `label`, and EVERY pre-M28a call
+    site keeps a byte-identical message.
+
+    The default is what makes that true without touching a single existing
+    caller, so it is asserted rather than assumed. `check_doc`'s `bad-date`
+    finding for `Updated:` is spelled by this function, and M25's
+    "two date spellings in one file would be a defect" has a message-level
+    twin: two date-error messages would be a defect too.
+
+    GREEN at baseline and GENUINE: it is what proves Phase 5's signature change
+    moved no byte of any existing message.
+    """
+    with pytest.raises(MetadataError) as excinfo:
+        _cli.parse_date("nope")
+    assert str(excinfo.value) == "Updated: malformed date 'nope' (expected %Y-%m-%d)"
+
+    with pytest.raises(MetadataError) as excinfo:
+        _cli.parse_date("nope", "%d-%m-%Y")
+    assert str(excinfo.value) == "Updated: malformed date 'nope' (expected %d-%m-%Y)"
+
+
+def test_parse_date_label_names_the_field_in_the_message():
+    """The whole point of the parameter: a malformed witness must not report
+    itself as a malformed `Updated:` line.
+
+    The signature is asserted BEFORE the call so the RED reason is a clean
+    assertion rather than a `TypeError` from an unexpected keyword argument —
+    a weaker reason that also hides which half is missing.
+    """
+    params = inspect.signature(_cli.parse_date).parameters
+    assert "label" in params, "Phase 5 adds a keyword-only `label` to parse_date (OQ-3)"
+
+    with pytest.raises(MetadataError) as excinfo:
+        _cli.parse_date("2026-13-01", "%Y-%m-%d", label="Archived")
+    assert str(excinfo.value) == "Archived: malformed date '2026-13-01' (expected %Y-%m-%d)"
+
+
+def test_parse_date_label_is_keyword_only():
+    """Keyword-only so no positional caller can be silently re-bound: today's
+    two-positional callers pass `date_format` second, and a third positional
+    parameter is exactly the shape that quietly swallows a mistake.
+
+    Asserted on the signature rather than by calling with three positionals:
+    that call raises `TypeError` today for the opposite reason (there is no
+    third parameter at all), so it would be falsely GREEN at baseline.
+    """
+    params = inspect.signature(_cli.parse_date).parameters
+    assert "label" in params, "Phase 5 adds a keyword-only `label` to parse_date (OQ-3)"
+    assert params["label"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert params["label"].default == "Updated"

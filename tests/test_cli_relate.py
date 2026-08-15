@@ -1020,3 +1020,68 @@ def test_relate_no_op_does_not_reindex(docs_script, tmp_path):
     proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert not (root / "INDEX.md").exists(), "no change ⇒ no reindex"
+
+
+# ===========================================================================
+# M28a — D9 / Q6: the witness survives M25 — D4's audited archived-endpoint
+# repair byte-identically.
+# ===========================================================================
+
+
+def test_relate_archived_repair_leaves_the_witness_byte_identical(docs_script, tmp_path):
+    """`convention.md`'s *Audited relationship repair* enumerates exactly three
+    things that may change in an archived document — the one recognized
+    `Related:` bullet, the `Updated:` value, and the `Revision:` group. M28a
+    puts `Archived:` on the byte-identical side beside `Archived-reason:`, and
+    this is the lock that makes that promise real.
+
+    The witness records ENTRY into the archive, never a later repair, so a
+    `relate` repair that moved it would be recording someone else's event.
+
+    GREEN at baseline (the witness it preserves is hand-authored, since no verb
+    writes one until Phase 6) and genuine afterwards. The trailing `docs check`
+    becomes an over-fire guard at Phase 6.
+    """
+    root = tmp_path / "witnessed"
+    (root / "archive" / "2026-01-01").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "witnessed"\n')
+    (root / "a.md").write_text(_doc("A", "witnessed", "depends-on: archive/2026-01-01/old.md"))
+    archived = root / "archive" / "2026-01-01" / "old.md"
+    archived.write_text(
+        "# Old\n\nLifecycle: archived\nRole: plan\nProject: witnessed\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\nArchived-reason: completed\n\n"
+        "Related:\n- references: a.md\n\n## Body\n\nHistorical prose.\n"
+    )
+    before = archived.read_text().splitlines()
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "depends-on",
+        "archive/2026-01-01/old.md",
+        "--root",
+        str(root),
+        "--reason",
+        "complete the pair",
+        "--date",
+        "2026-08-11",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    after = archived.read_text().splitlines()
+    assert [line for line in before if line not in after] == ["Updated: 2026-01-01"], (
+        "the ONLY line that may disappear is the old Updated: value"
+    )
+    assert [line for line in after if line not in before] == [
+        "Updated: 2026-08-11",
+        "- required-by: a.md",
+        "Revision:",
+        "- 2026-08-11: relate add 'required-by: a.md'; reason: complete the pair",
+    ]
+    assert "Archived: 2026-01-01" in after, "the witness is byte-identical"
+    assert "Archived-reason: completed" in after
+    assert _run(docs_script, "check", str(root)).returncode == 0, (
+        "and the repaired document still corroborates its dated directory"
+    )

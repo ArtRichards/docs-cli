@@ -15,6 +15,8 @@ from docs import (
     BUILTIN_STATUSES,
     MetadataError,
     VocabularyError,
+    doc_to_json,
+    load_config,
     parse,
 )
 
@@ -176,3 +178,49 @@ def test_parse_fixture_well_formed(fixtures_dir):
     assert doc.title  # non-empty
     assert doc.lifecycle in BUILTIN_STATUSES
     assert doc.role in BUILTIN_ROLES
+
+
+# --- M28a (B) — `Archived:` stays OUT of `parse()`'s `known` set -----------
+
+
+def test_parse_harvests_archived_into_extra(tmp_path):
+    """Item (B)'s deliberate NON-change: `Archived:` is not promoted to a
+    first-class `Doc` attribute, so it surfaces through `Doc.extra` exactly as
+    `Archived-reason:` and `Revision:` already do.
+
+    GREEN at baseline and a genuine lock: a Phase-5 implementer adding the
+    label to `known` would silently drop it from `docs list --json`'s
+    `extra_fields`, widening a record M28a promises not to touch.
+    """
+    text = (
+        "# Old\n\nLifecycle: archived\nRole: spec\nProject: docs\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\nArchived-reason: closed out\n\nbody\n"
+    )
+    doc = parse(text, tmp_path / "old.md", tmp_path)
+    assert doc.extra["Archived"] == "2026-01-01"
+    assert doc.extra["Archived-reason"] == "closed out"
+
+
+def test_doc_to_json_surfaces_archived_under_extra_fields(tmp_path):
+    """*Also settled*: M28a adds no field to any JSON record. The witness
+    travels in `extra_fields`, and `docs list --json`'s top-level key set is
+    unchanged."""
+    (tmp_path / ".docs.toml").write_text('[project]\nname = "docs"\n')
+    text = (
+        "# Old\n\nLifecycle: archived\nRole: spec\nProject: docs\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\n\nbody\n"
+    )
+    path = tmp_path / "old.md"
+    path.write_text(text)
+    record = doc_to_json(parse(text, path, tmp_path), load_config(tmp_path), tmp_path)
+    assert set(record) == {
+        "path",
+        "title",
+        "lifecycle",
+        "role",
+        "project",
+        "updated",
+        "related",
+        "extra_fields",
+    }
+    assert record["extra_fields"]["Archived"] == "2026-01-01"

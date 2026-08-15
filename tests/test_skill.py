@@ -471,3 +471,55 @@ def test_bundled_use_cases_teaches_the_move_rewrite_and_the_strand_check() -> No
         "the catalog must name the strand refusal, which is the one case where a "
         "previously-completing archive now exits 2"
     )
+
+
+# --- M28a — the bundled skill must teach the witness and the refusal -------
+
+
+def test_skill_md_teaches_the_archive_date_witness_and_the_mv_refusal() -> None:
+    """M28a — D9 surface parity: the skill's `docs archive` and `docs mv` rows
+    must name the witness and the refusal.
+
+    Both are things an agent has to know BEFORE it invokes the verb: an archive
+    now writes a field the agent did not ask for, and a `docs mv` that used to
+    complete now exits 2. An agent reading only the current rows would be
+    surprised by the second and would not know the first exists.
+
+    Intended RED until Phase 7 (the bundled skill lands in the SAME change as
+    the CLI surface; there is nothing to mirror at Phase 2).
+    """
+    _frontmatter, body = _split_frontmatter(_read_skill())
+    rows = [line for line in body.split("\n") if line.startswith("|")]
+    archive_rows = "\n".join(line for line in rows if "docs archive" in line)
+    mv_rows = "\n".join(line for line in rows if "docs mv" in line)
+
+    assert archive_rows, "the skill body's verb table must carry a `docs archive` row"
+    assert mv_rows, "the skill body's verb table must carry a `docs mv` row"
+
+    assert "Archived:" in archive_rows, (
+        "the archive row must name the field the verb now writes, by its exact label"
+    )
+    assert "refus" in mv_rows.lower(), (
+        "the mv row must say a cross-dated archived relocation now REFUSES — "
+        "the milestone's one behaviour change"
+    )
+    assert "archive" in mv_rows.lower(), (
+        "…and must say which moves it applies to, or the refusal reads as universal"
+    )
+
+
+def test_bundled_use_cases_teaches_the_archive_date_witness() -> None:
+    """M28a — D9: the shipped use-case catalog carries the same prescription.
+
+    The catalog is where an agent looks for the closeout recipe, so it is where
+    the two new facts belong: a closeout now records the archive date on every
+    member it moves, and `docs check` reports a document whose location
+    contradicts it.
+
+    Intended RED until Phase 7.
+    """
+    text = (SKILL_DIR / "references" / "use-cases.md").read_text()
+    assert "Archived:" in text, "the catalog must name the field a closeout now writes"
+    assert "archive-date-drift" in text, (
+        "…and the rule id an adopter will see in `docs check` output"
+    )

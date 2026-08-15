@@ -593,3 +593,211 @@ def test_check_every_movelink_fixture_tree_is_clean_as_committed(docs_script, fi
         assert root.is_dir(), f"Phase 3 must author the `{name}` fixture tree"
         proc = _run(docs_script, "check", str(root))
         assert proc.returncode == 0, f"{name} is not clean as committed:\n{proc.stdout}"
+
+
+# ===========================================================================
+# M28a — `archive-date-drift` at the CLI, over the `archivedate-*` fixture
+# family.
+#
+# The contract under test is the milestone's *Decisions (Phase 1 — BINDING)*
+# items (C)–(E) and `cli.md` › `docs check` › *Archive-date corroboration*.
+# Every test below asserts a frozen contract string as well as an exit code,
+# so an unrelated failure with the same code cannot satisfy it (M26's
+# falsely-GREEN lesson).
+# ===========================================================================
+
+_FORM_A = (
+    "Archived: 2026-01-01 but the file is in archive/2026-03-04/ "
+    "(move it back, or correct the recorded date)"
+)
+_FORM_B = (
+    "Archived: 2026-01-01 but the file is not under a dated archive/ directory "
+    "(move it back, or remove the field)"
+)
+
+# The hand-written registration of M28a's fixture family, with each tree's
+# COMPLETE expected finding set as committed. Named explicitly rather than
+# derived from a glob: a parametrization over a glob would generate zero ids
+# before Phase 3 and be vacuously green. Three of the six are deliberately
+# drifted, so "clean" is not the whole gate here — the expected set is.
+_ARCHIVEDATE_TREES: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
+    ("archivedate-absent", ()),
+    ("archivedate-clean", ()),
+    ("archivedate-drifted", (("archive/2026-03-04/moved.md", "archive-date-drift"),)),
+    (
+        "archivedate-outside",
+        (
+            ("escaped.md", "archive-date-drift"),
+            ("stale-both.md", "status-drift"),
+            ("stale-both.md", "archive-date-drift"),
+        ),
+    ),
+    ("archivedate-two-dated-dirs", ()),
+    ("archivedate-undated", (("archive/misc/filed.md", "archive-date-drift"),)),
+)
+
+
+def _archivedate_tree(fixtures_dir: Path, name: str) -> Path:
+    """The committed `archivedate-*` tree, asserted to exist.
+
+    `docs check` is read-only, so these run against the committed tree; the
+    existence assertion is what keeps the family honestly RED between Phase 2
+    and Phase 3 rather than erroring on a missing directory.
+    """
+    root = fixtures_dir / "trees" / name
+    assert root.is_dir(), f"Phase 3 must author the `{name}` fixture tree"
+    return root
+
+
+def _findings(docs_script: Path, root: Path) -> tuple[int, list[tuple[str, str]], list[dict]]:
+    proc = _run(docs_script, "check", str(root), "--json")
+    records = json.loads(proc.stdout) if proc.stdout.strip() else []
+    return proc.returncode, [(r["path"], r["rule"]) for r in records], records
+
+
+def test_check_every_archivedate_fixture_tree_matches_its_registration(docs_script, fixtures_dir):
+    """Phase 3's exit criterion, asserted rather than assumed.
+
+    Every `archivedate-*` tree is swept automatically into the three
+    whole-corpus sweeps, but each of those asserts only that ONE rule family
+    stays silent. This asserts the whole gate: each tree's COMPLETE finding
+    set, as committed, is exactly the one its semantic calls for — so every
+    assertion elsewhere measures the thing under test rather than pre-existing
+    damage in the fixture.
+
+    Intended RED until Phase 3 (the trees) and Phase 6 (the rule).
+    """
+    on_disk = sorted(
+        d.name
+        for d in (fixtures_dir / "trees").iterdir()
+        if d.is_dir() and d.name.startswith("archivedate-")
+    )
+    assert on_disk == sorted(name for name, _ in _ARCHIVEDATE_TREES), (
+        "the hand-written list and the directory must agree, or a seventh "
+        f"`archivedate-*` tree would be silently unchecked here. On disk: {on_disk!r}"
+    )
+
+    for name, expected in _ARCHIVEDATE_TREES:
+        root = _archivedate_tree(fixtures_dir, name)
+        code, pairs, _records = _findings(docs_script, root)
+        assert pairs == list(expected), f"{name} findings as committed: {pairs!r}"
+        assert code == (2 if expected else 0), f"{name} exit code"
+
+
+def test_check_archivedate_clean_tree_exits_0(docs_script, fixtures_dir):
+    """E5, the DECLINE locked: `archivedate-clean` carries a deliberate
+    cross-dated `pairs-with` pair, both ends corroborated, and says nothing.
+
+    The reporter's suggested rule — warn when `pairs-with` partners sit in
+    different dated archive directories — would fire here. It is declined, and
+    this is the lock that proves it was not smuggled in.
+    """
+    root = _archivedate_tree(fixtures_dir, "archivedate-clean")
+    first = (root / "archive" / "2026-01-01" / "first.md").read_text()
+    second = (root / "archive" / "2026-03-04" / "second.md").read_text()
+    assert "pairs-with: archive/2026-03-04/second.md" in first, (
+        "the fixture must carry the cross-dated pair the decline is about"
+    )
+    assert "pairs-with: archive/2026-01-01/first.md" in second
+    assert "Archived: 2026-01-01" in first and "Archived: 2026-03-04" in second
+
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 0, proc.stdout
+    assert "archive-date-drift" not in proc.stdout
+
+
+def test_check_archivedate_absent_tree_exits_0(docs_script, fixtures_dir):
+    """D6, the whole compatibility story: a pre-2.0 archived document — an
+    `Archived-reason:` line and no witness — is silent."""
+    root = _archivedate_tree(fixtures_dir, "archivedate-absent")
+    old = (root / "archive" / "2026-01-01" / "old.md").read_text()
+    assert "Archived-reason:" in old, "the fixture must look archived, minus the witness"
+    assert "\nArchived:" not in old, "…and must carry NO witness at all"
+
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 0, proc.stdout
+    assert "archive-date-drift" not in proc.stdout
+
+
+def test_check_archivedate_drifted_tree_exits_2_with_form_a(docs_script, fixtures_dir):
+    """E1d detected: a witness-carrying document in a DIFFERENT dated
+    directory, however the relocation was produced."""
+    root = _archivedate_tree(fixtures_dir, "archivedate-drifted")
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "archive/2026-03-04/moved.md" in proc.stdout.splitlines(), (
+        "output is grouped by file; the drifted document is named"
+    )
+    assert f"  error: [archive-date-drift] {_FORM_A}" in proc.stdout
+
+
+def test_check_archivedate_drifted_json_record_keys_unchanged(docs_script, fixtures_dir):
+    """D4: no new JSON field — the key set stays exactly the M3 four, and BOTH
+    dates travel in `message`."""
+    root = _archivedate_tree(fixtures_dir, "archivedate-drifted")
+    code, _pairs, records = _findings(docs_script, root)
+    assert code == 2
+    drift = [r for r in records if r.get("rule") == "archive-date-drift"]
+    assert len(drift) == 1, f"exactly one archive-date-drift record, got {records!r}"
+    rec = drift[0]
+    assert set(rec) == {"path", "severity", "rule", "message"}, (
+        "M28a adds NO new JSON field; both dates live in `message`"
+    )
+    assert rec["severity"] == "error"
+    assert rec["path"] == "archive/2026-03-04/moved.md"
+    assert rec["message"] == _FORM_A
+    assert "2026-01-01" in rec["message"] and "2026-03-04" in rec["message"]
+
+
+def test_check_archivedate_outside_tree_reports_both_status_drift_directions(
+    docs_script, fixtures_dir
+):
+    """Q7, both directions of the `status-drift` interaction in one tree.
+
+    `escaped.md` is `Lifecycle: active` outside the archive — `status-drift` is
+    SILENT and the stale witness is the only evidence. `stale-both.md` is
+    `Lifecycle: archived` outside the archive — both rules fire, independently,
+    on one document, in the frozen order.
+    """
+    root = _archivedate_tree(fixtures_dir, "archivedate-outside")
+    code, pairs, _records = _findings(docs_script, root)
+    assert code == 2
+    assert pairs == [
+        ("escaped.md", "archive-date-drift"),
+        ("stale-both.md", "status-drift"),
+        ("stale-both.md", "archive-date-drift"),
+    ], pairs
+
+    proc = _run(docs_script, "check", str(root))
+    assert f"  error: [archive-date-drift] {_FORM_B}" in proc.stdout
+
+
+def test_check_archivedate_undated_tree_exits_2_with_form_b_and_no_status_drift(
+    docs_script, fixtures_dir
+):
+    """Q7's second shape: `archive/misc/filed.md` is `Lifecycle: archived`
+    INSIDE the archive subtree, so `status-drift` is silent by construction —
+    and the recorded date still has no corroborating location.
+    """
+    root = _archivedate_tree(fixtures_dir, "archivedate-undated")
+    code, pairs, _records = _findings(docs_script, root)
+    assert code == 2
+    assert pairs == [("archive/misc/filed.md", "archive-date-drift")], pairs
+    assert "status-drift" not in [rule for _path, rule in pairs]
+
+    proc = _run(docs_script, "check", str(root))
+    assert f"  error: [archive-date-drift] {_FORM_B}" in proc.stdout
+
+
+def test_check_archivedate_two_dated_dirs_tree_is_clean_as_committed(docs_script, fixtures_dir):
+    """The `docs mv` fixture is clean before any move, so every Leg-2
+    assertion measures the MOVE rather than pre-existing damage."""
+    root = _archivedate_tree(fixtures_dir, "archivedate-two-dated-dirs")
+    with_witness = (root / "archive" / "2026-01-01" / "with-witness.md").read_text()
+    no_witness = (root / "archive" / "2026-01-01" / "no-witness.md").read_text()
+    assert "Archived: 2026-01-01" in with_witness
+    assert "\nArchived:" not in no_witness, (
+        "the no-witness member is what makes Leg 2 provably independent of the field"
+    )
+    proc = _run(docs_script, "check", str(root))
+    assert proc.returncode == 0, proc.stdout

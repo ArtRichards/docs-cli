@@ -608,3 +608,48 @@ def test_touch_check_broken_body_link_exits_2(docs_script, tmp_path):
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
     assert "broken-body-link" in proc.stdout, proc.stdout
     assert "does not resolve to an existing path: plan.md" in proc.stdout, proc.stdout
+
+
+# ===========================================================================
+# M28a — E3 / D9: `docs touch` bumps `Updated:` and leaves the witness alone.
+# ===========================================================================
+
+
+def test_touch_on_an_archived_document_leaves_the_witness_byte_identical(docs_script, tmp_path):
+    """E3 is the evidence for D1 — `Updated:` cannot be the witness, because
+    the archive move bumps it, M27 — D6's migration bumped it on 29 archived
+    documents, and an ordinary `docs touch` bumps it again at exit 0.
+
+    This is the lock that keeps the two fields from being conflated: after a
+    `touch`, `Updated:` has moved and `Archived:` is byte-identical. Everything
+    else in the document is byte-identical too.
+
+    GREEN at baseline, and degenerate only in the narrow sense that the witness
+    it preserves is hand-authored: `docs touch` genuinely rewrites exactly one
+    inline label, and this pins that it stays that way. The trailing
+    `docs check` becomes an over-fire guard at Phase 6.
+    """
+    root = tmp_path / "touched"
+    (root / "archive" / "2026-01-01").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "touched"\n')
+    doc = root / "archive" / "2026-01-01" / "old.md"
+    doc.write_text(
+        "# Old\n\nLifecycle: archived\nRole: notes\nProject: touched\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\nArchived-reason: closed out\n"
+        "\n## Body\n\nProse.\n"
+    )
+    before = doc.read_text()
+
+    proc = _run(docs_script, "touch", str(doc))
+    assert proc.returncode == 0, proc.stderr
+
+    after = doc.read_text()
+    today = date.today().isoformat()
+    assert f"Updated: {today}" in after, "touch still bumps Updated:"
+    assert after == before.replace("Updated: 2026-01-01", f"Updated: {today}"), (
+        "ONLY the Updated: value may change — the witness and the reason are untouched"
+    )
+    assert "Archived: 2026-01-01" in after
+    assert _run(docs_script, "check", str(root)).returncode == 0, (
+        "and the witness still corroborates its directory afterwards"
+    )
