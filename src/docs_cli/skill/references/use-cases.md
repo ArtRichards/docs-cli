@@ -21,8 +21,8 @@ You own the convention from day one.
 | Bootstrap a new docs tree | (touch `.docs.toml`) | One `[project] name = "…"` line is enough; see `convention.md`. |
 | Author a new spec / plan / charter / log / runbook / decision | `docs new <role> <slug>` | Scaffolds the metadata block + H1. Agents author the full body in one Bash call via `docs new <role> <slug> --body-from -` (M8). |
 | Bump a doc's `Updated:` after edit | `docs touch <file>...` | Required after any body or metadata edit. Accepts one or more files; the batch is atomic and the INDEX refreshes exactly once at end (M10). |
-| Rename or relocate a doc | `docs mv <old> <new>` | Rewrites every `Related:` reference tree-wide. Prose markdown links in bodies are not rewritten — that's a deliberate scope cut. |
-| Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. Archives that ONE doc; to take related docs too, preview the one-hop neighbourhood with `--cascade-dry-run` and then write the exact set with `--cascade-only GLOB` (M26). `--json` emits the whole operation plan. |
+| Rename or relocate a doc | `docs mv <old> <new>` | Rewrites every `Related:` reference tree-wide **and — from 2.0 — every local Markdown body link the move makes stale** (M28): the ones pointing at `<old>` from anywhere in the tree, and the ones inside `<old>` itself, rebased from its new directory. A destination whose meaning did not change keeps the spelling its author gave it, and plain-text mentions, code and external URLs are never touched. `--dry-run` names every planned rewrite before you commit; `--json` emits the same plan as a record. |
+| Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. Archives that ONE doc; to take related docs too, preview the one-hop neighbourhood with `--cascade-dry-run` and then write the exact set with `--cascade-only GLOB` (M26). From 2.0 it rebases stale body links the same way `docs mv` does, and it **refuses (exit 2, zero bytes) when a still-active doc outside the plan declares itself `child-of` a doc the plan would archive** (M28) — a parent archived out from under a live child. `--json` emits the whole operation plan, now including `rewrites` and `strands`. |
 | Regenerate INDEX | `docs index` | The hand-written preamble is preserved; only the marker-block content is rewritten. |
 | Query the tree | `docs list [filters]` | Human table by default; `--json` for piping. Filter by role, lifecycle, project, stale-after-N-days. |
 | Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, one-sided reciprocal edges, and — from 2.0 — local Markdown body links whose destination is missing or leaves the tree root. Exit codes 0/1/2 distinguishable for CI gates. |
@@ -85,8 +85,12 @@ that contains it** — not root-relative like a `Related:` target — which is w
 (fenced and inline), images, autolinks, raw HTML, reference *uses*, external
 and schemed URLs, root-absolute and protocol-relative destinations, and
 fragment-only links produce nothing at all; a fragment is preserved and never
-validated. There is no repair verb and no opt-out knob: `docs` will not guess
-whether a link should be rebased, repointed, or deleted.
+validated. There is no repair verb and no opt-out knob for damage that is
+already there: `docs` will not guess whether an existing broken link should be
+rebased, repointed, or deleted. What it *does* own from 2.0 is the damage a
+move would otherwise cause — `docs mv` and `docs archive` rebase the
+destinations they make stale, in the same operation (M28), so this repair loop
+is a one-time upgrade chore rather than something every move re-creates.
 
 | Scenario | Verb | Detail |
 |---|---|---|

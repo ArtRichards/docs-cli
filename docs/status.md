@@ -47,8 +47,8 @@ Related:
 
 **M28 — Move-safe Markdown body-link rewrites is the current milestone.
 Step 1 (Phases 1–4) is complete on `m28/phases-1-4` (2026-08-15); Step 2
-(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5 and 6
-complete** (2026-08-15) and Phase 7 — Update Tool/Wrapper Layer
+(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5, 6 and 7
+complete** (2026-08-15) and Phase 8 — Run Tests (GREEN)
 next.** Milestone setup completed 2026-08-15 with all
 seven setup questions RESOLVED, and Phase 1 did not re-open them. M28 extends `docs mv` and `docs archive` to rebase the
 parsed local Markdown destination tokens a move makes stale — reusing M27's
@@ -787,8 +787,19 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **continue M28 Step 2 at Phase 7 — Update Tool/Wrapper
-Layer.** **Phases 5 and 6 are complete on `m28/phases-5-10`** (2026-08-15).
+**Next action:** **continue M28 Step 2 at Phase 8 — Run Tests (GREEN).**
+**Phases 5, 6 and 7 are complete on `m28/phases-5-10`** (2026-08-15), and the
+suite is **1333 passed, 0 failed**. **Phase 7** reconciled every parallel
+surface — both argparse descriptions, the bundled `SKILL.md` and
+`references/use-cases.md` (whose "prose links are not rewritten — a deliberate
+scope cut" line was false as of Phase 6), the `UNRELEASED` CHANGELOG with its
+three-part upgrade note naming the two re-spelled `docs mv` stderr lines, and
+a dated resolution bullet on `feedback-log.md`'s issue #1 entry answering
+findings 1 and 4. Two test expected-values changed, both **strengthenings**:
+`archive --json`'s closed top-level key set went from eight keys to ten, and
+the primary-only record lock was re-pointed at a tree whose primary has no
+live `child-of` children — the tree it left now carries its own leg-1 refusal
+lock, because that scenario is exactly the harm leg 1 exists to prevent.
 **Phase 5** landed `MOVE_STRAND_KINDS`, the four frozen records and the seven
 pure functions of item (L) as three pure insertions into `cli.py`, with
 `_cmd_mv` and `_cmd_archive` byte-identical, so the CLI locks stayed honestly

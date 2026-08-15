@@ -1915,12 +1915,22 @@ def test_cascade_only_unwritable_candidate_refuses_with_exit_2(docs_script, tmp_
 
 # --- M26 — D7 `docs archive --json` -----------------------------------------
 
+# M28 (K): the closed key set widens by EXACTLY two, inserted after
+# `candidates`. Updating this expected value is contract-mandated, not a
+# relaxation: item (K) forbids omitting an empty array, so the two ids below
+# now pin a TEN-key closed set — a strictly stronger assertion than the
+# eight-key one, and the only edit that keeps them honest.
+# `tests/test_archive_plan.py::_TOP_LEVEL_KEYS` is deliberately NOT touched:
+# `archive_plan_to_json`'s `move_plan` parameter defaults to None, so a direct
+# caller with no rewrite plan still sees the M26 key set.
 _JSON_TOP_LEVEL_KEYS = [
     "primary",
     "date",
     "scope",
     "reason",
     "candidates",
+    "rewrites",
+    "strands",
     "dry_run",
     "applied",
     "index_refreshed",
@@ -2149,28 +2159,65 @@ def test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected
     deciding whether a selection is correct, and it must be able to see the
     neighborhood it just declined to touch.
 
-    RED reason: `--json` is not a recognised flag on `archive` today.
+    **Re-pointed at `_two_relation_tree` in M28 Phase 7.** The subject of this
+    lock is the APPLY-path record of a primary-only archive, and that subject
+    is preserved exactly. The tree changed because `archive-neighborhood`'s
+    `milestone-impl.md` is still active and declares `child-of: milestone.md`,
+    so archiving `milestone.md` alone now — correctly — refuses on the
+    strand-check's leg 1 before any write; that refusal has its own lock in
+    `test_archive_primary_only_leg_1_refuses_on_a_live_child` below. Here
+    `root.md` is the primary, its two one-hop candidates report `not-selected`,
+    and its own `child-of: beta.md` is exempt because the DECLARER is the plan
+    member. Deliberately not `--dry-run`: that would weaken an apply-path lock
+    into a preview-path one.
     """
-    root = _tree(fixtures_dir, tmp_path, "archive-neighborhood")
+    root = _two_relation_tree(tmp_path)
 
-    proc = _run(docs_script, "archive", str(root / "milestone.md"), "--json", "--date", _M26_DATE)
+    proc = _run(docs_script, "archive", str(root / "root.md"), "--json", "--date", _M26_DATE)
 
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     record = json.loads(proc.stdout)
     assert record["scope"] is None
-    assert [c["path"] for c in record["candidates"]] == [
-        "plan.md",
-        "milestone-impl.md",
-        "cli.md",
-        "convention.md",
-        "test-strategy.md",
-        "status.md",
-    ]
+    assert record["applied"] is True, "the subject is the APPLY-path record"
+    assert [c["path"] for c in record["candidates"]] == ["sub/alpha.md", "beta.md"]
     assert all(c["selected"] is False for c in record["candidates"])
     assert all(c["exclusion_reason"] == "not-selected" for c in record["candidates"])
     assert all(c["destination"] is None for c in record["candidates"])
     # …and the prose stays quiet about them (setup Q7).
     assert "candidate" not in proc.stderr
+
+
+def test_archive_primary_only_leg_1_refuses_on_a_live_child(docs_script, fixtures_dir, tmp_path):
+    """M28 — D6 leg 1 on the M26-era `archive-neighborhood` tree, at the shape
+    that used to complete: a plain `docs archive FILE`.
+
+    `milestone-impl.md` is still active and declares `child-of: milestone.md`,
+    so archiving the milestone alone would archive a parent out from under a
+    live child — precisely the harm leg 1 exists to prevent, and precisely the
+    behaviour change D8 calls out as breaking. The scenario is too good a
+    leg-1 witness to lose when
+    `test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected`
+    is re-pointed away from this tree, so it is pinned here in its own right —
+    on a tree M26 authored, with no body links anywhere in it, which proves
+    leg 1 does not depend on the `movelink-*` family.
+    """
+    root = _tree(fixtures_dir, tmp_path, "archive-neighborhood")
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "archive", str(root / "milestone.md"), "--json", "--date", _M26_DATE)
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert (
+        "docs: archive: milestone-impl.md is still active and declares "
+        "'child-of: milestone.md', which this operation would archive; "
+        "refusing before any write" in proc.stderr
+    )
+    assert (
+        "docs: archive: 1 still-active child(ren) would be stranded; zero bytes written"
+        in proc.stderr
+    )
+    assert proc.stdout == "", "no --json record on a refusal (M26's frozen rule)"
+    assert _snapshot(root) == before
 
 
 def test_archive_json_records_index_refreshed(docs_script, fixtures_dir, tmp_path):

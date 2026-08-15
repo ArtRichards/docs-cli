@@ -56,7 +56,7 @@ table and the milestone checklist synchronized.
 | 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1332 collected / 229 failed / 1103 passed (restated after the Step-1 audit and the fresh-eyes fold-in); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (193 `AttributeError`, 36 `AssertionError`); mechanically proven 0 removed ids, 0 deleted test lines, and exactly **one** pre-existing id RED — `test_mv_help`, strengthened by operator decision. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | **Complete** | 2026-08-15 | `MOVE_STRAND_KINDS`, the four frozen records (`LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`) and the seven pure functions of item (L) landed as three pure INSERTIONS — 518 lines, zero existing lines touched, `_cmd_mv` / `_cmd_archive` byte-identical. `tests/test_move_links.py` 194/194; suite 1332 / **36 failed** / 1296 passed; the `AttributeError` class is at **0** and only `AssertionError` remains. Original objective: The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | **Complete** | 2026-08-15 | `_cmd_mv` inverted to plan-then-move with the R9 partial-state admission; `_cmd_archive` gained steps 5b / 8b / 8c / 8d and threads each member's planned text into `_archive_one`; `_print_move_lines` added and `preview only` lifted into the verb; `_rewrite_referring_edges` **deleted** (43 lines), superseded by `apply_move_plan`. Suite **5 failed, 1327 passed** — every remaining RED is a Phase-7 item (two `_JSON_TOP_LEVEL_KEYS` ids, one re-pointed fixture, two bundled-skill locks). Original objective: Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
-| 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
+| 7. Update Tool/Wrapper Layer | **Complete** | 2026-08-15 | Both argparse descriptions; the two contract-mandated test expected-value updates (`_JSON_TOP_LEVEL_KEYS` +2 keys, and the primary-only record re-pointed at `_two_relation_tree` with a **new** leg-1 lock added on the tree it left); bundled `SKILL.md` + `references/use-cases.md`; `CHANGELOG.md` (three `Added`, four `Changed` incl. one BREAKING, and the three-part upgrade note naming the two re-spelled `docs mv` lines); `feedback-log.md`'s issue #1 resolution bullet. `cli.md` / `convention.md` verified rather than rewritten (Phase 1 landed them); both mirrors `cmp`-identical; `](../` still 0. Suite **1333 passed, 0 failed**. Original objective: argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, update the shipped use-case catalog, completion summaries, hand to M28a and M29. |
@@ -1208,6 +1208,98 @@ resolved into `moves` — exactly rule (G). Two docstrings that named it now nam
 - `grep -rn 'docs: would move\|docs: moved\|reference(s) rewritten' tests/
   docs/cli.md src/docs_cli/skill/ CHANGELOG.md` — **no hits**, re-confirming
   item (J)'s claim that no test pins the two re-spelled `docs mv` lines.
+
+## Phase 7 — Update Tool/Wrapper Layer — 2026-08-15
+
+### Objective
+
+Reconcile every parallel surface with the behaviour Phase 6 landed, and take
+the suite fully GREEN.
+
+### Actions taken
+
+- **argparse.** `mv_p`'s `help` and `description` now name the body-link
+  rebasing, the plan-before-move contract and both new flags; `archive_p`'s
+  names the rebasing **and** the leg-1 refusal with its exit code. `mv --json`
+  itself landed in Phase 6 (see that section's note).
+- **Bundled skill.** `SKILL.md`'s `docs mv` row gains `--dry-run`, `--json`
+  and the body-link rewrite; its `docs archive` row gains the rebasing, the
+  `child-of` refusal with its repair ("archive the child first, or widen the
+  scope"), and the leg-2 report. `references/use-cases.md`'s line 24 —
+  *"Prose markdown links in bodies are not rewritten — that's a deliberate
+  scope cut"* — was **false as of Phase 6** and is replaced; its archive row
+  and its M27 upgrade paragraph now say the repair loop is a one-time upgrade
+  chore rather than something every move re-creates.
+- **`CHANGELOG.md`**, under the existing `UNRELEASED` heading: three `Added`
+  entries (the rewrites, `mv`'s preview + `--json`, `archive --json`'s two new
+  keys), four `Changed` entries — one **BREAKING** (the leg-1 refusal), plus
+  prose writes, the `mv` inversion, and previews adopting plan-construction
+  failures — and the three-part upgrade note.
+- **`docs/feedback-log.md`**: a dated resolution bullet on the issue #1 entry
+  recording that finding 4's `--report-links` was declined as a design and
+  adopted as the plan record on both verbs, and that finding 1's routed
+  predicate was amended to leg 1 + leg 2 because the literal form refuses this
+  repository's own closeout.
+- **`docs/cli.md` / `docs/convention.md`**: verified, not rewritten — Phase 1
+  landed both (`convention.md` carries the widened M18 exception and the
+  reconciled M27 — D6 sentence; `cli.md:568-813` carries the whole M28 block
+  plus the amended check order, the widened `--json` schema and the three exit
+  tables). Re-verified against the shipped `--help` text by hand.
+
+### The two test edits, and why each is a STRENGTHENING
+
+Named explicitly, because an unexplained test edit inside a no-regression
+claim is what makes such claims worthless.
+
+1. **`tests/test_cli_archive.py::_JSON_TOP_LEVEL_KEYS` gains `"rewrites",
+   "strands"` after `"candidates"`** — a contract-mandated expected-value
+   update. Item (K) freezes the widening at exactly those two keys in exactly
+   that position and forbids the escape hatch of omitting an empty array, so
+   the two ids that assert this list (`test_archive_json_preview_record_shape`,
+   `test_archive_json_apply_record_has_the_same_key_set`) now pin a **ten-key
+   closed set** where they pinned an eight-key one. The assertion is
+   **strengthened**, never weakened: every key it demanded before it still
+   demands, in the same relative order, plus two more.
+   `tests/test_archive_plan.py::_TOP_LEVEL_KEYS` is deliberately **untouched**,
+   which the `move_plan: MovePlan | None = None` keyword default is what makes
+   possible.
+2. **`test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected`
+   is re-pointed from `archive-neighborhood` to `_two_relation_tree`.** Its
+   subject — the Q14 claim that a plain `docs archive FILE --json` carries the
+   WHOLE candidate set — is preserved exactly, on the **apply** path
+   (`--dry-run` was rejected as a fallback: it would weaken an apply-path lock
+   into a preview-path one). The original tree's refusal is **correct
+   behaviour, not a defect**: `archive-neighborhood`'s `milestone-impl.md` is
+   still active and declares `child-of: milestone.md`, so archiving
+   `milestone.md` alone archives a parent out from under a live child —
+   precisely the harm leg 1 exists to prevent. That scenario is too good a
+   leg-1 witness to lose, so it is now pinned in its own right by the **new**
+   `test_archive_primary_only_leg_1_refuses_on_a_live_child`, on an M26-era
+   tree with no body links anywhere in it — which additionally proves leg 1
+   does not depend on the `movelink-*` family.
+
+Net test-line accounting: `_JSON_TOP_LEVEL_KEYS` +2 value lines (+8 comment
+lines), the re-pointed id's body rewritten in place, and one new id added.
+**No test id was removed and no assertion was relaxed.**
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **1333 passed, 0 failed**
+  (1332 + the new leg-1 lock).
+- `docs mv --help` / `docs archive --help` read back against `cli.md` ›
+  *`docs mv`* and *Safe explicit archive selection* — agree.
+- `cmp docs/cli.md src/docs_cli/skill/references/cli.md` and
+  `cmp docs/convention.md src/docs_cli/skill/references/convention.md` — both
+  identical.
+- `grep -rn '](\.\./' src/docs_cli/skill/` — no hits;
+  `grep -c '](\.\./' docs/cli.md docs/convention.md` — **0** and **0**
+  (item (M)).
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — no difference
+  (every doc edited this step already carried `Updated: 2026-08-15`).
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+- No `pyproject.toml` or version change (M25 — D6): the package stays `1.8.0`.
 
 ## Milestone completion summary
 

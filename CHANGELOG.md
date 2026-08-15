@@ -180,6 +180,62 @@ until then._
   never additionally as broken. A `../`-escape that normalises back under the
   root (`../sub/../back-inside.md`) is contained and validated normally.
 
+- **Move-safe body-link rewrites** (M28). `docs mv` and `docs archive` now
+  rebase the local Markdown body links a move makes stale, in the same
+  operation, in the same per-document write, and under the same
+  all-or-nothing contract as the `Related:` rewrite. Two breakages, one
+  formula: a link whose **target** moved, and a link **inside** a document
+  that itself moved. Resolve each destination from the referrer's old
+  directory, map the resolved target through the move set, relativise against
+  the referrer's new directory. Because the mapping is by **normalised
+  target**, every spelling of the same file is rewritten — `plan.md`,
+  `./plan.md`, `sub/../plan.md`, `../plan.md` alike.
+
+  ```console
+  $ docs mv plan.md milestone-plan.md
+  docs: mv: moved plan.md -> milestone-plan.md
+  docs: mv: rewrite note.md:13 plan.md -> milestone-plan.md
+  docs: mv: rewrite sub/deep.md:10 ../plan.md -> ../milestone-plan.md
+  docs: mv: 2 destination(s) in 2 document(s), 1 Related: bullet(s)
+  ```
+
+  Only destination **tokens** change. Labels, titles, quoting form,
+  fragments, plain-text mentions, fenced and inline code, images, autolinks,
+  raw HTML, reference *uses*, and every non-`local` destination are
+  byte-identical afterwards, and a destination whose meaning the move did not
+  change keeps the spelling its author gave it — so archiving a plan and its
+  log together produces a **zero-byte** diff in their links to each other.
+  Already-archived referrers are repaired too, under M18's move-driven
+  exception widened along its own axis: destination tokens only, no
+  `Updated:` bump and no `Revision:` bullet.
+
+- **`docs mv --dry-run` is a real preview, and `docs mv --json` is new**
+  (M28). `--dry-run` walks the tree, builds the whole rewrite plan, and names
+  every planned rewrite — document, line, old spelling, new spelling —
+  instead of 1.x's single line. `--json` emits **one** record with an
+  identical shape for a preview and for a real apply, so the two are
+  diffable:
+
+  ```json
+  {"old": {"source": "docs/plan.md", "path": "plan.md"},
+   "new": {"source": "docs/milestone-plan.md", "path": "milestone-plan.md"},
+   "rewrites": [{"path": "note.md", "line": 13, "column": 16,
+                 "old": "plan.md", "new": "milestone-plan.md"}],
+   "dry_run": false, "applied": true, "index_refreshed": true}
+  ```
+
+  The top-level key set is closed and ordered as shown. No record is emitted
+  on a refusal, exactly as `docs archive` has it.
+
+- **`docs archive --json` gains `rewrites` and `strands`** (M28). The closed
+  top-level key set widens by exactly those two, inserted after `candidates`,
+  and both are **present and `[]`** when empty rather than missing.
+  `rewrites` is the same section, produced by the same serializer, that
+  `docs mv --json` emits, so the two verbs' plans are byte-comparable.
+  `strands` carries the new strand-check's report — every still-active
+  inbound reference into the newly-archived set, `Related:` bullets and body
+  links alike, with both ends named.
+
 ### Changed
 
 - **BREAKING — a one-sided recognized reciprocal edge now exits 2.** Trees
@@ -240,6 +296,45 @@ until then._
   source of a legacy one-sided edge. `Lifecycle: blocked` and the
   `blocks`/`blocked-by` edge stay explicitly **uncoupled**: a blocked
   lifecycle does not require an edge, and an edge does not set a lifecycle.
+- **BREAKING — `docs archive` now refuses where it used to complete** (M28).
+  When a still-active document **outside the plan** declares itself
+  `child-of` a document the plan would archive, the write refuses at exit 2
+  before any byte moves — a parent archived out from under a live child:
+
+  ```console
+  $ docs archive plan.md
+  docs: archive: live-child.md is still active and declares 'child-of: plan.md', which this operation would archive; refusing before any write
+  docs: archive: 1 still-active child(ren) would be stranded; zero bytes written
+  ```
+
+  The refusal names both ends, one line per orphaned pair, prints even under
+  `--quiet`, and applies to all three archive shapes including a plain
+  `docs archive FILE`. Every **other** still-active inbound reference — any
+  other `Related:` verb, free-form verbs included, and every body link — is
+  **reported and not refused**, because a milestone closeout is supposed to
+  leave the tracker and the plan pointing at the completed work. Repair by
+  archiving the child first, or by widening the scope to include it.
+- **`docs mv` and `docs archive` now write prose bytes**, including into
+  already-archived documents whose destinations a move makes stale. Both were
+  previously metadata-only writers. The blast radius is the move-driven
+  exception's, unchanged: a document is written iff a `Related:` target or a
+  local body-link destination of its resolves to a document moving in **this**
+  operation, and then only that bullet and those destination tokens change.
+- **`docs mv` plans before it moves.** 1.x renamed the file and rewrote
+  references afterwards; a class-2 rebase needs the moved document's own text
+  and both of its paths, and an all-or-nothing contract needs the plan
+  complete before the move. A handled failure — an unwritable planned
+  referrer, a stale recorded span, two overlapping planned spans — now
+  refuses at exit 2 with **zero bytes written, the moved document included**.
+  A residual `OSError` during execution carries the exact partial-state
+  admission (`Moved:` / `Rewritten:` / `Not written:`), replacing 1.x's bare
+  `docs: mv: <OSError>`.
+- **A preview now adopts failures of plan *construction*.** Both previews
+  walk the tree to build the plan they print, so a **malformed** tree makes
+  `docs mv --dry-run` exit 2 and `docs archive --cascade-dry-run` exit 1 —
+  the same codes their write paths already use. Plan *consequences* are still
+  only reported: a preview whose plan the strand-check's leg 1 would refuse
+  prints that verdict and exits **0**.
 
 ### Fixed
 
@@ -328,6 +423,36 @@ inline code span, or backslash-escape the opening bracket — any of the three
 makes the span invisible to the scanner. There is deliberately **no 4-space
 indented-code rule**: a link indented four spaces inside a blockquote or a
 list continuation is a real link and **is** checked.
+
+**Repair the body links once — then the moves keep them repaired.** M27
+detects and M28 repairs, in that order, so between them there is one
+upgrade chore and after them there is none: `docs mv` and `docs archive`
+rebase what *they* make stale, and never repair damage they did not cause.
+Three things change for existing automation:
+
+1. **A move now edits prose**, in documents you did not name and in
+   already-archived documents whose destinations point at what is moving.
+   Diffs get larger and are no longer metadata-only. If you gate on "the move
+   touched only `Related:` lines", that gate is now wrong.
+2. **An archive now refuses in a case it previously completed** — a plan
+   that would archive a document a still-active document declares itself
+   `child-of`. It exits 2 and writes nothing. Archive the child first, or
+   widen `--cascade-only` to include it. Preview with `--cascade-dry-run` (or
+   plain `--dry-run`), which reports the verdict at exit 0 rather than
+   adopting it, and read the `strands` array if you parse `--json`.
+3. **Two `docs mv` stderr lines are re-spelled.** No test and no exit code
+   changes, so this breaks **silently** for anyone parsing stderr:
+
+   | 1.x | 2.0 |
+   |---|---|
+   | `docs: would move <old> -> <new>` | `docs: mv: would move <old> -> <new>` |
+   | `docs: moved <old> -> <new> (<N> reference(s) rewritten)` | `docs: mv: moved <old> -> <new>` |
+
+   Both gain the `mv: ` verb prefix that every other verb already carries,
+   and the trailing count moves into the richer counts footer
+   (`docs: mv: <R> destination(s) in <D> document(s), <E> Related:
+   bullet(s)`). If you parse `docs mv`'s output, switch to `--json`: it is
+   new in this release precisely so nothing has to.
 
 ## 1.8.0 — 2026-07-03
 

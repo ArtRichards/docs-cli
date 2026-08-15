@@ -5325,7 +5325,12 @@ def _build_parser() -> argparse.ArgumentParser:
             "`--cascade-dry-run` previews the whole one-hop neighbourhood and "
             "writes nothing; `--cascade-only GLOB` archives FILE plus exactly "
             "the candidates matching GLOB, planned in full before the first "
-            "byte moves."
+            "byte moves. Since M28 the same operation also rebases every local "
+            "Markdown body-link destination the move makes stale, and REFUSES "
+            "(exit 2, zero bytes) when a still-active document outside the plan "
+            "declares itself `child-of` a document the plan would archive; "
+            "every other still-active inbound reference is reported, not "
+            "refused."
         ),
     )
     archive_p.add_argument("file", help="Path to the doc to archive.")
@@ -5370,11 +5375,17 @@ def _build_parser() -> argparse.ArgumentParser:
     mv_p = subparsers.add_parser(
         "mv",
         parents=[common],
-        help="Move/rename a doc and rewrite Related: references tree-wide.",
+        help="Move/rename a doc and rewrite Related: and body-link references tree-wide.",
         description=(
             "Move <old> to <new> (a new name in the same directory or a "
             "different directory under the root), rewrite every Related: entry "
-            "across the tree that points at <old>, and regenerate INDEX.md."
+            "across the tree that points at <old>, and regenerate INDEX.md. "
+            "Since M28 the move also rebases every local Markdown body-link "
+            "destination it makes stale — both the links pointing AT <old> and "
+            "the links INSIDE it — as one plan built and validated before the "
+            "first byte moves, so a handled failure writes nothing at all. "
+            "--dry-run names every planned rewrite; --json emits the same plan "
+            "as a record."
         ),
     )
     mv_p.add_argument("old", help="Current path of the doc.")
