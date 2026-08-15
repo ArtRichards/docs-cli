@@ -64,7 +64,7 @@ Requires Python 3.11+ (for stdlib `tomllib`). No third-party runtime dependencie
 
 ## Adopting an existing tree
 
-Have a directory of foreign Markdown specs? `docs install-skill` materialises a Claude Code skill that walks an agent through `docs migrate <dir>` → triage → `docs migrate --apply`. See [`docs/m8-adoption-workflow.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/m8-adoption-workflow.md) for the full agent-driveable workflow, the bundled [adoption playbook](https://github.com/ArtRichards/docs-cli/blob/main/src/docs_cli/skill/references/adoption-playbook.md) for the procedural deep-dive, or run `docs migrate <dir>` directly for a dry-run plan.
+Have a directory of foreign Markdown specs? `docs install-skill` materialises a Claude Code skill that walks an agent through `docs migrate <dir>` → triage → `docs migrate --apply`. See [`docs/archive/2026-05-25/m8-adoption-workflow.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/archive/2026-05-25/m8-adoption-workflow.md) for the full agent-driveable workflow, the bundled [adoption playbook](https://github.com/ArtRichards/docs-cli/blob/main/src/docs_cli/skill/references/adoption-playbook.md) for the procedural deep-dive, or run `docs migrate <dir>` directly for a dry-run plan.
 
 For development:
 

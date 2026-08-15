@@ -39,8 +39,8 @@ Related:
   so the contract stays at one write per document, and **deleted**
   `_rewrite_referring_edges`; Phase 7 reconciled every parallel surface;
   Phase 8 proved the gate at **1333 passed** with **0** test ids removed
-  against the pre-M28 commit (the Step-2 audit later added five locks, taking
-  the final suite to **1338**); Phase 9 dogfooded nine flows on throwaway
+  against the pre-M28 commit (the Step-2 audit added five locks and the
+  fresh-eyes fold-in three more, taking the final suite to **1341**); Phase 9 dogfooded nine flows on throwaway
   copies — E1's 42 findings, E2's 13 and E3's 6 all went to **0**, plan A
   completed with its leg-2 report naming exactly the 16 references the setup
   census measured, plans B and C refused with zero bytes, and a there-and-back
@@ -341,9 +341,10 @@ referrers, every one of them deliberate (E7, plan A). It is therefore narrowed:
   still-active document **outside the plan** declares itself `child-of` a
   document the plan would archive. That is a parent archived out from under its
   live children — the exact reported harm, provable from the graph the plan
-  already builds, and measured at **0** occurrences on plan A against **6** on
-  both plan B (issue #1's `--cascade-only '*'`) and plan C (archiving `plan.md`
-  alone). Exit 2, before any write, naming both ends.
+  already builds, and measured at **0** occurrences on plan A against **5** on
+  plan B (issue #1's `--cascade-only '*'`) and **6** on plan C (archiving
+  `plan.md` alone) — see amendment 6. Exit 2, before any write, naming both
+  ends.
 - **Leg 2 — report everything else, refuse nothing.** Every other still-active
   inbound reference into the newly-archived set — any other `Related:` verb
   (`pairs-with`, `precedes` / `follows`, `depends-on` / `required-by`,
@@ -535,6 +536,10 @@ coverage* below.
   | **A** `--cascade-only 'm26-*'` (a textbook closeout) | 8 | 8 | 7 |
   | **B** `--cascade-only '*'` (issue #1's harm) | 45 | 8 | 17 |
   | **C** archiving `plan.md` alone | 11 (incl. **6** live `child-of`) | 4 | 12 |
+
+  The `child-of` counts this table feeds into leg 1 were taken **before** the
+  plan-member exemption item (H) later froze; plan B's is **5**, not 6, because
+  its own primary is one of the six declarers. See amendment 6.
 
   A and B differ in **magnitude, not in kind**. Plan A's referrers are
   `status.md`'s tracker edges, `plan.md`'s `parent-of`, and the neighbouring
@@ -878,8 +883,9 @@ broad report:
 
 - **Leg 1 (refusal):** refuse only when a still-active document **outside the
   plan** declares itself **`child-of`** a document the plan would archive.
-  Measured **0** on plan A, **6** on plan B (`--cascade-only '*'`), **6** on
-  plan C (`plan.md` alone). Exit 2, before any write, both ends named.
+  Measured **0** on plan A, **5** on plan B (`--cascade-only '*'` — amendment
+  6), **6** on plan C (`plan.md` alone). Exit 2, before any write, both ends
+  named.
 - **Leg 2 (report):** every other still-active inbound reference — any other
   `Related:` verb and every body link — is **named, not refused**, in the
   preview, in the apply output, and in the record's `strands` array.
@@ -991,8 +997,8 @@ completed work. That is what M25's reciprocal graph exists to record, and
 
 1. **Refuse on the parent-strand direction.** Refuse when the plan would
    archive a document that a **still-active document outside the plan declares
-   itself `child-of`**. Measured: **0** occurrences in plan A, **6** in plan B,
-   **6** in plan C. This is exactly the reported harm — a live
+   itself `child-of`**. Measured: **0** occurrences in plan A, **5** in plan B
+   (amendment 6), **6** in plan C. This is exactly the reported harm — a live
    `milestone-plan.md` archived out from under its live children — it is
    provable from the graph the plan already builds, it costs no false positive
    on this tree's legitimate operations, and it does not re-open M26 — Q3's
@@ -1214,20 +1220,24 @@ setup text.
 
 ### Amendments to the setup-frozen material (BINDING)
 
-Four frozen items could not stand as written. All four are recorded here so
+Seven frozen items could not stand as written. All seven are recorded here so
 the binding scope and the frozen contract cannot disagree — M27's precedent
 for amending setup-frozen material in place rather than diverging silently.
-Amendments 1–4 are Phase-1 decisions; **amendment 5 is a Step-2 audit
-correction of a statement of fact about M27**, not a decision, and it changes
-no behaviour — the rule D2 states was implemented correctly all along.
+Amendments 1–4 are Phase-1 decisions. **Amendments 5 and 6 are Step-2
+corrections of statements of fact** — about M27's grammar, and about a census
+taken before item (H) existed — not decisions, and neither changes behaviour.
+**Amendment 7 is a Step-2 operator decision** and does change behaviour: it
+adds one message the catalogue lacked.
 
 | # | Amendment | Why the frozen form could not stand |
 |---|---|---|
 | 1 | **M26's compatibility matrix row "a preview writes nothing and exits 0, full stop" is amended: a preview adopts failures of plan *construction* and reports-but-does-not-adopt *consequence* verdicts.** A malformed tree makes `archive --cascade-dry-run` exit **1** and `mv --dry-run` exit **2** — the codes their write paths already use — while a leg-1 strand verdict is reported at exit 0. `docs/m26-safe-archive-selection.md` › *The compatibility matrix (BINDING)* is amended by this row. | D6 requires both strand legs to run in the preview, and a preview cannot report a plan it could not build. M26's own *Follow-ups* item 2 records that the frozen check order lets a preview miss a pre-flight refusal and names repeating it as the mistake to avoid. The distinction is not "preview vs write" but "can I describe this operation at all" vs "what would this operation cost" — the first is adopted, the second is reported. |
 | 2 | **The E7 leg-2 coverage row's observation point for plan B is its PREVIEW.** The row asks for the `strands` array "for plan B (which refuses)". A leg-1 refusal emits **no** `--json` record (M26's frozen Phase-1 Q3 rule, restated in `cli.md`), so plan B's array is asserted in `archive --cascade-dry-run --cascade-only '*'` — exit 0, record emitted, leg-1 verdict reported. The row is amended in place. | Otherwise Phase 2 would have to assert a record that the frozen no-record-on-refusal rule forbids. The preview is exactly where D6 says the leg-1 verdict is reported rather than adopted, so it is the natural observation point and no rule has to bend. |
 | 3 | **The E3 coverage row's "the `archive-pair` / `archive-trio` shapes **gain** body links" is amended to "a new `movelink-closeout` tree reproduces the `archive-pair` / `archive-trio` SHAPE, carrying real body links".** Every existing fixture tree stays byte-identical. | The row contradicted the Phase-3 exit criterion "the existing `archive-*` / `mv-*` / `rename-*` trees stay byte-identical" in the same document. Editing them would also move M26-era assertions onto new bytes for no benefit. Copying the shape delivers the stated coverage and keeps the no-regression proof at a clean zero moved test ids. |
-| 5 | **D2's exclusion list drops "4-space indented code"; the RULE it states is unchanged.** M28 rewrites exactly what M27 validates — and M27 — Q3 explicitly **declined** a 4-space indented-code rule, so a four-space-indented link is scanned, is reported by `docs check`, and is rewritten by a move. `cli.md` › *Move-safe body-link rewrites* said the opposite and now says so in both directions, naming the three real opt-outs (fence, backticks, backslash). | The claim was **reproduced**: a `    [indented](target.md)` block had its destination rewritten by `docs mv` while the fenced and inline-code copies were untouched — correct behaviour, wrongly documented. `cli.md` ships **byte-identically inside the wheel**, so an agent reading the bundled skill was told a four-space-indented code sample is safe from a move. Found at the Step-2 audit by an adversarial pass that read the enumeration against `cli.md`'s own M27 section, which had said the opposite since M27. No test can catch a false prose claim, and the CHANGELOG (which says "fenced and inline code") had it right — evidence this was an authoring slip in exactly two places. |
 | 4 | **Q4's "already broken, or already escaping" clause is narrowed to "already escaping".** An already-**escaping** destination is copied byte-for-byte in every case (formula step 3). An already-**broken** but *contained* destination is copied only while its referrer stays put; when the referrer itself moves, it is **rebased to the same, still-broken target** — never repaired, never re-aimed. *Out of scope* › *Repairing pre-existing damage* and `cli.md` › *What a move never touches* are reworded to say so. | Q4's literal wording is **unimplementable** in the frozen architecture, and the frozen architecture is right. The planner is pure — it never stats — so it cannot know a contained target is missing; the only way to honour "never touched" would be a filesystem probe inside the planner, which destroys the hermeticity D4 and (L) exist to guarantee. Rebasing preserves the author's aim (the link still names the same file); *not* rebasing would silently re-aim it at a different path as the referrer's directory changes, which is strictly worse. The deviation is recorded here because three lesser ones are, and because `cli.md` ships in the bundled skill: a Phase-6 implementer reading only the author-facing spec would otherwise implement the opposite of `tests/test_move_links.py`'s pinned behaviour. |
+| 5 | **D2's exclusion list drops "4-space indented code"; the RULE it states is unchanged.** M28 rewrites exactly what M27 validates — and M27 — Q3 explicitly **declined** a 4-space indented-code rule, so a four-space-indented link is scanned, is reported by `docs check`, and is rewritten by a move. `cli.md` › *Move-safe body-link rewrites* said the opposite and now says so in both directions, naming the three real opt-outs (fence, backticks, backslash). | The claim was **reproduced**: a `    [indented](target.md)` block had its destination rewritten by `docs mv` while the fenced and inline-code copies were untouched — correct behaviour, wrongly documented. `cli.md` ships **byte-identically inside the wheel**, so an agent reading the bundled skill was told a four-space-indented code sample is safe from a move. Found at the Step-2 audit by an adversarial pass that read the enumeration against `cli.md`'s own M27 section, which had said the opposite since M27. No test can catch a false prose claim, and the CHANGELOG (which says "fenced and inline code") had it right — evidence this was an authoring slip in exactly two places. |
+| 6 | **Plan B's leg-1 count is 5, not the 6 the setup census recorded.** The E7 census counted documents declaring `child-of: plan.md` and found six; plan B (`docs archive m27-markdown-body-link-validation.md --cascade-only '*'`) archives the primary along with the plan, and that primary is **itself** one of the six. Item (H) exempts plan members — a document being archived cannot be stranded by its own operation — so plan B refuses on **5**. Plan C (`plan.md` alone) is unaffected and still measures 6. Every stated count is corrected in place. | The census predates item (H): it was taken at setup, over the graph, before the frozen contract said which declarers are exempt. Nothing about the harm or the decision changes — plan B still refuses, still names both ends, still writes zero bytes — but a **binding** document must not carry a number the shipped code contradicts, and this one appeared in four places. Verified twice at the Step-2 review: the preview prints exactly five `would strand` lines and `5 still-active child(ren) would be stranded`. |
+| 7 | **Item (J) gains one message: `docs archive`'s REWRITE-phase partial-state admission.** `docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <…>. Rewritten: <…>. Not written: <…>. Repair manually.` — M26's `PARTIAL ARCHIVE` prefix with `docs mv`'s `Rewritten:` / `Not written:` clauses, because by that point every member has archived and what splits is the rewrite. | The catalogue defined an admission for execution phase 9a (a member's move) and none for 9b (the referrer rewrites), which pre-M28 printed a bare `docs: archive: <err>`. That was defensible while 9b wrote only `Related:` bullets; M28 widened it to prose bytes across the whole tree, archived documents included, making it the operation's **largest** partial-state window and the only one that would not say what it had done — while `docs mv` admitted the identical failure exactly. `cli.md`'s *Residual boundary* and *Validate-all-first* both promise an exact admission for **both** verbs, and the milestone's own success criterion is verb-agnostic, so the alternative was narrowing a safety promise in the milestone whose entire point is that a move never leaves silent damage. Operator decision at the Step-2 review; reproduced, fixed and locked. |
 
 ### Step-1 resolutions (BINDING)
 
@@ -1731,7 +1741,6 @@ implemented here.
 | 4 | **Rolling back an interrupted execution batch** — M25 — D5's staged-publish-plus-rollback extended to N documents. Declined by M26 — D4, still declined here, still available. | Later |
 | 5 | **Heading/anchor validation for fragments**, out of scope for M27 *and* M28 by the 2026-08-10 operator decision, and now also out of scope for rewriting: M28 carries a fragment across a move without ever resolving it. | Later |
 | 6 | **`docs mv <doc> archive/<date>/<doc>` can still strand a live child** (Phase 1, R4). The strand-check is `archive`-only because only `archive` produces a newly-archived set, and `mv` into the archive subtree is already a `status-drift` error the operator has to repair — but nothing *refuses* it before the write. Extending leg 1 to a `mv` whose destination lands under the archive subtree is a small, self-contained follow-up. | Later |
-| 8 | **`docs archive` has no partial-state admission for its REWRITE phase** (raised by the Step-2 audit; **needs an operator decision**, not implemented here). A mid-execution `OSError` while `apply_move_plan` writes referrers prints only `docs: archive: write failed for <rel>: <err>` and exits 2 — no `PARTIAL ARCHIVE` clause, no `Archived:` / `Rewritten:` / `Not written:` split — while `docs mv` admits exactly that state, because its move and its rewrites are one execution block. This is **not** a regression: pre-M28 the same failure in `_rewrite_referring_edges` printed `docs: archive: <err>` and the frozen catalogue (J) defines no rewrite-phase admission for `archive`. But M28 widened that phase from `Related:` bullets to prose bytes across the whole tree, archived documents included, so it is now the phase with the **largest** partial-state window and the only one with no admission — which sits awkwardly beside D4's "admitted exactly" and R9's "the two verbs stay symmetrical". `CoordinatedWriteError.published` already carries what an admission would need; `_cmd_archive` discards it. Closing this means one new message outside the frozen catalogue, which is why it is recorded rather than done. | Later |
 | 7 | **One residual in the destination encode set** (Phase 1, R8 / item (C) *Known residual*): a path component carrying a whitespace character other than space or tab — newline, carriage return, form feed, vertical tab — is not encoded, so the emitted plain token would terminate early. It fails **loudly** (the truncated destination does not resolve, so `docs check` reports it), no filename this tool creates carries one, and the angle form is unaffected. The colon case that sat here at Phase 1 was **closed in Phase 1** by operator decision at the Step-1 review — it failed *silently*, which is the failure class M28 exists to prevent — and is now item (C)'s first-segment `:` rule under the `classify_destination(new_raw) == "local"` post-condition. | Later |
 
 ## Testing and quality gate
@@ -1774,7 +1783,9 @@ snapshot.
   prose and every non-moving edge byte-identical.
 - A handled validation or write failure leaves **zero** bytes written,
   including the moved document; only an unexpected mid-execution `OSError`
-  produces a partial state, and it is admitted exactly.
+  produces a partial state, and it is admitted exactly — on **both** verbs and,
+  for `docs archive`, in **both** execution phases (the member moves and the
+  referrer rewrites), which is what amendment 7 closed.
 - **Leg 1:** a plan that would archive a document a still-active document
   declares itself `child-of` refuses before any write, names both ends, and
   reports the identical verdict in the preview at exit 0 — while a legitimate

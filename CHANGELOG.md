@@ -440,19 +440,24 @@ Three things change for existing automation:
    widen `--cascade-only` to include it. Preview with `--cascade-dry-run` (or
    plain `--dry-run`), which reports the verdict at exit 0 rather than
    adopting it, and read the `strands` array if you parse `--json`.
-3. **Two `docs mv` stderr lines are re-spelled.** No test and no exit code
-   changes, so this breaks **silently** for anyone parsing stderr:
+3. **stderr changes on both verbs.** No exit code changes and no test pins
+   these, so they break **silently** for anyone parsing stderr:
 
    | 1.x | 2.0 |
    |---|---|
    | `docs: would move <old> -> <new>` | `docs: mv: would move <old> -> <new>` |
    | `docs: moved <old> -> <new> (<N> reference(s) rewritten)` | `docs: mv: moved <old> -> <new>` |
+   | — | `docs: mv: <R> destination(s) in <D> document(s), <E> Related: bullet(s)` — **new, on every move** |
+   | — | `docs: archive: <R> destination(s) in <D> document(s) rebased` — **new, on every archive** |
+   | `docs: archive: preview only — nothing was written` on a **cascade** preview only | …now on **every** preview, including a plain `--dry-run`, and always the last line |
 
-   Both gain the `mv: ` verb prefix that every other verb already carries,
-   and the trailing count moves into the richer counts footer
-   (`docs: mv: <R> destination(s) in <D> document(s), <E> Related:
-   bullet(s)`). If you parse `docs mv`'s output, switch to `--json`: it is
-   new in this release precisely so nothing has to.
+   The two `docs mv` lines gain the `mv: ` verb prefix that every other verb
+   already carries, and the trailing count moves into the richer counts
+   footer. The two footers are **unconditional** — a link-free tree still
+   prints `0 destination(s) in 0 document(s) rebased`, because a zero is
+   positive evidence the new rewrite phase ran rather than silently doing
+   nothing. If you parse either verb's stderr, switch to `--json`: `docs mv`
+   gains a record in this release precisely so nothing has to.
 
 ## 1.8.0 — 2026-07-03
 

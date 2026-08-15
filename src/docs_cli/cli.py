@@ -6402,6 +6402,50 @@ def _archive_partial_state(
     )
 
 
+def _archive_rewrite_partial_state(
+    plan: ArchivePlan, move_plan: MovePlan, exc: CoordinatedWriteError
+) -> str:
+    """The admission for a failure in `docs archive`'s REWRITE phase (M28 — J).
+
+    `_archive_partial_state`'s sibling, for the other half of execution. The two
+    phases leave genuinely different partial states and each names its own:
+
+    - **9a**, a member's move fails, so some members archived and some did not —
+      `Archived:` / `Still at their original paths:`;
+    - **9b**, every member has already archived and a *referrer* write fails —
+      `Archived:` (all of them, because they all moved) / `Rewritten:` /
+      `Not written:`, which is `docs mv`'s shape, because it is the same
+      failure: a coordinated rewrite that landed for some documents and not
+      others.
+
+    This phase had no admission before M28's Step-2 review. Pre-M28 it wrote
+    only `Related:` bullets and printed a bare `docs: archive: <err>`; M28
+    widened it to prose bytes across the whole tree, archived documents
+    included, which made it the operation's **largest** partial-state window
+    and the only one that did not say what it had done. `cli.md`'s *Residual
+    boundary* and *Validate-all-first* both promise an exact admission for
+    **both** verbs, and the milestone's success criterion is verb-agnostic;
+    this is what makes those true as written.
+
+    Every clause renders the literal word `none` when its list is empty, never
+    a blank (the M25 `_rollback_relate` lesson).
+    """
+    archived = ", ".join(f"{move.rel} -> {move.dest_rel}" for move in plan.moves)
+    not_written = [
+        rewrite.rel
+        for rewrite in move_plan.rewrites
+        if rewrite.rel not in move_plan.moves
+        and rewrite.new_text != rewrite.original
+        and rewrite.rel not in exc.published
+    ]
+    return (
+        f"{exc}; PARTIAL ARCHIVE — not rolled back. "
+        f"Archived: {archived or 'none'}. "
+        f"Rewritten: {', '.join(exc.published) or 'none'}. "
+        f"Not written: {', '.join(not_written) or 'none'}. Repair manually."
+    )
+
+
 def _archive_one(
     path: Path,
     root: Path,
@@ -6472,8 +6516,14 @@ def archive_plan_to_json(
     inserted after `candidates` — rendered by `move_plan_to_json`, the same
     serializer `docs mv --json` splices, so the two verbs' sections are
     byte-comparable. `_cmd_archive` always supplies `move_plan`, so the CLI
-    record always carries both keys, present and `[]` when empty. The default
-    keeps a direct caller that has no rewrite plan on the M26 key set.
+    record always carries both keys, present and `[]` when empty.
+
+    The `move_plan=None` default keeps a direct caller that has no rewrite plan
+    on the M26 key set — and is therefore **not** a conforming `docs archive
+    --json` record, because item (K) requires both arrays present-and-`[]`
+    rather than omitted. It exists for `tests/test_archive_plan.py`'s unit
+    calls and for any caller holding only an `ArchivePlan`; the CLI must never
+    use it.
 
     Args:
         plan: The plan produced by `plan_archive`.
@@ -6864,8 +6914,15 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         if not args.quiet:
             _print_archive_lines(plan, dry_run=True, cascade=cascade)
             _print_move_lines(move_plan, verb="archive", dry_run=True)
-            if cascade:
-                print("docs: archive: preview only — nothing was written", file=sys.stderr)
+            # Printed for EVERY preview since the Step-2 review, not only a
+            # cascade one. M26 gated it on `cascade` because a plain preview was
+            # a single line and a disclaimer under it would have been noise;
+            # since M28 that same preview prints the rewrite lines, the counts
+            # footer, both strand blocks and possibly "a write would refuse", so
+            # a reader who never reaches a sentence saying nothing happened is
+            # left with exactly the ambiguity this milestone exists to remove.
+            # Last, so the preview still ends on it.
+            print("docs: archive: preview only — nothing was written", file=sys.stderr)
         _emit_json(move_plan, applied=False, index_refreshed=False)
         return 0
 
@@ -6945,18 +7002,14 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         )
         return 2
 
-    # 9 — execution. All-or-nothing by construction; the only residual is an
-    # unexpected `OSError`, admitted exactly and never rolled back (D4). Each
-    # moving member's planned text is threaded in, so its body-link splices,
-    # its `Related:` rewrites and its archive metadata edits land in ONE write.
+    # 9 — execution, in two phases that fail DIFFERENTLY, which is why they get
+    # two handlers. All-or-nothing by construction; the only residual is an
+    # unexpected `OSError`, admitted exactly and never rolled back (D4).
     #
-    # Then M12 / M18 / M28: repoint every referring `Related:` bullet AND every
-    # stale body-link destination — active tree and the narrow archive-subtree
-    # exception alike — in one write per document, in the same batch as the
-    # move. Both halves fail the same way (M14 — A4: exit 2, and **no**
-    # `--json` record, because the operation did not complete), which is why
-    # they share one handler; the `_refresh_index` below is the one post-write
-    # failure that still emits a record, which is why IT is separate.
+    # 9a — the members move. Each one's planned text is threaded in, so its
+    # body-link splices, its `Related:` rewrites and its archive metadata edits
+    # land in ONE write. `_archive_partial_state` has already rendered the full
+    # admission by the time this raises.
     try:
         apply_archive_plan(
             plan,
@@ -6966,9 +7019,27 @@ def _cmd_archive(args: argparse.Namespace) -> int:
                 if rewrite.rel in move_plan.moves
             },
         )
-        apply_move_plan(move_plan)
     except CoordinatedWriteError as exc:
         print(f"docs: archive: {exc}", file=sys.stderr)
+        return 2
+
+    # 9b — M12 / M18 / M28: repoint every referring `Related:` bullet AND every
+    # stale body-link destination — active tree and the narrow archive-subtree
+    # exception alike — in one write per document, in the same batch as the
+    # move. `apply_move_plan` raises a bare `write failed for <rel>`, so the
+    # admission is rendered HERE (amendment 7): every member has already moved,
+    # so this phase's partial state is a different one from 9a's, and M28
+    # widened it from `Related:` bullets to prose bytes across the whole tree.
+    # Still no `--json` record — the operation did not complete. The
+    # `_refresh_index` below is the one post-write failure that DOES emit one,
+    # which is why it is separate again.
+    try:
+        apply_move_plan(move_plan)
+    except CoordinatedWriteError as exc:
+        print(
+            f"docs: archive: {_archive_rewrite_partial_state(plan, move_plan, exc)}",
+            file=sys.stderr,
+        )
         return 2
 
     # Announce only what actually happened, and only once the writes landed.

@@ -66,6 +66,32 @@ implementation-complete, scaffold the implementation log and run the current
 authorized production publish/tag/release, served-artifact acceptance, skill
 refresh, and docs closeout.
 
+## `README.md` refresh (routed here 2026-08-15 by M28's Step-2 review)
+
+`README.md` is outside every milestone's surface-parity gate — it is not in
+D8's list, it is not mirrored into the bundled skill, and no test reads it — so
+nothing surfaces its staleness at any gate except this one. It is also the
+first thing a PyPI visitor and a GitHub visitor see, which makes the publish
+the right place to fix it. Known items, all verified 2026-08-15:
+
+- **The `## Commands` block omits three shipped verbs**: `docs relate`
+  (M25 — the repair verb for a rule that is a *hard error* at 2.0, so an
+  adopter hitting `missing-inverse` finds no repair on the front page),
+  `docs stamp` (M15) and `docs project rename|set` (M12).
+- **Re-verify every `blob/main/…` link.** One was already dead —
+  `docs/m8-adoption-workflow.md` has lived under `docs/archive/2026-05-25/`
+  since M8's closeout — and it was fixed inside M28 rather than routed here,
+  because M28's own subject is link integrity and shipping a 2.0.0 whose front
+  page carries a dead documentation link would be self-refuting. The remaining
+  five resolve today; the M25–M28a closeout **archives more documents**, so
+  they must be re-checked after that archive runs, not before.
+- **The feature summary predates the v2.0 train.** It describes neither the
+  reciprocal-edge rules, the body-link rules, nor the move-safe rewrites.
+
+Fold this into the docs-closeout step of `release-runbook.md` rather than
+treating it as optional: the archive step of that same closeout is what can
+break the links again.
+
 ## Issue #1 closeout
 
 GitHub issue #1 (https://github.com/ArtRichards/docs-cli/issues/1) reported the

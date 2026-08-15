@@ -24,9 +24,9 @@ table and the milestone checklist synchronized.
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
 - Progress: **ALL TEN PHASES COMPLETE (2026-08-15) — M28 is
   implementation-complete.** Step 1 (Phases 1–4) landed on `m28/phases-1-4`;
-  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1338
+  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1341
   passed / 0 failed** (1333 at the Phase-8 gate, plus the five locks the
-  Step-2 audit added) with 0 test ids removed against the pre-M28 commit, and
+  Step-2 audit added and three more from the fresh-eyes fold-in) with 0 test ids removed against the pre-M28 commit, and
   proving the whole thing on nine dogfood flows over throwaway copies. See
   *Milestone completion summary* at the end of this log. The whole machine-facing contract is frozen in
   the milestone's *Decisions (Phase 1 — BINDING)* — items (A)–(M), three
@@ -1825,6 +1825,135 @@ Suite: **1335 → 1338 passed**.
      to have closed `test-strategy.md` and its `Updated:` now says so — but it
      is flagged here as a pre-existing defect, not an M28 regression.
 
+## Fresh-eyes review fold-in — 2026-08-15
+
+An independent review of Step 2 returned **no blockers on the product code**.
+It re-ran the whole gate, mechanically reproduced the no-regression proof,
+exercised the pure seam directly (~600 planner cases plus an exhaustive
+renderer sweep over both delimiter forms × 16 special characters × 4 path
+prefixes × 4 fragment shapes) and found **zero** violations of the round-trip
+invariant, the `classify_destination` post-condition, the colon rule, the
+no-op rule, (B)'s step order or the never-creates-an-escape invariant. It
+re-ran E1/E2/E3 and every refusal flow on throwaway copies and reproduced each
+one. It also cleared four things that look like defects and are not:
+`preflight_move_plan`'s `os.access` on the file rather than the parent
+directory (item (F) verbatim, and byte-for-byte what `preflight_archive_plan`
+documents and defends), `plan_move` dropping M18's `doc.archived` gate
+(equivalent by construction — rule (G)), `MOVE_STRAND_KINDS` being
+declared-and-asserted-only (consistent with `BODY_LINK_KINDS` /
+`DESTINATION_KINDS`), and the surface-parity gate.
+
+Eight findings were returned; all eight are folded in, together with the
+operator's answers to the four items the audit surfaced.
+
+### F1 — the archive rewrite-phase admission, CLOSED IN CODE (operator decision)
+
+The audit had surfaced this as *Follow-ups* item 8. The review reproduced it
+and showed it was worse than recorded: `docs archive` exits 2 having archived
+the primary and rewritten one referrer but not another, printing only
+`docs: archive: write failed for ro/ref.md: …` — while `docs mv` on the
+identical tree prints the complete admission. What the follow-up entry had
+missed is that **three shipped promises were already false**: `cli.md`'s
+*Validate-all-first* sits inside a section that opens *"Everything in this
+section governs **both** `docs archive` … and `docs mv`"*; `cli.md`'s
+*Residual boundary* makes the same promise; and the milestone's own success
+criterion is verb-agnostic. Two of the three ship **byte-identically in the
+wheel** — the amendment-5 failure class again.
+
+**Operator decision: close it in code**, because the alternative was narrowing
+a safety promise in the milestone whose entire point is that a move never
+leaves silent damage. `_archive_rewrite_partial_state` renders M26's
+`PARTIAL ARCHIVE` prefix with `docs mv`'s `Rewritten:` / `Not written:`
+clauses — the right clauses, because by phase 9b every member has archived and
+what splits is the rewrite. The data was already there: `apply_move_plan`'s
+`CoordinatedWriteError.published` carried it and `_cmd_archive` discarded it.
+The one new message is recorded as **amendment 7** to item (J) with its
+reasoning; the Phase-10 merge of the two post-move `try` blocks is undone,
+because its justification was that both halves fail identically and they no
+longer do. Locked by `test_archive_rewrite_oserror_admits_the_partial_state`,
+which reproduces the reviewer's `0o644`-file-inside-`0o555`-directory shape and
+places a second referrer **outside** that directory so `Rewritten:` is
+non-empty — otherwise three of four clauses render `none` and the test cannot
+tell a real admission from a template. Mutation-tested. The documentation half
+was done as **verification that the three promises are now true**, not as a
+narrowing.
+
+### F2 — plan B measures 5, not 6 (amendment 6)
+
+Independently verified twice by the reviewer. Six documents declare
+`child-of: plan.md`; plan B's primary is one of them; item (H) exempts plan
+members. The code was right and four **binding** passages carried the census
+number. Corrected in place at all four sites, with **amendment 6** recording
+that the census predates item (H) — a census artefact, not a behaviour change.
+Amendment 5 was the precedent.
+
+### F3 — the upgrade note now names every changed stderr line
+
+Item 3 of *Upgrading from 1.x* exists precisely to name stderr changes that
+break **silently**, and it named only the two re-spelled `docs mv` lines. It
+now also names both new counts footers, the zero case, and the widened
+`preview only` gate.
+
+### F4 — the `docs mv` line block contradicted the `--quiet` rule
+
+The block opened *"Every line prints unless `--quiet`"* and then listed the
+not-writable **refusal**, which prints even under `--quiet`. Qualified.
+
+### F5 — every preview now says it wrote nothing (operator decision)
+
+M26 gated `preview only — nothing was written` on a cascade flag because a
+plain preview was one line and a disclaimer under it was noise. Since Phase 6
+that same preview prints the rewrite lines, the counts footer, both strand
+blocks and possibly `a write would refuse`. **Operator decision: print it for
+every preview** — the M26 rationale is void now the block is long, and a
+preview that never says it wrote nothing is exactly the ambiguity M28 exists
+to remove. Kept last, and locked by
+`test_every_preview_ends_by_saying_it_wrote_nothing`, which asserts it is the
+**final** line on both shapes: a preview announcing itself in the middle of its
+own plan would be worse than one that did not announce itself at all.
+
+### F6 — the zero-count footer stays, and is now pinned (operator decision)
+
+**Operator decision: keep it.** A zero is positive evidence the new rewrite
+phase ran, and it keeps the two verbs' footers symmetrical; leg 2's count line
+staying conditional is correct because it summarises a *list*.
+`test_the_rewrite_footer_prints_its_zero` pins **both halves of that
+asymmetry**, because each looks like the other's bug, and `cli.md` now states
+it.
+
+### F7 / F8 — the two reference tables, and one docstring
+
+The amendments table read 1, 2, 3, **5**, 4 and Follow-ups read …6, **8**, 7;
+both reordered, since readers scan them by number. Follow-up 8 is retired into
+amendment 7. `archive_plan_to_json`'s `move_plan=None` default now says in its
+docstring that the record it produces is **not** a conforming
+`docs archive --json` record — item (K) requires both arrays present-and-`[]`
+rather than omitted — and that the CLI must never use it.
+
+### The README item the review sharpened
+
+The audit had listed README staleness among three things deliberately left out
+of this diff. The reviewer found that list **incomplete and one member a real
+bug**: `README.md` linked to `blob/main/docs/m8-adoption-workflow.md`, which
+has lived under `docs/archive/2026-05-25/` since M8's closeout — a dead link on
+the project's front page, heading into a 2.0.0 publish, in the milestone whose
+subject is link integrity. **Fixed here**, and all six `blob/main/…` links
+re-verified against the working tree. The remaining README staleness — three
+shipped verbs missing from the command list, and a feature summary that
+predates the v2.0 train — is routed to `m29-pypi-publish-2-0-0.md` as an
+explicit publish-time item, because nothing else surfaces it at any gate and
+because M29's own archive step is what can break those links again.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **1341 passed, 0 failed**
+  (1338 plus the three locks this fold-in added).
+- Lint, format, types clean; `docs check --root docs` exit 0; both bundled
+  mirrors `cmp`-identical; INDEX snapshot in sync; `](../` 0/0.
+- The F1 fix reproduced by hand before and after, on the reviewer's tree
+  shape, and mutation-tested.
+- Every `blob/main/…` link in `README.md` resolved against the working tree.
+
 ## Milestone completion summary
 
 **M28 — Move-safe Markdown body-link rewrites is implementation-complete. All
@@ -1879,13 +2008,13 @@ line names the moved document.
   *consequences*.** That single sentence resolves M26's own follow-up item 2
   without bending the no-record-on-refusal rule.
 
-**Evidence quality.** 251 test ids added, **0** removed against the pre-M28
+**Evidence quality.** 254 test ids added, **0** removed against the pre-M28
 commit, 11 test lines deleted — all inside one deliberately re-pointed lock,
 named and justified as a strengthening rather than reported as "no test
-changes". The suite is **1338 passed / 0 failed** (1333 at the Phase-8 gate,
+changes". The suite is **1341 passed / 0 failed** (1333 at the Phase-8 gate,
 plus the five locks the Step-2 audit added — two for Step-2 resolutions that
 had shipped as promises rather than locks, and three closing gaps the
-adversarial pass found). Nine dogfood flows ran
+adversarial pass found — plus three from the fresh-eyes fold-in). Nine dogfood flows ran
 unattended on throwaway copies, the live tree never written to, with the
 "before" column measured rather than quoted. Plan A reproduced the setup census
 exactly (16 references, 8 + 8, from 7 referrers). A there-and-back move leaves

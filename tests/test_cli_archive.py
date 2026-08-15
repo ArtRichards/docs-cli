@@ -3240,6 +3240,37 @@ def test_archive_leg_1_preview_reports_the_verdict_at_exit_0(docs_script, fixtur
     assert _m28_snapshot(root) == before
 
 
+def test_every_preview_ends_by_saying_it_wrote_nothing(docs_script, fixtures_dir, tmp_path):
+    """A preview must always end on the sentence that says nothing happened.
+
+    M26 gated `preview only — nothing was written` on a cascade flag because a
+    plain `--dry-run` printed a single line and a disclaimer under it was noise.
+    Since M28 that same preview prints the rewrite lines, the counts footer,
+    both strand blocks and possibly `a write would refuse` — so the M26
+    rationale is void, and a reader who never reaches the disclaimer is left
+    with exactly the ambiguity this milestone exists to remove.
+
+    Both shapes are asserted, and the line is asserted LAST in each: a preview
+    that announced itself in the middle of its own plan would be worse than one
+    that did not announce itself at all.
+    """
+    for flag in ("--dry-run", "--cascade-dry-run"):
+        root = _m28_tree(fixtures_dir, tmp_path / flag.strip("-"), "movelink-closeout")
+        before = _m28_snapshot(root)
+        proc = _run(docs_script, "archive", "feature.md", "--date", _M28_DATE, flag, cwd=root)
+
+        assert proc.returncode == 0, (flag, proc.stderr)
+        lines = proc.stderr.splitlines()
+        assert lines[-1] == "docs: archive: preview only — nothing was written", (
+            f"{flag}: the preview must END on the disclaimer, got {lines[-1]!r}"
+        )
+        assert sum(1 for ln in lines if "preview only" in ln) == 1, "exactly once"
+        assert any(ln.startswith("docs: archive: rewrite ") for ln in lines), (
+            "the fixture must make this a preview with real content to disclaim"
+        )
+        assert _m28_snapshot(root) == before
+
+
 def test_archive_leg_1_preview_pair_is_suppressed_by_quiet(docs_script, fixtures_dir, tmp_path):
     """(L) splits the two leg-1 pairs, and `--quiet` is where the split is
     observable: the PREVIEW pair is a report, so `--quiet` silences it, while
@@ -3555,6 +3586,64 @@ def test_archive_refuses_when_a_planned_referrer_is_unwritable(docs_script, fixt
     assert _m28_snapshot(root) == before
 
 
+@_SKIP_AS_ROOT
+def test_archive_rewrite_oserror_admits_the_partial_state(docs_script, tmp_path):
+    """D4's residual, on the phase M28 created — check-order step 9b.
+
+    Step 9a (the members move) has admitted its partial state since M26. Step 9b
+    (the referrer rewrites) had none: it printed a bare
+    `docs: archive: write failed for <rel>: <err>` and exited 2, while `docs mv`
+    on the identical tree printed the complete admission. Pre-M28 that was
+    defensible — the phase wrote only `Related:` bullets — but M28 widened it to
+    prose bytes across the whole tree, making it the operation's LARGEST
+    partial-state window and the only one that would not say what it had done.
+
+    The trigger is the boundary `preflight_archive_plan` documents itself as
+    deliberately admitting: a `0o644` file inside a `0o555` directory passes
+    `os.access(file, W_OK)` and fails at the `.docs-tmp` sibling. `ref2.md` is
+    outside that directory, so it lands first and the admission has a non-empty
+    `Rewritten:` clause — without it, three of the four clauses would render
+    `none` and the test could not tell a real admission from a template.
+    """
+    root = tmp_path / "rw"
+    (root / "ro").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "rw"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: rw\n"
+    (root / "a.md").write_text(f"# A\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\nThe primary.\n")
+    (root / "ref2.md").write_text(
+        f"# R2\n\n{hdr}Updated: 2026-01-03\n\nRelated:\n- pairs-with: a.md\n\n"
+        "## Body\n\nSee [a](a.md).\n"
+    )
+    (root / "ro" / "ref.md").write_text(
+        f"# R1\n\n{hdr}Updated: 2026-01-02\n\nRelated:\n- pairs-with: a.md\n\n"
+        "## Body\n\nSee [a](../a.md).\n"
+    )
+    os.chmod(root / "ro", 0o555)
+    try:
+        proc = _run(docs_script, "archive", str(root / "a.md"), "--date", _M28_DATE, "--json")
+    finally:
+        os.chmod(root / "ro", 0o755)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr
+    assert "docs: archive: write failed for ro/ref.md: " in proc.stderr, proc.stderr
+    assert "PARTIAL ARCHIVE — not rolled back." in proc.stderr
+    assert f"Archived: a.md -> {_M28_DATED}/a.md." in proc.stderr, (
+        "every member moved in this phase, so they are ALL named as archived"
+    )
+    assert "Rewritten: ref2.md." in proc.stderr, (
+        "the referrer that did land must be named — this is the clause that "
+        "distinguishes a real admission from a template of `none`s"
+    )
+    assert "Not written: ro/ref.md." in proc.stderr
+    assert "Repair manually." in proc.stderr
+    assert proc.stdout == "", "no --json record: the operation did not complete"
+    # …and the admission is checkable against the disk, clause by clause.
+    assert (root / _M28_DATED / "a.md").is_file()
+    assert f"[a]({_M28_DATED}/a.md)" in (root / "ref2.md").read_text()
+    assert "[a](../a.md)" in (root / "ro" / "ref.md").read_text()
+
+
 def test_archive_quiet_suppresses_the_rewrite_and_strand_lines(docs_script, fixtures_dir, tmp_path):
     """R3's other half: `--quiet` governs the whole summary on a COMPLETING
     run — the rewrite lines, the counts footer and the strand report alike —
@@ -3580,6 +3669,38 @@ def test_archive_quiet_suppresses_the_rewrite_and_strand_lines(docs_script, fixt
     assert proc.stderr == "", f"--quiet must silence the whole summary, got {proc.stderr!r}"
     assert (root / _M28_DATED / "feature.md").is_file(), "the write still happened"
     assert f"[the feature]({_M28_DATED}/feature.md)" in (root / "status.md").read_text()
+
+
+def test_the_rewrite_footer_prints_its_zero(docs_script, tmp_path):
+    """R3 read literally, and pinned because the zero case looks like noise.
+
+    The counts footer prints on EVERY archive, including one over a tree with
+    no body links at all — `0 destination(s) in 0 document(s) rebased`. That is
+    positive evidence the new phase ran, and it keeps the two verbs' footers
+    symmetrical. Leg 2's count line is deliberately NOT symmetrical with it: it
+    summarises a list, so `0 still-active inbound reference(s)` on every
+    archive would be pure noise, and it prints only when the list is non-empty.
+
+    Both halves of that asymmetry are asserted here, because each looks like
+    the other's bug.
+    """
+    root = tmp_path / "bare"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "bare"\n\n[archive]\ndir = "archive"\n')
+    header = "Lifecycle: active\nRole: notes\nProject: bare\nUpdated: 2026-05-20\n"
+    (root / "a.md").write_text(f"# A\n\n{header}\n## Body\n\nNo links anywhere.\n")
+    (root / "b.md").write_text(f"# B\n\n{header}\n## Body\n\nNone here either.\n")
+
+    proc = _run(docs_script, "archive", "a.md", "--date", _M28_DATE, cwd=root)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "docs: archive: 0 destination(s) in 0 document(s) rebased" in proc.stderr, (
+        f"the counts footer is unconditional (R3), zero included: {proc.stderr!r}"
+    )
+    assert "still-active inbound reference(s)" not in proc.stderr, (
+        "leg 2's count line summarises a LIST, so it stays conditional — the "
+        "asymmetry with the footer above is deliberate, not an oversight"
+    )
 
 
 def test_archive_never_rewrites_or_reports_an_excluded_document(docs_script, tmp_path):

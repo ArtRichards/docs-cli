@@ -361,17 +361,22 @@ authorization, not an exemption from validity checks.
 
 **Residual boundary, stated plainly.** Every failure the tool can
 foresee is handled by the pre-flight. An unexpected `OSError` *during*
-execution is reported as an exact **partial-state admission** — naming
-which documents moved and which remain at their original paths — and is
-**not** rolled back:
+execution is reported as an exact **partial-state admission** and is
+**not** rolled back. Execution has **two** phases and each admits its
+own state, because the states differ:
 
 ```
 docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <relA> -> <newA>, <relB> -> <newB>. Still at their original paths: <relC>, <relD>. Repair manually.
+docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <relA> -> <newA>, <relB> -> <newB>. Rewritten: <relC>. Not written: <relD>. Repair manually.
 ```
 
-When nothing had moved yet the archived list is rendered as the literal
-word `none` (`Archived: none.`), never as a blank. Exit 2, no `--json`
-record. Extending M25 — D5's staged-publish-plus-rollback contract from
+The **first** is a member's move failing: some members archived and some
+did not. The **second** is a *referrer rewrite* failing after every
+member has already archived — so the archived list is complete and what
+splits is the rewrite, which is why that line carries `docs mv`'s
+`Rewritten:` / `Not written:` clauses instead. Every clause renders the
+literal word `none` when its list is empty (`Archived: none.`), never a
+blank. Exit 2, no `--json` record. Extending M25 — D5's staged-publish-plus-rollback contract from
 two documents to N was considered and explicitly declined for M26.
 
 ##### An empty selection is a refusal (M26 — D5)
@@ -806,10 +811,18 @@ docs: archive: <child-rel> is still active and declares 'child-of: <parent-rel>'
 docs: archive: <N> still-active child(ren) would be stranded; zero bytes written
 docs: archive: would strand <child-rel> — still active, declares 'child-of: <parent-rel>'; a write would refuse
 docs: archive: <N> still-active child(ren) would be stranded
+docs: archive: preview only — nothing was written
 ```
 
-The last two are the preview's leg-1 pair; the two before them are the
-write path's. `<doc-rel>` is the referrer's **old** canonical
+The last two before the disclaimer are the preview's leg-1 pair; the two
+before those are the write path's. The counts footer prints on **every**
+archive, `0 destination(s) in 0 document(s) rebased` included — it is
+positive evidence that the rewrite phase ran, and it keeps the two verbs'
+footers symmetrical. The leg-2 **count** line is deliberately not
+symmetrical with it: it summarises a list, so it appears only when that
+list is non-empty. `preview only — nothing was written` closes **every**
+preview, plain `--dry-run` and `--cascade-dry-run` alike, and is always
+the last line. `<doc-rel>` is the referrer's **old** canonical
 root-relative path and `<line>` indexes into the text the plan was
 computed from. Every interpolated author token is rendered on one line,
 as M27's findings are.
@@ -896,7 +909,9 @@ guarantee.
 
 `--dry-run` is a real preview: it walks the tree, builds the whole
 rewrite plan, and names every planned rewrite instead of a single line.
-Every line prints unless `--quiet`:
+Every line below prints unless `--quiet` — except the last, which is a
+**refusal** and therefore prints even under `--quiet`, as every refusal
+does:
 
 ```
 docs: mv: would move <old-rel> -> <new-rel>
@@ -906,6 +921,10 @@ docs: mv: <R> destination(s) in <D> document(s), <E> Related: bullet(s)
 docs: mv: preview only — nothing was written
 docs: mv: <rel> is not writable; refusing before any write
 ```
+
+The counts footer prints on every move, `0 destination(s) in 0
+document(s), 0 Related: bullet(s)` included, for the same reason
+`docs archive`'s does.
 
 `--json` emits **one** record on stdout, with an **identical shape** for a
 preview and for a real apply, so the two are diffable:
