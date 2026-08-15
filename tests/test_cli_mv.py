@@ -592,6 +592,60 @@ def test_mv_preview_record_equals_apply_record(docs_script, fixtures_dir, tmp_pa
     assert (apply_record["dry_run"], apply_record["applied"]) == (False, True)
 
 
+def _mv_readonly_root_tree(tmp_path: Path) -> Path:
+    """A tree whose docs are writable but whose ROOT is not.
+
+    `_readonly_root_tree`'s shape from `tests/test_cli_archive.py`, applied to
+    `mv`: both documents live in `w/`, so the rename and every planned rewrite
+    land, and then the end-of-move `atomic_write(root / "INDEX.md", …)` fails
+    because its `.docs-tmp` sibling cannot be created in the read-only root.
+    """
+    root = tmp_path / "roroot"
+    (root / "w").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "roroot"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: roroot\n"
+    (root / "w" / "a.md").write_text(f"# A\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\na.\n")
+    (root / "w" / "b.md").write_text(
+        f"# B\n\n{hdr}Updated: 2026-01-02\n\nRelated:\n- pairs-with: w/a.md\n\n"
+        "## Body\n\nSee [a](a.md).\n"
+    )
+    root.chmod(0o555)
+    return root
+
+
+@_SKIP_AS_ROOT_MV
+def test_mv_json_record_is_emitted_on_an_index_refresh_failure(docs_script, tmp_path):
+    """The ONE documented exception to "no record on a refusal", now on `mv`
+    too — the two verbs share one schema, so they must share this rule or
+    `index_refreshed`'s documented `false` value is unobservable on `mv`.
+
+    An INDEX-refresh failure is a **post-write** failure: the move and every
+    rewrite already landed, so the record IS emitted with `"applied": true,
+    "index_refreshed": false` and the run exits 2. Without this lock the
+    natural reading of "no record on a refusal" — suppress it on every
+    non-zero exit — passes the whole suite, and 1.x's bare `docs: mv: <err>`
+    would look correct too.
+    """
+    root = _mv_readonly_root_tree(tmp_path)
+    try:
+        proc = _run(docs_script, "mv", str(root / "w" / "a.md"), str(root / "w" / "c.md"), "--json")
+
+        assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+        assert "Traceback" not in proc.stderr
+        assert "docs: INDEX refresh failed: " in proc.stderr, proc.stderr
+        record = json.loads(proc.stdout)
+        assert record["applied"] is True, "the move really did land"
+        assert record["index_refreshed"] is False
+        assert record["dry_run"] is False
+        # …and the disk agrees with the record.
+        assert (root / "w" / "c.md").is_file()
+        assert not (root / "w" / "a.md").exists()
+        assert "[a](c.md)" in (root / "w" / "b.md").read_text()
+        assert not (root / "INDEX.md").exists()
+    finally:
+        root.chmod(0o755)
+
+
 def test_mv_rename_leaves_check_clean(docs_script, fixtures_dir, tmp_path):
     """E1, the headline defect: today a rename leaves a tree that fails the
     tool's own gate. Afterwards `docs check` must exit 0.

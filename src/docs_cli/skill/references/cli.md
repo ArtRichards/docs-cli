@@ -918,13 +918,18 @@ footer, and a consumer that wants it counts `rewrites`.
 **No `--json` record on a refusal**, exactly as `docs archive` has it: a
 refusal is a non-zero exit plus a stderr message, with empty stdout.
 
+An **INDEX-refresh** failure is the one exception, mirroring
+`docs archive`: the move and every rewrite landed correctly, so the record
+**is** emitted, with `"applied": true, "index_refreshed": false`, and the
+run exits 2 after printing `docs: INDEX refresh failed: <err>`.
+
 ##### `docs mv` exit codes (M14 — A1 / A4; M28 — D4)
 
 | Exit | Condition |
 |---|---|
 | 0 | Success; `--dry-run` preview |
 | 1 | `<old>` is not a file; collision — `<new>` already exists |
-| 2 | Malformed `.docs.toml`; either path outside the docs root; a malformed tree caught by the validate-all-first pre-flight walk (A1) — since M28 **also under `--dry-run`**, because a preview cannot describe a tree it cannot read; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4) |
+| 2 | Malformed `.docs.toml`; either path outside the docs root; a malformed tree caught by the validate-all-first pre-flight walk (A1) — since M28 **also under `--dry-run`**, because a preview cannot describe a tree it cannot read; an **unreadable** document in that same walk; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); INDEX-refresh failure |
 
 ### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json] [--exclude PATTERN]`
 
@@ -2911,7 +2916,7 @@ M12 / M14 / M15 / M25-specific exit-code shape:
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
 | `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5 / M28 — D4 / D6) | success | the primary is missing, does not parse, or resolves outside the resolved docs root; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); a still-active document outside the plan declaring itself `child-of` a plan member (M28 — D6, leg 1); `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 | `archive --cascade-dry-run` / `--dry-run` (M26 — D6; M28 — D6) | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing, and **including** a plan whose leg-1 strand verdict it reports rather than adopts | a referring doc has malformed metadata — the preview now walks the tree, so it adopts this plan-**construction** failure (M28) | — |
-| `mv` (M14 — A1 / A4; M28 — D4) | success / dry-run preview | `<old>` is not a file; collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1), since M28 **also under `--dry-run`**; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); both paths outside the docs root; malformed `.docs.toml` |
+| `mv` (M14 — A1 / A4; M28 — D4) | success / dry-run preview | `<old>` is not a file; collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1), since M28 **also under `--dry-run`**; an unreadable document in that walk; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); both paths outside the docs root; malformed `.docs.toml`; INDEX-refresh failure |
 | `relate add\|remove` (M25 — D3 / D4 / D5) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; unknown verb; self-edge; malformed `--date`; empty or multi-line `--reason`; an archived endpoint without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
 
 **Cross-verb exit-code convention (no-root vs outside-root).** Two distinct

@@ -389,10 +389,16 @@ never re-spelled — so the diff of a move contains only what the move
 actually made stale. What the tool cannot repair it never touches: an
 external URL, an image, an autolink, raw HTML, a bare filename in a
 sentence, anything inside a fence or backticks, and a destination that was
-already broken or already escaping before the move are all byte-identical
-afterwards. Documents that `[exclude]` or `.docsignore` keeps out of the
-walk are not rewritten either — the exclusion decides what is *read*, never
-what a destination may point at.
+already **escaping** before the move are all byte-identical afterwards. A
+destination that was already **broken** is never *repaired* and never
+*re-aimed* either — but it is rebased like any other when its referrer
+moves, to the same, still-broken target, because the tool resolves paths
+without ever asking the filesystem what exists and rebasing is what keeps
+the link pointing where its author aimed it. Either way the finding
+survives the move: `docs check` owns pre-existing damage, and repairing it
+is never a precondition for a rename. Documents that `[exclude]` or
+`.docsignore` keeps out of the walk are not rewritten either — the
+exclusion decides what is *read*, never what a destination may point at.
 
 **A move can refuse, and it refuses before it writes.** Archiving a
 document that a still-active document outside the operation declares itself

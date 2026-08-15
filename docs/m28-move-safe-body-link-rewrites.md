@@ -39,7 +39,8 @@ Related:
   so the contract stays at one write per document, and **deleted**
   `_rewrite_referring_edges`; Phase 7 reconciled every parallel surface;
   Phase 8 proved the gate at **1333 passed** with **0** test ids removed
-  against the pre-M28 commit; Phase 9 dogfooded nine flows on throwaway
+  against the pre-M28 commit (the Step-2 audit later added two locks, taking
+  the final suite to **1335**); Phase 9 dogfooded nine flows on throwaway
   copies — E1's 42 findings, E2's 13 and E3's 6 all went to **0**, plan A
   completed with its leg-2 report naming exactly the 16 references the setup
   census measured, plans B and C refused with zero bytes, and a there-and-back

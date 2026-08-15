@@ -3240,6 +3240,30 @@ def test_archive_leg_1_preview_reports_the_verdict_at_exit_0(docs_script, fixtur
     assert _m28_snapshot(root) == before
 
 
+def test_archive_leg_1_preview_pair_is_suppressed_by_quiet(docs_script, fixtures_dir, tmp_path):
+    """(L) splits the two leg-1 pairs, and `--quiet` is where the split is
+    observable: the PREVIEW pair is a report, so `--quiet` silences it, while
+    the WRITE path's pair is a refusal and survives (pinned above).
+
+    Without this the split is invisible to the suite — the existing `--quiet`
+    locks run on a refusal (which has no preview pair) and on a completing
+    apply (whose plan has no orphans at all), so an implementation that put
+    the preview pair in the verb beside the refusal would pass both.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    before = _m28_snapshot(root)
+    proc = _run(
+        docs_script, "archive", "plan.md", "--date", _M28_DATE, "--dry-run", "--quiet", cwd=root
+    )
+
+    assert proc.returncode == 0, (proc.returncode, proc.stdout, proc.stderr)
+    assert proc.stderr == "", (
+        "a preview reports rather than refuses, so --quiet silences ALL of it — "
+        f"the leg-1 `would strand` pair included; got {proc.stderr!r}"
+    )
+    assert _m28_snapshot(root) == before
+
+
 def test_legitimate_closeout_completes_despite_still_active_referrers(
     docs_script, fixtures_dir, tmp_path
 ):

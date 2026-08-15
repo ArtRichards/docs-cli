@@ -24,8 +24,9 @@ table and the milestone checklist synchronized.
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
 - Progress: **ALL TEN PHASES COMPLETE (2026-08-15) — M28 is
   implementation-complete.** Step 1 (Phases 1–4) landed on `m28/phases-1-4`;
-  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1333
-  passed / 0 failed** with 0 test ids removed against the pre-M28 commit, and
+  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1335
+  passed / 0 failed** (1333 at the Phase-8 gate, plus the two locks the
+  Step-2 audit added) with 0 test ids removed against the pre-M28 commit, and
   proving the whole thing on nine dogfood flows over throwaway copies. See
   *Milestone completion summary* at the end of this log. The whole machine-facing contract is frozen in
   the milestone's *Decisions (Phase 1 — BINDING)* — items (A)–(M), three
@@ -1511,7 +1512,132 @@ novelty.
 - `git diff --stat` for the `/simplify` pass — `src/docs_cli/cli.py` only,
   57 insertions / 75 deletions.
 
-## Milestone completion summary
+## Step-2 same-instance audit — 2026-08-15
+
+Run against Phases 5–10 after the last phase and before returning, per the
+ship-milestone consistency / completeness / accuracy checklist.
+
+### Issues found and fixed
+
+1. **`convention.md` still carried Q4's PRE-amendment wording, which the code
+   contradicts.** It said an *"external URL, an image, an autolink, raw HTML, a
+   bare filename in a sentence, anything inside a fence or backticks, and a
+   destination that was **already broken** or already escaping before the move
+   are all byte-identical afterwards"*. **Amendment 4 (BINDING) reversed the
+   broken half**: an already-broken but *contained* destination keeps its bytes
+   only while its referrer stays put, and is **rebased to the same, still-broken
+   target** when the referrer itself moves — which is what
+   `test_a_moving_referrer_rebases_a_broken_destination_without_repairing_it`
+   pins. The amendment named `cli.md` › *What a move never touches* and the
+   milestone's *Out of scope*, both of which were reworded correctly in Phase 1,
+   but it did **not** name `convention.md`, so that file slipped through. This
+   is the exact failure mode amendment 4 was written to prevent, and
+   `convention.md` ships **byte-identically inside the wheel**, so a reader of
+   the bundled skill would have been told the opposite of the shipped
+   behaviour. Reworded; the bundled mirror re-synced. Swept every other shipped
+   surface (`cli.md`, `CHANGELOG.md`, `SKILL.md`, all four other bundled
+   references, `cli.py`) for the same claim — no other occurrence.
+2. **Two shipped `docs mv` behaviours were undocumented.** `cli.md`'s `docs mv`
+   exit table and its compatibility-matrix row covered neither (a) an
+   **unreadable** document met during the plan walk — new in Phase 6, where 1.x
+   let the `OSError` escape as a traceback and the code now maps it to the same
+   clean exit 2 `docs archive` uses — nor (b) the **INDEX-refresh failure**,
+   whose message, record and exit code changed under Step-2 resolution 5. Both
+   rows updated, and the `docs mv --json` section gained the INDEX-refresh
+   paragraph mirroring `docs archive`'s. Mirror re-synced.
+3. **Two locks the Step-2 resolutions required were missing.**
+   - Resolution 4 explicitly asked for a lock on `--quiet` over a **preview**
+     whose plan has orphans, noting that nothing in the suite exercised it.
+     It did not get written during Phase 6. Added
+     `test_archive_leg_1_preview_pair_is_suppressed_by_quiet`. This is the only
+     place the item-(L) split between the preview pair (a report, suppressed)
+     and the write pair (a refusal, never suppressed) is observable: the
+     existing `--quiet` locks run on a refusal, which has no preview pair, and
+     on a completing apply, whose plan has no orphans at all.
+   - Resolution 5's `docs mv` INDEX-refresh behaviour was a **promise, not a
+     lock** — exactly the state the operator rejected for `test_mv_help`.
+     Added `test_mv_json_record_is_emitted_on_an_index_refresh_failure`,
+     mirroring `test_archive_json_record_is_emitted_on_an_index_refresh_failure`
+     and its `_readonly_root_tree` trick (documents in `w/`, the ROOT read-only,
+     so every write lands and only the end-of-move `INDEX.md` write fails).
+   - **Both were mutation-tested rather than assumed.** Reverting the code to
+     the shape each forbids — hoisting `_print_move_lines` out of the
+     `not --quiet` guard, and restoring 1.x's bare `docs: mv: <err>` +
+     unconditional exit 2 — makes each new id fail and **leaves every other
+     test green**, which is the proof that each closes a real gap rather than
+     re-asserting something already covered.
+
+Suite: **1333 → 1335 passed**, still 0 failed.
+
+### Checked clean
+
+- **The frozen message catalogue (item (J)) is byte-exact in three places.**
+  All 16 lines were extracted programmatically from the milestone doc's fence
+  and found verbatim in `cli.md`; every one was then rendered from the shipped
+  CLI against fixture trees and compared by eye against the template.
+- **Both check orders (item (I))** were walked step by step against the code.
+  `_cmd_archive` runs 1 → 2 → 3 → 4 → 5 → 5b → 6 → 7 → 8/8b → 8c → 8d → 9, and
+  `_cmd_mv` runs 1 → 2 → 3 → 4 → 5 → 5b → 6 → 7, exactly as frozen. The one
+  structural change — hoisting `compile_exclude_predicate` to just after
+  `load_config` so the preview and the write path share it — was proven
+  behaviour-neutral: the compiler escapes every non-metacharacter through
+  `re.escape` and has no raise path, so no refusal can change order because of
+  it.
+- **The renderer's two post-conditions, fuzzed.** 60,000 random paths × both
+  delimiter forms × three fragment shapes: **0** round-trip failures and **0**
+  delimiter drift. `classify_destination(new_raw) == "local"` failed only for
+  inputs beginning with `/` — which item (C)'s own proof excludes ("`root-absolute`
+  and `protocol-relative` cannot occur, both endpoints are in-root relative
+  paths"). That exclusion was then *verified* rather than trusted: `moves`
+  values are `relative_to(root).as_posix()` on both verbs, `old_target` is
+  proven contained by formula step 3 (whose predicate rejects a leading `/`),
+  and `posixpath.relpath` of two relative paths is never absolute — 0 of 36
+  pairs. Restricted to that reachable domain, 60,000 cases give **0** failures.
+- **The never-creates-an-escape invariant (item (D)), fuzzed** over the whole
+  planner: 18,646 planned rewrites across random referrer/target/destination
+  combinations produced **0** escaping results and **0** whose emitted spelling
+  denoted something other than the intended target.
+- **Deliverables and success criteria** re-read one by one against reality
+  rather than memory. All ten deliverables and all eleven success criteria are
+  met; the `convention.md` half of deliverable 7 (M18's exception widened,
+  M27 — D6's *last one this convention grants* sentence reconciled at three)
+  was verified by reading the shipped text, not the plan.
+- **No placeholders**: no `TODO` / `FIXME` / `NotImplementedError` /
+  commented-out code in the new source; no `Pending` row and no
+  `_Not complete._` left in the milestone doc or the log; all ten deliverable
+  boxes and all ten phase boxes ticked; every phase has a dated log section.
+- **The diff is only this milestone's work**: `git diff --name-only 58955ef`
+  touches nothing outside `docs/`, `tests/`, `src/` and `CHANGELOG.md`.
+- **Generated artifacts in lockstep**: `docs/INDEX.md` and
+  `tests/fixtures/expected/docs-INDEX.md` byte-identical; both bundled mirrors
+  `cmp`-identical to their sources; `](../` at **0** in `cli.md`,
+  `convention.md` and every bundled `.md` (item (M)).
+- **Commits**: one per phase on `m28/phases-5-10`, `m28(phase N): …` following
+  the project's convention, each carrying the required trailers; no secrets.
+
+### Surfaced for the operator (not auto-decided)
+
+1. **The archive rewrite footer now prints on every archive, including one with
+   nothing to rebase.** Step-2 resolution 3 read R3 literally and made the
+   counts footer unconditional, so the most common invocation of all gained a
+   second line:
+
+   ```console
+   $ docs archive a.md
+   docs: archive: archived a.md -> archive/2026-08-15/a.md
+   docs: archive: 0 destination(s) in 0 document(s) rebased
+   ```
+
+   That is the decision as given and it is implemented as given; it is surfaced
+   because the *rendered* result is what an operator judges, and the leg-2
+   count line was given the opposite treatment (printed only when its list is
+   non-empty) in the same resolution. Nothing pins the zero case, so changing
+   it later flips no test.
+2. **Plan B's orphan count is 5, not the 6 the setup census recorded** (Phase 9).
+   The census counted `child-of: plan.md` declarers without item (H)'s
+   plan-member exemption, and plan B's primary is itself one of them. The code
+   is right and the exemption is locked; the *census* line in the setup record
+   is the stale number, left as the historical measurement it was.
 
 **M28 — Move-safe Markdown body-link rewrites is implementation-complete. All
 ten TDD phases are done (2026-08-15)**, Step 1 (Phases 1–4) on
@@ -1565,10 +1691,12 @@ line names the moved document.
   *consequences*.** That single sentence resolves M26's own follow-up item 2
   without bending the no-record-on-refusal rule.
 
-**Evidence quality.** 246 test ids added, **0** removed against the pre-M28
+**Evidence quality.** 248 test ids added, **0** removed against the pre-M28
 commit, 11 test lines deleted — all inside one deliberately re-pointed lock,
 named and justified as a strengthening rather than reported as "no test
-changes". The suite is **1333 passed / 0 failed**. Nine dogfood flows ran
+changes". The suite is **1335 passed / 0 failed** (1333 at the Phase-8 gate,
+plus the two locks the Step-2 audit added — one for each Step-2 resolution
+that had shipped as a promise rather than a lock). Nine dogfood flows ran
 unattended on throwaway copies, the live tree never written to, with the
 "before" column measured rather than quoted. Plan A reproduced the setup census
 exactly (16 references, 8 + 8, from 7 referrers). A there-and-back move leaves
