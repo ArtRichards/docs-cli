@@ -65,8 +65,12 @@ left, and `docs check --root docs` still exits 0 with the rule live — and
 bundled skill, two argparse `description` clauses (the flag delta itself is
 confirmed **empty**), the `UNRELEASED` CHANGELOG entries and issue #1's
 closeout, and correcting the two spec gaps verification found. The suite is
-fully **GREEN at 1502 passed / 0 failed**.
-Phase 8 — Run Tests (GREEN) is next.** All seven
+fully **GREEN at 1502 passed / 0 failed**. **Phase 8 — Run Tests (GREEN)
+completed 2026-08-16**: every gate clean, and the mechanical proof against
+`7f7853b` shows **0** of the 1341 pre-existing ids removed and **0 deleted
+lines in every test source file** — no test was relaxed, weakened, deleted or
+rewritten, and Step 2 changed no test source at all.
+Phase 9 — Integrate / Accept / Dogfood is next.** All seven
 setup questions were RESOLVED before Phase 1,
 and Phase 1 froze the contract against them without re-opening any: the
 machine-facing contract is items (A)–(H) of the milestone's *Decisions

@@ -39,8 +39,10 @@ Related:
   three touch points — the writer, the rule and Leg 2's refusal; 26 ids
   flipped, suite 2 failed / 1500 passed with only the two bundled-skill ids
   left), and Phase 7 — Update Tool/Wrapper Layer complete 2026-08-16, taking
-  the suite fully **GREEN at 1502 passed / 0 failed**. Phase 8 — Run Tests
-  (GREEN) is next.** The machine-facing contract is
+  the suite fully **GREEN at 1502 passed / 0 failed**, and Phase 8 — Run Tests
+  (GREEN) complete 2026-08-16 with every gate clean and 0 of the 1341
+  pre-existing ids removed or failing. Phase 9 — Integrate / Accept / Dogfood
+  is next.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
   an operator decision). Phases 2–4 authored **149** test ids and six
@@ -901,7 +903,7 @@ coverage* below.
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
-- [ ] Phase 8 — Run Tests (GREEN)
+- [x] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 

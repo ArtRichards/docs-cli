@@ -24,9 +24,10 @@ the milestone checklist synchronized.
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
 - Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
   fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
-  flight on `m28a/phases-5-10`; Phases 5, 6 and 7 complete 2026-08-16 and the
-  suite fully **GREEN at 1502 passed / 0 failed**. Phase 8 — Run Tests
-  (GREEN) is next.** All seven setup
+  flight on `m28a/phases-5-10`; Phases 5–8 complete 2026-08-16 with the suite
+  fully **GREEN at 1502 passed / 0 failed**, every gate clean and 0 of the
+  1341 pre-existing ids removed or failing. Phase 9 — Integrate / Accept /
+  Dogfood is next.** All seven setup
   questions were RESOLVED before Phase 1 (Q4 by the operator; Q1 auto-resolved
   under the naming-with-an-obvious-default rule; Q2/Q3/Q5/Q6/Q7
   conductor-resolved), and Phase 1 froze the contract against them without
@@ -68,7 +69,7 @@ the milestone checklist synchronized.
 | 5. Update Base Interfaces | Complete | 2026-08-16 | **28 failed / 1474 passed** — the 43 ids the Phase-4 classification assigned here, flipped. `Archived` into `_BUILTIN_METADATA_FIELDS` (and out of `parse()`'s `known` set and migrate's supersession set); `parse_date`'s keyword-only `label: str = "Updated"` (OQ-3, item (H)); and **all three** pure helpers — `archive_dir_date`, `cross_dated_archive_move` (Leg 2's predicate, delegating to it) and `archive_date_findings` — wired nowhere, so `check_doc`, `_archive_one` and `_cmd_mv` are untouched and every CLI-level id stays honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Complete | 2026-08-16 | **2 failed / 1500 passed** — the 26 ids the Phase-4 classification assigned here, flipped; only the two Phase-7 bundled-skill ids remain. One `set_metadata_field` call in `_archive_one` at the pinned position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. Follow-through item 9's remaining three in-code prose surfaces landed here with the rule they describe. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-16 | **1502 passed / 0 failed** — the suite is fully GREEN one phase early, as Phase 8 is the verification phase. Phase 1 had already landed the author-facing halves in `cli.md` / `convention.md`, so this phase **verified** them item by item and found two real gaps, both corrected: `convention.md`'s built-in always-allowed label list omitted `Archived`, and its `docs mv` refusal paragraph still said three permitted neighbours where amendment 6 says four. Bundled `SKILL.md` (three verb rows) and `references/use-cases.md` (three rows plus a new *Upgrade: the archive-date witness* section) landed; both mirrors re-copied in the same commit. Two argparse `description` strings gained one clause each (RESOLVED OQ-1) — the flag delta itself is **confirmed empty**, measured against `7f7853b`. `UNRELEASED` CHANGELOG gained both `Added` entries, the BREAKING `Changed` entry and the upgrade note including OQ-2's residual; `feedback-log.md` issue #1 is **CLOSED**. No new flag, no version bump. |
-| 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1341 pre-existing ids. |
+| 8. Run Tests (GREEN) | Complete | 2026-08-16 | **1502 passed / 0 failed**, 0 errors / xfails / warnings. `ruff check`, `ruff format --check` and `mypy src/ tests/` clean; `docs check --root docs` exit 0; both mirrors byte-identical. Mechanical proof against `7f7853b`: **0** of the 1341 pre-existing ids removed, 161 added, and **0 deleted lines in every test SOURCE file** — the only deletions anywhere under `tests/` are 8 lines in the frozen INDEX snapshot, every one an `Updated:` value or the generated-on line. **No test was relaxed, weakened, deleted or rewritten**, and Step 2 changed no test source at all. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, completion summaries, hand to M29. |
 
@@ -1232,6 +1233,51 @@ skill, the argparse strings, the CHANGELOG and the feedback-log closeout.
 | `cmp docs/cli.md src/docs_cli/skill/references/cli.md` and the same for `convention.md` | byte-identical |
 | flag delta vs `7f7853b` for `archive` / `mv` / `check` | **empty** (mechanically diffed) |
 | `docs mv --help` / `docs check --help` | carry the new clauses and agree with `cli.md` |
+
+## Phase 8 — Run Tests (GREEN) — 2026-08-16
+
+### Objective
+
+Run every product and quality gate with exact counts, and prove mechanically
+that no pre-existing test id was removed and no test was weakened to get here.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `.venv/bin/python -m pytest -q` | **1502 passed, 0 failed** in ~55s; 0 errors, 0 xfail/xpass, 0 warnings, 0 collection errors |
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 48 files already formatted |
+| `.venv/bin/mypy src/ tests/` | Success: no issues found in 49 source files |
+| `.venv/bin/docs check --root docs` | no violations found (exit 0) |
+| `cmp docs/cli.md src/docs_cli/skill/references/cli.md`; same for `convention.md` | byte-identical |
+
+### Mechanical no-regression proof
+
+Ids collected from a throwaway `git worktree` at the pre-Phase-1 commit
+`7f7853b` and from HEAD, and compared with `comm` — the same method Phase 4
+used:
+
+| Measure | Result |
+|---|---|
+| ids at `7f7853b` | **1341** |
+| ids at HEAD | **1502** |
+| `comm -23 old new` — **removed** ids | **0** |
+| `comm -13 old new` — added ids | **161** |
+| pre-existing ids now failing | **0** (the suite has no failures at all) |
+| `git diff 7f7853b --numstat -- tests/` | **0 deleted lines in every test SOURCE file.** The only deletions anywhere under `tests/` are **8 lines in `tests/fixtures/expected/docs-INDEX.md`** — seven `Updated:` values (`status.md`, `plan.md`, `cli.md`, `convention.md`, `feedback-log.md` and both M28a docs) and the generated-on line, re-synced whenever `docs touch` moved a date across the day boundary. |
+| `git diff ac66005 --numstat -- tests/` (Step 2 alone) | **2 changed lines, both in the INDEX snapshot.** Step 2 changed **no test source at all** |
+
+**No test was relaxed, weakened, deleted or rewritten** — not in Step 2, and
+not across the milestone. Every one of the 71 RED ids went GREEN because the
+behaviour it asserts now exists, in the phase the Phase-4 classification
+assigned it to: 43 at Phase 5, 26 at Phase 6, 2 at Phase 7. Two ids that a
+careless implementer would have "fixed" were deliberately left alone and are
+still GREEN as written —
+`test_mv_neighbour_3_to_the_archive_root_is_silent_without_a_witness` (D8's
+second residual, *Follow-ups* item 7, operator decision OQ-7) and
+`test_archive_renders_the_witness_in_the_trees_date_format` (defect E8's
+exit-2 INDEX-refresh failure, *Follow-ups* item 1).
 
 ## Milestone completion summary
 
