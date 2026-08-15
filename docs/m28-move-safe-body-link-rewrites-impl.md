@@ -54,7 +54,7 @@ table and the milestone checklist synchronized.
 | 2. Write Tests (RED) | **Complete** | 2026-08-15 | 182 new ids: `tests/test_move_links.py` (153, the pure seam) plus 12 `mv`, 14 `archive`, 1 `check` and 2 skill locks. Suite 1269 collected / 181 failed / 1088 passed; the 1087 pre-existing ids all present and GREEN; zero collection errors; zero deleted test lines. Original objective: Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
 | 3. Create Data/Fixtures | **Complete** | 2026-08-15 | Seven `movelink-*` trees authored — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`, `-closeout` — each `docs check`-clean as committed; every existing fixture byte-identical; the two directory-derived sweeps 29→36 and 33→40; suite 1283 / 180 failed / 1103 passed. A read-only prototype census confirmed every intended plan, line numbers included. Original objective: `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
 | 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1332 collected / 229 failed / 1103 passed (restated after the Step-1 audit and the fresh-eyes fold-in); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (193 `AttributeError`, 36 `AssertionError`); mechanically proven 0 removed ids, 0 deleted test lines, and exactly **one** pre-existing id RED — `test_mv_help`, strengthened by operator decision. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
-| 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
+| 5. Update Base Interfaces | **Complete** | 2026-08-15 | `MOVE_STRAND_KINDS`, the four frozen records (`LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`) and the seven pure functions of item (L) landed as three pure INSERTIONS — 518 lines, zero existing lines touched, `_cmd_mv` / `_cmd_archive` byte-identical. `tests/test_move_links.py` 194/194; suite 1332 / **36 failed** / 1296 passed; the `AttributeError` class is at **0** and only `AssertionError` remains. Original objective: The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
@@ -1032,6 +1032,73 @@ the three items the same-instance audit had surfaced.
    rewrites that no verb performs yet. This is the M26/M27 precedent for
    Phases 1–4 (the spec *is* the frozen contract), recorded here rather than
    "fixed", so it is a deliberate state and not an oversight.
+
+## Phase 5 — Update Base Interfaces — 2026-08-15
+
+### Objective
+
+Land every symbol in item (L) except `_print_move_lines` as pure code, so all
+193 `AttributeError`s become GREEN and **no verb changes** — the CLI locks must
+stay honestly RED at the seam rather than half-wired.
+
+### Actions taken
+
+Three pure **insertions** into `src/docs_cli/cli.py`; not one existing line
+was edited.
+
+| Where | What |
+|---|---|
+| *Vocabulary*, after `MAX_DESTINATION_PAREN_DEPTH` | `MOVE_STRAND_KINDS = frozenset({"related", "body-link"})` |
+| *Models*, after `BodyLink` | the four frozen records — `LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan` — verbatim from item (L) |
+| a new banner section after `body_link_findings` | `render_destination_token`, `plan_body_link_rewrites`, `splice_body_links`, `plan_move`, `preflight_move_plan`, `apply_move_plan`, `move_plan_to_json`, plus the two module-level encode tables |
+
+The section sits **before** `_is_archived_rel` (which `plan_move` calls) and
+after the scanner it consumes. That forward reference is established practice
+in this file — `_plan_relate_edit` does the same — and the alternative would
+have been to move an M26 helper for no behavioural reason.
+
+### Decisions worth calling out
+
+- **The colon post-condition is applied AFTER the escape table, on the first
+  path segment only.** Applying it before would let the table's `%` rule
+  double-encode the `%3A` the renderer itself just wrote. Segment splitting is
+  safe on the *encoded* string because no escape in either table contains a
+  `/`, so the boundary computed there is the boundary of the decoded path.
+- **`plan_move` derives body-link strands from the planned rewrites rather
+  than re-scanning**, and the equivalence is provable rather than assumed: a
+  strand source never moves, so `old_target in moves` implies
+  `new_target != old_target`, which means the no-op test cannot fire and a
+  `LinkRewrite` therefore exists. Re-scanning would have been a second walk
+  over the same text for the same answer.
+- **`preflight_move_plan` runs its three proofs per `DocRewrite` in plan
+  order**, in item (F)'s order, rather than as three whole-plan passes. Item
+  (F) lists the proofs in an order, and a per-document loop is what makes that
+  order observable; the writability proof is skipped for a document the plan
+  does not write, exactly as (F) scopes it ("the documents the plan will
+  **write**").
+  - Consequence, recorded rather than discovered: with span-match ahead of
+    overlap, `test_overlapping_spans_refuse_rather_than_corrupt`'s widened
+    span trips the **span-match** proof first. The test asserts `exit_code ==
+    2` and not the message, so it holds either way, and the frozen order is
+    what decided it. The overlap proof stays reachable on its own (two
+    planned spans that both still match their text and still overlap).
+- **`MovePlan.moves` snapshots the caller's mapping** (`dict(moves)`), so a
+  plan cannot be mutated out from under `apply_move_plan` by a caller that
+  keeps editing the dict it passed in.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/test_move_links.py -q` — **194 passed**
+  (the whole pure seam, from 1 passing at baseline).
+- `.venv/bin/python -m pytest tests/ -q` — **36 failed, 1296 passed**, exactly
+  the Phase-4 `AssertionError` set; `pytest --tb=line | grep -c AttributeError`
+  → **0**. The two exception classes are down to one.
+- `git diff -U0 58955ef -- src/docs_cli/cli.py` — **three** hunks, all pure
+  insertions at lines 144, 775 and 2960; `git diff 58955ef` touches no line
+  inside `_cmd_mv` or `_cmd_archive`.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
 
 ## Milestone completion summary
 

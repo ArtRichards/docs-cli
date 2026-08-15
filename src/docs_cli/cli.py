@@ -141,6 +141,13 @@ DESTINATION_KINDS: frozenset[str] = frozenset(
 )
 MAX_DESTINATION_PAREN_DEPTH: int = 3
 
+# M28 (D6, item (H)): the closed vocabulary of `Strand.kind` — the two routes
+# by which a still-active document can be left pointing at a newly-archived
+# one. `related` is a `Related:` bullet (which carries a verb and no line);
+# `body-link` is a Markdown destination (which carries a line and no verb). A
+# third member would mean a new reference class in the convention, not a tweak.
+MOVE_STRAND_KINDS: frozenset[str] = frozenset({"related", "body-link"})
+
 # M10 (OQ-O + OQ-P): metadata labels the `unknown-field` check rule
 # treats as built-in — always allowed regardless of the
 # `[vocabulary] add_fields` configuration. Covers the required fields
@@ -763,6 +770,139 @@ class BodyLink:
     fragment: str | None
     start: int
     end: int
+
+
+@dataclass(frozen=True)
+class LinkRewrite:
+    """One planned body-link destination rewrite (M28 — D1/D3, item (L)).
+
+    The `RelateEdit` / `ArchiveMove` analogue at occurrence granularity: an
+    immutable, write-free description of one destination token and what the
+    move makes it become. Produced by `plan_body_link_rewrites`, consumed by
+    `splice_body_links`, `preflight_move_plan`, `_print_move_lines` and
+    `move_plan_to_json`.
+
+    Frozen for the reason `BodyLink` is: M28 collects spans and then splices,
+    and an in-place edit between those two steps would silently invalidate
+    every remaining span in the same document.
+
+    Attributes:
+        link: M27's `BodyLink` record, carried **verbatim** and never
+            re-derived — `link.raw` is what the `--json` record reports as
+            `old`, so a re-spelling here would misdescribe the author's text.
+        old_target: The canonical root-relative POSIX target, resolved from
+            the referrer's **old** directory (formula step 2).
+        new_target: That target after the move map (formula step 4). Equal to
+            `old_target` when only the referrer moved.
+        new_raw: The replacement destination token, delimiters and any
+            re-encoding included — exactly the bytes spliced into
+            ``[link.start, link.end)``.
+    """
+
+    link: BodyLink
+    old_target: str
+    new_target: str
+    new_raw: str
+
+
+@dataclass(frozen=True)
+class DocRewrite:
+    """One document's whole planned edit under a coordinated move (M28 — item (L)).
+
+    Carries the text the plan was computed from and the text the plan would
+    write, so execution never re-reads and never re-derives — (E)'s "one
+    `atomic_write` per document, never two" is a property of this record.
+
+    `MovePlan.rewrites` carries only documents whose bytes change, **plus**
+    every moving member: a moving member is always present, with
+    ``new_text == original`` when nothing about it changed, because both verbs
+    take that document's final text from here rather than from a re-read.
+
+    Attributes:
+        path: Absolute path on disk, at its OLD location.
+        rel: The OLD canonical root-relative POSIX path — the identity the
+            plan, every message and every record field name it by.
+        new_rel: ``rel`` unless this document itself moves.
+        archived: True iff the document lies under the archive subtree. Carried
+            from the walk so the D5 policy is auditable from the plan alone.
+        original: The text the plan was computed from. Every `LinkRewrite`
+            span indexes into THIS string.
+        new_text: The text after (E) steps 1-2 — body-link splices, then the
+            `Related:` bullet rewrites. Equals `original` when nothing changed.
+            `docs archive` layers step 3's metadata edits on top of it.
+        links: The planned destination rewrites, in ascending `start`. The
+            splicer is what reverses; storing ascending keeps the record in
+            source order for the messages and the JSON section.
+        related_rewrites: How many `Related:` bullets step 2 repointed.
+    """
+
+    path: Path
+    rel: str
+    new_rel: str
+    archived: bool
+    original: str
+    new_text: str
+    links: tuple[LinkRewrite, ...]
+    related_rewrites: int
+
+
+@dataclass(frozen=True)
+class Strand:
+    """One still-active inbound reference into a newly-archived set (M28 — D6).
+
+    Both strand legs produce these: leg 1's `MovePlan.orphans` (always
+    ``kind == "related"`` and ``verb == "child-of"``) and leg 2's
+    `MovePlan.strands` (everything else). Both ends are always named, which is
+    what the refusal, the report, the preview and the record all require.
+
+    Attributes:
+        path: The still-active referrer's canonical root-relative POSIX path.
+        target: The document it would be left pointing at, at its **old**
+            canonical path — the one the referrer names today.
+        kind: A `MOVE_STRAND_KINDS` member.
+        verb: The `Related:` verb; None **iff** ``kind == "body-link"``.
+        line: 1-based line of the destination token; None **iff**
+            ``kind == "related"`` (`Doc.related` carries no line).
+    """
+
+    path: str
+    target: str
+    kind: str
+    verb: str | None
+    line: int | None
+
+
+@dataclass(frozen=True)
+class MovePlan:
+    """A complete, write-free coordinated-move rewrite plan (M28 — D4, item (L)).
+
+    The `ArchivePlan` analogue for the body-link half, shared by both verbs:
+    `plan_move` builds it from one whole-tree walk, `preflight_move_plan`
+    proves it applicable before a byte moves, `apply_move_plan` executes the
+    non-moving half, and `move_plan_to_json` renders the section both verbs'
+    `--json` records splice in. The same object backs a preview and a real
+    apply, which is why the two are diffable.
+
+    Attributes:
+        root: The resolved docs root.
+        config: The tree's config (supplies `archive_dir` for the strand
+            check's archived test).
+        moves: Canonical OLD root-relative POSIX path -> canonical NEW path,
+            for every document this operation relocates.
+        rewrites: Documents whose bytes change, in walk order, plus every
+            moving member (see `DocRewrite`).
+        strands: Leg 2's report — every OTHER still-active inbound reference.
+            Empty unless `plan_move` was called with ``strand_check=True``.
+        orphans: Leg 1's refusal set — still-active `child-of` declarations
+            into the moving set.
+    """
+
+    root: Path
+    config: Config
+    moves: Mapping[str, str]
+    rewrites: tuple[DocRewrite, ...]
+    strands: tuple[Strand, ...]
+    orphans: tuple[Strand, ...]
 
 
 # ---------------------------------------------------------------------------
@@ -2815,6 +2955,384 @@ def body_link_findings(path: Path, text: str, root: Path) -> list[Finding]:
                 )
             )
     return findings
+
+
+# ---------------------------------------------------------------------------
+# Move-safe body-link rewrites — the move planner (M28 — D1/D3/D4/D6)
+# ---------------------------------------------------------------------------
+#
+# M27 validates body links; M28 is the only writer of them. Everything here is
+# a pure function of its arguments — `plan_move` takes the walked documents and
+# their texts from the caller, so nothing in this section opens, stats, or
+# writes a file. `preflight_move_plan` (one `os.access` per planned write) and
+# `apply_move_plan` (one `atomic_write` per changed document) are the two
+# deliberate exceptions, and they are the boundary D4 exists to draw.
+#
+# The order of the formula in `plan_body_link_rewrites` is contractual, not
+# stylistic; see `cli.md` › *Move-safe body-link rewrites (M28 — D1–D7)* ›
+# *The formula* and the milestone's item (B).
+
+# M28 (C / R8): the grammar-derived minimal encode sets. A plain destination
+# ends at the first unescaped whitespace or unescaped `)` at depth 0, and `(`
+# beyond `MAX_DESTINATION_PAREN_DEPTH` kills the link; an angle destination
+# ends at the first unescaped `>` on the line; `#` opens the fragment; `\`
+# escapes; `%` introduces an escape. `%` is listed FIRST in both, so the
+# introducer can never be double-encoded by the escapes this renderer itself
+# writes. A blanket `urllib.parse.quote` is deliberately rejected: it would
+# mangle accented and CJK filenames that need no encoding at all.
+_PLAIN_DESTINATION_ESCAPES: tuple[tuple[str, str], ...] = (
+    ("%", "%25"),
+    (" ", "%20"),
+    ("\t", "%09"),
+    ("(", "%28"),
+    (")", "%29"),
+    ("#", "%23"),
+    ("<", "%3C"),
+    (">", "%3E"),
+    ("\\", "%5C"),
+)
+_ANGLE_DESTINATION_ESCAPES: tuple[tuple[str, str], ...] = (
+    ("%", "%25"),
+    (">", "%3E"),
+    ("<", "%3C"),
+    ("#", "%23"),
+    ("\\", "%5C"),
+)
+
+
+def render_destination_token(raw: str, new_path: str, fragment: str | None) -> str:
+    """Render the replacement destination token for one occurrence (M28 — C).
+
+    **The delimiter form is invariant**: angle stays angle, plain stays plain.
+    A plain destination that cannot carry a character is percent-encoded, never
+    promoted to `<…>` — one strategy, no "it depends" cell (D3 / Q5).
+
+    `raw` is consulted for its delimiter form only, by the same predicate
+    `_strip_angle_pair` uses so the two cannot drift. `new_path` is the
+    **decoded** path the token must denote, so an author's redundant escape
+    (`plan%2Ex.md`) is not reproduced; a no-op token keeps every byte it had,
+    because it is copied rather than rendered.
+
+    Two post-conditions, both proven rather than hoped for:
+
+    - `_split_destination(result) == (new_path, fragment)` — the scanner's own
+      decoder, run on the emitted token, reproduces exactly what the token was
+      built from. The fragment is reattached verbatim and never re-encoded: it
+      came out of a token that already parsed inside the SAME delimiter form,
+      so it contains no character that terminates that form.
+    - `classify_destination(result) == "local"`. Two table entries exist for
+      this reason and no other. `#` — a path whose first character is `#` would
+      re-classify as `fragment` and stop being a link. And `:` in the FIRST
+      path segment, applied after the table so `%3A` cannot be double-encoded:
+      a first segment matching `_SCHEME_RE` re-classifies the token as
+      `scheme`, which means M27 stops validating it and a working link would be
+      **silently** killed by the move. First-segment-only is exactly sufficient
+      rather than conservative: `_SCHEME_RE` anchors at `^` and `/` is not in
+      its character class, so a colon after a `/` can never open a scheme and
+      `sub/a:b.md` keeps its literal colon. No escape in either table contains
+      a `/`, so the segment boundary computed on the encoded string is the
+      boundary of the decoded one.
+    """
+    angled = len(raw) >= 2 and raw.startswith("<") and raw.endswith(">")
+    encoded = new_path
+    for char, escape in _ANGLE_DESTINATION_ESCAPES if angled else _PLAIN_DESTINATION_ESCAPES:
+        encoded = encoded.replace(char, escape)
+    head, sep, tail = encoded.partition("/")
+    encoded = head.replace(":", "%3A") + sep + tail
+    token = encoded if fragment is None else f"{encoded}#{fragment}"
+    return f"<{token}>" if angled else token
+
+
+def plan_body_link_rewrites(
+    rel: str,
+    new_rel: str,
+    text: str,
+    moves: Mapping[str, str],
+) -> tuple[LinkRewrite, ...]:
+    """Plan every destination rewrite one document needs (M28 — D1, item (B)).
+
+    A **pure** function of `(rel, new_rel, text, moves)`: no filesystem access
+    of any kind, so the plan is a function of the tree's bytes and cannot vary
+    with where the process runs. Existence checks and writes are the caller's.
+
+    The step order is BINDING:
+
+    1. classify the token AS WRITTEN; anything but `local` is copied
+       byte-for-byte (D2 / Q4);
+    2. resolve from the referrer's **old** directory;
+    3. a target that leaves the root is copied byte-for-byte — M28 never
+       rebases an escape and never repairs pre-existing damage (Q4);
+    4. map that target through `moves`;
+    5. the **no-op test**, stated semantically rather than as a string test:
+       re-resolve the token as written from the referrer's NEW directory, and
+       copy it byte-for-byte when that still means the mapped target;
+    6. otherwise the `posixpath.relpath` form against the new directory, with
+       a trailing `/` reattached iff the original had one (R7);
+    7-8. the fragment verbatim, and the token rendered by
+       `render_destination_token`.
+
+    Steps 1 and 3 run BEFORE anything is resolved through `moves`, or M28 would
+    reach outside the grammar M27 validates. Step 5 runs AFTER step 4, or a
+    class-2 rebase of a link to a co-moving document would be tested against
+    the wrong target — that is what makes an archived plan/log pair produce a
+    zero-byte diff in their links to each other.
+
+    Step 3 tests the OLD target only. A destination that is contained today and
+    whose re-resolution from the new directory escapes is a legitimate rebase:
+    `../../root.md` from `sub/deep/x.md` names `root.md`, and moving that
+    document to the root has to flatten it.
+
+    Returns:
+        The planned rewrites in source order (ascending `start`).
+    """
+    rewrites: list[LinkRewrite] = []
+    for link in scan_body_links(text):
+        if classify_destination(link.raw) != "local":
+            continue
+        old_target = normalise_body_link_target(rel, link.path)
+        if not _body_link_is_contained(old_target):
+            continue
+        new_target = moves.get(old_target, old_target)
+        if normalise_body_link_target(new_rel, link.path) == new_target:
+            continue
+        new_path = posixpath.relpath(new_target, posixpath.dirname(new_rel))
+        if link.path.endswith("/"):
+            new_path += "/"
+        rewrites.append(
+            LinkRewrite(
+                link,
+                old_target,
+                new_target,
+                render_destination_token(link.raw, new_path, link.fragment),
+            )
+        )
+    return tuple(rewrites)
+
+
+def splice_body_links(text: str, rewrites: Sequence[LinkRewrite]) -> str:
+    """Apply planned destination splices to `text` (M28 — E step 1).
+
+    Descending `start`, so an earlier span's offsets stay valid after a later
+    span's replacement changes length — M27's Phase-6 technique, proven on 140
+    occurrences across 30 documents with 30-of-30 byte-identical round-trip
+    reconstructions. Every byte outside a recorded span is copied.
+
+    Accepts any input order; the plan stores ascending, and this is what
+    reverses.
+    """
+    for rewrite in sorted(rewrites, key=lambda r: r.link.start, reverse=True):
+        text = text[: rewrite.link.start] + rewrite.new_raw + text[rewrite.link.end :]
+    return text
+
+
+def plan_move(
+    root: Path,
+    config: Config,
+    *,
+    entries: Sequence[tuple[Doc, str]],
+    moves: Mapping[str, str],
+    related_pairs: Sequence[tuple[str, str]] | None = None,
+    strand_check: bool = False,
+) -> MovePlan:
+    """Build the whole coordinated-move rewrite plan (M28 — D4, item (L)).
+
+    `entries` is the caller's walk, as `(Doc, text)` pairs, so the planner
+    reads nothing. Both verbs feed the SAME walk they already run, which is
+    what keeps the plan a pure function of the tree.
+
+    Per document, in (E)'s BINDING order: the body-link splices first (their
+    spans are offsets into the text they were scanned from), then one
+    `rewrite_related_refs` pass per `related_pairs` entry (line-structural, so
+    it is safe on modified text). `docs archive` layers its metadata edits on
+    top at execution time; nothing here is written.
+
+    `moves` is canonical and feeds the DESTINATION half — every spelling that
+    normalises to a moving document is already a hit, so the body planner needs
+    no alias list at all (D1, E6). `related_pairs` feeds the `Related:` half,
+    which matches by exact string and therefore does need one (M26 — Q5); it
+    defaults to `tuple(moves.items())`.
+
+    `strand_check` is `archive`-only (R4): a rename produces no newly-archived
+    set. Its source set is every walked document that is not a plan member and
+    not already archived — a document being archived cannot be stranded, and an
+    already-archived one is not still active. `[exclude]` / `.docsignore`
+    govern the walk, so an excluded document is neither rewritten nor examined
+    (R11).
+
+    Leg 1 (`orphans`) takes the `child-of` declarations; leg 2 (`strands`)
+    takes every other `Related:` verb — free-form verbs included, matched on
+    `_canonical_related_target`, not on `RECIPROCAL_VERBS` and not on the
+    declared spelling — and every body link whose old target is moving. The two
+    legs partition the graph by EDGE, so one document can contribute to both.
+
+    Body-link strands are derived from the planned rewrites rather than from a
+    second scan, and the equivalence is provable: a strand source never moves,
+    so ``old_target in moves`` implies ``new_target != old_target``, which
+    means the no-op test cannot fire and a `LinkRewrite` therefore exists.
+    """
+    pairs = tuple(moves.items()) if related_pairs is None else tuple(related_pairs)
+    rewrites: list[DocRewrite] = []
+    strands: list[Strand] = []
+    orphans: list[Strand] = []
+
+    for doc, text in entries:
+        rel = _root_relative(doc.path, root)
+        new_rel = moves.get(rel, rel)
+        links = plan_body_link_rewrites(rel, new_rel, text, moves)
+        new_text = splice_body_links(text, links)
+        related = 0
+        for old_rel, dest_rel in pairs:
+            new_text, count = rewrite_related_refs(new_text, old_rel, dest_rel)
+            related += count
+
+        # A moving member is ALWAYS present, with `new_text == original` when
+        # nothing about it changed: both verbs take that document's final text
+        # from its `DocRewrite` rather than from a re-read.
+        if links or related or rel in moves:
+            rewrites.append(
+                DocRewrite(doc.path, rel, new_rel, doc.archived, text, new_text, links, related)
+            )
+
+        if not strand_check or rel in moves or _is_archived_rel(rel, config):
+            continue
+        for verb, target in doc.related:
+            canonical = _canonical_related_target(target)
+            if canonical not in moves:
+                continue
+            strand = Strand(rel, canonical, "related", verb, None)
+            (orphans if verb == "child-of" else strands).append(strand)
+        for rewrite in links:
+            if rewrite.old_target in moves:
+                strands.append(
+                    Strand(rel, rewrite.old_target, "body-link", None, rewrite.link.line)
+                )
+
+    return MovePlan(root, config, dict(moves), tuple(rewrites), tuple(strands), tuple(orphans))
+
+
+def preflight_move_plan(plan: MovePlan) -> None:
+    """Prove the rewrite plan applicable before the first byte moves (M28 — F).
+
+    Over exactly the documents the plan will **write**, in plan order: the
+    document is writable by an explicit `os.access` test; every recorded
+    destination span still matches the text it was scanned from; and no two
+    planned spans in one document overlap, which splicing would otherwise
+    corrupt silently rather than fail.
+
+    Parseability is not re-proven here — the walk that produced the plan
+    already did it.
+
+    Every failure is a refusal, never an `assert`:
+    `CoordinatedWriteError(rolled_back=True, published=(), exit_code=2)`, so
+    the calling verb writes zero bytes — the moved document included — and
+    emits no `--json` record. Exit 1 stays reserved for the conditions 1.x
+    owned (M26 — Q4, unchanged).
+
+    Raises:
+        CoordinatedWriteError: any of the three proofs fails.
+    """
+    for rewrite in plan.rewrites:
+        if rewrite.new_text == rewrite.original:
+            continue
+        if not os.access(rewrite.path, os.W_OK):
+            raise CoordinatedWriteError(
+                f"{rewrite.rel} is not writable; refusing before any write",
+                rolled_back=True,
+                published=(),
+            )
+        for link_rewrite in rewrite.links:
+            link = link_rewrite.link
+            if rewrite.original[link.start : link.end] != link.raw:
+                raise CoordinatedWriteError(
+                    f"{rewrite.rel}: recorded destination span no longer matches its "
+                    "text; refusing before any write",
+                    rolled_back=True,
+                    published=(),
+                )
+        spans = sorted((lr.link.start, lr.link.end) for lr in rewrite.links)
+        for (_start, end), (next_start, _next_end) in zip(spans, spans[1:], strict=False):
+            if next_start < end:
+                raise CoordinatedWriteError(
+                    f"{rewrite.rel}: two planned destination spans overlap; "
+                    "refusing before any write",
+                    rolled_back=True,
+                    published=(),
+                )
+
+
+def apply_move_plan(plan: MovePlan) -> None:
+    """Write every NON-MOVING document whose bytes change (M28 — item (L)).
+
+    One `atomic_write` per document, never two: the `Related:` bullet rewrite
+    and the body-link splices for one document were applied to one in-memory
+    text at plan time, and this commits it.
+
+    A moving member is deliberately skipped. The two verbs relocate a member
+    differently — `docs mv` writes it to its old path and renames, `docs
+    archive` layers its metadata edits on top and hands it to `_archive_one` —
+    so each verb owns its own member's write, and each takes that member's
+    final text from its `DocRewrite` rather than from a re-read (E step 3).
+
+    There is no rollback (D4, deliberately, inheriting M26's boundary). Every
+    failure the tool can foresee was refused by `preflight_move_plan`; an
+    unexpected `OSError` here becomes the caller's partial-state admission.
+
+    Raises:
+        CoordinatedWriteError: a write failed; `published` names what really
+            landed and `rolled_back` is False.
+    """
+    written: list[str] = []
+    for rewrite in plan.rewrites:
+        if rewrite.rel in plan.moves or rewrite.new_text == rewrite.original:
+            continue
+        try:
+            atomic_write(rewrite.path, rewrite.new_text)
+        except OSError as exc:
+            raise CoordinatedWriteError(
+                f"write failed for {rewrite.rel}: {exc}",
+                rolled_back=False,
+                published=tuple(written),
+            ) from exc
+        written.append(rewrite.rel)
+
+
+def move_plan_to_json(plan: MovePlan) -> dict[str, object]:
+    """The shared `rewrites` / `strands` section of both verbs' records (M28 — K).
+
+    ONE serializer, spliced into `docs mv --json` (which takes `rewrites`
+    only — R4) and into `docs archive --json` (which takes both, inserted after
+    `candidates`). That is what makes the two byte-comparable by construction
+    rather than by discipline, and it is why there is no rewrite-count key
+    (R10): the stderr footer carries the count and `len(rewrites)` derives it.
+
+    `old` is `link.raw` — the destination token exactly as written, delimiters
+    and escapes included — never a re-derived spelling. `column` is the token's
+    first character, not the `[` and not a byte offset. Both key sets are
+    closed and ordered as written here.
+    """
+    return {
+        "rewrites": [
+            {
+                "path": rewrite.rel,
+                "line": link_rewrite.link.line,
+                "column": link_rewrite.link.column,
+                "old": link_rewrite.link.raw,
+                "new": link_rewrite.new_raw,
+            }
+            for rewrite in plan.rewrites
+            for link_rewrite in rewrite.links
+        ],
+        "strands": [
+            {
+                "path": strand.path,
+                "target": strand.target,
+                "kind": strand.kind,
+                "verb": strand.verb,
+                "line": strand.line,
+            }
+            for strand in plan.strands
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------

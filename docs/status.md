@@ -46,8 +46,10 @@ Related:
 ## Current milestone
 
 **M28 — Move-safe Markdown body-link rewrites is the current milestone.
-Step 1 (Phases 1–4) is complete on `m28/phases-1-4` (2026-08-15); Phase 5 —
-Update Base Interfaces is next.** Milestone setup completed 2026-08-15 with all
+Step 1 (Phases 1–4) is complete on `m28/phases-1-4` (2026-08-15); Step 2
+(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phase 5 — Update Base
+Interfaces complete** (2026-08-15) and Phase 6 — Implement Offline/Core Path
+next.** Milestone setup completed 2026-08-15 with all
 seven setup questions RESOLVED, and Phase 1 did not re-open them. M28 extends `docs mv` and `docs archive` to rebase the
 parsed local Markdown destination tokens a move makes stale — reusing M27's
 scanner and its exact destination spans, never a second parser — and to refuse
@@ -785,7 +787,14 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **begin M28 Phase 5 — Update Base Interfaces.** **Step 1
+**Next action:** **continue M28 Step 2 at Phase 6 — Implement Offline/Core
+Path.** **Phase 5 — Update Base Interfaces is complete on
+`m28/phases-5-10`** (2026-08-15): `MOVE_STRAND_KINDS`, the four frozen records
+and the seven pure functions of item (L) landed as three pure insertions into
+`cli.py`, with `_cmd_mv` and `_cmd_archive` byte-identical, so the CLI locks
+stay honestly RED at the seam. `tests/test_move_links.py` is 194/194 and the
+suite is 1332 / 36 failed / 1296 passed — the `AttributeError` class is gone
+and only `AssertionError` remains. **Step 1
 (Phases 1–4) is complete on `m28/phases-1-4`** (2026-08-15), on top of the
 milestone setup completed 2026-08-15 on `m28/milestone-setup` with all seven
 setup questions resolved. **Phase 1** froze the whole machine-facing contract
