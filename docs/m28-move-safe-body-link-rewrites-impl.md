@@ -1,0 +1,280 @@
+# M28 — Implementation Log
+
+Lifecycle: active
+Role: log
+Project: docs
+Updated: 2026-08-15
+
+Related:
+- child-of: m28-move-safe-body-link-rewrites.md
+- pairs-with: m28-move-safe-body-link-rewrites.md
+- pairs-with: status.md
+- references: feedback-log.md
+
+## Overview
+
+Chronological implementation log for M28 — Move-safe Markdown body-link
+rewrites. Append one evidence-backed section per TDD phase; keep the progress
+table and the milestone checklist synchronized.
+
+## Implementation metadata
+
+- Project: docs
+- Milestone: M28 — Move-safe Markdown body-link rewrites
+- Started: 2026-08-15 (milestone setup; no TDD phase started)
+- Progress: **Milestone setup complete, with all seven setup questions
+  RESOLVED (Q1/Q2/Q3 by the operator; Q4/Q5/Q6/Q7 conductor-resolved).
+  Phase 1 — Define Contract is next and does not re-open them.** Q1 **amends
+  the 2026-08-15 routing entry**: setup measured that the routed strand-check
+  predicate refuses this repository's own standard milestone closeout, so the
+  refusal is narrowed to the `child-of` direction and everything else is
+  reported instead. Q2 **supersedes the registered stub's own Open question 1
+  recommendation**: the archived-referrer rewrite carries destination tokens
+  only. Q3 answers `feedback-log.md` issue #1 finding 4 — `--report-links`
+  declined as a design, its output adopted as a plan record on both verbs. All
+  three are restated in the milestone doc's *Decisions recorded at setup
+  (BINDING)*.
+- Source: the operator-confirmed body-link decisions in `feedback-log.md`
+  (2026-08-09/10), the M28 registration in `plan.md` (2026-08-10), and the
+  2026-08-15 routing of `feedback-log.md` issue #1 finding 1 (the strand-check)
+  and finding 4 (the `--report-links` scope option) into this milestone.
+- Branch: `m28/milestone-setup` for setup; implementation branches are chosen
+  when Phase 1 begins.
+
+## TDD phase progress
+
+| Phase | Progress | Date | Notes |
+|---|---|---|---|
+| 1. Define Contract | Pending | — | Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
+| 2. Write Tests (RED) | Pending | — | Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
+| 3. Create Data/Fixtures | Pending | — | `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
+| 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
+| 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
+| 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
+| 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
+| 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
+| 9. Integrate / Accept / Dogfood | Pending | — | Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
+| 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, update the shipped use-case catalog, completion summaries, hand to M28a and M29. |
+
+## Setup record — 2026-08-15
+
+### Objective
+
+Bring the registered M28 draft stub up to full milestone-task-plan depth and
+create this log, without starting Phase 1. M27 is implementation-complete and
+merged to `main` (`58955ef`), so M28 is the next implementation milestone in
+the v2.0 train. The stub's binding scope — including the post-plan
+strand-check added 2026-08-15 — and its three Phase-1 open questions are
+carried forward rather than replaced.
+
+### Actions taken
+
+- Read the milestone's inputs end to end: `plan.md`'s v2.0 narrative and M28
+  row, `charter.md`, the pinned specs (`cli.md`, `convention.md`,
+  `architecture.md`, `test-strategy.md`), `feedback-log.md` — issue #1 in
+  particular, whose finding 1 routed the strand-check here and whose finding 4
+  left a scope option explicitly unresolved for M28 planning — and the M26 and
+  M27 milestone/log pairs, whose *Follow-ups* tables both name M28 as a home.
+- Read the code M28 must extend: `scan_body_links` and the `BodyLink` span
+  record, `classify_destination`, `normalise_body_link_target`,
+  `_body_link_is_contained`, `body_link_findings`, `_cmd_mv`,
+  `_cmd_archive`, `plan_archive` / `preflight_archive_plan` /
+  `apply_archive_plan`, `_archive_one`, `rewrite_related_refs`, and
+  `_rewrite_referring_edges` with its M18 archived-referrer exception.
+- Ran a **read-only** body-link census over the live `docs/` tree and over all
+  39 committed fixture trees using the shipped M27 scanner — never a
+  reimplementation — building the inbound reference map, the outgoing per
+  document map, the archived-referrer map, and a per-form inventory.
+- Reproduced the milestone's headline defects on **throwaway copies** of this
+  tree outside the repository: a rename (E1), a single-document archive (E2),
+  and the real milestone-closeout invocation (E3). No repository file was
+  mutated during setup; the live tree was only read.
+- Probed the routed strand-check predicate against three concrete archive
+  plans over the live graph — a legitimate closeout, issue #1's
+  `--cascade-only '*'` harm, and archiving `plan.md` alone — and measured that
+  its literal form refuses the first (E7). That measurement is what turns Q1
+  from a wording detail into the milestone's largest question.
+- Expanded *Binding scope* into eight decisions (D1–D8), added *Out of scope*,
+  the E1–E8 evidence with an *Evidence → regression coverage* table, the
+  ten-phase TDD plan with per-phase objective / files / exit, the phase
+  checklist, the testing gate, evidence-anchored success criteria, and
+  *Follow-ups recorded for later milestones*.
+- Carried the registered stub's three "Open questions for M28 Phase 1" forward
+  as Q2, Q4 and Q5 — sharpened by the measurements — rather than dropping
+  them, and added Q1, Q3, Q6 and Q7 for the scope and contract decisions the
+  reading surfaced. Raised all seven with recommendations rather than deciding
+  any of them silently, and then **resolved all seven before Phase 1** — Q1
+  (the strand-check predicate), Q2 (archived-referrer audit metadata) and Q3
+  (the `mv` preview / `--json` record and the `--report-links` answer) by
+  operator decision; Q4, Q5, Q6 and Q7 conductor-resolved from the specs, the
+  measured evidence and the M25/M26/M27 precedent.
+- Recorded the three answers that changed something already written down in a
+  dedicated *Decisions recorded at setup (BINDING)* section of the milestone
+  doc — **A1** the amendment to the 2026-08-15 routing entry, **A2** the
+  supersession of the stub's Open question 1 recommendation, **A3** the answer
+  to issue #1 finding 4 — each with what it replaced, why, and the rejected
+  alternatives, so a Phase-1 agent with none of this context can reconstruct
+  all three from the document alone.
+- Kept the reciprocal `follows` / `precedes`, `depends-on` / `required-by`
+  edges intact, flipped the milestone to `Lifecycle: active`, and added the
+  milestone ↔ log pair edges.
+- Scaffolded this log with
+  `docs new log m28-move-safe-body-link-rewrites-impl`, bumped dates and
+  validated with `docs touch … --check`, and refreshed the frozen dogfood
+  INDEX snapshot `tests/fixtures/expected/docs-INDEX.md` for the new log entry
+  — the same snapshot refresh the M25, M26 and M27 setups performed.
+- Updated the trackers: `status.md` (current milestone, milestone-progress
+  row) now describes M28 as in flight with its plan and log linked.
+
+### Current-tree evidence (docs-cli 1.8.0 with M25–M27 merged at `58955ef`)
+
+| Evidence | Measurement | Why it matters | Bears on |
+|---|---|---|---|
+| **E1** | On a throwaway copy, `docs mv plan.md milestone-plan.md` prints `moved plan.md -> milestone-plan.md (35 reference(s) rewritten)` and exits **0**; `docs check` then exits **2** with **42 `broken-body-link`** findings across **14** documents — 13 archived plus the active `agent-native-invocation.md`. Worst hit: `archive/2026-05-23/m5-claude-code-skill.md` ×16, `archive/2026-05-22/m4-migration-helper.md` ×6. | The tool now produces trees that fail its own gate, and the metadata repair it performs (35 bullets) is *smaller* than the damage it leaves (42 destinations). | D1, D4 |
+| **E2** | `docs archive m17-pypi-publish-impl.md` exits **0**; `docs check` then reports **13** findings — **10 class 1** (`status.md` ×3, `plan.md` ×2, `release-runbook.md` ×1, and **4 inside archived referrers** now dangling on `../../m17-pypi-publish-impl.md`) and **3 class 2** (inside the moved document itself, whose `plan.md` and `release-runbook.md` links now resolve to `archive/2026-08-15/…`). | One ordinary command produces **both** move classes at once, which is why D1 treats them as one formula rather than two features — and 4 of the 13 are only repairable by writing to archived documents. | D1, D5 |
+| **E3** | `docs archive m25-reciprocal-relationship-integrity.md --cascade-only 'm25-*' --reason …` — the exact invocation M26 prescribes for a milestone closeout — exits **0** and leaves **6** `broken-body-link` findings in `status.md` (×4) and `plan.md` (×2). | The damage lands in the two documents an agent reads first, on the single most common multi-document write this project performs. It is issue #1 finding 4 at this repository's scale. | D1, D7 |
+| **E4** | The live tree carries **395** recognised spans over **71** documents; **379** are `local`, resolving to **69** distinct targets. Most referenced: `release-runbook.md` 49 occurrences / 17 documents, `plan.md` 42 / 14, `cli.md` 24 / 10, `status.md` 24 / 9. Ten active documents carry **211** outgoing local links. | Quantifies both classes' blast radius and shows the exposure is concentrated in exactly the documents most likely to be renamed or reorganised. | D1, D2 |
+| **E5** | **131** body links in **27 archived** documents point at **active** documents — `plan.md` ×38, `status.md` ×24, `release-runbook.md` ×23, `cli.md` ×20, `definition-of-ready.md` ×6, `agent-native-invocation.md` ×5, `test-strategy.md` ×4, `architecture.md` ×3, `m17-pypi-publish-impl.md` ×4, and three more. | The archived-referrer policy is a **blocker**, not a nicety: without it, moving any core document leaves errors no verb can repair. M18 already licenses exactly this move-driven class of write. | D5, Q2 |
+| **E6** | `rewrite_related_refs` matches a `Related:` bullet's target by **exact string** — the reason M26 — Q5 carries a per-alias pair list. In the E1 reproduction it rewrote 35 bullets by string while leaving 42 destinations broken across three spellings of the same target (`plan.md`, `../plan.md`, `../../plan.md`). | The `Related:` rewriter cannot be reused for path math. The body-link rewriter must resolve first and map on the **normalised** target — which incidentally gives it no alias problem at all. | D1 |
+| **E7** | The routed strand predicate, measured over the live graph for three plans. **A** — a textbook `--cascade-only 'm26-*'` closeout: **8** still-active `Related:` edges + **8** still-active body links, from **7** active referrers. **B** — issue #1's `--cascade-only '*'`: **45** + **8**, from **17**. **C** — archiving `plan.md` alone: **11** (including **6** live `child-of`) + **4**, from **12**. Separately confirmed live: `docs archive m27-markdown-body-link-validation.md --cascade-dry-run --cascade-only '*'` marks `plan.md`, `cli.md`, `convention.md`, `test-strategy.md` and `status.md` **selected**. | The literal predicate **refuses the standard milestone closeout**; A and B differ in magnitude, not in kind. The one structural feature B and C have and A does not is six still-active documents declaring `child-of: plan.md` — a parent archived out from under live children. | D6, Q1 |
+| **E8** | Across all **39** committed fixture trees there are 110 local body links, **all** of them in the six `bodylink-*` trees (18) or the `real-trees-adopted` migrate fixture (92); the `archive-*`, `mv-with-malformed`, `rename-with-*`, `cross-refs` and `with-archive` trees carry **zero**. In `docs/`: **zero** angle-bracket, percent-escaped or backslash-escaped destinations, and exactly **one** local destination anywhere carries a fragment (`convention.md` → `cli.md#common-exclusion`). | No existing `mv` or `archive` fixture exercises a body link at all, and no corpus anywhere exercises the forms the re-encoding rules govern. Phase 3 must author every one deliberately — the same conclusion M27 — E8 forced. | Phase 3, Q5 |
+
+### Verification
+
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 47 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues found in 48 source files.
+- `.venv/bin/python -m pytest -q` — 1087 passed.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+
+### Decisions / issues
+
+- **The damage class is the one M27 already repaired by hand.** M27 — D6's
+  one-time migration fixed 139 archived breaks, 132 of them a pure un-rebased
+  `../../` — which is class 2 of D1's formula, produced by `docs archive`
+  itself. M28 is that repair, generalised and moved into the verb, and M27's
+  Phase-6 execution is the best available evidence that the span-splice
+  approach works on real data: 140 occurrences over 30 documents, spliced by
+  offset right-to-left, with 30/30 byte-identical round-trip reconstructions.
+- **The two classes are one formula, not two features.** Resolving each
+  destination from the referrer's *old* location, mapping the resolved target
+  through the move set, and relativising against the referrer's *new*
+  directory produces class 1 when the map fires and class 2 when the referrer
+  itself moved. E2 shows a single archive producing both, which is why they
+  cannot be separate code paths.
+- **Matching on the normalised target is strictly better than the `Related:`
+  rewriter's exact-string match**, and it is not a stylistic preference: E6
+  shows the same target spelled three ways in one tree. It also means M28
+  needs no analogue of M26 — Q5's alias list.
+- **The archived-referrer question is a blocker.** E5's 131 links mean that
+  without D5 the tool cannot complete a clean move of `plan.md`, `cli.md`,
+  `status.md` or `release-runbook.md` at all — the resulting `broken-body-link`
+  errors are hard, and no verb can repair them. M18's exception already
+  licenses move-driven writes to archived documents for the `Related:` half of
+  exactly this repair, so D5 widens M18 along its own axis rather than
+  granting the fourth exception `convention.md` says it will not grant.
+  **Q2 resolved the audit-metadata half against the registered stub's own
+  recommendation** (A2): destination tokens only, no `Updated:` bump, no
+  `Revision:` bullet — the same trigger, operation and single write as M18's
+  half, asserting nothing new, and avoiding an archived document's date
+  becoming a record of some *other* document's move. Phase 7 reconciles
+  M27 — D6's "last one this convention grants" sentence with the widened M18
+  paragraph.
+- **The strand-check's literal predicate does not survive contact with a real
+  tree, and this is the milestone's central finding.** The routing entry
+  reasoned that the check "self-cancels for legitimate whole-set archiving,
+  because a set archived together strands nothing". Measured, it does not: a
+  correct M26 closeout leaves 7 active referrers pointing into the archived
+  set, every one of them deliberate — `status.md`'s tracker edges, `plan.md`'s
+  `parent-of`, and the neighbouring milestones' `precedes` / `follows` /
+  `depends-on`, which is precisely what M25's reciprocal graph exists to
+  record. Refusing that would break the workflow the tool is for. **Q1
+  resolved it as an amendment to the routing entry** (A1), in two binding
+  legs: **leg 1** refuses only when a still-active document outside the plan
+  declares itself `child-of` a document the plan would archive — 0 occurrences
+  on plan A against 6 on both plan B and plan C — and **leg 2** *reports*
+  every other still-active inbound reference, `Related:` and body link alike,
+  in the preview, the apply output and the record's `strands` array, refusing
+  nothing. Leg 2 is not decoration: it is the half that answers issue #1's
+  actual complaint — that the safety rested on a human reading a preview — by
+  handing the consequences to the caller in a parseable form, so it carries
+  its own deliverable, success criterion and named coverage. Three
+  alternatives were rejected and are tabulated in A1 with the reason each
+  lost: shipping the literal predicate, refusing an unbounded `'*'` scope
+  (trivially defeated by `*.md`), and a `Role:`-based rule (a vocabulary
+  policy, not a consequence check).
+- **Consistency with how issue #1's other suggestion was handled matters
+  here.** In the same feedback entry the operator declined the reporter's
+  finding-3 rule because "two documents archived months apart may legitimately
+  carry an edge, so the rule would fire on correct trees and fail the
+  charter's *never cry wolf* criterion". The literal strand predicate fails the
+  same test on the same tree, which is the argument for narrowing it rather
+  than shipping it as written.
+- **`docs mv` has to be inverted before it can be safe.** It moves the file and
+  *then* rewrites, so a class-2 rewrite and an all-or-nothing contract cannot
+  both hold. Planning before the move also lets `mv` inherit M26 — D4's
+  refuse-with-zero-mutation guarantee, which it has never had.
+- **One write per document, not two.** The `Related:` rewrite and the body-link
+  splices for the same document are applied to one text and committed with a
+  single `atomic_write`; `_rewrite_referring_edges` is already single-pass, and
+  keeping it so avoids doubling the failure surface.
+- **`feedback-log.md` issue #1 finding 4's `--report-links` alternative is
+  answered, not ignored** (D7, Q3, operator — A3): **declined as a design** —
+  M27 has already made a broken prose link a hard error, so "declare them out
+  of scope" would leave the tool knowingly producing failing trees — but its
+  **output is adopted**, and widened, as a plan record on **both** verbs.
+  `docs mv` gains a real `--dry-run` preview and a `--json` rewrite-plan
+  record; `docs archive --json` gains the same rewrite section plus the
+  `strands` array; one schema is shared by preview and apply, following
+  M26 — D7's operator-approved `archive --json` addition and M25's
+  `relate --json` conventions. Phase 7 adds a dated note to the issue #1 entry
+  so findings 1 and 4 are visibly resolved rather than silently absorbed.
+- **M28 cannot create an escaping destination.** Both endpoints of every
+  rewrite are canonical in-root paths, so their relative form always
+  normalises back inside the root. Worth stating as an invariant with its
+  one-line proof, because it is what lets M28 inherit M27's guarantee rather
+  than re-argue it.
+- **Nothing in the fixture corpus exercises this** (E8). Every `mv` / `archive`
+  fixture has zero body links, and the whole repository has zero angle,
+  percent-escaped or backslash-escaped destinations and exactly one fragment.
+  Phase 3 authors all of it — the same position M27 — E8 put Phase 3 in, and
+  the reason Q5's re-encoding rules must be pinned in Phase 1 rather than
+  discovered in Phase 6.
+- Version staging is already settled by M25 — D6: the package stays `1.8.0`
+  through M25–M28 (and M28a) and M29 performs the single bump to `2.0.0`. M28
+  touches neither `pyproject.toml` nor the packaging version pins; its
+  CHANGELOG entries accumulate under the existing `UNRELEASED` heading.
+- Host-machine workflow skills are **not** updated by this milestone. Per
+  `CLAUDE.md`, host skills refresh only at a production ship; the bundled skill
+  inside `src/docs_cli/skill/` **is** updated in lockstep, in Phase 7.
+- **No OPEN QUESTIONS remain.** All seven are resolved and recorded as binding
+  in the milestone doc's *Resolved setup questions (Q1–Q7, BINDING)*, with the
+  three that changed prior decisions restated in *Decisions recorded at setup
+  (BINDING)*. Phase 1 freezes the rewrite formula, the emitted spelling and
+  re-encoding rules, the archived-referrer policy, both strand-check legs, the
+  atomicity boundary and the two verbs' preview / `--json` shapes against them
+  rather than re-litigating scope.
+
+### Resolved setup questions — summary
+
+Full reasoning in the milestone doc's *Resolved setup questions
+(Q1–Q7, BINDING)*; the three answers that changed something already written
+down are restated in *Decisions recorded at setup (BINDING)* as A1, A2 and A3.
+
+| # | Question | Resolution |
+|---|---|---|
+| Q1 | What exactly does the post-plan strand-check refuse? Its literal form refuses this repository's own standard closeout (E7). | **RESOLVED (operator) → D6, and an AMENDMENT to the 2026-08-15 routing entry (A1).** Two binding legs. **Leg 1** refuses only when a still-active document outside the plan declares itself `child-of` a document the plan would archive — 0 hits on plan A, 6 on plans B and C. **Leg 2** names every other still-active inbound reference — any other `Related:` verb and every body link — in the preview, the apply output and the record's `strands` array, refusing nothing; it is not optional and carries its own deliverable, success criterion and coverage. Rejected with reasons in A1: the literal predicate (refuses a correct closeout), an unbounded-`'*'` refusal (defeated by `*.md`), a `Role:`-based rule (a vocabulary policy, not a consequence check). |
+| Q2 | Does an archived referrer's body-link rewrite carry audit metadata? *(stub Open question 1)* | **RESOLVED (operator) → D5, against the stub's own recommendation (A2).** **M18's shape** — destination tokens only, no `Updated:` bump, no `Revision:` bullet: same trigger, same operation, same single write; nothing new is asserted; and a bump would make an archived document's date a record of another document's move while churning INDEX. Implemented by **widening M18's exception**, granting no fourth one, with M27 — D6's "last one this convention grants" sentence reconciled in Phase 7. |
+| Q3 | Does `docs mv` gain a real preview and a `--json` rewrite-plan record? Also the home of issue #1 finding 4's `--report-links` option. | **RESOLVED (operator) → D7 (A3). Yes, both.** `docs mv` gains a real `--dry-run` preview and a `--json` rewrite-plan record; `docs archive --json` gains the same rewrite section plus a `strands` array; one schema shared by preview and apply, following M26 — D7 and M25's `relate --json` conventions. `--report-links` is **declined as a design** (M27 already made a broken prose link a hard error, so a report-only option would mean knowingly shipping failing trees) while its **output is adopted** as the plan record. |
+| Q4 | What happens to destinations a move does not own — non-`local`, already broken, or escaping? *(stub Open question 2)* | **RESOLVED (conductor) → D2 + D3, as recommended.** Leave them byte-identical and do **not** gate the move on them. M27 already guarantees a clean tree has no escaping link; pre-existing damage keeps its M27 finding, and `docs check` owns it. |
+| Q5 | Same-path normalisation, the emitted spelling, and re-encoding. *(stub Open question 3)* | **RESOLVED (conductor) → D3, as recommended.** Byte-for-byte preservation when the computed semantic destination is unchanged; otherwise the `posixpath.relpath` form, fragment reattached verbatim, original delimiter form preserved, one stated escape strategy, locked by a decode round-trip test. No corpus destination exercises any escape (E8), so that path ships against authored fixtures only. |
+| Q6 | Does `docs migrate --apply`'s archive-normalising move get the same treatment? | **RESOLVED (conductor) → out of scope, as recommended**, recorded as *Follow-ups* item 1. `docs migrate` repairs no references at all today, operates on a foreign tree, and folding it in would widen M28 from a coordinated move to an adoption workflow. |
+| Q7 | Does M28 fix M26 — *Follow-ups* item 3 (duplicate `Related:` bullets from alias rewriting), which is homed here? | **RESOLVED (conductor) → re-deferred explicitly, with the reason, as recommended.** M28 builds a destination-token splicer over body text, not a `Related:`-block editor; the cost is cosmetic. The alternative — deduplicating `apply_archive_plan`'s pairs and flipping the pinned test — **reaches into M26's frozen Phase-1 Q5 contract**, and M28 does not do that. |
+
+## Phase 1 — Define Contract
+
+_Not started._
+
+## Milestone completion summary
+
+_Not complete._

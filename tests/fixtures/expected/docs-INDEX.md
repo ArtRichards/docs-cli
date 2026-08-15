@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-15. 25 docs active, 46 archived._
+_Generated 2026-08-15. 26 docs active, 46 archived._
 
 ## Project — docs
 
@@ -38,6 +38,7 @@ _Generated 2026-08-15. 25 docs active, 46 archived._
 ### Active — Log
 
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-15.
+- [m28-move-safe-body-link-rewrites-impl.md](m28-move-safe-body-link-rewrites-impl.md) — _log_ — Chronological implementation log for M28 — Move-safe Markdown body-link rewrites. Append one evidence-backed section…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation-impl.md](m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-14.
 - [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.
 - [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-12.
