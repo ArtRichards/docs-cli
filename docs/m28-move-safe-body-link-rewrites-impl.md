@@ -22,8 +22,12 @@ table and the milestone checklist synchronized.
 - Project: docs
 - Milestone: M28 — Move-safe Markdown body-link rewrites
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
-- Progress: **Phases 1–4 are COMPLETE (2026-08-15) — Step 1 of the
-  milestone is done; Phase 5 — Update Base Interfaces is next.** The whole machine-facing contract is frozen in
+- Progress: **ALL TEN PHASES COMPLETE (2026-08-15) — M28 is
+  implementation-complete.** Step 1 (Phases 1–4) landed on `m28/phases-1-4`;
+  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1333
+  passed / 0 failed** with 0 test ids removed against the pre-M28 commit, and
+  proving the whole thing on nine dogfood flows over throwaway copies. See
+  *Milestone completion summary* at the end of this log. The whole machine-facing contract is frozen in
   the milestone's *Decisions (Phase 1 — BINDING)* — items (A)–(M), three
   amendments to setup-frozen material, and eleven Step-1 resolutions (R1–R11)
   — with the author-facing halves in `cli.md` and `convention.md` and zero
@@ -44,7 +48,7 @@ table and the milestone checklist synchronized.
   2026-08-15 routing of `feedback-log.md` issue #1 finding 1 (the strand-check)
   and finding 4 (the `--report-links` scope option) into this milestone.
 - Branch: `m28/milestone-setup` for setup; `m28/phases-1-4` for Step 1
-  (Phases 1–4).
+  (Phases 1–4); `m28/phases-5-10` for Step 2 (Phases 5–10).
 
 ## TDD phase progress
 
@@ -59,7 +63,7 @@ table and the milestone checklist synchronized.
 | 7. Update Tool/Wrapper Layer | **Complete** | 2026-08-15 | Both argparse descriptions; the two contract-mandated test expected-value updates (`_JSON_TOP_LEVEL_KEYS` +2 keys, and the primary-only record re-pointed at `_two_relation_tree` with a **new** leg-1 lock added on the tree it left); bundled `SKILL.md` + `references/use-cases.md`; `CHANGELOG.md` (three `Added`, four `Changed` incl. one BREAKING, and the three-part upgrade note naming the two re-spelled `docs mv` lines); `feedback-log.md`'s issue #1 resolution bullet. `cli.md` / `convention.md` verified rather than rewritten (Phase 1 landed them); both mirrors `cmp`-identical; `](../` still 0. Suite **1333 passed, 0 failed**. Original objective: argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
 | 8. Run Tests (GREEN) | **Complete** | 2026-08-15 | **1333 collected, 1333 passed, 0 failed**; 0 collection errors, 0 xfail/xpass/error. Mechanically proven against `58955ef`: **0** ids removed, 246 added, and — because nothing fails — all **1087** pre-existing ids present and GREEN. `git diff --numstat 58955ef -- 'tests/*.py'` shows exactly **11** deleted lines, every one inside the re-pointed primary-only lock, both edits named and justified as strengthenings. Lint / format / types clean; `docs check --root docs` exit 0; both bundled mirrors `cmp`-identical; INDEX snapshot identical; `](../` 0/0; `pyproject.toml` unchanged. Original objective: Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
 | 9. Integrate / Accept / Dogfood | **Complete** | 2026-08-15 | Nine flows on throwaway copies; the live `docs/` tree never written to (`git status` empty throughout). E1 42→**0** findings with a 77-line diff in which **every changed line names the moved document**; E2 13→**0** including the 4 archived referrers; E3 6→**0**; plan A completes with its leg-2 report naming exactly **16** references from **7** referrers — the E7 census reproduced; plans B and C refuse at exit 2 with **zero bytes** and empty stdout; plan B's preview reports the same verdict at exit 0 with a populated record; the refusal survives `--quiet` (7 lines, all refusal); a there-and-back move is **byte-identical**, `INDEX.md` included; both verbs' preview and apply records differ in exactly the three state bits. Added runtime: +80 ms on `mv`, +113 ms on a solo archive. Original objective: Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
-| 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, update the shipped use-case catalog, completion summaries, hand to M28a and M29. |
+| 10. Quality, Docs, Refactor | **Complete** | 2026-08-15 | `/simplify` over the planner and both verbs — net **−18 lines**, four collapses, suite still 1333 GREEN. `architecture.md` gained a *Move-safe body-link rewrites (M28)* subsection, had its archive pipeline re-drawn through `apply_move_plan`, and gained a `mv` pipeline it never had; `test-strategy.md` gained the `movelink-*` family and two critical-path rows; the shipped use-case catalog landed in Phase 7 with the rest of the surface; `plan.md` and `status.md` record the completion and hand the train to M28a and M29. Original objective: `/simplify`, close `architecture.md` and `test-strategy.md`, update the shipped use-case catalog, completion summaries, hand to M28a and M29. |
 
 ## Setup record — 2026-08-15
 
@@ -1446,6 +1450,133 @@ far inside the "well under 1 s" bound.
 - Both throwaway `git worktree`s removed; `git worktree list` shows only the
   repository itself.
 
+## Phase 10 — Quality, Docs, Refactor — 2026-08-15
+
+### The `/simplify` pass
+
+Four changes, all behaviour-preserving, verified by the same 1333-test suite
+before and after. Net **−18 lines** in `src/docs_cli/cli.py`.
+
+| Change | Why it simplifies |
+|---|---|
+| `_cmd_mv`'s two near-identical `except` clauses collapsed into **one** `except OSError`, with the detail/`published` derivation moved into `_mv_partial_state` | The two handlers differed in exactly two expressions and repeated a nine-line `print(...)` call. Moving "which exception carries what" next to the message it produces puts that knowledge in one place and removes a whole branch from the execution path — 34 lines to 16 at the call site. |
+| `_mv_member_changes` deleted; `moved` looked up **once** and reduced to `member_text: str \| None` | The helper existed only to avoid repeating a one-line test, and the caller then scanned `plan.rewrites` a *second* time to fetch the record it had just proven present. "The text the member needs written to its old path, or None" is one concept where there were three. |
+| `archive_plan_to_json` restored to a **single dict literal** with a `**rewrite_section` splice | The `move_plan` parameter had turned one expression into a literal plus a conditional `.update()` plus three assignments. The splice keeps the key order the schema freezes and makes "the shared section goes here" visible in the shape of the code. |
+| The two adjacent post-move `try` blocks in `_cmd_archive` merged into one | `apply_archive_plan` and `apply_move_plan` fail identically — M14 (A4): exit 2, no record — so two handlers printing the same line were duplication. The `_refresh_index` handler stays **separate**, deliberately: it is the one post-write failure that still emits a record, which is the M26 split the log records. |
+
+Two smaller ones in the same pass: the overlap proof in `preflight_move_plan`
+became one `any(...)` over adjacent span pairs, and `_print_move_lines`'
+preview block lost a redundant `if plan.orphans` by folding it into the guard.
+
+Nothing else was touched. `_archive_move_map` and `_archive_related_pairs`
+were considered for collapsing and **kept**: they name the single most
+misunderstood distinction in the milestone — the move map is canonical and
+feeds the destination half, the pairs are alias-expanded and feed the
+`Related:` half — and inlining them would hide it. `_plan_rewrites`' `MovePlan
+| int` return was likewise kept: it is this file's established idiom
+(`_resolve_managed_root`, `_resolve_relate_endpoint`), and consistency beats
+novelty.
+
+### Documentation closed
+
+- **`docs/architecture.md`** — the `archive` pipeline diagram still ended in
+  `_rewrite_referring_edges`, a function that no longer exists; it is re-drawn
+  through steps 8 / 8b / 8c / 8d and `apply_move_plan`, with the preview's 5b
+  split named. A new **`mv` (M14, inverted by M28)** section gives that verb a
+  pipeline diagram it never had. A new *Move-safe body-link rewrites (M28)*
+  subsection sits under the M27 body-link block, which already
+  forward-referenced M28 as the span consumer.
+- **`docs/test-strategy.md`** — the `movelink-*` family joins *Fixture
+  sources* (seven trees, one semantic each, with the line/column numbers named
+  as contract and the reason exotic grammar and mutation cases stay inline),
+  and *Critical paths* gains two rows: a coordinated move leaves `docs check`
+  clean with a destination-token-only diff, and leg 1 refuses with zero bytes
+  **while a legitimate closeout completes**.
+- **`docs/plan.md`** and **`docs/status.md`** — M28's narrative, table row,
+  roadmap bullet, current-milestone block and *Next action* all record
+  implementation-complete and hand the train to **M28a** and **M29**. M28
+  stays `Lifecycle: active` until the M29 publish closeout.
+- The **shipped use-case catalog** (`references/use-cases.md`) landed in
+  Phase 7 with the rest of the surface, because its now-false "prose links are
+  not rewritten" sentence was a correctness problem the moment Phase 6 shipped,
+  not a Phase-10 polish item.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **1333 passed, 0 failed**, before
+  and after the `/simplify` pass.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+- `git diff --stat` for the `/simplify` pass — `src/docs_cli/cli.py` only,
+  57 insertions / 75 deletions.
+
 ## Milestone completion summary
 
-_Not complete._
+**M28 — Move-safe Markdown body-link rewrites is implementation-complete. All
+ten TDD phases are done (2026-08-15)**, Step 1 (Phases 1–4) on
+`m28/phases-1-4` and Step 2 (Phases 5–10) on `m28/phases-5-10`. The package
+stays `1.8.0`; **M29** performs the single bump to `2.0.0` (M25 — D6), and M28
+stays `Lifecycle: active` until that closeout.
+
+**What shipped.** `docs mv` and `docs archive` now rebase the local Markdown
+body links a move makes stale — in the same operation, in the same
+per-document write, and under the same all-or-nothing contract as the
+`Related:` rewrite. Two independent breakages are handled by **one formula**
+over M27's scanner and its exact destination spans, mapped on the **normalised
+target** so every spelling of one file is rewritten with no alias list.
+`docs mv` was inverted to plan-before-move, gaining M26 — D4's
+zero-mutation refusal, a real `--dry-run` preview and a `--json` record.
+`docs archive` gained the same rewrite section plus a `strands` array, and a
+**strand-check**: leg 1 refuses a plan that would archive a parent out from
+under a live child, leg 2 reports every other still-active inbound reference
+without refusing. `_rewrite_referring_edges` is deleted, superseded by
+`apply_move_plan`.
+
+**The defect it closed, measured.** Before M28 both verbs produced trees that
+failed the tool's own gate. On this repository, on throwaway copies, with the
+pre-M28 binary as the control: a rename left **42** `broken-body-link` findings
+across 14 documents, a single archive left **13** spanning both move classes
+including four inside archived referrers, and the real milestone closeout left
+**6** in the two most-read documents. All three are now **0**, with `docs check`
+exiting 0 after each, and the rename's diff is 77 lines in which every changed
+line names the moved document.
+
+**The judgement calls, and why they went the way they did.**
+
+- **Leg 1 was narrowed to `child-of`, and leg 2 was not optional.** The routed
+  predicate, taken literally, refuses this repository's own standard milestone
+  closeout — 16 deliberate references from 7 referrers. A safety check that
+  blocks the workflow the tool exists for is one operators route around, which
+  is the same *never cry wolf* criterion the operator applied when declining
+  issue #1's finding 3. Leg 2 is what preserves the routing note's actual
+  purpose: it delivers the consequences to the agent generating the glob, in a
+  form it can parse.
+- **Archived referrers get destination tokens only** — M18's shape, widened
+  along its own axis rather than granted as a fourth exception, superseding the
+  registered stub's own recommendation. Same trigger, same operation, same
+  single write; nothing new is asserted; and an `Updated:` bump would make an
+  archived document's date a record of some *other* document's move.
+- **`--report-links` was declined as a design and its output adopted.** M27
+  had already made a broken prose link a hard error, so "declare them out of
+  scope" would ship trees that fail the tool's own gate — and a *report* leaves
+  the repair to the same agent whose blind spot produced the problem.
+- **A preview adopts plan *construction* failures and only reports plan
+  *consequences*.** That single sentence resolves M26's own follow-up item 2
+  without bending the no-record-on-refusal rule.
+
+**Evidence quality.** 246 test ids added, **0** removed against the pre-M28
+commit, 11 test lines deleted — all inside one deliberately re-pointed lock,
+named and justified as a strengthening rather than reported as "no test
+changes". The suite is **1333 passed / 0 failed**. Nine dogfood flows ran
+unattended on throwaway copies, the live tree never written to, with the
+"before" column measured rather than quoted. Plan A reproduced the setup census
+exactly (16 references, 8 + 8, from 7 referrers). A there-and-back move leaves
+the tree byte-identical, `INDEX.md` included. The cost is +80 ms on a move and
++113 ms on a solo archive over a 73-document tree.
+
+**Handed on.** Seven follow-ups are recorded in the milestone doc — the two
+largest being `docs migrate --apply`'s missing reference repair and extending
+leg 1 to a `docs mv` into the archive subtree. **M28a — Structured
+archive-date witness** and **M29 — PyPI publish 2.0.0** are ready to prepare
+next.

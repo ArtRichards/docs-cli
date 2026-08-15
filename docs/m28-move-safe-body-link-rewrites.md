@@ -30,8 +30,23 @@ Related:
   move whose *consequences* are provably wrong. M27 supplies the validated
   scanner and the destination spans; M26 supplies the operation plan; M28
   supplies mutation, the pre-move plan for `mv`, and the strand-check.
-- Progress: **Phases 1–4 COMPLETE (2026-08-15) — Step 1 of the milestone is
-  done; Phase 5 — Update Base Interfaces is next.** The whole machine-facing contract is frozen in
+- Progress: **ALL TEN PHASES COMPLETE (2026-08-15) — M28 is
+  implementation-complete.** Step 1 (Phases 1–4) landed on `m28/phases-1-4`
+  and Step 2 (Phases 5–10) on `m28/phases-5-10`. Phase 5 landed the pure
+  planner seam as three insertions into `cli.py` with no verb wired; Phase 6
+  inverted `_cmd_mv` to plan-before-move, added `docs archive`'s steps 5b /
+  8b / 8c / 8d, threaded each moving member's planned text into `_archive_one`
+  so the contract stays at one write per document, and **deleted**
+  `_rewrite_referring_edges`; Phase 7 reconciled every parallel surface;
+  Phase 8 proved the gate at **1333 passed** with **0** test ids removed
+  against the pre-M28 commit; Phase 9 dogfooded nine flows on throwaway
+  copies — E1's 42 findings, E2's 13 and E3's 6 all went to **0**, plan A
+  completed with its leg-2 report naming exactly the 16 references the setup
+  census measured, plans B and C refused with zero bytes, and a there-and-back
+  move left the tree byte-identical; Phase 10 ran `/simplify` (net −18 lines,
+  four collapses) and closed `architecture.md`, `test-strategy.md`, `plan.md`
+  and `status.md`. The full record is in the implementation log. What follows
+  is the setup and Phase-1 record, unchanged. The whole machine-facing contract is frozen in
   *Decisions (Phase 1 — BINDING)* below — the rewrite formula and its BINDING
   step order, the emitted spelling and both encode sets, the no-op rule, the
   never-creates-an-escape proof, the write pipeline, the pre-flight, the
@@ -586,34 +601,34 @@ coverage* below.
       its message, the atomicity boundary, and the Phase-5 signatures frozen in
       Phase 1 against the resolved Q1–Q7. *(Done — see* Decisions (Phase 1 —
       BINDING) *below.)*
-- [ ] A pure, stdlib-only rewrite planner over `(old referrer rel, new referrer
+- [x] A pure, stdlib-only rewrite planner over `(old referrer rel, new referrer
       rel, move map, BodyLink)` with no filesystem access of its own.
-- [ ] A minimal destination-token editor that preserves every unrelated byte,
+- [x] A minimal destination-token editor that preserves every unrelated byte,
       applied right-to-left, one `atomic_write` per document.
-- [ ] `docs mv` and `docs archive` integration for single and batch moves,
+- [x] `docs mv` and `docs archive` integration for single and batch moves,
       with `mv`'s plan built before the move and every handled failure refusing
       with zero mutation.
-- [ ] **The strand-check's refusal leg** (D6 leg 1) — the `child-of` predicate,
+- [x] **The strand-check's refusal leg** (D6 leg 1) — the `child-of` predicate,
       running in the write path **and** the preview, naming both ends, with
       zero false positives on this tree's legitimate closeouts.
-- [ ] **The strand-check's reporting leg** (D6 leg 2) — every other
+- [x] **The strand-check's reporting leg** (D6 leg 2) — every other
       still-active inbound reference, `Related:` and body link alike, named
       with both ends in the preview, in the apply output, and in the record's
       `strands` array, refusing nothing. This is the half that answers issue #1
       finding 1's actual complaint and is not optional.
-- [ ] `docs mv --dry-run` / `docs mv --json` and the `archive --json` rewrite
+- [x] `docs mv --dry-run` / `docs mv --json` and the `archive --json` rewrite
       section, one schema shared by preview and apply (Q3).
-- [ ] Archived-referrer rewriting implemented under the D5 policy — destination
+- [x] Archived-referrer rewriting implemented under the D5 policy — destination
       tokens only — with `convention.md`'s M18 exception widened and
       M27 — D6's "last one this convention grants" sentence reconciled.
-- [ ] Regression coverage for E1–E8 plus failure-injection, nested-path,
+- [x] Regression coverage for E1–E8 plus failure-injection, nested-path,
       fragment/title/angle-form, non-`local`, idempotence, and no-op locks, and
       proof that M12 referring-edge, M18 archive-edge, and M26 plan behaviour
       are unchanged.
-- [ ] Surface parity across `--help`, `cli.md`, `convention.md`, the bundled
+- [x] Surface parity across `--help`, `cli.md`, `convention.md`, the bundled
       skill (byte-identical mirrors), and the `UNRELEASED` CHANGELOG, plus the
       v2.0 upgrade note.
-- [ ] End-to-end dogfood on a throwaway copy proving zero dangling supported
+- [x] End-to-end dogfood on a throwaway copy proving zero dangling supported
       links after a rename, a single archive, and a real milestone closeout —
       and proving the second run of the same move changes nothing.
 
@@ -797,12 +812,12 @@ coverage* below.
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
-- [ ] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate / Accept / Dogfood
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 5 — Update Base Interfaces
+- [x] Phase 6 — Implement Offline/Core Path
+- [x] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 8 — Run Tests (GREEN)
+- [x] Phase 9 — Integrate / Accept / Dogfood
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 

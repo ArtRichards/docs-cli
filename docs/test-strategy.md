@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 Related:
 - pairs-with: architecture.md
@@ -59,6 +59,28 @@ Three sources of test docs, in increasing realism:
      backslash-escapes, balanced parens, reference definitions — lives in
      inline strings against the pure scanner instead, because those cases
      assert on parse output rather than on a tree walk.
+   - `movelink-*/` — the M28 family, **one semantic per tree**, for
+     move-safe body-link rewriting: `-incoming` (class 1 — one target, two
+     spellings, two depths, plus a prose mention and a code span that must
+     survive byte-identical), `-moved-referrer` (class 2, deepening and
+     flattening in one move), `-both` (both classes in one archive, plus the
+     co-moving no-op), `-archived-referrer` (the D5 shape — an archived
+     referrer, a non-moving edge, a non-moving destination and a bare prose
+     mention, so the byte-identity boundary is pinned with it), `-nested`
+     (the path math, three spellings including `../../sub/../root.md`),
+     `-strand` (D6 leg 1 — a live child outside the plan, alongside a
+     legitimate closeout that must **not** trip it), and `-closeout` (the
+     `archive-pair` / `archive-trio` shape **reproduced** with real body
+     links, so no committed tree had to be edited). Structure only, never
+     dates — and the **line and column numbers are contract**, asserted
+     verbatim by the CLI locks. The **exotic grammar** — angle destinations,
+     titles, percent- and backslash-escapes, fragments, directory
+     destinations, reference definitions, colons and non-ASCII filenames —
+     lives in inline strings against the pure planner, and the mutation-shaped
+     cases that write and then byte-compare use inline `tmp_path` builders:
+     the M25 rule, plus one M28-specific reason, which is that no committed
+     fixture filename may carry a space or a parenthesis (`tests/` ships in
+     every sdist).
    - `reciprocal-*/` — the M25 family, **one semantic per tree**, for the
      `missing-inverse` rule: `-clean` (all three pairs complete),
      `-missing` (the one-sided edge), `-freeform` (the supersedes trap),
@@ -86,6 +108,8 @@ Each must have at least one test before merging:
 - Atomic write: simulated failure mid-write leaves original file untouched. (Tested with mock that raises after tmp write but before rename.)
 - Archive planner: a `--cascade-only` scope selecting nothing on a **write** refuses with zero mutation — the primary is not archived either, and the two causes ("none of the N matched" vs "no candidates at all") get different messages.
 - Archive apply: a mid-execution `OSError` produces an exact partial-state admission naming what moved and what did not — never a silent partial write that exits 0.
+- Coordinated move: a rename and a scoped archive each leave `docs check` **clean**, with the diff touching only destination tokens and the metadata the move already owned — the tool must never produce a tree that fails its own gate.
+- Strand-check leg 1: a plan that would archive a document a still-active document declares itself `child-of` refuses at exit 2 with **zero bytes written** and both ends named, while a legitimate milestone closeout **completes** — the over-fire lock is as required as the refusal, because a check that fires on correct trees is one operators route around.
 
 ## Coverage targets
 

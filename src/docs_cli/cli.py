@@ -3250,14 +3250,12 @@ def preflight_move_plan(plan: MovePlan) -> None:
                     published=(),
                 )
         spans = sorted((lr.link.start, lr.link.end) for lr in rewrite.links)
-        for (_start, end), (next_start, _next_end) in zip(spans, spans[1:], strict=False):
-            if next_start < end:
-                raise CoordinatedWriteError(
-                    f"{rewrite.rel}: two planned destination spans overlap; "
-                    "refusing before any write",
-                    rolled_back=True,
-                    published=(),
-                )
+        if any(later[0] < earlier[1] for earlier, later in zip(spans, spans[1:], strict=False)):
+            raise CoordinatedWriteError(
+                f"{rewrite.rel}: two planned destination spans overlap; refusing before any write",
+                rolled_back=True,
+                published=(),
+            )
 
 
 def apply_move_plan(plan: MovePlan) -> None:
@@ -6479,7 +6477,8 @@ def archive_plan_to_json(
     Returns:
         A JSON-serialisable record dict.
     """
-    record: dict[str, object] = {
+    rewrite_section = {} if move_plan is None else move_plan_to_json(move_plan)
+    return {
         "primary": {
             "source": plan.source,
             "path": plan.primary.rel,
@@ -6498,13 +6497,11 @@ def archive_plan_to_json(
             }
             for candidate in plan.candidates
         ],
+        **rewrite_section,
+        "dry_run": dry_run,
+        "applied": applied,
+        "index_refreshed": index_refreshed,
     }
-    if move_plan is not None:
-        record.update(move_plan_to_json(move_plan))
-    record["dry_run"] = dry_run
-    record["applied"] = applied
-    record["index_refreshed"] = index_refreshed
-    return record
 
 
 # M26 (D6): the human prose for each INELIGIBILITY token. `not-selected` is
@@ -6656,7 +6653,7 @@ def _print_move_lines(plan: MovePlan, *, verb: str, dry_run: bool) -> None:
             file=sys.stderr,
         )
 
-    if not dry_run:
+    if not (dry_run and plan.orphans):
         return
     for orphan in plan.orphans:
         print(
@@ -6664,11 +6661,10 @@ def _print_move_lines(plan: MovePlan, *, verb: str, dry_run: bool) -> None:
             f"'child-of: {orphan.target}'; a write would refuse",
             file=sys.stderr,
         )
-    if plan.orphans:
-        print(
-            f"docs: {verb}: {len(plan.orphans)} still-active child(ren) would be stranded",
-            file=sys.stderr,
-        )
+    print(
+        f"docs: {verb}: {len(plan.orphans)} still-active child(ren) would be stranded",
+        file=sys.stderr,
+    )
 
 
 def _cmd_archive(args: argparse.Namespace) -> int:
@@ -6945,6 +6941,14 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     # unexpected `OSError`, admitted exactly and never rolled back (D4). Each
     # moving member's planned text is threaded in, so its body-link splices,
     # its `Related:` rewrites and its archive metadata edits land in ONE write.
+    #
+    # Then M12 / M18 / M28: repoint every referring `Related:` bullet AND every
+    # stale body-link destination — active tree and the narrow archive-subtree
+    # exception alike — in one write per document, in the same batch as the
+    # move. Both halves fail the same way (M14 — A4: exit 2, and **no**
+    # `--json` record, because the operation did not complete), which is why
+    # they share one handler; the `_refresh_index` below is the one post-write
+    # failure that still emits a record, which is why IT is separate.
     try:
         apply_archive_plan(
             plan,
@@ -6954,18 +6958,8 @@ def _cmd_archive(args: argparse.Namespace) -> int:
                 if rewrite.rel in move_plan.moves
             },
         )
-    except CoordinatedWriteError as exc:
-        print(f"docs: archive: {exc}", file=sys.stderr)
-        return 2
-
-    # M12 / M18 / M28: repoint every referring `Related:` bullet AND every
-    # stale body-link destination — active tree and the narrow archive-subtree
-    # exception alike — in one write per document, in the same batch as the
-    # move.
-    try:
         apply_move_plan(move_plan)
     except CoordinatedWriteError as exc:
-        # M14 (A4). No `--json` record: the operation did not complete.
         print(f"docs: archive: {exc}", file=sys.stderr)
         return 2
 
@@ -6990,19 +6984,25 @@ def _cmd_archive(args: argparse.Namespace) -> int:
 
 def _mv_partial_state(
     plan: MovePlan,
-    detail: str,
+    exc: OSError,
     *,
     old_rel: str,
     new_rel: str,
-    replaced: bool,
+    member_write_needed: bool,
     moved_written: bool,
-    published: tuple[str, ...],
+    replaced: bool,
 ) -> str:
     """Render `docs mv`'s residual partial-state admission (M28 — R9 / J).
 
     M26's `_archive_partial_state` shape, extended by a `Rewritten:` clause,
     so the two verbs' admissions read the same way and each clause is
     checkable against the disk line by line.
+
+    `exc` carries both halves of the detail line. `apply_move_plan` raises a
+    `CoordinatedWriteError` that already names the document it failed on and
+    lists what it had published; every other `OSError` reaching here — the
+    moved document's own write, the parent `mkdir`, the `replace` — is about
+    the moved document and has published nothing.
 
     The moved document is reported under `Moved:` **iff the `replace`
     succeeded** and under `Rewritten:` otherwise — writing its rebased text to
@@ -7013,6 +7013,11 @@ def _mv_partial_state(
     Each clause renders the literal word `none` when its list is empty, never
     a blank (the M25 `_rollback_relate` lesson).
     """
+    if isinstance(exc, CoordinatedWriteError):
+        detail, published = str(exc), exc.published
+    else:
+        detail, published = f"write failed for {old_rel}: {exc}", ()
+
     rewritten = [old_rel] if moved_written and not replaced else []
     rewritten.extend(published)
 
@@ -7023,7 +7028,7 @@ def _mv_partial_state(
         and rewrite.new_text != rewrite.original
         and rewrite.rel not in published
     ]
-    if not moved_written and _mv_member_changes(plan, old_rel):
+    if member_write_needed and not moved_written:
         not_written.insert(0, old_rel)
 
     return (
@@ -7031,20 +7036,6 @@ def _mv_partial_state(
         f"Moved: {f'{old_rel} -> {new_rel}' if replaced else 'none'}. "
         f"Rewritten: {', '.join(rewritten) or 'none'}. "
         f"Not written: {', '.join(not_written) or 'none'}. Repair manually."
-    )
-
-
-def _mv_member_changes(plan: MovePlan, old_rel: str) -> bool:
-    """True iff the moved document's own bytes change under `plan`.
-
-    False both when the plan has no `DocRewrite` for it — an `[exclude]` /
-    `.docsignore` pattern hid it from the walk, so R11 says it is neither
-    examined nor rewritten — and when it is present with `new_text ==
-    original`, which is the ordinary case for a rename of a document with no
-    body links and no self-edges.
-    """
-    return any(
-        rewrite.rel == old_rel and rewrite.new_text != rewrite.original for rewrite in plan.rewrites
     )
 
 
@@ -7132,48 +7123,39 @@ def _cmd_mv(args: argparse.Namespace) -> int:
 
     # 7 — execution: the moved document's planned text to its OLD path, then
     # the rename, then every other planned document, then one reindex.
+    #
+    # `moved` is None only when `[exclude]` / `.docsignore` hid the moved
+    # document from the walk — R11: an excluded document is neither rewritten
+    # nor examined — in which case the file is simply renamed, exactly as 1.x
+    # did. It is otherwise always present, even when nothing about it changed
+    # (item (L)).
+    moved = next((rewrite for rewrite in plan.rewrites if rewrite.rel == old_rel), None)
+    member_text = None if moved is None or moved.new_text == moved.original else moved.new_text
     moved_written = False
     replaced = False
     try:
-        if _mv_member_changes(plan, old_rel):
-            moved = next(rewrite for rewrite in plan.rewrites if rewrite.rel == old_rel)
-            atomic_write(old_path, moved.new_text)
+        if member_text is not None:
+            atomic_write(old_path, member_text)
             moved_written = True
         new_path.parent.mkdir(parents=True, exist_ok=True)
         old_path.replace(new_path)
         replaced = True
         apply_move_plan(plan)
-    except CoordinatedWriteError as exc:
-        # `apply_move_plan` already names the document and the error.
-        print(
-            "docs: mv: "
-            + _mv_partial_state(
-                plan,
-                str(exc),
-                old_rel=old_rel,
-                new_rel=new_rel,
-                replaced=replaced,
-                moved_written=moved_written,
-                published=exc.published,
-            ),
-            file=sys.stderr,
-        )
-        return 2
     except OSError as exc:
-        # M14 (A4), upgraded by R9: the moved document's own write, the parent
-        # `mkdir`, or the `replace`. Mapped to a clean exit 2 with the exact
-        # partial state rather than escaping as a traceback. Must come AFTER
-        # the `CoordinatedWriteError` clause, which is a subclass.
+        # M14 (A4), upgraded by R9: `apply_move_plan`'s `CoordinatedWriteError`
+        # (an `OSError` subclass) and every bare `OSError` from the member
+        # write, the `mkdir` or the `replace` alike. Mapped to a clean exit 2
+        # carrying the exact partial state rather than escaping as a traceback.
         print(
             "docs: mv: "
             + _mv_partial_state(
                 plan,
-                f"write failed for {old_rel}: {exc}",
+                exc,
                 old_rel=old_rel,
                 new_rel=new_rel,
-                replaced=replaced,
+                member_write_needed=member_text is not None,
                 moved_written=moved_written,
-                published=(),
+                replaced=replaced,
             ),
             file=sys.stderr,
         )
