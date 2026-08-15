@@ -4000,3 +4000,50 @@ def test_archive_json_top_level_key_set_does_not_widen(docs_script, fixtures_dir
     record = json.loads(proc.stdout)
     assert list(record) == _JSON_TOP_LEVEL_KEYS, list(record)
     assert record["date"] == _M28A_DATE
+
+
+def test_archive_leaves_an_archived_referrers_witness_byte_identical(docs_script, tmp_path):
+    """D9 / Q6 for the ARCHIVE half of M18's move-driven exception, as widened
+    by M28 — D5.
+
+    `convention.md` promises that only the moving destination and the moving
+    bullet change in an already-archived referrer: `Lifecycle:`, `Archived:`,
+    `Archived-reason:`, `Role:`, `Project:`, `Updated:`, the H1 and all other
+    prose stay byte-identical, and no `Revision:` bullet is added. `docs mv`'s
+    half of that promise has its own lock; this is the `docs archive` half, and
+    without it the widened exception is only half tested.
+
+    GREEN at baseline (the witness it preserves is hand-authored, since no verb
+    writes one until Phase 6) and genuine afterwards.
+    """
+    root = tmp_path / "referrer"
+    (root / "archive" / "2026-01-01").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "referrer"\n')
+    (root / "target.md").write_text(
+        "# Target\n\nLifecycle: active\nRole: notes\nProject: referrer\n"
+        "Updated: 2026-05-20\n\n## Body\n\nThe document about to be archived.\n"
+    )
+    referrer = root / "archive" / "2026-01-01" / "old.md"
+    referrer.write_text(
+        "# Old\n\nLifecycle: archived\nRole: plan\nProject: referrer\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\nArchived-reason: completed\n\n"
+        "Related:\n- references: target.md\n\n"
+        "## Body\n\nSee [the target](../../target.md) for the current shape.\n"
+    )
+    before = referrer.read_text()
+
+    proc = _run(docs_script, "archive", str(root / "target.md"), "--date", _M28A_DATE)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    after = referrer.read_text()
+    expected = before.replace("- references: target.md", f"- references: {_M28A_DATED}/target.md")
+    expected = expected.replace("(../../target.md)", f"(../{_M28A_DATE}/target.md)")
+    assert after == expected, (
+        "only the moving bullet and the moving destination may change in an "
+        "already-archived referrer"
+    )
+    assert "Archived: 2026-01-01" in after, "the witness is byte-identical"
+    assert "Archived-reason: completed" in after
+    assert "Updated: 2026-01-01" in after, "no Updated: bump for another document's move"
+    assert "Revision:" not in after, "and no audit bullet — the widened exception adds none"
+    assert _run(docs_script, "check", str(root)).returncode == 0

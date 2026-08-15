@@ -228,3 +228,23 @@ def test_new_empty_final_segment_slug_rejected(docs_script, fixtures_dir, tmp_pa
     assert not (root / "foo" / ".md").exists()
     # Defensive: no stray dotfile anywhere under the (possibly created) foo/ dir.
     assert not list(root.glob("foo/.md"))
+
+
+# --- M28a (A) — `docs new` never writes the archive-date witness -----------
+
+
+def test_new_never_writes_the_archive_date_witness(docs_script, fixtures_dir, tmp_path):
+    """Item (A): only `docs archive` writes `Archived:`. `docs new` creates a
+    `Lifecycle: draft` document that has never been archived, so a witness
+    there would be a date the tool never observed — the falsification M28a
+    exists to prevent.
+
+    GREEN at baseline and genuine: `cli.md` claims five verbs never write it,
+    and this is one of the two that nothing else in the suite covers.
+    """
+    root = _minimal_tree(fixtures_dir, tmp_path)
+    proc = _run(docs_script, "new", "spec", "fresh", "--root", str(root))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    created = root / "fresh.md"
+    assert created.is_file(), "the document must actually have been created"
+    assert "\nArchived:" not in created.read_text()

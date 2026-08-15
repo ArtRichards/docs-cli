@@ -35,10 +35,10 @@ Related:
   Interfaces is next.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with five amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
-  an operator decision), and Phase 2 authored 131 test ids against it. With Phase 3's six `archivedate-*` fixture trees the
-  suite stands at **1484 collected, 58 RED and 85 GREEN** of the 143 new ids,
-  in exactly two exception classes, with **no** pre-existing id removed or
-  failing and `cli.py` untouched. M28 is implementation-complete
+  an operator decision), and Phase 2 authored 131 test ids against it. With Phase 3's six `archivedate-*` fixture trees and the
+  Step-1 audit's five extra locks the suite stands at **1489 collected, 60 RED
+  and 88 GREEN** of the 148 new ids, in exactly two exception classes, with
+  **no** pre-existing id removed or failing and `cli.py` untouched. M28 is implementation-complete
   and merged to `main` (`b1ec74b`), so M28a is the last implementation
   milestone in the v2.0 train before the M29 publish. Setup measured this
   repository read-only and reproduced the reported drift on throwaway copies,
@@ -647,8 +647,11 @@ coverage* below.
 - [ ] Vocabulary integration: the label in `_BUILTIN_METADATA_FIELDS`, out of
       `parse()`'s `known` set, out of migrate's supersession set, and unaffected
       by `[vocabulary] add_fields`.
-- [ ] `docs migrate` behaviour pinned by test: never writes the witness, never
-      promotes a foreign one.
+- [x] `docs migrate` behaviour pinned by test: never writes the witness, never
+      promotes a foreign one. (Complete at Phase 2: D7 is satisfied by
+      construction, so the deliverable IS the pair of locks, and both are GREEN
+      — including the one that stops `Archived` being added to migrate's
+      supersession set in the same change that adds it to the built-in set.)
 - [x] Fixture trees for the corroborated, the drifted, the field-absent, the
       outside-the-archive, the undated-directory and the two-dated-directory
       (`docs mv` refusal) cases, with the registration tuple and both

@@ -1285,6 +1285,46 @@ def test_mv_neighbour_4_two_spellings_of_one_date_completes(docs_script, tmp_pat
     assert check.returncode == 0, check.stdout
 
 
+def test_mv_refusal_names_the_raw_directory_segments(docs_script, tmp_path):
+    """Item (E): `<D1>` and `<D2>` are the RAW directory segments.
+
+    An implementation that re-rendered the parsed dates through
+    `config.date_format` would pass every other Leg-2 assertion here — they all
+    use zero-padded spellings that survive a round trip — and would then name
+    two directories the tree does not have. This also proves an unpadded
+    directory still participates in the predicate rather than being skipped.
+    """
+    root = tmp_path / "rawsegments"
+    (root / "archive" / "2026-1-1").mkdir(parents=True)
+    (root / "archive" / "2026-03-04").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "rawsegments"\n')
+    (root / "archive" / "2026-1-1" / "old.md").write_text(
+        "# Old\n\nLifecycle: archived\nRole: notes\nProject: rawsegments\n"
+        "Updated: 2026-01-01\nArchived: 2026-1-1\n\n## Body\n\nProse.\n"
+    )
+    (root / "archive" / "2026-03-04" / "other.md").write_text(
+        "# Other\n\nLifecycle: archived\nRole: notes\nProject: rawsegments\n"
+        "Updated: 2026-03-04\nArchived: 2026-03-04\n\n## Body\n\nProse.\n"
+    )
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-1-1/old.md",
+        "archive/2026-03-04/old.md",
+        cwd=root,
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert (
+        "docs: mv: archive/2026-1-1/old.md -> archive/2026-03-04/old.md "
+        "crosses dated archive directories (2026-1-1 to 2026-03-04); "
+        "refusing before any write"
+    ) in proc.stderr, proc.stderr
+    assert _M28A_ESCAPE in proc.stderr
+    assert _snapshot(root) == before
+
+
 def test_mv_of_an_archived_document_leaves_its_witness_byte_identical(
     docs_script, fixtures_dir, tmp_path
 ):

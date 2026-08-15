@@ -1735,6 +1735,24 @@ def test_archive_date_findings_unparseable_value_names_the_configured_format():
     assert findings[0].message == "Archived: malformed date '2026-03-04' (expected %d-%m-%Y)"
 
 
+def test_archive_date_findings_message_prints_the_raw_strings_from_disk():
+    """Item (E): `<recorded>` and `<segment>` are the RAW strings as written on
+    disk, not re-rendered through `config.date_format`.
+
+    An implementation that printed `dir_date.strftime(config.date_format)` and
+    the re-rendered recorded value would pass every other message assertion in
+    this file — every one of them uses zero-padded spellings that survive a
+    round trip — and would then tell an operator to look for a directory the
+    tree does not have.
+    """
+    findings = _archive_date_findings("archive/2026-1-1/x.md", {"Archived": "2026-3-4"})
+    assert [f.rule for f in findings] == ["archive-date-drift"], findings
+    assert findings[0].message == (
+        "Archived: 2026-3-4 but the file is in archive/2026-1-1/ "
+        "(move it back, or correct the recorded date)"
+    )
+
+
 def test_archive_date_findings_compares_parsed_dates_not_strings():
     """Q2 / E8: `archive/2026-1-1/` corroborates `Archived: 2026-01-01`.
 
