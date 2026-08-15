@@ -1,0 +1,6 @@
+[project]
+name = "movelink-closeout"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

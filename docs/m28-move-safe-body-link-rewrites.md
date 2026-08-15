@@ -30,8 +30,8 @@ Related:
   move whose *consequences* are provably wrong. M27 supplies the validated
   scanner and the destination spans; M26 supplies the operation plan; M28
   supplies mutation, the pre-move plan for `mv`, and the strand-check.
-- Progress: **Phases 1–2 COMPLETE (2026-08-15); Phase 3 — Create
-  Data/Fixtures is next.** The whole machine-facing contract is frozen in
+- Progress: **Phases 1–3 COMPLETE (2026-08-15); Phase 4 — Run Tests
+  (RED Baseline) is next.** The whole machine-facing contract is frozen in
   *Decisions (Phase 1 — BINDING)* below — the rewrite formula and its BINDING
   step order, the emitted spelling and both encode sets, the no-op rule, the
   never-creates-an-escape proof, the write pipeline, the pre-flight, the
@@ -45,8 +45,14 @@ Related:
   (153) plus appended CLI, check and skill locks (29) — leaving the suite at
   **1269 collected, 181 failed, 1088 passed**: every one of the 1087
   pre-existing ids still present and GREEN, zero collection errors, and zero
-  deleted or altered test lines. No product code changed in either phase.
-  What follows is the setup record, unchanged. M27 is
+  deleted or altered test lines. Phase 3 then authored the **seven
+  `movelink-*` fixture trees** — every one `docs check`-clean as committed,
+  every existing fixture byte-identical — sweeping the two directory-derived
+  parametrizations from 29 to 36 and from 33 to 40 and taking the suite to
+  **1283 collected, 180 failed, 1103 passed**. A read-only prototype census
+  under the Phase-1 contract confirmed each tree yields exactly its intended
+  plan, line numbers included. No product code changed in any of the three
+  phases. What follows is the setup record, unchanged. M27 is
   implementation-complete
   and merged to `main` (`58955ef`), so M28 is the next implementation
   milestone in the v2.0 train. Setup measured this repository read-only and on
@@ -768,7 +774,7 @@ coverage* below.
 
 - [x] Phase 1 — Define Contract
 - [x] Phase 2 — Write Tests (RED)
-- [ ] Phase 3 — Create Data/Fixtures
+- [x] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path

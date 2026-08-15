@@ -3188,8 +3188,9 @@ def test_legitimate_closeout_completes_despite_still_active_referrers(
 ):
     """The leg-1 over-fire lock at the CLI seam (A1). E7 measured the literal
     predicate refusing this repository's own standard closeout; the narrowed
-    predicate must let a scoped closeout through even though four still-active
-    references point into the archived set.
+    predicate must let a scoped closeout through even though two still-active
+    references — the roadmap's `parent-of` bullet and its body link — point
+    into the archived set.
     """
     root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
     proc = _run(
@@ -3240,8 +3241,8 @@ def test_strand_report_names_both_ends_on_stderr_in_preview_and_apply(
         assert line in preview.stderr, f"missing from the preview: {line}"
         assert line in applied.stderr, f"missing from the apply output: {line}"
 
-    strands = [ln for ln in preview.stderr.splitlines() if " strand " in ln or "strand " in ln]
-    assert [ln for ln in strands if ln.startswith("docs: archive: strand ")] == expected[:5]
+    observed = [ln for ln in preview.stderr.splitlines() if ln.startswith("docs: archive: strand ")]
+    assert observed == expected[:5], "the frozen order is walk order, bullets before body links"
 
 
 def test_archive_rewrite_section_is_identical_in_preview_and_apply(

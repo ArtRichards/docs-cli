@@ -1,0 +1,6 @@
+[project]
+name = "movelink-archived-referrer"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

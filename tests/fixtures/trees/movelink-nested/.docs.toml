@@ -1,0 +1,6 @@
+[project]
+name = "movelink-nested"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"

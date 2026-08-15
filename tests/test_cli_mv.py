@@ -561,6 +561,11 @@ def test_mv_archived_referrer_gains_no_revision_bullet(docs_script, fixtures_dir
     """The A2/Q2 lock, stated separately because it reverses the registered
     stub's own recommendation: M18's shape, not M25 — D4's. No `Revision:`
     group, and `Updated:` unmoved.
+
+    The first assertion is what keeps this honest: without it the test is
+    GREEN at baseline for the wrong reason — today no `Revision:` appears
+    because no body-link write happens at all. It must observe the M28 write
+    AND the absence of audit metadata in the same document.
     """
     root = _movelink_tree(fixtures_dir, tmp_path, "movelink-archived-referrer")
     archived = root / "archive" / "2026-01-01" / "old-log.md"
@@ -569,6 +574,9 @@ def test_mv_archived_referrer_gains_no_revision_bullet(docs_script, fixtures_dir
     assert proc.returncode == 0, proc.stderr
 
     after = archived.read_text()
+    assert "[the plan](../../renamed-plan.md)" in after, (
+        "the move-driven destination rewrite must have happened at all"
+    )
     assert "Revision:" not in after
     assert "Updated: 2026-01-01" in after
     assert "Lifecycle: archived" in after
@@ -645,11 +653,21 @@ def test_mv_dry_run_on_a_malformed_tree_exits_2_and_changes_nothing(
 def test_mv_second_equivalent_move_changes_nothing(docs_script, fixtures_dir, tmp_path):
     """Idempotence: moving back and forth returns the tree to its exact bytes,
     because a destination whose meaning is unchanged keeps its spelling.
+
+    `INDEX.md` is excluded from the comparison and asserted separately: the
+    fixture ships without one, and the FIRST move generates it. Everything
+    else must be byte-identical, `Updated:` values included — a move has never
+    bumped them and M28 does not start.
     """
     root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
-    before = _snapshot(root)
+    before = {rel: raw for rel, raw in _snapshot(root).items() if rel != "INDEX.md"}
 
     assert _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root).returncode == 0
+    once = (root / "note.md").read_text()
+    assert "[the plan](milestone-plan.md)" in once, "the first move must actually rewrite"
+
     assert _run(docs_script, "mv", "milestone-plan.md", "plan.md", cwd=root).returncode == 0
 
-    assert _snapshot(root) == before
+    after = _snapshot(root)
+    assert {rel: raw for rel, raw in after.items() if rel != "INDEX.md"} == before
+    assert "INDEX.md" in after

@@ -22,8 +22,8 @@ table and the milestone checklist synchronized.
 - Project: docs
 - Milestone: M28 — Move-safe Markdown body-link rewrites
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
-- Progress: **Phases 1–2 are COMPLETE (2026-08-15); Phase 3 — Create
-  Data/Fixtures is next.** The whole machine-facing contract is frozen in
+- Progress: **Phases 1–3 are COMPLETE (2026-08-15); Phase 4 — Run Tests
+  (RED Baseline) is next.** The whole machine-facing contract is frozen in
   the milestone's *Decisions (Phase 1 — BINDING)* — items (A)–(M), three
   amendments to setup-frozen material, and eleven Step-1 resolutions (R1–R11)
   — with the author-facing halves in `cli.md` and `convention.md` and zero
@@ -52,7 +52,7 @@ table and the milestone checklist synchronized.
 |---|---|---|---|
 | 1. Define Contract | **Complete** | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(M), three amendments to setup-frozen material, eleven Step-1 resolutions (R1–R11). Author-facing halves in `cli.md` (*Move-safe body-link rewrites (M28 — D1–D7)*, the rewritten `docs mv` section, the amended archive check order, the widened `archive --json` schema, three exit tables) and `convention.md` (M18's widened exception, M27 — D6's reconciled sentence, the author-facing move guarantee). Zero product-code change. Original objective: Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | **Complete** | 2026-08-15 | 182 new ids: `tests/test_move_links.py` (153, the pure seam) plus 12 `mv`, 14 `archive`, 1 `check` and 2 skill locks. Suite 1269 collected / 181 failed / 1088 passed; the 1087 pre-existing ids all present and GREEN; zero collection errors; zero deleted test lines. Original objective: Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
-| 3. Create Data/Fixtures | Pending | — | `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
+| 3. Create Data/Fixtures | **Complete** | 2026-08-15 | Seven `movelink-*` trees authored — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`, `-closeout` — each `docs check`-clean as committed; every existing fixture byte-identical; the two directory-derived sweeps 29→36 and 33→40; suite 1283 / 180 failed / 1103 passed. A read-only prototype census confirmed every intended plan, line numbers included. Original objective: `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
@@ -459,6 +459,106 @@ including the leg-1 over-fire lock proving a legitimate closeout completes.
   — degenerate at baseline (it pins a `posixpath` property the Phase-5
   implementation must not "fix"), a genuine lock afterwards.
 - `git diff --numstat -- tests/` — 777 insertions, **0 deletions**.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+
+## Phase 3 — Create Data/Fixtures — 2026-08-15
+
+### Objective
+
+Author the committed trees the CLI locks need — one semantic each, per
+`test-strategy.md`'s fixture policy — given E8: **not one** existing `mv` or
+`archive` fixture carries a body link, and the whole corpus carries zero
+angle, percent-escaped or backslash-escaped destinations and exactly one
+fragment. Every rewrite-relevant tree form is authored deliberately.
+
+### Actions taken
+
+Seven new trees under `tests/fixtures/trees/`, each with its own
+`.docs.toml`, structure-only and static-dated:
+
+| Tree | Shape | Isolates |
+|---|---|---|
+| `movelink-incoming` | `plan.md`, `note.md`, `sub/deep.md` | class 1 — one target, two spellings, two depths; plus a prose mention and a code span that must survive |
+| `movelink-moved-referrer` | `guide.md` linking `target.md` and `sub/ref.md` | class 2, both directions in one move |
+| `movelink-both` | `a.md` ↔ `b.md` co-moving, `c.md` staying | E2 — both classes in one archive, and the co-moving no-op |
+| `movelink-archived-referrer` | `plan.md`, `keep.md`, `archive/2026-01-01/old-log.md` | E5 + the byte-identity boundary (a non-moving edge, a non-moving destination, a bare prose mention) |
+| `movelink-nested` | `sub/deep/x.md` linking up, down, and up-then-down | E4 path math, three spellings |
+| `movelink-strand` | `plan.md`, `live-child.md`, `milestone.md`, `milestone-impl.md` | D6 leg 1 — a live child outside the plan, and a legitimate closeout that must NOT trip it |
+| `movelink-closeout` | `feature.md` + `feature-impl.md` + `status.md` + `plan.md` | E3 + the leg-1 over-fire lock at tree scale |
+
+- **`movelink-closeout` reproduces the `archive-pair` / `archive-trio`
+  SHAPE** rather than those trees gaining body links — Phase-1 amendment 3.
+  `git status` shows exactly **seven new directories** and no modified
+  fixture.
+- **No committed fixture filename carries a space or a parenthesis.** The
+  `%20` / `%28` re-encoding cases are renderer calls and `tmp_path` builders
+  in `tests/test_move_links.py`; `tests/` ships in every sdist.
+- **Line numbers are contract**, and they are the ones Phase 2 asserts
+  verbatim: `note.md:13`, `sub/deep.md:10`, `feature.md:16`, `plan.md:13`,
+  `status.md:13`.
+- No `precedes` / `follows`, `depends-on` / `required-by` or `blocks` /
+  `blocked-by` verb appears anywhere in the seven, so all of them pass the
+  legacy no-new-findings sweep; `child-of`, `parent-of`, `pairs-with` and
+  `references` are free-form and carry no reciprocal obligation.
+
+### The prototype census (read-only)
+
+A throwaway prototype of the Phase-1 contract — the formula, the renderer
+and both strand legs, over the shipped M27 scanner and never a
+reimplementation of it — was run read-only over all seven trees. It
+reproduced **every** expectation Phase 2 asserts, including the ones that
+were hand-computed:
+
+- `movelink-closeout` under `--cascade-only 'feature-*'` yields exactly
+  `feature.md:16 plan.md -> ../../plan.md`, `plan.md:13`, and two on
+  `status.md:13` — **4 destinations in 3 documents** — with the co-moving
+  pair's links to each other left untouched, and exactly the **five** leg-2
+  strands in the frozen order (walk order; bullets before body links).
+- `movelink-strand` archiving the roadmap yields **two** orphans in walk
+  order (`live-child.md`, `milestone.md`) and one leg-2 strand; the scoped
+  closeout of the milestone pair yields **zero** orphans — the over-fire lock
+  at tree scale.
+- `movelink-archived-referrer` yields `../../renamed-plan.md` under `mv` and
+  `../2026-08-15/plan.md` under `archive` — the archived-referrer rebase, from
+  one dated directory to another.
+
+### Decisions / issues
+
+- **Two Phase-2 tests were strengthened once the fixtures made their real
+  state observable**, which is exactly what a fixture phase is for:
+  - `test_mv_archived_referrer_gains_no_revision_bullet` was GREEN at
+    baseline **for the wrong reason** — no `Revision:` appears today because
+    no body-link write happens at all. It now asserts the destination rewrite
+    first, so it observes the M28 write and the absence of audit metadata in
+    the same document.
+  - `test_mv_second_equivalent_move_changes_nothing` was RED for the wrong
+    reason: the fixture ships without an `INDEX.md` and the first move
+    generates one, so a whole-tree byte compare could never pass. `INDEX.md`
+    is now excluded from the comparison and asserted separately, and the test
+    additionally proves the FIRST move actually rewrote something.
+- `sub/ref.md` initially carried a stray blank line inside its metadata
+  block, which ends the block early and surfaces as `missing-field: Updated`.
+  Caught by the per-tree `docs check`, which is why that gate runs before the
+  suite.
+
+### Verification
+
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**.
+- `.venv/bin/docs check tests/fixtures/trees/movelink-<each>` — exit 0 for all
+  **seven**.
+- `test_check_tree_legacy_fixtures_gain_no_new_findings` — **36 passed**
+  (29 + 7).
+- `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings` — **40
+  passed** (33 + 7).
+- `.venv/bin/python -m pytest tests/ -q --co` — **1283 collected**, 0
+  collection errors.
+- `.venv/bin/python -m pytest tests/ -q` — **180 failed, 1103 passed**.
+- `git diff --numstat 58955ef -- tests/` — **0** deleted lines in every test
+  file; the only deletions anywhere are the frozen INDEX snapshot's re-synced
+  `Updated:` values from Phase 1.
+- `git status` — exactly seven new fixture directories.
 - `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
   `.venv/bin/mypy src/ tests/` — clean.
 - `.venv/bin/docs check --root docs` — no violations found (exit 0).
