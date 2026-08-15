@@ -796,9 +796,11 @@ runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
 **Next action:** **prepare M28a — Structured archive-date witness**, then
-**M29 — PyPI publish 2.0.0**. **M28 is implementation-complete — all ten TDD
-phases done (2026-08-15)**, Step 1 on `m28/phases-1-4` and Step 2 on
-`m28/phases-5-10`. **Phase 10** ran `/simplify` over the new planner and the
+**M29 — PyPI publish 2.0.0**. **M28 is complete and merged to `main`**
+(2026-08-15, merge `b1ec74b`) across all ten TDD phases — Step 1 on
+`m28/phases-1-4`, Step 2 on `m28/phases-5-10`, Step 3 on `m28/simplify` — and
+stays `Lifecycle: active` until M29 publishes the train. The merged suite is
+**1341 GREEN** with the gate clean tree-wide. **Phase 10** ran `/simplify` over the new planner and the
 two verbs (net **−18 lines**, four collapses, suite still 1333 GREEN) and
 closed the documentation: `architecture.md` gained a *Move-safe body-link
 rewrites (M28)* subsection, had its archive pipeline re-drawn through
