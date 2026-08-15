@@ -57,7 +57,7 @@ table and the milestone checklist synchronized.
 | 5. Update Base Interfaces | **Complete** | 2026-08-15 | `MOVE_STRAND_KINDS`, the four frozen records (`LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`) and the seven pure functions of item (L) landed as three pure INSERTIONS — 518 lines, zero existing lines touched, `_cmd_mv` / `_cmd_archive` byte-identical. `tests/test_move_links.py` 194/194; suite 1332 / **36 failed** / 1296 passed; the `AttributeError` class is at **0** and only `AssertionError` remains. Original objective: The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | **Complete** | 2026-08-15 | `_cmd_mv` inverted to plan-then-move with the R9 partial-state admission; `_cmd_archive` gained steps 5b / 8b / 8c / 8d and threads each member's planned text into `_archive_one`; `_print_move_lines` added and `preview only` lifted into the verb; `_rewrite_referring_edges` **deleted** (43 lines), superseded by `apply_move_plan`. Suite **5 failed, 1327 passed** — every remaining RED is a Phase-7 item (two `_JSON_TOP_LEVEL_KEYS` ids, one re-pointed fixture, two bundled-skill locks). Original objective: Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | **Complete** | 2026-08-15 | Both argparse descriptions; the two contract-mandated test expected-value updates (`_JSON_TOP_LEVEL_KEYS` +2 keys, and the primary-only record re-pointed at `_two_relation_tree` with a **new** leg-1 lock added on the tree it left); bundled `SKILL.md` + `references/use-cases.md`; `CHANGELOG.md` (three `Added`, four `Changed` incl. one BREAKING, and the three-part upgrade note naming the two re-spelled `docs mv` lines); `feedback-log.md`'s issue #1 resolution bullet. `cli.md` / `convention.md` verified rather than rewritten (Phase 1 landed them); both mirrors `cmp`-identical; `](../` still 0. Suite **1333 passed, 0 failed**. Original objective: argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
-| 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
+| 8. Run Tests (GREEN) | **Complete** | 2026-08-15 | **1333 collected, 1333 passed, 0 failed**; 0 collection errors, 0 xfail/xpass/error. Mechanically proven against `58955ef`: **0** ids removed, 246 added, and — because nothing fails — all **1087** pre-existing ids present and GREEN. `git diff --numstat 58955ef -- 'tests/*.py'` shows exactly **11** deleted lines, every one inside the re-pointed primary-only lock, both edits named and justified as strengthenings. Lint / format / types clean; `docs check --root docs` exit 0; both bundled mirrors `cmp`-identical; INDEX snapshot identical; `](../` 0/0; `pyproject.toml` unchanged. Original objective: Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, update the shipped use-case catalog, completion summaries, hand to M28a and M29. |
 
@@ -1300,6 +1300,70 @@ lines), the re-pointed id's body rewritten in place, and one new id added.
   `.venv/bin/mypy src/ tests/` — clean.
 - `.venv/bin/docs check --root docs` — no violations found (exit 0).
 - No `pyproject.toml` or version change (M25 — D6): the package stays `1.8.0`.
+
+## Phase 8 — Run Tests (GREEN) — 2026-08-15
+
+### The gate
+
+| Command | Result |
+|---|---|
+| `pytest tests/ -q --co` | **1333 collected**, 0 collection errors |
+| `pytest tests/ -q` | **1333 passed, 0 failed** |
+| `pytest tests/ -q -rxXE` | 0 XFAIL / 0 XPASS / 0 ERROR |
+| `ruff check .` | All checks passed |
+| `ruff format --check .` | 48 files already formatted |
+| `mypy src/ tests/` | no issues found in 49 source files |
+| `docs check --root docs` | no violations found (exit 0) |
+| `cmp docs/cli.md src/docs_cli/skill/references/cli.md` | identical |
+| `cmp docs/convention.md src/docs_cli/skill/references/convention.md` | identical |
+| `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` | no difference |
+| `grep -c '](\.\./' docs/cli.md docs/convention.md` | **0** and **0** (item (M)) |
+| `git diff --stat 58955ef -- pyproject.toml` | empty — no version bump (M25 — D6) |
+
+### Mechanical no-regression proof against `58955ef`
+
+Phase 4's method, repeated: a throwaway `git worktree` at the pre-M28 commit,
+ids collected with `pytest -q --co` on both sides, compared with `comm`.
+
+| Measure | Value |
+|---|---|
+| Pre-M28 ids | **1087** |
+| Current ids | **1333** |
+| `comm -23 old new` — ids **removed** | **0** |
+| `comm -13 old new` — ids added | **246** |
+| Pre-existing ids failing | **0** — the suite has no failures at all, so every one of the 1087 is present *and* GREEN |
+
+`git diff --numstat 58955ef -- 'tests/*.py'`:
+
+| File | + | − |
+|---|---|---|
+| `tests/test_cli_archive.py` | 594 | **11** |
+| `tests/test_cli_check.py` | 46 | 0 |
+| `tests/test_cli_mv.py` | 441 | 0 |
+| `tests/test_move_links.py` | 1335 | 0 |
+| `tests/test_skill.py` | 59 | 0 |
+
+**All 11 deleted lines are inside
+`test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected`** —
+the docstring's obsolete `RED reason:` line, the three lines that built and
+ran the old invocation, and the seven-line expected candidate list — replaced
+in place by the `_two_relation_tree` equivalent. The
+`_JSON_TOP_LEVEL_KEYS` edit deletes **nothing**: the list gained two entries
+and a comment block, so it is a pure insertion. Both edits are justified in
+Phase 7's *The two test edits* section, and both are **strengthenings or
+equal, never weakenings**:
+
+- the top-level key set went from an eight-key closed assertion to a
+  **ten**-key one, every original key still demanded in the same relative
+  order — and item (K) forbids the escape hatch of omitting an empty array,
+  so a ten-key pin is the only honest expected value;
+- the re-pointed lock keeps its subject (a plain `docs archive FILE --json`
+  carries the whole candidate set) and keeps observing it on the **apply**
+  path; the coverage its old tree provided is not lost but *promoted*, into
+  the new `test_archive_primary_only_leg_1_refuses_on_a_live_child`.
+
+Total changed test lines: **2486 added, 11 deleted**, across five files, zero
+ids removed.
 
 ## Milestone completion summary
 

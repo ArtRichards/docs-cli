@@ -47,9 +47,9 @@ Related:
 
 **M28 — Move-safe Markdown body-link rewrites is the current milestone.
 Step 1 (Phases 1–4) is complete on `m28/phases-1-4` (2026-08-15); Step 2
-(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5, 6 and 7
-complete** (2026-08-15) and Phase 8 — Run Tests (GREEN)
-next.** Milestone setup completed 2026-08-15 with all
+(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5–8 complete**
+(2026-08-15) — the suite is fully GREEN at **1333 passed** — and Phase 9 —
+Integrate / Accept / Dogfood next.** Milestone setup completed 2026-08-15 with all
 seven setup questions RESOLVED, and Phase 1 did not re-open them. M28 extends `docs mv` and `docs archive` to rebase the
 parsed local Markdown destination tokens a move makes stale — reusing M27's
 scanner and its exact destination spans, never a second parser — and to refuse
@@ -787,9 +787,16 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **continue M28 Step 2 at Phase 8 — Run Tests (GREEN).**
-**Phases 5, 6 and 7 are complete on `m28/phases-5-10`** (2026-08-15), and the
-suite is **1333 passed, 0 failed**. **Phase 7** reconciled every parallel
+**Next action:** **continue M28 Step 2 at Phase 9 — Integrate / Accept /
+Dogfood.** **Phases 5–8 are complete on `m28/phases-5-10`** (2026-08-15).
+**Phase 8** took the whole gate GREEN — **1333 collected, 1333 passed**, zero
+collection errors, zero xfail/xpass/error, lint / format / types clean,
+`docs check --root docs` exit 0, both bundled mirrors `cmp`-identical, the
+frozen INDEX snapshot identical and `pyproject.toml` untouched — and proved
+mechanically against `58955ef` that **0** test ids were removed, 246 added,
+and all 1087 pre-existing ids are present and GREEN. Exactly **11** test lines
+were deleted, all inside the one re-pointed lock, with both test edits named
+and justified as strengthenings rather than reported as "0 lines changed". **Phase 7** reconciled every parallel
 surface — both argparse descriptions, the bundled `SKILL.md` and
 `references/use-cases.md` (whose "prose links are not rewritten — a deliberate
 scope cut" line was false as of Phase 6), the `UNRELEASED` CHANGELOG with its
