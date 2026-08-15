@@ -47,9 +47,10 @@ Related:
 
 **M28 — Move-safe Markdown body-link rewrites is the current milestone.
 Step 1 (Phases 1–4) is complete on `m28/phases-1-4` (2026-08-15); Step 2
-(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5–8 complete**
-(2026-08-15) — the suite is fully GREEN at **1333 passed** — and Phase 9 —
-Integrate / Accept / Dogfood next.** Milestone setup completed 2026-08-15 with all
+(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5–9 complete**
+(2026-08-15) — the suite is fully GREEN at **1333 passed** and the nine-flow
+dogfood ran unattended on throwaway copies — and Phase 10 — Quality, Docs,
+Refactor next.** Milestone setup completed 2026-08-15 with all
 seven setup questions RESOLVED, and Phase 1 did not re-open them. M28 extends `docs mv` and `docs archive` to rebase the
 parsed local Markdown destination tokens a move makes stale — reusing M27's
 scanner and its exact destination spans, never a second parser — and to refuse
@@ -787,8 +788,21 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **continue M28 Step 2 at Phase 9 — Integrate / Accept /
-Dogfood.** **Phases 5–8 are complete on `m28/phases-5-10`** (2026-08-15).
+**Next action:** **continue M28 Step 2 at Phase 10 — Quality, Docs,
+Refactor.** **Phases 5–9 are complete on `m28/phases-5-10`** (2026-08-15).
+**Phase 9** dogfooded nine flows on throwaway copies, never touching the live
+tree: E1's rename went from **42** `broken-body-link` findings to **0** with a
+77-line diff in which every changed line names the moved document; E2's single
+archive from **13** to **0**, including its four archived referrers; E3's real
+closeout from **6** to **0**; plan A — the E7 census invocation — **completed**
+with its leg-2 report naming exactly **16** still-active inbound references
+(8 `Related:` + 8 body links, 7 referrers), reproducing the census; plans B and
+C **refused** at exit 2 with zero bytes and empty stdout, while plan B's
+preview reported the identical verdict at exit 0 with a populated record; the
+refusal survived `--quiet`; a there-and-back move left the tree
+**byte-identical**, `INDEX.md` included; and both verbs' preview and apply
+records differ in exactly the three state bits. The move costs **+80 ms** and a
+solo archive **+113 ms** over the 73-document tree.
 **Phase 8** took the whole gate GREEN — **1333 collected, 1333 passed**, zero
 collection errors, zero xfail/xpass/error, lint / format / types clean,
 `docs check --root docs` exit 0, both bundled mirrors `cmp`-identical, the

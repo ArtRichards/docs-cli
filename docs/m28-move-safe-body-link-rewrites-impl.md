@@ -58,7 +58,7 @@ table and the milestone checklist synchronized.
 | 6. Implement Offline/Core Path | **Complete** | 2026-08-15 | `_cmd_mv` inverted to plan-then-move with the R9 partial-state admission; `_cmd_archive` gained steps 5b / 8b / 8c / 8d and threads each member's planned text into `_archive_one`; `_print_move_lines` added and `preview only` lifted into the verb; `_rewrite_referring_edges` **deleted** (43 lines), superseded by `apply_move_plan`. Suite **5 failed, 1327 passed** — every remaining RED is a Phase-7 item (two `_JSON_TOP_LEVEL_KEYS` ids, one re-pointed fixture, two bundled-skill locks). Original objective: Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | **Complete** | 2026-08-15 | Both argparse descriptions; the two contract-mandated test expected-value updates (`_JSON_TOP_LEVEL_KEYS` +2 keys, and the primary-only record re-pointed at `_two_relation_tree` with a **new** leg-1 lock added on the tree it left); bundled `SKILL.md` + `references/use-cases.md`; `CHANGELOG.md` (three `Added`, four `Changed` incl. one BREAKING, and the three-part upgrade note naming the two re-spelled `docs mv` lines); `feedback-log.md`'s issue #1 resolution bullet. `cli.md` / `convention.md` verified rather than rewritten (Phase 1 landed them); both mirrors `cmp`-identical; `](../` still 0. Suite **1333 passed, 0 failed**. Original objective: argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
 | 8. Run Tests (GREEN) | **Complete** | 2026-08-15 | **1333 collected, 1333 passed, 0 failed**; 0 collection errors, 0 xfail/xpass/error. Mechanically proven against `58955ef`: **0** ids removed, 246 added, and — because nothing fails — all **1087** pre-existing ids present and GREEN. `git diff --numstat 58955ef -- 'tests/*.py'` shows exactly **11** deleted lines, every one inside the re-pointed primary-only lock, both edits named and justified as strengthenings. Lint / format / types clean; `docs check --root docs` exit 0; both bundled mirrors `cmp`-identical; INDEX snapshot identical; `](../` 0/0; `pyproject.toml` unchanged. Original objective: Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
-| 9. Integrate / Accept / Dogfood | Pending | — | Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
+| 9. Integrate / Accept / Dogfood | **Complete** | 2026-08-15 | Nine flows on throwaway copies; the live `docs/` tree never written to (`git status` empty throughout). E1 42→**0** findings with a 77-line diff in which **every changed line names the moved document**; E2 13→**0** including the 4 archived referrers; E3 6→**0**; plan A completes with its leg-2 report naming exactly **16** references from **7** referrers — the E7 census reproduced; plans B and C refuse at exit 2 with **zero bytes** and empty stdout; plan B's preview reports the same verdict at exit 0 with a populated record; the refusal survives `--quiet` (7 lines, all refusal); a there-and-back move is **byte-identical**, `INDEX.md` included; both verbs' preview and apply records differ in exactly the three state bits. Added runtime: +80 ms on `mv`, +113 ms on a solo archive. Original objective: Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, update the shipped use-case catalog, completion summaries, hand to M28a and M29. |
 
 ## Setup record — 2026-08-15
@@ -1364,6 +1364,87 @@ equal, never weakenings**:
 
 Total changed test lines: **2486 added, 11 deleted**, across five files, zero
 ids removed.
+
+## Phase 9 — Integrate / Accept / Dogfood — 2026-08-15
+
+### Method
+
+**The live `docs/` tree was never written to.** Every flow ran as
+`cp -a docs "$SCRATCH/<tag>"` followed by a `--root "$SCRATCH/<tag>"`
+invocation, and `git status --short` was empty before and after the whole
+phase. The "before" column is not quoted from the setup record: the pre-M28
+`cli.py` was checked out into a throwaway `git worktree` at `58955ef` and run
+against a copy of the **same** current tree, so both columns measure the same
+73 documents / 3.1 MB.
+
+### The flows
+
+| # | Flow | Before (pre-M28 binary) | After (M28) |
+|---|---|---|---|
+| E1 | `docs mv plan.md milestone-plan.md` | exit 0, then `docs check` exit 2 with **42** `broken-body-link` across **14** documents | exit 0, `42 destination(s) in 14 document(s), 35 Related: bullet(s)`, `docs check` exit **0** |
+| E2 | `docs archive m17-pypi-publish-impl.md --date …` | exit 0, then **13** `broken-body-link` (7 of them inside the archive subtree) | `13 destination(s) in 7 document(s) rebased`, **4** of the rewrite lines naming `archive/…` referrers, `docs check` exit **0** |
+| E3 | `docs archive m25-…md --cascade-only 'm25-*' --reason …` | exit 0, then **6** `broken-body-link` | exit 0, `6 destination(s) in 2 document(s) rebased`, **11** leg-2 strands, **0** orphans, `docs check` exit **0** |
+| Plan A | `docs archive m26-…md --cascade-only 'm26-*' --reason …` (the E7 census invocation) | — | exit **0**, **0** orphans, `8 destination(s) in 2 document(s) rebased`, **16** still-active inbound references — **8 `Related:` + 8 body links from 7 distinct referrers**, reproducing the setup census exactly — `docs check` exit 0 |
+| Plan B | `docs archive m27-…md --cascade-only '*'` (issue #1's harm) | — | exit **2**, **5** orphans named with both ends, stdout **0 bytes**, tree SHA-256 unchanged |
+| Plan C | `docs archive plan.md` | — | exit **2**, **6** orphans, stdout **0 bytes**, tree SHA-256 unchanged |
+| Preview parity | plan B with `--cascade-dry-run --json` | — | exit **0**, record emitted (10 keys, 277 rewrites, 49 strands), leg-1 verdict **reported** (`would strand …` / `5 still-active child(ren) would be stranded`), tree SHA-256 unchanged |
+| `--quiet` refusal | plan C with `--quiet` | — | exit 2, **7** stderr lines, **all 7** refusal lines and **0** ordinary prose |
+| Idempotence | E1 forward, then `docs mv milestone-plan.md plan.md` | — | **every file byte-identical**, `INDEX.md` included, `docs check` exit 0 |
+
+### The E1 diff, audited line by line
+
+77 lines changed (`-77 / +77`) across 40 documents plus `INDEX.md`. **Every
+one of the 154 changed lines contains the string `plan.md`** — i.e. every
+change is a `Related:` bullet or a body-link destination naming the moved
+document. Nothing else moved: no prose, no `Updated:` value, no heading, no
+metadata field. 77 = 42 destinations + 35 bullets, matching the summary line
+the verb printed.
+
+### Record parity, measured
+
+Invoked with **identical argument spellings** (so `source` cannot differ for a
+trivial reason), the preview and apply records differ in exactly
+`['applied', 'dry_run', 'index_refreshed']` — for **both** verbs. `rewrites`
+compares equal element-for-element (42 records on `mv`, 8 on `archive`), as
+does `archive`'s `strands` (16 records), and the two verbs' `rewrites` record
+key sets are identical — which is what one shared serializer buys.
+
+### Runtime
+
+Mean of three runs each, same tree, same machine:
+
+| Flow | pre-M28 | M28 | added |
+|---|---|---|---|
+| `docs mv` | 317 ms | 397 ms | **+80 ms** |
+| `docs archive` (solo) | 140 ms | 253 ms | **+113 ms** |
+| `docs mv --dry-run` | 74 ms | 195 ms | **+121 ms** |
+
+The preview's is the largest relative jump and the expected one: it walks and
+plans now, where 1.x printed one line without reading the tree. Every flow is
+far inside the "well under 1 s" bound.
+
+### Deviations from the plan of record, and why each is correct
+
+- **Plan B produced 5 orphans, not the 6 the setup census predicted.** The
+  census counted `child-of: plan.md` declarers without applying item (H)'s
+  plan-member exemption; `m27-markdown-body-link-validation.md` is the primary
+  of this invocation, so it is a plan member and cannot be stranded by it. The
+  exemption is contractual and locked by
+  `test_leg_1_ignores_a_child_of_declared_by_a_plan_member`. Plan C, where
+  only `plan.md` moves, produces the full **6**, matching the census exactly.
+- **E3 reported 11 leg-2 strands, not 16.** 16 is plan A's number — the E7
+  census measured `--cascade-only 'm26-*'` — and plan A was run separately and
+  reproduced **exactly** 16 (8 + 8, from 7 referrers). E3 archives the *m25*
+  pair, a different neighbourhood.
+
+### Verification
+
+- `git status --short` — empty before and after; the live tree is untouched.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+- Every refusal flow re-hashed with SHA-256 over the whole tree
+  (path + bytes, sorted): identical to the pre-run hash.
+- Both throwaway `git worktree`s removed; `git worktree list` shows only the
+  repository itself.
 
 ## Milestone completion summary
 
