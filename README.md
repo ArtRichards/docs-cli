@@ -40,8 +40,8 @@ See [`docs/convention.md`](https://github.com/ArtRichards/docs-cli/blob/main/doc
 docs new <role> <slug> [--project NAME] [--body-from PATH|-]
                                           Scaffold a doc with the right metadata; --body-from writes the body atomically.
 docs index [DIR] [--exclude PATTERN]      Regenerate INDEX.md from metadata in DIR.
-docs archive <file> [--reason "…"]        Archive: edit Lifecycle, move to archive/<date>/, refresh index.
-docs mv <old> <new>                       Move + rewrite Related: references across the tree.
+docs archive <file> [--reason "…"]        Archive: edit Lifecycle, move to archive/<date>/, rebase stale body links, refresh index.
+docs mv <old> <new> [--dry-run] [--json]  Move + rewrite Related: references AND stale body links across the tree.
 docs list [filters] [--json] [--exclude PATTERN]
                                           Query view of the tree.
 docs check [DIR] [--exclude PATTERN]      Validate metadata, refs, status/location drift, body links.
