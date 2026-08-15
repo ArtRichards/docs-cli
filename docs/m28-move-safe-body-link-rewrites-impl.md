@@ -1954,6 +1954,61 @@ because M29's own archive step is what can break those links again.
   shape, and mutation-tested.
 - Every `blob/main/…` link in `README.md` resolved against the working tree.
 
+## Second `/simplify` pass — 2026-08-15
+
+Run on `m28/simplify` over the whole M28 surface — the planner seam, the output
+helpers and both verbs' rewiring — after the audit and the fresh-eyes fold-in
+had changed the code Phase 10's pass last saw. Three changes, all
+behaviour-preserving, verified by the same 1341-test suite before and after.
+Net **−11 lines** in `src/docs_cli/cli.py`, the only file touched.
+
+| Change | Why it simplifies |
+|---|---|
+| `plan_body_link_rewrites` — `render_destination_token(…)` lifted out of the `LinkRewrite(…)` argument list into a named `new_raw` | The nested call inside a positional argument list is what forced the formatter to explode one statement across **seven** lines, one argument per line. Two lines now, and the local's name matches the field it fills. |
+| `_cmd_archive` step 9a — the member-text dict hoisted out of the `try` into `member_texts` | A pure dict comprehension cannot raise the failure the handler admits to, so it was noise inside the guarded block. The `try` body is now the one call it guards. |
+| `_cmd_mv`'s partial-state admission computed into `admission`, then printed with an f-string | `print("docs: mv: " + _mv_partial_state(…), file=sys.stderr)` put `file=sys.stderr` ten lines below the `print(`, and the `+` concatenation is the only one of its kind here — the archive sibling already interpolates. Compute, then print. |
+
+**Deliberately NOT re-made: the archive `try`-block merge.** Phase 10's pass
+merged 9a and 9b on the justification that `apply_archive_plan` and
+`apply_move_plan` "fail identically"; the fresh-eyes fold-in (F1) undid it,
+because since amendment 7 the rewrite phase has its own partial-state
+admission and the two no longer fail identically at all. Re-merging would
+reintroduce that defect. The blocks stay separate.
+
+**Considered and rejected**, each for a stated reason:
+
+- **A shared `_planned_writes(plan)` helper** for the "documents
+  `apply_move_plan` writes" predicate, which appears three times — the
+  executor's skip and both verbs' `Not written:` clause. Net **zero** lines
+  once its docstring is written, and it moves the rule out of the two
+  *message-rendering* functions whose entire value is that each clause is
+  checkable where it is read. Kept local.
+- **Extracting the `<…>` predicate** shared by `_strip_angle_pair` and
+  `render_destination_token`. A named helper costs about seven lines to remove
+  one duplicated boolean; `angled = raw != _strip_angle_pair(raw)` costs none
+  but is indirect where the explicit test says exactly what `angled` means.
+- **The frozen item (L) seam** — `render_destination_token`,
+  `splice_body_links` and `plan_body_link_rewrites` each have exactly one
+  in-tree caller, but all three are contract-frozen signatures with direct
+  unit tests; collapsing them would break the contract, not simplify it.
+- **`_plan_rewrites`' `MovePlan | int` return**, **`_archive_move_map` /
+  `_archive_related_pairs`**, the `preflight_move_plan` refusal blocks and the
+  `_print_move_lines` orphan guard — all re-examined, all kept, for the
+  reasons Phase 10 already recorded or because both forms are equally
+  defensible and churn is not a simplification.
+
+### Verification
+
+- `.venv/bin/python -m pytest -q` — **1341 passed, 0 failed**, before and
+  after the pass.
+- `.venv/bin/ruff format --check .`, `.venv/bin/ruff check .`,
+  `.venv/bin/mypy` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+- Both bundled mirrors `diff`-identical to their sources; INDEX snapshot in
+  sync; `pyproject.toml` untouched.
+- `git diff --stat` — `src/docs_cli/cli.py` only, 17 insertions / 28
+  deletions.
+
 ## Milestone completion summary
 
 **M28 — Move-safe Markdown body-link rewrites is implementation-complete. All

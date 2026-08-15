@@ -3105,14 +3105,8 @@ def plan_body_link_rewrites(
         new_path = posixpath.relpath(new_target, posixpath.dirname(new_rel))
         if link.path.endswith("/"):
             new_path += "/"
-        rewrites.append(
-            LinkRewrite(
-                link,
-                old_target,
-                new_target,
-                render_destination_token(link.raw, new_path, link.fragment),
-            )
-        )
+        new_raw = render_destination_token(link.raw, new_path, link.fragment)
+        rewrites.append(LinkRewrite(link, old_target, new_target, new_raw))
     return tuple(rewrites)
 
 
@@ -7010,15 +7004,13 @@ def _cmd_archive(args: argparse.Namespace) -> int:
     # body-link splices, its `Related:` rewrites and its archive metadata edits
     # land in ONE write. `_archive_partial_state` has already rendered the full
     # admission by the time this raises.
+    member_texts = {
+        rewrite.rel: rewrite.new_text
+        for rewrite in move_plan.rewrites
+        if rewrite.rel in move_plan.moves
+    }
     try:
-        apply_archive_plan(
-            plan,
-            texts={
-                rewrite.rel: rewrite.new_text
-                for rewrite in move_plan.rewrites
-                if rewrite.rel in move_plan.moves
-            },
-        )
+        apply_archive_plan(plan, texts=member_texts)
     except CoordinatedWriteError as exc:
         print(f"docs: archive: {exc}", file=sys.stderr)
         return 2
@@ -7244,19 +7236,16 @@ def _cmd_mv(args: argparse.Namespace) -> int:
                 with contextlib.suppress(OSError):
                     directory.rmdir()
                 directory = directory.parent
-        print(
-            "docs: mv: "
-            + _mv_partial_state(
-                plan,
-                exc,
-                old_rel=old_rel,
-                new_rel=new_rel,
-                member_write_needed=member_text is not None,
-                moved_written=moved_written,
-                replaced=replaced,
-            ),
-            file=sys.stderr,
+        admission = _mv_partial_state(
+            plan,
+            exc,
+            old_rel=old_rel,
+            new_rel=new_rel,
+            member_write_needed=member_text is not None,
+            moved_written=moved_written,
+            replaced=replaced,
         )
+        print(f"docs: mv: {admission}", file=sys.stderr)
         return 2
 
     if not args.quiet:
