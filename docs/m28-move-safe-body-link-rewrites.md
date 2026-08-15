@@ -51,11 +51,12 @@ Related:
   parametrizations from 29 to 36 and from 33 to 40 and taking the suite to
   **1283 collected, 180 failed, 1103 passed**. A read-only prototype census
   under the Phase-1 contract confirmed each tree yields exactly its intended
-  plan, line numbers included. Phase 4 captured the baseline: **1286
-  collected, 182 failed, 1104 passed** (restated after the Step-1
-  same-instance audit), zero collection errors, zero xfail /
-  xpass, exactly **two** exception classes (152 `AttributeError` from the
-  pure seam, 30 `AssertionError` from the CLI and skill locks), and a
+  plan, line numbers included. Phase 4 captured the baseline: **1295
+  collected, 191 failed, 1104 passed** (restated after the Step-1
+  same-instance audit and its adversarial second pass), zero collection
+  errors, zero xfail / xpass, exactly **two** exception classes (156
+  `AttributeError` from the pure seam, 35 `AssertionError` from the CLI and
+  skill locks), and a
   mechanical proof against the pre-M28 commit that **0** test ids were removed
   and **0** pre-existing ids fail. No product code changed in any of the four
   phases — `git diff --stat 58955ef -- src/docs_cli/cli.py` is empty by

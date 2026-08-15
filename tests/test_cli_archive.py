@@ -3251,8 +3251,11 @@ def test_strand_report_names_both_ends_on_stderr_in_preview_and_apply(
         assert line in preview.stderr, f"missing from the preview: {line}"
         assert line in applied.stderr, f"missing from the apply output: {line}"
 
-    observed = [ln for ln in preview.stderr.splitlines() if ln.startswith("docs: archive: strand ")]
-    assert observed == expected[:5], "the frozen order is walk order, bullets before body links"
+    for stream, label in ((preview.stderr, "preview"), (applied.stderr, "apply")):
+        observed = [ln for ln in stream.splitlines() if ln.startswith("docs: archive: strand ")]
+        assert observed == expected[:5], (
+            f"the {label} order is frozen: walk order, bullets before body links"
+        )
 
 
 def test_archive_rewrite_section_is_identical_in_preview_and_apply(
@@ -3272,11 +3275,17 @@ def test_archive_rewrite_section_is_identical_in_preview_and_apply(
 
     preview_root = _m28_tree(fixtures_dir, tmp_path / "a", "movelink-closeout")
     apply_root = _m28_tree(fixtures_dir, tmp_path / "b", "movelink-closeout")
+    before = _m28_snapshot(preview_root)
     preview = _run(docs_script, *args, "--cascade-dry-run", cwd=preview_root)
     applied = _run(docs_script, *args, cwd=apply_root)
 
     assert preview.returncode == 0, preview.stderr
     assert applied.returncode == 0, applied.stderr
+    assert _m28_snapshot(preview_root) == before, (
+        "a COMPLETING preview writes zero bytes — every other snapshot lock in "
+        "this file is on a REFUSAL path, so without this a preview that applied "
+        "its own rewrite plan and then declined to move the files would pass"
+    )
     rewrite_lines = [
         ln
         for ln in preview.stderr.splitlines()
@@ -3380,9 +3389,12 @@ def test_archive_json_strands_observed_in_the_preview_of_a_refusing_plan(
     record = json.loads(proc.stdout)
     assert "strands" in record, "`strands` is present in every record, never missing"
     assert record["dry_run"] is True and record["applied"] is False
-    assert {(s["path"], s["kind"]) for s in record["strands"]}, "leg 2 still reports here"
-    assert not any(s["verb"] == "child-of" for s in record["strands"]), (
-        "the child-of edges belong to leg 1; the two legs partition the graph"
+    assert [
+        (s["path"], s["target"], s["kind"], s["verb"], s["line"]) for s in record["strands"]
+    ] == [("milestone.md", "plan.md", "body-link", None, 15)], (
+        "leg 2 still reports here, and it reports EXACTLY the one edge leg 1 does "
+        "not own — the child-of bullets belong to leg 1, so the two legs partition "
+        "the graph rather than overlapping"
     )
 
 
@@ -3432,3 +3444,101 @@ def test_archive_cascade_dry_run_on_a_malformed_tree_exits_1(docs_script, fixtur
     assert "helper.md" in proc.stderr
     assert "Traceback" not in proc.stderr
     assert _m28_snapshot(root) == before
+
+
+@_SKIP_AS_ROOT
+def test_archive_refuses_when_a_planned_referrer_is_unwritable(docs_script, fixtures_dir, tmp_path):
+    """(F) at the `docs archive` seam, check-order step 8c.
+
+    M26's pre-flight (step 7) proves every plan MEMBER writable; M28's proves
+    every planned REFERRER writable. `status.md` is not a plan member here, so
+    only the new pre-flight can catch it — and the refusal must leave the whole
+    tree byte-identical, the primary included.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    before = _m28_snapshot(root)
+    (root / "status.md").chmod(0o444)
+    try:
+        proc = _run(
+            docs_script,
+            "archive",
+            "feature.md",
+            "--cascade-only",
+            "feature-*",
+            "--date",
+            _M28_DATE,
+            cwd=root,
+        )
+    finally:
+        (root / "status.md").chmod(0o644)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "docs: archive: status.md is not writable; refusing before any write" in proc.stderr
+    assert proc.stdout == ""
+    assert _m28_snapshot(root) == before
+
+
+def test_archive_quiet_suppresses_the_rewrite_and_strand_lines(docs_script, fixtures_dir, tmp_path):
+    """R3's other half: `--quiet` governs the whole summary on a COMPLETING
+    run — the rewrite lines, the counts footer and the strand report alike —
+    while the write still happens.
+
+    The existing `--quiet` lock is on a refusal path, which has no rewrite or
+    strand lines to suppress, so it cannot see this.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    proc = _run(
+        docs_script,
+        "archive",
+        "feature.md",
+        "--cascade-only",
+        "feature-*",
+        "--date",
+        _M28_DATE,
+        "--quiet",
+        cwd=root,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == "", f"--quiet must silence the whole summary, got {proc.stderr!r}"
+    assert (root / _M28_DATED / "feature.md").is_file(), "the write still happened"
+    assert f"[the feature]({_M28_DATED}/feature.md)" in (root / "status.md").read_text()
+
+
+def test_archive_never_rewrites_or_reports_an_excluded_document(docs_script, tmp_path):
+    """R11, stated in `cli.md` as a named limitation and locked here.
+
+    `[exclude]` / `.docsignore` decide which documents are WALKED, and
+    therefore which are rewritten and which can report a strand. They never
+    decide what a destination may point at. So an excluded document that
+    declares `child-of` the primary does **not** trip leg 1 — the archive
+    completes — and its stale destination is left exactly as written.
+
+    This is a knowable gap, which is why it is named rather than inferred.
+    """
+    root = tmp_path / "excl"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "excl"\n\n[archive]\ndir = "archive"\n\n[exclude]\ndirs = ["vendor"]\n'
+    )
+    header = "Lifecycle: active\nRole: notes\nProject: excl\nUpdated: 2026-05-20\n"
+    (root / "plan.md").write_text(f"# Plan\n\n{header}\n## Body\n\nThe primary.\n")
+    (root / "keep.md").write_text(f"# Keep\n\n{header}\n## Body\n\nSee [the plan](plan.md).\n")
+    vendor = root / "vendor"
+    vendor.mkdir()
+    excluded = vendor / "child.md"
+    excluded.write_text(
+        f"# Vendored child\n\n{header}\nRelated:\n- child-of: plan.md\n\n"
+        "## Body\n\nSee [the plan](../plan.md).\n"
+    )
+    before = excluded.read_text()
+
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, cwd=root)
+
+    assert proc.returncode == 0, (
+        f"an EXCLUDED child-of must not trip leg 1 — the walk never yields it:\n{proc.stderr}"
+    )
+    assert "would be stranded" not in proc.stderr
+    assert "vendor" not in proc.stderr
+    assert excluded.read_text() == before, "an excluded document is never rewritten"
+    assert f"[the plan]({_M28_DATED}/plan.md)" in (root / "keep.md").read_text()

@@ -195,7 +195,8 @@ point, and the E3 fixture contradiction — and recorded eleven Step-1
 resolutions. Phase 2 wrote 182 RED ids with zero deleted test lines; Phase 3
 authored the seven `movelink-*` fixture trees, each `docs check`-clean and each
 proven by a read-only prototype census; Phase 4 captured the baseline at
-**1283 collected, 180 failed, 1103 passed** with exactly two exception classes
+**1295 collected, 191 failed, 1104 passed** (after the Step-1 audit's twelve
+added locks) with exactly two exception classes
 and all 1087 pre-existing ids mechanically proven present and passing. No
 product code was touched across Phases 1–4. **Phase 5 — Update Base
 Interfaces is next.** Setup's headline finding is that both

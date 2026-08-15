@@ -53,7 +53,7 @@ table and the milestone checklist synchronized.
 | 1. Define Contract | **Complete** | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(M), three amendments to setup-frozen material, eleven Step-1 resolutions (R1–R11). Author-facing halves in `cli.md` (*Move-safe body-link rewrites (M28 — D1–D7)*, the rewritten `docs mv` section, the amended archive check order, the widened `archive --json` schema, three exit tables) and `convention.md` (M18's widened exception, M27 — D6's reconciled sentence, the author-facing move guarantee). Zero product-code change. Original objective: Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | **Complete** | 2026-08-15 | 182 new ids: `tests/test_move_links.py` (153, the pure seam) plus 12 `mv`, 14 `archive`, 1 `check` and 2 skill locks. Suite 1269 collected / 181 failed / 1088 passed; the 1087 pre-existing ids all present and GREEN; zero collection errors; zero deleted test lines. Original objective: Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
 | 3. Create Data/Fixtures | **Complete** | 2026-08-15 | Seven `movelink-*` trees authored — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`, `-closeout` — each `docs check`-clean as committed; every existing fixture byte-identical; the two directory-derived sweeps 29→36 and 33→40; suite 1283 / 180 failed / 1103 passed. A read-only prototype census confirmed every intended plan, line numbers included. Original objective: `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
-| 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1286 collected / 182 failed / 1104 passed (restated after the Step-1 audit); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (152 `AttributeError`, 28 `AssertionError`); mechanically proven 0 removed ids and 0 failing pre-existing ids against `58955ef`. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
+| 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1295 collected / 191 failed / 1104 passed (restated after the Step-1 audit); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (152 `AttributeError`, 28 `AssertionError`); mechanically proven 0 removed ids and 0 failing pre-existing ids against `58955ef`. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
@@ -573,18 +573,18 @@ else, and prove mechanically that no pre-existing test id moved.
 ### The baseline
 
 ```
-.venv/bin/python -m pytest tests/ -q --co   ->  1286 collected, 0 collection errors
-.venv/bin/python -m pytest tests/ -q        ->  182 failed, 1104 passed
+.venv/bin/python -m pytest tests/ -q --co   ->  1295 collected, 0 collection errors
+.venv/bin/python -m pytest tests/ -q        ->  191 failed, 1104 passed
 ```
 
-*(Restated after the Step-1 same-instance audit, which added three `docs mv`
-locks — see* Step-1 same-instance audit *below. The pre-audit figures were
+*(Restated after the Step-1 same-instance audit, which added twelve locks — see*
+Step-1 same-instance audit *below. The pre-audit figures were
 1283 / 180 / 1103.)*
 
-Arithmetic, and it closes: **1087** pre-existing + **185** authored ids +
+Arithmetic, and it closes: **1087** pre-existing + **194** authored ids +
 **14** swept ids (7 into `test_check_tree_legacy_fixtures_gain_no_new_findings`,
 7 into `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings`) =
-**1286**. Of the 199 new ids, **182** are RED and **17** are GREEN at
+**1295**. Of the 208 new ids, **191** are RED and **17** are GREEN at
 baseline.
 
 ### Probes, stated honestly
@@ -608,8 +608,8 @@ Exactly **two** classes, and the arithmetic closes:
 
 | Class | Count | Where | Why |
 |---|---|---|---|
-| `AttributeError` | 152 | the whole of `tests/test_move_links.py` | every M28 symbol is fetched through `_m28(name)`, so the RED reason is one clean missing attribute rather than a collection error |
-| `AssertionError` | 30 | 14 `docs mv`, 14 `docs archive`, 2 bundled-skill locks | the behaviour is absent, not the symbol; 28 carry a message and 2 are bare `assert`s pytest rewrote |
+| `AttributeError` | 156 | the whole of `tests/test_move_links.py` | every M28 symbol is fetched through `_m28(name)`, so the RED reason is one clean missing attribute rather than a collection error |
+| `AssertionError` | 35 | 16 `docs mv`, 17 `docs archive`, 2 bundled-skill locks | the behaviour is absent, not the symbol; 33 carry a message and 2 are bare `assert`s pytest rewrote |
 
 An earlier run showed a third class — **3 `KeyError: 'strands'`** from indexing
 a record that has no such key. That is a weaker RED reason than an assertion
@@ -625,9 +625,9 @@ Test ids were collected from a throwaway `git worktree` at the pre-M28 commit
 | Measure | Result |
 |---|---|
 | ids at `58955ef` | **1087** |
-| ids at HEAD | **1286** |
+| ids at HEAD | **1295** |
 | `comm -23 old new` — **removed** ids | **0** |
-| `comm -13 old new` — added ids | **199** (153 `test_move_links.py`, 15 `test_cli_mv.py`, 14 `test_cli_archive.py`, 14 `test_check.py` sweeps, 2 `test_skill.py`, 1 `test_cli_check.py`) |
+| `comm -13 old new` — added ids | **208** (157 `test_move_links.py`, 17 `test_cli_mv.py`, 17 `test_cli_archive.py`, 14 `test_check.py` sweeps, 2 `test_skill.py`, 1 `test_cli_check.py`) |
 | `comm -12 failed old` — pre-existing ids now FAILING | **0** |
 | `git diff --numstat 58955ef -- tests/` | **0** deleted lines in every test file |
 | `git diff --stat 58955ef -- src/docs_cli/cli.py` | **empty** |
@@ -640,10 +640,9 @@ reached into.
 
 | # | Family | Landing |
 |---|---|---|
-| 152 | **The pure seam** (`tests/test_move_links.py`): the formula and both classes, the no-op rule and idempotence, out-of-reach destinations, the never-creates-an-escape invariant, the emitted spelling, the re-encoding round-trip, the splicer, the pipeline order, purity, both strand legs, the pre-flight, the shared record | **Phase 5** — `LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`, `MOVE_STRAND_KINDS`, `plan_body_link_rewrites`, `render_destination_token`, `splice_body_links`, `plan_move`, `preflight_move_plan`, `apply_move_plan`, `move_plan_to_json` |
-| 12 | **`docs mv` behaviour**: class-2 rebasing, nested both-directions, E1's post-rename `docs check`-clean, the archived referrer's byte boundary and its no-`Revision:` sibling, prose and code untouched, the zero-mutation refusal, the malformed-tree preview at exit 2, idempotence, the preview's rewrite lines, the apply path's identical lines, and the mid-execution partial-state admission | **Phase 6** — invert `_cmd_mv` to plan before it moves |
-| 2 | **`docs mv` surface**: `--json`'s record and its preview/apply equality | **Phase 7** — `--json` on the `mv` subparser (`cli.py:4852`) |
-| 14 | **`docs archive` behaviour and surface**: E2, E3, E5, leg 1's refusal and its `--quiet` sibling, leg 1's preview at exit 0, the over-fire lock, leg 2's stderr report in both modes, the widened `--json` key set, `strands` on a completing plan and in a refusing plan's preview, empty-array-not-missing, preview/apply rewrite equality, and the malformed-tree preview at exit 1 | **Phase 6** (behaviour) and **Phase 7** (the record and the amended check order) |
+| 156 | **The pure seam** (`tests/test_move_links.py`): the formula and both classes, the no-op rule and idempotence, out-of-reach destinations, the never-creates-an-escape invariant, the emitted spelling, the re-encoding round-trip, the splicer, the pipeline order and its one-write-per-document count, purity, both strand legs and the bullet declaration order, the pre-flight, the alias-pair split, and the shared record | **Phase 5** — `LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`, `MOVE_STRAND_KINDS`, `plan_body_link_rewrites`, `render_destination_token`, `splice_body_links`, `plan_move`, `preflight_move_plan`, `apply_move_plan`, `move_plan_to_json` |
+| 16 | **`docs mv` behaviour and surface**: class-2 rebasing, nested both-directions, an **archived** document `mv`'d rebasing its own destinations, E1's post-rename `docs check`-clean, the archived referrer's byte boundary and its no-`Revision:` sibling, prose and code untouched, the zero-mutation refusal, the malformed-tree preview at exit 2, idempotence, the preview's rewrite lines and its zero-byte guarantee, the apply path's identical lines, the mid-execution partial-state admission, and the `--json` record with its `source`/`path` split and its preview/apply equality | **Phase 6** — invert `_cmd_mv` to plan before it moves — and **Phase 7** for `--json` on the `mv` subparser (`cli.py:4852`) |
+| 17 | **`docs archive` behaviour and surface**: E2, E3, E5, leg 1's refusal and its `--quiet` sibling, leg 1's preview at exit 0, the over-fire lock, leg 2's stderr report ordered in both modes, the rewrite-plan pre-flight over a planned **referrer**, `--quiet` on a completing run, the excluded-document limitation, the widened `--json` key set, `strands` on a completing plan and exactly-one in a refusing plan's preview, empty-array-not-missing, preview/apply rewrite equality with a zero-byte preview, and the malformed-tree preview at exit 1 | **Phase 6** (behaviour) and **Phase 7** (the record and the amended check order) |
 | 2 | **Bundled skill parity**: `SKILL.md`'s `mv` / `archive` rows and `references/use-cases.md` | **Phase 7** — the bundled skill lands in the same change as the CLI surface |
 
 ### GREEN at baseline — every lock classified
@@ -655,7 +654,7 @@ The 16 new GREEN ids:
 | `test_check_tree_legacy_fixtures_gain_no_new_findings[movelink-*]` ×7 | **degenerate** now (none of the seven uses a reciprocal verb); a genuine regression lock after Phase 6 |
 | `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings[movelink-*]` ×7 | **degenerate** now; genuine afterwards — a Phase-6 rewrite that emitted a wrong spelling would break them |
 | `test_check_every_movelink_fixture_tree_is_clean_as_committed` | **genuine**; it landed at Phase 3, and it is what makes every post-move clean assertion measure the MOVE rather than pre-existing fixture damage |
-| `test_relpath_of_a_root_level_target_needs_no_special_case` | **degenerate** now; genuine afterwards — it pins the `posixpath` behaviour item (B) step 6 relies on, so a Phase-5 implementation cannot "fix" it with an `or '.'` that changes every emitted spelling |
+| `test_relpath_of_a_root_level_target_needs_no_special_case` | **degenerate** now, and it can never fail for any M28 implementation — it pins the `posixpath` behaviour item (B) step 6 relies on, so a Phase-5 implementation cannot "fix" it with an `or '.'` that changes every emitted spelling. Kept deliberately as ground truth. |
 | `test_mv_quiet_suppresses_every_line_but_prints_a_refusal` | **degenerate** now (`docs mv --quiet` prints nothing today because there is nothing to print); genuine at Phase 6, when the move line, every rewrite line and the counts footer exist and `--quiet` must still silence all of them while the refusal survives |
 
 Pre-existing locks whose expected state is worth naming, all verified GREEN at
@@ -777,7 +776,78 @@ rather than auto-decided, because each touches intent rather than accuracy.
    exception-class census two classes by construction. (Also recorded at
    Phase 4.)
 
-The baseline is restated accordingly: **1286 collected, 182 failed, 1104
+### A second, adversarial pass over the same question
+
+The checklist calls the *"do the tests genuinely pin the contract"* item the
+highest-leverage check of a 1–4 step, so it was run a second time by a fresh
+reader with no memory of writing the tests, working from the frozen contract
+rather than from the code. It measured its claims rather than asserting them —
+re-deriving all 20 inline formula cases and all 13 renderer expectations from
+item (B)/(C), running left-to-right splicing and `Related:`-before-splices to
+confirm the ordering locks really do catch those mistakes, and checking every
+verbatim line and column against the shipped M27 scanner. It found **five more
+gaps that a wrong-but-plausible implementation would have walked through**, and
+six weaker ones. All eleven are fixed:
+
+1. **No test proved that a *completing* preview writes zero bytes** — in
+   either verb. `test_mv_dry_run_names_every_planned_rewrite` checked only the
+   two move endpoints, and **every** `_m28_snapshot` lock in the archive file
+   was on a *refusal* path. A Phase-6 preview that walked, built the plan,
+   printed it, **applied the rewrites**, and then declined to rename would have
+   passed. Whole-tree snapshots added to both completing previews.
+2. **Item (G)'s last sentence had zero coverage** — "an archived document that
+   is itself moved by `docs mv` gets class-2 rebasing of its own destinations".
+   The corpus exercises the archived document only as a class-**1** referrer,
+   so an implementation gating class-2 rebasing on `not doc.archived` — a very
+   plausible reading of M3's read-only stance — passed everything.
+   `test_mv_of_an_archived_document_rebases_its_own_destinations` closes it.
+3. **`tab -> %09` was unpinned, and the round-trip lock is blind to it.**
+   `_split_destination` is a *decoder*, not a tokenizer, so dropping any plain
+   terminator but `%` or `#` from the encode table leaves the 72-cell round trip
+   GREEN — measured. Tab was the one grammar-derived entry with no explicit
+   assertion; it now has one, alongside the angle form's literal tab.
+4. **The `column` field's VALUE was never asserted** — only
+   `isinstance(int) and >= 1`. A serializer emitting `link.start` (a byte
+   offset), the `[` column, or a 0-based column passed. The `mv --json` tuples
+   now pin columns 16 and 59, verified against the scanner.
+5. **Nothing proved the reported `<old-token>` is `link.raw`** rather than a
+   re-derived canonical spelling. Every asserted `old` was a token whose raw
+   form equals its canonicalisation. `movelink-nested`'s
+   `../../sub/../root.md` is the one spelling in the corpus that separates
+   them, and it is now asserted through `mv --json`.
+
+The six weaker ones, also fixed: the frozen `none` rendering in `mv`'s
+partial-state admission (`"Rewritten: "` was satisfied by a blank); the archive
+side of the (F) pre-flight, which had no CLI test at all over a planned
+**referrer**; `--quiet` on a *completing* archive (the existing lock is on a
+refusal, which has nothing to suppress); R11's excluded-document limitation,
+which was stated in `cli.md` and pinned nowhere; the `Related:`
+declaration-order clause, which no fixture could distinguish from a sort;
+`(E)`'s "one `atomic_write` per document, never two", which is unobservable
+from the resulting bytes and now has a call-count spy; `plan_move`'s
+`related_pairs` parameter, never exercised; `mv --json`'s `source` vs `path`
+distinction, invisible when the argument is already canonical;
+`test_mv_preview_record_equals_apply_record`, which passed on two empty arrays;
+the apply-side strand ordering, checked only by membership; and the refusing
+plan's leg-2 set, asserted only as non-empty. Three nits closed too: the
+percent-first test did not distinguish first from last (both emit
+`a%2520b.md` for `a%20b.md` — measured; it now uses a path carrying both a
+literal percent and a real space), the `movelink-*` tree list is now
+cross-checked against the directory so an eighth tree cannot be silently
+unswept, and the bundled-skill assertion required `--dry-run` **or** `--json`
+where it must require both.
+
+That pass also confirmed three dimensions clean and said so with evidence:
+every verbatim line and column matches the real scanner, no fixture makes a
+test vacuous and every count reconciles; no contradiction exists between the
+tests, item (J)/(K) and `cli.md` (em-dashes U+2014 on both sides, plural forms
+matching); and the splicer, pipeline-order and no-op locks are genuinely
+strong — left-to-right splicing produces visible corruption on the fixture, a
+*string* no-op test instead of the semantic one fails
+`test_dot_slash_spelling_is_never_normalised`, and running step 5 before step 4
+fails `test_a_co_moving_pair_keeps_its_sibling_link_byte_identical`.
+
+The baseline is restated accordingly: **1295 collected, 191 failed, 1104
 passed** (from 1283 / 180 / 1103), still exactly two exception classes, still
 zero deleted test lines and zero removed ids against `58955ef`.
 

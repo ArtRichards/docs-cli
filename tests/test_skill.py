@@ -441,8 +441,9 @@ def test_skill_md_teaches_move_safe_link_rewrites() -> None:
     assert "body link" in mv_rows.lower() or "prose link" in mv_rows.lower(), (
         "the mv row must say the move rebases body links, not just Related: edges"
     )
-    assert "--dry-run" in mv_rows or "--json" in mv_rows, (
-        "the mv row must name its new preview / record surface (D7)"
+    assert "--dry-run" in mv_rows and "--json" in mv_rows, (
+        "the mv row must name BOTH halves of its new surface (D7) — an `or` here "
+        "would let Phase 7 document one and skip the other"
     )
     assert "child-of" in archive_rows, (
         "the archive row must name the strand refusal's predicate, so an agent "

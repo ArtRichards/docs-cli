@@ -578,6 +578,16 @@ def test_check_every_movelink_fixture_tree_is_clean_as_committed(docs_script, fi
 
     Intended RED until Phase 3.
     """
+    on_disk = sorted(
+        d.name
+        for d in (fixtures_dir / "trees").iterdir()
+        if d.is_dir() and d.name.startswith("movelink-")
+    )
+    assert on_disk == sorted(_MOVELINK_TREES), (
+        "the hand-written list and the directory must agree, or an eighth "
+        f"`movelink-*` tree would be silently unchecked here. On disk: {on_disk!r}"
+    )
+
     for name in _MOVELINK_TREES:
         root = fixtures_dir / "trees" / name
         assert root.is_dir(), f"Phase 3 must author the `{name}` fixture tree"

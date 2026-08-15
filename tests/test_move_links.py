@@ -393,6 +393,18 @@ def test_angle_form_keeps_a_literal_space() -> None:
     assert _render("<plan.md>", "a b.md", None) == "<a b.md>"
 
 
+def test_tab_is_percent_encoded_in_a_plain_destination_and_literal_in_angle() -> None:
+    """A plain destination ends at the first unescaped WHITESPACE, and a tab is
+    whitespace; the angle form is bounded by `>` and carries it literally.
+
+    Stated separately from the space case because the round-trip lock cannot
+    see it: `_split_destination` is a DECODER, not a tokenizer, so dropping any
+    terminator but `%` or `#` from the plain table still round-trips.
+    """
+    assert _render("plan.md", "a\tb.md", None) == "a%09b.md"
+    assert _render("<plan.md>", "a\tb.md", None) == "<a\tb.md>"
+
+
 def test_parenthesis_is_percent_encoded_in_a_plain_destination() -> None:
     """A plain destination ends at an unescaped `)` at depth 0, and `(` beyond
     `MAX_DESTINATION_PAREN_DEPTH` kills the link outright — so both go.
@@ -409,6 +421,12 @@ def test_percent_is_encoded_before_every_other_character() -> None:
     """
     assert _render("plan.md", "a%20b.md", None) == "a%2520b.md"
     assert _render("<plan.md>", "a%20b.md", None) == "<a%2520b.md>"
+
+    # A path carrying BOTH a literal percent and a real space: `%`-last would
+    # re-encode the `%` of the `%20` this renderer just wrote for the space,
+    # giving `a%2520%2520b.md`. `%2520` here is the author's literal `%20`;
+    # `%20` is the space.
+    assert _render("plan.md", "a %20b.md", None) == "a%20%2520b.md"
 
 
 def test_backslash_and_hash_are_encoded() -> None:
@@ -1027,3 +1045,118 @@ def test_relpath_of_a_root_level_target_needs_no_special_case() -> None:
     """
     assert posixpath.relpath("a.md", "") == "a.md"
     assert posixpath.relpath("a.md", posixpath.dirname("note.md")) == "a.md"
+
+
+# --- audit additions: the contract items the first pass left unpinned -------
+
+
+def test_leg_2_reports_related_bullets_in_declaration_order(tmp_path) -> None:
+    """(H): "within a referrer, `Related:` bullets in declaration order".
+
+    Every committed fixture has at most one moving target per referrer, so any
+    ordering passes there. Two bullets whose targets BOTH move, declared in
+    reverse alphabetical order, is the only shape that distinguishes
+    declaration order from a sort.
+    """
+    root = _tree(
+        tmp_path,
+        {
+            "tracker.md": _doc(
+                "Tracker",
+                "No body links here — this isolates the bullet ordering.",
+                role="status",
+                related=("pairs-with: zulu.md", "pairs-with: alpha.md"),
+            ),
+            "alpha.md": _doc("Alpha", "A."),
+            "zulu.md": _doc("Zulu", "Z."),
+        },
+    )
+    plan = _plan(root, {"alpha.md": f"{_DATED}/alpha.md", "zulu.md": f"{_DATED}/zulu.md"})
+
+    assert [s.target for s in plan.strands] == ["zulu.md", "alpha.md"], (
+        "declaration order, not sorted order"
+    )
+
+
+def test_apply_writes_each_document_exactly_once(tmp_path, monkeypatch) -> None:
+    """(E): "One `atomic_write` per document. Never two."
+
+    Two passes would double the write count, double the failure surface, and
+    make a half-written document possible in a way the current single-pass
+    rewriter avoids — so the count is the contract, and it is unobservable
+    from the resulting bytes. The referrer here carries BOTH a `Related:`
+    bullet and a body link into the moving document, which is exactly the
+    shape a two-pass implementation would write twice.
+    """
+    root = _tree(
+        tmp_path,
+        {
+            "status.md": _doc(
+                "Status",
+                "Tracking [the plan](plan.md) closely.",
+                role="status",
+                related=("pairs-with: plan.md",),
+            ),
+            "plan.md": _doc("Plan", "The plan."),
+        },
+    )
+    plan = _plan(root, {"plan.md": f"{_DATED}/plan.md"}, strand_check=False)
+
+    real = cli.atomic_write
+    written: list[str] = []
+
+    def _spy(path, content):
+        written.append(Path(path).name)
+        return real(path, content)
+
+    monkeypatch.setattr(cli, "atomic_write", _spy)
+    _m28("apply_move_plan")(plan)
+
+    assert written == ["status.md"], f"exactly one write per changed document, got {written!r}"
+
+
+def test_related_pairs_drives_the_bullet_half_independently_of_the_move_map(
+    tmp_path,
+) -> None:
+    """(A): the move map is canonical and feeds the DESTINATION half; the
+    alias-expanded pairs feed the `Related:` half, and only that half needs
+    them.
+
+    `rewrite_related_refs` matches a bullet's target by exact string (M26 — Q5),
+    so a `./plan.md` bullet is repointed only when the alias pair is supplied —
+    while the body link resolving to the same file is rewritten either way,
+    because the body planner matches on the normalised target and has no alias
+    problem at all (D1, E6).
+    """
+    files = {
+        "status.md": _doc(
+            "Status",
+            "Tracking [the plan](plan.md) closely.",
+            role="status",
+            related=("pairs-with: ./plan.md",),
+        ),
+        "plan.md": _doc("Plan", "The plan."),
+    }
+    moves = {"plan.md": f"{_DATED}/plan.md"}
+
+    bare = _rewrite_for(
+        _plan(_tree(tmp_path / "bare", files), moves, strand_check=False), "status.md"
+    )
+    assert bare is not None
+    assert f"[the plan]({_DATED}/plan.md)" in bare.new_text, "the body half never needs an alias"
+    assert bare.related_rewrites == 0, "an exact-string match cannot see `./plan.md`"
+    assert "- pairs-with: ./plan.md" in bare.new_text
+
+    aliased = _rewrite_for(
+        _plan(
+            _tree(tmp_path / "aliased", files),
+            moves,
+            strand_check=False,
+            related_pairs=[("plan.md", f"{_DATED}/plan.md"), ("./plan.md", f"{_DATED}/plan.md")],
+        ),
+        "status.md",
+    )
+    assert aliased is not None
+    assert aliased.related_rewrites == 1
+    assert f"- pairs-with: {_DATED}/plan.md" in aliased.new_text
+    assert f"[the plan]({_DATED}/plan.md)" in aliased.new_text
