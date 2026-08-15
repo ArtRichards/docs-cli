@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-25
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-25/m7-migration-accuracy-log.md
@@ -12,6 +12,9 @@ Related:
 - pairs-with: convention.md
 - pairs-with: archive/2026-05-22/m4-migration-helper.md
 - pairs-with: archive/2026-05-25/m8-adoption-workflow.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -462,7 +465,7 @@ setup._
 ## TDD Implementation Plan
 
 The ten phases follow the methodology in
-[status.md](status.md). Because M7 is **breaking the convention
+[status.md](../../status.md). Because M7 is **breaking the convention
 schema** (F0 rename) AND **broadening inference** AND **sweeping
 this project's own docs over to the new key**, the phases bias
 toward landing F0 first as a stable substrate before the

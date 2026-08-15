@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-08-14
 Archived-reason: Milestone M17 complete; docs-cli==1.6.0 shipped to PyPI 2026-06-03
 
 Related:
@@ -14,6 +14,9 @@ Related:
 - pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
 - pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Stub-drafted 2026-06-03, post M14 + M15 closeout.** M17
@@ -22,7 +25,7 @@ Related:
 > locally (M14 owns the `pyproject.toml` bump + the
 > `## 1.6.0 — UNRELEASED` CHANGELOG section; M15 appended its
 > authoring entries to that same section). The operative
-> checklist is [release-runbook.md](release-runbook.md); this
+> checklist is [release-runbook.md](../../release-runbook.md); this
 > milestone doc exists to give the publish work a named home,
 > exit criteria, and a log to record what actually happened.
 
@@ -340,7 +343,7 @@ rm -rf dist/ && .venv/bin/python -m build
 ```
 
 Plus the M17-specific dogfood: walk
-[release-runbook.md](release-runbook.md) end-to-end against
+[release-runbook.md](../../release-runbook.md) end-to-end against
 TestPyPI then real PyPI, with the smoke set covering the M14 +
 M15 headline contracts (see Success Criteria).
 
@@ -416,9 +419,9 @@ M17 is complete when:
 **M17 complete — `docs-cli==1.6.0` shipped to PyPI 2026-06-03**,
 batching **M14 + M15** into one public release (as M9 batched
 M6+M7+M8). Driven end-to-end as a fully-autonomous run walking
-[release-runbook.md](release-runbook.md) directly (no TDD code
+[release-runbook.md](../../release-runbook.md) directly (no TDD code
 phases). The full per-phase record + deviation prose lives in
-[m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s
+[m17-pypi-publish-impl.md](../../m17-pypi-publish-impl.md)'s
 milestone-completion summary.
 
 - **PyPI:** https://pypi.org/project/docs-cli/1.6.0/ ·

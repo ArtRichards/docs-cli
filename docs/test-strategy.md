@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-13
+Updated: 2026-08-14
 
 Related:
 - pairs-with: architecture.md
@@ -42,6 +42,23 @@ Three sources of test docs, in increasing realism:
      bullet pointing at the moving primary, so the M18 boundary is pinned
      with it). Structure only, never dates. Mutation-shaped cases use inline
      `tmp_path` builders for the same reason as the M25 family.
+   - `bodylink-*/` — the M27 family, **one semantic per tree**, for the two
+     body-link rules: `-clean` (every supported form, resolving), `-broken`
+     (one unresolved inline link and nothing else), `-excluded-forms` (image,
+     autolink, raw HTML, fenced and inline code, reference *uses*,
+     fragment-only, schemed, protocol-relative, root-absolute and a
+     backslash-escaped opt-out — all silent), `-nested` (resolution relative
+     to the referring document, up and down, including
+     `../sub/../back-inside.md`, which normalises back under the root),
+     `-archived` (the un-rebased archive shape that is 132 of this repo's own
+     139 breaks), and `-outside-root` (two escapes, one aimed at a path that
+     **cannot** exist and one self-referential and therefore guaranteed to
+     exist — the pair that makes "whether or not it would have resolved"
+     testable without mocking). Structure only, never dates. The **exotic
+     grammar** — angle destinations, all three title quotings, percent- and
+     backslash-escapes, balanced parens, reference definitions — lives in
+     inline strings against the pure scanner instead, because those cases
+     assert on parse output rather than on a tree walk.
    - `reciprocal-*/` — the M25 family, **one semantic per tree**, for the
      `missing-inverse` rule: `-clean` (all three pairs complete),
      `-missing` (the one-sided edge), `-freeform` (the supersedes trap),
@@ -93,7 +110,7 @@ Phase 10 of each milestone runs these.
 - Performance / scale. The tool targets trees in the low thousands of files; no benchmarks until that limit is hit.
 - File-system semantics specific to non-POSIX hosts. POSIX-atomic rename is assumed.
 - Non-UTF-8 encodings. The tool assumes UTF-8; non-UTF-8 input is a documented failure mode.
-- Markdown rendering. The tool reads metadata; the body content is opaque.
+- Markdown rendering, headings and anchors, prose style, and document structure. From M27 the body is no longer opaque, but it is read for exactly **one** purpose — resolving the destinations of the bounded set of local links `cli.md` › *Markdown body-link validation* names. Nothing else about the body is parsed, validated, or asserted on: a fragment is preserved and never checked against a heading, and the scanner claims no CommonMark conformance.
 
 ## Data plan note
 

@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-29
+Updated: 2026-08-14
 Archived-reason: Milestone M13 complete; docs-cli==1.5.0 shipped to PyPI 2026-05-29
 
 Related:
@@ -13,12 +13,15 @@ Related:
 - pairs-with: status.md
 - pairs-with: archive/2026-05-28/m12-project-rename.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Stub-drafted 2026-05-29, post M12 closeout.** M13 enters
 > active state immediately — the M12 wheel + sdist already live
 > in local `dist/` and pass `twine check`. The operative
-> checklist is [release-runbook.md](release-runbook.md); this
+> checklist is [release-runbook.md](../../release-runbook.md); this
 > milestone doc exists to give the publish work a named home,
 > exit criteria, and a log to record what actually happened.
 
@@ -245,7 +248,7 @@ rm -rf dist/ && .venv/bin/python -m build
 ```
 
 Plus the M13-specific dogfood: walk
-[release-runbook.md](release-runbook.md) end-to-end against
+[release-runbook.md](../../release-runbook.md) end-to-end against
 TestPyPI then real PyPI, with the smoke set covering the four
 M12 headline contracts (project rename round-trip + touch
 outside-root refusal + archive referring-edge rewrite + version
@@ -300,7 +303,7 @@ M9/M11 pattern._
 
 **M13 complete — `docs-cli==1.5.0` shipped to PyPI 2026-05-29.**
 Driven end-to-end via `/ship-milestone M13` walking
-[release-runbook.md](release-runbook.md) (M13 has no TDD code
+[release-runbook.md](../../release-runbook.md) (M13 has no TDD code
 phases; the runbook sections are the phases).
 
 - **PyPI:** https://pypi.org/project/docs-cli/1.5.0/

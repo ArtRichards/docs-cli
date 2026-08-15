@@ -352,3 +352,63 @@ def test_bundled_use_cases_teaches_safe_archive_selection() -> None:
     assert not _BARE_CASCADE.search(joined), (
         f"use-cases.md must not prescribe bare `--cascade`. Got: {joined!r}"
     )
+
+
+# --- M27 — the bundled skill must teach body-link validation ---------------
+
+
+def test_skill_md_teaches_body_link_validation() -> None:
+    """M27 — D7 surface parity: the skill's `docs check` row must name BOTH new
+    hard errors.
+
+    The row currently teaches `missing-inverse` and `duplicate-field` and says
+    nothing about prose links, so an agent reading it would not know that a
+    2.0 `docs check` can now fail on a body link at all — and would have no
+    idea which of the two repairs (rebase the destination, or use a URL) the
+    finding is asking for. The flags column of that table is read as a
+    prescription, which is precisely why the rule ids belong in it.
+
+    Intended RED until Phase 7 (the bundled skill lands in the SAME change as
+    the CLI surface; there is nothing to mirror at Phase 2).
+    """
+    _frontmatter, body = _split_frontmatter(_read_skill())
+    check_rows = [
+        line for line in body.split("\n") if line.startswith("|") and "docs check" in line
+    ]
+    assert check_rows, "the skill body's verb table must carry a `docs check` row"
+    joined = "\n".join(check_rows)
+
+    assert "broken-body-link" in joined, (
+        "the check row must name `broken-body-link` — a missing local body-link "
+        "destination is a hard error from 2.0"
+    )
+    assert "outside-root-body-link" in joined, (
+        "the check row must name `outside-root-body-link` — a destination that "
+        "leaves the tree root is its own hard error, with a different repair"
+    )
+
+
+def test_bundled_use_cases_teaches_body_link_repair() -> None:
+    """M27 — D7: the shipped use-case catalog carries the same prescription,
+    and names the TWO repairs an adopter faces.
+
+    `references/use-cases.md`'s "Validate in CI" row lists what `docs check`
+    reports; it must include body links. The catalog is also where an upgrading
+    adopter looks for the recipe, so both repairs must be findable: rebase the
+    destination for `broken-body-link`, use a URL for `outside-root-body-link`.
+
+    Intended RED until Phase 7.
+    """
+    text = (SKILL_DIR / "references" / "use-cases.md").read_text()
+
+    check_rows = [
+        line for line in text.split("\n") if line.startswith("|") and "docs check" in line
+    ]
+    assert check_rows, "use-cases.md must carry a `docs check` row"
+    assert "body link" in "\n".join(check_rows).lower(), (
+        "the validate row must say body links are now checked"
+    )
+
+    assert "broken-body-link" in text, "the catalog must name the rule id an adopter will see"
+    assert "outside-root-body-link" in text, "…and the second one, whose repair is different"
+    assert "URL" in text, "the outside-root repair is to use a URL, and it must be spelled out"

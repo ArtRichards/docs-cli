@@ -3,13 +3,16 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-08-14
 Archived-reason: Milestone M15 complete; docs-cli==1.6.0 shipped to PyPI via M17 2026-06-03
 
 Related:
 - child-of: archive/2026-06-03/m15-agent-native-authoring.md
 - pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -52,7 +55,7 @@ section tracks implementation progress, which is distinct.)
 The four items were carved out of M14 on 2026-06-02 (operator-confirmed)
 when the A6/B3/C4 widening pushed M14 past M12 scale:
 
-- **B2 `docs project set`** — [agent-native-invocation.md](agent-native-invocation.md)
+- **B2 `docs project set`** — [agent-native-invocation.md](../../agent-native-invocation.md)
   §5E (the single-doc counterpart to `docs project rename`).
 - **B3 `docs stamp` + C4 `--body-from` detector** — surfaced by the M16
   bundled-docs-skill dogfood: an agent wrote a full test-matrix body and

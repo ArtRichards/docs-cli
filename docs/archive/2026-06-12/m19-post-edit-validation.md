@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-08-14
 
 Related:
 - child-of: plan.md
@@ -12,6 +12,9 @@ Related:
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -87,7 +90,7 @@ describes the **pre-M15-C4** "first 20 lines looks like a metadata block"
 heuristic. The runtime detector (`_body_has_metadata_block`) and the refusal
 message are correct — only the help text drifted. M19 corrects the one line,
 closing the follow-on tracked in status.md + the
-[m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) Open follow-on note.
+[m17-pypi-publish-impl.md](../../m17-pypi-publish-impl.md) Open follow-on note.
 
 ### Scope — three deliverables
 
@@ -133,7 +136,7 @@ closing the follow-on tracked in status.md + the
   `src/docs_cli/cli.py:2900-2905` (which still says "Refused (exit 2) if any
   of the body's first 20 lines looks like a metadata block") with wording
   that matches the actual M15-C4 detector. The turnkey replacement is the
-  one drafted in the [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)
+  one drafted in the [m17-pypi-publish-impl.md](../../m17-pypi-publish-impl.md)
   Open follow-on note:
 
   > Read body content from PATH (or `-` for stdin) and append it under the

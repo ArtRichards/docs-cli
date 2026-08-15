@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-21
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-21/m2-mutating-verbs-log.md
@@ -13,6 +13,9 @@ Related:
 - pairs-with: cli.md
 - pairs-with: architecture.md
 - pairs-with: test-strategy.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -35,14 +38,14 @@ is atomic: a failure never leaves a partially-edited doc.
   1 on existing file. Does not refresh INDEX.
 - `docs archive <file>` performs the dual-status dance atomically: edit
   (`Status: archived` + bump `Updated:`), move to `<archive_dir>/<date>/`,
-  regenerate INDEX. `--reason`, `--date`, `--cascade` per [cli.md](cli.md).
+  regenerate INDEX. `--reason`, `--date`, `--cascade` per [cli.md](../../cli.md).
 - `docs mv <old> <new>` moves/renames a doc and rewrites every `Related:`
   reference that points at `<old>` across the whole tree. Exit 1 on collision.
 - `docs touch <file>` bumps `Updated:` to today; regenerates INDEX.
 - Atomicity: tmp file + rename for every write; archive moves only after the
   edit succeeds; INDEX regen runs last.
 - `--dry-run` works on all four verbs.
-- Exit codes per [cli.md](cli.md).
+- Exit codes per [cli.md](../../cli.md).
 
 ### Deliverables
 
@@ -88,7 +91,7 @@ Milestone-completion summary at the bottom of this file._
 
 ## TDD Implementation Plan
 
-The ten phases follow the fixed methodology in [status.md](status.md). Phases
+The ten phases follow the fixed methodology in [status.md](../../status.md). Phases
 1–4 establish the contract, tests, fixtures, and RED baseline with **no verb
 implementation**; phases 5–10 implement and ship.
 
@@ -186,7 +189,7 @@ implementation**; phases 5–10 implement and ship.
   all four verbs, `--cascade` interactive prompt, error messages to stderr.
 - **Files:** `bin/docs` — `_build_parser()`, `main()`, the `_cmd_*` handlers.
 - **Exit:** `docs <verb> --help` for all four; every CLI test green; exit codes
-  match the [cli.md](cli.md) matrix.
+  match the [cli.md](../../cli.md) matrix.
 
 ### Phase 8: Run Tests (GREEN)
 
@@ -211,8 +214,8 @@ implementation**; phases 5–10 implement and ship.
   - Full quality gate (Phase 8 commands).
   - Refactor any code grown past the readable budget; revisit the single-file
     decision if warranted (defer the split to M3 unless it becomes unworkable).
-  - Update [status.md](status.md): M2 → Complete, M3 → ACTIVE.
-  - Update [plan.md](plan.md): record the `--cascade` default decision and the
+  - Update [status.md](../../status.md): M2 → Complete, M3 → ACTIVE.
+  - Update [plan.md](../../plan.md): record the `--cascade` default decision and the
     INDEX directory/`Project` grouping deferral to M3.
   - Append milestone-completion summaries to this file and the log.
 - **Exit:** Quality gate green; docs updated; ready to start M3.
@@ -260,10 +263,10 @@ and `dual-status-adr.md`):
 - **INDEX grouping by directory / `Project` is deferred to M3.** The real
   large-tree human-navigation improvement is grouping the INDEX by something
   other than `Role`. That is a view concern, not a mutating-verb concern; it is
-  recorded as a [plan.md](plan.md) open question for M3 (`docs list --project`,
+  recorded as a [plan.md](../../plan.md) open question for M3 (`docs list --project`,
   directory-grouped INDEX). M2 keeps the INDEX Role-grouped; the renderer fix
   above ensures nested docs at least link correctly and show their path.
-- **`--cascade` default deferred.** [plan.md](plan.md) asks whether
+- **`--cascade` default deferred.** [plan.md](../../plan.md) asks whether
   `docs archive --cascade` should be the default with `--no-cascade` to opt
   out. Currently opt-in. Phase 1 declares `--cascade` as a plain `store_true`
   so the polarity is a one-line change if Phase 6 flips it. Decision recorded
@@ -296,14 +299,14 @@ commands exit 0.
 M2 is complete when:
 
 - [x] All Phase Checklist items are checked.
-- [x] All four verbs (`new`, `archive`, `mv`, `touch`) work per [cli.md](cli.md),
+- [x] All four verbs (`new`, `archive`, `mv`, `touch`) work per [cli.md](../../cli.md),
       including `--dry-run` and the documented exit codes.
 - [x] Every write is atomic — a failure leaves the original doc untouched.
 - [x] Nested docs (archived docs especially) get working INDEX links.
 - [x] All Deliverables above are checked off.
 - [x] Dogfood: archiving and renaming this repo's own docs produces correct,
       drift-free state.
-- [x] [status.md](status.md) reflects M2 → Complete, M3 → Next.
+- [x] [status.md](../../status.md) reflects M2 → Complete, M3 → Next.
 - [x] [m2-mutating-verbs-log.md](m2-mutating-verbs-log.md) contains a
       milestone-completion summary.
 
@@ -315,7 +318,7 @@ touch` bumps `Updated:`, `docs archive` does the dual-status move, and `docs
 mv` relocates a doc while rewriting every `Related:` reference to it.
 
 - **Surface:** four subcommands on `bin/docs`, each with `--dry-run` and the
-  [cli.md](cli.md) exit-code matrix (0 / 1 / 2).
+  [cli.md](../../cli.md) exit-code matrix (0 / 1 / 2).
 - **Shared core:** three pure editing helpers (`set_metadata_field`,
   `rewrite_related_refs`, `scaffold_doc`) plus `_metadata_line_span`,
   `_archive_one`, `_cascade_archive`, and `_refresh_index`. Metadata edits are
@@ -326,7 +329,7 @@ mv` relocates a doc while rewriting every `Related:` reference to it.
   files, all green; tree-wide `ruff` and `mypy` clean.
 - **Dogfood:** all four verbs exercised against a copy of this repo's `docs/`
   — correct, drift-free, idempotent (see the Phase 9 log).
-- **Decisions recorded** in [plan.md](plan.md): `--cascade` stays opt-in;
+- **Decisions recorded** in [plan.md](../../plan.md): `--cascade` stays opt-in;
   directory- / `Project`-grouped INDEX deferred to M3. `bin/docs` is ~1.3k
   lines and still single-file — the split stays deferred to M3 per this
   milestone's Decisions; the code is sectioned and passes every gate, so it is

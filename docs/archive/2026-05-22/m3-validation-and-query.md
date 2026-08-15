@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-22/m3-validation-and-query-log.md
@@ -13,6 +13,9 @@ Related:
 - pairs-with: cli.md
 - pairs-with: architecture.md
 - pairs-with: test-strategy.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -35,14 +38,14 @@ tree navigates by project.
 ### Requirements
 
 - `docs check [DIR] [--stale N] [--json]` reports every violation listed in
-  [cli.md](cli.md): missing/empty required fields, out-of-vocabulary
+  [cli.md](../../cli.md): missing/empty required fields, out-of-vocabulary
   Status/Role, unparseable `Updated:`, structural breakage, status/location
   drift, broken `Related:` references, and — with `--stale N` — stale active
   docs. Exit 0 clean, 1 warnings only, 2 errors.
 - `docs list [--status S] [--role R] [--project P] [--stale N] [--json]`
   filters the tree (filters AND-combined) and prints a table grouped by Status
   then Role, or a JSON array. The `--json` record schema is pinned in
-  [cli.md](cli.md) and stable from M3 on. Exits 0.
+  [cli.md](../../cli.md) and stable from M3 on. Exits 0.
 - `check` and `list` are read-only — no `--dry-run`, no mutation.
 - The INDEX renderer groups active docs by `Project` (docs-root project first,
   then alphabetical), then by `Role` within each project; `## Archived` stays a
@@ -90,7 +93,7 @@ Milestone-completion summary at the bottom of this file._
 
 ## TDD Implementation Plan
 
-The ten phases follow the fixed methodology in [status.md](status.md). Phases
+The ten phases follow the fixed methodology in [status.md](../../status.md). Phases
 1–4 establish the contract, tests, fixtures, and RED baseline with **no verb
 implementation**; phases 5–10 implement and ship. **All ten phases are
 complete — see the Milestone-completion summary at the end of this file.**
@@ -178,7 +181,7 @@ complete — see the Milestone-completion summary at the end of this file.**
   mapping, error messages to stderr.
 - **Files:** `bin/docs` — `finding_to_json`, `doc_to_json`, the `--json`
   branches of `_cmd_check` / `_cmd_list`.
-- **Exit:** every CLI test green; exit codes match the [cli.md](cli.md) matrix.
+- **Exit:** every CLI test green; exit codes match the [cli.md](../../cli.md) matrix.
 
 ### Phase 8: Run Tests (GREEN)
 
@@ -196,8 +199,8 @@ complete — see the Milestone-completion summary at the end of this file.**
 ### Phase 10: Quality, Docs, Refactor
 
 - **Objective:** Close out M3.
-- **Actions:** full quality gate; update [status.md](status.md) (M3 → Complete,
-  M4 → next) and [plan.md](plan.md) (resolve the INDEX-grouping open question);
+- **Actions:** full quality gate; update [status.md](../../status.md) (M3 → Complete,
+  M4 → next) and [plan.md](../../plan.md) (resolve the INDEX-grouping open question);
   append milestone-completion summaries here and in the log.
 - **Exit:** quality gate green; docs updated; ready to start M4.
 
@@ -227,7 +230,7 @@ and `dual-status-adr.md`):
   wraps `validate_status` / `validate_role` / `parse_date` so a rejection
   becomes a `Finding` instead of an exception. `list` shares the lenient
   traversal so it can still exit 0 on a messy tree.
-- **INDEX grouped by `Project` then `Role`.** The [plan.md](plan.md) open
+- **INDEX grouped by `Project` then `Role`.** The [plan.md](../../plan.md) open
   question (group the INDEX by directory or `Project`) is resolved: by
   `Project`. It is metadata-driven — consistent with the convention's
   deliberate replacement of role-bucket subdirectories with `Role:` metadata —
@@ -240,7 +243,7 @@ and `dual-status-adr.md`):
   extra `Label: value` lines as a designed feature. There is nothing
   implementable to warn about; Phase 1 removed the phrase from cli.md. Exit 1
   is stale docs only. A possible future opt-in extra-field allowlist is scoped
-  as an open question in [plan.md](plan.md).
+  as an open question in [plan.md](../../plan.md).
 - **`Finding` carries a stable `rule` id.** Beyond `severity` and `message`,
   each finding has a machine-readable `rule` (`missing-field`, `bad-vocab`,
   `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`). It is
@@ -249,7 +252,7 @@ and `dual-status-adr.md`):
 - **`check` / `list` take no `--dry-run`.** They are read-only, so they do not
   use the `common` parent parser (which carries `--dry-run`). `check` takes a
   positional `[DIR]` like `index`; `list` is `--root`-only, matching cli.md.
-- **`bin/docs` stays a single file.** [definition-of-ready.md](definition-of-ready.md)'s
+- **`bin/docs` stays a single file.** [definition-of-ready.md](../../definition-of-ready.md)'s
   risk log and M2's Decisions both flagged a possible package split "at M3".
   After the Phase 1 contract `bin/docs` is ~1,520 lines — large, but sectioned
   with header comments and clean under `ruff` / `mypy`. M3 adds two verbs and a
@@ -278,13 +281,13 @@ all commands green; `docs check docs/` exits 0.
 M3 is complete when:
 
 - [x] All Phase Checklist items are checked.
-- [x] `docs check` and `docs list` work per [cli.md](cli.md), including
+- [x] `docs check` and `docs list` work per [cli.md](../../cli.md), including
       `--json` and the documented exit codes.
 - [x] `docs check docs/` returns exit 0 on this repo's own docs tree.
 - [x] `docs list --json` output validates against the schema pinned in cli.md.
 - [x] The INDEX renders the two-level `Project` → `Role` layout.
 - [x] All Deliverables above are checked off.
-- [x] [status.md](status.md) reflects M3 → Complete and [plan.md](plan.md)'s
+- [x] [status.md](../../status.md) reflects M3 → Complete and [plan.md](../../plan.md)'s
       INDEX-grouping open question is resolved.
 - [x] [m3-validation-and-query-log.md](m3-validation-and-query-log.md) contains
       a milestone-completion summary.
@@ -314,7 +317,7 @@ M3 is complete when:
   Updated-descending sort.
 - **`_resolved_project`** — `Doc.project` or the config default, never None.
 - **`finding_to_json` / `doc_to_json`** — the `--json` record builders for
-  the schemas pinned in [cli.md](cli.md).
+  the schemas pinned in [cli.md](../../cli.md).
 - **`render_index`** — reworked to the two-level `## Project — <name>` /
   `### Active — <Role>` layout; `_format_entry` and the marker-splice logic
   unchanged.
@@ -326,7 +329,7 @@ accepted in Phase 5: the `malformed` rule covers a **missing H1 only** —
 `parse_metadata_block` ends the metadata block at the first non-label line
 rather than raising, so a malformed in-block line is not separately
 detectable. No fixture exercises it; recorded in the log and in
-[status.md](status.md)'s durable gotchas.
+[status.md](../../status.md)'s durable gotchas.
 
 ### Verification
 

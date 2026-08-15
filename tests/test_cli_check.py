@@ -401,3 +401,149 @@ def test_check_clean_after_a_scoped_archive(docs_script, tmp_path):
 
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, (check.stdout, check.stderr)
+
+
+# --- M27 (D4 / D4b) — body-link validation through the CLI -----------------
+#
+# Phase 2 (written RED). Intended RED: neither rule exists yet, so every
+# `bodylink-*` fixture tree exits 0 and prints nothing (plain assertion
+# failure). Every intended-exit-2 test here ALSO asserts its frozen contract
+# message, so none can be satisfied by an unrelated exit 2 — the M26
+# falsely-GREEN lesson.
+#
+# Between Phase 2 and Phase 3 these fail on the missing fixture directory
+# instead; `_bodylink_tree` makes that explicit rather than letting a
+# vacuously-empty walk look like a pass.
+
+
+def _bodylink_tree(name: str) -> Path:
+    """Path to a committed `bodylink-*` fixture tree, proving it exists.
+
+    `docs check` on a missing directory walks nothing and exits 0, so the
+    exit-0 locks below would pass on a fixture that was never written. The
+    guard is what keeps them honest before Phase 3.
+    """
+    root = TREES / name
+    assert root.is_dir(), f"missing fixture tree {name!r} (Phase 3 supplies it)"
+    return root
+
+
+def test_check_broken_body_link_exits_2_and_names_the_line(docs_script):
+    """D4: a local body link naming no existing path is a hard error, and the
+    finding carries everything an agent needs to repair it in `message`.
+    """
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-broken")))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in (proc.stdout + proc.stderr)
+    # Grouping header, not a substring hit: `doc.md` also occurs elsewhere in
+    # the output, so only the bare header line proves the finding is FILED
+    # against the referring doc.
+    assert "doc.md" in proc.stdout.splitlines(), "output is grouped by file; the REFERRER is named"
+    assert "broken-body-link" in proc.stdout
+    assert (
+        "body link at line 8 does not resolve to an existing path: plan.md (resolves to plan.md)"
+    ) in proc.stdout
+
+
+def test_check_broken_body_link_json_record_keys_unchanged(docs_script):
+    """D4/Q4: no new JSON field — the record key set stays exactly the M3 four."""
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-broken")), "--json")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    data = json.loads(proc.stdout)
+    records = [rec for rec in data if rec.get("rule") == "broken-body-link"]
+    assert len(records) == 1, f"exactly one broken-body-link record, got {data!r}"
+    rec = records[0]
+    assert set(rec) == {"path", "severity", "rule", "message"}, (
+        "M27 adds NO new JSON field; the line, the raw destination and the "
+        "candidate all live in `message`"
+    )
+    assert rec["severity"] == "error"
+    assert rec["path"] == "doc.md", "root-relative POSIX path of the REFERRING doc"
+    assert "line 8" in rec["message"]
+    assert "plan.md" in rec["message"]
+
+
+def test_check_outside_root_body_link_exits_2_and_names_the_url_repair(docs_script):
+    """D4b: an escaping destination is reported, and the message names the
+    repair — replace it with a URL — mirroring `missing-inverse`'s
+    `(or remove the edge)`.
+    """
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-outside-root")))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "Traceback" not in (proc.stdout + proc.stderr)
+    assert "doc.md" in proc.stdout.splitlines(), "output is grouped by file"
+    assert "outside-root-body-link" in proc.stdout
+    assert "leaves the docs root:" in proc.stdout
+    assert "links outside the tree must be URLs" in proc.stdout
+
+
+def test_check_outside_root_body_link_json_record_keys_unchanged(docs_script):
+    """D4b: the second rule leaves the record closed too."""
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-outside-root")), "--json")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    data = json.loads(proc.stdout)
+    records = [rec for rec in data if rec.get("rule") == "outside-root-body-link"]
+    assert len(records) == 2, f"exactly two outside-root-body-link records, got {data!r}"
+    for rec in records:
+        assert set(rec) == {"path", "severity", "rule", "message"}
+        assert rec["severity"] == "error"
+        assert rec["path"] == "doc.md"
+
+
+def test_check_outside_root_emits_no_broken_body_link_record(docs_script):
+    """BINDING precedence, at the CLI: containment is tested BEFORE existence,
+    so an escaping destination yields `outside-root-body-link` ONLY.
+
+    One of the fixture's two escapes points at a path that CANNOT exist and
+    the other at one that provably does; neither may produce a
+    `broken-body-link`, because deciding brokenness would need precisely the
+    stat the boundary forbids.
+    """
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-outside-root")), "--json")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    data = json.loads(proc.stdout)
+    assert [rec["rule"] for rec in data] == ["outside-root-body-link"] * 2, (
+        f"the two rules must never double-report, got {data!r}"
+    )
+
+
+def test_check_bodylink_clean_tree_exits_0(docs_script):
+    """Every supported form, resolving → clean.
+
+    GREEN-at-baseline but DEGENERATE (passes today only because the rules do
+    not exist); the real over-fire guard after Phase 6.
+    """
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-clean")))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_check_bodylink_excluded_forms_tree_exits_0(docs_script):
+    """E5/E8/D2: images, autolinks, raw HTML, code, schemed, protocol-relative,
+    root-absolute, fragment-only, reference uses and an escaped span → silence.
+
+    GREEN-at-baseline but DEGENERATE; the over-fire guard after Phase 6.
+    """
+    proc = _run(docs_script, "check", str(_bodylink_tree("bodylink-excluded-forms")))
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+
+def test_check_verdict_is_identical_from_a_relocated_copy(docs_script, tmp_path):
+    """D4b hermeticity: the verdict is a function of the tree ALONE.
+
+    The same bytes checked from a different location — with no sibling
+    directories of any kind around them — must produce the identical exit code
+    and the identical stdout. This is the property that makes `docs check`
+    usable as a CI gate: a tree that passes in a git clone must pass in a
+    container and in a vendored subtree.
+
+    GREEN-at-baseline but DEGENERATE (nothing reads the body yet); the real
+    hermeticity lock from Phase 6.
+    """
+    src = _bodylink_tree("bodylink-outside-root")
+    dst = tmp_path / "relocated"
+    shutil.copytree(src, dst)
+
+    here = _run(docs_script, "check", str(src))
+    there = _run(docs_script, "check", str(dst))
+    assert here.returncode == there.returncode, (here.stdout, there.stdout)
+    assert here.stdout == there.stdout, "identical bytes must yield an identical verdict"

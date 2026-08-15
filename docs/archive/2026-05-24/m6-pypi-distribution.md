@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-05-24
+Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-24/m6-pypi-distribution-log.md
@@ -13,6 +13,9 @@ Related:
 - pairs-with: cli.md
 - pairs-with: test-strategy.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Scope reframe 2026-05-24 (operator decision).** M6 is now
@@ -20,9 +23,9 @@ Related:
 > machinery (build backend, package shape, `install-skill` verb,
 > runbook, README/architecture rewrites, GitHub repo) and closed at
 > Phase 10. The **actual PyPI publish is M9** (see
-> [m9-pypi-publish.md](m9-pypi-publish.md)), which runs post-M8 and
+> [m9-pypi-publish.md](../2026-05-25/m9-pypi-publish.md)), which runs post-M8 and
 > ships M6 + M7 + M8 as one batched `1.3.0` release per
-> [release-runbook.md](release-runbook.md). Read every "operator
+> [release-runbook.md](../../release-runbook.md). Read every "operator
 > publishes / Phase 10 flips after publish" bullet below as
 > superseded by M9; nothing in M6's scope is publish-dependent.
 
@@ -33,7 +36,7 @@ Related:
 > 1. **No CI workflows.** The original
 >    `.github/workflows/{release,testpypi}.yml` Trusted-Publishing
 >    design is parked as a future-iteration note in
->    [release-runbook.md](release-runbook.md). M6 ships via manual
+>    [release-runbook.md](../../release-runbook.md). M6 ships via manual
 >    `twine upload` driven by the operator.
 > 2. **Operator-driven publish.** The implementation agent prepares
 >    every artifact, exercises every code path locally, and stages a
@@ -310,7 +313,7 @@ Milestone-completion summary at the bottom of this file._
 
 ## TDD Implementation Plan
 
-The ten phases follow the methodology in [status.md](status.md). Because M6
+The ten phases follow the methodology in [status.md](../../status.md). Because M6
 adds a small code surface (one new verb) **and** restructures the repo
 **and** introduces a wheel-build pathway, the phases bias toward the
 RED→GREEN cycle running against `tests/test_packaging.py` — the suite that
@@ -640,7 +643,7 @@ works.
 - [x] Phase 7: Update Tool/Wrapper Layer
 - [x] Phase 8: Run Tests (GREEN)
 - [x] Phase 9: Implement Online/Integration (local build + smoke; impl side)
-- [x] Phase 10: Quality, Docs, Refactor — _closed 2026-05-24 as preparation only; publish moved to [M9](m9-pypi-publish.md)_
+- [x] Phase 10: Quality, Docs, Refactor — _closed 2026-05-24 as preparation only; publish moved to [M9](../2026-05-25/m9-pypi-publish.md)_
 
 ## Decisions
 
@@ -851,7 +854,7 @@ of each. This mirrors M5's milestone-setup precedent.
 
 ## OPEN QUESTIONS — resolved
 
-_All five milestone-setup questions were triaged against [plan.md](plan.md)
+_All five milestone-setup questions were triaged against [plan.md](../../plan.md)
 and the M1–M5 precedent and operator-confirmed on 2026-05-23. Each
 resolution is recorded as a Decision in the "Decisions" section above
 (OQ1–OQ5). The full question, why-it-matters, and recommendation text is
@@ -1020,9 +1023,9 @@ the executable-script tooling overhead M6 was about to retire.
 
 > **M6 complete 2026-05-24 as preparation only.** Phase 10 closed
 > as part of the 2026-05-24 scope reframe: the actual PyPI publish
-> is **[M9](m9-pypi-publish.md)**, which runs post-M8 and ships
+> is **[M9](../2026-05-25/m9-pypi-publish.md)**, which runs post-M8 and ships
 > M6 + M7 + M8 as one batched `1.3.0` release per
-> [release-runbook.md](release-runbook.md). The "Operator-side
+> [release-runbook.md](../../release-runbook.md). The "Operator-side
 > closeout work" sub-list at the bottom of this summary is
 > superseded by M9 + the runbook — kept for historical context but
 > not to be followed standalone.
@@ -1082,7 +1085,7 @@ What's deliberately deferred:
   source-of-truth pattern is a follow-up.
 
 Operator-side closeout work _(historical — superseded by M9, see
-[m9-pypi-publish.md](m9-pypi-publish.md) + [release-runbook.md](release-runbook.md))_:
+[m9-pypi-publish.md](../2026-05-25/m9-pypi-publish.md) + [release-runbook.md](../../release-runbook.md))_:
 
 1. `twine upload --repository testpypi dist/*`; install from
    TestPyPI in a throwaway venv; smoke.
@@ -1099,6 +1102,6 @@ The above describes the M6-standalone publish that **never
 happened**. The 2026-05-24 scope reframe moved the publish to M9
 at version `1.3.0`, batched with M7 + M8. The M6 wheel + sdist in
 local `dist/` from 2026-05-23 are not uploaded; M9 rebuilds at M8
-ship time. See [release-runbook.md](release-runbook.md) for the
+ship time. See [release-runbook.md](../../release-runbook.md) for the
 operative checklist.
 

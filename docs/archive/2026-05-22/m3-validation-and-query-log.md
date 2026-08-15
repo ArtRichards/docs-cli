@@ -3,11 +3,14 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-22/m3-validation-and-query.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Implementation metadata
 
@@ -292,7 +295,7 @@ no implementation; the RED baseline (55 failed / 109 passed) is unchanged:
   named "unknown extra fields", but the convention defines no known-field
   registry, so M3 leaves extra fields unflagged. A possible future change — an
   opt-in `[vocabulary] add_fields` allowlist driving an `unknown-field`
-  warning — is recorded in [plan.md](plan.md)'s Open questions and
+  warning — is recorded in [plan.md](../../plan.md)'s Open questions and
   cross-referenced from this milestone's Decisions.
 - **Consistency sweep.** Audited the phase 1–4 artifacts: corrected this log's
   M1+M2 test-file count (10, not 11); recorded the single-file-vs-package
@@ -305,7 +308,7 @@ no implementation; the RED baseline (55 failed / 109 passed) is unchanged:
   references (dogfood-ready for the eventual `docs check docs/`).
 
 **Resume at Phase 5.** See this milestone's [task plan](m3-validation-and-query.md)
-(the TDD Implementation Plan) and [status.md](status.md)'s "Resuming this work"
+(the TDD Implementation Plan) and [status.md](../../status.md)'s "Resuming this work"
 section.
 
 ## Phase logs — implementation (phases 5–10)
@@ -337,7 +340,7 @@ per-doc `check` tests and the two-level renderer tests.
   in-block line is not separately detectable. `check_doc`'s `malformed` rule
   therefore fires only on a missing H1 — the one structural breakage the
   parser surfaces. No fixture exercises any other case; recorded as a durable
-  gotcha in [status.md](status.md).
+  gotcha in [status.md](../../status.md).
 - Deferred `import json` to Phase 7 (its first use) to keep Phase 5 clean
   under `ruff`.
 
@@ -382,7 +385,7 @@ Finalize the CLI — `--json` output for both verbs.
 
 #### Actions taken
 - `finding_to_json` → `{path, severity, rule, message}`; `doc_to_json` → the
-  schema pinned in [cli.md](cli.md) (`path` root-relative, `project`
+  schema pinned in [cli.md](../../cli.md) (`path` root-relative, `project`
   resolved, `updated` an ISO `YYYY-MM-DD` string regardless of
   `date_format`, `related` an array of `{verb, target}`, `extra_fields` an
   object with tuple values rendered as JSON arrays).
@@ -431,10 +434,10 @@ Close out M3.
 
 #### Actions taken
 - Re-ran the full quality gate — all green.
-- [status.md](status.md): M3 → Complete, M4 flagged next, progress table and
+- [status.md](../../status.md): M3 → Complete, M4 flagged next, progress table and
   "Resuming this work" section updated, the M3 RED-baseline gotcha removed and
   the `malformed`-rule gotcha added.
-- [plan.md](plan.md): the INDEX-grouping open question moved to Resolved
+- [plan.md](../../plan.md): the INDEX-grouping open question moved to Resolved
   questions (resolved by `Project`); the extra-field allowlist question stays
   parked.
 - Appended the Milestone-completion summary to
@@ -461,6 +464,6 @@ TDD phases complete.
 - **Commits:** one per implementing phase on `main` (phases 5, 6, 7, 10;
   phases 8–9 were verification-only with no changes to commit).
 - **Accepted spec gap:** the `malformed` rule covers a missing H1 only — see
-  the Phase 5 log and [status.md](status.md)'s durable gotchas.
+  the Phase 5 log and [status.md](../../status.md)'s durable gotchas.
 - **Next:** M4 — Migration helper (`docs migrate`); its task plan is authored
   when the milestone is activated.

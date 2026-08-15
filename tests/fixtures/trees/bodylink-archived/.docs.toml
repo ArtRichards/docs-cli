@@ -1,0 +1,5 @@
+[project]
+name = "bodylink-archived"
+
+[archive]
+dir = "archive"

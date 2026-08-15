@@ -3,12 +3,15 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-28
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-28/m12-project-rename.md
 - pairs-with: archive/2026-05-28/m12-project-rename.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -77,7 +80,7 @@ _Captured before Phase 1; historical._
     conformant `Project:` line + the `.docs.toml` sidecar +
     regenerating INDEX. The M10 follow-on TODO captured the
     full target spec at
-    [archive/2026-05-27/m10-adoption-polish.md](archive/2026-05-27/m10-adoption-polish.md)
+    [archive/2026-05-27/m10-adoption-polish.md](../../archive/2026-05-27/m10-adoption-polish.md)
     lines 261-268.
 - **What M12 produces:**
   - `docs project rename <new-name>` verb (new namespace).

@@ -3,7 +3,7 @@
 Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-08-14
 Archived-reason: Milestone M20 complete; docs-cli==1.6.5 shipped to PyPI 2026-06-12
 
 Related:
@@ -14,6 +14,9 @@ Related:
 - pairs-with: archive/2026-06-12/m18-archive-edge-integrity.md
 - pairs-with: archive/2026-06-12/m19-post-edit-validation.md
 
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
+
 ## Overview
 
 > **Stub-drafted 2026-06-12, post M19 implementation-complete.** M20
@@ -22,7 +25,7 @@ Related:
 > `docs-cli==1.6.5` locally (M19 owns the `pyproject.toml` bump → `1.6.5`,
 > the `tests/test_packaging.py` version-pin flip, and the
 > `## 1.6.5 — UNRELEASED` CHANGELOG section). The operative checklist is
-> [release-runbook.md](release-runbook.md); this milestone doc exists to
+> [release-runbook.md](../../release-runbook.md); this milestone doc exists to
 > give the publish work a named home, exit criteria, and a log to record
 > what actually happened.
 
@@ -341,7 +344,7 @@ rm -rf dist/ && .venv/bin/python -m build
 .venv/bin/twine check dist/*
 ```
 
-Plus the M20-specific dogfood: walk [release-runbook.md](release-runbook.md)
+Plus the M20-specific dogfood: walk [release-runbook.md](../../release-runbook.md)
 end-to-end against TestPyPI then real PyPI, with the smoke set covering the
 M19 headline contracts (see Success Criteria), and the NEW host-skill-refresh
 step (`docs install-skill --force` from the published wheel + the workflow-skill
@@ -405,7 +408,7 @@ M20 is complete when:
 **M20 complete — `docs-cli==1.6.5` shipped to PyPI 2026-06-12**, the
 publish-only counterpart to **M19**, one-to-one (as M13 shipped M12 and M11
 shipped M10; M9 and M17 were the batched shapes). Driven end-to-end as a
-fully-autonomous run walking [release-runbook.md](release-runbook.md) directly
+fully-autonomous run walking [release-runbook.md](../../release-runbook.md) directly
 (no TDD code phases); the operator authorized the irreversible PyPI upload +
 `main` push + `v1.6.5` tag + GitHub release up front (Q1 → FULL AUTONOMOUS).
 **NEW vs M17:** the closeout refreshed the host-machine skills per the CLAUDE.md
@@ -440,7 +443,7 @@ skill-update-flow policy.
   CHANGELOG not in sdist/wheel → the sdist sha moved from the GO-report build
   only because `docs/` evolved, not the date edit). No forced `1.6.x` bump. Full
   deviation prose in
-  [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md)'s milestone-completion
+  [m20-pypi-publish-impl.md](../../m20-pypi-publish-impl.md)'s milestone-completion
   summary, including the new M20 host-skill-drift finding.
 
 ## OPEN QUESTIONS

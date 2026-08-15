@@ -25,7 +25,7 @@ You own the convention from day one.
 | Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. Archives that ONE doc; to take related docs too, preview the one-hop neighbourhood with `--cascade-dry-run` and then write the exact set with `--cascade-only GLOB` (M26). `--json` emits the whole operation plan. |
 | Regenerate INDEX | `docs index` | The hand-written preamble is preserved; only the marker-block content is rewritten. |
 | Query the tree | `docs list [filters]` | Human table by default; `--json` for piping. Filter by role, lifecycle, project, stale-after-N-days. |
-| Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, and one-sided reciprocal edges. Exit codes 0/1/2 distinguishable for CI gates. |
+| Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, one-sided reciprocal edges, and — from 2.0 — local Markdown body links whose destination is missing or leaves the tree root. Exit codes 0/1/2 distinguishable for CI gates. |
 | Repair a one-sided relationship | `docs relate add\|remove SOURCE VERB TARGET` | Writes both halves of a reciprocal pair as one operation. Idempotent; `--dry-run` previews; `--json` for piping; `--reason` required for an archived endpoint (M25). |
 
 ## Adoption: bring a non-conforming tree under the convention
@@ -74,6 +74,29 @@ The loop is `check → relate add|remove → check` until clean. Free-form
 verbs (`pairs-with`, `child-of`/`parent-of`,
 `supersedes`/`superseded-by`, your own) are untouched by all of this —
 they gain no reciprocal validation and `relate` refuses to edit them.
+
+## Upgrade: repair body links (M27)
+
+From 2.0 `docs check` also reads each document's **body** and validates the
+local Markdown links it finds there, so a tree carrying unnoticed prose damage
+starts failing. A body-link destination resolves **relative to the document
+that contains it** — not root-relative like a `Related:` target — which is why
+`../` is normal in prose and never appears in a `Related:` bullet. Code
+(fenced and inline), images, autolinks, raw HTML, reference *uses*, external
+and schemed URLs, root-absolute and protocol-relative destinations, and
+fragment-only links produce nothing at all; a fragment is preserved and never
+validated. There is no repair verb and no opt-out knob: `docs` will not guess
+whether a link should be rebased, repointed, or deleted.
+
+| Scenario | Verb | Detail |
+|---|---|---|
+| Find the damage | `docs check` | Each finding names the 1-based line, the destination exactly as written, and the path it resolves to. `--json` for a machine list; the record keys are unchanged (`path`, `severity`, `rule`, `message`). |
+| The destination is missing — rebase it | `docs check` → edit the destination | `broken-body-link`. The overwhelmingly common cause is a document an older `docs` archived: the link was correct at the document's original location and no version of the tool has ever rebased it, so it needs the `../../` that the move into the archive should have added. The finding prints the candidate path it probed, which is what makes the missing prefix obvious. |
+| The destination leaves the tree — use a URL | `docs check` → replace with a URL | `outside-root-body-link`. The destination names something the tree does not own, and `docs check` never stats outside its own root — the escape is detected by path arithmetic alone, so the verdict is identical from a git clone, a container, or a vendored subtree. Replace it with a **URL**. |
+| Opt a span out deliberately | edit the prose | Fence a code sample that contains link syntax, put it in an inline code span, or backslash-escape the opening bracket. Any of the three makes the span invisible to the scanner. |
+| Re-check | `docs check` | Clean. |
+
+The loop is `check → rebase or URL → check` until clean.
 
 ## Distribution: install + share
 

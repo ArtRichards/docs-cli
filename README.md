@@ -44,7 +44,7 @@ docs archive <file> [--reason "…"]        Archive: edit Lifecycle, move to arc
 docs mv <old> <new>                       Move + rewrite Related: references across the tree.
 docs list [filters] [--json] [--exclude PATTERN]
                                           Query view of the tree.
-docs check [DIR] [--exclude PATTERN]      Validate metadata, refs, status/location drift.
+docs check [DIR] [--exclude PATTERN]      Validate metadata, refs, status/location drift, body links.
 docs touch <file>                         Bump Updated: to today.
 docs migrate <dir> [--apply] [--summary] [--only ambiguous] [--exclude PATTERN]
                                           Adopt a foreign Markdown directory into the convention (dry-run by default).

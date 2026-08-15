@@ -3,11 +3,14 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-22
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-22/m4-migration-helper.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Implementation metadata
 
@@ -30,7 +33,7 @@ section tracks milestone progress, which is distinct.)
 ## Milestone-setup open questions — resolved (2026-05-22)
 
 Four questions were surfaced while authoring the task plan; all four were
-triaged against [plan.md](plan.md) and the M1–M3 precedent and operator-
+triaged against [plan.md](../../plan.md) and the M1–M3 precedent and operator-
 confirmed. Each is recorded as a Decision in
 [m4-migration-helper.md](m4-migration-helper.md):
 
@@ -92,7 +95,7 @@ _Captured before Phase 1; historical._
   M4 must *insert* a metadata block between an existing H1 and body (or
   synthesise the H1) and *infer* the values the convention requires that a
   foreign doc does not carry. Neither inference nor block-insertion exists.
-- **Fixture reserved:** [test-strategy.md](test-strategy.md) already lists
+- **Fixture reserved:** [test-strategy.md](../../test-strategy.md) already lists
   `tests/fixtures/trees/foreign/` "for `docs migrate` tests (M4)"; Phase 3
   builds it.
 

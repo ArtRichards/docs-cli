@@ -581,3 +581,30 @@ def test_touch_check_config_default_provenance(docs_script, tmp_path):
     assert "(stale threshold 30, set in .docs.toml [check] stale_days)" in proc.stdout
     # Mutually exclusive with the CLI-sourced variant — no --stale was given.
     assert "via --stale" not in proc.stdout
+
+
+# --- M27 (D4) — `docs touch --check` inherits both body-link rules ----------
+
+
+def test_touch_check_broken_body_link_exits_2(docs_script, tmp_path):
+    """D4/Q6: the rules are always on for `docs touch --check` too.
+
+    `_run_touch_check` runs the same `check_tree` over the same root, so the
+    inheritance is free — but "free" is exactly the kind of property that
+    silently stops being true, and there is no flag to turn it off. Mirrors
+    `test_touch_check_broken_ref_tree_exits_2` for the body-link surface.
+
+    Intended RED: no rule exists yet, so the tree exits 0 (plain assertion).
+    """
+    root = tmp_path / "bodylinktouch"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "bodylinktouch"\n')
+    doc = root / "doc.md"
+    doc.write_text(
+        "# Doc\n\nLifecycle: active\nRole: notes\nProject: bodylinktouch\n"
+        "Updated: 2026-01-01\n\nSee [the plan](plan.md) for context.\n"
+    )
+    proc = _run(docs_script, "touch", str(doc), "--check")
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "broken-body-link" in proc.stdout, proc.stdout
+    assert "does not resolve to an existing path: plan.md" in proc.stdout, proc.stdout

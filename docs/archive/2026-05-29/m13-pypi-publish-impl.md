@@ -3,12 +3,15 @@
 Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-05-29
+Updated: 2026-08-14
 
 Related:
 - child-of: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: archive/2026-05-29/m13-pypi-publish.md
 - pairs-with: status.md
+
+Revision:
+- 2026-08-14: M27 one-time body-link migration; body-link destinations repaired (destination tokens only)
 
 ## Overview
 
@@ -200,7 +203,7 @@ intact; these are the cheap rot/drift probes):
 **M13 complete — `docs-cli==1.5.0` shipped to PyPI 2026-05-29**,
 driven end-to-end via `/ship-milestone M13`. Because M13 is an
 operational publish milestone (no TDD code phases), the
-conductor walked [release-runbook.md](release-runbook.md)
+conductor walked [release-runbook.md](../../release-runbook.md)
 directly on `m13/milestone-setup` rather than spinning up the
 standard phases-1-4 / phases-5-10 sub-agent stack; the
 operator explicitly authorized a fully-autonomous run including
