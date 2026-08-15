@@ -1368,7 +1368,10 @@ equal, never weakenings**:
   the new `test_archive_primary_only_leg_1_refuses_on_a_live_child`.
 
 Total changed test lines: **2475 added, 11 deleted**, across five files, zero
-ids removed — the per-file table above sums to exactly that.
+ids removed — the per-file table above sums to exactly that. Both figures are
+measured at the Phase-8 commit `570499c`; re-run today they read **2666 added,
+11 deleted** over 1338 ids, because the Step-2 audit added five more locks
+afterwards. The deleted count is the one that matters and it has not moved.
 
 ## Phase 9 — Integrate / Accept / Dogfood — 2026-08-15
 
