@@ -55,7 +55,7 @@ table and the milestone checklist synchronized.
 | 3. Create Data/Fixtures | **Complete** | 2026-08-15 | Seven `movelink-*` trees authored — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`, `-closeout` — each `docs check`-clean as committed; every existing fixture byte-identical; the two directory-derived sweeps 29→36 and 33→40; suite 1283 / 180 failed / 1103 passed. A read-only prototype census confirmed every intended plan, line numbers included. Original objective: `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
 | 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1332 collected / 229 failed / 1103 passed (restated after the Step-1 audit and the fresh-eyes fold-in); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (193 `AttributeError`, 36 `AssertionError`); mechanically proven 0 removed ids, 0 deleted test lines, and exactly **one** pre-existing id RED — `test_mv_help`, strengthened by operator decision. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | **Complete** | 2026-08-15 | `MOVE_STRAND_KINDS`, the four frozen records (`LinkRewrite`, `DocRewrite`, `Strand`, `MovePlan`) and the seven pure functions of item (L) landed as three pure INSERTIONS — 518 lines, zero existing lines touched, `_cmd_mv` / `_cmd_archive` byte-identical. `tests/test_move_links.py` 194/194; suite 1332 / **36 failed** / 1296 passed; the `AttributeError` class is at **0** and only `AssertionError` remains. Original objective: The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
-| 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
+| 6. Implement Offline/Core Path | **Complete** | 2026-08-15 | `_cmd_mv` inverted to plan-then-move with the R9 partial-state admission; `_cmd_archive` gained steps 5b / 8b / 8c / 8d and threads each member's planned text into `_archive_one`; `_print_move_lines` added and `preview only` lifted into the verb; `_rewrite_referring_edges` **deleted** (43 lines), superseded by `apply_move_plan`. Suite **5 failed, 1327 passed** — every remaining RED is a Phase-7 item (two `_JSON_TOP_LEVEL_KEYS` ids, one re-pointed fixture, two bundled-skill locks). Original objective: Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1087 pre-existing ids. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay E1, E2 and E3 on throwaway copies and prove each ends `docs check` clean with a destination-token-only diff; exercise the leg-1 refusal on plans B and C and byte-compare; confirm plan A completes with its leg-2 report naming all 16 still-active inbound references; prove idempotence; measure the added runtime. The real tree is never written to. |
@@ -1099,6 +1099,115 @@ have been to move an M26 helper for no behavioural reason.
 - `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
   `.venv/bin/mypy src/ tests/` — clean.
 - `.venv/bin/docs check --root docs` — no violations found (exit 0).
+
+## Phase 6 — Implement Offline/Core Path — 2026-08-15
+
+### Objective
+
+Wire the Phase-5 planner into both verbs under item (I)'s check orders, without
+relaxing a single Phase-2 lock.
+
+### Actions taken
+
+**`_cmd_mv` — inverted (item (I)).** `<old>` is a file (1) → `<new>` exists (1)
+→ root/config (2) → both under root (2) → **the whole-tree walk + `plan_move`**
+→ **5b the preview** (prints, `--json`, exit 0) → the rewrite-plan pre-flight →
+execution: the moved document's planned text to its **old** path, then
+`replace`, then `apply_move_plan`, then one `_refresh_index`. The M14 (A1)
+pre-flight walk is not a second walk — it *is* the plan walk, which is why the
+inversion costs nothing.
+
+**`_cmd_mv` — the R9 partial-state admission.** `_mv_partial_state` renders
+M26's shape extended by a `Rewritten:` clause. The moved document lands under
+`Moved:` iff the `replace` succeeded and under `Rewritten:` otherwise, so a
+`replace` that raises names the one document holding text rebased for a
+directory it is not in.
+
+**`_cmd_archive` — steps 5b / 8b / 8c / 8d.** `predicate` hoisted to just after
+`load_config`; a `_plan_rewrites()` closure shared by the preview (at 5b) and
+the write path (at 8) so both build the plan from the same walk with the same
+failure mapping (malformed → 1, unreadable → 2); `preflight_move_plan` at 8c;
+leg 1's refusal at 8d, printed even under `--quiet`; then execution.
+
+**One write per member.** `_archive_one` gained `text: str | None = None` and
+`apply_archive_plan` gained `texts: Mapping[str, str] | None = None`, so a
+moving member's archive metadata edits are layered on **top of** its planned
+text instead of a re-read. Without this a moving member is written twice,
+violating (E)'s "never two". Both defaults are the pre-M28 behaviour, which is
+what keeps `tests/test_archive_plan.py`'s direct calls untouched.
+
+**`_archive_move_map` / `_archive_related_pairs`** extracted as pure helpers.
+The pairs were previously built *inside* `apply_archive_plan`, i.e. only after
+execution — a chicken-and-egg for step 8b, which needs them at plan time.
+`apply_archive_plan` now returns `_archive_related_pairs(plan)`, so its
+contract and its M26 unit lock are unchanged.
+
+**`_rewrite_referring_edges` deleted** (43 lines), superseded by
+`apply_move_plan` on M26's `_cascade_set` precedent. Its M18 archived-doc gate
+becomes unnecessary *by construction*: under the new pipeline an archived
+document's text changes iff a `Related:` target or a body-link destination
+resolved into `moves` — exactly rule (G). Two docstrings that named it now name
+`rewrite_related_refs` / `_archive_related_pairs`.
+
+### Decisions / issues
+
+- **`preview only — nothing was written` moved out of `_print_archive_lines`
+  into `_cmd_archive`**, still gated on `cascade and dry_run` so M26's
+  behaviour is byte-identical, and emitted **last** — a preview now ends on the
+  sentence that says nothing happened, rather than burying it above the rewrite
+  and strand lines.
+- **The rewrite-counts footer prints unconditionally; leg 2's count line does
+  not.** R3 read literally for the footer (it is the skimming aid, and `0
+  destination(s) in 0 document(s) rebased` is a real answer); leg 2's count is
+  the summary *of a list*, and `0 still-active inbound reference(s)` on every
+  archive would be pure noise.
+- **`--quiet` suppresses the leg-1 PREVIEW pair**; only the two write-path
+  refusal lines survive it. That is item (L)'s split — the preview pair is a
+  report, not a refusal — so the pair lives in `_print_move_lines(dry_run=True)`
+  (caller-gated on `not --quiet`) and the refusal pair lives in `_cmd_archive`.
+- **A `docs mv` INDEX-refresh failure now mirrors `archive` exactly**: `docs:
+  INDEX refresh failed: <err>`, a record with `applied: true,
+  index_refreshed: false`, exit 2. Symmetry between the two verbs is the point
+  of one shared schema, and otherwise `index_refreshed`'s documented `false`
+  value is unobservable on `mv`.
+- **`_cmd_mv` tolerates a missing moving-member `DocRewrite`.** When
+  `[exclude]` / `.docsignore` hides the moved document from the walk it has no
+  plan entry, so the pre-`replace` write is skipped and the file is simply
+  renamed — today's behaviour exactly, and R11's exclusion contract honoured.
+  Synthesising an entry would violate it. `_mv_member_changes` names that
+  condition once so both the execution path and the admission agree.
+- **`mv --json`'s argparse flag landed HERE, not in Phase 7.** `_cmd_mv`'s
+  record emission reads `args.json`, so the one-line declaration cannot be
+  separated from the behaviour without a `getattr` shim. Named rather than
+  quietly done; the rest of the wrapper layer (both descriptions, the bundled
+  skill, `CHANGELOG.md`, `feedback-log.md`, the two contract-mandated test
+  expected-value updates) stayed in Phase 7.
+- **`plan_move` is handed `root`, not `root.resolve()`, by `_cmd_mv`.** `walk`
+  yields paths under the *unresolved* root, and `_root_relative` falls back to
+  the bare filename for a path it cannot relativise — so passing the resolved
+  root would silently mis-name every `sub/x.md` referrer whenever `--root` is
+  given relatively.
+
+### Verification
+
+- `.venv/bin/python -m pytest tests/ -q` — **5 failed, 1327 passed**. All 17
+  `mv` and 17 `archive` M28 behaviour ids are GREEN; every remaining RED is a
+  Phase-7 item: `test_archive_json_preview_record_shape` and
+  `test_archive_json_apply_record_has_the_same_key_set` (the
+  `_JSON_TOP_LEVEL_KEYS` expected-value update),
+  `test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected`
+  (re-pointed fixture) and the two bundled-skill locks.
+- The primary-only fixture's failure is **correct behaviour**, verified by
+  hand: `archive-neighborhood`'s `milestone-impl.md` is still active and
+  declares `child-of: milestone.md`, so archiving `milestone.md` alone strands
+  a live child and leg 1 refuses at exit 2 with zero bytes written. That is the
+  harm leg 1 exists to prevent, reproduced by an M26-era fixture.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+- `grep -rn 'docs: would move\|docs: moved\|reference(s) rewritten' tests/
+  docs/cli.md src/docs_cli/skill/ CHANGELOG.md` — **no hits**, re-confirming
+  item (J)'s claim that no test pins the two re-spelled `docs mv` lines.
 
 ## Milestone completion summary
 

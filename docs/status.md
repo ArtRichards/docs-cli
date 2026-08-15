@@ -47,8 +47,8 @@ Related:
 
 **M28 — Move-safe Markdown body-link rewrites is the current milestone.
 Step 1 (Phases 1–4) is complete on `m28/phases-1-4` (2026-08-15); Step 2
-(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phase 5 — Update Base
-Interfaces complete** (2026-08-15) and Phase 6 — Implement Offline/Core Path
+(Phases 5–10) is in flight on `m28/phases-5-10`, with **Phases 5 and 6
+complete** (2026-08-15) and Phase 7 — Update Tool/Wrapper Layer
 next.** Milestone setup completed 2026-08-15 with all
 seven setup questions RESOLVED, and Phase 1 did not re-open them. M28 extends `docs mv` and `docs archive` to rebase the
 parsed local Markdown destination tokens a move makes stale — reusing M27's
@@ -787,14 +787,22 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **continue M28 Step 2 at Phase 6 — Implement Offline/Core
-Path.** **Phase 5 — Update Base Interfaces is complete on
-`m28/phases-5-10`** (2026-08-15): `MOVE_STRAND_KINDS`, the four frozen records
-and the seven pure functions of item (L) landed as three pure insertions into
-`cli.py`, with `_cmd_mv` and `_cmd_archive` byte-identical, so the CLI locks
-stay honestly RED at the seam. `tests/test_move_links.py` is 194/194 and the
-suite is 1332 / 36 failed / 1296 passed — the `AttributeError` class is gone
-and only `AssertionError` remains. **Step 1
+**Next action:** **continue M28 Step 2 at Phase 7 — Update Tool/Wrapper
+Layer.** **Phases 5 and 6 are complete on `m28/phases-5-10`** (2026-08-15).
+**Phase 5** landed `MOVE_STRAND_KINDS`, the four frozen records and the seven
+pure functions of item (L) as three pure insertions into `cli.py`, with
+`_cmd_mv` and `_cmd_archive` byte-identical, so the CLI locks stayed honestly
+RED at the seam; `tests/test_move_links.py` went 194/194 and the
+`AttributeError` class went to zero. **Phase 6** inverted `_cmd_mv` to
+plan-then-move with the R9 partial-state admission, added `docs archive`'s
+steps 5b / 8b / 8c / 8d, threaded each moving member's planned text into
+`_archive_one` so the contract stays at one write per document, lifted
+`preview only` into the verb so a preview ends on it, and **deleted**
+`_rewrite_referring_edges` — superseded by `apply_move_plan`, whose M18
+archived-doc gate is unnecessary by construction. The suite is **5 failed,
+1327 passed**, and every remaining RED is a Phase-7 item: the two
+`_JSON_TOP_LEVEL_KEYS` ids, one M26-era fixture whose primary-only archive now
+correctly refuses on leg 1, and the two bundled-skill locks. **Step 1
 (Phases 1–4) is complete on `m28/phases-1-4`** (2026-08-15), on top of the
 milestone setup completed 2026-08-15 on `m28/milestone-setup` with all seven
 setup questions resolved. **Phase 1** froze the whole machine-facing contract
