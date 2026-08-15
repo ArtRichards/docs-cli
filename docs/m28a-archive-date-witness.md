@@ -41,8 +41,9 @@ Related:
   left), and Phase 7 — Update Tool/Wrapper Layer complete 2026-08-16, taking
   the suite fully **GREEN at 1502 passed / 0 failed**, and Phase 8 — Run Tests
   (GREEN) complete 2026-08-16 with every gate clean and 0 of the 1341
-  pre-existing ids removed or failing. Phase 9 — Integrate / Accept / Dogfood
-  is next.** The machine-facing contract is
+  pre-existing ids removed or failing, and Phase 9 — Integrate / Accept /
+  Dogfood complete 2026-08-16 across ten flows on throwaway copies. Phase 10 —
+  Quality, Docs, Refactor is next.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
   an operator decision). Phases 2–4 authored **149** test ids and six
@@ -681,7 +682,7 @@ coverage* below.
       `UNRELEASED` CHANGELOG entry written.
 - [x] A dated note on `feedback-log.md`'s issue #1 entry recording that finding
       3's archive-date half is answered, closing the issue's last open item.
-- [ ] End-to-end dogfood on a throwaway copy proving that E1d's `docs mv` now
+- [x] End-to-end dogfood on a throwaway copy proving that E1d's `docs mv` now
       refuses with zero bytes written, that a hand-made equivalent relocation
       of a witness-carrying document is a hard error naming both dates, that
       all 46 pre-witness archived documents stay silent, and that a real
@@ -904,7 +905,7 @@ coverage* below.
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate / Accept / Dogfood
+- [x] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery

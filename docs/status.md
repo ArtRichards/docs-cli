@@ -69,8 +69,19 @@ fully **GREEN at 1502 passed / 0 failed**. **Phase 8 — Run Tests (GREEN)
 completed 2026-08-16**: every gate clean, and the mechanical proof against
 `7f7853b` shows **0** of the 1341 pre-existing ids removed and **0 deleted
 lines in every test source file** — no test was relaxed, weakened, deleted or
-rewritten, and Step 2 changed no test source at all.
-Phase 9 — Integrate / Accept / Dogfood is next.** All seven
+rewritten, and Step 2 changed no test source at all. **Phase 9 — Integrate /
+Accept / Dogfood completed 2026-08-16** across ten flows on throwaway copies:
+E1d refuses at exit 2 leaving the copy byte-identical, on a document with the
+witness and on one without; a hand-made relocation adds exactly **one**
+`archive-date-drift` where the pre-M28a CLI on the same tree adds none; all
+four permitted neighbours complete; a non-default `attic` / `%d-%m-%Y` tree
+refuses on its configured dir and completes on an ordinary `archive/`
+subdirectory; all **46** pre-witness archived documents stay silent; a real
+`--cascade-only 'm26-*'` closeout writes the witness to every member with one
+shared date and leaves `docs check` clean; `migrate --apply` writes none and
+demotes a foreign one; the **7** cross-dated `pairs-with` edges emit nothing;
+and the runtime delta is below the 10 ms measurement floor.
+Phase 10 — Quality, Docs, Refactor is next.** All seven
 setup questions were RESOLVED before Phase 1,
 and Phase 1 froze the contract against them without re-opening any: the
 machine-facing contract is items (A)–(H) of the milestone's *Decisions

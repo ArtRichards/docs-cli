@@ -26,8 +26,8 @@ the milestone checklist synchronized.
   fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
   flight on `m28a/phases-5-10`; Phases 5–8 complete 2026-08-16 with the suite
   fully **GREEN at 1502 passed / 0 failed**, every gate clean and 0 of the
-  1341 pre-existing ids removed or failing. Phase 9 — Integrate / Accept /
-  Dogfood is next.** All seven setup
+  1341 pre-existing ids removed or failing, and Phase 9 complete across ten
+  dogfood flows. Phase 10 — Quality, Docs, Refactor is next.** All seven setup
   questions were RESOLVED before Phase 1 (Q4 by the operator; Q1 auto-resolved
   under the naming-with-an-obvious-default rule; Q2/Q3/Q5/Q6/Q7
   conductor-resolved), and Phase 1 froze the contract against them without
@@ -70,7 +70,7 @@ the milestone checklist synchronized.
 | 6. Implement Offline/Core Path | Complete | 2026-08-16 | **2 failed / 1500 passed** — the 26 ids the Phase-4 classification assigned here, flipped; only the two Phase-7 bundled-skill ids remain. One `set_metadata_field` call in `_archive_one` at the pinned position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. Follow-through item 9's remaining three in-code prose surfaces landed here with the rule they describe. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-16 | **1502 passed / 0 failed** — the suite is fully GREEN one phase early, as Phase 8 is the verification phase. Phase 1 had already landed the author-facing halves in `cli.md` / `convention.md`, so this phase **verified** them item by item and found two real gaps, both corrected: `convention.md`'s built-in always-allowed label list omitted `Archived`, and its `docs mv` refusal paragraph still said three permitted neighbours where amendment 6 says four. Bundled `SKILL.md` (three verb rows) and `references/use-cases.md` (three rows plus a new *Upgrade: the archive-date witness* section) landed; both mirrors re-copied in the same commit. Two argparse `description` strings gained one clause each (RESOLVED OQ-1) — the flag delta itself is **confirmed empty**, measured against `7f7853b`. `UNRELEASED` CHANGELOG gained both `Added` entries, the BREAKING `Changed` entry and the upgrade note including OQ-2's residual; `feedback-log.md` issue #1 is **CLOSED**. No new flag, no version bump. |
 | 8. Run Tests (GREEN) | Complete | 2026-08-16 | **1502 passed / 0 failed**, 0 errors / xfails / warnings. `ruff check`, `ruff format --check` and `mypy src/ tests/` clean; `docs check --root docs` exit 0; both mirrors byte-identical. Mechanical proof against `7f7853b`: **0** of the 1341 pre-existing ids removed, 161 added, and **0 deleted lines in every test SOURCE file** — the only deletions anywhere under `tests/` are 8 lines in the frozen INDEX snapshot, every one an `Updated:` value or the generated-on line. **No test was relaxed, weakened, deleted or rewritten**, and Step 2 changed no test source at all. |
-| 9. Integrate / Accept / Dogfood | Pending | — | Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
+| 9. Integrate / Accept / Dogfood | Complete | 2026-08-16 | **Ten flows, all on throwaway copies.** E1d refuses at exit 2 with the copy byte-identical, on a document **without** the witness and on one **with** it, in every mode (`--dry-run` prints no `would move` line; `--json` prints 0 bytes). A hand-made relocation adds exactly **one** `archive-date-drift` where the pre-M28a CLI on the same tree adds none. All **four** permitted neighbours complete, the two-spellings-of-one-date case included. A non-default `attic` / `%d-%m-%Y` tree refuses on its configured dir and **completes** on an ordinary `archive/` subdirectory — both polarities of the config-blindness trap. All **46** pre-witness archived documents stay silent (0 findings total, exit 0). A real `--cascade-only 'm26-*'` closeout writes the witness to **every** member with one shared date, the reason to the primary alone, `docs check` clean. `migrate --apply` writes **no** witness and demotes a foreign one. The **7** cross-dated `pairs-with` edges emit nothing. Runtime delta below the 10 ms floor. One operator error during flow 8 wrote to the repository root and was fully reverted from HEAD with nothing lost; recorded in the entry rather than hidden. Original scope: | Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, completion summaries, hand to M29. |
 
 ## Setup record — 2026-08-15
@@ -1278,6 +1278,150 @@ still GREEN as written —
 second residual, *Follow-ups* item 7, operator decision OQ-7) and
 `test_archive_renders_the_witness_in_the_trees_date_format` (defect E8's
 exit-2 INDEX-refresh failure, *Follow-ups* item 1).
+
+## Phase 9 — Integrate / Accept / Dogfood — 2026-08-16
+
+### Objective
+
+Prove each measured property on throwaway copies, unattended and with no
+stdin. Ten flows; the real tree is never written to.
+
+### Flows and results
+
+**1 — E1d refused, on a document that carries NO witness.** On a `cp -a` copy
+of `docs/`:
+
+```console
+$ docs mv archive/2026-05-25/m9-pypi-publish.md archive/2026-07-03/m9-pypi-publish.md
+docs: mv: archive/2026-05-25/m9-pypi-publish.md -> archive/2026-07-03/m9-pypi-publish.md crosses dated archive directories (2026-05-25 to 2026-07-03); refusing before any write
+docs: mv: the dated directory records when a document was archived; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check`
+exit 2
+```
+
+`diff -r` against a pristine copy: **identical** — zero bytes written. This
+document carries no `Archived:` line, which is the case Leg 1 can never reach
+and the reason Q4 adopted both legs. Setup measured the same command
+completing at **exit 0** with `docs check` clean.
+
+**2 — E1d refused, on a document that DOES carry the witness, in every mode.**
+`docs archive feedback-log.md --reason …` on the copy first, which wrote:
+
+```
+Lifecycle: archived
+Role: log
+Project: docs
+Updated: 2026-08-16
+Archived: 2026-08-16
+Archived-reason: dogfood flow 2
+```
+
+— item (A)'s pinned order exactly. The cross-dated `mv` of it then refuses:
+**exit 2** plain, **exit 2** under `--dry-run` (2 stderr lines, and **no**
+`would move …` line — the preview does not lie), **exit 2** under `--quiet`
+(both lines still printed), and **exit 2** under `--json` with **0 bytes** on
+stdout. Tree byte-identical after each.
+
+**3 — a hand-made relocation is detected, where it was silent before.** On a
+fresh copy: archive a document (so it gains the witness), then relocate it
+with a plain `mv` into a different dated directory. `docs check --json` rule
+tally, on **one** tree, from **two** CLIs:
+
+| CLI | tally |
+|---|---|
+| M28a (HEAD) | `broken-ref: 11`, **`archive-date-drift: 1`** |
+| pre-M28a (`7f7853b` worktree) | `broken-ref: 11` |
+
+The delta is exactly the one new finding; the `broken-ref` noise is the hand
+`mv` not rewriting references, and predates M28a. The record, showing the
+closed four-key set:
+
+```json
+{"path": "archive/2026-07-03/feedback-log.md", "severity": "error", "rule": "archive-date-drift",
+ "message": "Archived: 2026-08-16 but the file is in archive/2026-07-03/ (move it back, or correct the recorded date)"}
+```
+
+**4 — all FOUR permitted neighbours complete** (amendment 6), each with the
+destination asserted to exist afterwards: (i) a rename within
+`archive/2026-05-25/`; (ii) `archive/2026-05-25/…` → the active root;
+(iii) a dated directory → the archive root (D8's second residual, permitted by
+design); (iv) `archive/2026-05-25/` → `archive/2026-5-25/` — **two spellings
+of one date**, the case a raw-string predicate would refuse. All exit 0.
+
+**5 — one refusal, and one non-refusal, on a non-default tree.** A throwaway
+tree with `[archive] dir = "attic"` and `date_format = "%d-%m-%Y"`:
+`attic/01-01-2026/old.md` → `attic/04-03-2026/old.md` **refuses**, naming the
+configured directory and the raw segments in the tree's own format
+(`crosses dated archive directories (01-01-2026 to 04-03-2026)`); and on the
+**same** tree `archive/2026-01-01/note.md` → `archive/2026-03-04/note.md`
+**completes at exit 0**, because there `archive/` is an ordinary
+subdirectory. Both polarities of the config-blindness trap, live.
+
+**6 — the silence proof over all 46.** On a clean copy: **46** archived
+documents (excluding `INDEX.md`), `docs check --json` → **0 findings total**,
+therefore **0** `archive-date-drift` and **0** `Archived:`-sourced
+`bad-date`, exit 0. Exactly **two** files in the tree contain an
+`^Archived: ` line — `cli.md` and the milestone doc — and in both the first
+occurrence is far past the metadata-block terminator (line 123 and line 149
+against a block ending at line 7), i.e. inside fences. The durable form of
+the claim (OQ-9) is what the suite pins: **zero drift findings over a tree
+with at least 46 archived documents**.
+
+**7 — a real closeout.** `docs archive m26-safe-archive-selection.md
+--cascade-only 'm26-*' --reason "M26 complete (dogfood)"` on a copy: exit 0,
+and **every** moved member carries `Archived: 2026-08-16` — the operation's
+one shared date — while `Archived-reason:` is on the **primary alone**. The
+`Related:` bare-label group still follows the inline run. `docs check` on the
+result: **exit 0**.
+
+**8 — `docs migrate --apply` writes no witness.** An isolated archive-shaped
+foreign tree (`archived/old-notes/` holding a bare legacy file and one
+carrying a foreign `Archived: true`). Migrate normalised it into
+`archive/2026-08-16/` and set `Lifecycle: archived` — and wrote **no**
+`Archived:` line anywhere (`grep -rn '^Archived:'` → none), while the foreign
+one was **demoted** to `Migrated-Archived: true` under `## Migrated
+metadata`. D7, live.
+
+**9 — the E5 decline holds.** The same copy carries exactly **7**
+archived↔archived `pairs-with` edges spanning different dated directories —
+`m12↔m10`, `m12↔m11`, `m13↔m12`, `m7↔m4`, `m8↔m5`, `m8↔m6`, `m9↔m6` — and
+the rule emits **0** findings on it. The declined rule would have emitted 7 on
+a correct tree; the witness emits 0.
+
+**10 — runtime.** Five runs each of `docs check` over the 74-document copy:
+HEAD **0.18 s** (steady state; 0.23 s cold), pre-M28a `7f7853b` **0.18 s**.
+The delta is **below the 10 ms measurement floor** — indistinguishable from
+zero, which is what pure path arithmetic with no filesystem access and no
+second pass predicts.
+
+### Decisions & issues
+
+- **An operator error during flow 8, fully reverted, recorded rather than
+  hidden.** A `cp -a` of a fixture path that does not exist failed, its
+  following `cd` failed with it, and the next command — `docs migrate .
+  --apply` — therefore ran against the **repository root** instead of the
+  throwaway copy, writing metadata blocks across the tracked tree and
+  creating an untracked `.docs.toml` and `archive/` at the root. **No commit
+  was involved and nothing was lost**: `git restore --source=HEAD --staged
+  --worktree .` plus removing the two untracked paths returned the tree to
+  `19147ea` exactly — `git status --porcelain` empty, 1502 passed,
+  `docs check --root docs` exit 0, both mirrors byte-identical, all
+  re-verified. **Zero deletions or renames** were involved at any point. Flow
+  8 was then redone against an isolated tree built from scratch, and every
+  remaining flow used **absolute `--root` paths only** — never `cd`, never a
+  bare `.` root. The exit criterion "the real tree is untouched" holds as of
+  this entry and was re-measured, but it is recorded here that it was
+  transiently violated and repaired rather than never violated.
+
+### Verification
+
+- Every flow ran unattended with no stdin, on `cp -a` copies or trees built
+  from scratch under `/tmp`.
+- The refusal flows left their copies **byte-identical** (`diff -r` against a
+  pristine copy).
+- The silence proof covers all **46** archived documents; the closeout flow
+  ends `docs check` clean; runtime is recorded and bounded below 10 ms.
+- `git status --porcelain` on the real repository: **empty**. HEAD is
+  `19147ea`.
 
 ## Milestone completion summary
 
