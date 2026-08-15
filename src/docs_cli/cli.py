@@ -163,8 +163,25 @@ MOVE_STRAND_KINDS: frozenset[str] = frozenset({"related", "body-link"})
 # never trip the tool's own allowlist warning, so it joins the built-in
 # always-allowed set rather than requiring every tree with an
 # `add_fields` allowlist to list it.
+#
+# M28a (D1, item (B)) adds `Archived:` — the archive-date witness
+# `docs archive` writes onto every document it moves — for exactly M25's
+# `Revision:` reason. It joins the built-in set ONLY; it stays out of
+# `parse()`'s `known` set (so it surfaces through `docs list --json` under
+# `extra_fields`, as `Archived-reason:` and `Revision:` already do) and out
+# of migrate's `_REQUIRED_METADATA_FIELDS` (so a foreign `Archived:` line is
+# demoted to `Migrated-Archived:`, never promoted — D7).
 _BUILTIN_METADATA_FIELDS: frozenset[str] = frozenset(
-    {"Lifecycle", "Role", "Project", "Updated", "Related", "Archived-reason", "Revision"}
+    {
+        "Lifecycle",
+        "Role",
+        "Project",
+        "Updated",
+        "Related",
+        "Archived",
+        "Archived-reason",
+        "Revision",
+    }
 )
 
 
@@ -910,17 +927,23 @@ class MovePlan:
 # ---------------------------------------------------------------------------
 
 
-def parse_date(value: str, date_format: str = "%Y-%m-%d") -> date:
+def parse_date(value: str, date_format: str = "%Y-%m-%d", *, label: str = "Updated") -> date:
     """Parse a date string, raising MetadataError on malformed input.
 
     The default format matches `convention.md`. Trims surrounding whitespace
     before parsing so trailing newlines from metadata-line splits don't trip
     the parser.
+
+    `label` names the field in the error message (M28a — OQ-3), so a malformed
+    `Archived:` value does not report itself as a malformed `Updated:` line.
+    Keyword-only, and defaulted, so every pre-M28a call site keeps a
+    byte-identical message and no positional caller can be silently re-bound.
+    One parser survives, and the two messages cannot drift.
     """
     try:
         return datetime.strptime(value.strip(), date_format).date()
     except ValueError as exc:
-        raise MetadataError(f"Updated: malformed date {value!r} (expected {date_format})") from exc
+        raise MetadataError(f"{label}: malformed date {value!r} (expected {date_format})") from exc
 
 
 def validate_lifecycle(value: str, lifecycles: frozenset[str]) -> None:
@@ -3333,6 +3356,135 @@ def move_plan_to_json(plan: MovePlan) -> dict[str, object]:
             for strand in plan.strands
         ],
     }
+
+
+# ---------------------------------------------------------------------------
+# M28a — the archive-date witness: the pure seam shared by both legs
+#
+# Three pure functions of their arguments — no filesystem access of any kind
+# (D3), pinned by purity locks that monkeypatch `Path.exists` / `is_file` /
+# `is_dir` / `resolve` / `open` to raise. They sit here, immediately above
+# `check_doc`, for M27's reason for placing `body_link_findings` here: the
+# rule reads from this slot.
+#
+# `archive_dir_date` forward-references `_is_archived_rel`, which is defined
+# further down beside the archive verb. That is legal at module level and it
+# is DELIBERATE: item (C) requires the SHARED notion of "is this under the
+# archive subtree", and hoisting the helper is *Follow-ups* item 4's job in
+# Phase 10, where it can be done together with the three inlined copies as
+# one justified move.
+# ---------------------------------------------------------------------------
+
+
+def archive_dir_date(rel: str, config: Config) -> date | None:
+    """The date of the dated archive directory `rel` sits in, or None (M28a — D3).
+
+    Three conditions, computed from the root-relative path and the tree's
+    config alone:
+
+    1. `rel` is under the configured `[archive] dir` — the SHARED
+       `_is_archived_rel` notion, so Leg 1 and Leg 2 can never disagree about
+       what the archive subtree is.
+    2. There is a segment after it — `len(parts) < 3` is what makes
+       `archive/x.md`, a document directly in the archive root, carry no date.
+    3. `parts[1]` — the FIRST segment under the archive dir, so
+       `archive/<date>/sub/x.md` corroborates `<date>` — parses through
+       `parse_date` with `config.date_format`. Deliberately NOT
+       `detect_archive_layout`'s hardcoded `strptime(parts[1], "%Y-%m-%d")`,
+       which ignores `Config` entirely (E7), and never `parse()`'s hardcoded
+       default (defect E8, *Follow-ups* item 1).
+    """
+    if not _is_archived_rel(rel, config):
+        return None
+    parts = rel.split("/")
+    if len(parts) < 3:
+        return None
+    try:
+        return parse_date(parts[1], config.date_format)
+    except MetadataError:
+        return None
+
+
+def cross_dated_archive_move(old_rel: str, new_rel: str, config: Config) -> tuple[str, str] | None:
+    """The two dated-directory segments when a move crosses them, else None (M28a — D5).
+
+    Leg 2's predicate, decided from the two root-relative paths and the tree's
+    config alone: no metadata, no filesystem, no graph — and therefore
+    independent of whether the moving document carries the witness, which is
+    the whole reason this leg exists.
+
+    Delegating to `archive_dir_date` IS the contract, not an implementation
+    detail: it is what makes the two legs share one notion of a dated archive
+    directory, and it is what keeps the comparison on PARSED dates (so
+    `archive/2026-01-01/` to `archive/2026-1-1/` is one date, not two —
+    permitted neighbour 4).
+
+    Returns the RAW directory segments, which item (E) interpolates into the
+    refusal's `<D1>` and `<D2>`; never a re-rendered `strftime` spelling.
+    """
+    old_date = archive_dir_date(old_rel, config)
+    new_date = archive_dir_date(new_rel, config)
+    if old_date is None or new_date is None or old_date == new_date:
+        return None
+    return old_rel.split("/")[1], new_rel.split("/")[1]
+
+
+def archive_date_findings(
+    path: Path,
+    metadata: Mapping[str, str | tuple[str, ...]],
+    root: Path,
+    config: Config,
+) -> list[Finding]:
+    """`archive-date-drift` for one document (M28a — D3). Pure; no filesystem access.
+
+    The evaluation order is BINDING (item (C)):
+
+    1. **Present-only** (D6) — not a `str`, or blank, and there is nothing to
+       report, ever. That is the entire compatibility story: a 1.x tree gains
+       zero findings. `isinstance(..., str)` rather than `is not None` also
+       covers a bare `Archived:` bullet group, which `parse_metadata_block`
+       yields as a tuple and item (C) pins as *absent*, mirroring how
+       `check_doc` already skips a tuple-valued `Updated:`.
+    2. A value that does not parse is **one `bad-date`** finding (form C) and
+       **no** drift finding — there is no date to compare (OQ-2). `bad-date`
+       stays the single vocabulary entry for a date field that does not parse.
+    3. `_root_relative`, never `path.resolve().relative_to(root.resolve())`:
+       `.resolve()` is filesystem access, which D3 forbids, and
+       `body_link_findings` is the precedent (OQ-4).
+    4. Corroborated → nothing. No dated directory → form B. A different one →
+       form A, naming BOTH dates.
+
+    `recorded` and the directory segment are interpolated as the RAW strings
+    from disk, never re-rendered through `config.date_format` — an operator
+    told to look at a re-rendered directory would be told to look at one the
+    tree does not have. Values arrive pre-stripped from `parse_metadata_block`,
+    and `recorded` is interpolated as received, matching `parse_date`'s own
+    un-stripped `{value!r}`.
+    """
+    recorded = metadata.get("Archived")
+    if not isinstance(recorded, str) or not recorded.strip():
+        return []
+    try:
+        recorded_date = parse_date(recorded, config.date_format, label="Archived")
+    except MetadataError as exc:
+        return [Finding(path, "error", "bad-date", str(exc))]
+
+    rel = _root_relative(path, root)
+    dir_date = archive_dir_date(rel, config)
+    if dir_date == recorded_date:
+        return []
+    if dir_date is None:
+        message = (
+            f"Archived: {recorded} but the file is not under a dated "
+            f"{config.archive_dir}/ directory (move it back, or remove the field)"
+        )
+    else:
+        segment = rel.split("/")[1]
+        message = (
+            f"Archived: {recorded} but the file is in {config.archive_dir}/{segment}/ "
+            "(move it back, or correct the recorded date)"
+        )
+    return [Finding(path, "error", "archive-date-drift", message)]
 
 
 # ---------------------------------------------------------------------------

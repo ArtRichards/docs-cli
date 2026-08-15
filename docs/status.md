@@ -49,14 +49,20 @@ Related:
 
 **M28a — Structured archive-date witness is the current milestone. Step 1 —
 Phases 1–4 — is complete on `m28a/phases-1-4` (contract 2026-08-15; RED tests,
-fixtures and the classified baseline 2026-08-16); Phase 5 — Update Base
-Interfaces is next.** All seven setup questions were RESOLVED before Phase 1,
+fixtures and the classified baseline 2026-08-16), and Step 2 — Phases 5–10 —
+is in flight on `m28a/phases-5-10`: **Phase 5 — Update Base Interfaces
+completed 2026-08-16**, landing the vocabulary entry, `parse_date`'s
+keyword-only `label`, and all three pure helpers wired nowhere — 43 ids
+flipped, the suite at **28 failed / 1474 passed**, and `check_doc`,
+`_archive_one` and `_cmd_mv` untouched so every CLI-level id stays honestly
+RED at the seam. Phase 6 — Implement Offline/Core Path is next.** All seven
+setup questions were RESOLVED before Phase 1,
 and Phase 1 froze the contract against them without re-opening any: the
 machine-facing contract is items (A)–(H) of the milestone's *Decisions
 (Phase 1 — BINDING)*, with **six amendments** to setup-frozen material and
 **nine Step-1 resolutions** (OQ-1 … OQ-9; OQ-7 an operator decision declining
 to widen the `docs mv` predicate). No product code has changed; Phases 2–4
-authored **136** test ids and **six** `archivedate-*` fixture trees against
+authored **149** test ids and **six** `archivedate-*` fixture trees against
 that contract and captured the classified baseline — 1502 collected, **71 RED
 and 90 GREEN** of the 161 new ids, in exactly two exception classes, with
 **no** pre-existing id removed or failing. M28a ships **two
@@ -910,8 +916,18 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M28a Step 2 — Phases 5–10**, then
-**M29 — PyPI publish 2.0.0**. M28a's milestone setup completed 2026-08-15 on
+**Next action:** **M28a Step 2 — Phase 6 onward**, then
+**M29 — PyPI publish 2.0.0**. **Phase 5 — Update Base Interfaces completed
+2026-08-16** on `m28a/phases-5-10`: `Archived` joined
+`_BUILTIN_METADATA_FIELDS` (and stayed out of `parse()`'s `known` set and
+migrate's supersession set); `parse_date` gained its keyword-only
+`label: str = "Updated"` so one parser spells both date-error messages with no
+existing call site's bytes moving; and all three pure helpers landed —
+`archive_dir_date`, the shared config-aware dated-directory reader,
+`cross_dated_archive_move` (Leg 2's predicate, which delegates to it so the two
+legs can never disagree), and `archive_date_findings`. All three are wired
+nowhere, so the 26 CLI-level ids stay honestly RED at the seam: 43 ids flipped
+and the suite stands at **28 failed / 1474 passed**. M28a's milestone setup completed 2026-08-15 on
 `m28a/milestone-setup`: the registered draft stub is expanded to a full
 ten-phase task plan with **nine binding decisions**, nine pieces of measured
 evidence (E1–E9), an *Evidence → regression coverage* table, and two setup

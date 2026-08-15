@@ -31,8 +31,12 @@ Related:
   destination are different dated archive directories, before it writes
   anything (**prevent**).
 - Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
-  fixtures and the classified baseline 2026-08-16. Phase 5 — Update Base
-  Interfaces is next.** The machine-facing contract is
+  fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
+  flight on `m28a/phases-5-10`: Phase 5 — Update Base Interfaces complete
+  2026-08-16 (the vocabulary entry, `parse_date`'s keyword-only `label` and all
+  three pure helpers, wired nowhere; 43 ids flipped, suite 28 failed / 1474
+  passed). Phase 6 — Implement Offline/Core Path is next.** The machine-facing
+  contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
   an operator decision). Phases 2–4 authored **149** test ids and six
@@ -890,7 +894,7 @@ coverage* below.
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
-- [ ] Phase 5 — Update Base Interfaces
+- [x] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
