@@ -22,9 +22,14 @@ table and the milestone checklist synchronized.
 - Project: docs
 - Milestone: M28 — Move-safe Markdown body-link rewrites
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
-- Progress: **Milestone setup complete, with all seven setup questions
-  RESOLVED (Q1/Q2/Q3 by the operator; Q4/Q5/Q6/Q7 conductor-resolved).
-  Phase 1 — Define Contract is next and does not re-open them.** Q1 **amends
+- Progress: **Phase 1 — Define Contract is COMPLETE (2026-08-15); Phase 2 —
+  Write Tests (RED) is next.** The whole machine-facing contract is frozen in
+  the milestone's *Decisions (Phase 1 — BINDING)* — items (A)–(M), three
+  amendments to setup-frozen material, and eleven Step-1 resolutions (R1–R11)
+  — with the author-facing halves in `cli.md` and `convention.md` and zero
+  product-code change. The setup record below is unchanged. Milestone setup
+  had resolved all seven setup questions (Q1/Q2/Q3 by the operator;
+  Q4/Q5/Q6/Q7 conductor-resolved) and Phase 1 did not re-open them. Q1 **amends
   the 2026-08-15 routing entry**: setup measured that the routed strand-check
   predicate refuses this repository's own standard milestone closeout, so the
   refusal is narrowed to the `child-of` direction and everything else is
@@ -38,14 +43,14 @@ table and the milestone checklist synchronized.
   (2026-08-09/10), the M28 registration in `plan.md` (2026-08-10), and the
   2026-08-15 routing of `feedback-log.md` issue #1 finding 1 (the strand-check)
   and finding 4 (the `--report-links` scope option) into this milestone.
-- Branch: `m28/milestone-setup` for setup; implementation branches are chosen
-  when Phase 1 begins.
+- Branch: `m28/milestone-setup` for setup; `m28/phases-1-4` for Step 1
+  (Phases 1–4).
 
 ## TDD phase progress
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
+| 1. Define Contract | **Complete** | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(M), three amendments to setup-frozen material, eleven Step-1 resolutions (R1–R11). Author-facing halves in `cli.md` (*Move-safe body-link rewrites (M28 — D1–D7)*, the rewritten `docs mv` section, the amended archive check order, the widened `archive --json` schema, three exit tables) and `convention.md` (M18's widened exception, M27 — D6's reconciled sentence, the author-facing move guarantee). Zero product-code change. Original objective: Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | Pending | — | Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
 | 3. Create Data/Fixtures | Pending | — | `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
@@ -271,9 +276,107 @@ down are restated in *Decisions recorded at setup (BINDING)* as A1, A2 and A3.
 | Q6 | Does `docs migrate --apply`'s archive-normalising move get the same treatment? | **RESOLVED (conductor) → out of scope, as recommended**, recorded as *Follow-ups* item 1. `docs migrate` repairs no references at all today, operates on a foreign tree, and folding it in would widen M28 from a coordinated move to an adoption workflow. |
 | Q7 | Does M28 fix M26 — *Follow-ups* item 3 (duplicate `Related:` bullets from alias rewriting), which is homed here? | **RESOLVED (conductor) → re-deferred explicitly, with the reason, as recommended.** M28 builds a destination-token splicer over body text, not a `Related:`-block editor; the cost is cosmetic. The alternative — deduplicating `apply_archive_plan`'s pairs and flipping the pinned test — **reaches into M26's frozen Phase-1 Q5 contract**, and M28 does not do that. |
 
-## Phase 1 — Define Contract
+## Phase 1 — Define Contract — 2026-08-15
 
-_Not started._
+### Objective
+
+Freeze, against the resolved Q1–Q7, everything Phase 2 will assert against:
+D1's formula and the move map, the emitted spelling / fragment / delimiter /
+re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape
+invariant with its proof, the archived-referrer policy (destination tokens
+only) and its `convention.md` wording, both strand-check legs, the pre-flight
+and partial-state boundary, both verbs' preview and `--json` shapes, and the
+Phase-5 signatures. **No product code lands** — signatures are frozen in prose
+following the M25/M26/M27 precedent, because stubs would perturb the Phase-4
+subprocess RED reasons.
+
+### Actions taken
+
+- Wrote the machine-facing contract as *Decisions (Phase 1 — BINDING)* in the
+  milestone: items **(A)** the move map, **(B)** the formula's BINDING step
+  order, **(C)** the destination-token renderer and both encode sets, **(D)**
+  the never-creates-an-escape invariant with its one-line proof, **(E)** the
+  per-document write pipeline, **(F)** validate-all-first, **(G)** the
+  archived-referrer rule stated as one sentence, **(H)** both strand legs,
+  **(I)** both check orders, **(J)** the message catalogue, **(K)** both
+  `--json` schemas, **(L)** the Phase-5 signatures, **(M)** the authoring
+  traps.
+- Recorded **three amendments to setup-frozen material** in place, so the
+  binding scope and the frozen contract cannot disagree (M27's precedent):
+  M26's compatibility-matrix row (a preview adopts plan-**construction**
+  failures and reports-but-does-not-adopt **consequence** verdicts), the E7
+  leg-2 coverage row (plan B's `strands` array is observed in its *preview*,
+  because a refusal emits no record), and the E3 coverage row (a new
+  `movelink-closeout` tree **reproduces** the `archive-pair` / `archive-trio`
+  shape instead of the committed trees gaining body links). The E3 and E7 rows
+  are edited in place in *Evidence → regression coverage*.
+- Recorded **eleven Step-1 resolutions (R1–R11)** — three operator decisions
+  (a preview adopts construction failures; no `--json` record on a refusal, so
+  plan B is observed in its preview; print everything unless `--quiet`) and
+  eight conductor decisions (`strands` is `archive`-only; the fixture
+  contradiction is resolved by copying; one refusal line per orphaned pair plus
+  a count; a directory destination keeps its trailing slash; the grammar-derived
+  minimal encode set with `%` first; `mv`'s upgraded partial-state admission;
+  no count key in either record; excluded documents are named as a limitation
+  rather than left to inference).
+- Landed the author-facing halves in `docs/cli.md`: a new
+  *Move-safe body-link rewrites (M28 — D1–D7)* block covering both verbs; a
+  rewritten `docs mv` section with its preview, its `--json` record and field
+  table, its partial-state admission and its own exit table; the archive check
+  order amended with 5b / 8b / 8c / 8d as sub-steps of the numbering M26 froze;
+  the `archive --json` example, field table and record descriptions widened by
+  `rewrites` and `strands`; and the archive and global exit tables amended.
+- Landed the convention halves in `docs/convention.md`: M18's exception
+  **widened** along its own axis (destinations beside bullets, no audit
+  metadata, active referrers treated the same), M27 — D6's "the last one this
+  convention grants" sentence **reconciled** (M28 leaves the count at three),
+  and a new author-facing statement under *Body links (M27)* — a coordinated
+  move rebases supported links, keeps an unchanged meaning byte-identical, and
+  can refuse before it writes.
+- Mirrored both specs byte-identically into `src/docs_cli/skill/references/`
+  and re-synced the frozen dogfood INDEX snapshot after `docs touch` moved
+  `cli.md`'s and `convention.md`'s `Updated:` values.
+
+### Contract decisions worth calling out
+
+- **The write path's message precedence is unchanged.** The Step-1 plan put the
+  whole-tree walk at step 5b for *both* paths, which would have inverted the
+  ordering `cli.md` freezes ("the plan pre-flight deliberately precedes the
+  whole-tree walk … naming the document the operator actually asked for is
+  strictly more actionable"). Under that ordering an unwritable member and a
+  malformed referrer would have swapped messages, and a `--cascade-only` write
+  selecting nothing would have exited 1 instead of 2. The frozen contract puts
+  the walk at **5b for the preview and at 8 for the write path** instead, so
+  M28 adds steps around M26's order without changing a single precedence it
+  froze. Recorded in item (I).
+- **`move_plan_to_json` returns the shared section**, `{"rewrites": …,
+  "strands": …}`, and each verb splices what it carries into its own record.
+  That is what makes "byte-comparable between the two verbs" a property of
+  construction rather than of discipline, and it keeps the frozen name and
+  arity while `mv` legitimately omits `strands` (R4).
+- **`plan_move` gained `related_pairs` and `strand_check`.** The alias-expanded
+  `Related:` pairs (M26 — Q5) and the canonical body-link move map are genuinely
+  different inputs — item (A) — and R4 makes the strand analysis
+  `archive`-only, so both had to be parameters rather than assumptions.
+- **Two encode-set residuals are recorded rather than hidden** (item (C) ›
+  *Known residuals*, *Follow-ups* item 7): a path component carrying whitespace
+  other than space or tab, and a colon in the first path segment, which would
+  re-classify the emitted token as `scheme`. Neither is reachable from a
+  filename this tool creates. Phase 2 pins the frozen set and asserts nothing
+  about either, so closing them later flips no test.
+
+### Verification
+
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**. No product code changed.
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 47 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues found in 48 source files.
+- `.venv/bin/python -m pytest -q` — **1087 passed** (unchanged).
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
+- `cmp docs/cli.md src/docs_cli/skill/references/cli.md` and the same for
+  `convention.md` — identical.
+- `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
+- `grep -c '](\.\./' docs/cli.md docs/convention.md` — **0** in both.
 
 ## Milestone completion summary
 

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 Related:
 - pairs-with: cli.md
@@ -373,6 +373,36 @@ autolink, and raw HTML all produce nothing at all. See `cli.md` ›
 *Markdown body-link validation* for the exact recognised grammar and both
 finding messages.
 
+**A coordinated move keeps supported links resolving (M28).** From M28 the
+two verbs that move a document — `docs mv` and `docs archive` — rebase the
+supported body links that move makes stale, in the same operation that
+moves the file, so a rename or a milestone closeout ends with `docs check`
+clean rather than with prose links to repair by hand. Two rules follow for
+authors.
+
+**Write the link; do not work around it.** A destination whose target moved
+is repointed. A destination inside a document that itself moved is rebased
+from that document's new directory. A destination whose *meaning* the move
+did not change keeps the spelling its author gave it, byte for byte —
+`./x.md` is never normalised to `x.md`, and a legitimate `sub/../x.md` is
+never re-spelled — so the diff of a move contains only what the move
+actually made stale. What the tool cannot repair it never touches: an
+external URL, an image, an autolink, raw HTML, a bare filename in a
+sentence, anything inside a fence or backticks, and a destination that was
+already broken or already escaping before the move are all byte-identical
+afterwards. Documents that `[exclude]` or `.docsignore` keeps out of the
+walk are not rewritten either — the exclusion decides what is *read*, never
+what a destination may point at.
+
+**A move can refuse, and it refuses before it writes.** Archiving a
+document that a still-active document outside the operation declares itself
+`child-of` refuses outright, naming both ends and changing zero bytes: a
+parent is not archived out from under a live child. Every *other*
+still-active reference into the newly-archived set — any other verb, and
+every body link — is reported rather than refused, because a closeout is
+supposed to leave the tracker and the plan pointing at the work it
+completed. That report is the operation's consequence, not a defect list.
+
 ## Archive subtree
 
 Completed work moves to an archive subtree. Default subdir name: `archive/`. Convention: `archive/YYYY-MM-DD/` per archive event. Configurable via `[archive] dir` in `.docs.toml`.
@@ -385,11 +415,13 @@ Lifecycle/location consistency rules:
 
 `done` vs `archived`: `done` stays in the active tree (evergreen reference); `archived` is moved to the archive subtree. Use `done` when the doc is finished but still referenced day-to-day.
 
-**Archive-subtree edge integrity (M18).** Archive-subtree `Related:` edges are maintained across moves. When a doc moves into the archive, both its OWN intra-archive edges (bullets pointing at another doc moving in the same operation) and any already-archived referrers' edges to it are repointed to the new `archive/YYYY-MM-DD/` paths, so they keep resolving. The M3 "archive is read-only" stance is preserved for everything else — only these move-driven edge rewrites touch archived docs; prose, other metadata, and edges to docs that did not move are left byte-identical.
+**Archive-subtree edge integrity (M18, widened by M28 — D5).** Archive-subtree `Related:` edges **and local Markdown body-link destinations** are maintained across moves. When a doc moves into the archive, both its OWN intra-archive references (bullets and destinations pointing at another doc moving in the same operation) and any already-archived referrers' references to it are repointed to the new `archive/YYYY-MM-DD/` paths, so they keep resolving. The M3 "archive is read-only" stance is preserved for everything else — only these move-driven rewrites touch archived docs; prose, other metadata, and references to docs that did not move are left byte-identical.
+
+M28 **widens this one exception along its own axis** rather than granting a new one: the trigger is unchanged (a reference pointing at a doc moving in *this* operation), the operation is the same, the write is the same single atomic write, and the blast radius grows by exactly the destination token beside the bullet. In particular the widened exception carries **no audit metadata**: an archived referrer whose destination is repointed gets no `Updated:` bump and no `Revision:` bullet, because it still points at the same target in a different spelling and asserts nothing new — and because an `Updated:` value that recorded some *other* doc's move would be a lie about the doc that carries it. An active referrer is treated the same way, as it always has been.
 
 **Audited relationship repair (M25 — D4).** A **second** narrow exception, beside M18's. Because archived docs are walked, they are reciprocity-checked too, so a one-sided recognized edge with an archived endpoint would otherwise be an unfixable `docs check` error. `docs relate add|remove` may therefore touch an archived endpoint — but only when the operator asks explicitly and says why: `--reason TEXT` (a single non-empty line) is **required** whenever either named endpoint is under the archive subtree, and an invocation that would change nothing still requires it. Exactly three things may change in an archived doc: **(1)** the one recognized `Related:` bullet added or removed, **(2)** the `Updated:` value, **(3)** the `Revision:` group — created, or one dated bullet appended recording that document's own change and the reason. `Lifecycle: archived`, the original `Archived-reason:` (which explains entry into the archive, never a later repair), `Role:`, `Project:`, every other `Related:` bullet, every other metadata field, the H1, the prose, the file's location, and its trailing-newline state stay byte-identical. `Revision:` is written to archived endpoints only; an active endpoint gets the edge and the `Updated:` bump and nothing more. This is not general archived-document editing — no other verb and no other field is in scope.
 
-**One-time body-link migration (M27 — D6).** A **third** narrow exception, beside M18's and M25 — D4's, and the last one this convention grants. Because body links are validated uniformly — in archived documents exactly as in active ones, the same reach `broken-ref` and `missing-inverse` already have — a document that an older `docs` moved into `archive/YYYY-MM-DD/` without rebasing its prose links carries damage that is now a hard `docs check` error and would otherwise be unrepairable. This repository's own archive was repaired once, on **2026-08-14**, with a **stated blast radius**: only **destination tokens**, the `Updated:` value, and one dated `Revision:` bullet may change, in **29** named archived documents; `Lifecycle:`, `Archived-reason:`, `Role:`, `Project:`, every `Related:` bullet, the H1, and all other prose stay byte-identical. `Revision:` is written to archived documents only — an active document repaired in the same pass gets the destination change and its `Updated:` bump and nothing more (M25 — D4). This is **not** a general licence to edit archived prose, and **no CLI verb performs it**: there is no `docs fix-links`. An adopter upgrading to 2.0 gets the recipe (`cli.md` › *Upgrading from 1.x*), not the migration.
+**One-time body-link migration (M27 — D6).** A **third** narrow exception, beside M18's and M25 — D4's, and the last one this convention grants — a count M28 leaves at three, because M28 — D5 widens M18's move-driven exception along its own axis instead of adding a fourth. Because body links are validated uniformly — in archived documents exactly as in active ones, the same reach `broken-ref` and `missing-inverse` already have — a document that an older `docs` moved into `archive/YYYY-MM-DD/` without rebasing its prose links carries damage that is now a hard `docs check` error and would otherwise be unrepairable. This repository's own archive was repaired once, on **2026-08-14**, with a **stated blast radius**: only **destination tokens**, the `Updated:` value, and one dated `Revision:` bullet may change, in **29** named archived documents; `Lifecycle:`, `Archived-reason:`, `Role:`, `Project:`, every `Related:` bullet, the H1, and all other prose stay byte-identical. `Revision:` is written to archived documents only — an active document repaired in the same pass gets the destination change and its `Updated:` bump and nothing more (M25 — D4). This is **not** a general licence to edit archived prose, and **no CLI verb performs it**: there is no `docs fix-links`. An adopter upgrading to 2.0 gets the recipe (`cli.md` › *Upgrading from 1.x*), not the migration.
 
 **Safe explicit archive selection (M26 — D1).** Entry into the archive subtree is authorized **explicitly**, never by relationship. A relationship verb supplies the *candidate set* a preview names; it never grants permission to move a document. `docs archive FILE` archives that one document. `docs archive FILE --cascade-dry-run` names every one-hop `pairs-with` / `child-of` candidate as selected, not selected, or ineligible and writes nothing. Only `docs archive FILE --cascade-only GLOB` writes a related document, and then exactly the candidates the glob selects — one complete plan, validated before the first byte moves, refusing outright rather than writing part of it. The 1.x bare `--cascade` and `--interactive` flags are retired and refuse. Two rules follow for authors: a document already under the archive subtree is **never** re-archived — neither as a candidate (it is reported ineligible) nor as the named primary (that is a refusal) — so a later archive event never changes an archived doc's location, `Updated:` value, `Lifecycle:`, `Archived-reason:`, H1, or prose, and changes no `Related:` bullet of its except one pointing at a document moving in that same operation, which M18's edge integrity repoints so it keeps resolving; and an `Archived-reason:` line records why *that* document was archived, so it is written to the named primary only, never to a cascaded candidate.
 
