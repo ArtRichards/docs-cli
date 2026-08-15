@@ -1549,12 +1549,22 @@ docs: archive: <child-rel> is still active and declares 'child-of: <parent-rel>'
 docs: archive: <N> still-active child(ren) would be stranded; zero bytes written
 docs: archive: would strand <child-rel> — still active, declares 'child-of: <parent-rel>'; a write would refuse
 docs: archive: <N> still-active child(ren) would be stranded
+docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <relA> -> <newA>, <relB> -> <newB>. Rewritten: <relC>. Not written: <relD>. Repair manually.
 ```
 
-The last two lines are the **preview's** leg-1 pair; the two before them are
-the **write path's**. Each of `Moved:` / `Rewritten:` / `Not written:` renders
-the literal word `none` when its list is empty, never a blank (the M25
-`_rollback_relate` lesson, and M26's `_archive_partial_state` precedent).
+The last line is **amendment 7**'s: the rewrite phase's partial-state
+admission, added at the Step-2 review. It reuses M26's `PARTIAL ARCHIVE`
+prefix and `Archived:` clause but takes `docs mv`'s `Rewritten:` /
+`Not written:` clauses instead of `Still at their original paths:`, because
+by the time it can fire every member has already archived and what splits is
+the rewrite. M26's move-phase admission is unchanged and still lives in
+`cli.md` › *Residual boundary*.
+
+The two lines before it are the **preview's** leg-1 pair; the two before those
+are the **write path's**. Each of `Moved:` / `Archived:` / `Rewritten:` /
+`Not written:` renders the literal word `none` when its list is empty, never a
+blank (the M25 `_rollback_relate` lesson, and M26's `_archive_partial_state`
+precedent).
 
 Everything prints unless `--quiet`, in preview and apply alike (R3), except
 the two leg-1 **refusal** lines, which print even under `--quiet` as every
