@@ -1611,6 +1611,162 @@ def test_archive_dir_date_never_touches_the_filesystem():
     assert result == date(2026, 1, 1)
 
 
+# --- (F) `cross_dated_archive_move` — Leg 2's predicate --------------------
+#
+# Leg 2 is decided from the two paths alone, so it is a PURE seam like Leg 1's
+# and it gets the same treatment. Without this group the only coverage of the
+# predicate is the `docs mv` CLI family, every member of which runs on a tree
+# using the default `[archive] dir` and `date_format` — so a config-blind
+# implementation that inlined `rel.startswith("archive/")` and
+# `strptime(seg, "%Y-%m-%d")` (`detect_archive_layout`'s idiom, the exact
+# mistake E7 warns against) would pass the whole suite while leaving M28a's
+# hole open on an `attic` tree and falsely refusing on a `history` tree.
+
+
+def _cross_dated(old_rel: str, new_rel: str, config: Config | None = None):
+    cfg = config if config is not None else _m28a_config()
+    return _m28a("cross_dated_archive_move")(old_rel, new_rel, cfg)
+
+
+def test_cross_dated_archive_move_returns_the_two_raw_segments():
+    """Item (F): the return value is `(seg_old, seg_new)` — the RAW directory
+    segments, which item (E) then interpolates into `<D1>` and `<D2>`."""
+    assert _cross_dated("archive/2026-01-01/x.md", "archive/2026-03-04/x.md") == (
+        "2026-01-01",
+        "2026-03-04",
+    )
+
+
+def test_cross_dated_archive_move_returns_the_segments_unnormalised():
+    """The segments are copied off the path, never re-rendered through
+    `config.date_format`: an unpadded source directory must be named the way it
+    is spelled on disk."""
+    assert _cross_dated("archive/2026-1-1/x.md", "archive/2026-03-04/x.md") == (
+        "2026-1-1",
+        "2026-03-04",
+    )
+
+
+def test_cross_dated_archive_move_is_none_for_a_rename_within_one_dated_dir():
+    """Permitted neighbour 1: the basename or the depth changes, the date does
+    not."""
+    assert _cross_dated("archive/2026-01-01/a.md", "archive/2026-01-01/b.md") is None
+    assert _cross_dated("archive/2026-01-01/a.md", "archive/2026-01-01/sub/b.md") is None
+
+
+def test_cross_dated_archive_move_is_none_when_one_end_is_outside_the_archive():
+    """Permitted neighbour 2, both directions: `status-drift` owns these and
+    D5 does not double-report them."""
+    assert _cross_dated("archive/2026-01-01/x.md", "x.md") is None
+    assert _cross_dated("x.md", "archive/2026-01-01/x.md") is None
+    assert _cross_dated("sub/2026-01-01/x.md", "archive/2026-03-04/x.md") is None
+
+
+def test_cross_dated_archive_move_is_none_when_a_segment_does_not_parse():
+    """Permitted neighbour 3, both directions, both shapes: an undated
+    subdirectory and the archive root itself. There is no pair of dates to
+    disagree — and this is also D8's second residual, permitted by design."""
+    assert _cross_dated("archive/2026-01-01/x.md", "archive/misc/x.md") is None
+    assert _cross_dated("archive/misc/x.md", "archive/2026-01-01/x.md") is None
+    assert _cross_dated("archive/2026-01-01/x.md", "archive/x.md") is None
+    assert _cross_dated("archive/x.md", "archive/2026-01-01/x.md") is None
+    assert _cross_dated("archive/misc/x.md", "archive/notes/x.md") is None
+
+
+def test_cross_dated_archive_move_is_none_for_two_spellings_of_one_date():
+    """Permitted neighbour 4 (implied by Q2): the comparison is on PARSED
+    dates, so these are the same date and there is nothing to refuse.
+
+    A raw-string comparison passes every other test in this group and fails
+    only here.
+    """
+    assert _cross_dated("archive/2026-01-01/x.md", "archive/2026-1-1/x.md") is None
+    assert _cross_dated("archive/2026-1-1/x.md", "archive/2026-01-01/x.md") is None
+
+
+def test_cross_dated_archive_move_honours_a_non_default_archive_dir():
+    """D5 / item (F): the predicate is config-aware, because it is
+    `archive_dir_date` — the SAME helper Leg 1 uses, so the two legs can never
+    disagree about what a dated archive directory is.
+
+    Both halves matter. On a tree configured `dir = "attic"` the refusal must
+    fire for `attic/`, or M28a's hole stays open on that tree; and it must NOT
+    fire for `archive/`, which is then an ordinary subdirectory whose documents
+    an operator may move freely — the trap `_is_archived_rel`'s own docstring
+    names.
+    """
+    cfg = _m28a_config(archive_dir="attic")
+    assert _cross_dated("attic/2026-01-01/x.md", "attic/2026-03-04/x.md", cfg) == (
+        "2026-01-01",
+        "2026-03-04",
+    )
+    assert _cross_dated("archive/2026-01-01/x.md", "archive/2026-03-04/x.md", cfg) is None, (
+        "on a tree configured dir = 'attic', archive/ is an ordinary subdirectory"
+    )
+
+
+def test_cross_dated_archive_move_honours_a_non_default_date_format():
+    """The second config axis. A `%d-%m-%Y` tree's dated directories parse and
+    its ISO-spelled ones do not, so an implementation carrying
+    `detect_archive_layout`'s hardcoded `"%Y-%m-%d"` gets both cases exactly
+    backwards.
+    """
+    cfg = _m28a_config(date_format="%d-%m-%Y")
+    assert _cross_dated("archive/01-01-2026/x.md", "archive/04-03-2026/x.md", cfg) == (
+        "01-01-2026",
+        "04-03-2026",
+    )
+    assert _cross_dated("archive/2026-01-01/x.md", "archive/2026-03-04/x.md", cfg) is None, (
+        "the ISO spelling is not a date in this tree's format, so neither segment parses"
+    )
+
+
+def test_cross_dated_archive_move_agrees_with_archive_dir_date():
+    """Item (C)'s stated guarantee, asserted rather than trusted: the predicate
+    is non-`None` exactly when both paths have a dated directory and the two
+    dates differ. One helper, shared by both legs.
+    """
+    cfg = _m28a_config(archive_dir="attic", date_format="%d-%m-%Y")
+    rels = [
+        "attic/01-01-2026/x.md",
+        "attic/04-03-2026/x.md",
+        "attic/1-1-2026/x.md",
+        "attic/misc/x.md",
+        "attic/x.md",
+        "archive/01-01-2026/x.md",
+        "x.md",
+    ]
+    for old in rels:
+        for new in rels:
+            old_date = _archive_dir_date(old, cfg)
+            new_date = _archive_dir_date(new, cfg)
+            expected = old_date is not None and new_date is not None and old_date != new_date
+            got = _cross_dated(old, new, cfg)
+            assert (got is not None) is expected, f"{old} -> {new}: got {got!r}"
+            if got is not None:
+                assert got == (old.split("/")[1], new.split("/")[1])
+
+
+def test_cross_dated_archive_move_never_touches_the_filesystem():
+    """D5: path arithmetic only — no metadata, no filesystem, no graph. The
+    refusal must be decidable before the tree is walked, which is what lets it
+    sit before the `--dry-run` branch (item (F), amendment 2).
+    """
+
+    def _boom(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("cross_dated_archive_move touched the filesystem")
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(Path, "exists", _boom)
+        mp.setattr(Path, "is_file", _boom)
+        mp.setattr(Path, "is_dir", _boom)
+        mp.setattr(Path, "resolve", _boom)
+        mp.setattr(Path, "open", _boom)
+        result = _cross_dated("archive/2026-01-01/x.md", "archive/2026-03-04/x.md")
+
+    assert result == ("2026-01-01", "2026-03-04")
+
+
 # --- (C) `archive_date_findings` — the pure rule ---------------------------
 
 

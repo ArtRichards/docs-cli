@@ -3952,8 +3952,15 @@ def test_archive_renders_the_witness_in_the_trees_date_format(docs_script, tmp_p
     The run's pre-existing exit-2 tail is asserted EXPLICITLY: `parse()` uses
     the hardcoded default while `check_doc` honours `config.date_format`
     (defect E8, *Follow-ups* item 1), so the end-of-batch INDEX refresh fails.
-    M28a does not fix it, and pinning it here means this test can never be
-    satisfied by the defect being fixed somewhere else.
+    M28a does not fix it, and pinning it strictly is what stops the witness
+    half of this test from being satisfied by a run that succeeded for some
+    other reason.
+
+    The consequence, stated plainly rather than left to be discovered: a later
+    milestone that FIXES E8 will break this test, deliberately — its expected
+    exit code becomes 0 and the INDEX-refresh assertions go away, while the
+    three `Archived:` / `Updated:` / no-second-spelling assertions survive
+    unchanged. *Follow-ups* item 1 names this test for exactly that reason.
     """
     root = tmp_path / "attic-tree"
     root.mkdir()

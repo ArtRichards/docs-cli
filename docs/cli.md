@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
 
 Related:
 - pairs-with: convention.md
@@ -958,6 +958,14 @@ docs: mv: archive/2026-01-01/x.md -> archive/2026-03-04/x.md crosses dated archi
 docs: mv: the dated directory records when a document was archived; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check`
 ```
 
+**Precedence.** The predicate is evaluated once `<old>` and `<new>` have been
+resolved to root-relative paths, so the two **exit 1** argument errors —
+`<old>` is not a file, and `<new>` already exists — are still reported first. A
+cross-dated move onto an occupied destination therefore exits **1** naming the
+collision, not 2 naming the refusal: the invocation is wrong in a way the
+operator must fix before the refusal is even meaningful. Everything after that
+point, the whole-tree walk included, comes **after** the refusal.
+
 **What it does not refuse**, stated so the predicate cannot creep. Each of
 these completes exactly as it does today:
 
@@ -1043,7 +1051,7 @@ run exits 2 after printing `docs: INDEX refresh failed: <err>`.
 | Exit | Condition |
 |---|---|
 | 0 | Success; `--dry-run` preview |
-| 1 | `<old>` is not a file; collision — `<new>` already exists |
+| 1 | `<old>` is not a file; collision — `<new>` already exists. Both are decided **before** the cross-dated refusal, so a cross-dated move onto an occupied destination exits 1 |
 | 2 | Malformed `.docs.toml`; either path outside the docs root; a **cross-dated archived relocation** (M28a — D5), in every mode including `--dry-run`; a malformed tree caught by the validate-all-first pre-flight walk (A1) — since M28 **also under `--dry-run`**, because a preview cannot describe a tree it cannot read; an **unreadable** document in that same walk; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); INDEX-refresh failure |
 
 ### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json] [--exclude PATTERN]`

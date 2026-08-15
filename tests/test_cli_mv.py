@@ -942,6 +942,18 @@ def _archivedate_tree(fixtures_dir: Path, tmp_path: Path, name: str) -> Path:
     return root
 
 
+def _check_pairs(docs_script: Path, root: Path) -> tuple[int, list[tuple[str, str]]]:
+    """`docs check --json` over `root` as `(exit_code, [(path, rule), …])`.
+
+    Every intended-exit-0 assertion below goes through this rather than a bare
+    `returncode == 0`, so it asserts the absence of a NAMED finding on a NAMED
+    document instead of whole-tree silence.
+    """
+    proc = _run(docs_script, "check", str(root), "--json")
+    records = json.loads(proc.stdout) if proc.stdout.strip() else []
+    return proc.returncode, [(r["path"], r["rule"]) for r in records]
+
+
 def _cross_dated(docs_script: Path, fixtures_dir: Path, tmp_path: Path, name: str, *extra: str):
     """Attempt the E1d relocation of `name` between the two dated directories.
 
@@ -1079,8 +1091,9 @@ def test_mv_neighbour_1_rename_within_one_dated_directory_completes(
     )
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert (root / "archive" / "2026-01-01" / "renamed.md").is_file()
-    check = _run(docs_script, "check", str(root))
-    assert check.returncode == 0, check.stdout
+    code, pairs = _check_pairs(docs_script, root)
+    assert pairs == [], f"the rename must add no finding anywhere: {pairs!r}"
+    assert code == 0
 
 
 def test_mv_neighbour_1_rename_into_a_subdirectory_of_one_dated_directory_completes(
@@ -1100,8 +1113,11 @@ def test_mv_neighbour_1_rename_into_a_subdirectory_of_one_dated_directory_comple
     moved = root / "archive" / "2026-01-01" / "sub" / "with-witness.md"
     assert moved.is_file(), "the move must actually have happened"
     assert "Archived: 2026-01-01" in moved.read_text(), "and the witness is unchanged"
-    check = _run(docs_script, "check", str(root))
-    assert check.returncode == 0, check.stdout
+    code, pairs = _check_pairs(docs_script, root)
+    nested = [rule for path, rule in pairs if path == "archive/2026-01-01/sub/with-witness.md"]
+    assert nested == [], f"a deeper path still corroborates its dated directory: {nested!r}"
+    assert pairs == [], f"and nothing else in the tree moved: {pairs!r}"
+    assert code == 0
 
 
 def test_mv_neighbour_2_out_of_the_archive_completes_with_only_status_drift(
@@ -1185,8 +1201,12 @@ def test_mv_neighbour_3_to_an_undated_archive_subdirectory_completes(
     assert back.returncode == 0, (back.stdout, back.stderr)
     assert (root / "archive" / "notes" / "no-witness.md").is_file()
     assert (root / "archive" / "2026-03-04" / "keep.md").is_file()
-    check = _run(docs_script, "check", str(root))
-    assert check.returncode == 0, check.stdout
+    code, pairs = _check_pairs(docs_script, root)
+    assert pairs == [], (
+        "neither moved document carries a witness, so neither end of the "
+        f"neighbour may produce a finding: {pairs!r}"
+    )
+    assert code == 0
 
 
 def test_mv_neighbour_3_to_the_archive_root_completes_and_leg_1_reports_it(
@@ -1250,8 +1270,14 @@ def test_mv_neighbour_3_to_the_archive_root_is_silent_without_a_witness(
         "…and the document carries no witness, which is precisely why nothing "
         "can report the loss of its dated directory"
     )
-    check = _run(docs_script, "check", str(root))
-    assert check.returncode == 0, check.stdout
+    code, pairs = _check_pairs(docs_script, root)
+    assert [rule for path, rule in pairs if path == "archive/no-witness.md"] == [], (
+        "THE GAP, stated as the absence of a NAMED finding on the NAMED document: "
+        "neither `status-drift` (the destination is still inside the archive "
+        "subtree) nor `archive-date-drift` (there is no witness) reports it"
+    )
+    assert pairs == [], f"and nothing else in the tree moved either: {pairs!r}"
+    assert code == 0
 
 
 def test_mv_neighbour_4_two_spellings_of_one_date_completes(docs_script, tmp_path):
@@ -1281,8 +1307,11 @@ def test_mv_neighbour_4_two_spellings_of_one_date_completes(docs_script, tmp_pat
     )
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert (root / "archive" / "2026-1-1" / "old.md").is_file()
-    check = _run(docs_script, "check", str(root))
-    assert check.returncode == 0, check.stdout
+    code, pairs = _check_pairs(docs_script, root)
+    assert [rule for path, rule in pairs if path == "archive/2026-1-1/old.md"] == [], (
+        "`2026-1-1` corroborates `Archived: 2026-01-01` — parsed dates, not strings"
+    )
+    assert code == 0
 
 
 def test_mv_refusal_names_the_raw_directory_segments(docs_script, tmp_path):
@@ -1361,3 +1390,134 @@ def test_mv_of_an_archived_document_leaves_its_witness_byte_identical(
     )
     assert after == expected, "only the moving bullet may change"
     assert "Archived: 2026-03-04" in after, "the witness is byte-identical"
+
+
+def _attic_tree(tmp_path: Path) -> Path:
+    """A tree whose archive subtree is `attic/` and whose dates are `%d-%m-%Y`.
+
+    It also carries an ORDINARY `archive/` subdirectory holding two
+    date-shaped directories. On this tree `archive/` is not the archive subtree
+    at all — `_is_archived_rel`'s own docstring names that trap — so a move
+    between those two directories is an everyday reorganisation the tool must
+    not touch.
+
+    Every `Updated:` is ISO because `parse()` still reads it with the hardcoded
+    default (defect E8, *Follow-ups* item 1); the tree's own `date_format`
+    governs the dated directories and the witness, which is what is under test.
+    """
+    root = tmp_path / "attictree"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "attictree"\n\n[archive]\ndir = "attic"\ndate_format = "%d-%m-%Y"\n'
+    )
+
+    def _doc(title: str, lifecycle: str, archived: str | None) -> str:
+        text = (
+            f"# {title}\n\nLifecycle: {lifecycle}\nRole: notes\nProject: attictree\n"
+            "Updated: 2026-05-20\n"
+        )
+        if archived is not None:
+            text += f"Archived: {archived}\n"
+        return text + "\n## Body\n\nProse.\n"
+
+    for rel, lifecycle, archived in (
+        ("attic/01-01-2026/old.md", "archived", "01-01-2026"),
+        ("attic/04-03-2026/other.md", "archived", "04-03-2026"),
+        ("archive/2026-01-01/note.md", "active", None),
+        ("archive/2026-03-04/sibling.md", "active", None),
+    ):
+        path = root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_doc(rel.rsplit("/", 1)[1], lifecycle, archived))
+    return root
+
+
+def test_mv_refuses_a_cross_dated_relocation_on_a_non_default_archive_tree(docs_script, tmp_path):
+    """D5 / item (F): the predicate is `archive_dir_date`, so it honours BOTH
+    `[archive] dir` and `[archive] date_format`.
+
+    Every other Leg-2 test in this file runs on a tree using the defaults, so
+    an implementation that inlined `rel.startswith("archive/")` and
+    `strptime(seg, "%Y-%m-%d")` — `detect_archive_layout`'s config-blind idiom,
+    the exact mistake E7 warns against — would pass all of them and leave
+    M28a's hole wide open on this tree. The message names the configured
+    directory and the raw segments, in the tree's own format.
+    """
+    root = _attic_tree(tmp_path)
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "mv",
+        "attic/01-01-2026/old.md",
+        "attic/04-03-2026/old.md",
+        cwd=root,
+    )
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert (
+        "docs: mv: attic/01-01-2026/old.md -> attic/04-03-2026/old.md "
+        "crosses dated archive directories (01-01-2026 to 04-03-2026); "
+        "refusing before any write"
+    ) in proc.stderr, proc.stderr
+    assert _M28A_ESCAPE in proc.stderr
+    assert _snapshot(root) == before, "a refusal writes zero bytes"
+
+
+def test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory(docs_script, tmp_path):
+    """The other half of the config-blindness trap, and the more dangerous one:
+    a config-blind predicate would FALSELY refuse here.
+
+    On a tree configured `dir = "attic"`, `archive/` is an ordinary
+    subdirectory and its date-shaped children are ordinary folders. Moving a
+    document between them is a reorganisation the convention permits, so it
+    must complete — `_is_archived_rel`'s docstring names exactly this case, and
+    D5's predicate inherits its answer by using the same helper.
+    """
+    root = _attic_tree(tmp_path)
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/note.md",
+        "archive/2026-03-04/note.md",
+        cwd=root,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "crosses dated archive directories" not in proc.stderr
+    assert (root / "archive" / "2026-03-04" / "note.md").is_file()
+    assert not (root / "archive" / "2026-01-01" / "note.md").exists()
+
+
+def test_mv_collision_still_exits_1_before_the_cross_dated_refusal(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The frozen precedence: `<old>` is not a file and `<new>` already exists
+    are argument errors decided BEFORE either path is resolved to a
+    root-relative one, so they still win at exit **1**.
+
+    A cross-dated move onto an occupied destination is therefore exit 1 naming
+    the collision, not exit 2 naming the refusal — the invocation is wrong in a
+    way the operator must fix before the refusal is even meaningful. Pinned so
+    Step 2 does not have to guess, and so a Phase-6 implementer cannot hoist
+    the predicate above the two `is_file` / `exists` guards.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    occupied = root / "archive" / "2026-03-04" / "with-witness.md"
+    occupied.write_text(
+        "# Occupant\n\nLifecycle: archived\nRole: notes\nProject: archivedate-two-dated-dirs\n"
+        "Updated: 2026-03-04\nArchived: 2026-03-04\n\n## Body\n\nProse.\n"
+    )
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/with-witness.md",
+        "archive/2026-03-04/with-witness.md",
+        cwd=root,
+    )
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "destination already exists" in proc.stderr
+    assert "crosses dated archive directories" not in proc.stderr, (
+        "the collision is the actionable message; the refusal does not preempt it"
+    )
+    assert _snapshot(root) == before
