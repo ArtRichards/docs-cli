@@ -31,7 +31,7 @@ _Generated 2026-08-15. 25 docs active, 46 archived._
 - [m26-safe-archive-selection.md](m26-safe-archive-selection.md) — _milestone_ — - Milestone: M26 (v2.0 train) - Title: Safe explicit archive selection - Surface: decouple relationship context from…. Updated 2026-08-15.
 - [m28-move-safe-body-link-rewrites.md](m28-move-safe-body-link-rewrites.md) — _milestone_ — - Milestone: M28 (v2.0 train) - Title: Move-safe Markdown body-link rewrites - Surface: extend `docs mv` and `docs…. Updated 2026-08-15.
 - [m28a-archive-date-witness.md](m28a-archive-date-witness.md) — _milestone_ — - Milestone: M28a (v2.0 train) - Title: Structured archive-date witness - Surface: `docs archive` records the archive…. Updated 2026-08-15.
-- [m29-pypi-publish-2-0-0.md](m29-pypi-publish-2-0-0.md) — _milestone_ — - Milestone: M29 - Title: PyPI publish 2.0.0 - Surface: runbook-driven publication of the complete M25–M28 relationship…. Updated 2026-08-15.
+- [m29-pypi-publish-2-0-0.md](m29-pypi-publish-2-0-0.md) — _milestone_ — - Milestone: M29 - Title: PyPI publish 2.0.0 - Surface: runbook-driven publication of the complete M25–M28a…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation.md](m27-markdown-body-link-validation.md) — _milestone_ — - Milestone: M27 (v2.0 train) - Title: Markdown body-link validation - Surface: parse a deliberately bounded set of…. Updated 2026-08-14.
 - [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md) — _milestone_ — - Milestone: M25 (v2.0 train) - Title: Reciprocal relationship integrity and `docs relate` - Surface: define three…. Updated 2026-08-12.
 
