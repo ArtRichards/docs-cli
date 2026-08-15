@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-14. 24 docs active, 46 archived._
+_Generated 2026-08-15. 24 docs active, 46 archived._
 
 ## Project — docs
 
@@ -36,10 +36,10 @@ _Generated 2026-08-14. 24 docs active, 46 archived._
 
 ### Active — Log
 
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation-impl.md](m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-14.
 - [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.
 - [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-12.
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-10.
 - [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) — _log_ — Chronological log of work on **M24 — PyPI publish 1.8.0**. Append a section per runbook phase (operator prep →…. Updated 2026-07-03.
 - [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-12.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.

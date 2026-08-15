@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: log
 Project: docs
-Updated: 2026-08-10
+Updated: 2026-08-15
 
 ## Purpose
 
@@ -14,6 +14,21 @@ without starting implementation. When feedback is promoted, its entry remains
 as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
+
+### 2026-08-15 — Issue #1: cascade parent-archiving, archived re-dating, and post-move validation gaps
+
+- Source: GitHub issue #1, https://github.com/ArtRichards/docs-cli/issues/1, filed 2026-08-15 against released docs 1.8.0. Carries a self-contained four-document reproduction plus a replay against a 109-doc real tree. The reporter's dry run prevented any real loss.
+- Standing: this is downstream confirmation of the same discovery already recorded in the 2026-08-09 entry, arriving independently from a real archive session. It is largely evidence that the v2.0 train targets the right defects, not new scope — with two exceptions noted below.
+- Verification method: every finding re-run against merged `main` at `58955ef` (M25, M26 and M27 landed and unreleased; 1087 passed, `docs check` exit 0). Findings below record measured behaviour, not inference from the milestone docs.
+- Finding 1, `--cascade` follows `child-of` upward and archives the live parent — **harm fixed, semantics unchanged**. Bare `--cascade` now refuses at exit 2 and writes nothing (M26 — Q1). But the candidate set still contains the parent, reached through the target's *outgoing* `child-of` edge: `--cascade-dry-run` lists `milestone-plan.md`, and `--cascade-only '*'` **selects it for archiving**. M26 — Q3 explicitly retained that candidate set, so the reporter's suggested fix — follow *incoming* `child-of` edges, i.e. documents declaring themselves children of the target — was considered and declined. M26's answer is authorization (an explicit scope is required, and the preview names everything) rather than edge direction. Residual risk: a broad or unlucky glob still archives the live plan, and the safety now rests on a human reading the preview. Open design question, not a defect against M26 as specified.
+- Finding 2, `--cascade` re-archives and re-dates already-archived docs — **fixed** (M26 — Q4). Verified: an archived candidate is reported `ineligible (already archived)` and stays excluded even under `--cascade-only '*'`. This was M26's own headline defect; the issue is independent confirmation.
+- Finding 3, `docs check` exits 0 after the damage — **split**. The link half is fixed by M27: verified that a live document whose prose link points at a now-archived path fails `docs check` with `[broken-body-link] … does not resolve to an existing path`, exit 2 — exactly the reporter's scenario. The *archive-date-divergence* half is **an open gap**: no rule among the ten implemented (`bad-date`, `bad-vocab`, `broken-body-link`, `broken-ref`, `duplicate-field`, `malformed`, `missing-inverse`, `outside-root-body-link`, `status-drift`, `unknown-field`) detects `pairs-with` partners sitting in different `archive/<date>/` directories, and no registered milestone claims it. The reporter's real-tree replay hit precisely this — a coherent archived trio split across two dated directories.
+- Finding 4, link rewriting covers `Related:` but not body prose — **owned by M28**, pending. Scale reported: 29 link targets across 24 lines in 4 live files for two three-doc sets, repaired by hand. The reporter offers a lighter alternative worth weighing during M28 planning: declare prose links out of scope in the documentation and ship a `--report-links` mode that only *lists* inbound prose references to moved files, rather than editing prose. Record as an M28 scope option; do not resolve here.
+- Compatibility note the train should carry: the reporter expected the link check to be **opt-in** (`docs check --links`), reasoning that some trees deliberately keep unrepaired links inside `archive/` as dated records. M27 ships it always-on, hard-error, and uniform across archived documents (operator decisions Q1 and Q6). That is a deliberate divergence from what an experienced adopter anticipated, and on upgrade to 2.0.0 such a tree fails `docs check` until repaired. The 2.0.0 release notes and the upgrade recipe should state this plainly rather than let adopters discover it.
+- Ordering note: M27 makes Finding 4 *loud* without repairing it. Between M27 and M28 an adopter is told about prose-link damage they must still fix by hand — the state this repository itself was in, at 140 occurrences. That sequencing is intentional (detect, then repair), and the upgrade guidance should say so.
+- What the reporter confirmed works, worth preserving under change: `--cascade-dry-run` naming the full set before anything moves; `--cascade-only GLOB` matching root-relative paths; `Related:` rewriting; `docs index` regeneration; atomic metadata-then-move; `--reason`; and moves staying git-rename-detected at 96–99% similarity.
+- Ownership: docs-cli for all four findings. No Agent Playbook Suite change is implied beyond consuming the released behaviour.
+- Status: verified 2026-08-15 against merged `main`. Findings 2 and 3-links are fixed and unreleased; finding 4 is registered as M28; finding 1's semantics and finding 3's archive-date divergence are **unowned** and need an operator routing decision — extend M28, open a new milestone, or decline with a recorded rationale. Nothing here blocks M28 or M29.
 
 ### 2026-08-09 — Useful relationship graphs, strict reciprocity, and upgrade repair
 
