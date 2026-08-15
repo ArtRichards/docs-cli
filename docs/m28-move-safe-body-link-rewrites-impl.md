@@ -53,7 +53,7 @@ table and the milestone checklist synchronized.
 | 1. Define Contract | **Complete** | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(M), three amendments to setup-frozen material, eleven Step-1 resolutions (R1–R11). Author-facing halves in `cli.md` (*Move-safe body-link rewrites (M28 — D1–D7)*, the rewritten `docs mv` section, the amended archive check order, the widened `archive --json` schema, three exit tables) and `convention.md` (M18's widened exception, M27 — D6's reconciled sentence, the author-facing move guarantee). Zero product-code change. Original objective: Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
 | 2. Write Tests (RED) | **Complete** | 2026-08-15 | 182 new ids: `tests/test_move_links.py` (153, the pure seam) plus 12 `mv`, 14 `archive`, 1 `check` and 2 skill locks. Suite 1269 collected / 181 failed / 1088 passed; the 1087 pre-existing ids all present and GREEN; zero collection errors; zero deleted test lines. Original objective: Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
 | 3. Create Data/Fixtures | **Complete** | 2026-08-15 | Seven `movelink-*` trees authored — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`, `-closeout` — each `docs check`-clean as committed; every existing fixture byte-identical; the two directory-derived sweeps 29→36 and 33→40; suite 1283 / 180 failed / 1103 passed. A read-only prototype census confirmed every intended plan, line numbers included. Original objective: `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
-| 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1295 collected / 191 failed / 1104 passed (restated after the Step-1 audit); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (152 `AttributeError`, 28 `AssertionError`); mechanically proven 0 removed ids and 0 failing pre-existing ids against `58955ef`. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
+| 4. Run Tests (RED Baseline) | **Complete** | 2026-08-15 | 1332 collected / 229 failed / 1103 passed (restated after the Step-1 audit and the fresh-eyes fold-in); 0 collection errors, 0 xfail/xpass, 0 warnings; exactly two exception classes (193 `AttributeError`, 36 `AssertionError`); mechanically proven 0 removed ids, 0 deleted test lines, and exactly **one** pre-existing id RED — `test_mv_help`, strengthened by operator decision. Original objective: Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Pending | — | Invert `_cmd_mv` to plan before it moves; fold the splices into `_rewrite_referring_edges`' single per-document write; apply the archived-referrer policy (tokens only); run **both** strand-check legs in the pre-flight **and** the preview; implement the refusal, the report and the partial-state paths. |
 | 7. Update Tool/Wrapper Layer | Pending | — | argparse for both verbs including `mv --json` and its real `--dry-run`, human output for rewrites and for the strand report, the JSON records and field tables, `cli.md` / `convention.md` (M18's widened exception **and** the reconciliation of M27 — D6's "last one this convention grants" sentence), a dated note on `feedback-log.md`'s issue #1 entry answering findings 1 and 4, the bundled skill, `UNRELEASED` CHANGELOG and the upgrade note. No version bump. |
@@ -553,8 +553,10 @@ were hand-computed:
 - `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings` — **40
   passed** (33 + 7).
 - `.venv/bin/python -m pytest tests/ -q --co` — **1283 collected**, 0
-  collection errors.
-- `.venv/bin/python -m pytest tests/ -q` — **180 failed, 1103 passed**.
+  collection errors *(as Phase 3 left it; the Step-1 audit and the fresh-eyes
+  fold-in later took it to 1332)*.
+- `.venv/bin/python -m pytest tests/ -q` — **180 failed, 1103 passed** *(as
+  Phase 3 left it)*.
 - `git diff --numstat 58955ef -- tests/` — **0** deleted lines in every test
   file; the only deletions anywhere are the frozen INDEX snapshot's re-synced
   `Updated:` values from Phase 1.
@@ -573,23 +575,25 @@ else, and prove mechanically that no pre-existing test id moved.
 ### The baseline
 
 ```
-.venv/bin/python -m pytest tests/ -q --co   ->  1295 collected, 0 collection errors
-.venv/bin/python -m pytest tests/ -q        ->  191 failed, 1104 passed
+.venv/bin/python -m pytest tests/ -q --co   ->  1332 collected, 0 collection errors
+.venv/bin/python -m pytest tests/ -q        ->  229 failed, 1103 passed
 ```
 
-*(Restated after the Step-1 same-instance audit, which added twelve locks — see*
-Step-1 same-instance audit *below. The pre-audit figures were
-1283 / 180 / 1103.)*
+*(Restated twice: after the Step-1 same-instance audit, which added twelve
+locks, and after the fresh-eyes fold-in, which added thirty-seven more and
+strengthened one pre-existing test by operator decision. The figures Phase 4
+first measured were 1283 / 180 / 1103.)*
 
-Arithmetic, and it closes: **1087** pre-existing + **194** authored ids +
+Arithmetic, and it closes: **1087** pre-existing + **231** authored ids +
 **14** swept ids (7 into `test_check_tree_legacy_fixtures_gain_no_new_findings`,
 7 into `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings`) =
-**1295**. Of the 208 new ids, **191** are RED and **17** are GREEN at
-baseline.
+**1332**. Of the 245 new ids, **228** are RED and **17** are GREEN at
+baseline; the 229th failure is `test_mv_help`, a **pre-existing** id
+strengthened by operator decision (see *Fresh-eyes review fold-in* below).
 
 ### Probes, stated honestly
 
-- **Collection errors: 0.** `--co` collects 1283 and reports no errors.
+- **Collection errors: 0.** `--co` collects 1332 and reports no errors.
 - **xfail / xpass / errors: 0.** `pytest -rxXE` reports no `XFAIL`, `XPASS`
   or `ERROR` line.
 - **Warnings: 0.** No warnings summary is emitted.
@@ -608,8 +612,8 @@ Exactly **two** classes, and the arithmetic closes:
 
 | Class | Count | Where | Why |
 |---|---|---|---|
-| `AttributeError` | 156 | the whole of `tests/test_move_links.py` | every M28 symbol is fetched through `_m28(name)`, so the RED reason is one clean missing attribute rather than a collection error |
-| `AssertionError` | 35 | 16 `docs mv`, 17 `docs archive`, 2 bundled-skill locks | the behaviour is absent, not the symbol; 33 carry a message and 2 are bare `assert`s pytest rewrote |
+| `AttributeError` | 193 | the whole of `tests/test_move_links.py` | every M28 symbol is fetched through `_m28(name)`, so the RED reason is one clean missing attribute rather than a collection error |
+| `AssertionError` | 36 | 17 `docs mv` (one of them the strengthened `test_mv_help`), 17 `docs archive`, 2 bundled-skill locks | the behaviour is absent, not the symbol; 34 carry a message and 2 are bare `assert`s pytest rewrote |
 
 An earlier run showed a third class — **3 `KeyError: 'strands'`** from indexing
 a record that has no such key. That is a weaker RED reason than an assertion
@@ -625,10 +629,10 @@ Test ids were collected from a throwaway `git worktree` at the pre-M28 commit
 | Measure | Result |
 |---|---|
 | ids at `58955ef` | **1087** |
-| ids at HEAD | **1295** |
+| ids at HEAD | **1332** |
 | `comm -23 old new` — **removed** ids | **0** |
-| `comm -13 old new` — added ids | **208** (157 `test_move_links.py`, 17 `test_cli_mv.py`, 17 `test_cli_archive.py`, 14 `test_check.py` sweeps, 2 `test_skill.py`, 1 `test_cli_check.py`) |
-| `comm -12 failed old` — pre-existing ids now FAILING | **0** |
+| `comm -13 old new` — added ids | **245** (194 `test_move_links.py`, 17 `test_cli_mv.py`, 17 `test_cli_archive.py`, 14 `test_check.py` sweeps, 2 `test_skill.py`, 1 `test_cli_check.py`) |
+| `comm -12 failed old` — pre-existing ids now FAILING | **1** — `test_mv_help`, and only that one. It is a **deliberate operator decision** taken at the Step-1 review: `cli.md` advertises `docs mv --json`, the test asserted only that `old` and `new` appear in `--help`, and nothing would have flagged the gap if Phase 7 forgot the argparse half. Strengthening it converts Phase-7 follow-through item 2 from a promise into a lock, and going RED until Phase 7 is exactly what a RED-baseline step is for. No assertion was weakened or removed. |
 | `git diff --numstat 58955ef -- tests/` | **0** deleted lines in every test file |
 | `git diff --stat 58955ef -- src/docs_cli/cli.py` | **empty** |
 
@@ -647,7 +651,7 @@ reached into.
 
 ### GREEN at baseline — every lock classified
 
-The 16 new GREEN ids:
+The 17 new GREEN ids:
 
 | Lock | Classification |
 |---|---|
@@ -701,8 +705,13 @@ Done mechanically over every M28 subprocess test, test by test:
 4. Bundled `SKILL.md` and `references/use-cases.md` (Phase 7), with
    `references/cli.md` / `references/convention.md` kept byte-identical.
 5. `CHANGELOG.md` under the existing `UNRELEASED` heading, with the upgrade
-   note: a move now edits prose, and an archive now refuses in a case it
-   previously completed.
+   note: a move now edits prose; an archive now refuses in a case it
+   previously completed; **and `docs mv`'s two shipped stderr lines are
+   re-spelled** — both gain the `mv: ` verb prefix and
+   `docs: moved … (<N> reference(s) rewritten)` loses its trailing count to the
+   richer footer. No test pins either string, so nothing goes RED, which is
+   precisely why the upgrade note has to name it: anyone parsing `docs mv`
+   stderr breaks silently at 2.0 (item (J)).
 6. A dated note on `feedback-log.md`'s issue #1 entry answering findings 1
    and 4 (Phase 7).
 7. `test-strategy.md`'s fixture-source list gains the `movelink-*` family, and
@@ -848,8 +857,133 @@ strong — left-to-right splicing produces visible corruption on the fixture, a
 fails `test_a_co_moving_pair_keeps_its_sibling_link_byte_identical`.
 
 The baseline is restated accordingly: **1295 collected, 191 failed, 1104
-passed** (from 1283 / 180 / 1103), still exactly two exception classes, still
-zero deleted test lines and zero removed ids against `58955ef`.
+passed** at the end of the audit (from 1283 / 180 / 1103), still exactly two
+exception classes, still zero deleted test lines and zero removed ids against
+`58955ef`. The fresh-eyes fold-in below takes it to its final
+**1332 / 229 / 1103**.
+
+## Fresh-eyes review fold-in — 2026-08-15
+
+An independent fresh-eyes review of Step 1 returned **no blockers**. It
+reproduced the baseline, re-derived the exception-class census, hand-recomputed
+formula (B) against all seven `movelink-*` trees and every pinned line and
+column, and judged the formula sound. It returned five should-fix items and
+three nits; all eight are folded in, together with the operator's answers to
+the three items the same-instance audit had surfaced.
+
+### Should-fix
+
+- **S1 — the frozen contract contradicted the frozen formula.** `cli.md`,
+  *Out of scope* and Q4's binding resolution all said an already-**broken**
+  destination is never touched, but formula (B) exempts only **escaping**
+  targets, so a contained-but-broken destination inside a **moving** referrer
+  runs through steps 4–6 and is rebased — which is what
+  `tests/test_move_links.py` correctly pins, because the planner is pure and
+  cannot know a target is missing. Q4's literal wording is *unimplementable*
+  in the frozen architecture, and the frozen architecture is right: the only
+  way to honour it would be a filesystem probe inside the planner, destroying
+  the hermeticity D4 and (L) exist to guarantee. A Phase-6 implementer reading
+  only `cli.md` — which ships in the bundled skill — would have implemented the
+  opposite of the pinned behaviour. Recorded as **amendment 4**, with `cli.md`
+  and *Out of scope* reworded to say a contained-but-broken destination in a
+  moving document is rebased to the same, still-broken target, never repaired
+  and never re-aimed. No test flipped.
+- **S2 — whether a moving member appears in `MovePlan.rewrites` was
+  undefined**, and three frozen statements disagreed. (L) now states it: a
+  moving member is **always** present, with `new_text == original` when nothing
+  changed — which makes (E)'s "== `original` when nothing changes" reachable
+  and (I)'s mv execution step total, instead of undefined in the common case
+  (`docs mv a.md b.md` with no body links and no self-edges). Two new locks:
+  the moving document is in the plan even when unchanged, and
+  `apply_move_plan` **never** writes it — the latter needed a plan whose moving
+  document has real bytes to write, because in every earlier test it happened
+  to have none, so an implementation that wrote moving members passed.
+- **S3 — leg 2's free-form-verb and canonical-target rules were unpinned**,
+  and both plausible wrong implementations were GREEN across the whole suite:
+  iterating `RECIPROCAL_VERBS` (which is how `docs relate` is written) misses
+  `references:`, and testing `T in moves` without canonicalising (which is how
+  `rewrite_related_refs` matches, per M26 — Q5) misses `./plan.md`. Every
+  strand fixture used a recognised verb and a canonical spelling. Fixed at both
+  levels: a new pure-seam lock over a referrer declaring `references: plan.md`
+  and `pairs-with: ./plan.md`, and a `references: ./plan.md` bullet added to
+  `movelink-strand`'s `live-child.md` so the CLI and the `strands` array see it
+  too — which incidentally makes that document contribute an orphan **and** a
+  strand, demonstrating that the two legs partition the graph by *edge*, not by
+  document.
+- **S4 — `docs mv`'s "no `--json` record on a refusal" had no lock.** Every mv
+  refusal test asserted `stdout == ""` *without* `--json`, so a build that
+  emitted a record on refusal satisfied them. `--json` added to the
+  unwritable-referrer refusal.
+- **S5 — two shipped `docs mv` stderr lines are re-spelled** (the `mv: ` prefix
+  added, the trailing `(<N> reference(s) rewritten)` count dropped) and item
+  (J)'s preamble called every line in it "new". Nothing goes RED, because no
+  test pins them — which is exactly why an adopter parsing `docs mv` stderr
+  would break silently at 2.0. Recorded in (J) and added to the Phase-7
+  CHANGELOG / upgrade-note follow-through.
+
+### Nits
+
+- **N1 — three stale counts in this log**, the artifact Phases 5–10 trust: the
+  phase-progress row's exception census, a `--co` figure the audit had already
+  superseded, and "the 16 new GREEN ids" against an arithmetic and a table that
+  both said 17. All three corrected, and every count in this file now derives
+  from the same measured run.
+- **N2 — `test_an_already_broken_destination_is_left_as_written` was
+  mislabeled**: neither end moves in its fixture, so the no-op rule alone
+  satisfies it and it locked nothing about Q4. Renamed to
+  `…_in_a_stationary_document_is_untouched` and its docstring now points at the
+  sibling that carries the half Q4 actually had to decide.
+- **N3 — (I)'s mv execution order had an undocumented failure mode.** The
+  moved document's rebased text is written to its **old** path before the
+  `replace`, so a `replace` that raises leaves that path holding text rebased
+  for a directory the file is not in. (I) now states which clause it lands in:
+  under `Moved:` iff the `replace` succeeded, under `Rewritten:` otherwise.
+
+### Operator answers to the three surfaced items
+
+1. **The encode-set residuals — split decision.** The **colon** case is
+   **closed here**, not deferred, and the argument is the one the contract
+   already accepts one clause earlier for `#`: the emitted token re-classifies
+   as `scheme`, M27 stops validating it, and `docs check` never reports the
+   link the move just killed — a **silent** failure, which is the failure class
+   M28 exists to prevent. Applying that principle to `#` and not to `:` was
+   internally inconsistent, and the inconsistency was the finding. The cost was
+   an artifact of framing the fix as a blanket table entry: `_SCHEME_RE`
+   anchors at `^` and `/` is not in its character class, so a **first-segment**
+   rule closes it at **zero** cost to `sub/a:b.md`. Item (C) now states the
+   renderer **post-condition** `classify_destination(new_raw) == "local"` as
+   the mechanism, with a complete proof, and four new locks pin it. The
+   whitespace residual stays *Follow-ups* item 7 — it fails *loudly*, so
+   `docs check` reports it.
+2. **The check-order split stands.** One overstatement corrected: the
+   `--cascade-only`-selects-nothing consequence manifests only when the tree is
+   **also** malformed, so the message-precedence inversion alone carries the
+   justification. And the previously-unwritten cost is now **named in
+   `cli.md`**: the preview does not preview the write path's *permissions* — a
+   plan whose planned referrer is unwritable previews at exit 0 and prints the
+   plan, while the write refuses at exit 2 at step 8c. Defensible, since a
+   preview writes nothing, but it is the same shape as M26 — *Follow-ups*
+   item 2, so it is stated rather than left to be discovered.
+3. **Spec ahead of code — accepted**, with one addition: `test_mv_help`
+   asserted only that `old` and `new` appear, far too weak to notice that
+   `docs mv --help` is behind `cli.md`. It now asserts `--json`, which makes it
+   the **one** pre-existing id that is RED at this baseline — deliberately, by
+   operator decision, and it converts Phase-7 follow-through item 2 from a
+   promise into a lock.
+
+### Verification
+
+- `git diff --stat 58955ef -- src/docs_cli/cli.py` — **empty**.
+- `.venv/bin/python -m pytest tests/ -q --co` — **1332 collected**, 0
+  collection errors.
+- `.venv/bin/python -m pytest tests/ -q` — **229 failed, 1103 passed**;
+  exactly two exception classes (193 `AttributeError`, 36 `AssertionError`).
+- `comm -23 old new` — **0** ids removed; `comm -12 failed old` — **1**, and it
+  is `test_mv_help` by operator decision.
+- `git diff --numstat 58955ef -- 'tests/*.py'` — **0** deleted lines.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean; `.venv/bin/docs check --root docs` —
+  exit 0; both bundled mirrors byte-identical.
 
 ### Checked clean
 

@@ -33,6 +33,13 @@ def test_mv_help(docs_script):
     assert proc.returncode == 0
     assert "old" in proc.stdout.lower()
     assert "new" in proc.stdout.lower()
+    # M28 — D7: `--json` is part of the frozen `docs mv` surface and `cli.md`
+    # already advertises it, so the argparse half must land with it. Asserting
+    # it here converts the Phase-7 follow-through from a promise into a lock —
+    # RED until Phase 7, which is what a RED-baseline step is for.
+    assert "--json" in proc.stdout, (
+        "cli.md advertises `docs mv --json`; --help must agree (surface parity)"
+    )
 
 
 def test_mv_renames_in_place(docs_script, fixtures_dir, tmp_path):
@@ -753,13 +760,16 @@ def test_mv_refuses_before_the_move_when_a_planned_referrer_is_unwritable(
     before = _snapshot(root)
     (root / "note.md").chmod(0o444)
     try:
-        proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root)
+        # `--json` is deliberate: `cli.md` freezes "no `--json` record on a
+        # refusal" for BOTH verbs, and without the flag an implementation that
+        # emitted one would still satisfy the empty-stdout assertion below.
+        proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", "--json", cwd=root)
     finally:
         (root / "note.md").chmod(0o644)
 
     assert proc.returncode == 2
     assert "docs: mv: note.md is not writable; refusing before any write" in proc.stderr
-    assert proc.stdout == ""
+    assert proc.stdout == "", "no --json record on a refusal (M26's frozen rule, D7 for mv)"
     assert _snapshot(root) == before, "a refusal writes zero bytes"
 
 

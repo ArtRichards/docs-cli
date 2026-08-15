@@ -279,10 +279,13 @@ def test_an_escaping_destination_is_never_rebased() -> None:
     assert _plan_links("sub/deep.md", "deep.md", text, {"sub/deep.md": "deep.md"}) == ()
 
 
-def test_an_already_broken_destination_is_left_as_written() -> None:
-    """Pre-existing damage keeps its M27 finding and is not repaired (Q4): a
-    contained-but-missing destination in a document neither end of which moves
-    is not planned at all.
+def test_an_already_broken_destination_in_a_stationary_document_is_untouched() -> None:
+    """Pre-existing damage is not repaired (Q4 as amended — amendment 4).
+
+    Named for what it actually locks: neither end moves here, so the no-op rule
+    alone decides it. The half of Q4 that needed a decision — what a MOVING
+    referrer does to a broken destination — is the sibling below, and the two
+    together are the whole of the amended Q4.
     """
     text = "# Note\n\nSee [gone](does-not-exist.md).\n"
     assert _plan_links("note.md", "note.md", text, {"plan.md": f"{_DATED}/plan.md"}) == ()
@@ -450,6 +453,65 @@ def test_a_leading_hash_is_encoded_so_the_token_stays_local() -> None:
     assert cli.classify_destination(emitted) == "local"
 
 
+def test_a_colon_in_the_first_path_segment_is_encoded_so_the_token_stays_local() -> None:
+    """The renderer's post-condition: `classify_destination(new_raw)` is still
+    `local` (operator decision, Step-1 review).
+
+    A first path segment matching `[A-Za-z][A-Za-z0-9+.-]*:` re-classifies the
+    emitted token as `scheme`, which means M27 stops validating it — so a
+    working link would be **silently** killed by the move and `docs check`
+    would never report it. That is precisely the failure class M28 exists to
+    prevent, and it is the same argument the contract already accepts for `#`
+    one clause earlier.
+    """
+    for raw, expected in (("plan.md", "M28%3Anotes.md"), ("<plan.md>", "<M28%3Anotes.md>")):
+        emitted = _render(raw, "M28:notes.md", None)
+        assert emitted == expected
+        assert cli.classify_destination(emitted) == "local"
+
+    assert cli.classify_destination("M28:notes.md") == "scheme", (
+        "the unencoded form really does re-classify — this is what the rule prevents"
+    )
+
+
+def test_a_colon_after_the_first_slash_is_left_literal() -> None:
+    """The rule is first-segment-only, and that is exactly sufficient rather
+    than conservative: `_SCHEME_RE` anchors at `^` and `/` is not in its
+    character class, so a colon that follows a `/` can never open a scheme.
+    Encoding it would be churn on a legitimate filename for no gain.
+    """
+    assert _render("plan.md", "sub/a:b.md", None) == "sub/a:b.md"
+    assert _render("plan.md", "../a:b.md", None) == "../a:b.md"
+    assert cli.classify_destination("sub/a:b.md") == "local"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "plan.md",
+        "#tricky.md",
+        "M28:notes.md",
+        "mailto:x.md",
+        "a b.md",
+        "a(b).md",
+        "café.md",
+        f"{_DATED}/plan.md",
+        "../../plan.md",
+        "sub/a:b.md",
+    ],
+)
+@pytest.mark.parametrize("raw", ["plan.md", "<plan.md>"])
+def test_every_emitted_token_still_classifies_as_local(path, raw) -> None:
+    """The post-condition stated as a lock rather than as prose.
+
+    Its proof is complete: `empty` cannot occur (`relpath` never returns an
+    empty string), `fragment` is blocked by `#` -> `%23`, `root-absolute` and
+    `protocol-relative` cannot occur (both endpoints are in-root relative
+    paths), and `scheme` is blocked by the first-segment colon rule.
+    """
+    assert cli.classify_destination(_render(raw, path, None)) == "local"
+
+
 def test_non_ascii_passes_through_literally() -> None:
     """No blanket `urllib.parse.quote`: an accented or CJK filename is emitted
     exactly as an author would write it (R8).
@@ -469,6 +531,8 @@ def test_non_ascii_passes_through_literally() -> None:
         "a\\b.md",
         "a#b.md",
         "a<b>.md",
+        "M28:notes.md",
+        "sub/a:b.md",
         "café.md",
         "計画.md",
         f"{_DATED}/plan.md",
@@ -1160,3 +1224,112 @@ def test_related_pairs_drives_the_bullet_half_independently_of_the_move_map(
     assert aliased.related_rewrites == 1
     assert f"- pairs-with: {_DATED}/plan.md" in aliased.new_text
     assert f"[the plan]({_DATED}/plan.md)" in aliased.new_text
+
+
+# --- fresh-eyes review additions -------------------------------------------
+
+
+def test_a_moving_document_is_always_present_in_the_plan(tmp_path) -> None:
+    """(L), as the Step-1 review forced it to be stated: a moving member is
+    **always** in `plan.rewrites`, with `new_text == original` when nothing
+    about it changed.
+
+    That is what makes (E)'s "`new_text` == `original` when nothing changes"
+    sentence reachable and (I)'s mv execution step total — the alternative
+    reading leaves `docs mv a.md b.md` with no `DocRewrite` for the document it
+    moves, and both verbs are told to take that document's final text from its
+    `DocRewrite` rather than from a re-read.
+    """
+    root = _tree(
+        tmp_path,
+        {
+            "plan.md": _doc("Plan", "The plan, linking nowhere."),
+            "note.md": _doc("Note", "Nothing here either."),
+        },
+    )
+    plan = _plan(root, {"plan.md": "milestone-plan.md"}, strand_check=False)
+    moved = _rewrite_for(plan, "plan.md")
+
+    assert moved is not None, "the moving document is in the plan even when nothing changed"
+    assert moved.new_rel == "milestone-plan.md"
+    assert moved.links == () and moved.related_rewrites == 0
+    assert moved.new_text == moved.original
+    assert "note.md" not in {r.rel for r in plan.rewrites}, (
+        "an untouched NON-moving document is still absent"
+    )
+
+
+def test_apply_never_writes_a_moving_document(tmp_path, monkeypatch) -> None:
+    """(L): `apply_move_plan` writes non-moving documents only — the two verbs
+    relocate a member differently, so each owns its own member's write.
+
+    Every other plan in this file happens to leave its moving document
+    unchanged, so an implementation that wrote moving members too would pass
+    them all. Here the moving document carries BOTH a body-link rewrite and a
+    `Related:` rewrite, so it has real bytes to write and the mistake is
+    visible.
+    """
+    root = _tree(
+        tmp_path,
+        {
+            "plan.md": _doc(
+                "Plan",
+                "See [the note](note.md).",
+                related=("pairs-with: note.md",),
+            ),
+            "note.md": _doc("Note", "See [the plan](plan.md).", related=("pairs-with: plan.md",)),
+        },
+    )
+    plan = _plan(root, {"plan.md": f"{_DATED}/plan.md"}, strand_check=False)
+    moved = _rewrite_for(plan, "plan.md")
+
+    assert moved is not None
+    assert moved.new_text != moved.original, "the moved document really does change"
+    assert "[the note](../../note.md)" in moved.new_text
+
+    real = cli.atomic_write
+    written: list[str] = []
+
+    def _spy(path, content):
+        written.append(cli._root_relative(Path(path), root))
+        return real(path, content)
+
+    monkeypatch.setattr(cli, "atomic_write", _spy)
+    _m28("apply_move_plan")(plan)
+
+    assert written == ["note.md"], (
+        f"the moving member is the verb's own business, not apply_move_plan's: {written!r}"
+    )
+    assert (root / "plan.md").read_text() == moved.original, "and it is left untouched on disk"
+
+
+def test_leg_2_reports_free_form_verbs_and_alias_spelled_targets(tmp_path) -> None:
+    """(H): "any other `Related:` verb, free-form verbs included", matched on
+    `_canonical_related_target(T) in moves`.
+
+    Both halves are load-bearing and both have a natural wrong implementation
+    that passes everything else: iterating `RECIPROCAL_VERBS` (which is how
+    `docs relate` is written) misses `references:`, and testing `T in moves`
+    without canonicalising (which is how `rewrite_related_refs` matches, per
+    M26 — Q5) misses `./plan.md`. Every other strand fixture uses a recognised
+    verb and a canonical spelling, so neither mistake shows up there.
+    """
+    root = _tree(
+        tmp_path,
+        {
+            "tracker.md": _doc(
+                "Tracker",
+                "No body links — this isolates the bullet half.",
+                role="status",
+                related=("references: plan.md", "pairs-with: ./plan.md"),
+            ),
+            "plan.md": _doc("Plan", "The plan."),
+        },
+    )
+    plan = _plan(root, {"plan.md": f"{_DATED}/plan.md"})
+
+    assert [(s.path, s.target, s.kind, s.verb) for s in plan.strands] == [
+        ("tracker.md", "plan.md", "related", "references"),
+        ("tracker.md", "plan.md", "related", "pairs-with"),
+    ], "a free-form verb is reported, and an alias spelling resolves to the canonical target"
+    assert plan.orphans == ()

@@ -195,10 +195,12 @@ point, and the E3 fixture contradiction — and recorded eleven Step-1
 resolutions. Phase 2 wrote 182 RED ids with zero deleted test lines; Phase 3
 authored the seven `movelink-*` fixture trees, each `docs check`-clean and each
 proven by a read-only prototype census; Phase 4 captured the baseline at
-**1295 collected, 191 failed, 1104 passed** (after the Step-1 audit's twelve
-added locks) with exactly two exception classes
-and all 1087 pre-existing ids mechanically proven present and passing. No
-product code was touched across Phases 1–4. **Phase 5 — Update Base
+**1332 collected, 229 failed, 1103 passed** (after the Step-1 audit and the
+fresh-eyes fold-in, which returned no blockers) with exactly two exception
+classes
+and all 1087 pre-existing ids mechanically proven present, 0 removed, 0 test
+lines deleted, and exactly one deliberately RED by operator decision
+(`test_mv_help`). No product code was touched across Phases 1–4. **Phase 5 — Update Base
 Interfaces is next.** Setup's headline finding is that both
 verbs now produce trees that fail the tool's own gate: one
 `docs mv plan.md milestone-plan.md` exits 0 and leaves 42 `broken-body-link`

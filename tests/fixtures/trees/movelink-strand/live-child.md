@@ -7,6 +7,7 @@ Updated: 2026-05-20
 
 Related:
 - child-of: plan.md
+- references: ./plan.md
 
 ## Body
 

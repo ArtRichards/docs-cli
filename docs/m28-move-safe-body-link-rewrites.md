@@ -51,16 +51,24 @@ Related:
   parametrizations from 29 to 36 and from 33 to 40 and taking the suite to
   **1283 collected, 180 failed, 1103 passed**. A read-only prototype census
   under the Phase-1 contract confirmed each tree yields exactly its intended
-  plan, line numbers included. Phase 4 captured the baseline: **1295
-  collected, 191 failed, 1104 passed** (restated after the Step-1
-  same-instance audit and its adversarial second pass), zero collection
-  errors, zero xfail / xpass, exactly **two** exception classes (156
-  `AttributeError` from the pure seam, 35 `AssertionError` from the CLI and
-  skill locks), and a
-  mechanical proof against the pre-M28 commit that **0** test ids were removed
-  and **0** pre-existing ids fail. No product code changed in any of the four
-  phases — `git diff --stat 58955ef -- src/docs_cli/cli.py` is empty by
-  design. What follows is the setup record, unchanged. M27 is
+  plan, line numbers included. Phase 4 captured the baseline: **1332
+  collected, 229 failed, 1103 passed** (restated after the Step-1
+  same-instance audit, its adversarial second pass, and the fresh-eyes
+  fold-in), zero collection errors, zero xfail / xpass, exactly **two**
+  exception classes (193 `AttributeError` from the pure seam, 36
+  `AssertionError` from the CLI and skill locks), and a mechanical proof
+  against the pre-M28 commit that **0** test ids were removed, **0** test lines
+  were deleted, and exactly **one** pre-existing id is RED — `test_mv_help`,
+  strengthened by operator decision so that Phase 7's argparse half is a lock
+  rather than a promise. The fresh-eyes review returned **no blockers**; its
+  five should-fix items and three nits are folded in, the largest being
+  **amendment 4**, which narrows Q4's "already broken" clause to "already
+  escaping" because its literal wording is unimplementable in a planner that
+  never stats. The operator also **closed the colon residual here** rather than
+  deferring it: item (C) now carries the renderer post-condition
+  `classify_destination(new_raw) == "local"`. No product code changed in any of
+  the four phases — `git diff --stat 58955ef -- src/docs_cli/cli.py` is empty
+  by design. What follows is the setup record, unchanged. M27 is
   implementation-complete
   and merged to `main` (`58955ef`), so M28 is the next implementation
   milestone in the v2.0 train. Setup measured this repository read-only and on
@@ -425,8 +433,13 @@ verbs (Q3, operator):
   in a sentence, a fenced example, and an `https://` destination are never
   touched.
 - **Repairing pre-existing damage.** M28 rewrites what *this* move makes
-  stale. A destination that was already broken, or already escaping, before
-  the move is left exactly as written and keeps its M27 finding (Q4). There is
+  stale; it never *repairs* a destination and never re-aims one. An already
+  **escaping** destination is copied byte-for-byte in every case. An already
+  **broken** but contained destination keeps its bytes while its referrer
+  stays put, and is rebased to the **same, still-broken target** when the
+  referrer itself moves — because the planner is pure and cannot know the
+  target is missing, and because rebasing is what preserves the author's aim
+  (amendment 4 to Q4). Either way the M27 finding survives the move. There is
   no `docs fix-links`; M27 — D6 repaired this repository once and adopters get
   the recipe.
 - **Unarchive / undo**, and rolling back an interrupted execution batch —
@@ -1059,14 +1072,20 @@ decoded forms (`%2F…`, `\/…`). What remains is what M28 does when it meets o
 anyway, in a tree that has not been repaired, since neither `mv` nor `archive`
 runs `docs check` first.
 
-**The resolution — leave every non-`local` and every already-broken or
-escaping destination byte-identical, and do not gate the move on it.** The five
-non-`local` kinds are copied through untouched by construction (D2). An
-escaping or already-broken `local` destination keeps its M27 finding, which is
-the report; rewriting it would require deciding what it *should* have said, and
-refusing the move because of unrelated pre-existing damage would make an
-unrelated repair a precondition for a rename. `docs check` owns pre-existing
-damage; `docs mv` owns the damage it would otherwise cause.
+**The resolution — leave every non-`local` and every escaping destination
+byte-identical, never repair a broken one, and do not gate the move on any of
+them.** The five non-`local` kinds are copied through untouched by construction
+(D2). An escaping `local` destination is copied byte-for-byte in every case. An
+already-broken but *contained* destination keeps its M27 finding either way:
+its bytes are untouched while its referrer stays put, and it is rebased to the
+**same, still-broken target** when the referrer moves — see *Decisions
+(Phase 1 — BINDING)* › *Amendments* › item 4, which narrows this answer's
+"already broken" clause for the reason that the planner is pure and cannot
+know. Rewriting a broken destination to something *else* would require deciding
+what it *should* have said, and refusing the move because of unrelated
+pre-existing damage would make an unrelated repair a precondition for a rename.
+`docs check` owns pre-existing damage; `docs mv` owns the damage it would
+otherwise cause.
 
 ### Q5 — Same-path normalisation and the emitted spelling
 
@@ -1183,6 +1202,7 @@ for amending setup-frozen material in place rather than diverging silently.
 | 1 | **M26's compatibility matrix row "a preview writes nothing and exits 0, full stop" is amended: a preview adopts failures of plan *construction* and reports-but-does-not-adopt *consequence* verdicts.** A malformed tree makes `archive --cascade-dry-run` exit **1** and `mv --dry-run` exit **2** — the codes their write paths already use — while a leg-1 strand verdict is reported at exit 0. `docs/m26-safe-archive-selection.md` › *The compatibility matrix (BINDING)* is amended by this row. | D6 requires both strand legs to run in the preview, and a preview cannot report a plan it could not build. M26's own *Follow-ups* item 2 records that the frozen check order lets a preview miss a pre-flight refusal and names repeating it as the mistake to avoid. The distinction is not "preview vs write" but "can I describe this operation at all" vs "what would this operation cost" — the first is adopted, the second is reported. |
 | 2 | **The E7 leg-2 coverage row's observation point for plan B is its PREVIEW.** The row asks for the `strands` array "for plan B (which refuses)". A leg-1 refusal emits **no** `--json` record (M26's frozen Phase-1 Q3 rule, restated in `cli.md`), so plan B's array is asserted in `archive --cascade-dry-run --cascade-only '*'` — exit 0, record emitted, leg-1 verdict reported. The row is amended in place. | Otherwise Phase 2 would have to assert a record that the frozen no-record-on-refusal rule forbids. The preview is exactly where D6 says the leg-1 verdict is reported rather than adopted, so it is the natural observation point and no rule has to bend. |
 | 3 | **The E3 coverage row's "the `archive-pair` / `archive-trio` shapes **gain** body links" is amended to "a new `movelink-closeout` tree reproduces the `archive-pair` / `archive-trio` SHAPE, carrying real body links".** Every existing fixture tree stays byte-identical. | The row contradicted the Phase-3 exit criterion "the existing `archive-*` / `mv-*` / `rename-*` trees stay byte-identical" in the same document. Editing them would also move M26-era assertions onto new bytes for no benefit. Copying the shape delivers the stated coverage and keeps the no-regression proof at a clean zero moved test ids. |
+| 4 | **Q4's "already broken, or already escaping" clause is narrowed to "already escaping".** An already-**escaping** destination is copied byte-for-byte in every case (formula step 3). An already-**broken** but *contained* destination is copied only while its referrer stays put; when the referrer itself moves, it is **rebased to the same, still-broken target** — never repaired, never re-aimed. *Out of scope* › *Repairing pre-existing damage* and `cli.md` › *What a move never touches* are reworded to say so. | Q4's literal wording is **unimplementable** in the frozen architecture, and the frozen architecture is right. The planner is pure — it never stats — so it cannot know a contained target is missing; the only way to honour "never touched" would be a filesystem probe inside the planner, which destroys the hermeticity D4 and (L) exist to guarantee. Rebasing preserves the author's aim (the link still names the same file); *not* rebasing would silently re-aim it at a different path as the referrer's directory changes, which is strictly worse. The deviation is recorded here because three lesser ones are, and because `cli.md` ships in the bundled skill: a Phase-6 implementer reading only the author-facing spec would otherwise implement the opposite of `tests/test_move_links.py`'s pinned behaviour. |
 
 ### Step-1 resolutions (BINDING)
 
@@ -1288,26 +1308,38 @@ therefore copied verbatim and never re-encoded.
 path. A **no-op** token keeps every byte, redundant escapes included, because
 it is copied rather than rendered.
 
-**`#` is in both sets for a reason beyond the fragment split.** A relative path
-whose first character is `#` would re-classify as `fragment` and stop being a
-link at all; encoding it keeps `classify_destination(new_raw) == "local"`.
+**The post-condition (BINDING): `classify_destination(new_raw) == "local"`.**
+The table above is the mechanism; this is the property it exists to deliver,
+and it is stated separately because the table alone does not obviously imply
+it. Two entries are there for this reason and no other:
 
-**Known residuals (recorded, not hidden).** The set above is minimal and
-grammar-derived, and two inputs fall outside it. Neither is reachable from any
-path this repository's verbs produce, and neither is silently ignored:
+- **`#` in both sets.** A relative path whose first character is `#` would
+  re-classify as `fragment` and stop being a link at all.
+- **`:` → `%3A` in the first path segment** — everything before the first `/`,
+  in both delimiter forms (operator decision at the Step-1 review). A first
+  segment matching `[A-Za-z][A-Za-z0-9+.-]*:` re-classifies the emitted token
+  as `scheme`, which means M27 stops validating it: a working link would be
+  **silently** killed by the move and `docs check` would never report it — the
+  exact failure class M28 exists to prevent. The rule is first-segment-only and
+  that is exactly sufficient rather than conservative, because `_SCHEME_RE`
+  anchors at `^` and `/` is not in its character class, so a colon after a `/`
+  can never open a scheme and `sub/a:b.md` keeps its literal colon.
 
-1. **A path component containing a whitespace character other than space or
-   tab** (newline, carriage return, form feed, vertical tab) is not encoded, so
-   the emitted plain token would terminate early. `docs new` never creates such
-   a filename and no fixture or live document carries one.
-2. **A first path segment matching `[A-Za-z][A-Za-z0-9+.-]*:`** — i.e. a
-   filename containing a colon before any `/` — would re-classify the emitted
-   token as `scheme` and silence it. Encoding `:` would close this, at the cost
-   of `%3A` in every legitimately colon-bearing destination.
+The post-condition's proof is complete, which is why it can be asserted rather
+than hoped for: `empty` cannot occur (`relpath` never returns an empty string),
+`fragment` is blocked by `#`, `root-absolute` and `protocol-relative` cannot
+occur (both endpoints are in-root relative paths), and `scheme` is blocked by
+the first-segment colon rule.
 
-Both are recorded as *Follow-ups* item 7 with the operator decision they need.
-Phase 2 pins the frozen set and asserts nothing about either residual, so
-closing them later needs no test flipped.
+**Known residual (recorded, not hidden).** One input falls outside the set: **a
+path component containing a whitespace character other than space or tab**
+(newline, carriage return, form feed, vertical tab) is not encoded, so the
+emitted plain token would terminate early. Unlike the colon, this fails
+**loudly** — the truncated destination does not resolve, so `docs check`
+reports it — and `docs new` never creates such a filename, no fixture or live
+document carries one, and the angle form is unaffected. It stays *Follow-ups*
+item 7. Phase 2 asserts nothing about it, so closing it later needs no test
+flipped.
 
 ### (D) The never-creates-an-escape invariant, with its proof
 
@@ -1421,9 +1453,20 @@ split is deliberate. `cli.md` states, and M26 froze, that "the plan pre-flight
 deliberately precedes the whole-tree walk … naming the document the operator
 actually asked for is strictly more actionable than naming an unrelated
 referring doc". Building the rewrite plan at 5b on the *write* path would have
-inverted that precedence — an unwritable member and a malformed referrer would
-swap messages, and a `--cascade-only` write that selects nothing would exit 1
-instead of 2. M28 changes no message precedence M26 froze.
+inverted that precedence: an unwritable member and a malformed referrer would
+swap messages, and — on a tree that is **also** malformed — a `--cascade-only`
+write selecting nothing would exit 1 instead of 2. The message-precedence
+inversion alone carries the justification. M28 changes no message precedence
+M26 froze.
+
+**What the split costs, stated rather than left to be discovered.** The preview
+no longer previews the *write path's* precedence: a plan whose planned referrer
+is unwritable **previews at exit 0 and prints the plan**, while the write
+refuses at exit 2 at step 8c. That is defensible — a preview writes nothing, so
+writability is irrelevant to it — but it is the same shape as M26 — *Follow-ups*
+item 2, so it is **named in `cli.md`** rather than left for an operator to hit.
+It is also exactly the boundary amendment 1 draws: plan *construction* is
+adopted by the preview, plan *consequences* and plan *permissions* are not.
 
 `docs mv`: 1 `<old>` is a file (exit 1) → 2 `<new>` exists (exit 1) → 3
 root/config (exit 2) → 4 both under root (exit 2) → **5 whole-tree walk +
@@ -1431,6 +1474,14 @@ rewrite plan** → **5b preview branch: prints rewrites; exit 0** → 6
 rewrite-plan pre-flight → 7 execution: the moved document's planned text is
 written to its **old** path, then `replace`, then every other planned
 document, then one `_refresh_index`.
+
+**Where the moved document lands in a partial-state admission.** Writing its
+rebased text before the `replace` means a `replace` that raises leaves the old
+path holding text whose links are rebased for a directory the file is not in.
+The admission must say so: the moved document is reported under `Moved:` **iff
+the `replace` succeeded**, and under `Rewritten:` otherwise — so that failure
+renders as `Moved: none. Rewritten: <old-rel>. Not written: <…>.` and names the
+one document an operator has to inspect.
 
 Two consequences, written down rather than discovered: `mv --dry-run` now
 walks, so a malformed tree turns its exit 0 into exit **2**; and
@@ -1473,6 +1524,16 @@ the literal word `none` when its list is empty, never a blank (the M25
 Everything prints unless `--quiet`, in preview and apply alike (R3), except
 the two leg-1 **refusal** lines, which print even under `--quiet` as every
 refusal does.
+
+**Two of these are RE-SPELLINGS of shipped lines, not new messages.** `docs mv`
+prints `docs: would move <old> -> <new>` and
+`docs: moved <old> -> <new> (<N> reference(s) rewritten)` today. Both gain the
+`mv: ` verb prefix, matching every other verb, and the second **drops its
+trailing count**, which moves into the richer counts footer. No test pins
+either string (grep-verified), so nothing goes RED — but anyone parsing
+`docs mv` stderr breaks silently at 2.0, so the Phase-7 upgrade note and the
+`UNRELEASED` CHANGELOG must name this alongside "a move now edits prose" and
+"an archive now refuses".
 
 ### (K) `--json` schemas
 
@@ -1588,10 +1649,18 @@ Four points the plain signatures do not carry:
   "strands": [...]}` — and each verb splices what it carries into its own
   record: `mv` takes `rewrites` only, `archive` takes both, inserted after
   `candidates`. One serializer is what makes the two byte-comparable (R10).
+- **A moving member is ALWAYS present in `rewrites`**, with
+  `new_text == original` when nothing about it changed; `rewrites` otherwise
+  carries only documents whose bytes change. Without this the common case —
+  `docs mv a.md b.md` on a document with no body links and no self-edges —
+  leaves the moved document with no `DocRewrite` at all, which makes (E)'s
+  "`new_text` == `original` when nothing changes" unreachable and (I)'s mv
+  execution step ("the moved document's planned text is written to its **old**
+  path") undefined.
 - `apply_move_plan` writes every **non-moving** document whose text changed,
-  one `atomic_write` each. A moving member is the verb's own business — the two
-  verbs relocate differently — and each verb takes that member's final text
-  from its `DocRewrite`, never from a re-read (E).
+  one `atomic_write` each, and **never** a moving member. That is the verb's
+  own business — the two verbs relocate differently — and each verb takes that
+  member's final text from its `DocRewrite`, never from a re-read (E).
 - `_print_move_lines` prints the rewrite lines, the counts footer and leg 2.
   The leg-1 **refusal** lines are the verb's, because they print under
   `--quiet` and precede a non-zero return.
@@ -1637,7 +1706,7 @@ implemented here.
 | 4 | **Rolling back an interrupted execution batch** — M25 — D5's staged-publish-plus-rollback extended to N documents. Declined by M26 — D4, still declined here, still available. | Later |
 | 5 | **Heading/anchor validation for fragments**, out of scope for M27 *and* M28 by the 2026-08-10 operator decision, and now also out of scope for rewriting: M28 carries a fragment across a move without ever resolving it. | Later |
 | 6 | **`docs mv <doc> archive/<date>/<doc>` can still strand a live child** (Phase 1, R4). The strand-check is `archive`-only because only `archive` produces a newly-archived set, and `mv` into the archive subtree is already a `status-drift` error the operator has to repair — but nothing *refuses* it before the write. Extending leg 1 to a `mv` whose destination lands under the archive subtree is a small, self-contained follow-up. | Later |
-| 7 | **Two residuals in the destination encode set** (Phase 1, R8 / item (C) *Known residuals*): a path component carrying a whitespace character other than space or tab, and a first path segment matching `[A-Za-z][A-Za-z0-9+.-]*:` (a colon before any `/`), which would re-classify the emitted token as `scheme`. Neither is reachable from a filename this tool creates; closing either is one entry in a mapping and needs an operator decision on the cost (`%3A` in every legitimately colon-bearing destination). | Later — needs an operator decision |
+| 7 | **One residual in the destination encode set** (Phase 1, R8 / item (C) *Known residual*): a path component carrying a whitespace character other than space or tab — newline, carriage return, form feed, vertical tab — is not encoded, so the emitted plain token would terminate early. It fails **loudly** (the truncated destination does not resolve, so `docs check` reports it), no filename this tool creates carries one, and the angle form is unaffected. The colon case that sat here at Phase 1 was **closed in Phase 1** by operator decision at the Step-1 review — it failed *silently*, which is the failure class M28 exists to prevent — and is now item (C)'s first-segment `:` rule under the `classify_destination(new_raw) == "local"` post-condition. | Later |
 
 ## Testing and quality gate
 

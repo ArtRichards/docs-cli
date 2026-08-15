@@ -637,11 +637,22 @@ an angle destination at the first unescaped `>`, `#` opens the fragment,
 
 | Form | Encoded | Left literal |
 |---|---|---|
-| plain | `%`→`%25` (first), space→`%20`, tab→`%09`, `(`→`%28`, `)`→`%29`, `#`→`%23`, `<`→`%3C`, `>`→`%3E`, `\`→`%5C` | everything else, non-ASCII included |
-| angle | `%`→`%25` (first), `<`→`%3C`, `>`→`%3E`, `#`→`%23`, `\`→`%5C` | everything else, **a space included** — carrying a space is what the angle form is for |
+| plain | `%`→`%25` (first), space→`%20`, tab→`%09`, `(`→`%28`, `)`→`%29`, `#`→`%23`, `<`→`%3C`, `>`→`%3E`, `\`→`%5C`, and `:`→`%3A` in the first path segment | everything else, non-ASCII included |
+| angle | `%`→`%25` (first), `<`→`%3C`, `>`→`%3E`, `#`→`%23`, `\`→`%5C`, and `:`→`%3A` in the first path segment | everything else, **a space included** — carrying a space is what the angle form is for |
 
 There is deliberately no blanket URL quoting: an accented or CJK filename
 is emitted literally, exactly as an author would write it.
+
+**The post-condition: the emitted token still classifies as `local`.** The
+table is the mechanism; this is the property it delivers, and two of its
+entries exist for this reason alone. A path whose first character is `#`
+would re-classify as `fragment`, and a first path segment matching
+`[A-Za-z][A-Za-z0-9+.-]*:` would re-classify as `scheme` — in which case
+the tool would stop validating the link it just rewrote, and a working
+destination would be **silently** killed by the move. The colon rule
+applies to the first path segment only, and that is exactly sufficient
+rather than conservative: a scheme's colon cannot follow a `/`, so
+`sub/a:b.md` keeps its literal colon.
 
 **The round-trip invariant.** Decoding an emitted token reproduces the
 path and fragment it was built from, by the same decode the scanner uses.
@@ -666,9 +677,16 @@ exactly, not re-argued.
 - **Every non-`local` destination.** `empty`, `fragment`, `scheme`,
   `protocol-relative` and `root-absolute` tokens are copied byte-for-byte,
   always.
-- **A destination that was already broken, or already escaping, before
-  the move.** It keeps its M27 finding; `docs check` owns pre-existing
-  damage, and an unrelated repair is never a precondition for a rename.
+- **A destination that was already escaping** — copied byte-for-byte in
+  every case, so a move can never rebase an escape.
+- **A destination that was already broken**, in the sense that the tool
+  never *repairs* one and never re-aims one. Its bytes are untouched while
+  its referrer stays put; when the referrer itself **moves**, the
+  destination is rebased to the **same, still-broken target**, because the
+  planner is pure — it never stats, so it cannot know the target is
+  missing — and because rebasing is what preserves the author's aim. Either
+  way it keeps its M27 finding: `docs check` owns pre-existing damage, and
+  an unrelated repair is never a precondition for a rename.
 - **Labels, titles, quoting style, fragments, and every other byte.**
   The edit is the destination token's span and nothing else.
 - **Plain-text mentions, fenced code, inline code spans, and external
@@ -783,6 +801,16 @@ tree makes `docs archive --cascade-dry-run` exit **1** and
 while a leg-1 strand verdict is reported at exit 0. This closes
 M26's own follow-up that the frozen check order let a preview miss a
 pre-flight refusal.
+
+**A preview does not preview the write path's PERMISSIONS, and that is a
+knowable gap rather than an oversight.** The write path runs its
+rewrite-plan pre-flight at step 8c, after the member pre-flight at step 7,
+so that the message precedence this section freezes is unchanged. A
+preview stops at step 5b and never reaches either. So a plan whose planned
+referrer is **not writable** previews at exit 0 and prints the plan, while
+the write refuses at exit 2. A preview writes nothing, so writability is
+genuinely irrelevant to it — but the asymmetry is named here rather than
+left to be discovered.
 
 ### `docs mv <old> <new> [--json] [--dry-run] [--quiet]`
 

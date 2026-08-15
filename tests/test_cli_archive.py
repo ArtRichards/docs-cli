@@ -3391,10 +3391,16 @@ def test_archive_json_strands_observed_in_the_preview_of_a_refusing_plan(
     assert record["dry_run"] is True and record["applied"] is False
     assert [
         (s["path"], s["target"], s["kind"], s["verb"], s["line"]) for s in record["strands"]
-    ] == [("milestone.md", "plan.md", "body-link", None, 15)], (
-        "leg 2 still reports here, and it reports EXACTLY the one edge leg 1 does "
+    ] == [
+        ("live-child.md", "plan.md", "related", "references", None),
+        ("milestone.md", "plan.md", "body-link", None, 15),
+    ], (
+        "leg 2 still reports here, and it reports EXACTLY the edges leg 1 does "
         "not own — the child-of bullets belong to leg 1, so the two legs partition "
-        "the graph rather than overlapping"
+        "the graph by EDGE rather than by document: `live-child.md` contributes an "
+        "orphan AND a strand. The `references: ./plan.md` bullet is also the only "
+        "CLI-level proof that a free-form verb and an alias spelling both reach the "
+        "record"
     )
 
 
