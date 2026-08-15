@@ -3051,9 +3051,16 @@ def plan_body_link_rewrites(
 ) -> tuple[LinkRewrite, ...]:
     """Plan every destination rewrite one document needs (M28 — D1, item (B)).
 
-    A **pure** function of `(rel, new_rel, text, moves)`: no filesystem access
-    of any kind, so the plan is a function of the tree's bytes and cannot vary
-    with where the process runs. Existence checks and writes are the caller's.
+    A **pure** function of `(rel, new_rel, text, moves)`: it opens nothing,
+    stats nothing and writes nothing, so the plan is a function of the tree's
+    bytes. Existence checks and writes are the caller's.
+
+    One precise qualification, because the Phase-2 purity lock structurally
+    cannot see it: step 6's `posixpath.relpath` calls `os.getcwd()` to normalise
+    two relative paths. The cwd prefix cancels between them, so **the result is
+    still independent of where the process runs** — pinned by
+    `test_emitted_spelling_is_independent_of_the_process_cwd` — but the
+    hermeticity claim is about the *tree*, not about `getcwd`.
 
     The step order is BINDING:
 
@@ -3244,15 +3251,16 @@ def preflight_move_plan(plan: MovePlan) -> None:
             link = link_rewrite.link
             if rewrite.original[link.start : link.end] != link.raw:
                 raise CoordinatedWriteError(
-                    f"{rewrite.rel}: recorded destination span no longer matches its "
-                    "text; refusing before any write",
+                    f"{rewrite.rel} carries a recorded destination span that no longer "
+                    "matches its text; refusing before any write",
                     rolled_back=True,
                     published=(),
                 )
         spans = sorted((lr.link.start, lr.link.end) for lr in rewrite.links)
         if any(later[0] < earlier[1] for earlier, later in zip(spans, spans[1:], strict=False)):
             raise CoordinatedWriteError(
-                f"{rewrite.rel}: two planned destination spans overlap; refusing before any write",
+                f"{rewrite.rel} carries two overlapping planned destination spans; "
+                "refusing before any write",
                 rolled_back=True,
                 published=(),
             )
@@ -7131,6 +7139,16 @@ def _cmd_mv(args: argparse.Namespace) -> int:
     # (item (L)).
     moved = next((rewrite for rewrite in plan.rewrites if rewrite.rel == old_rel), None)
     member_text = None if moved is None or moved.new_text == moved.original else moved.new_text
+    # The deepest ancestor of `<new>` that already exists. Everything below it
+    # is this call's to prune when the rename never happens: `mkdir` runs
+    # BEFORE `replace`, so a `replace` that raises would otherwise leave an
+    # empty directory behind — and an admission reading `Moved: none.
+    # Rewritten: none. Not written: none.` would have changed the tree anyway.
+    # `_archive_partial_state` prunes its dated directory for exactly this
+    # reason; `mv` has the same failure shape and gets the same care.
+    kept = new_path.parent
+    while not kept.exists():
+        kept = kept.parent
     moved_written = False
     replaced = False
     try:
@@ -7146,6 +7164,15 @@ def _cmd_mv(args: argparse.Namespace) -> int:
         # (an `OSError` subclass) and every bare `OSError` from the member
         # write, the `mkdir` or the `replace` alike. Mapped to a clean exit 2
         # carrying the exact partial state rather than escaping as a traceback.
+        if not replaced:
+            directory = new_path.parent
+            while directory != kept:
+                # `rmdir` refuses a non-empty directory, which is the guard:
+                # anything we did not create, or that something else has since
+                # filled, is left alone.
+                with contextlib.suppress(OSError):
+                    directory.rmdir()
+                directory = directory.parent
         print(
             "docs: mv: "
             + _mv_partial_state(

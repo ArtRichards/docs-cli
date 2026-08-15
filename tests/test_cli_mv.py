@@ -646,6 +646,43 @@ def test_mv_json_record_is_emitted_on_an_index_refresh_failure(docs_script, tmp_
         root.chmod(0o755)
 
 
+@_SKIP_AS_ROOT_MV
+def test_mv_failed_rename_leaves_no_directory_behind(docs_script, tmp_path):
+    """A partial-state admission that says nothing was moved must be TRUE.
+
+    `mkdir(parents=True)` runs before `replace`, so a `replace` that raises
+    would otherwise leave an empty destination directory behind — and the
+    admission would read `Moved: none. Rewritten: none. Not written: none.`
+    over a tree the call had in fact changed. `_archive_partial_state` prunes
+    its dated directory for exactly this reason; `mv` has the same failure
+    shape, and now the same care.
+
+    The trigger is a read-only SOURCE directory: the root stays writable so
+    the `mkdir` succeeds, and only the rename fails.
+    """
+    root = tmp_path / "prune"
+    (root / "w").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "prune"\n')
+    (root / "w" / "a.md").write_text(
+        "# A\n\nLifecycle: active\nRole: notes\nProject: prune\n"
+        "Updated: 2026-01-01\n\n## Body\n\nNo links at all.\n"
+    )
+    os.chmod(root / "w", 0o555)
+    try:
+        proc = _run(docs_script, "mv", str(root / "w" / "a.md"), str(root / "sub" / "a.md"))
+    finally:
+        os.chmod(root / "w", 0o755)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr
+    assert "PARTIAL MOVE — not rolled back. Moved: none." in proc.stderr, proc.stderr
+    assert not (root / "sub").exists(), (
+        "an admission that names nothing moved must leave nothing behind — the "
+        f"directory the failed move created is still there: {proc.stderr!r}"
+    )
+    assert (root / "w" / "a.md").is_file(), "the source is untouched"
+
+
 def test_mv_rename_leaves_check_clean(docs_script, fixtures_dir, tmp_path):
     """E1, the headline defect: today a rename leaves a tree that fails the
     tool's own gate. Afterwards `docs check` must exit 0.

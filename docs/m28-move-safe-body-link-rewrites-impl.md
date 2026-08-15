@@ -24,8 +24,8 @@ table and the milestone checklist synchronized.
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
 - Progress: **ALL TEN PHASES COMPLETE (2026-08-15) — M28 is
   implementation-complete.** Step 1 (Phases 1–4) landed on `m28/phases-1-4`;
-  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1335
-  passed / 0 failed** (1333 at the Phase-8 gate, plus the two locks the
+  Step 2 (Phases 5–10) on `m28/phases-5-10`, taking the suite to **1338
+  passed / 0 failed** (1333 at the Phase-8 gate, plus the five locks the
   Step-2 audit added) with 0 test ids removed against the pre-M28 commit, and
   proving the whole thing on nine dogfood flows over throwaway copies. See
   *Milestone completion summary* at the end of this log. The whole machine-facing contract is frozen in
@@ -1367,8 +1367,8 @@ equal, never weakenings**:
   path; the coverage its old tree provided is not lost but *promoted*, into
   the new `test_archive_primary_only_leg_1_refuses_on_a_live_child`.
 
-Total changed test lines: **2486 added, 11 deleted**, across five files, zero
-ids removed.
+Total changed test lines: **2475 added, 11 deleted**, across five files, zero
+ids removed — the per-file table above sums to exactly that.
 
 ## Phase 9 — Integrate / Accept / Dogfood — 2026-08-15
 
@@ -1515,8 +1515,12 @@ novelty.
 ## Step-2 same-instance audit — 2026-08-15
 
 Run against Phases 5–10 after the last phase and before returning, per the
-ship-milestone consistency / completeness / accuracy checklist. Four issues
-found; all four fixed here. Two items are **surfaced** for the operator rather
+ship-milestone consistency / completeness / accuracy checklist, in three
+passes: one reading the code against the frozen contract, one reading the
+documents against each other and against measured ground truth, and one
+reading the code adversarially, reproducing every contract claim on throwaway
+trees rather than reading for agreement. **Sixteen** issues found; all sixteen
+fixed here. Four items are **surfaced** for the operator rather
 than auto-decided, because each touches intent rather than accuracy.
 
 ### Issues found and fixed
@@ -1578,6 +1582,142 @@ than auto-decided, because each touches intent rather than accuracy.
    and the CHANGELOG do not already carry.
 
 Suite: **1333 → 1335 passed**, still 0 failed.
+
+### A second pass, over the documentation alone
+
+The four above came from reading the code against the contract. A separate
+pass read the *documents* against each other and against measured ground
+truth, and found six more — none behavioural, all fixed here.
+
+5. **A wrong headline number in this log's own no-regression proof.** Phase 8's
+   *Total changed test lines* read **2486 added**; the per-file table directly
+   above it sums to **2475**, and so does `git diff --numstat`. `2486 =
+   2475 + 11` — the deleted lines had been added into the *added* total. The
+   worst possible place for an arithmetic slip, because it is the one figure a
+   reader re-derives to check the claim. Corrected, and the sentence now says
+   it sums to the table.
+6. **This log's `## Milestone completion summary` heading was destroyed when
+   the audit section was inserted**, leaving the summary body running on from
+   *Surfaced for the operator* item 2 — and the log's own `Progress:` bullet
+   pointing at a heading that no longer existed. Both sibling logs (M25's,
+   M27's) carry it as their final `##`. `docs check` cannot see this: it is
+   prose, not a link. Reinstated.
+7. **`status.md`'s current-milestone block rendered with its emphasis
+   inverted.** The opening `**M28 — … is the current milestone.` was closed by
+   the next `**`, so every headline fact — *all ten phases done*, *1335
+   passed*, *M28a*, *M29* — rendered plain while the connective filler between
+   them rendered bold. Restructured so the emphasis nests as intended.
+8. **`status.md` said the rewrite-plan pre-flight runs "four proofs"; it runs
+   three.** The fourth is item (F)'s first bullet, *"the document parses"*,
+   which that bullet itself annotates as *already proven by the walk*.
+   `architecture.md` and this log both said three. Corrected, with the
+   parseability precondition named so the discrepancy cannot come back.
+9. **`plan.md`'s surface-parity convention named only half the byte-identity
+   gate** — `references/cli.md` ≡ `docs/cli.md`, omitting the
+   `convention.md` half that `tests/test_skill_refs.py` and `CLAUDE.md` both
+   enforce. Load-bearing, and not hypothetically: audit finding 1 above *was* a
+   `convention.md` divergence shipping inside the wheel. Both halves now named.
+10. **`docs/feedback-log.md`'s issue #1 entry still read as open at the top.**
+    Finding 4 was marked *"owned by M28, pending"* and the `Status:` line said
+    *"finding 4 is registered as M28"* — true when written, false now. The
+    Phase-7 *Resolution* bullet supersedes them but sits **below**, so a
+    top-down reader got the stale state first. Both markers now say
+    implemented-and-unreleased and point down at the resolution.
+11. **`m29-pypi-publish-2-0-0.md`'s drafted public reply stated the
+    PRE-amendment predicate**, and would have been posted to a GitHub issue as
+    fact. It said 2.0.0 *"refuses an operation that would leave a still-active
+    document pointing at a newly-archived one"* and that this *"self-cancels
+    for the legitimate case"* — the second being the exact sentence M28 setup
+    measured to be **false** (E7: an ordinary closeout leaves 16 deliberate
+    references), and the first describing a predicate M28 deliberately did not
+    ship. The file's own guard note told the poster to rewrite **finding 4's**
+    paragraph; it never named finding 1, which is the one that went wrong. Both
+    paragraphs rewritten to the two legs that shipped, with the measurement that
+    produced the split stated, and the guard note updated to record which
+    paragraphs are now fact and which (finding 3's, awaiting M28a) are still
+    intention.
+
+### A third pass, adversarial, over the code against the contract
+
+A separate pass read every item of the frozen contract against the shipped
+code, reproducing each claim on throwaway trees rather than reading for
+agreement. It confirmed items (B), (C), (E), (F), (G), (H), (I), (K) and (L)
+clean — including a fuzz of the renderer, a per-path `atomic_write` count, and
+a step-by-step walk of both check orders — and found five more issues, plus one
+item that needs an operator decision (below).
+
+12. **`cli.md` told the reader a move never rewrites 4-space-indented code. It
+    does — and correctly.** The M28 block listed *"images, autolinks, raw HTML,
+    reference uses, and 4-space-indented code"* among the exclusions, while
+    **the same file** has said since M27 that there is *"no 4-space
+    indented-code rule (M27 — Q3): a link indented four spaces … **is**
+    scanned"*. **Reproduced**: a `    [indented](target.md)` block had its
+    destination rewritten by `docs mv`, while the fenced and inline-code copies
+    were untouched. D2's *rule* — "anything M27 does not validate, M28 does not
+    rewrite" — was implemented exactly right; its *enumeration* was a statement
+    of fact about M27 that M27 contradicts. This is the worst kind of doc bug:
+    `cli.md` ships **byte-identically inside the wheel**, no test can see a
+    false prose claim, and an agent was being told a code sample is safe from a
+    move that silently edits it. `cli.md` now states the boundary in **both**
+    directions and names the three real opt-outs (fence, backticks, backslash);
+    the milestone's D2 bullet is corrected and the correction recorded as
+    **amendment 5**, flagged as a factual correction rather than a decision.
+    The CHANGELOG had it right all along ("fenced and inline code"), which is
+    what identifies this as an authoring slip in exactly two places.
+13. **`docs mv` could leave a directory behind while admitting it had moved
+    nothing.** `mkdir(parents=True)` runs before `replace`, so a `replace` that
+    raises left an empty destination directory *and* an admission reading
+    `Moved: none. Rewritten: none. Not written: none.` — over a tree the call
+    had in fact changed. `_archive_partial_state` prunes its dated directory
+    for precisely this reason ("a refusal that promised zero mutation would
+    have changed the tree"); `mv` has the same failure shape and now gets the
+    same care, pruning only what this call created and only when the rename did
+    not happen. Locked by `test_mv_failed_rename_leaves_no_directory_behind`
+    and mutation-tested.
+14. **Two shipped refusal strings were undocumented and used a shape no other
+    refusal uses.** (F)'s span-mismatch and overlap refusals read
+    `<rel>: <predicate>`, where every M25/M26 sibling reads `<rel> <predicate>;
+    refusing before any write`. Item (J) left them unpinned deliberately, which
+    is exactly how an operator-facing string drifts. Both normalised to the
+    sibling shape, added to `cli.md`'s *Validate-all-first* section with a note
+    on why they are defensive, and **pinned** by the two unit tests that
+    previously asserted only the exit code.
+15. **The overlap proof had no witness — the test named after it could not
+    reach it.** `test_overlapping_spans_refuse_rather_than_corrupt` widens a
+    span so it overlaps its neighbour, but widening also breaks that span's
+    text match, and (F)'s order runs span-match **first** — so the overlap
+    branch was unreachable code that no test distinguished from a `pass`. The
+    existing test now asserts the message the *order* really produces (and says
+    why), and a new `test_two_matching_spans_that_overlap_refuse` reaches the
+    overlap proof with two `LinkRewrite`s over the same occurrence: both still
+    match their text, so only overlap can refuse.
+16. **A `./` destination is now pinned, because it looks like a bug.** A
+    directory destination whose target becomes the referrer's own new directory
+    relativises to `.`, and R7 reattaches the slash — `./`, the one emitted
+    spelling carrying the leading `./` that (B) step 6 forbids elsewhere. It is
+    required: the empty alternative classifies as `empty` and stops being a
+    link at all, breaking (C)'s post-condition. Pinned so that "fixing" it
+    cannot silently kill every such link.
+
+Two further observations were examined and **accepted as correct**, recorded
+here so they are not re-raised:
+
+- **(F)'s span-match proof is a tautology in production.** The plan's
+  `original` is the exact string the spans were scanned from, in the same
+  process, so it can only fail for a hand-built `MovePlan`. `cli.md` words it
+  as "still matches the text it was scanned from", which is what the code
+  checks. It is a defensive invariant against a corrupting splice, and it is
+  now documented as defensive rather than as protection it does not provide.
+- **`plan_body_link_rewrites` calls `os.getcwd()`,** via `posixpath.relpath`
+  on two relative paths. The cwd prefix cancels, so the emitted spelling is
+  genuinely cwd-independent (pinned by
+  `test_emitted_spelling_is_independent_of_the_process_cwd`) — but "no
+  filesystem access of any kind" overstated it, and the Phase-2 purity lock
+  cannot see it. The docstring now says exactly what the guarantee is: opens
+  nothing, stats nothing, writes nothing, and the result is a function of the
+  tree's bytes.
+
+Suite: **1335 → 1338 passed**.
 
 ### Checked clean
 
@@ -1648,6 +1788,41 @@ Suite: **1333 → 1335 passed**, still 0 failed.
    plan-member exemption, and plan B's primary is itself one of them. The code
    is right and the exemption is locked; the *census* line in the setup record
    is the stale number, left as the historical measurement it was.
+3. **`docs archive` has no partial-state admission for its REWRITE phase, and
+   closing that needs a decision rather than an edit.** A mid-execution
+   `OSError` while `apply_move_plan` writes referrers prints only
+   `docs: archive: write failed for <rel>: <err>` and exits 2 — no
+   `PARTIAL ARCHIVE` clause and no moved/rewritten/not-written split — while
+   `docs mv` admits exactly that state. It is **not** a regression: pre-M28 the
+   same failure in `_rewrite_referring_edges` printed `docs: archive: <err>`,
+   and the frozen catalogue (J) defines no rewrite-phase admission for
+   `archive`. But M28 widened that phase from `Related:` bullets to prose bytes
+   across the whole tree, archived documents included, so it is now the phase
+   with the **largest** partial-state window and the only one with no
+   admission — which sits awkwardly beside D4's "admitted exactly" and R9's
+   "the two verbs stay symmetrical". `CoordinatedWriteError.published` already
+   carries everything an admission would need; `_cmd_archive` discards it.
+   Closing it means **one new message outside the frozen catalogue**, so it is
+   recorded as *Follow-ups* item 8 rather than done.
+4. **Three staleness items outside M28's diff were found and deliberately NOT
+   fixed**, because the checklist also requires that the diff contain only this
+   milestone's work:
+   - `README.md`'s command list omits `docs relate` (M25), `docs stamp` and
+     `docs project` (M12) entirely. The two lines M28 made wrong were fixed
+     (finding 4 above); the missing verbs are older gaps and belong to whoever
+     owns the README, most naturally the M29 publish.
+   - `status.md`'s *resume snapshot* block still says `433 passed (current
+     suite, as of 1.5.0 / M13)` and `mypy` without arguments, and describes
+     `plan.md` as covering "v1 + v1.1". The block carries a
+     "historical" disclaimer, but that disclaimer sits **below** the
+     *Verify environment* code block, which therefore reads as a live
+     instruction. A one-line move of the disclaimer would fix it.
+   - `docs/test-strategy.md`'s quality gate named `mypy bin/docs`, a path that
+     has not existed since M6. That one **was** fixed, because Phase 10 claims
+     to have closed `test-strategy.md` and its `Updated:` now says so — but it
+     is flagged here as a pre-existing defect, not an M28 regression.
+
+## Milestone completion summary
 
 **M28 — Move-safe Markdown body-link rewrites is implementation-complete. All
 ten TDD phases are done (2026-08-15)**, Step 1 (Phases 1–4) on
@@ -1701,12 +1876,13 @@ line names the moved document.
   *consequences*.** That single sentence resolves M26's own follow-up item 2
   without bending the no-record-on-refusal rule.
 
-**Evidence quality.** 248 test ids added, **0** removed against the pre-M28
+**Evidence quality.** 251 test ids added, **0** removed against the pre-M28
 commit, 11 test lines deleted — all inside one deliberately re-pointed lock,
 named and justified as a strengthening rather than reported as "no test
-changes". The suite is **1335 passed / 0 failed** (1333 at the Phase-8 gate,
-plus the two locks the Step-2 audit added — one for each Step-2 resolution
-that had shipped as a promise rather than a lock). Nine dogfood flows ran
+changes". The suite is **1338 passed / 0 failed** (1333 at the Phase-8 gate,
+plus the five locks the Step-2 audit added — two for Step-2 resolutions that
+had shipped as promises rather than locks, and three closing gaps the
+adversarial pass found). Nine dogfood flows ran
 unattended on throwaway copies, the live tree never written to, with the
 "before" column measured rather than quoted. Plan A reproduced the setup census
 exactly (16 references, 8 + 8, from 7 referrers). A there-and-back move leaves

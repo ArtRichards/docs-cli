@@ -39,8 +39,8 @@ Related:
   so the contract stays at one write per document, and **deleted**
   `_rewrite_referring_edges`; Phase 7 reconciled every parallel surface;
   Phase 8 proved the gate at **1333 passed** with **0** test ids removed
-  against the pre-M28 commit (the Step-2 audit later added two locks, taking
-  the final suite to **1335**); Phase 9 dogfooded nine flows on throwaway
+  against the pre-M28 commit (the Step-2 audit later added five locks, taking
+  the final suite to **1338**); Phase 9 dogfooded nine flows on throwaway
   copies — E1's 42 findings, E2's 13 and E3's 6 all went to **0**, plan A
   completed with its leg-2 report naming exactly the 16 references the setup
   census measured, plans B and C refused with zero bytes, and a there-and-back
@@ -193,11 +193,16 @@ M26 — Q5's per-alias pair list to catch a `./b.md` bullet (D6, E6).
   Phase-6 live-tree repair used for 140 occurrences across 30 documents, with
   30/30 byte-identical round-trip reconstructions proving no other byte moved.
 - **The validated grammar is not widened.** Anything M27 does not validate,
-  M28 does not rewrite: images, autolinks, raw HTML, reference *uses*, and
-  4-space indented code stay out (M27 — D1/D2, and M27's *Follow-ups* item 1
-  stays deferred). Widening the grammar here would silently widen the rewrite
-  surface in the same stroke, which is the reason M27 excluded images in the
-  first place.
+  M28 does not rewrite: images, autolinks, raw HTML and reference *uses* stay
+  out (M27 — D1/D2, and M27's *Follow-ups* item 1 stays deferred). Widening the
+  grammar here would silently widen the rewrite surface in the same stroke,
+  which is the reason M27 excluded images in the first place.
+  **(Corrected at the Step-2 audit — see amendment 5.)** This bullet as
+  originally written also listed *4-space indented code* among the exclusions.
+  That was a factual error about M27, not a decision: M27 — Q3 **declined** an
+  indented-code rule, so a four-space-indented link is a real link, is
+  validated, and is therefore rewritten. The rule stated here is unchanged and
+  correct; only its enumeration was wrong.
 - **Only `local` destinations are ever touched.** `empty`, `fragment`,
   `scheme`, `protocol-relative`, and `root-absolute` destinations are copied
   byte-for-byte, always (Q4).
@@ -1209,15 +1214,19 @@ setup text.
 
 ### Amendments to the setup-frozen material (BINDING)
 
-Three frozen items could not stand as written. All three are recorded here so
+Four frozen items could not stand as written. All four are recorded here so
 the binding scope and the frozen contract cannot disagree — M27's precedent
 for amending setup-frozen material in place rather than diverging silently.
+Amendments 1–4 are Phase-1 decisions; **amendment 5 is a Step-2 audit
+correction of a statement of fact about M27**, not a decision, and it changes
+no behaviour — the rule D2 states was implemented correctly all along.
 
 | # | Amendment | Why the frozen form could not stand |
 |---|---|---|
 | 1 | **M26's compatibility matrix row "a preview writes nothing and exits 0, full stop" is amended: a preview adopts failures of plan *construction* and reports-but-does-not-adopt *consequence* verdicts.** A malformed tree makes `archive --cascade-dry-run` exit **1** and `mv --dry-run` exit **2** — the codes their write paths already use — while a leg-1 strand verdict is reported at exit 0. `docs/m26-safe-archive-selection.md` › *The compatibility matrix (BINDING)* is amended by this row. | D6 requires both strand legs to run in the preview, and a preview cannot report a plan it could not build. M26's own *Follow-ups* item 2 records that the frozen check order lets a preview miss a pre-flight refusal and names repeating it as the mistake to avoid. The distinction is not "preview vs write" but "can I describe this operation at all" vs "what would this operation cost" — the first is adopted, the second is reported. |
 | 2 | **The E7 leg-2 coverage row's observation point for plan B is its PREVIEW.** The row asks for the `strands` array "for plan B (which refuses)". A leg-1 refusal emits **no** `--json` record (M26's frozen Phase-1 Q3 rule, restated in `cli.md`), so plan B's array is asserted in `archive --cascade-dry-run --cascade-only '*'` — exit 0, record emitted, leg-1 verdict reported. The row is amended in place. | Otherwise Phase 2 would have to assert a record that the frozen no-record-on-refusal rule forbids. The preview is exactly where D6 says the leg-1 verdict is reported rather than adopted, so it is the natural observation point and no rule has to bend. |
 | 3 | **The E3 coverage row's "the `archive-pair` / `archive-trio` shapes **gain** body links" is amended to "a new `movelink-closeout` tree reproduces the `archive-pair` / `archive-trio` SHAPE, carrying real body links".** Every existing fixture tree stays byte-identical. | The row contradicted the Phase-3 exit criterion "the existing `archive-*` / `mv-*` / `rename-*` trees stay byte-identical" in the same document. Editing them would also move M26-era assertions onto new bytes for no benefit. Copying the shape delivers the stated coverage and keeps the no-regression proof at a clean zero moved test ids. |
+| 5 | **D2's exclusion list drops "4-space indented code"; the RULE it states is unchanged.** M28 rewrites exactly what M27 validates — and M27 — Q3 explicitly **declined** a 4-space indented-code rule, so a four-space-indented link is scanned, is reported by `docs check`, and is rewritten by a move. `cli.md` › *Move-safe body-link rewrites* said the opposite and now says so in both directions, naming the three real opt-outs (fence, backticks, backslash). | The claim was **reproduced**: a `    [indented](target.md)` block had its destination rewritten by `docs mv` while the fenced and inline-code copies were untouched — correct behaviour, wrongly documented. `cli.md` ships **byte-identically inside the wheel**, so an agent reading the bundled skill was told a four-space-indented code sample is safe from a move. Found at the Step-2 audit by an adversarial pass that read the enumeration against `cli.md`'s own M27 section, which had said the opposite since M27. No test can catch a false prose claim, and the CHANGELOG (which says "fenced and inline code") had it right — evidence this was an authoring slip in exactly two places. |
 | 4 | **Q4's "already broken, or already escaping" clause is narrowed to "already escaping".** An already-**escaping** destination is copied byte-for-byte in every case (formula step 3). An already-**broken** but *contained* destination is copied only while its referrer stays put; when the referrer itself moves, it is **rebased to the same, still-broken target** — never repaired, never re-aimed. *Out of scope* › *Repairing pre-existing damage* and `cli.md` › *What a move never touches* are reworded to say so. | Q4's literal wording is **unimplementable** in the frozen architecture, and the frozen architecture is right. The planner is pure — it never stats — so it cannot know a contained target is missing; the only way to honour "never touched" would be a filesystem probe inside the planner, which destroys the hermeticity D4 and (L) exist to guarantee. Rebasing preserves the author's aim (the link still names the same file); *not* rebasing would silently re-aim it at a different path as the referrer's directory changes, which is strictly worse. The deviation is recorded here because three lesser ones are, and because `cli.md` ships in the bundled skill: a Phase-6 implementer reading only the author-facing spec would otherwise implement the opposite of `tests/test_move_links.py`'s pinned behaviour. |
 
 ### Step-1 resolutions (BINDING)
@@ -1722,6 +1731,7 @@ implemented here.
 | 4 | **Rolling back an interrupted execution batch** — M25 — D5's staged-publish-plus-rollback extended to N documents. Declined by M26 — D4, still declined here, still available. | Later |
 | 5 | **Heading/anchor validation for fragments**, out of scope for M27 *and* M28 by the 2026-08-10 operator decision, and now also out of scope for rewriting: M28 carries a fragment across a move without ever resolving it. | Later |
 | 6 | **`docs mv <doc> archive/<date>/<doc>` can still strand a live child** (Phase 1, R4). The strand-check is `archive`-only because only `archive` produces a newly-archived set, and `mv` into the archive subtree is already a `status-drift` error the operator has to repair — but nothing *refuses* it before the write. Extending leg 1 to a `mv` whose destination lands under the archive subtree is a small, self-contained follow-up. | Later |
+| 8 | **`docs archive` has no partial-state admission for its REWRITE phase** (raised by the Step-2 audit; **needs an operator decision**, not implemented here). A mid-execution `OSError` while `apply_move_plan` writes referrers prints only `docs: archive: write failed for <rel>: <err>` and exits 2 — no `PARTIAL ARCHIVE` clause, no `Archived:` / `Rewritten:` / `Not written:` split — while `docs mv` admits exactly that state, because its move and its rewrites are one execution block. This is **not** a regression: pre-M28 the same failure in `_rewrite_referring_edges` printed `docs: archive: <err>` and the frozen catalogue (J) defines no rewrite-phase admission for `archive`. But M28 widened that phase from `Related:` bullets to prose bytes across the whole tree, archived documents included, so it is now the phase with the **largest** partial-state window and the only one with no admission — which sits awkwardly beside D4's "admitted exactly" and R9's "the two verbs stay symmetrical". `CoordinatedWriteError.published` already carries what an admission would need; `_cmd_archive` discards it. Closing this means one new message outside the frozen catalogue, which is why it is recorded rather than done. | Later |
 | 7 | **One residual in the destination encode set** (Phase 1, R8 / item (C) *Known residual*): a path component carrying a whitespace character other than space or tab — newline, carriage return, form feed, vertical tab — is not encoded, so the emitted plain token would terminate early. It fails **loudly** (the truncated destination does not resolve, so `docs check` reports it), no filename this tool creates carries one, and the angle form is unaffected. The colon case that sat here at Phase 1 was **closed in Phase 1** by operator decision at the Step-1 review — it failed *silently*, which is the failure class M28 exists to prevent — and is now item (C)'s first-segment `:` rule under the `classify_destination(new_raw) == "local"` post-condition. | Later |
 
 ## Testing and quality gate

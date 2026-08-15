@@ -122,7 +122,7 @@ Per the methodology, run before each milestone closes:
 ```
 ruff check .
 ruff format --check .
-mypy bin/docs                  # warnings OK in v1; errors must be zero
+mypy src/ tests/               # errors must be zero
 pytest -q
 ./bin/docs check docs/         # once M3 lands; for M1 this is `./bin/docs index docs/`
 ```

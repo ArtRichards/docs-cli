@@ -577,8 +577,14 @@ a newly-archived set.
 
 M27 validates body links; M28 is the only writer of them. The scanner,
 the recognised grammar and the destination-token span are M27's,
-**unwidened**: images, autolinks, raw HTML, reference *uses*, and
-4-space-indented code stay out, so a move never rewrites them. See
+**unwidened**: images, autolinks, raw HTML and reference *uses* stay out, so
+a move never rewrites them. The boundary runs exactly where M27 put it, and
+it is worth stating in the other direction too: **a link inside a 4-space
+indented block IS scanned, and therefore IS rewritten** — M27 — Q3
+deliberately declined an indented-code rule, so a four-space-indented link is
+a real link to both verbs. Fence a code sample that contains link syntax, put
+it in backticks, or backslash-escape the opening bracket; any of the three
+keeps it out of the scanner and therefore out of the move. See
 *Markdown body-link validation (M27 — D1–D4b)*.
 
 ##### The formula (M28 — D1)
@@ -726,11 +732,29 @@ documents the plan will write, the pre-flight proves: the document parses
 every recorded destination span still matches the text it was scanned
 from; and no two planned spans in one document overlap.
 
+Its three refusals, each prefixed with the calling verb (`docs: mv: ` /
+`docs: archive: `) and each printed even under `--quiet`:
+
+```
+docs: <verb>: <rel> is not writable; refusing before any write
+docs: <verb>: <rel> carries a recorded destination span that no longer matches its text; refusing before any write
+docs: <verb>: <rel> carries two overlapping planned destination spans; refusing before any write
+```
+
+The second and third are defensive: the plan is built and applied inside
+one process from one read, so neither can fire on a plan this tool
+produced. They exist because splicing a stale or overlapping span
+corrupts a file *silently* rather than failing, and a hand-built or
+future plan must not be able to do that.
+
 Any **handled** failure refuses the whole operation — non-zero exit,
 **zero bytes written**, including the moved document, and no `--json`
 record. Only a residual unexpected `OSError` *during* execution produces
 a partial state, and it is admitted exactly, naming what was moved, what
-was rewritten and what was not written. There is no rollback.
+was rewritten and what was not written. There is no rollback. When the
+rename itself fails, any directory `docs mv` created for the destination
+is pruned, so an admission that names nothing moved has left nothing
+behind.
 
 Within one document the splices are applied in **descending start
 offset**, so earlier offsets stay valid, and the `Related:` rewrite and

@@ -655,6 +655,30 @@ def test_directory_destination_keeps_its_trailing_slash() -> None:
 # --- (E) the pipeline order -----------------------------------------------
 
 
+def test_a_directory_destination_that_becomes_the_referrers_own_directory_is_dot_slash() -> None:
+    """The one emitted spelling that carries a leading `./`, and it is required.
+
+    A directory destination whose target IS the referrer's new directory
+    relativises to `.`, and R7 reattaches the slash — so the token is `./`.
+    (B) step 6's "no leading `./`" forbids the redundant `./x.md`; it cannot
+    forbid this one, because the alternatives are worse: the empty string
+    classifies as `empty` and stops being a link at all, breaking (C)'s
+    post-condition, and `.` alone loses the trailing slash R7 preserves.
+
+    Pinned because it looks like a bug: an implementer "fixing" it to `""`
+    would silently kill every such link, which is the exact failure class M28
+    exists to prevent.
+    """
+    text = "# Hub\n\nSee [the folder](sub/).\n"
+    rewrites = _plan_links("hub.md", "sub/hub.md", text, {"hub.md": "sub/hub.md"})
+
+    assert _raws(rewrites) == ["./"]
+    assert cli.classify_destination("./") == "local", (
+        "the empty alternative would classify as `empty` and stop being a link"
+    )
+    assert cli.normalise_body_link_target("sub/hub.md", "./") == "sub"
+
+
 def test_body_splices_precede_the_related_bullet_rewrite(tmp_path) -> None:
     """(E) is forced, not stylistic: body-link spans are offsets into the text
     they were scanned from, and `rewrite_related_refs` changes LENGTHS. Running
@@ -967,6 +991,14 @@ def test_a_span_that_no_longer_matches_its_text_refuses(tmp_path) -> None:
     assert excinfo.value.exit_code == 2
     assert excinfo.value.rolled_back is True
     assert excinfo.value.published == ()
+    assert str(excinfo.value) == (
+        "note.md carries a recorded destination span that no longer matches its "
+        "text; refusing before any write"
+    ), (
+        "the two (F) refusals the catalogue left unpinned are pinned here, in the "
+        "`<rel> <predicate>; refusing before any write` shape every sibling refusal "
+        "uses — an unpinned operator-facing string drifts"
+    )
 
 
 def test_overlapping_spans_refuse_rather_than_corrupt(tmp_path) -> None:
@@ -994,6 +1026,50 @@ def test_overlapping_spans_refuse_rather_than_corrupt(tmp_path) -> None:
     with pytest.raises(cli.CoordinatedWriteError) as excinfo:
         _m28("preflight_move_plan")(poisoned)
     assert excinfo.value.exit_code == 2
+    assert str(excinfo.value) == (
+        "note.md carries a recorded destination span that no longer matches its "
+        "text; refusing before any write"
+    ), (
+        "(F)'s order is contractual and this is where it shows: widening a span so "
+        "it overlaps its neighbour ALSO breaks that span's text match, and the "
+        "span-match proof runs first — so corruption is refused, which is the point "
+        "of this test, but by the earlier proof. The overlap proof's own witness is "
+        "the sibling below"
+    )
+
+
+def test_two_matching_spans_that_overlap_refuse(tmp_path) -> None:
+    """The overlap proof's own witness, which the widened-span case above cannot
+    be: there, widening breaks the text match, so (F)'s earlier proof fires and
+    the overlap branch is never reached.
+
+    Two `LinkRewrite`s over the SAME occurrence overlap perfectly and both still
+    match their text, so span-match passes and only the overlap proof can refuse.
+    Without this the third proof is unreachable code that no test distinguishes
+    from a `pass`.
+    """
+    root = _tree(
+        tmp_path,
+        {
+            "note.md": _doc("Note", "See [the plan](plan.md)."),
+            "plan.md": _doc("Plan", "The plan."),
+        },
+    )
+    plan = _plan(root, {"plan.md": f"{_DATED}/plan.md"})
+    rewrite = _rewrite_for(plan, "note.md")
+    assert rewrite is not None and len(rewrite.links) == 1
+
+    doubled = dataclasses.replace(rewrite, links=(rewrite.links[0], rewrite.links[0]))
+    poisoned = dataclasses.replace(plan, rewrites=(doubled,))
+
+    with pytest.raises(cli.CoordinatedWriteError) as excinfo:
+        _m28("preflight_move_plan")(poisoned)
+    assert str(excinfo.value) == (
+        "note.md carries two overlapping planned destination spans; refusing before any write"
+    )
+    assert excinfo.value.exit_code == 2
+    assert excinfo.value.rolled_back is True
+    assert excinfo.value.published == ()
 
 
 @_SKIP_AS_ROOT
