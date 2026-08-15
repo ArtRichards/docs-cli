@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
 
 Related:
 - pairs-with: cli.md
@@ -175,11 +175,12 @@ is `Capital:`, so `owner:` is malformed and rejected by the parser
 upstream). The rule is opt-in: an absent or empty `add_fields`
 switches the `unknown-field` warning OFF entirely. The built-in
 always-allowed metadata labels (`Lifecycle`, `Role`, `Project`,
-`Updated`, `Related`, `Archived-reason`, `Revision`) are never
-affected by `add_fields` — they are always permitted. (`Revision`
-joins the set in M25: `docs relate` writes that label itself, and a
-label the tool writes must never trip the tool's own allowlist
-warning.)
+`Updated`, `Related`, `Archived`, `Archived-reason`, `Revision`) are
+never affected by `add_fields` — they are always permitted.
+(`Revision` joins the set in M25 and `Archived` in M28a, for one
+reason: `docs relate` and `docs archive` write those labels
+themselves, and a label the tool writes must never trip the tool's
+own allowlist warning.)
 
 Scope: `add_fields` widens the `unknown-field` check's allowlist
 only; it does **not** change `docs list --json` or INDEX rendering
@@ -429,7 +430,7 @@ Lifecycle/location consistency rules:
 - **The tool never requires a dated directory.** The rule reports a document whose *own recorded date* is not corroborated, never a tree whose layout it dislikes. An undated subdirectory under the archive subtree stays permitted, and a document sitting in one that carries no witness stays silent.
 - **It is independent of `status-drift`.** The two report different facts — a lifecycle that disagrees with a location, and a recorded date that does — and both may fire on one document.
 
-**Cross-dated archived relocations refuse (M28a — D5).** The dated directory is the only record of when a document was archived, so `docs mv` **refuses** a move whose source and destination are two *different* dated archive directories — decided from the two paths alone, before any byte is written, at exit 2, in every mode. It refuses for every archived document, whether or not it carries the witness, which is what protects the population archived before 2.0.0. A rename within one dated directory, a move with one end outside the archive subtree, and a move whose two segments do not both parse as dates are all permitted and unaffected. **The escape stays open**: to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line to match its new directory, and re-run `docs check`, which then confirms the two agree. The refusal blocks the silent path, not the deliberate one.
+**Cross-dated archived relocations refuse (M28a — D5).** The dated directory is the only record of when a document was archived, so `docs mv` **refuses** a move whose source and destination are two *different* dated archive directories — decided from the two paths alone, before any byte is written, at exit 2, in every mode. It refuses for every archived document, whether or not it carries the witness, which is what protects the population archived before 2.0.0. Four neighbouring moves are permitted and unaffected: a rename within one dated directory, a move with one end outside the archive subtree, a move whose two segments do not both parse as dates, and two spellings of one date (`archive/2026-01-01/` to `archive/2026-1-1/`), because the comparison is on parsed dates rather than raw strings. **The escape stays open**: to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line to match its new directory, and re-run `docs check`, which then confirms the two agree. The refusal blocks the silent path, not the deliberate one.
 
 **Archive-subtree edge integrity (M18, widened by M28 — D5).** Archive-subtree `Related:` edges **and local Markdown body-link destinations** are maintained across moves. When a doc moves into the archive, both its OWN intra-archive references (bullets and destinations pointing at another doc moving in the same operation) and any already-archived referrers' references to it are repointed to the new `archive/YYYY-MM-DD/` paths, so they keep resolving. The M3 "archive is read-only" stance is preserved for everything else — only these move-driven rewrites touch archived docs; prose, other metadata, and references to docs that did not move are left byte-identical. `Archived:` and `Archived-reason:` are named explicitly on that byte-identical side (M28a — D9): both record entry into the archive, and a move-driven rewrite of some *other* document's destination is not an archive event.
 

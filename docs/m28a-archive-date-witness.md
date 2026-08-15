@@ -38,8 +38,9 @@ Related:
   passed), and Phase 6 — Implement Offline/Core Path complete 2026-08-16 (the
   three touch points — the writer, the rule and Leg 2's refusal; 26 ids
   flipped, suite 2 failed / 1500 passed with only the two bundled-skill ids
-  left). Phase 7 — Update Tool/Wrapper Layer is next.** The machine-facing
-  contract is
+  left), and Phase 7 — Update Tool/Wrapper Layer complete 2026-08-16, taking
+  the suite fully **GREEN at 1502 passed / 0 failed**. Phase 8 — Run Tests
+  (GREEN) is next.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
   an operator decision). Phases 2–4 authored **149** test ids and six
@@ -648,13 +649,13 @@ coverage* below.
       predicate, its message, its exit code, its plan-before-move position and
       its documented escape; the present-only contract; and the Phase-5
       signatures.
-- [ ] The structured archive-date field written by `docs archive` to **every**
+- [x] The structured archive-date field written by `docs archive` to **every**
       document the operation moves, at the pinned block position, with the same
       `date_str` that names the directory.
-- [ ] A pure, config-aware corroboration helper over `(path, metadata, root,
+- [x] A pure, config-aware corroboration helper over `(path, metadata, root,
       config)` with no filesystem access of its own, and the
       `archive-date-drift` rule wired into `check_doc` at the frozen position.
-- [ ] Vocabulary integration: the label in `_BUILTIN_METADATA_FIELDS`, out of
+- [x] Vocabulary integration: the label in `_BUILTIN_METADATA_FIELDS`, out of
       `parse()`'s `known` set, out of migrate's supersession set, and unaffected
       by `[vocabulary] add_fields`.
 - [x] `docs migrate` behaviour pinned by test: never writes the witness, never
@@ -666,17 +667,17 @@ coverage* below.
       outside-the-archive, the undated-directory and the two-dated-directory
       (`docs mv` refusal) cases, with the registration tuple and both
       whole-corpus sweeps updated in the same change.
-- [ ] Regression coverage for E1–E9 plus the present-only silence proof over
+- [x] Regression coverage for E1–E9 plus the present-only silence proof over
       all 46 of this tree's archived documents, byte-identity locks for
       `touch` / `relate` / the M18–M28 widened move exception, and proof that
       the closed four-key `Finding` record and the M26 archive plan behaviour
       are unchanged.
-- [ ] `convention.md`'s three archived-immutability paragraphs, its *Optional
+- [x] `convention.md`'s three archived-immutability paragraphs, its *Optional
       fields* table and its *Archive subtree* rules updated; `cli.md`'s archive
       step list, check-rule list, `rule` table row, built-in-field set and
       upgrade recipe updated; both byte-identical skill mirrors re-synced; the
       `UNRELEASED` CHANGELOG entry written.
-- [ ] A dated note on `feedback-log.md`'s issue #1 entry recording that finding
+- [x] A dated note on `feedback-log.md`'s issue #1 entry recording that finding
       3's archive-date half is answered, closing the issue's last open item.
 - [ ] End-to-end dogfood on a throwaway copy proving that E1d's `docs mv` now
       refuses with zero bytes written, that a hand-made equivalent relocation
@@ -684,7 +685,7 @@ coverage* below.
       all 46 pre-witness archived documents stay silent, and that a real
       milestone closeout writes the witness to every member and leaves
       `docs check` clean.
-- [ ] **Leg 2** — `docs mv`'s refusal of a cross-dated archived relocation
+- [x] **Leg 2** — `docs mv`'s refusal of a cross-dated archived relocation
       (D5), evaluated in M28's plan-before-move window at the position
       Phase-1 amendment 2 froze, with
       its frozen message, exit 2, its zero-bytes-written guarantee, its four
@@ -899,7 +900,7 @@ coverage* below.
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor

@@ -21,11 +21,11 @@ You own the convention from day one.
 | Bootstrap a new docs tree | (touch `.docs.toml`) | One `[project] name = "…"` line is enough; see `convention.md`. |
 | Author a new spec / plan / charter / log / runbook / decision | `docs new <role> <slug>` | Scaffolds the metadata block + H1. Agents author the full body in one Bash call via `docs new <role> <slug> --body-from -` (M8). |
 | Bump a doc's `Updated:` after edit | `docs touch <file>...` | Required after any body or metadata edit. Accepts one or more files; the batch is atomic and the INDEX refreshes exactly once at end (M10). |
-| Rename or relocate a doc | `docs mv <old> <new>` | Rewrites every `Related:` reference tree-wide **and — from 2.0 — every local Markdown body link the move makes stale** (M28): the ones pointing at `<old>` from anywhere in the tree, and the ones inside `<old>` itself, rebased from its new directory. A destination whose meaning did not change keeps the spelling its author gave it, and plain-text mentions, code and external URLs are never touched. `--dry-run` names every planned rewrite before you commit; `--json` emits the same plan as a record. |
-| Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. Archives that ONE doc; to take related docs too, preview the one-hop neighbourhood with `--cascade-dry-run` and then write the exact set with `--cascade-only GLOB` (M26). From 2.0 it rebases stale body links the same way `docs mv` does, and it **refuses (exit 2, zero bytes) when a still-active doc outside the plan declares itself `child-of` a doc the plan would archive** (M28) — a parent archived out from under a live child. `--json` emits the whole operation plan, now including `rewrites` and `strands`. |
+| Rename or relocate a doc | `docs mv <old> <new>` | Rewrites every `Related:` reference tree-wide **and — from 2.0 — every local Markdown body link the move makes stale** (M28): the ones pointing at `<old>` from anywhere in the tree, and the ones inside `<old>` itself, rebased from its new directory. A destination whose meaning did not change keeps the spelling its author gave it, and plain-text mentions, code and external URLs are never touched. `--dry-run` names every planned rewrite before you commit; `--json` emits the same plan as a record. From 2.0 a move between two different dated **archive** directories is **refused** (exit 2, zero bytes, in every mode) — see *Upgrade: the archive-date witness* below (M28a). |
+| Archive a completed doc | `docs archive <file>` | Atomic: edits `Lifecycle:` (`Status:` pre-M7), moves to `archive/YYYY-MM-DD/`, regenerates INDEX. Archives that ONE doc; to take related docs too, preview the one-hop neighbourhood with `--cascade-dry-run` and then write the exact set with `--cascade-only GLOB` (M26). From 2.0 it rebases stale body links the same way `docs mv` does, and it **refuses (exit 2, zero bytes) when a still-active doc outside the plan declares itself `child-of` a doc the plan would archive** (M28) — a parent archived out from under a live child. `--json` emits the whole operation plan, now including `rewrites` and `strands`. From 2.0 it also records the archive date as an `Archived:` metadata line on **every** doc the operation moves — the primary *and* each cascade member, so a closeout's own metadata records the event that created it — while `Archived-reason:` stays on the primary alone (M28a). |
 | Regenerate INDEX | `docs index` | The hand-written preamble is preserved; only the marker-block content is rewritten. |
 | Query the tree | `docs list [filters]` | Human table by default; `--json` for piping. Filter by role, lifecycle, project, stale-after-N-days. |
-| Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, one-sided reciprocal edges, and — from 2.0 — local Markdown body links whose destination is missing or leaves the tree root. Exit codes 0/1/2 distinguishable for CI gates. |
+| Validate in CI | `docs check` | Reports drift, broken refs, lifecycle/location mismatches, malformed metadata, one-sided reciprocal edges, and — from 2.0 — local Markdown body links whose destination is missing or leaves the tree root, plus `archive-date-drift` on an archived doc whose location contradicts its own `Archived:` line. Exit codes 0/1/2 distinguishable for CI gates. |
 | Repair a one-sided relationship | `docs relate add\|remove SOURCE VERB TARGET` | Writes both halves of a reciprocal pair as one operation. Idempotent; `--dry-run` previews; `--json` for piping; `--reason` required for an archived endpoint (M25). |
 
 ## Adoption: bring a non-conforming tree under the convention
@@ -101,6 +101,22 @@ is a one-time upgrade chore rather than something every move re-creates.
 | Re-check | `docs check` | Clean. |
 
 The loop is `check → rebase or URL → check` until clean.
+
+## Upgrade: the archive-date witness (M28a)
+
+From 2.0 `docs archive` records the archive date as an `Archived:` line on
+every doc it moves, and `docs check` reports a doc whose location does not
+corroborate that date. The rule is **present-only**: a doc that does not carry
+the field produces nothing, ever — so a 1.x tree gains **zero** findings on
+upgrade and there is no repair queue. Coverage grows by use; there is no
+backfill verb, because no honest source for a historical archive date exists.
+
+| Scenario | Verb | Detail |
+|---|---|---|
+| Close out a milestone and keep the evidence | `docs archive <primary> --cascade-only 'GLOB'` | Every moved member carries `Archived: <date>` with the operation's one shared date — the same date that names the dated directory. `Archived-reason:` still lands on the primary alone. |
+| A doc was relocated between dated archive directories | `docs mv` → **refused** | Exit 2, zero bytes, in every mode including `--dry-run` and `--quiet`, naming both dates. Every other archive-subtree move still completes: a rename inside one dated directory, a move with one end outside the archive, a move whose segments do not both parse as dates, and two spellings of one date. |
+| Something else relocated it — a hand `git mv`, a script, an `rsync` | `docs check` | `archive-date-drift`, a hard error naming the recorded date and the directory the file now sits in. Repair by moving the doc back to its recorded directory, or by correcting the `Archived:` line to match where it now lives, then re-run `docs check`. |
+| The `Archived:` value is not a date in the tree's format | `docs check` | `bad-date`, naming `Archived:` rather than `Updated:`. The likeliest source is a hand-adopted foreign tree; `docs migrate` itself never writes the witness and demotes a foreign `Archived:` line to `Migrated-Archived:`. |
 
 ## Distribution: install + share
 

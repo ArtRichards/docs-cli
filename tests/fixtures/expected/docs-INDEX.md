@@ -24,7 +24,7 @@ _Generated 2026-08-16. 27 docs active, 46 archived._
 ### Active — Spec
 
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-16.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-15.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-16.
 
 ### Active — Milestone
 
@@ -37,8 +37,8 @@ _Generated 2026-08-16. 27 docs active, 46 archived._
 
 ### Active — Log
 
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-16.
 - [m28a-archive-date-witness-impl.md](m28a-archive-date-witness-impl.md) — _log_ — Chronological implementation log for M28a — Structured archive-date witness. Append one evidence-backed section per TDD…. Updated 2026-08-16.
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-15.
 - [m28-move-safe-body-link-rewrites-impl.md](m28-move-safe-body-link-rewrites-impl.md) — _log_ — Chronological implementation log for M28 — Move-safe Markdown body-link rewrites. Append one evidence-backed section…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation-impl.md](m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-14.
 - [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.

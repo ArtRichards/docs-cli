@@ -24,9 +24,9 @@ the milestone checklist synchronized.
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
 - Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
   fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
-  flight on `m28a/phases-5-10`; Phases 5 and 6 complete 2026-08-16, the suite
-  down to 2 failed / 1500 passed with only the two bundled-skill ids left.
-  Phase 7 — Update Tool/Wrapper Layer is next.** All seven setup
+  flight on `m28a/phases-5-10`; Phases 5, 6 and 7 complete 2026-08-16 and the
+  suite fully **GREEN at 1502 passed / 0 failed**. Phase 8 — Run Tests
+  (GREEN) is next.** All seven setup
   questions were RESOLVED before Phase 1 (Q4 by the operator; Q1 auto-resolved
   under the naming-with-an-obvious-default rule; Q2/Q3/Q5/Q6/Q7
   conductor-resolved), and Phase 1 froze the contract against them without
@@ -67,7 +67,7 @@ the milestone checklist synchronized.
 | 4. Run Tests (RED Baseline) | Complete | 2026-08-16 | **1502 collected, 71 failed, 1431 passed** (after the Step-1 audit and the fresh-eyes fold-in; 1484 / 58 / 1426 as first measured). Exactly two exception classes (36 `AttributeError`, 35 `AssertionError`); 0 collection errors, 0 xfail/xpass/error, 0 warnings, 0 tracebacks. Mechanical proof against `7f7853b`: **0 ids removed**, **0 pre-existing ids failing**, 0 deleted test-source lines, `cli.py` untouched. Every RED failure traced to a family and a landing phase (43 → Phase 5, 26 → Phase 6, 2 → Phase 7); all 90 GREEN-at-baseline ids classified by name. |
 | 5. Update Base Interfaces | Complete | 2026-08-16 | **28 failed / 1474 passed** — the 43 ids the Phase-4 classification assigned here, flipped. `Archived` into `_BUILTIN_METADATA_FIELDS` (and out of `parse()`'s `known` set and migrate's supersession set); `parse_date`'s keyword-only `label: str = "Updated"` (OQ-3, item (H)); and **all three** pure helpers — `archive_dir_date`, `cross_dated_archive_move` (Leg 2's predicate, delegating to it) and `archive_date_findings` — wired nowhere, so `check_doc`, `_archive_one` and `_cmd_mv` are untouched and every CLI-level id stays honestly RED at the seam. |
 | 6. Implement Offline/Core Path | Complete | 2026-08-16 | **2 failed / 1500 passed** — the 26 ids the Phase-4 classification assigned here, flipped; only the two Phase-7 bundled-skill ids remain. One `set_metadata_field` call in `_archive_one` at the pinned position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. Follow-through item 9's remaining three in-code prose surfaces landed here with the rule they describe. |
-| 7. Update Tool/Wrapper Layer | Pending | — | `cli.md`'s archive step list, check-rule list, `rule` table row and built-in-field set; `convention.md`'s *Optional fields*, *Archive subtree* and the **three** archived-immutability paragraphs; **both specs' `docs mv` paragraphs carrying D5's refusal, its exit code and its by-hand escape together**; the migrate section; the upgrade recipe naming the one behaviour change; both byte-identical skill mirrors; `UNRELEASED` CHANGELOG; a dated note closing `feedback-log.md` issue #1. No new flag, no version bump. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-08-16 | **1502 passed / 0 failed** — the suite is fully GREEN one phase early, as Phase 8 is the verification phase. Phase 1 had already landed the author-facing halves in `cli.md` / `convention.md`, so this phase **verified** them item by item and found two real gaps, both corrected: `convention.md`'s built-in always-allowed label list omitted `Archived`, and its `docs mv` refusal paragraph still said three permitted neighbours where amendment 6 says four. Bundled `SKILL.md` (three verb rows) and `references/use-cases.md` (three rows plus a new *Upgrade: the archive-date witness* section) landed; both mirrors re-copied in the same commit. Two argparse `description` strings gained one clause each (RESOLVED OQ-1) — the flag delta itself is **confirmed empty**, measured against `7f7853b`. `UNRELEASED` CHANGELOG gained both `Added` entries, the BREAKING `Changed` entry and the upgrade note including OQ-2's residual; `feedback-log.md` issue #1 is **CLOSED**. No new flag, no version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1341 pre-existing ids. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`, close `architecture.md` and `test-strategy.md`, completion summaries, hand to M29. |
@@ -1140,6 +1140,98 @@ corrected the wide-blast-radius bullet to.
 | `docs check --root docs` | no violations (exit 0) — the dogfood tree stays silent with the rule live |
 | `git diff ac66005 --numstat -- tests/` | **empty** — no test source changed in Step 2 at all, let alone was relaxed |
 | spot-run: `test_archive_leaves_the_tree_check_clean`, `test_check_doc_duplicate_archived_label_still_fires_duplicate_field`, `test_check_tree_dogfood_repo_docs_gains_no_archive_date_drift`, `test_check_tree_pre_m28a_fixtures_gain_no_archive_date_findings` (46) | 49 passed — the four families that were degenerate before this phase and are genuine now |
+
+## Phase 7 — Update Tool/Wrapper Layer — 2026-08-16
+
+### Objective
+
+Reconcile every parallel surface. Phase 1 landed the author-facing halves in
+`cli.md` and `convention.md`, so most of this phase is **verification, not
+authoring** — and the parts that were genuinely outstanding are the bundled
+skill, the argparse strings, the CHANGELOG and the feedback-log closeout.
+
+### Actions taken
+
+- **Bundled skill** (the two RED ids, and the third row parity asks for):
+  `SKILL.md`'s `docs archive` row now names `Archived:` by its exact label and
+  says it lands on **every** doc the operation moves while `Archived-reason:`
+  stays on the primary; its `docs mv` row says the move **refuses** and says
+  which moves, so the refusal cannot read as universal; and its `docs check`
+  row names `archive-date-drift` and its present-only nature.
+  `references/use-cases.md` gained the witness on the closeout row, the
+  refusal on the `docs mv` row, `archive-date-drift` on the `docs check` row,
+  and a new *Upgrade: the archive-date witness (M28a)* section — the honest
+  analogue of the M25 and M27 upgrade sections — whose four rows carry the
+  closeout, the refusal, the drift repair, and the `bad-date` residual.
+- **Spec verification, item by item, against the Phase-7 objective.** Every
+  surface it names was re-read rather than recalled: `cli.md`'s archive step
+  list + witness paragraph, its `docs check` rule list / `rule` table row /
+  built-in field set / exit-2 line / *Archive-date corroboration* subsection
+  with its own *Upgrading from 1.x*, its `docs mv` *Cross-dated archived
+  relocations* subsection with the Precedence paragraph and the
+  four-neighbour table; `convention.md`'s *Optional fields* rows, its
+  *Archive subtree* paragraphs, and all three archived-immutability
+  paragraphs plus M26's byte-identity list. **Two real gaps were found and
+  corrected** (below).
+- **Argparse** (RESOLVED OQ-1): the flag delta is **empty (confirmed, not
+  assumed)** — `docs archive` / `docs mv` / `docs check` option sets were
+  diffed mechanically against a `git worktree` at `7f7853b` and are
+  identical — and the **two `description` strings gained one clause each
+  under the surface-parity gate**, following M28's own precedent for a
+  behaviour change with no flag delta: `mv_p` now says a move between two
+  different dated archive directories refuses (exit 2, zero bytes) in every
+  mode, and `check_p`'s rule-family list now names an archived document whose
+  recorded `Archived:` date its location does not corroborate.
+- **`CHANGELOG.md`**, under the existing `UNRELEASED` heading (no
+  `pyproject.toml`, no version pin — M25 — D6): two `Added` entries (the
+  witness, with the pinned block position and the one-value/one-source rule;
+  and `archive-date-drift`, with both message forms, the closed four-key
+  record and the present-only contract), one **BREAKING** `Changed` entry for
+  the `docs mv` refusal with both frozen lines, the four permitted neighbours
+  and the exit-1 precedence, and an *Upgrading from 1.x* passage stating the
+  present-only contract plainly (**zero** findings on a 1.x tree, no
+  backfill), the by-hand escape, and **OQ-2's residual** — a hand-adopted
+  foreign tree carrying a non-date `Archived:` value gains a new `bad-date`
+  error. The heading's own scope line moved from "M25–M28" to "M25–M28a".
+- **`feedback-log.md` issue #1 is CLOSED.** A dated 2026-08-16 *Resolution*
+  bullet records that finding 3's archive-date half is answered by M28a's two
+  legs, why both were needed (the witness can never reach the 46 documents
+  archived before it existed), and that the reporter's literal `pairs-with`
+  rule stays declined with its measured number — 7 findings on a correct
+  tree, every one a deliberate cross-milestone edge. The Status bullet now
+  says the issue has no open item left.
+
+### Decisions & issues
+
+- **Two spec gaps found by verification, both corrected here.** Neither
+  changes scope or behaviour intent; both were factually wrong statements in
+  a spec that ships byte-identically inside the wheel:
+  1. `convention.md`'s built-in always-allowed metadata label list
+     (`Lifecycle`, `Role`, `Project`, `Updated`, `Related`,
+     `Archived-reason`, `Revision`) **omitted `Archived`** — while `cli.md`'s
+     parallel list named it and `_BUILTIN_METADATA_FIELDS` contains it. Added,
+     with the M25/M28a reason stated once for both labels.
+  2. `convention.md`'s *Cross-dated archived relocations refuse* paragraph
+     still enumerated **three** permitted neighbours. Phase-1 amendment 6
+     swept "three" to "four" across eight derived surfaces, but its list did
+     not include `convention.md`, so the sentence survived — disagreeing with
+     `cli.md`'s own four-row table two documents away. Swept to four, naming
+     the two-spellings-of-one-date case and why it completes.
+- **The mirrors were re-copied in the same commit** as the source edits, per
+  the CLAUDE.md surface-parity gate, and `tests/fixtures/expected/docs-INDEX.md`
+  was re-synced in the same commit because `docs touch` moved
+  `feedback-log.md`'s `Updated:` across the day boundary.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `pytest -q` | **1502 passed / 0 failed** — fully GREEN |
+| `ruff check .` / `ruff format --check .` / `mypy src/ tests/` | clean |
+| `docs check --root docs` | no violations (exit 0) |
+| `cmp docs/cli.md src/docs_cli/skill/references/cli.md` and the same for `convention.md` | byte-identical |
+| flag delta vs `7f7853b` for `archive` / `mv` / `check` | **empty** (mechanically diffed) |
+| `docs mv --help` / `docs check --help` | carry the new clauses and agree with `cli.md` |
 
 ## Milestone completion summary
 

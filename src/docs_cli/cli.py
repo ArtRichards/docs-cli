@@ -5552,6 +5552,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "destination it makes stale — both the links pointing AT <old> and "
             "the links INSIDE it — as one plan built and validated before the "
             "first byte moves, so a handled failure writes nothing at all. "
+            "Since M28a a move between two different dated archive directories "
+            "REFUSES (exit 2, zero bytes) in every mode, --dry-run included, "
+            "because it would falsify the archive-date record; every other "
+            "archive-subtree move still completes. "
             "--dry-run names every planned rewrite; --json emits the same plan "
             "as a record."
         ),
@@ -5721,9 +5725,10 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Walk the docs root and report convention violations: missing or "
             "malformed metadata, unknown vocabulary, status/location drift, "
-            "broken Related: references, and local Markdown body links that "
-            "name no existing path or that leave the docs root. Exit 0 clean, "
-            "1 warnings only, 2 errors."
+            "broken Related: references, local Markdown body links that "
+            "name no existing path or that leave the docs root, and an "
+            "archived document whose recorded Archived: date its location "
+            "does not corroborate. Exit 0 clean, 1 warnings only, 2 errors."
         ),
     )
     check_p.add_argument(

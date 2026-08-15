@@ -59,9 +59,14 @@ RED at the seam — and **Phase 6 — Implement Offline/Core Path completed
 2026-08-16**, wiring both legs at their three frozen touch points and nowhere
 else: the witness write in `_archive_one`, the rule in `check_doc`, and Leg 2's
 refusal in `_cmd_mv` before the `--dry-run` branch. 26 more ids flipped, the
-suite stands at **2 failed / 1500 passed** with only the two bundled-skill ids
-left, and `docs check --root docs` still exits 0 with the rule live.
-Phase 7 — Update Tool/Wrapper Layer is next.** All seven
+suite stands at 2 failed / 1500 passed with only the two bundled-skill ids
+left, and `docs check --root docs` still exits 0 with the rule live — and
+**Phase 7 — Update Tool/Wrapper Layer completed 2026-08-16**, landing the
+bundled skill, two argparse `description` clauses (the flag delta itself is
+confirmed **empty**), the `UNRELEASED` CHANGELOG entries and issue #1's
+closeout, and correcting the two spec gaps verification found. The suite is
+fully **GREEN at 1502 passed / 0 failed**.
+Phase 8 — Run Tests (GREEN) is next.** All seven
 setup questions were RESOLVED before Phase 1,
 and Phase 1 froze the contract against them without re-opening any: the
 machine-facing contract is items (A)–(H) of the milestone's *Decisions
@@ -922,8 +927,21 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M28a Step 2 — Phase 7 onward**, then
-**M29 — PyPI publish 2.0.0**. **Phase 6 — Implement Offline/Core Path
+**Next action:** **M28a Step 2 — Phase 8 onward**, then
+**M29 — PyPI publish 2.0.0**. **Phase 7 — Update Tool/Wrapper Layer completed
+2026-08-16** on `m28a/phases-5-10`, taking the suite fully **GREEN at 1502
+passed / 0 failed**: the bundled `SKILL.md` and `references/use-cases.md`
+carry the witness, the refusal and `archive-date-drift`; the argparse flag
+delta is **confirmed empty** (mechanically diffed against `7f7853b`) while two
+`description` strings gained one clause each under the surface-parity gate;
+the `UNRELEASED` CHANGELOG gained both `Added` entries, the BREAKING `Changed`
+entry and an upgrade note stating the present-only contract plainly; and
+`feedback-log.md` **issue #1 is CLOSED**, its last open item answered. Phase 1
+had already landed the author-facing specs, so this phase verified them item
+by item — and found two real gaps, both corrected: `convention.md`'s built-in
+always-allowed label list omitted `Archived`, and its `docs mv` refusal
+paragraph still said three permitted neighbours where amendment 6 says four.
+**Phase 6 — Implement Offline/Core Path
 completed 2026-08-16** on `m28a/phases-5-10`: the three touch points Phase-1
 amendment 3 named, and nowhere else — one `set_metadata_field` in
 `_archive_one` writing the same `date_str` that names the dated directory to
