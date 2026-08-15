@@ -30,14 +30,15 @@ Related:
   does not corroborate (**detect**); `docs mv` refuses a move whose source and
   destination are different dated archive directories, before it writes
   anything (**prevent**).
-- Progress: **Phases 1–3 complete (contract 2026-08-15; RED tests and
-  fixtures 2026-08-16); Phase 4 — Run Tests (RED Baseline) is next.** The machine-facing contract is
+- Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
+  fixtures and the classified baseline 2026-08-16. Phase 5 — Update Base
+  Interfaces is next.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with five amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
-  an operator decision), and Phase 2 authored 131 test ids against it. With
-  Phase 3's six `archivedate-*` fixture trees the suite stands at 1484
-  collected, 58 RED and 85 GREEN of the 143 new ids, and no pre-existing id
-  failing. M28 is implementation-complete
+  an operator decision), and Phase 2 authored 131 test ids against it. With Phase 3's six `archivedate-*` fixture trees the
+  suite stands at **1484 collected, 58 RED and 85 GREEN** of the 143 new ids,
+  in exactly two exception classes, with **no** pre-existing id removed or
+  failing and `cli.py` untouched. M28 is implementation-complete
   and merged to `main` (`b1ec74b`), so M28a is the last implementation
   milestone in the v2.0 train before the M29 publish. Setup measured this
   repository read-only and reproduced the reported drift on throwaway copies,
@@ -871,7 +872,7 @@ coverage* below.
 - [x] Phase 1 — Define Contract
 - [x] Phase 2 — Write Tests (RED)
 - [x] Phase 3 — Create Data/Fixtures
-- [ ] Phase 4 — Run Tests (RED Baseline)
+- [x] Phase 4 — Run Tests (RED Baseline)
 - [ ] Phase 5 — Update Base Interfaces
 - [ ] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer

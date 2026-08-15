@@ -736,7 +736,7 @@ def test_check_archivedate_drifted_json_record_keys_unchanged(docs_script, fixtu
     dates travel in `message`."""
     root = _archivedate_tree(fixtures_dir, "archivedate-drifted")
     code, _pairs, records = _findings(docs_script, root)
-    assert code == 2
+    assert code == 2, f"a drifted witness is a hard error; records: {records!r}"
     drift = [r for r in records if r.get("rule") == "archive-date-drift"]
     assert len(drift) == 1, f"exactly one archive-date-drift record, got {records!r}"
     rec = drift[0]
@@ -781,9 +781,12 @@ def test_check_archivedate_undated_tree_exits_2_with_form_b_and_no_status_drift(
     """
     root = _archivedate_tree(fixtures_dir, "archivedate-undated")
     code, pairs, _records = _findings(docs_script, root)
-    assert code == 2
+    assert code == 2, f"an uncorroborated witness is a hard error; findings: {pairs!r}"
     assert pairs == [("archive/misc/filed.md", "archive-date-drift")], pairs
-    assert "status-drift" not in [rule for _path, rule in pairs]
+    assert "status-drift" not in [rule for _path, rule in pairs], (
+        "the document is INSIDE the archive subtree, so status-drift is silent by "
+        "construction — this is Leg 1 reaching a shape status-drift cannot"
+    )
 
     proc = _run(docs_script, "check", str(root))
     assert f"  error: [archive-date-drift] {_FORM_B}" in proc.stdout

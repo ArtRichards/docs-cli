@@ -1055,7 +1055,7 @@ def test_mv_cross_dated_refusal_precedes_the_whole_tree_walk(docs_script, fixtur
         cwd=root,
     )
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
-    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr
+    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr, proc.stderr
     assert "broken.md" not in proc.stderr, (
         "the cross-dated refusal is reported, not the unrelated malformed sibling"
     )
@@ -1097,6 +1097,9 @@ def test_mv_neighbour_1_rename_into_a_subdirectory_of_one_dated_directory_comple
         cwd=root,
     )
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    moved = root / "archive" / "2026-01-01" / "sub" / "with-witness.md"
+    assert moved.is_file(), "the move must actually have happened"
+    assert "Archived: 2026-01-01" in moved.read_text(), "and the witness is unchanged"
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, check.stdout
 
@@ -1180,6 +1183,8 @@ def test_mv_neighbour_3_to_an_undated_archive_subdirectory_completes(
         cwd=root,
     )
     assert back.returncode == 0, (back.stdout, back.stderr)
+    assert (root / "archive" / "notes" / "no-witness.md").is_file()
+    assert (root / "archive" / "2026-03-04" / "keep.md").is_file()
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, check.stdout
 
@@ -1239,6 +1244,12 @@ def test_mv_neighbour_3_to_the_archive_root_is_silent_without_a_witness(
         cwd=root,
     )
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    moved = root / "archive" / "no-witness.md"
+    assert moved.is_file(), "the move must actually have happened"
+    assert "\nArchived:" not in moved.read_text(), (
+        "…and the document carries no witness, which is precisely why nothing "
+        "can report the loss of its dated directory"
+    )
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, check.stdout
 
