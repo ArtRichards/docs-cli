@@ -35,7 +35,10 @@ Related:
   flight on `m28a/phases-5-10`: Phase 5 — Update Base Interfaces complete
   2026-08-16 (the vocabulary entry, `parse_date`'s keyword-only `label` and all
   three pure helpers, wired nowhere; 43 ids flipped, suite 28 failed / 1474
-  passed). Phase 6 — Implement Offline/Core Path is next.** The machine-facing
+  passed), and Phase 6 — Implement Offline/Core Path complete 2026-08-16 (the
+  three touch points — the writer, the rule and Leg 2's refusal; 26 ids
+  flipped, suite 2 failed / 1500 passed with only the two bundled-skill ids
+  left). Phase 7 — Update Tool/Wrapper Layer is next.** The machine-facing
   contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
@@ -895,7 +898,7 @@ coverage* below.
 - [x] Phase 3 — Create Data/Fixtures
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
-- [ ] Phase 6 — Implement Offline/Core Path
+- [x] Phase 6 — Implement Offline/Core Path
 - [ ] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood

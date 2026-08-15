@@ -54,8 +54,14 @@ is in flight on `m28a/phases-5-10`: **Phase 5 — Update Base Interfaces
 completed 2026-08-16**, landing the vocabulary entry, `parse_date`'s
 keyword-only `label`, and all three pure helpers wired nowhere — 43 ids
 flipped, the suite at **28 failed / 1474 passed**, and `check_doc`,
-`_archive_one` and `_cmd_mv` untouched so every CLI-level id stays honestly
-RED at the seam. Phase 6 — Implement Offline/Core Path is next.** All seven
+`_archive_one` and `_cmd_mv` untouched so every CLI-level id stayed honestly
+RED at the seam — and **Phase 6 — Implement Offline/Core Path completed
+2026-08-16**, wiring both legs at their three frozen touch points and nowhere
+else: the witness write in `_archive_one`, the rule in `check_doc`, and Leg 2's
+refusal in `_cmd_mv` before the `--dry-run` branch. 26 more ids flipped, the
+suite stands at **2 failed / 1500 passed** with only the two bundled-skill ids
+left, and `docs check --root docs` still exits 0 with the rule live.
+Phase 7 — Update Tool/Wrapper Layer is next.** All seven
 setup questions were RESOLVED before Phase 1,
 and Phase 1 froze the contract against them without re-opening any: the
 machine-facing contract is items (A)–(H) of the milestone's *Decisions
@@ -916,8 +922,18 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M28a Step 2 — Phase 6 onward**, then
-**M29 — PyPI publish 2.0.0**. **Phase 5 — Update Base Interfaces completed
+**Next action:** **M28a Step 2 — Phase 7 onward**, then
+**M29 — PyPI publish 2.0.0**. **Phase 6 — Implement Offline/Core Path
+completed 2026-08-16** on `m28a/phases-5-10`: the three touch points Phase-1
+amendment 3 named, and nowhere else — one `set_metadata_field` in
+`_archive_one` writing the same `date_str` that names the dated directory to
+**every** member (the reason stays primary-only, untouched); one
+`findings.extend` in `check_doc` between `status-drift` and `duplicate-field`;
+and Leg 2's two-line refusal in `_cmd_mv` immediately after `old_rel` /
+`new_rel` are derived and before the `--dry-run` branch, so it refuses in every
+mode with zero bytes written and no `--json` record. 26 ids flipped to
+**2 failed / 1500 passed**; `docs check --root docs` still exits 0 with the
+rule live over the 46-document archive. **Phase 5 — Update Base Interfaces completed
 2026-08-16** on `m28a/phases-5-10`: `Archived` joined
 `_BUILTIN_METADATA_FIELDS` (and stayed out of `parse()`'s `known` set and
 migrate's supersession set); `parse_date` gained its keyword-only

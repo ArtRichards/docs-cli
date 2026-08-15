@@ -24,8 +24,9 @@ the milestone checklist synchronized.
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
 - Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
   fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
-  flight on `m28a/phases-5-10`; Phase 5 complete 2026-08-16 at 28 failed /
-  1474 passed. Phase 6 — Implement Offline/Core Path is next.** All seven setup
+  flight on `m28a/phases-5-10`; Phases 5 and 6 complete 2026-08-16, the suite
+  down to 2 failed / 1500 passed with only the two bundled-skill ids left.
+  Phase 7 — Update Tool/Wrapper Layer is next.** All seven setup
   questions were RESOLVED before Phase 1 (Q4 by the operator; Q1 auto-resolved
   under the naming-with-an-obvious-default rule; Q2/Q3/Q5/Q6/Q7
   conductor-resolved), and Phase 1 froze the contract against them without
@@ -65,7 +66,7 @@ the milestone checklist synchronized.
 | 3. Create Data/Fixtures | Complete | 2026-08-16 | Six committed `archivedate-*` trees, one semantic each, structure-only with fixed past dates. Suite: 1484 collected, **58 RED / 85 GREEN** of the 143 new ids; every pre-M28a fixture tree byte-identical (`git diff --numstat -- tests/fixtures/` empty; the six trees are additions only). Original scope: new `archivedate-*` trees, one semantic each — `-clean`, `-drifted`, `-absent`, `-outside`, `-undated`, and `-two-dated-dirs` for D5's refusal and its permitted same-directory rename — plus the hand-written registration tuple and the two whole-corpus sweep tests that a deliberately drifted tree would otherwise trip. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-08-16 | **1502 collected, 71 failed, 1431 passed** (after the Step-1 audit and the fresh-eyes fold-in; 1484 / 58 / 1426 as first measured). Exactly two exception classes (36 `AttributeError`, 35 `AssertionError`); 0 collection errors, 0 xfail/xpass/error, 0 warnings, 0 tracebacks. Mechanical proof against `7f7853b`: **0 ids removed**, **0 pre-existing ids failing**, 0 deleted test-source lines, `cli.py` untouched. Every RED failure traced to a family and a landing phase (43 → Phase 5, 26 → Phase 6, 2 → Phase 7); all 90 GREEN-at-baseline ids classified by name. |
 | 5. Update Base Interfaces | Complete | 2026-08-16 | **28 failed / 1474 passed** — the 43 ids the Phase-4 classification assigned here, flipped. `Archived` into `_BUILTIN_METADATA_FIELDS` (and out of `parse()`'s `known` set and migrate's supersession set); `parse_date`'s keyword-only `label: str = "Updated"` (OQ-3, item (H)); and **all three** pure helpers — `archive_dir_date`, `cross_dated_archive_move` (Leg 2's predicate, delegating to it) and `archive_date_findings` — wired nowhere, so `check_doc`, `_archive_one` and `_cmd_mv` are untouched and every CLI-level id stays honestly RED at the seam. |
-| 6. Implement Offline/Core Path | Pending | — | One `set_metadata_field` call in `_archive_one` at the frozen position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. |
+| 6. Implement Offline/Core Path | Complete | 2026-08-16 | **2 failed / 1500 passed** — the 26 ids the Phase-4 classification assigned here, flipped; only the two Phase-7 bundled-skill ids remain. One `set_metadata_field` call in `_archive_one` at the pinned position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. Follow-through item 9's remaining three in-code prose surfaces landed here with the rule they describe. |
 | 7. Update Tool/Wrapper Layer | Pending | — | `cli.md`'s archive step list, check-rule list, `rule` table row and built-in-field set; `convention.md`'s *Optional fields*, *Archive subtree* and the **three** archived-immutability paragraphs; **both specs' `docs mv` paragraphs carrying D5's refusal, its exit code and its by-hand escape together**; the migrate section; the upgrade recipe naming the one behaviour change; both byte-identical skill mirrors; `UNRELEASED` CHANGELOG; a dated note closing `feedback-log.md` issue #1. No new flag, no version bump. |
 | 8. Run Tests (GREEN) | Pending | — | Full product and quality gates with exact counts; mechanical no-regression proof against the 1341 pre-existing ids. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
@@ -1065,6 +1066,80 @@ stays honestly RED at the seam.
 | `ruff check .` / `ruff format --check .` / `mypy src/ tests/` | clean |
 | `docs check --root docs` | no violations (exit 0) |
 | `git diff -- src/docs_cli/cli.py \| grep '^+' \| grep -E 'check_doc\|_archive_one\|_cmd_mv'` | only a banner comment and a docstring **naming** `check_doc`; **no line of any of the three functions changed** — the real Phase-5 exit criterion |
+
+## Phase 6 — Implement Offline/Core Path — 2026-08-16
+
+### Objective
+
+Wire both legs at their three frozen touch points and nowhere else: one
+`set_metadata_field` in `_archive_one`, one `findings.extend` in `check_doc`,
+and one refusal in `_cmd_mv` — the "three touch points" Phase-1 amendment 3
+corrected the wide-blast-radius bullet to.
+
+### Actions taken
+
+- **The writer** — one line in `_archive_one`, between the `Updated:` bump and
+  the conditional `Archived-reason:`. It writes the `date_str` the member was
+  already handed (computed once in `_cmd_archive` as
+  `archive_date.strftime(config.date_format)` and already used to name the
+  dated directory): **never a second `strftime`, never a `date.today()`
+  re-read**. `apply_archive_plan`'s `plan.reason if index == 0 else None` was
+  deliberately **not** touched, so the reason stays primary-only (M26 — D1)
+  while the date reaches every member (A2). Position is decided *only* by this
+  call order — `set_metadata_field` appends a new inline label at the end of
+  the inline run and inserts before the first bare-label group — which yields
+  item (A)'s `Lifecycle / Role / Project / Updated / Archived /
+  Archived-reason` with a `Related:` group still following the run. Both are
+  byte-level locks.
+- **The rule** — one `findings.extend(archive_date_findings(path, metadata,
+  root, config))` between the `status-drift` block and M25's `duplicate-field`
+  block, at item (D)'s frozen position.
+  `test_check_doc_reports_archive_date_drift_at_the_frozen_position` asserts
+  the exact sequence `["status-drift", "archive-date-drift",
+  "duplicate-field"]` on a document that trips all three, so the too-early and
+  the too-late placement each fail.
+- **Leg 2's refusal** — in `_cmd_mv`, between the `old_rel` / `new_rel`
+  derivation's `except ValueError` return and the `compile_exclude_predicate`
+  comment: amendment 2's position, which the fresh-eyes reviewer confirmed
+  verbatim at those two line numbers. Both stderr lines are item (E)'s frozen
+  strings. Returning 2 here emits **no** `--json` record — `_emit_json` is
+  defined below it and never called — which the refusal test asserts with
+  `proc.stdout == ""` under `--json`.
+- **Follow-through item 9's remaining prose surfaces**, per the conductor's
+  split (they land with the rule rather than with the helpers):
+  `check_doc`'s docstring gained an `archive-date-drift` entry beside the M27
+  body-link ones and its `bad-date` line widened from "`Updated:` not
+  parseable" to "a date field that does not parse — `Updated:`, or
+  `Archived:`" (matching `cli.md`); `Finding`'s docstring rule enumeration
+  gained `archive-date-drift (M28a)`; the `unknown-field` comment now names
+  `Archived:` in the built-in list; and `set_metadata_field`'s "Used by …"
+  line names the new label.
+
+### Decisions & issues
+
+- **No implementation surprise.** Every one of the 26 ids flipped on the first
+  run, and the four placement traps the Phase-4 adversarial pass enumerated
+  (inside `preflight_move_plan`, after the walk, above the `is_file` /
+  `exists` guards, and an inlined config-blind predicate) were avoided by
+  construction rather than discovered by failure.
+- **Two ids are contracts and were deliberately left alone.**
+  `test_mv_neighbour_3_to_the_archive_root_is_silent_without_a_witness` pins
+  D8's second residual (*Follow-ups* item 7, operator decision OQ-7) and stays
+  GREEN as a KNOWN GAP;
+  `test_archive_renders_the_witness_in_the_trees_date_format` still asserts
+  defect E8's exit-2 INDEX-refresh failure, which the `label` default keeps
+  byte-identical (`parse()` retains its hardcoded ISO default). *Follow-ups*
+  item 1 owns the coupling. Neither was "fixed".
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `pytest -q` | **2 failed / 1500 passed** — only `test_skill.py`'s two Phase-7 ids remain RED |
+| `ruff check .` / `ruff format --check .` / `mypy src/ tests/` | clean |
+| `docs check --root docs` | no violations (exit 0) — the dogfood tree stays silent with the rule live |
+| `git diff ac66005 --numstat -- tests/` | **empty** — no test source changed in Step 2 at all, let alone was relaxed |
+| spot-run: `test_archive_leaves_the_tree_check_clean`, `test_check_doc_duplicate_archived_label_still_fires_duplicate_field`, `test_check_tree_dogfood_repo_docs_gains_no_archive_date_drift`, `test_check_tree_pre_m28a_fixtures_gain_no_archive_date_findings` (46) | 49 passed — the four families that were degenerate before this phase and are genuine now |
 
 ## Milestone completion summary
 
