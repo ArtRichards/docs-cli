@@ -3158,7 +3158,17 @@ def test_archive_leg_1_refuses_even_under_quiet(docs_script, fixtures_dir, tmp_p
     proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, "--quiet", cwd=root)
 
     assert proc.returncode == 2
-    assert "still active and declares 'child-of: plan.md'" in proc.stderr
+    assert (
+        "docs: archive: live-child.md is still active and declares 'child-of: plan.md', "
+        "which this operation would archive; refusing before any write" in proc.stderr
+    )
+    assert (
+        "docs: archive: 2 still-active child(ren) would be stranded; zero bytes written"
+        in proc.stderr
+    )
+    assert "docs: archive: would archive" not in proc.stderr, (
+        "--quiet still suppresses the ordinary prose; only the refusal survives"
+    )
 
 
 def test_archive_leg_1_preview_reports_the_verdict_at_exit_0(docs_script, fixtures_dir, tmp_path):
@@ -3338,6 +3348,7 @@ def test_archive_json_strands_present_for_a_plan_that_completes(
     assert proc.returncode == 0, proc.stderr
 
     record = json.loads(proc.stdout)
+    assert "strands" in record, "`strands` is present in every record, never missing"
     assert record["applied"] is True
     observed = [
         (s["path"], s["target"], s["kind"], s["verb"], s["line"]) for s in record["strands"]
@@ -3367,6 +3378,7 @@ def test_archive_json_strands_observed_in_the_preview_of_a_refusing_plan(
     assert proc.returncode == 0, proc.stderr
 
     record = json.loads(proc.stdout)
+    assert "strands" in record, "`strands` is present in every record, never missing"
     assert record["dry_run"] is True and record["applied"] is False
     assert {(s["path"], s["kind"]) for s in record["strands"]}, "leg 2 still reports here"
     assert not any(s["verb"] == "child-of" for s in record["strands"]), (
@@ -3392,6 +3404,10 @@ def test_archive_json_strands_is_empty_array_not_missing(docs_script, tmp_path):
     assert proc.returncode == 0, proc.stderr
 
     record = json.loads(proc.stdout)
+    assert "strands" in record and "rewrites" in record, (
+        "both arrays are PRESENT and empty, never missing — a consumer must not "
+        "have to distinguish `absent` from `nothing to report`"
+    )
     assert record["strands"] == []
     assert record["rewrites"] == []
 
