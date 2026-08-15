@@ -1515,7 +1515,9 @@ novelty.
 ## Step-2 same-instance audit — 2026-08-15
 
 Run against Phases 5–10 after the last phase and before returning, per the
-ship-milestone consistency / completeness / accuracy checklist.
+ship-milestone consistency / completeness / accuracy checklist. Four issues
+found; all four fixed here. Two items are **surfaced** for the operator rather
+than auto-decided, because each touches intent rather than accuracy.
 
 ### Issues found and fixed
 
@@ -1566,6 +1568,14 @@ ship-milestone consistency / completeness / accuracy checklist.
      unconditional exit 2 — makes each new id fail and **leaves every other
      test green**, which is the proof that each closes a real gap rather than
      re-asserting something already covered.
+
+4. **`README.md`'s verb table under-described both verbs.** `docs mv` still
+   read *"Move + rewrite Related: references across the tree"*, with no mention
+   of body links and neither new flag; `docs archive` did not mention the
+   rebase. `README.md` is deliberately outside D8's surface-parity list, and
+   neither line was *false* — but it is the project's front door, and the
+   change it omitted is a **BREAKING** one. Two lines, adding nothing `cli.md`
+   and the CHANGELOG do not already carry.
 
 Suite: **1333 → 1335 passed**, still 0 failed.
 
