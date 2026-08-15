@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -373,3 +374,282 @@ def test_mv_preserves_reciprocal_pair(docs_script, tmp_path):
 
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, (check.stdout, check.stderr)
+
+
+_SKIP_AS_ROOT_MV = pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0,
+    reason="root bypasses 0o444 write protection; the unwritable trigger does not fire",
+)
+
+
+# --- M28 — move-safe body-link rewrites ------------------------------------
+#
+# The contract under test is the milestone's *Decisions (Phase 1 — BINDING)*
+# and `cli.md` › *Move-safe body-link rewrites (M28 — D1–D7)* / *`docs mv`*.
+# Every subprocess test below asserts a frozen contract string as well as an
+# exit code, so an unrelated failure with the same code cannot satisfy it
+# (M26's falsely-GREEN lesson).
+
+
+def _movelink_tree(fixtures_dir: Path, tmp_path: Path, name: str) -> Path:
+    """Copy a `movelink-*` fixture tree into tmp_path; return its root.
+
+    Asserts the SOURCE tree exists, so between Phase 2 and Phase 3 these tests
+    are honestly RED on a missing fixture rather than vacuously green on an
+    empty copy (M27's Phase-2 catch).
+    """
+    source = fixtures_dir / "trees" / name
+    assert source.is_dir(), f"Phase 3 must author the `{name}` fixture tree"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+    return root
+
+
+def _snapshot(root: Path) -> dict[str, bytes]:
+    """Every file under `root`, by root-relative POSIX path."""
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_mv_dry_run_names_every_planned_rewrite(docs_script, fixtures_dir, tmp_path):
+    """D7/Q3: `--dry-run` is a real preview — every planned destination
+    rewrite, with document, line, old spelling and new spelling — instead of
+    today's single `would move` line.
+
+    Line numbers are part of the `movelink-incoming` fixture contract: the
+    destination tokens live at `note.md:13` and `sub/deep.md:10`.
+
+    RED reason: `_cmd_mv` returns at its `args.dry_run` branch before it walks
+    anything, so it prints one line and knows of no rewrites (Phase 6).
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", "--dry-run", cwd=root)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "docs: mv: would move plan.md -> milestone-plan.md" in proc.stderr
+    assert "docs: mv: rewrite note.md:13 plan.md -> milestone-plan.md" in proc.stderr
+    assert "docs: mv: rewrite sub/deep.md:10 ../plan.md -> ../milestone-plan.md" in proc.stderr
+    assert "docs: mv: 2 destination(s) in 2 document(s), 1 Related: bullet(s)" in proc.stderr
+    assert "docs: mv: preview only — nothing was written" in proc.stderr
+    assert (root / "plan.md").is_file() and not (root / "milestone-plan.md").exists()
+
+
+def test_mv_json_record_shape(docs_script, fixtures_dir, tmp_path):
+    """D7: `docs mv --json` emits ONE record with the closed, ordered key set
+    `cli.md` pins — and no `strands` key, because a rename produces no
+    newly-archived set (R4).
+
+    RED reason: the `mv` subparser has no `--json` flag at all (Phase 7).
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", "--json", cwd=root)
+
+    assert proc.returncode == 0, proc.stderr
+    record = json.loads(proc.stdout)
+    assert list(record) == ["old", "new", "rewrites", "dry_run", "applied", "index_refreshed"]
+    assert record["old"] == {"source": "plan.md", "path": "plan.md"}
+    assert record["new"] == {"source": "milestone-plan.md", "path": "milestone-plan.md"}
+    assert record["dry_run"] is False
+    assert record["applied"] is True
+    assert record["index_refreshed"] is True
+
+    assert [(r["path"], r["line"], r["old"], r["new"]) for r in record["rewrites"]] == [
+        ("note.md", 13, "plan.md", "milestone-plan.md"),
+        ("sub/deep.md", 10, "../plan.md", "../milestone-plan.md"),
+    ]
+    for rewrite in record["rewrites"]:
+        assert list(rewrite) == ["path", "line", "column", "old", "new"]
+
+
+def test_mv_preview_record_equals_apply_record(docs_script, fixtures_dir, tmp_path):
+    """One schema shared by preview and apply, so the two are diffable — only
+    the three mode flags differ (D7, M26 — D7's precedent).
+    """
+    preview_root = _movelink_tree(fixtures_dir, tmp_path / "a", "movelink-incoming")
+    apply_root = _movelink_tree(fixtures_dir, tmp_path / "b", "movelink-incoming")
+
+    preview = _run(
+        docs_script, "mv", "plan.md", "milestone-plan.md", "--json", "--dry-run", cwd=preview_root
+    )
+    applied = _run(docs_script, "mv", "plan.md", "milestone-plan.md", "--json", cwd=apply_root)
+    assert preview.returncode == 0, preview.stderr
+    assert applied.returncode == 0, applied.stderr
+
+    preview_record = json.loads(preview.stdout)
+    apply_record = json.loads(applied.stdout)
+    assert list(preview_record) == list(apply_record)
+    assert preview_record["rewrites"] == apply_record["rewrites"]
+    assert (preview_record["dry_run"], preview_record["applied"]) == (True, False)
+    assert (apply_record["dry_run"], apply_record["applied"]) == (False, True)
+
+
+def test_mv_rename_leaves_check_clean(docs_script, fixtures_dir, tmp_path):
+    """E1, the headline defect: today a rename leaves a tree that fails the
+    tool's own gate. Afterwards `docs check` must exit 0.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    moved = _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root)
+    assert moved.returncode == 0, moved.stderr
+
+    checked = _run(docs_script, "check", str(root))
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+    assert "broken-body-link" not in checked.stdout
+
+
+def test_mv_rebases_the_moved_documents_own_links(docs_script, fixtures_dir, tmp_path):
+    """Class 2: the destinations INSIDE the moved document are rebased from its
+    new directory, in both directions at once.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-moved-referrer")
+    proc = _run(docs_script, "mv", "guide.md", "sub/guide.md", cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    moved = (root / "sub" / "guide.md").read_text()
+    assert "[the target](../target.md)" in moved
+    assert "[the sub reference](ref.md)" in moved
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_mv_into_a_subdirectory_rebases_both_directions(docs_script, fixtures_dir, tmp_path):
+    """E4's nested path math: a document moved out of a deep subdirectory has
+    its `../../` links flattened and its downward links deepened, and every
+    incoming reference is repointed in the same operation.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-nested")
+    proc = _run(docs_script, "mv", "sub/deep/x.md", "x.md", cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    moved = (root / "x.md").read_text()
+    assert "[the root](root.md)" in moved
+    assert "[the nested note](sub/deep/nested/y.md)" in moved
+    assert "[again](root.md)" in moved
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_mv_rewrites_an_archived_referrers_destination_and_nothing_else(
+    docs_script, fixtures_dir, tmp_path
+):
+    """E5 / D5: the archived referrer's stale destination is repointed and
+    NOTHING else in that document changes — `Lifecycle:`, `Archived-reason:`,
+    `Updated:`, the H1, the prose, and every non-moving reference are
+    byte-identical.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-archived-referrer")
+    archived = root / "archive" / "2026-01-01" / "old-log.md"
+    before = archived.read_text()
+
+    proc = _run(docs_script, "mv", "plan.md", "renamed-plan.md", cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    after = archived.read_text()
+    assert after != before, "the stale destination must be repaired at all"
+    assert "[the plan](../../renamed-plan.md)" in after
+    assert "../../plan.md" not in after
+    assert "- references: renamed-plan.md" in after
+
+    expected = before.replace("(../../plan.md)", "(../../renamed-plan.md)").replace(
+        "- references: plan.md", "- references: renamed-plan.md"
+    )
+    assert after == expected, "only the moving destination and its bullet may change"
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_mv_archived_referrer_gains_no_revision_bullet(docs_script, fixtures_dir, tmp_path):
+    """The A2/Q2 lock, stated separately because it reverses the registered
+    stub's own recommendation: M18's shape, not M25 — D4's. No `Revision:`
+    group, and `Updated:` unmoved.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-archived-referrer")
+    archived = root / "archive" / "2026-01-01" / "old-log.md"
+
+    proc = _run(docs_script, "mv", "plan.md", "renamed-plan.md", cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    after = archived.read_text()
+    assert "Revision:" not in after
+    assert "Updated: 2026-01-01" in after
+    assert "Lifecycle: archived" in after
+    assert "Archived-reason:" in after
+
+
+def test_mv_leaves_plain_text_mentions_and_fenced_code_untouched(
+    docs_script, fixtures_dir, tmp_path
+):
+    """ "Never rewrite prose": a bare filename in a sentence and link syntax
+    inside a code span are not destinations and must survive byte-identical.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    note = root / "note.md"
+    before = note.read_text()
+    assert "A bare plan.md" in before, "the fixture must carry a prose mention"
+    assert "`[the plan](plan.md)`" in before, "the fixture must carry a code span"
+
+    proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    after = note.read_text()
+    assert "A bare plan.md" in after
+    assert "`[the plan](plan.md)`" in after
+    assert "[the plan](milestone-plan.md)" in after
+
+
+@_SKIP_AS_ROOT_MV
+def test_mv_refuses_before_the_move_when_a_planned_referrer_is_unwritable(
+    docs_script, fixtures_dir, tmp_path
+):
+    """D4 extended to `mv`: a handled failure refuses the WHOLE operation with
+    zero mutation — the source still at its old path, the destination absent,
+    and the referrer byte-identical.
+
+    RED reason: `_cmd_mv` moves first and rewrites afterwards, so today the
+    source is already at its new path when the unwritable referrer is met, and
+    the failure is an `OSError` mapped after the move (Phase 6 inverts it).
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    before = _snapshot(root)
+    (root / "note.md").chmod(0o444)
+    try:
+        proc = _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root)
+    finally:
+        (root / "note.md").chmod(0o644)
+
+    assert proc.returncode == 2
+    assert "docs: mv: note.md is not writable; refusing before any write" in proc.stderr
+    assert proc.stdout == ""
+    assert _snapshot(root) == before, "a refusal writes zero bytes"
+
+
+def test_mv_dry_run_on_a_malformed_tree_exits_2_and_changes_nothing(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Amendment 1: a preview adopts failures of plan CONSTRUCTION — it cannot
+    describe what it cannot read — so `mv --dry-run` on a malformed tree now
+    exits 2 with the same message its write path uses.
+
+    RED reason: today `--dry-run` returns before the pre-flight walk and exits
+    0 (cli.py's `args.dry_run` branch precedes the walk).
+    """
+    root = _mv_malformed_tree(fixtures_dir, tmp_path)
+    before = _snapshot(root)
+    proc = _run(docs_script, "mv", "good-a.md", "good-b.md", "--dry-run", cwd=root)
+
+    assert proc.returncode == 2
+    assert "broken.md" in proc.stderr
+    assert "Traceback" not in proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_mv_second_equivalent_move_changes_nothing(docs_script, fixtures_dir, tmp_path):
+    """Idempotence: moving back and forth returns the tree to its exact bytes,
+    because a destination whose meaning is unchanged keeps its spelling.
+    """
+    root = _movelink_tree(fixtures_dir, tmp_path, "movelink-incoming")
+    before = _snapshot(root)
+
+    assert _run(docs_script, "mv", "plan.md", "milestone-plan.md", cwd=root).returncode == 0
+    assert _run(docs_script, "mv", "milestone-plan.md", "plan.md", cwd=root).returncode == 0
+
+    assert _snapshot(root) == before

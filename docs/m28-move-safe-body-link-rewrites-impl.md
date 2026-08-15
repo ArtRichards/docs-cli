@@ -22,8 +22,8 @@ table and the milestone checklist synchronized.
 - Project: docs
 - Milestone: M28 — Move-safe Markdown body-link rewrites
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
-- Progress: **Phase 1 — Define Contract is COMPLETE (2026-08-15); Phase 2 —
-  Write Tests (RED) is next.** The whole machine-facing contract is frozen in
+- Progress: **Phases 1–2 are COMPLETE (2026-08-15); Phase 3 — Create
+  Data/Fixtures is next.** The whole machine-facing contract is frozen in
   the milestone's *Decisions (Phase 1 — BINDING)* — items (A)–(M), three
   amendments to setup-frozen material, and eleven Step-1 resolutions (R1–R11)
   — with the author-facing halves in `cli.md` and `convention.md` and zero
@@ -51,7 +51,7 @@ table and the milestone checklist synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | **Complete** | 2026-08-15 | Frozen in the milestone's *Decisions (Phase 1 — BINDING)*: items (A)–(M), three amendments to setup-frozen material, eleven Step-1 resolutions (R1–R11). Author-facing halves in `cli.md` (*Move-safe body-link rewrites (M28 — D1–D7)*, the rewritten `docs mv` section, the amended archive check order, the widened `archive --json` schema, three exit tables) and `convention.md` (M18's widened exception, M27 — D6's reconciled sentence, the author-facing move guarantee). Zero product-code change. Original objective: Freeze the three-step rewrite formula and its move map, the emitted spelling / fragment / delimiter / re-encoding rules, the byte-for-byte no-op rule, the never-creates-an-escape invariant, the archived-referrer policy (destination tokens only) and its `convention.md` wording, **both** strand-check legs — leg 1's `child-of` refusal predicate and message, leg 2's report, its ordering and the lines and record keys that carry it — the pre-flight and partial-state boundary, the preview and `--json` shapes for **both** verbs (including `mv`'s new record and `archive --json`'s rewrite section and `strands` array), and the Phase-5 signatures — against the resolved Q1–Q7. |
-| 2. Write Tests (RED) | Pending | — | Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
+| 2. Write Tests (RED) | **Complete** | 2026-08-15 | 182 new ids: `tests/test_move_links.py` (153, the pure seam) plus 12 `mv`, 14 `archive`, 1 `check` and 2 skill locks. Suite 1269 collected / 181 failed / 1088 passed; the 1087 pre-existing ids all present and GREEN; zero collection errors; zero deleted test lines. Original objective: Pure-planner unit tests for both move classes and every grammar form; `mv` / `archive` integration and subprocess locks; both strand-check legs — the refusal, the leg-1 over-fire lock proving a legitimate closeout completes, and the leg-2 report in prose and in `strands`; failure-injection, byte-identity, idempotence and no-op locks. |
 | 3. Create Data/Fixtures | Pending | — | `movelink-*` trees, one semantic each — `-incoming`, `-moved-referrer`, `-both`, `-archived-referrer`, `-nested`, `-strand`; exotic grammar as inline strings and mutation cases as inline `tmp_path` builders (the M25 rule). |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1087-test baseline; every GREEN-at-baseline and transitional lock named. |
 | 5. Update Base Interfaces | Pending | — | The rewrite record, the rewrite plan, the pure planner, the splicer, the strand predicate (leg 1), the strand report (leg 2) and the JSON serializer — no verb wired, so the CLI tests stay honestly RED at the seam. |
@@ -377,6 +377,91 @@ subprocess RED reasons.
   `convention.md` — identical.
 - `diff docs/INDEX.md tests/fixtures/expected/docs-INDEX.md` — identical.
 - `grep -c '](\.\./' docs/cli.md docs/convention.md` — **0** in both.
+
+## Phase 2 — Write Tests (RED) — 2026-08-15
+
+### Objective
+
+Express the whole Phase-1 contract as tests before any implementation:
+planning, splicing, both move classes, the archived referrer, **both**
+strand-check legs, the failure paths, the no-op rule and both `--json`
+records — including every case that must stay GREEN at baseline, and
+including the leg-1 over-fire lock proving a legitimate closeout completes.
+
+### Actions taken
+
+- Authored **`tests/test_move_links.py`** (153 ids), the pure seam. Every M28
+  symbol is reached through a single `_m28(name)` wrapper over
+  `getattr(cli, …)` — a module-level import of a missing name would be a
+  COLLECTION error, which the Phase-4 exit criterion forbids, and a literal
+  `getattr` trips ruff's B009. Groups: the formula and its two classes; the
+  no-op rule and idempotence; out-of-reach destinations (every non-`local`
+  kind, an escape, pre-existing damage); the never-creates-an-escape invariant
+  over 16 depth/direction combinations; the emitted spelling; the re-encoding
+  rules including a 72-case decode round-trip against the scanner's own
+  `_split_destination`; the splicer; the pipeline order; purity; both strand
+  legs; the pre-flight; and the shared record.
+- Appended **12 `docs mv` locks** — the real preview, the `--json` record and
+  its preview/apply equality, E1's post-rename `docs check`-clean assertion,
+  class-2 rebasing, nested both-directions, the archived referrer's byte
+  boundary and its no-`Revision:` sibling, prose and code untouched, the
+  zero-mutation refusal, the malformed-tree preview at exit 2, and
+  idempotence.
+- Appended **14 `docs archive` locks** — E2's both-classes-at-once, E3's
+  closeout, E5's archived referrer, leg 1's refusal (zero bytes, both ends,
+  no record) and its `--quiet` sibling, leg 1's preview at exit 0, the
+  over-fire lock, leg 2's stderr report in preview and apply, the widened
+  `--json` key set, `strands` on a plan that completes, `strands` observed in
+  the preview of a refusing plan, the empty-array-not-missing lock, the
+  preview/apply rewrite-section equality, and the malformed-tree preview at
+  exit 1.
+- Appended **1 `docs check` lock** asserting every `movelink-*` tree is clean
+  as committed, and **2 bundled-skill locks** for the M28 surface.
+- Every fixture-backed test routes through a helper that asserts the tree
+  directory **exists**, so the family is honestly RED between Phase 2 and
+  Phase 3 rather than vacuously green on an empty copy (M27's Phase-2 catch).
+  The `movelink-*` check lock names its seven trees explicitly rather than
+  deriving them from a glob, which would generate **zero** ids before Phase 3.
+- Every intended-exit-2 (and exit-1) subprocess test asserts a **frozen
+  contract string** as well as the code, so an unrelated failure with the same
+  code cannot later satisfy it (M26's falsely-GREEN lesson).
+
+### Decisions / issues
+
+- **The purity test uses `pytest.MonkeyPatch.context()`, not the fixture.**
+  The fixture reverts at teardown, so a failure inside the block left
+  `Path.exists` poisoned while pytest rendered the traceback — an
+  INTERNALERROR instead of a readable RED reason. Caught by running the file;
+  the context manager reverts as the exception unwinds (M27's
+  `test_normalise_is_lexical_…` precedent, for the same reason).
+- **Line numbers are part of the fixture contract.** `movelink-incoming`'s
+  destinations are pinned at `note.md:13` and `sub/deep.md:10`, and
+  `movelink-closeout`'s at `feature.md:16`, `plan.md:13` and `status.md:13`,
+  because Phase 2 asserts `rewrite <doc>:<line>` and
+  `strand <src>:<line>` lines verbatim. Phase 3 authors exactly those shapes.
+- **The closed four-key `Finding` record is asserted unchanged by the existing
+  M27 lock** (`tests/test_cli_check.py` › *D4/Q4: no new JSON field*), which
+  stays GREEN at baseline. M28 adds no `docs check` rule, so duplicating it
+  here would add an id without adding coverage.
+- **No pre-existing test is deleted, renamed, or has an assertion altered.**
+  `git diff --numstat -- tests/` shows **0** deleted lines across all four
+  appended files, and `tests/test_edit.py`, `tests/test_relate_plan.py` and
+  `tests/test_archive_plan.py` are untouched — `rewrite_related_refs` and the
+  M26 plan contract are not reached into.
+
+### Verification
+
+- `git diff --stat -- src/docs_cli/cli.py` — **empty**.
+- `.venv/bin/python -m pytest tests/ -q --co` — **1269 collected**, 0
+  collection errors (1087 + 182 new).
+- `.venv/bin/python -m pytest tests/ -q` — **181 failed, 1088 passed**. The
+  one new GREEN id is `test_relpath_of_a_root_level_target_needs_no_special_case`
+  — degenerate at baseline (it pins a `posixpath` property the Phase-5
+  implementation must not "fix"), a genuine lock afterwards.
+- `git diff --numstat -- tests/` — 777 insertions, **0 deletions**.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `.venv/bin/docs check --root docs` — no violations found (exit 0).
 
 ## Milestone completion summary
 

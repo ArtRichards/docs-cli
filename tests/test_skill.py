@@ -412,3 +412,61 @@ def test_bundled_use_cases_teaches_body_link_repair() -> None:
     assert "broken-body-link" in text, "the catalog must name the rule id an adopter will see"
     assert "outside-root-body-link" in text, "…and the second one, whose repair is different"
     assert "URL" in text, "the outside-root repair is to use a URL, and it must be spelled out"
+
+
+# --- M28 — the bundled skill must teach move-safe link rewrites ------------
+
+
+def test_skill_md_teaches_move_safe_link_rewrites() -> None:
+    """M28 — D8 surface parity: the skill's `docs mv` and `docs archive` rows
+    must say that a move now rewrites prose destinations, and that an archive
+    can refuse.
+
+    Both are behaviour changes an agent has to know BEFORE it invokes the verb:
+    a move now writes bytes into documents the agent did not name, and a
+    `docs archive` that used to complete can now exit 2. An agent reading only
+    the current rows would be surprised by both.
+
+    Intended RED until Phase 7 (the bundled skill lands in the SAME change as
+    the CLI surface; there is nothing to mirror at Phase 2).
+    """
+    _frontmatter, body = _split_frontmatter(_read_skill())
+    rows = [line for line in body.split("\n") if line.startswith("|")]
+    mv_rows = "\n".join(line for line in rows if "docs mv" in line)
+    archive_rows = "\n".join(line for line in rows if "docs archive" in line)
+
+    assert mv_rows, "the skill body's verb table must carry a `docs mv` row"
+    assert archive_rows, "the skill body's verb table must carry a `docs archive` row"
+
+    assert "body link" in mv_rows.lower() or "prose link" in mv_rows.lower(), (
+        "the mv row must say the move rebases body links, not just Related: edges"
+    )
+    assert "--dry-run" in mv_rows or "--json" in mv_rows, (
+        "the mv row must name its new preview / record surface (D7)"
+    )
+    assert "child-of" in archive_rows, (
+        "the archive row must name the strand refusal's predicate, so an agent "
+        "knows which shape exits 2 before it runs the write"
+    )
+
+
+def test_bundled_use_cases_teaches_the_move_rewrite_and_the_strand_check() -> None:
+    """M28 — D7/D8: the shipped use-case catalog carries the same prescription.
+
+    The catalog is where an agent looks for the closeout recipe, so it is where
+    the two new facts belong: the closeout now leaves the tracker resolving,
+    and a plan that would strand a live child refuses.
+
+    Intended RED until Phase 7.
+    """
+    text = (SKILL_DIR / "references" / "use-cases.md").read_text()
+    rows = [line for line in text.split("\n") if line.startswith("|")]
+    joined = "\n".join(rows)
+
+    assert "body link" in joined.lower() or "prose link" in joined.lower(), (
+        "the catalog must say a coordinated move rebases body links"
+    )
+    assert "child-of" in joined, (
+        "the catalog must name the strand refusal, which is the one case where a "
+        "previously-completing archive now exits 2"
+    )
