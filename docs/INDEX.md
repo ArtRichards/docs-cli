@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-15. 26 docs active, 46 archived._
+_Generated 2026-08-15. 27 docs active, 46 archived._
 
 ## Project — docs
 
@@ -30,7 +30,7 @@ _Generated 2026-08-15. 26 docs active, 46 archived._
 
 - [m26-safe-archive-selection.md](m26-safe-archive-selection.md) — _milestone_ — - Milestone: M26 (v2.0 train) - Title: Safe explicit archive selection - Surface: decouple relationship context from…. Updated 2026-08-15.
 - [m28-move-safe-body-link-rewrites.md](m28-move-safe-body-link-rewrites.md) — _milestone_ — - Milestone: M28 (v2.0 train) - Title: Move-safe Markdown body-link rewrites - Surface: extend `docs mv` and `docs…. Updated 2026-08-15.
-- [m28a-archive-date-witness.md](m28a-archive-date-witness.md) — _milestone_ — - Milestone: M28a (v2.0 train) - Title: Structured archive-date witness - Surface: `docs archive` records the archive…. Updated 2026-08-15.
+- [m28a-archive-date-witness.md](m28a-archive-date-witness.md) — _milestone_ — - Milestone: M28a (v2.0 train) - Title: Structured archive-date witness - Surface: **two legs.** `docs archive` records…. Updated 2026-08-15.
 - [m29-pypi-publish-2-0-0.md](m29-pypi-publish-2-0-0.md) — _milestone_ — - Milestone: M29 - Title: PyPI publish 2.0.0 - Surface: runbook-driven publication of the complete M25–M28a…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation.md](m27-markdown-body-link-validation.md) — _milestone_ — - Milestone: M27 (v2.0 train) - Title: Markdown body-link validation - Surface: parse a deliberately bounded set of…. Updated 2026-08-14.
 - [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md) — _milestone_ — - Milestone: M25 (v2.0 train) - Title: Reciprocal relationship integrity and `docs relate` - Surface: define three…. Updated 2026-08-12.
@@ -39,6 +39,7 @@ _Generated 2026-08-15. 26 docs active, 46 archived._
 
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-15.
 - [m28-move-safe-body-link-rewrites-impl.md](m28-move-safe-body-link-rewrites-impl.md) — _log_ — Chronological implementation log for M28 — Move-safe Markdown body-link rewrites. Append one evidence-backed section…. Updated 2026-08-15.
+- [m28a-archive-date-witness-impl.md](m28a-archive-date-witness-impl.md) — _log_ — Chronological implementation log for M28a — Structured archive-date witness. Append one evidence-backed section per TDD…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation-impl.md](m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-14.
 - [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.
 - [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-12.
