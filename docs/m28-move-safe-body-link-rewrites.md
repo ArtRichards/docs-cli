@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-08-10
+Updated: 2026-08-15
 
 Related:
 - child-of: plan.md
@@ -14,10 +14,10 @@ Related:
 - pairs-with: status.md
 - references: feedback-log.md
 - follows: m27-markdown-body-link-validation.md
-- precedes: m29-pypi-publish-2-0-0.md
 - depends-on: m26-safe-archive-selection.md
 - depends-on: m27-markdown-body-link-validation.md
 - required-by: m29-pypi-publish-2-0-0.md
+- precedes: m28a-archive-date-witness.md
 
 ## Overview
 
@@ -58,6 +58,21 @@ relationships and body navigation remain intact.
   with M26's deduplicated archive operation plan and refresh INDEX once.
 - Define the narrow audited exception, if any, for move-driven destination
   rewrites in archived referrers; do not create a general archive editor.
+- **Post-plan strand-check** (added 2026-08-15 from `feedback-log.md` issue #1,
+  finding 1). Over the complete, already-computed plan, refuse the operation if
+  applying it would leave a still-active document pointing at a newly-archived
+  one — through a `Related:` edge or a body link — and name both ends in the
+  refusal. Rationale: M26 made archive selection *authorized* (an explicit
+  `--cascade-only` scope is required) but a glob is a syntactic filter that
+  cannot know what it selects, so `--cascade-only '*'` still archives a live
+  `milestone-plan.md` reached through the target's outgoing `child-of` edge.
+  Validating the plan's *consequences* is direction-agnostic — it closes the
+  `child-of` route, the symmetric `pairs-with` route, and the body-link route
+  together — and it self-cancels for legitimate whole-set archiving, because a
+  set archived together strands nothing. It does not re-open M26 — Q3: the
+  candidate set stays exactly as frozen; the new invariant makes its direction
+  moot. This belongs to M28 because M28 already builds the inbound-reference
+  graph it needs.
 
 ## Current state and risks
 

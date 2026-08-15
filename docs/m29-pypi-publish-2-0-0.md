@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: milestone
 Project: docs
-Updated: 2026-08-10
+Updated: 2026-08-15
 
 Related:
 - child-of: plan.md
@@ -11,11 +11,12 @@ Related:
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - references: feedback-log.md
-- follows: m28-move-safe-body-link-rewrites.md
 - depends-on: m25-reciprocal-relationship-integrity.md
 - depends-on: m26-safe-archive-selection.md
 - depends-on: m27-markdown-body-link-validation.md
 - depends-on: m28-move-safe-body-link-rewrites.md
+- follows: m28a-archive-date-witness.md
+- depends-on: m28a-archive-date-witness.md
 
 ## Overview
 

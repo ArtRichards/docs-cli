@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-08-13
+Updated: 2026-08-15
 
 Related:
 - child-of: plan.md
@@ -19,6 +19,7 @@ Related:
 - precedes: m27-markdown-body-link-validation.md
 - required-by: m28-move-safe-body-link-rewrites.md
 - required-by: m29-pypi-publish-2-0-0.md
+- required-by: m28a-archive-date-witness.md
 
 ## Overview
 
