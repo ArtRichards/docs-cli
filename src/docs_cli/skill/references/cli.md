@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 Related:
 - pairs-with: convention.md
@@ -313,16 +313,30 @@ so the message an operator sees always names the most specific cause:
 4. the primary is not already under the archive subtree;
 5. the plan is built (pure) — and a preview stops here, prints, and
    exits 0;
+   - since M28 a preview first runs the whole-tree walk (step 8) and
+     builds the rewrite plan and the strand analysis from it, so that it
+     can print them. That is why a preview now **adopts a malformed
+     tree's exit 1** — see *A preview adopts plan-construction failures*
+     below;
 6. the empty-selection refusal (D5);
 7. **the plan pre-flight** — the five per-member proofs above;
 8. the whole-tree validation walk (M12 / M14 — A6), which still honours
    `[exclude]` / `.docsignore` and still exits 1;
+   - the rewrite plan and the strand analysis are built from this walk
+     (M28 — D1 / D6);
+   - **the rewrite-plan pre-flight** (M28 — D4): every document the plan
+     will write is writable, every recorded destination span still
+     matches the text it was scanned from, and no two spans in one
+     document overlap — exit **2**;
+   - **the strand-check's leg-1 refusal** (M28 — D6) — exit **2**;
 9. execution.
 
 The plan pre-flight deliberately precedes the whole-tree walk: both can
 be triggered by the same malformed file, and naming the document the
 operator actually asked for is strictly more actionable than naming an
-unrelated referring doc.
+unrelated referring doc. M28 inserts its steps **around** that ordering,
+never through it — the write path's walk stays at step 8 — so every
+message precedence this order froze is unchanged.
 
 Any **handled** failure refuses the whole operation: non-zero exit,
 **zero bytes written**, including the primary, and no `--json` record.
@@ -347,17 +361,22 @@ authorization, not an exemption from validity checks.
 
 **Residual boundary, stated plainly.** Every failure the tool can
 foresee is handled by the pre-flight. An unexpected `OSError` *during*
-execution is reported as an exact **partial-state admission** — naming
-which documents moved and which remain at their original paths — and is
-**not** rolled back:
+execution is reported as an exact **partial-state admission** and is
+**not** rolled back. Execution has **two** phases and each admits its
+own state, because the states differ:
 
 ```
 docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <relA> -> <newA>, <relB> -> <newB>. Still at their original paths: <relC>, <relD>. Repair manually.
+docs: archive: write failed for <rel>: <err>; PARTIAL ARCHIVE — not rolled back. Archived: <relA> -> <newA>, <relB> -> <newB>. Rewritten: <relC>. Not written: <relD>. Repair manually.
 ```
 
-When nothing had moved yet the archived list is rendered as the literal
-word `none` (`Archived: none.`), never as a blank. Exit 2, no `--json`
-record. Extending M25 — D5's staged-publish-plus-rollback contract from
+The **first** is a member's move failing: some members archived and some
+did not. The **second** is a *referrer rewrite* failing after every
+member has already archived — so the archived list is complete and what
+splits is the rewrite, which is why that line carries `docs mv`'s
+`Rewritten:` / `Not written:` clauses instead. Every clause renders the
+literal word `none` when its list is empty (`Archived: none.`), never a
+blank. Exit 2, no `--json` record. Extending M25 — D5's staged-publish-plus-rollback contract from
 two documents to N was considered and explicitly declined for M26.
 
 ##### An empty selection is a refusal (M26 — D5)
@@ -418,6 +437,16 @@ real apply, so the two are diffable:
     {"path": "archive/2026-01-01/old.md", "verb": "pairs-with",
      "selected": false, "destination": null, "exclusion_reason": "already-archived"}
   ],
+  "rewrites": [
+    {"path": "status.md", "line": 42, "column": 12,
+     "old": "m25.md", "new": "archive/2026-08-12/m25.md"}
+  ],
+  "strands": [
+    {"path": "status.md", "target": "m25.md",
+     "kind": "related", "verb": "pairs-with", "line": null},
+    {"path": "plan.md", "target": "m25.md",
+     "kind": "body-link", "verb": null, "line": 118}
+  ],
   "dry_run": true,
   "applied": false,
   "index_refreshed": false
@@ -431,6 +460,8 @@ real apply, so the two are diffable:
 | `scope` | string \| null | The `--cascade-only` value as typed, or null. |
 | `reason` | string \| null | The `--reason` value, or null. It applies to the primary only. |
 | `candidates` | array | The whole deduplicated one-hop set, in `Related:` declaration order. Present in **every** mode, including a plain `docs archive FILE`. |
+| `rewrites` | array | Every planned body-link destination rewrite, in walk order and, within a document, ascending `(line, column)` (M28 — D7). Present and `[]` when the move makes no destination stale, never missing. |
+| `strands` | array | The strand-check's leg-2 report — every still-active inbound reference into the newly-archived set (M28 — D6). Present and `[]` when the neighbourhood is empty, never missing. |
 | `dry_run` | bool | True under `--dry-run` or `--cascade-dry-run`. |
 | `applied` | bool | True iff bytes were written. |
 | `index_refreshed` | bool | True iff the end-of-batch reindex ran and succeeded. |
@@ -443,6 +474,24 @@ root-relative POSIX, non-null **iff** `selected`), and
 `not-selected`, `already-archived`, `unresolved-target`,
 `outside-root`).
 
+Each `rewrites` record: `path` (the referrer's **old** canonical
+root-relative POSIX path — the identity it had when the plan was
+computed, and the one `line` indexes into), `line` and `column` (1-based,
+of the destination token's first character in the text the plan was
+computed from), `old` (the destination token **exactly as written**,
+angle brackets and escapes included) and `new` (the replacement token,
+delimiters included). The key set is closed and ordered as shown. This
+is the **same** section `docs mv --json` emits, byte-comparable between
+the two verbs and between a preview and an apply (M28 — D7).
+
+Each `strands` record: `path` (the still-active referrer),
+`target` (the document it will be left pointing at, at its **old**
+canonical path — the one the referrer names today), `kind` (`related` or
+`body-link`), `verb` (the `Related:` verb, null **iff** `kind` is
+`body-link`) and `line` (1-based, null **iff** `kind` is `related` —
+a `Related:` bullet carries no line in the parsed record). The key set
+is closed and ordered as shown.
+
 The top-level key set is **closed** and ordered as shown. Under a plain
 `docs archive FILE` every candidate is reported with
 `"selected": false, "exclusion_reason": "not-selected"` — the stderr
@@ -451,8 +500,11 @@ the agent deciding whether a selection is correct.
 
 **No `--json` record on a refusal.** Every refusal above exits non-zero
 with empty stdout; the exit code plus the stderr message is the
-contract. An **INDEX-refresh** failure is different — it is a
-post-write failure with every document already moved correctly — so the
+contract. That includes M28's two new refusals — the rewrite-plan
+pre-flight and the strand-check's leg 1 — so the `strands` array of a
+plan that leg 1 would refuse is observed in its **preview**, which exits
+0 and emits the record. An **INDEX-refresh** failure is different — it is
+a post-write failure with every document already moved correctly — so the
 record **is** emitted there, with `"applied": true,
 "index_refreshed": false`, and the run exits 2.
 
@@ -507,20 +559,301 @@ refresh at the end. A scoped write is all-or-nothing, so there is no
 per-candidate failure to surface. Cascade remains one-hop only (M2
 decision unchanged).
 
-##### `docs archive` exit codes (M26 — D2 / D4 / D5)
+##### `docs archive` exit codes (M26 — D2 / D4 / D5; M28 — D4 / D6)
 
 Exit **1** is reserved for the conditions 1.x already assigned it; every
-**new** M26 refusal exits **2**.
+**new** M26 and M28 refusal exits **2**.
 
 | Exit | Condition |
 |---|---|
-| 0 | Success; any preview (`--dry-run` / `--cascade-dry-run`), including one whose `--cascade-only` selected nothing |
-| 1 | The primary is missing, does not parse, or resolves **outside** the docs root (a symlink out of the tree, or a `--root` naming a different tree); a plan member has no editable metadata block; the archive destination slot is already occupied; the whole-tree pre-flight walk finds a malformed referring doc (move aborts) |
-| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
+| 0 | Success; any preview (`--dry-run` / `--cascade-dry-run`), including one whose `--cascade-only` selected nothing, and including one whose plan the strand-check's leg 1 would refuse — the preview **reports** that verdict (M28 — D6) |
+| 1 | The primary is missing, does not parse, or resolves **outside** the docs root (a symlink out of the tree, or a `--root` naming a different tree); a plan member has no editable metadata block; the archive destination slot is already occupied; the whole-tree pre-flight walk finds a malformed referring doc (move aborts) — since M28 **also under `--dry-run` / `--cascade-dry-run`**, because a preview cannot describe a tree it cannot read |
+| 2 | `--cascade` or `--interactive` (retired, M26 — D2); an already-archived primary; an empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; an intra-plan destination collision; an unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); a still-active document outside the plan declaring itself `child-of` a plan member (M28 — D6, leg 1); `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 
-### `docs mv <old> <new>`
+#### Move-safe body-link rewrites (M28 — D1–D7)
 
-Move/rename a doc and rewrite every `Related:` reference that points at `<old>` across the tree.
+Since M28 a coordinated move rebases the local Markdown body links the
+move makes stale, in the same operation, in the same per-document write,
+and under the same all-or-nothing contract as the `Related:` rewrite
+above. Everything in this section governs **both** `docs archive` (all
+three shapes of *Safe explicit archive selection*) and `docs mv` — except
+the strand-check, which is `archive`-only because only `archive` produces
+a newly-archived set.
+
+M27 validates body links; M28 is the only writer of them. The scanner,
+the recognised grammar and the destination-token span are M27's,
+**unwidened**: images, autolinks, raw HTML and reference *uses* stay out, so
+a move never rewrites them. The boundary runs exactly where M27 put it, and
+it is worth stating in the other direction too: **a link inside a 4-space
+indented block IS scanned, and therefore IS rewritten** — M27 — Q3
+deliberately declined an indented-code rule, so a four-space-indented link is
+a real link to both verbs. Fence a code sample that contains link syntax, put
+it in backticks, or backslash-escape the opening bracket; any of the three
+keeps it out of the scanner and therefore out of the move. See
+*Markdown body-link validation (M27 — D1–D4b)*.
+
+##### The formula (M28 — D1)
+
+A move set maps each moving document's canonical root-relative **old**
+path to its **new** one. For every recognised destination occurrence in
+every walked document `D`, in this fixed order:
+
+1. classify the token **as written**; anything but `local` is copied
+   byte-for-byte and the occurrence ends here;
+2. resolve the destination from `D`'s **old** directory, giving a
+   canonical root-relative target;
+3. a target that leaves the root is copied byte-for-byte and the
+   occurrence ends here — M28 never rebases an escape, and never repairs
+   pre-existing damage;
+4. map that target through the move set, leaving it unchanged when it is
+   not a key;
+5. **the no-op test** — re-resolve the token *as written* from `D`'s
+   **new** directory; when that reproduces the mapped target the existing
+   spelling still means the right thing, so the token is copied
+   byte-for-byte and the occurrence ends here;
+6. otherwise the new destination is the `posixpath.relpath` form of the
+   mapped target against `D`'s new directory, with the fragment
+   reattached verbatim after a single `#`.
+
+Two independent breakages fall out of one formula, never two code paths.
+**Incoming** — the target moved, so step 4 fires and `D` stays put.
+**Moved referrer** — `D` itself moved, so step 6's base differs from step
+2's. A document can suffer both at once. A **co-moving pair** suffers
+neither: step 5 leaves a sibling link that still resolves byte-identical,
+which is why archiving a plan and its log together produces a zero-byte
+diff in their links to each other.
+
+**The mapping is by canonical target, not by string.** Every spelling
+that normalises to a moving document is rewritten — `plan.md`,
+`./plan.md`, `sub/../plan.md` and `../plan.md` alike — because step 2
+normalises before step 4 looks anything up. This differs from the
+`Related:` rewriter, whose targets are root-relative and matched by exact
+string.
+
+##### What the tool writes (M28 — D3)
+
+The emitted destination is the `posixpath.relpath` form — no leading
+`./`, `..` segments where the path really does go up — which is the
+spelling this convention already uses everywhere. The **delimiter form is
+invariant**: an angle-wrapped destination stays angle-wrapped, a plain
+one stays plain. A plain destination that cannot carry a character is
+**percent-encoded**, never promoted to angle brackets. One strategy, no
+"it depends" cell.
+
+The encode set is derived from the grammar rather than guessed — a plain
+destination ends at the first unescaped whitespace or unescaped `)`,
+an angle destination at the first unescaped `>`, `#` opens the fragment,
+`\` escapes, and `%` introduces an escape — and `%` is always encoded
+**first**, so the introducer can never be double-encoded:
+
+| Form | Encoded | Left literal |
+|---|---|---|
+| plain | `%`→`%25` (first), space→`%20`, tab→`%09`, `(`→`%28`, `)`→`%29`, `#`→`%23`, `<`→`%3C`, `>`→`%3E`, `\`→`%5C`, and `:`→`%3A` in the first path segment | everything else, non-ASCII included |
+| angle | `%`→`%25` (first), `<`→`%3C`, `>`→`%3E`, `#`→`%23`, `\`→`%5C`, and `:`→`%3A` in the first path segment | everything else, **a space included** — carrying a space is what the angle form is for |
+
+There is deliberately no blanket URL quoting: an accented or CJK filename
+is emitted literally, exactly as an author would write it.
+
+**The post-condition: the emitted token still classifies as `local`.** The
+table is the mechanism; this is the property it delivers, and two of its
+entries exist for this reason alone. A path whose first character is `#`
+would re-classify as `fragment`, and a first path segment matching
+`[A-Za-z][A-Za-z0-9+.-]*:` would re-classify as `scheme` — in which case
+the tool would stop validating the link it just rewrote, and a working
+destination would be **silently** killed by the move. The colon rule
+applies to the first path segment only, and that is exactly sufficient
+rather than conservative: a scheme's colon cannot follow a `/`, so
+`sub/a:b.md` keeps its literal colon.
+
+**The round-trip invariant.** Decoding an emitted token reproduces the
+path and fragment it was built from, by the same decode the scanner uses.
+Reattaching the fragment cannot break the token, and the proof is one
+line: the fragment came out of a token that already parsed inside the
+*same* delimiter form, so it contains no character that terminates that
+form.
+
+**A rewritten token is minimally encoded.** An author's redundant escape
+is not reproduced — the tool renders from the decoded path and applies
+only the encodings the grammar requires. A **no-op** token keeps every
+byte it had, redundant escapes included, because it is copied rather than
+rendered.
+
+**M28 can never create an `outside-root-body-link`.** Both endpoints of
+every rewrite are canonical in-root paths, so the relative form always
+normalises back inside the root — the containment property is preserved
+exactly, not re-argued.
+
+##### What a move never touches (M28 — D2 / D3)
+
+- **Every non-`local` destination.** `empty`, `fragment`, `scheme`,
+  `protocol-relative` and `root-absolute` tokens are copied byte-for-byte,
+  always.
+- **A destination that was already escaping** — copied byte-for-byte in
+  every case, so a move can never rebase an escape.
+- **A destination that was already broken**, in the sense that the tool
+  never *repairs* one and never re-aims one. Its bytes are untouched while
+  its referrer stays put; when the referrer itself **moves**, the
+  destination is rebased to the **same, still-broken target**, because the
+  planner is pure — it never stats, so it cannot know the target is
+  missing — and because rebasing is what preserves the author's aim. Either
+  way it keeps its M27 finding: `docs check` owns pre-existing damage, and
+  an unrelated repair is never a precondition for a rename.
+- **Labels, titles, quoting style, fragments, and every other byte.**
+  The edit is the destination token's span and nothing else.
+- **Plain-text mentions, fenced code, inline code spans, and external
+  URLs.** A bare filename in a sentence is prose, not a link.
+- **`INDEX.md` at the root of the tree**, which is generated and is
+  refreshed once at the end as it already is.
+
+**A named limitation: excluded documents are outside the strand-check and
+outside the rewrite.** `[exclude]` and `.docsignore` decide which
+documents are walked, and therefore which are rewritten and which can
+report a strand — exactly as they already decide which `Related:` bullets
+the referring-edge rewrite repoints. They never decide what a destination
+may point at. So a body link inside an excluded document is neither
+rebased nor reported, and this is a knowable gap rather than an oversight.
+
+##### Archived referrers (M28 — D5)
+
+An archived document is written by a move **iff** a `Related:` target
+**or a local body-link destination** of its resolves to a document moving
+in **this** operation — and then only that bullet and those destination
+tokens change. No `Updated:` bump, no `Revision:` bullet, no other byte.
+
+This is M18's move-driven exception widened along its own axis, not a
+fourth exception: same trigger, same operation, same single write. The
+same uniformity governs an **active** referrer, which has never had its
+`Updated:` bumped by somebody else's move either. An archived document
+that is itself moved by `docs mv` has its own destinations rebased under
+the same move-driven licence. See `convention.md` › *Archive subtree*.
+
+##### Validate-all-first (M28 — D4)
+
+The complete rewrite plan is built from one whole-tree walk, and proven,
+**before the first byte moves** — for `docs mv` this inverts the historic
+ordering, which moved the file and rewrote afterwards. Over exactly the
+documents the plan will write, the pre-flight proves: the document parses
+(the walk already proved it); it is writable by an explicit access test;
+every recorded destination span still matches the text it was scanned
+from; and no two planned spans in one document overlap.
+
+Its three refusals, each prefixed with the calling verb (`docs: mv: ` /
+`docs: archive: `) and each printed even under `--quiet`:
+
+```
+docs: <verb>: <rel> is not writable; refusing before any write
+docs: <verb>: <rel> carries a recorded destination span that no longer matches its text; refusing before any write
+docs: <verb>: <rel> carries two overlapping planned destination spans; refusing before any write
+```
+
+The second and third are defensive: the plan is built and applied inside
+one process from one read, so neither can fire on a plan this tool
+produced. They exist because splicing a stale or overlapping span
+corrupts a file *silently* rather than failing, and a hand-built or
+future plan must not be able to do that.
+
+Any **handled** failure refuses the whole operation — non-zero exit,
+**zero bytes written**, including the moved document, and no `--json`
+record. Only a residual unexpected `OSError` *during* execution produces
+a partial state, and it is admitted exactly, naming what was moved, what
+was rewritten and what was not written. There is no rollback. When the
+rename itself fails, any directory `docs mv` created for the destination
+is pruned, so an admission that names nothing moved has left nothing
+behind.
+
+Within one document the splices are applied in **descending start
+offset**, so earlier offsets stay valid, and the `Related:` rewrite and
+the archive metadata edits are applied to the same in-memory text
+afterwards. One `atomic_write` per document, never two.
+
+##### The strand-check (M28 — D6) — `archive` only
+
+Over the completed plan, before any write, `docs archive` examines every
+walked document that is **not** a plan member and **not** already under
+the archive subtree — a document being archived cannot be stranded, and
+an already-archived one is not still active.
+
+**Leg 1 — refuse.** When such a document declares itself `child-of` a
+document the plan would archive, that is a parent archived out from under
+a live child. The write refuses at exit **2**, before any byte moves,
+with one line per orphaned pair naming both ends, then a count. Leg 1
+applies to all three archive shapes, including a plain `docs archive
+FILE`.
+
+**Leg 2 — report, refuse nothing.** Every other still-active inbound
+reference into the newly-archived set — any other `Related:` verb,
+free-form verbs included, and every body link — is named with both ends
+on stderr and in the record's `strands` array.
+
+**Leg 2 is not a damage report.** Those references are *repaired* by the
+same operation; what is reported is the post-plan consequence — an active
+document still points at a document that is now archived. A milestone
+closeout is supposed to leave the tracker and the plan pointing at the
+completed work, so leg 2 firing is the normal case, and refusing on it
+would refuse the workflow the tool exists for.
+
+**Ordering is deterministic:** referrer walk order; within a referrer,
+`Related:` bullets in declaration order, then body links in `(line,
+column)` order.
+
+**A preview reports leg 1 and exits 0.** It does not adopt the verdict.
+
+Frozen lines, each printed unless `--quiet`, except the leg-1 refusal
+lines, which print even under `--quiet` as every refusal does:
+
+```
+docs: archive: rewrite <doc-rel>:<line> <old-token> -> <new-token>
+docs: archive: <R> destination(s) in <D> document(s) rebased
+docs: archive: strand <src-rel> — still active, '<verb>: <dst-rel>'
+docs: archive: strand <src-rel>:<line> — still active, links to <dst-rel>
+docs: archive: <N> still-active inbound reference(s) into the archived set
+docs: archive: <child-rel> is still active and declares 'child-of: <parent-rel>', which this operation would archive; refusing before any write
+docs: archive: <N> still-active child(ren) would be stranded; zero bytes written
+docs: archive: would strand <child-rel> — still active, declares 'child-of: <parent-rel>'; a write would refuse
+docs: archive: <N> still-active child(ren) would be stranded
+docs: archive: preview only — nothing was written
+```
+
+The last two before the disclaimer are the preview's leg-1 pair; the two
+before those are the write path's. The counts footer prints on **every**
+archive, `0 destination(s) in 0 document(s) rebased` included — it is
+positive evidence that the rewrite phase ran, and it keeps the two verbs'
+footers symmetrical. The leg-2 **count** line is deliberately not
+symmetrical with it: it summarises a list, so it appears only when that
+list is non-empty. `preview only — nothing was written` closes **every**
+preview, plain `--dry-run` and `--cascade-dry-run` alike, and is always
+the last line. `<doc-rel>` is the referrer's **old** canonical
+root-relative path and `<line>` indexes into the text the plan was
+computed from. Every interpolated author token is rendered on one line,
+as M27's findings are.
+
+##### A preview adopts plan-construction failures (M28 — D6)
+
+M26's compatibility matrix said a preview writes nothing and exits 0,
+full stop. M28 amends exactly one class of that: **a preview adopts
+failures of plan *construction* — it cannot describe what it cannot read
+— and reports-but-does-not-adopt *consequence* verdicts.** So a malformed
+tree makes `docs archive --cascade-dry-run` exit **1** and
+`docs mv --dry-run` exit **2**, the same codes their write paths use,
+while a leg-1 strand verdict is reported at exit 0. This closes
+M26's own follow-up that the frozen check order let a preview miss a
+pre-flight refusal.
+
+**A preview does not preview the write path's PERMISSIONS, and that is a
+knowable gap rather than an oversight.** The write path runs its
+rewrite-plan pre-flight at step 8c, after the member pre-flight at step 7,
+so that the message precedence this section freezes is unchanged. A
+preview stops at step 5b and never reaches either. So a plan whose planned
+referrer is **not writable** previews at exit 0 and prints the plan, while
+the write refuses at exit 2. A preview writes nothing, so writability is
+genuinely irrelevant to it — but the asymmetry is named here rather than
+left to be discovered.
+
+### `docs mv <old> <new> [--json] [--dry-run] [--quiet]`
+
+Move/rename a doc, rewrite every `Related:` reference that points at
+`<old>` across the tree, and — since M28 — rebase every local Markdown
+body-link destination the move makes stale.
 
 - `<new>` may be a new filename in the same directory, or a different directory under the docs root.
 - All matching `Related: <verb>: <old>` entries are rewritten to `<verb>: <new>`.
@@ -528,14 +861,37 @@ Move/rename a doc and rewrite every `Related:` reference that points at `<old>` 
   `.docsignore` (M14 — A6) — a malformed *excluded* file never fails the
   post-move reindex (same threading as `docs touch`).
 
-**Atomic — all-or-nothing (M14 — A1).** A validate-all-first pre-flight
-walk runs *before* the move: if any (non-excluded) doc in the tree is
-malformed, `docs mv` aborts with **exit 2** *before* moving anything,
+**Body-link rewrites (M28).** The formula, the emitted spelling and its
+encode sets, the no-op rule, the archived-referrer policy and the
+rewrite-plan pre-flight are identical for both verbs and are specified
+once, in *Move-safe body-link rewrites (M28 — D1–D7)* above. The
+strand-check is **not** part of `docs mv`: it reports what an operation
+leaves pointing at a **newly-archived** document, and a rename produces no
+newly-archived set.
+
+**Atomic — all-or-nothing (M14 — A1; M28 — D4).** A validate-all-first
+pre-flight runs *before* the move: if any (non-excluded) doc in the tree
+is malformed, `docs mv` aborts with **exit 2** *before* moving anything,
 leaving the source in place, the destination absent, and every referring
-`Related:` edge untouched (no dangling edge, no stray INDEX). An `OSError`
-raised while rewriting a referring doc *after* the move (e.g. a referrer
-in a read-only directory) is mapped to a clean **exit 2** rather than an
-uncaught traceback (M14 — A4).
+`Related:` edge and body link untouched (no dangling edge, no stray
+INDEX). M28 extends that guarantee to the rewrite plan — an unwritable
+planned referrer, a recorded span that no longer matches its text, or two
+overlapping planned spans in one document each refuse at **exit 2** with
+**zero bytes written, the moved document included**. Execution then
+writes the moved document's rebased text to its old path, renames it,
+writes every other planned document, and refreshes INDEX once.
+
+An `OSError` raised *during* execution is mapped to a clean **exit 2**
+rather than an uncaught traceback (M14 — A4), and since M28 it carries
+the exact partial-state admission:
+
+```
+docs: mv: write failed for <rel>: <err>; PARTIAL MOVE — not rolled back. Moved: <old-rel> -> <new-rel>. Rewritten: <rel>, <rel>. Not written: <rel>. Repair manually.
+```
+
+Each of the three clauses renders the literal word `none` when its list
+is empty, never a blank. There is no rollback — M26 — D4's boundary,
+unchanged.
 
 **Moved-doc own-edge rewrite (M18 — D3).** Like `docs archive`'s D1,
 `docs mv` repoints the MOVED doc's OWN `Related:` bullets when their
@@ -546,10 +902,77 @@ bullets the move touches) lands the moved doc with its own edges
 resolving, not dangling. `docs mv` already rewrites already-archived
 referrers (its walk carries no `doc.archived` skip), so this completes
 the own-edge half and gives `mv` the same edge-integrity contract as
-`archive`.
+`archive`. M28's class-2 rebasing is the body-link half of the same
+guarantee.
 
-Exits 1 on collision (`<new>` exists); 2 on a malformed tree caught by the
-pre-flight walk (A1) or an `OSError` mid edge-rewrite (A4).
+##### `docs mv` preview and `--json` (M28 — D7)
+
+`--dry-run` is a real preview: it walks the tree, builds the whole
+rewrite plan, and names every planned rewrite instead of a single line.
+Every line below prints unless `--quiet` — except the last, which is a
+**refusal** and therefore prints even under `--quiet`, as every refusal
+does:
+
+```
+docs: mv: would move <old-rel> -> <new-rel>
+docs: mv: moved <old-rel> -> <new-rel>
+docs: mv: rewrite <doc-rel>:<line> <old-token> -> <new-token>
+docs: mv: <R> destination(s) in <D> document(s), <E> Related: bullet(s)
+docs: mv: preview only — nothing was written
+docs: mv: <rel> is not writable; refusing before any write
+```
+
+The counts footer prints on every move, `0 destination(s) in 0
+document(s), 0 Related: bullet(s)` included, for the same reason
+`docs archive`'s does.
+
+`--json` emits **one** record on stdout, with an **identical shape** for a
+preview and for a real apply, so the two are diffable:
+
+```json
+{
+  "old": {"source": "docs/plan.md", "path": "plan.md"},
+  "new": {"source": "docs/milestone-plan.md", "path": "milestone-plan.md"},
+  "rewrites": [
+    {"path": "status.md", "line": 42, "column": 12,
+     "old": "plan.md", "new": "milestone-plan.md"}
+  ],
+  "dry_run": true,
+  "applied": false,
+  "index_refreshed": false
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `old` | object | `source` is the `<old>` argument **exactly as typed**; `path` is its canonical root-relative POSIX path. |
+| `new` | object | The same two fields for `<new>`. |
+| `rewrites` | array | Every planned body-link destination rewrite. **The same section, with the same record shape, that `docs archive --json` emits** — see its field table above. Present and `[]` when the move makes no destination stale, never missing. |
+| `dry_run` | bool | True under `--dry-run`. |
+| `applied` | bool | True iff bytes were written. |
+| `index_refreshed` | bool | True iff the end-of-move reindex ran and succeeded. |
+
+The top-level key set is **closed** and ordered as shown. There is
+deliberately **no `strands` key**: `docs mv` produces no newly-archived
+set, and a permanently-empty key would be a schema wart. There is
+deliberately no rewrite-count key either — the count lives in the stderr
+footer, and a consumer that wants it counts `rewrites`.
+
+**No `--json` record on a refusal**, exactly as `docs archive` has it: a
+refusal is a non-zero exit plus a stderr message, with empty stdout.
+
+An **INDEX-refresh** failure is the one exception, mirroring
+`docs archive`: the move and every rewrite landed correctly, so the record
+**is** emitted, with `"applied": true, "index_refreshed": false`, and the
+run exits 2 after printing `docs: INDEX refresh failed: <err>`.
+
+##### `docs mv` exit codes (M14 — A1 / A4; M28 — D4)
+
+| Exit | Condition |
+|---|---|
+| 0 | Success; `--dry-run` preview |
+| 1 | `<old>` is not a file; collision — `<new>` already exists |
+| 2 | Malformed `.docs.toml`; either path outside the docs root; a malformed tree caught by the validate-all-first pre-flight walk (A1) — since M28 **also under `--dry-run`**, because a preview cannot describe a tree it cannot read; an **unreadable** document in that same walk; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); INDEX-refresh failure |
 
 ### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json] [--exclude PATTERN]`
 
@@ -2534,9 +2957,9 @@ M12 / M14 / M15 / M25-specific exit-code shape:
 | `stamp` (M15 — B3) | success / dry-run | a named file is missing or outside the docs root (validate-all-first abort) | invalid `--role`; no `.docs.toml` ancestor or `--root` without `.docs.toml` |
 | `touch` (outside-root refusal) | — | — | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml` |
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
-| `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5) | success | the primary is missing, does not parse, or resolves outside the resolved docs root; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
-| `archive --cascade-dry-run` / `--dry-run` | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing | — | — |
-| `mv` (M14 — A1 / A4) | success / dry-run | collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1); `OSError` mid edge-rewrite after the move (A4); both paths outside the docs root |
+| `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5 / M28 — D4 / D6) | success | the primary is missing, does not parse, or resolves outside the resolved docs root; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); a still-active document outside the plan declaring itself `child-of` a plan member (M28 — D6, leg 1); `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
+| `archive --cascade-dry-run` / `--dry-run` (M26 — D6; M28 — D6) | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing, and **including** a plan whose leg-1 strand verdict it reports rather than adopts | a referring doc has malformed metadata — the preview now walks the tree, so it adopts this plan-**construction** failure (M28) | — |
+| `mv` (M14 — A1 / A4; M28 — D4) | success / dry-run preview | `<old>` is not a file; collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1), since M28 **also under `--dry-run`**; an unreadable document in that walk; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); both paths outside the docs root; malformed `.docs.toml`; INDEX-refresh failure |
 | `relate add\|remove` (M25 — D3 / D4 / D5) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; unknown verb; self-edge; malformed `--date`; empty or multi-line `--reason`; an archived endpoint without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
 
 **Cross-verb exit-code convention (no-root vs outside-root).** Two distinct

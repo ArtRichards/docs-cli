@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-15. 25 docs active, 46 archived._
+_Generated 2026-08-15. 26 docs active, 46 archived._
 
 ## Project — docs
 
@@ -23,8 +23,8 @@ _Generated 2026-08-15. 25 docs active, 46 archived._
 
 ### Active — Spec
 
-- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-14.
-- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-14.
+- [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-15.
+- [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-15.
 
 ### Active — Milestone
 
@@ -38,6 +38,7 @@ _Generated 2026-08-15. 25 docs active, 46 archived._
 ### Active — Log
 
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-15.
+- [m28-move-safe-body-link-rewrites-impl.md](m28-move-safe-body-link-rewrites-impl.md) — _log_ — Chronological implementation log for M28 — Move-safe Markdown body-link rewrites. Append one evidence-backed section…. Updated 2026-08-15.
 - [m27-markdown-body-link-validation-impl.md](m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-14.
 - [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.
 - [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-12.
@@ -56,8 +57,8 @@ _Generated 2026-08-15. 25 docs active, 46 archived._
 
 ### Active — Reference
 
-- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-08-14.
-- [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-08-14.
+- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-08-15.
+- [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-08-15.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 
 ## Project — ideas

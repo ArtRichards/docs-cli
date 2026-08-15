@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 Related:
 - implements: charter.md
@@ -386,6 +386,64 @@ the marker block and the derived content.
   `_print_check_findings` are all unchanged. The stdlib-only pin holds:
   `urllib.parse`, `posixpath`, `string`, `re`.
 
+#### Move-safe body-link rewrites (M28)
+
+M27 validates body links; **M28 is the only writer of them**, and it consumes
+exactly the span contract above. The whole planner is one banner section
+between `body_link_findings` and the M3 check rules, and every function in it
+is pure except two named boundaries:
+
+```
+plan_body_link_rewrites(rel, new_rel, text, moves)   pure — the 8-step formula,
+        │  -> tuple[LinkRewrite, ...]                per occurrence, no I/O
+        ▼
+render_destination_token(raw, new_path, fragment)    pure — delimiter form
+        │                                            invariant, minimal encode
+        ▼
+splice_body_links(text, rewrites)                    descending `start`, so
+        │                                            earlier offsets stay valid
+        ▼
+plan_move(root, config, entries=…, moves=…,          pure — the caller's walk,
+        │  related_pairs=…, strand_check=…)          both strand legs
+        │  -> MovePlan
+        ▼
+preflight_move_plan(plan)                            writable / span-consistent /
+        │                                            non-overlapping; raises
+        ▼                                            before any write
+apply_move_plan(plan)                                one atomic_write per changed
+                                                     NON-moving document
+```
+
+- **Four frozen records**, shaped after `RelateEdit` / `RelatePlan` and
+  `ArchiveMove` / `ArchivePlan`: `LinkRewrite` (one occurrence, carrying M27's
+  `BodyLink` verbatim), `DocRewrite` (one document's whole planned edit,
+  carrying both the text the plan was computed from and the text it would
+  write), `Strand` (one still-active inbound reference, both ends named), and
+  `MovePlan`.
+- **`plan_move` takes `entries` rather than a root to walk**, which is what
+  makes the plan a pure function of the tree: each verb feeds it the walk it
+  already runs, and the planner opens nothing.
+- **One formula, not two code paths.** Class 1 (the target moved) is the case
+  where the move-map lookup fires; class 2 (the referrer moved) is the case
+  where the relativisation base differs from the resolution base. The
+  semantic no-op test between them is what makes a co-moving pair a zero-byte
+  diff.
+- **The move map is canonical; the `Related:` pairs are alias-expanded.** Two
+  arguments, because the two halves match differently — the body planner
+  matches on the normalised target and needs no alias list at all, while
+  `rewrite_related_refs` matches a bullet by exact string.
+  `_archive_move_map` and `_archive_related_pairs` build them from an
+  `ArchivePlan`; `docs mv` passes one pair and lets `related_pairs` default.
+- **The strand-check is `archive`-only** and lives inside `plan_move` because
+  it is a property of the finished plan, not of the CLI: leg 1 fills
+  `MovePlan.orphans` (the `child-of` refusal set), leg 2 fills
+  `MovePlan.strands` (everything else). The two legs partition the graph by
+  **edge**, so one document can contribute to both.
+- **`move_plan_to_json` returns the shared section only** — `{"rewrites": …,
+  "strands": …}` — and each verb splices what it carries into its own record.
+  One serializer is what makes `docs mv --json` and `docs archive --json`
+  byte-comparable by construction rather than by discipline.
+
 ### `relate` (M25)
 
 - `plan_relate(...) -> RelatePlan` reads both endpoints and stages both
@@ -400,7 +458,7 @@ the marker block and the derived content.
   not a filesystem transaction — two files cannot be renamed atomically as
   a unit on POSIX, and the spec says so rather than implying otherwise.
 
-### `archive` (M26)
+### `archive` (M26, extended by M28)
 
 The same plan/apply split as `relate`, one stage longer and with a
 deliberately different failure boundary:
@@ -415,14 +473,33 @@ plan_archive(...) -> ArchivePlan               pure — destinations for the
 preflight_archive_plan(plan)                   proves all five per-member
         │                                      properties; raises before any write
         ▼
-apply_archive_plan(plan) -> [(old, new), ...]  drives `_archive_one` in
-        │                                      plan.moves order, primary first
-        ▼
-_rewrite_referring_edges(root, config, moves)  M12 + M18, one batch
+walk(root, config, predicate) -> entries       M12 / M14 (A6), step 8
         │
+        ▼
+plan_move(root, config, entries=…, …)          M28, step 8b — the rewrite plan
+        │  -> MovePlan                         and both strand legs
+        ▼
+preflight_move_plan(move_plan)                 M28, step 8c
+        │
+        ▼
+(leg-1 refusal on move_plan.orphans)           M28, step 8d — exit 2, no record
+        │
+        ▼
+apply_archive_plan(plan, texts=…)              drives `_archive_one` in
+        │  -> [(old, new), ...]                plan.moves order, primary first,
+        │                                      each member's PLANNED text
+        ▼
+apply_move_plan(move_plan)                     M28 — one write per changed
+        │                                      non-moving document
         ▼
 _refresh_index(root, config)                   exactly once, at the end
 ```
+
+The preview runs the same walk / `plan_move` pair at step **5b** instead, and
+stops there at exit 0 — so it adopts a failure of plan *construction* (a
+malformed tree it cannot read) and only *reports* a plan *consequence* (leg 1's
+verdict). The write path's walk stays at step 8 so that every message
+precedence M26 froze at step 7 is unchanged.
 
 - **Validate-all-first with a residual admission**, in contrast to M25's
   staged publish plus rollback. Every failure the tool can foresee is a
@@ -443,6 +520,52 @@ _refresh_index(root, config)                   exactly once, at the end
   state; `_cmd_archive` decides what that means for the exit code. That is
   why `--json` can carry the full candidate set in every mode while the
   stderr prose stays quiet under a plain `docs archive FILE`.
+- **M28 threads each moving member's planned text into `_archive_one`**
+  (`apply_archive_plan(plan, texts=…)`) rather than letting it re-read the
+  file. That is what keeps the contract at **one `atomic_write` per document,
+  never two**: the member's body-link splices, its `Related:` rewrites and its
+  archive metadata edits are all applied to one in-memory text. Both
+  parameters default to the pre-M28 behaviour, so a direct caller with no
+  rewrite plan is unaffected.
+
+### `mv` (M14, inverted by M28)
+
+`docs mv` had no plan/apply split before M28 — it renamed the file and rewrote
+references afterwards. A class-2 rebase needs the moved document's own text
+*and* both of its paths, and an all-or-nothing contract needs the plan
+complete before the move, so the order is inverted:
+
+```
+walk(root, config, predicate) -> entries     M14 (A1)'s pre-flight walk, now
+        │                                    doubling as M28's plan walk
+        ▼
+plan_move(root, config, entries=…,           strand_check=False — a rename
+        │  moves={old_rel: new_rel})         produces no newly-archived set
+        ▼  -> MovePlan
+(preview branch: print + --json; exit 0)     step 5b
+        │
+        ▼
+preflight_move_plan(plan)                    step 6 — zero bytes on any refusal
+        │
+        ▼
+atomic_write(old_path, moved.new_text)       the moved document's planned text,
+        │                                    to its OLD path
+        ▼
+old_path.replace(new_path)                   the rename
+        │
+        ▼
+apply_move_plan(plan)                        every other planned document
+        │
+        ▼
+_refresh_index(root, config)                 exactly once, at the end
+```
+
+Writing the member before the rename is what makes the partial-state admission
+exact: a `replace` that raises leaves the old path holding text rebased for a
+directory the file is not in, so `_mv_partial_state` reports the moved document
+under `Moved:` **iff the rename succeeded** and under `Rewritten:` otherwise.
+`moved` is absent from the plan only when `[exclude]` / `.docsignore` hid the
+document from the walk (R11), in which case the file is simply renamed.
 
 ### `cli`
 

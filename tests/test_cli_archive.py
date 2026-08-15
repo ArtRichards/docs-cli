@@ -1915,12 +1915,22 @@ def test_cascade_only_unwritable_candidate_refuses_with_exit_2(docs_script, tmp_
 
 # --- M26 — D7 `docs archive --json` -----------------------------------------
 
+# M28 (K): the closed key set widens by EXACTLY two, inserted after
+# `candidates`. Updating this expected value is contract-mandated, not a
+# relaxation: item (K) forbids omitting an empty array, so the two ids below
+# now pin a TEN-key closed set — a strictly stronger assertion than the
+# eight-key one, and the only edit that keeps them honest.
+# `tests/test_archive_plan.py::_TOP_LEVEL_KEYS` is deliberately NOT touched:
+# `archive_plan_to_json`'s `move_plan` parameter defaults to None, so a direct
+# caller with no rewrite plan still sees the M26 key set.
 _JSON_TOP_LEVEL_KEYS = [
     "primary",
     "date",
     "scope",
     "reason",
     "candidates",
+    "rewrites",
+    "strands",
     "dry_run",
     "applied",
     "index_refreshed",
@@ -2149,28 +2159,65 @@ def test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected
     deciding whether a selection is correct, and it must be able to see the
     neighborhood it just declined to touch.
 
-    RED reason: `--json` is not a recognised flag on `archive` today.
+    **Re-pointed at `_two_relation_tree` in M28 Phase 7.** The subject of this
+    lock is the APPLY-path record of a primary-only archive, and that subject
+    is preserved exactly. The tree changed because `archive-neighborhood`'s
+    `milestone-impl.md` is still active and declares `child-of: milestone.md`,
+    so archiving `milestone.md` alone now — correctly — refuses on the
+    strand-check's leg 1 before any write; that refusal has its own lock in
+    `test_archive_primary_only_leg_1_refuses_on_a_live_child` below. Here
+    `root.md` is the primary, its two one-hop candidates report `not-selected`,
+    and its own `child-of: beta.md` is exempt because the DECLARER is the plan
+    member. Deliberately not `--dry-run`: that would weaken an apply-path lock
+    into a preview-path one.
     """
-    root = _tree(fixtures_dir, tmp_path, "archive-neighborhood")
+    root = _two_relation_tree(tmp_path)
 
-    proc = _run(docs_script, "archive", str(root / "milestone.md"), "--json", "--date", _M26_DATE)
+    proc = _run(docs_script, "archive", str(root / "root.md"), "--json", "--date", _M26_DATE)
 
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     record = json.loads(proc.stdout)
     assert record["scope"] is None
-    assert [c["path"] for c in record["candidates"]] == [
-        "plan.md",
-        "milestone-impl.md",
-        "cli.md",
-        "convention.md",
-        "test-strategy.md",
-        "status.md",
-    ]
+    assert record["applied"] is True, "the subject is the APPLY-path record"
+    assert [c["path"] for c in record["candidates"]] == ["sub/alpha.md", "beta.md"]
     assert all(c["selected"] is False for c in record["candidates"])
     assert all(c["exclusion_reason"] == "not-selected" for c in record["candidates"])
     assert all(c["destination"] is None for c in record["candidates"])
     # …and the prose stays quiet about them (setup Q7).
     assert "candidate" not in proc.stderr
+
+
+def test_archive_primary_only_leg_1_refuses_on_a_live_child(docs_script, fixtures_dir, tmp_path):
+    """M28 — D6 leg 1 on the M26-era `archive-neighborhood` tree, at the shape
+    that used to complete: a plain `docs archive FILE`.
+
+    `milestone-impl.md` is still active and declares `child-of: milestone.md`,
+    so archiving the milestone alone would archive a parent out from under a
+    live child — precisely the harm leg 1 exists to prevent, and precisely the
+    behaviour change D8 calls out as breaking. The scenario is too good a
+    leg-1 witness to lose when
+    `test_archive_json_of_a_primary_only_archive_lists_candidates_as_not_selected`
+    is re-pointed away from this tree, so it is pinned here in its own right —
+    on a tree M26 authored, with no body links anywhere in it, which proves
+    leg 1 does not depend on the `movelink-*` family.
+    """
+    root = _tree(fixtures_dir, tmp_path, "archive-neighborhood")
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "archive", str(root / "milestone.md"), "--json", "--date", _M26_DATE)
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert (
+        "docs: archive: milestone-impl.md is still active and declares "
+        "'child-of: milestone.md', which this operation would archive; "
+        "refusing before any write" in proc.stderr
+    )
+    assert (
+        "docs: archive: 1 still-active child(ren) would be stranded; zero bytes written"
+        in proc.stderr
+    )
+    assert proc.stdout == "", "no --json record on a refusal (M26's frozen rule)"
+    assert _snapshot(root) == before
 
 
 def test_archive_json_records_index_refreshed(docs_script, fixtures_dir, tmp_path):
@@ -3012,3 +3059,684 @@ def test_archived_primary_is_checked_before_the_selection(docs_script, fixtures_
     assert "matched none of the" not in proc.stderr
     assert "has no one-hop" not in proc.stderr
     assert _snapshot(root) == before
+
+
+# --- M28 — move-safe body-link rewrites and the strand-check ---------------
+#
+# The contract under test is the milestone's *Decisions (Phase 1 — BINDING)*
+# and `cli.md` › *Move-safe body-link rewrites (M28 — D1–D7)*. Every
+# subprocess test below asserts a frozen contract string as well as an exit
+# code, so an unrelated failure with the same code cannot satisfy it (M26's
+# falsely-GREEN lesson).
+
+_M28_DATE = "2026-08-15"
+_M28_DATED = f"archive/{_M28_DATE}"
+
+
+def _m28_tree(fixtures_dir: Path, tmp_path: Path, name: str) -> Path:
+    """Copy a `movelink-*` fixture tree into tmp_path; return its root.
+
+    Asserts the SOURCE tree exists, so between Phase 2 and Phase 3 these tests
+    are honestly RED on a missing fixture rather than vacuously green on an
+    empty copy (M27's Phase-2 catch).
+    """
+    source = fixtures_dir / "trees" / name
+    assert source.is_dir(), f"Phase 3 must author the `{name}` fixture tree"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+    return root
+
+
+def _m28_snapshot(root: Path) -> dict[str, bytes]:
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_archive_single_document_repairs_both_classes(docs_script, fixtures_dir, tmp_path):
+    """E2: one ordinary archive produces BOTH move classes, so both are
+    repaired by the one formula — and a co-moving pair's link to each other is
+    left byte-identical.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-both")
+    proc = _run(
+        docs_script, "archive", "a.md", "--cascade-only", "b.md", "--date", _M28_DATE, cwd=root
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    moved = (root / _M28_DATED / "a.md").read_text()
+    assert "[b](b.md)" in moved, "a co-moving sibling link keeps its bytes (the no-op rule)"
+    assert "[c](../../c.md)" in moved, "class 2: the non-moving target is rebased"
+    assert f"[a]({_M28_DATED}/a.md)" in (root / "c.md").read_text(), "class 1"
+
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_closeout_leaves_the_tracker_links_resolving(docs_script, fixtures_dir, tmp_path):
+    """E3: the real milestone-closeout invocation — the one M26 prescribes and
+    `create-milestones` will prescribe — must leave the two most-read documents
+    resolving, and `docs check` clean.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    proc = _run(
+        docs_script,
+        "archive",
+        "feature.md",
+        "--cascade-only",
+        "feature-*",
+        "--date",
+        _M28_DATE,
+        "--reason",
+        "milestone closed out",
+        cwd=root,
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    status = (root / "status.md").read_text()
+    assert f"[the feature]({_M28_DATED}/feature.md)" in status
+    assert f"[its log]({_M28_DATED}/feature-impl.md)" in status
+    assert f"[the feature]({_M28_DATED}/feature.md)" in (root / "plan.md").read_text()
+
+    moved = (root / _M28_DATED / "feature.md").read_text()
+    assert "[the log](feature-impl.md)" in moved, "the co-moving pair keeps its bytes"
+    assert "[the plan](../../plan.md)" in moved, "class 2 two directories deeper"
+
+    checked = _run(docs_script, "check", str(root))
+    assert checked.returncode == 0, checked.stdout + checked.stderr
+
+
+def test_archived_referrer_destination_is_repointed_and_nothing_else_changes(
+    docs_script, fixtures_dir, tmp_path
+):
+    """E5 / D5: an already-archived referrer whose target moves has its
+    destination repointed and NOTHING else changed — M18's shape, widened by
+    exactly one token class (Q2/A2: no `Updated:` bump, no `Revision:`).
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-archived-referrer")
+    archived = root / "archive" / "2026-01-01" / "old-log.md"
+    before = archived.read_text()
+
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    after = archived.read_text()
+    expected = before.replace("(../../plan.md)", f"(../{_M28_DATE}/plan.md)").replace(
+        "- references: plan.md", f"- references: {_M28_DATED}/plan.md"
+    )
+    assert after == expected, "only the moving destination and its bullet may change"
+    assert "Revision:" not in after
+    assert "Updated: 2026-01-01" in after
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_archive_leg_1_refuses_and_writes_zero_bytes(docs_script, fixtures_dir, tmp_path):
+    """D6 leg 1: a parent archived out from under its live children refuses
+    before any write, one line per orphaned pair naming BOTH ends, then a
+    count — and the whole tree is byte-identical afterwards.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    before = _m28_snapshot(root)
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, "--json", cwd=root)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert (
+        "docs: archive: live-child.md is still active and declares 'child-of: plan.md', "
+        "which this operation would archive; refusing before any write" in proc.stderr
+    )
+    assert (
+        "docs: archive: milestone.md is still active and declares 'child-of: plan.md', "
+        "which this operation would archive; refusing before any write" in proc.stderr
+    )
+    assert (
+        "docs: archive: 2 still-active child(ren) would be stranded; zero bytes written"
+        in proc.stderr
+    )
+    assert proc.stdout == "", "no --json record on a refusal (M26's frozen rule)"
+    assert _m28_snapshot(root) == before
+
+
+def test_archive_leg_1_refuses_even_under_quiet(docs_script, fixtures_dir, tmp_path):
+    """Every refusal prints even under `--quiet` (M26's rule, unchanged): a
+    silent refusal would leave an agent with an exit code and nothing to act on.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, "--quiet", cwd=root)
+
+    assert proc.returncode == 2
+    assert (
+        "docs: archive: live-child.md is still active and declares 'child-of: plan.md', "
+        "which this operation would archive; refusing before any write" in proc.stderr
+    )
+    assert (
+        "docs: archive: 2 still-active child(ren) would be stranded; zero bytes written"
+        in proc.stderr
+    )
+    assert "docs: archive: would archive" not in proc.stderr, (
+        "--quiet still suppresses the ordinary prose; only the refusal survives"
+    )
+
+
+def test_archive_leg_1_preview_reports_the_verdict_at_exit_0(docs_script, fixtures_dir, tmp_path):
+    """D6: a preview REPORTS leg 1 rather than adopting it — and it does so on a
+    plain `--dry-run`, not only behind a cascade flag, because leg 1 applies to
+    all three archive shapes (D1's quiet rule governs CANDIDATE prose only).
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    before = _m28_snapshot(root)
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, "--dry-run", cwd=root)
+
+    assert proc.returncode == 0, proc.stderr
+    assert (
+        "docs: archive: would strand live-child.md — still active, declares "
+        "'child-of: plan.md'; a write would refuse" in proc.stderr
+    )
+    assert (
+        "docs: archive: would strand milestone.md — still active, declares "
+        "'child-of: plan.md'; a write would refuse" in proc.stderr
+    )
+    assert "docs: archive: 2 still-active child(ren) would be stranded" in proc.stderr
+    assert _m28_snapshot(root) == before
+
+
+def test_every_preview_ends_by_saying_it_wrote_nothing(docs_script, fixtures_dir, tmp_path):
+    """A preview must always end on the sentence that says nothing happened.
+
+    M26 gated `preview only — nothing was written` on a cascade flag because a
+    plain `--dry-run` printed a single line and a disclaimer under it was noise.
+    Since M28 that same preview prints the rewrite lines, the counts footer,
+    both strand blocks and possibly `a write would refuse` — so the M26
+    rationale is void, and a reader who never reaches the disclaimer is left
+    with exactly the ambiguity this milestone exists to remove.
+
+    Both shapes are asserted, and the line is asserted LAST in each: a preview
+    that announced itself in the middle of its own plan would be worse than one
+    that did not announce itself at all.
+    """
+    for flag in ("--dry-run", "--cascade-dry-run"):
+        root = _m28_tree(fixtures_dir, tmp_path / flag.strip("-"), "movelink-closeout")
+        before = _m28_snapshot(root)
+        proc = _run(docs_script, "archive", "feature.md", "--date", _M28_DATE, flag, cwd=root)
+
+        assert proc.returncode == 0, (flag, proc.stderr)
+        lines = proc.stderr.splitlines()
+        assert lines[-1] == "docs: archive: preview only — nothing was written", (
+            f"{flag}: the preview must END on the disclaimer, got {lines[-1]!r}"
+        )
+        assert sum(1 for ln in lines if "preview only" in ln) == 1, "exactly once"
+        assert any(ln.startswith("docs: archive: rewrite ") for ln in lines), (
+            "the fixture must make this a preview with real content to disclaim"
+        )
+        assert _m28_snapshot(root) == before
+
+
+def test_archive_leg_1_preview_pair_is_suppressed_by_quiet(docs_script, fixtures_dir, tmp_path):
+    """(L) splits the two leg-1 pairs, and `--quiet` is where the split is
+    observable: the PREVIEW pair is a report, so `--quiet` silences it, while
+    the WRITE path's pair is a refusal and survives (pinned above).
+
+    Without this the split is invisible to the suite — the existing `--quiet`
+    locks run on a refusal (which has no preview pair) and on a completing
+    apply (whose plan has no orphans at all), so an implementation that put
+    the preview pair in the verb beside the refusal would pass both.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    before = _m28_snapshot(root)
+    proc = _run(
+        docs_script, "archive", "plan.md", "--date", _M28_DATE, "--dry-run", "--quiet", cwd=root
+    )
+
+    assert proc.returncode == 0, (proc.returncode, proc.stdout, proc.stderr)
+    assert proc.stderr == "", (
+        "a preview reports rather than refuses, so --quiet silences ALL of it — "
+        f"the leg-1 `would strand` pair included; got {proc.stderr!r}"
+    )
+    assert _m28_snapshot(root) == before
+
+
+def test_legitimate_closeout_completes_despite_still_active_referrers(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The leg-1 over-fire lock at the CLI seam (A1). E7 measured the literal
+    predicate refusing this repository's own standard closeout; the narrowed
+    predicate must let a scoped closeout through even though two still-active
+    references — the roadmap's `parent-of` bullet and its body link — point
+    into the archived set.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    proc = _run(
+        docs_script,
+        "archive",
+        "milestone.md",
+        "--cascade-only",
+        "milestone-*",
+        "--date",
+        _M28_DATE,
+        cwd=root,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert "would be stranded" not in proc.stderr
+    assert "refusing before any write" not in proc.stderr
+    assert (root / _M28_DATED / "milestone.md").is_file()
+    assert (root / _M28_DATED / "milestone-impl.md").is_file()
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_strand_report_names_both_ends_on_stderr_in_preview_and_apply(
+    docs_script, fixtures_dir, tmp_path
+):
+    """D6 leg 2: every still-active inbound reference is named — both ends —
+    on stderr, in the preview AND in the apply output, in the frozen
+    deterministic order (walk order; bullets before body links within one
+    referrer).
+    """
+    expected = [
+        "docs: archive: strand plan.md — still active, 'parent-of: feature.md'",
+        "docs: archive: strand plan.md:13 — still active, links to feature.md",
+        "docs: archive: strand status.md — still active, 'pairs-with: feature.md'",
+        "docs: archive: strand status.md:13 — still active, links to feature.md",
+        "docs: archive: strand status.md:13 — still active, links to feature-impl.md",
+        "docs: archive: 5 still-active inbound reference(s) into the archived set",
+    ]
+    args = ("archive", "feature.md", "--cascade-only", "feature-*", "--date", _M28_DATE)
+
+    preview_root = _m28_tree(fixtures_dir, tmp_path / "a", "movelink-closeout")
+    apply_root = _m28_tree(fixtures_dir, tmp_path / "b", "movelink-closeout")
+    preview = _run(docs_script, *args, "--cascade-dry-run", cwd=preview_root)
+    applied = _run(docs_script, *args, cwd=apply_root)
+
+    assert preview.returncode == 0, preview.stderr
+    assert applied.returncode == 0, applied.stderr
+    for line in expected:
+        assert line in preview.stderr, f"missing from the preview: {line}"
+        assert line in applied.stderr, f"missing from the apply output: {line}"
+
+    for stream, label in ((preview.stderr, "preview"), (applied.stderr, "apply")):
+        observed = [ln for ln in stream.splitlines() if ln.startswith("docs: archive: strand ")]
+        assert observed == expected[:5], (
+            f"the {label} order is frozen: walk order, bullets before body links"
+        )
+
+
+def test_archive_rewrite_section_is_identical_in_preview_and_apply(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The rewrite lines and the counts footer are the same in both modes — a
+    scoped write is all-or-nothing, so the plan IS what happened.
+    """
+    expected = [
+        "docs: archive: rewrite feature.md:16 plan.md -> ../../plan.md",
+        f"docs: archive: rewrite plan.md:13 feature.md -> {_M28_DATED}/feature.md",
+        f"docs: archive: rewrite status.md:13 feature.md -> {_M28_DATED}/feature.md",
+        f"docs: archive: rewrite status.md:13 feature-impl.md -> {_M28_DATED}/feature-impl.md",
+        "docs: archive: 4 destination(s) in 3 document(s) rebased",
+    ]
+    args = ("archive", "feature.md", "--cascade-only", "feature-*", "--date", _M28_DATE)
+
+    preview_root = _m28_tree(fixtures_dir, tmp_path / "a", "movelink-closeout")
+    apply_root = _m28_tree(fixtures_dir, tmp_path / "b", "movelink-closeout")
+    before = _m28_snapshot(preview_root)
+    preview = _run(docs_script, *args, "--cascade-dry-run", cwd=preview_root)
+    applied = _run(docs_script, *args, cwd=apply_root)
+
+    assert preview.returncode == 0, preview.stderr
+    assert applied.returncode == 0, applied.stderr
+    assert _m28_snapshot(preview_root) == before, (
+        "a COMPLETING preview writes zero bytes — every other snapshot lock in "
+        "this file is on a REFUSAL path, so without this a preview that applied "
+        "its own rewrite plan and then declined to move the files would pass"
+    )
+    rewrite_lines = [
+        ln
+        for ln in preview.stderr.splitlines()
+        if ln.startswith("docs: archive: rewrite ") or "destination(s) in" in ln
+    ]
+    assert rewrite_lines == expected
+    assert [
+        ln
+        for ln in applied.stderr.splitlines()
+        if ln.startswith("docs: archive: rewrite ") or "destination(s) in" in ln
+    ] == expected
+
+
+def test_archive_json_top_level_keys_widen_by_exactly_rewrites_and_strands(
+    docs_script, fixtures_dir, tmp_path
+):
+    """K: the closed key set widens by exactly two, inserted after
+    `candidates`, and nothing else moves.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    proc = _run(
+        docs_script,
+        "archive",
+        "feature.md",
+        "--cascade-only",
+        "feature-*",
+        "--date",
+        _M28_DATE,
+        "--json",
+        "--cascade-dry-run",
+        cwd=root,
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    record = json.loads(proc.stdout)
+    assert list(record) == [
+        "primary",
+        "date",
+        "scope",
+        "reason",
+        "candidates",
+        "rewrites",
+        "strands",
+        "dry_run",
+        "applied",
+        "index_refreshed",
+    ]
+
+
+def test_archive_json_strands_present_for_a_plan_that_completes(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Leg 2's report is delivered to the CALLER, in a form it can parse —
+    which is the half that answers issue #1's actual complaint — and it is
+    present on a plan that COMPLETES, not only on one that refuses.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    proc = _run(
+        docs_script,
+        "archive",
+        "feature.md",
+        "--cascade-only",
+        "feature-*",
+        "--date",
+        _M28_DATE,
+        "--json",
+        cwd=root,
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    record = json.loads(proc.stdout)
+    assert "strands" in record, "`strands` is present in every record, never missing"
+    assert record["applied"] is True
+    observed = [
+        (s["path"], s["target"], s["kind"], s["verb"], s["line"]) for s in record["strands"]
+    ]
+    assert observed == [
+        ("plan.md", "feature.md", "related", "parent-of", None),
+        ("plan.md", "feature.md", "body-link", None, 13),
+        ("status.md", "feature.md", "related", "pairs-with", None),
+        ("status.md", "feature.md", "body-link", None, 13),
+        ("status.md", "feature-impl.md", "body-link", None, 13),
+    ]
+    for strand in record["strands"]:
+        assert list(strand) == ["path", "target", "kind", "verb", "line"]
+
+
+def test_archive_json_strands_observed_in_the_preview_of_a_refusing_plan(
+    docs_script, fixtures_dir, tmp_path
+):
+    """Phase-1 amendment 2: a leg-1 refusal emits no record at all, so the
+    `strands` array of a plan leg 1 would refuse is observed in its PREVIEW —
+    exit 0, record emitted, verdict reported rather than adopted.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    proc = _run(
+        docs_script, "archive", "plan.md", "--date", _M28_DATE, "--json", "--dry-run", cwd=root
+    )
+    assert proc.returncode == 0, proc.stderr
+
+    record = json.loads(proc.stdout)
+    assert "strands" in record, "`strands` is present in every record, never missing"
+    assert record["dry_run"] is True and record["applied"] is False
+    assert [
+        (s["path"], s["target"], s["kind"], s["verb"], s["line"]) for s in record["strands"]
+    ] == [
+        ("live-child.md", "plan.md", "related", "references", None),
+        ("milestone.md", "plan.md", "body-link", None, 15),
+    ], (
+        "leg 2 still reports here, and it reports EXACTLY the edges leg 1 does "
+        "not own — the child-of bullets belong to leg 1, so the two legs partition "
+        "the graph by EDGE rather than by document: `live-child.md` contributes an "
+        "orphan AND a strand. The `references: ./plan.md` bullet is also the only "
+        "CLI-level proof that a free-form verb and an alias spelling both reach the "
+        "record"
+    )
+
+
+def test_archive_json_strands_is_empty_array_not_missing(docs_script, tmp_path):
+    """An empty neighbourhood yields an empty array, never a missing key."""
+    root = tmp_path / "lonely"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "lonely"\n\n[archive]\ndir = "archive"\n')
+    (root / "solo.md").write_text(
+        "# Solo\n\nLifecycle: active\nRole: notes\nProject: lonely\n"
+        "Updated: 2026-05-20\n\n## Body\n\nNothing points here.\n"
+    )
+    (root / "other.md").write_text(
+        "# Other\n\nLifecycle: active\nRole: notes\nProject: lonely\n"
+        "Updated: 2026-05-20\n\n## Body\n\nUnrelated prose.\n"
+    )
+
+    proc = _run(docs_script, "archive", "solo.md", "--date", _M28_DATE, "--json", cwd=root)
+    assert proc.returncode == 0, proc.stderr
+
+    record = json.loads(proc.stdout)
+    assert "strands" in record and "rewrites" in record, (
+        "both arrays are PRESENT and empty, never missing — a consumer must not "
+        "have to distinguish `absent` from `nothing to report`"
+    )
+    assert record["strands"] == []
+    assert record["rewrites"] == []
+
+
+def test_archive_cascade_dry_run_on_a_malformed_tree_exits_1(docs_script, fixtures_dir, tmp_path):
+    """Phase-1 amendment 1: a preview adopts failures of plan CONSTRUCTION.
+    It now walks the tree in order to build the rewrite plan and the strand
+    analysis, so a malformed referrer turns its exit 0 into the exit 1 the
+    write path already uses.
+
+    RED reason: today the preview returns at check-order step 5, before the
+    whole-tree walk at step 8.
+    """
+    root = _crossrefs_tree(fixtures_dir, tmp_path)
+    (root / "helper.md").write_text("This file has no H1 — it's malformed for parse().\n")
+    before = _m28_snapshot(root)
+
+    proc = _run(
+        docs_script, "archive", str(root / "core.md"), "--cascade-dry-run", "--date", _M28_DATE
+    )
+    assert proc.returncode == 1, (proc.returncode, proc.stdout, proc.stderr)
+    assert "helper.md" in proc.stderr
+    assert "Traceback" not in proc.stderr
+    assert _m28_snapshot(root) == before
+
+
+@_SKIP_AS_ROOT
+def test_archive_refuses_when_a_planned_referrer_is_unwritable(docs_script, fixtures_dir, tmp_path):
+    """(F) at the `docs archive` seam, check-order step 8c.
+
+    M26's pre-flight (step 7) proves every plan MEMBER writable; M28's proves
+    every planned REFERRER writable. `status.md` is not a plan member here, so
+    only the new pre-flight can catch it — and the refusal must leave the whole
+    tree byte-identical, the primary included.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    before = _m28_snapshot(root)
+    (root / "status.md").chmod(0o444)
+    try:
+        proc = _run(
+            docs_script,
+            "archive",
+            "feature.md",
+            "--cascade-only",
+            "feature-*",
+            "--date",
+            _M28_DATE,
+            cwd=root,
+        )
+    finally:
+        (root / "status.md").chmod(0o644)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "docs: archive: status.md is not writable; refusing before any write" in proc.stderr
+    assert proc.stdout == ""
+    assert _m28_snapshot(root) == before
+
+
+@_SKIP_AS_ROOT
+def test_archive_rewrite_oserror_admits_the_partial_state(docs_script, tmp_path):
+    """D4's residual, on the phase M28 created — check-order step 9b.
+
+    Step 9a (the members move) has admitted its partial state since M26. Step 9b
+    (the referrer rewrites) had none: it printed a bare
+    `docs: archive: write failed for <rel>: <err>` and exited 2, while `docs mv`
+    on the identical tree printed the complete admission. Pre-M28 that was
+    defensible — the phase wrote only `Related:` bullets — but M28 widened it to
+    prose bytes across the whole tree, making it the operation's LARGEST
+    partial-state window and the only one that would not say what it had done.
+
+    The trigger is the boundary `preflight_archive_plan` documents itself as
+    deliberately admitting: a `0o644` file inside a `0o555` directory passes
+    `os.access(file, W_OK)` and fails at the `.docs-tmp` sibling. `ref2.md` is
+    outside that directory, so it lands first and the admission has a non-empty
+    `Rewritten:` clause — without it, three of the four clauses would render
+    `none` and the test could not tell a real admission from a template.
+    """
+    root = tmp_path / "rw"
+    (root / "ro").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "rw"\n\n[archive]\ndir = "archive"\n')
+    hdr = "Lifecycle: active\nRole: notes\nProject: rw\n"
+    (root / "a.md").write_text(f"# A\n\n{hdr}Updated: 2026-01-01\n\n## Body\n\nThe primary.\n")
+    (root / "ref2.md").write_text(
+        f"# R2\n\n{hdr}Updated: 2026-01-03\n\nRelated:\n- pairs-with: a.md\n\n"
+        "## Body\n\nSee [a](a.md).\n"
+    )
+    (root / "ro" / "ref.md").write_text(
+        f"# R1\n\n{hdr}Updated: 2026-01-02\n\nRelated:\n- pairs-with: a.md\n\n"
+        "## Body\n\nSee [a](../a.md).\n"
+    )
+    os.chmod(root / "ro", 0o555)
+    try:
+        proc = _run(docs_script, "archive", str(root / "a.md"), "--date", _M28_DATE, "--json")
+    finally:
+        os.chmod(root / "ro", 0o755)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr
+    assert "docs: archive: write failed for ro/ref.md: " in proc.stderr, proc.stderr
+    assert "PARTIAL ARCHIVE — not rolled back." in proc.stderr
+    assert f"Archived: a.md -> {_M28_DATED}/a.md." in proc.stderr, (
+        "every member moved in this phase, so they are ALL named as archived"
+    )
+    assert "Rewritten: ref2.md." in proc.stderr, (
+        "the referrer that did land must be named — this is the clause that "
+        "distinguishes a real admission from a template of `none`s"
+    )
+    assert "Not written: ro/ref.md." in proc.stderr
+    assert "Repair manually." in proc.stderr
+    assert proc.stdout == "", "no --json record: the operation did not complete"
+    # …and the admission is checkable against the disk, clause by clause.
+    assert (root / _M28_DATED / "a.md").is_file()
+    assert f"[a]({_M28_DATED}/a.md)" in (root / "ref2.md").read_text()
+    assert "[a](../a.md)" in (root / "ro" / "ref.md").read_text()
+
+
+def test_archive_quiet_suppresses_the_rewrite_and_strand_lines(docs_script, fixtures_dir, tmp_path):
+    """R3's other half: `--quiet` governs the whole summary on a COMPLETING
+    run — the rewrite lines, the counts footer and the strand report alike —
+    while the write still happens.
+
+    The existing `--quiet` lock is on a refusal path, which has no rewrite or
+    strand lines to suppress, so it cannot see this.
+    """
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-closeout")
+    proc = _run(
+        docs_script,
+        "archive",
+        "feature.md",
+        "--cascade-only",
+        "feature-*",
+        "--date",
+        _M28_DATE,
+        "--quiet",
+        cwd=root,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == "", f"--quiet must silence the whole summary, got {proc.stderr!r}"
+    assert (root / _M28_DATED / "feature.md").is_file(), "the write still happened"
+    assert f"[the feature]({_M28_DATED}/feature.md)" in (root / "status.md").read_text()
+
+
+def test_the_rewrite_footer_prints_its_zero(docs_script, tmp_path):
+    """R3 read literally, and pinned because the zero case looks like noise.
+
+    The counts footer prints on EVERY archive, including one over a tree with
+    no body links at all — `0 destination(s) in 0 document(s) rebased`. That is
+    positive evidence the new phase ran, and it keeps the two verbs' footers
+    symmetrical. Leg 2's count line is deliberately NOT symmetrical with it: it
+    summarises a list, so `0 still-active inbound reference(s)` on every
+    archive would be pure noise, and it prints only when the list is non-empty.
+
+    Both halves of that asymmetry are asserted here, because each looks like
+    the other's bug.
+    """
+    root = tmp_path / "bare"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "bare"\n\n[archive]\ndir = "archive"\n')
+    header = "Lifecycle: active\nRole: notes\nProject: bare\nUpdated: 2026-05-20\n"
+    (root / "a.md").write_text(f"# A\n\n{header}\n## Body\n\nNo links anywhere.\n")
+    (root / "b.md").write_text(f"# B\n\n{header}\n## Body\n\nNone here either.\n")
+
+    proc = _run(docs_script, "archive", "a.md", "--date", _M28_DATE, cwd=root)
+
+    assert proc.returncode == 0, proc.stderr
+    assert "docs: archive: 0 destination(s) in 0 document(s) rebased" in proc.stderr, (
+        f"the counts footer is unconditional (R3), zero included: {proc.stderr!r}"
+    )
+    assert "still-active inbound reference(s)" not in proc.stderr, (
+        "leg 2's count line summarises a LIST, so it stays conditional — the "
+        "asymmetry with the footer above is deliberate, not an oversight"
+    )
+
+
+def test_archive_never_rewrites_or_reports_an_excluded_document(docs_script, tmp_path):
+    """R11, stated in `cli.md` as a named limitation and locked here.
+
+    `[exclude]` / `.docsignore` decide which documents are WALKED, and
+    therefore which are rewritten and which can report a strand. They never
+    decide what a destination may point at. So an excluded document that
+    declares `child-of` the primary does **not** trip leg 1 — the archive
+    completes — and its stale destination is left exactly as written.
+
+    This is a knowable gap, which is why it is named rather than inferred.
+    """
+    root = tmp_path / "excl"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "excl"\n\n[archive]\ndir = "archive"\n\n[exclude]\ndirs = ["vendor"]\n'
+    )
+    header = "Lifecycle: active\nRole: notes\nProject: excl\nUpdated: 2026-05-20\n"
+    (root / "plan.md").write_text(f"# Plan\n\n{header}\n## Body\n\nThe primary.\n")
+    (root / "keep.md").write_text(f"# Keep\n\n{header}\n## Body\n\nSee [the plan](plan.md).\n")
+    vendor = root / "vendor"
+    vendor.mkdir()
+    excluded = vendor / "child.md"
+    excluded.write_text(
+        f"# Vendored child\n\n{header}\nRelated:\n- child-of: plan.md\n\n"
+        "## Body\n\nSee [the plan](../plan.md).\n"
+    )
+    before = excluded.read_text()
+
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, cwd=root)
+
+    assert proc.returncode == 0, (
+        f"an EXCLUDED child-of must not trip leg 1 — the walk never yields it:\n{proc.stderr}"
+    )
+    assert "would be stranded" not in proc.stderr
+    assert "vendor" not in proc.stderr
+    assert excluded.read_text() == before, "an excluded document is never rewritten"
+    assert f"[the plan]({_M28_DATED}/plan.md)" in (root / "keep.md").read_text()

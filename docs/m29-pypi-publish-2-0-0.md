@@ -66,6 +66,32 @@ implementation-complete, scaffold the implementation log and run the current
 authorized production publish/tag/release, served-artifact acceptance, skill
 refresh, and docs closeout.
 
+## `README.md` refresh (routed here 2026-08-15 by M28's Step-2 review)
+
+`README.md` is outside every milestone's surface-parity gate — it is not in
+D8's list, it is not mirrored into the bundled skill, and no test reads it — so
+nothing surfaces its staleness at any gate except this one. It is also the
+first thing a PyPI visitor and a GitHub visitor see, which makes the publish
+the right place to fix it. Known items, all verified 2026-08-15:
+
+- **The `## Commands` block omits three shipped verbs**: `docs relate`
+  (M25 — the repair verb for a rule that is a *hard error* at 2.0, so an
+  adopter hitting `missing-inverse` finds no repair on the front page),
+  `docs stamp` (M15) and `docs project rename|set` (M12).
+- **Re-verify every `blob/main/…` link.** One was already dead —
+  `docs/m8-adoption-workflow.md` has lived under `docs/archive/2026-05-25/`
+  since M8's closeout — and it was fixed inside M28 rather than routed here,
+  because M28's own subject is link integrity and shipping a 2.0.0 whose front
+  page carries a dead documentation link would be self-refuting. The remaining
+  five resolve today; the M25–M28a closeout **archives more documents**, so
+  they must be re-checked after that archive runs, not before.
+- **The feature summary predates the v2.0 train.** It describes neither the
+  reciprocal-edge rules, the body-link rules, nor the move-safe rewrites.
+
+Fold this into the docs-closeout step of `release-runbook.md` rather than
+treating it as optional: the archive step of that same closeout is what can
+break the links again.
+
 ## Issue #1 closeout
 
 GitHub issue #1 (https://github.com/ArtRichards/docs-cli/issues/1) reported the
@@ -78,10 +104,16 @@ reply is posted at publish, not before. Its verified per-finding analysis is in
 shipped.** This draft was written on 2026-08-15, when M28 and M28a were
 registered stubs with no Phase 1. Any statement about their behaviour is an
 intention, not a fact, until their contracts are frozen and GREEN. In
-particular, finding 4's paragraph must be rewritten to describe what M28
-actually decided, and finding 3's field name must match what M28a froze. Delete
+particular, finding 3's field name must match what M28a froze. Delete
 or correct anything the implementation changed; do not post a claim the code
 does not support.
+
+**Finding 1's and finding 4's paragraphs were rewritten on 2026-08-15**, when
+M28 went implementation-complete, because the draft as written stated the
+pre-amendment predicate — a blanket refusal that M28's own measurements showed
+refuses an ordinary milestone closeout — and claimed it "self-cancels for the
+legitimate case", which is the exact sentence that measurement falsified.
+Finding 3's paragraph is still an intention: M28a has no Phase 1.
 
 Post it with `gh issue comment 1 --body-file <path>`, then close the issue.
 
@@ -105,17 +137,33 @@ validated before the first byte moves.
 Scope alone was not enough. A glob is a syntactic filter and cannot know what it
 selects, so `--cascade-only '*'` would still have reached the live parent
 through the target's outgoing `child-of` edge. 2.0.0 therefore also validates
-the plan's **consequences**: an operation that would leave a still-active
-document pointing at a newly-archived one is refused, naming both ends.
+the plan's **consequences**, before the first byte moves, in two parts:
 
-Your suggested fix — follow *incoming* `child-of` edges rather than the outgoing
-one — is an improvement, but it does not close the hole on its own: `pairs-with`
-is symmetric, and milestone documents legitimately carry cross-milestone
-`pairs-with` edges, so a live parent or sibling stays reachable that way.
-Checking consequences is direction-agnostic and closes the `child-of`,
-`pairs-with`, and body-link routes together. It also self-cancels for the
-legitimate case — archive a whole document set together and nothing is
-stranded, so the operation you actually wanted still works.
+- **It refuses** when a still-active document outside the plan declares itself
+  `child-of` a document the plan would archive — a parent archived out from
+  under a live child, which is exactly what you hit. Exit 2, both ends named,
+  zero bytes written, in all three archive shapes including a plain
+  `docs archive FILE`.
+- **It reports, and does not refuse,** every *other* still-active inbound
+  reference into the newly-archived set — any other `Related:` verb and every
+  body link — on stderr and in a `strands` array in the `--json` record.
+
+That split is deliberate, and measuring it is what produced it. The obvious
+rule — refuse whenever the plan would leave *any* still-active document
+pointing at a newly-archived one — was implemented and measured against a real
+tree, and it refuses an ordinary milestone closeout: archiving one completed
+milestone pair leaves 16 deliberate references behind, from the tracker, the
+roadmap, and the neighbouring milestones, and every one of them is *supposed*
+to survive. A check that fires on correct work is one people route around, so
+only the `child-of` direction refuses and the rest is delivered to you as data.
+
+Your suggested fix — follow *incoming* `child-of` edges rather than the
+outgoing one — is an improvement, but it does not close the hole on its own:
+`pairs-with` is symmetric, and milestone documents legitimately carry
+cross-milestone `pairs-with` edges, so a live parent or sibling stays reachable
+that way. Validating consequences is direction-agnostic and covers the
+`child-of`, `pairs-with`, and body-link routes together, and it leaves the
+candidate set itself untouched.
 
 ## 2 — `--cascade` re-archives already-archived docs and re-dates them
 
@@ -164,7 +212,20 @@ a referring document that itself moves. Labels, titles, fragments, and quoting
 form are preserved, and plain text and code are left alone.
 
 Your lighter alternative — document the boundary and ship a `--report-links`
-mode instead — was recorded and weighed during that milestone's planning.
+mode instead — was weighed and **declined as a design, while its output was
+adopted**. Declining it was forced by the release itself: 2.0.0 makes a broken
+prose link a hard `docs check` error, so "declare them out of scope" would mean
+the tool knowingly shipping trees that fail its own gate — measured on this
+project at 42, 13 and 6 findings for a rename, a single archive and a real
+milestone closeout. A *report* also leaves the repair to the same caller whose
+blind spot produced the problem.
+
+What you actually wanted — visibility before and after — ships as a plan record
+on **both** verbs rather than as a separate mode. `docs mv` gains a real
+`--dry-run` that names every planned rewrite, and a `--json` record; `docs
+archive --json` gains the same `rewrites` section plus the `strands` array
+above. Both records have the same shape for a preview and a real apply, so you
+can diff them.
 
 ## Upgrading
 

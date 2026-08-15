@@ -547,3 +547,49 @@ def test_check_verdict_is_identical_from_a_relocated_copy(docs_script, tmp_path)
     there = _run(docs_script, "check", str(dst))
     assert here.returncode == there.returncode, (here.stdout, there.stdout)
     assert here.stdout == there.stdout, "identical bytes must yield an identical verdict"
+
+
+# --- M28 — the `movelink-*` fixture family is clean as committed -----------
+
+_MOVELINK_TREES = (
+    "movelink-archived-referrer",
+    "movelink-both",
+    "movelink-closeout",
+    "movelink-incoming",
+    "movelink-moved-referrer",
+    "movelink-nested",
+    "movelink-strand",
+)
+
+
+def test_check_every_movelink_fixture_tree_is_clean_as_committed(docs_script, fixtures_dir):
+    """Phase 3's exit criterion, asserted rather than assumed.
+
+    Every `movelink-*` tree is swept automatically into
+    `test_check_tree_legacy_fixtures_gain_no_new_findings` (29 -> 36) and
+    `test_check_tree_pre_m27_fixtures_gain_no_body_link_findings` (33 -> 40),
+    but those two assert only that ONE rule stays silent. This asserts the
+    whole gate: each tree is `docs check`-clean as committed, so every
+    post-move clean assertion elsewhere measures the MOVE rather than
+    pre-existing damage in the fixture.
+
+    Named explicitly rather than derived from the directory: a parametrization
+    over a glob would generate zero ids before Phase 3 and be vacuously green.
+
+    Intended RED until Phase 3.
+    """
+    on_disk = sorted(
+        d.name
+        for d in (fixtures_dir / "trees").iterdir()
+        if d.is_dir() and d.name.startswith("movelink-")
+    )
+    assert on_disk == sorted(_MOVELINK_TREES), (
+        "the hand-written list and the directory must agree, or an eighth "
+        f"`movelink-*` tree would be silently unchecked here. On disk: {on_disk!r}"
+    )
+
+    for name in _MOVELINK_TREES:
+        root = fixtures_dir / "trees" / name
+        assert root.is_dir(), f"Phase 3 must author the `{name}` fixture tree"
+        proc = _run(docs_script, "check", str(root))
+        assert proc.returncode == 0, f"{name} is not clean as committed:\n{proc.stdout}"
