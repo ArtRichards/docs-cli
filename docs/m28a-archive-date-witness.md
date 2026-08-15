@@ -30,8 +30,11 @@ Related:
   does not corroborate (**detect**); `docs mv` refuses a move whose source and
   destination are different dated archive directories, before it writes
   anything (**prevent**).
-- Progress: **Milestone setup complete (2026-08-15); Phase 1 — Define
-  Contract is next.** No TDD phase has started. M28 is implementation-complete
+- Progress: **Phase 1 — Define Contract complete (2026-08-15); Phase 2 —
+  Write Tests (RED) is next.** The machine-facing contract is frozen in
+  *Decisions (Phase 1 — BINDING)* below, with five amendments to
+  setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
+  an operator decision). M28 is implementation-complete
   and merged to `main` (`b1ec74b`), so M28a is the last implementation
   milestone in the v2.0 train before the M29 publish. Setup measured this
   repository read-only and reproduced the reported drift on throwaway copies,
@@ -296,12 +299,15 @@ independent of whether the moving document carries the witness.
   `date_format` — there is no pair of dates to disagree;
 - every other existing `docs mv` behaviour, unchanged.
 
-**It reuses M28's machinery and invents nothing.** The refusal is evaluated
-inside `docs mv`'s existing plan-before-move pre-flight — which M28 built, and
-which already guarantees a handled failure writes **zero bytes**, including the
-moved document itself. Exit 2, before the first byte moves, naming both dates.
-There is no second refusal mechanism, no new flag, no new JSON key and no
-opt-out. Its message is frozen in Phase 1 beside `archive-date-drift`'s and
+**It reuses M28's machinery and invents nothing.** The refusal is evaluated in
+`docs mv`'s existing plan-before-move window — the window M28's pre-flight
+occupies, one step earlier: immediately after the two root-relative paths are
+derived and **before** the `--dry-run` branch, so it refuses in every mode
+rather than letting a preview print `would move …` for an operation the apply
+refuses (Phase-1 amendment 2). That window already guarantees a handled failure
+writes **zero bytes**, including the moved document itself. Exit 2, before the
+first byte moves, naming both dates. There is no second refusal mechanism, no
+new flag, no new JSON key and no opt-out. Its message is frozen in Phase 1 beside `archive-date-drift`'s and
 pinned by locks the same way.
 
 **The escape is documented in the same paragraph as the refusal**, in both
@@ -377,16 +383,33 @@ milestones archived at different events. The rule would emit 7 findings on a
 correct tree — the charter's *never cry wolf* criterion, failed on the first
 tree it met. The witness detects the same drift objectively and emits 0 here.
 
-**What the two legs reach, and what they do not.** Together they close the
-tool's own surface completely. D5 refuses the one silent relocation `docs mv`
-performs, for every archived document regardless of the field. D3 reports drift
-produced any *other* way — a hand `git mv`, a bulk script, an `rsync`, a future
-defect — for every document archived from 2.0.0 onward. What remains outside
-both is a **hand-made** relocation of a **pre-2.0** archived document: no
-witness to disagree with, and no tool invocation to refuse. That residual is
-stated rather than papered over. It shrinks with every archive event, and it is
-not closable without reconstructing dates the tool never observed — which D6
-and Q3 refuse on principle.
+**What the two legs reach, and what they do not.** D5 refuses the one silent
+**cross-dated** relocation `docs mv` performs, for every archived document
+regardless of the field. D3 reports drift produced any *other* way — a hand
+`git mv`, a bulk script, an `rsync`, a future defect — for every document
+archived from 2.0.0 onward. **Two** residuals remain outside both, and Phase 1
+states the second rather than letting the first stand for the whole truth
+(Phase-1 amendment 1):
+
+- A **hand-made** relocation of a **pre-2.0** archived document: no witness to
+  disagree with, and no tool invocation to refuse.
+- A **tool-driven** relocation *out of* a dated directory that is not
+  cross-dated — `docs mv archive/<D>/x.md archive/x.md`, or a move into an
+  undated subdirectory of the archive. It is a permitted neighbour **by
+  design** (*Out of scope*: a move whose two segments do not both parse as
+  dates is not refused, because refusing it would also refuse a legitimate
+  reorganisation of the archive subtree that the convention permits). It
+  destroys the only archive-date record a pre-2.0 archived document has, and
+  `status-drift` stays silent because the destination is still inside the
+  archive subtree. Leg 1 catches it for witness-carrying documents — message
+  form B — and nothing catches it for the rest.
+
+Both residuals are stated rather than papered over, and both shrink with every
+archive event. Neither is closable without either reconstructing dates the tool
+never observed — which D6 and Q3 refuse on principle — or refusing a
+reorganisation the convention allows. The second is registered as *Follow-ups*
+item 7 and locked by a Phase-2 test proving Leg 1 does reach the
+witness-carrying half.
 
 ### D9 — Compatibility, upgrade guidance, and surface parity
 
@@ -413,8 +436,10 @@ and Q3 refuse on principle.
   `convention.md` enumerates, in three separate paragraphs, exactly what may
   change inside an archived document — M18's move-driven edge integrity as
   widened by M28 — D5, M25 — D4's audited relationship repair, and M27 — D6's
-  one-time body-link migration. Each already names `Archived-reason:` in its
-  byte-identical list. Each must name the witness too, or the guarantee that it
+  one-time body-link migration. Two of the three already name
+  `Archived-reason:` in the byte-identical list; M18's says "other metadata"
+  generically, and Phase 1 makes it explicit there too (amendment 5).
+  Each must name the witness too, or the guarantee that it
   survives a `relate` repair and a move-driven rewrite is a promise no document
   makes.
 - **Surface parity in the same change** (`plan.md` › *Ongoing conventions*;
@@ -561,8 +586,10 @@ coverage* below.
   documented in the same paragraph as the refusal in both specs — so the
   refusal can never read as a dead end.
 - **Structural risk — wide blast radius for a small change.** The product
-  change is two lines — one `set_metadata_field` call and one
-  `findings.extend` — but it touches the metadata vocabulary, the
+  change is **three touch points** — one `set_metadata_field` call in
+  `_archive_one`, one `findings.extend` in `check_doc`, and one refusal in
+  `_cmd_mv` (Phase-1 amendment 3: the original "two lines" predates Q4's
+  answer) — but it touches the metadata vocabulary, the
   `unknown-field` allowlist, three archived-immutability paragraphs in
   `convention.md`, the migrate demotion path, and two byte-identical skill
   mirrors. The contract freeze must enumerate every surface before any code,
@@ -586,7 +613,7 @@ coverage* below.
 | Evidence | Addressed by | Named coverage (Phases 2–3) |
 |---|---|---|
 | E1 one silent relocation — **prevented** | D5 | `docs mv archive/<D1>/x.md archive/<D2>/x.md` **refuses** at exit 2 with **zero bytes written**, naming both dates, proven identically on a document **with** and **without** the witness; the refusal is asserted to fire inside the pre-flight, before the move |
-| E1 the permitted neighbours | D5 | a rename **within** one dated archive directory, a move with one end outside the archive subtree, and a move whose two segments do not both parse as dates each **complete**; the two `status-drift` paths keep their existing locks and gain no second finding; every pre-M28a `docs mv` behaviour is proven byte-stable |
+| E1 the permitted neighbours | D5 | a rename **within** one dated archive directory, a move with one end outside the archive subtree, and a move whose two segments do not both parse as dates each **complete**; the two `status-drift` paths keep their existing locks and gain no second finding; every pre-M28a `docs mv` behaviour is proven byte-stable. The neighbour that costs something — `docs mv archive/<D>/x.md archive/x.md`, D8's second residual — is proven both to **complete** and, on a witness-carrying document, to be reported by Leg 1's second message form (Phase-1 amendment 1) |
 | E1 one silent relocation — **detected** | D1 + D3 | an `archivedate-drifted` fixture — a document carrying the witness in a *different* dated directory — yields exactly one `archive-date-drift` error naming both dates, at exit 2, however the relocation was produced |
 | E2 M28 silenced the alarm | D1 + D3 + D5 | the E1d relocation replayed end-to-end inside the suite: `docs mv` now refuses it outright, and a hand-made equivalent relocation of a witness-carrying document leaves a tree that `docs check` **fails** — where both flows were silent before |
 | E3 `Updated:` is not a witness | D1 | a lock proving `docs touch` on an archived document bumps `Updated:` and leaves the witness **byte-identical**, so the two fields cannot be conflated |
@@ -600,7 +627,7 @@ coverage* below.
 
 ## Deliverables
 
-- [ ] Both legs frozen in Phase 1 against the resolved Q1–Q7: the field's
+- [x] Both legs frozen in Phase 1 against the resolved Q1–Q7: the field's
       name, value source, rendering, block position and every-member write
       rule; the vocabulary changes; the corroboration predicate and the rule's
       severity / exit / cardinality / message forms; the `docs mv` refusal
@@ -835,7 +862,7 @@ coverage* below.
 
 ## Phase checklist
 
-- [ ] Phase 1 — Define Contract
+- [x] Phase 1 — Define Contract
 - [ ] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
@@ -1133,13 +1160,15 @@ This is the same boundary, for the same reason, that M28 — Q6 drew when it put
 
 **Why it mattered.** `convention.md` grants exactly three narrow exceptions to
 archived-document immutability, and each states its blast radius as an explicit
-list of what may change and what stays byte-identical — each of them naming
-`Archived-reason:` by hand. A new archive-time field that is not named in those
+list of what may change and what stays byte-identical — two of the three naming
+`Archived-reason:` by hand, and M18's saying "other metadata" generically
+(amendment 5). A new archive-time field that is not named in those
 lists is a field with no stated guarantee: nothing in the suite would notice,
 and an adopter reading the convention could not tell whether a `docs relate`
 repair or a move-driven rewrite may touch it.
 
-**The resolution — all three paragraphs name the witness in Phase 7:**
+**The resolution — all three paragraphs name the witness** (landed in Phase 1
+with the rest of the author-facing surface, re-verified in Phase 7)**:**
 M18's move-driven edge integrity as widened by M28 — D5, M25 — D4's audited
 relationship repair, and M27 — D6's one-time body-link migration. In every one
 of them the witness sits on the byte-identical side, beside
@@ -1207,6 +1236,312 @@ one destination; these are two independent assertions about one document.
   ship, and the Agent Playbook Suite update stays a post-M29 cross-repository
   follow-up (`CLAUDE.md`; `plan.md`).
 
+## Decisions (Phase 1 — BINDING)
+
+Phase 1 freezes the surface Phase 2 asserts against. Everything below is
+binding for M28a; Phases 5–7 implement it verbatim. The setup decisions (D1–D9)
+and the resolved setup questions (Q1–Q7) are **not** re-opened — this section
+makes them exact. The author-facing statement lives in `cli.md` ›
+`docs archive`, `cli.md` › `docs check` › *Archive-date corroboration*,
+`cli.md` › `docs mv` › *Cross-dated archived relocations*, and `convention.md`
+› *Optional fields* / *Archive subtree*; what follows is the machine-facing
+contract plus the decisions that could not be read off the setup text.
+
+**No product code lands in Phase 1.** The signatures are frozen here rather
+than stubbed in `src/docs_cli/cli.py`, following the M25/M26/M27/M28
+precedent — a stub would perturb the Phase-4 subprocess RED reasons.
+
+### Amendments to the setup-frozen material (BINDING)
+
+Five frozen items could not stand as written. All five are recorded here so the
+binding scope and the frozen contract cannot disagree — M27's and M28's
+precedent for amending setup-frozen material in place rather than diverging
+silently. Amendments 1 and 2 are Phase-1 decisions; 3, 4 and 5 are corrections
+of statements of fact. None re-opens a decision, and none changes what M28a
+ships.
+
+| # | Amendment | Why the frozen form could not stand |
+|---|---|---|
+| 1 | **D8's residual is incomplete, and is amended in place.** It said the only thing neither leg reaches is "a hand-made relocation of a pre-2.0 archived document". `docs mv archive/2026-01-01/x.md archive/x.md` — D5's *third permitted neighbour*, by design — is a **tool-driven** relocation of any archived document that destroys the only archive-date record it has, leaves `status-drift` silent (the destination is still under the archive subtree), and is reached by Leg 1 only for witness-carrying documents. The predicate is **not** widened; D8 now names both residuals, *Follow-ups* item 7 registers the second, and the E1-neighbours coverage row gains the Leg-1 lock. | A binding document must not claim closure it does not have. Widening the predicate was considered and rejected by operator decision (OQ-7): it would also refuse a legitimate reorganisation of the archive subtree, which `convention.md` permits. The honest move is to name the cost, not to pay it with a false refusal. |
+| 2 | **D5's "evaluated inside `docs mv`'s existing plan-before-move pre-flight" is refined to "in the plan-before-move *window*, one step earlier — immediately after `old_rel` / `new_rel` are derived and before the `--dry-run` branch".** It therefore refuses in **every** mode, `--dry-run` and `--quiet` included. | `_cmd_mv` returns at its `--dry-run` branch *before* `preflight_move_plan` runs, so D5's literal reading would leave `docs mv --dry-run` printing `would move …` at exit 0 for an operation the apply refuses — a preview that lies, in the milestone whose entire point is that nothing silently falsifies the archive record. This is the same window one step earlier, not a second refusal mechanism, and it matches `docs archive --cascade-only`'s malformed-invocation precedent: a verdict decidable from the arguments alone refuses in every mode, a preview included. |
+| 3 | **"The product change is two lines" (*Current state and risks*, the wide-blast-radius bullet) becomes three touch points**: one `set_metadata_field` in `_archive_one`, one `findings.extend` in `check_doc`, and one refusal in `_cmd_mv`. | Factual correction. The sentence predates Q4's answer, which added D5's leg. |
+| 4 | **The implementation log's *Setup questions — summary* table carried pre-D5 decision numbers** — Q2→D6, Q3→D7, Q6→D8, Q7→D6 — while this document has Q2→D3, Q3→D6, Q5→D7, Q6→D9, Q7→D3. Renumbered in place. | Factual correction. Q4's answer inserted D5 and renumbered everything after it; the log's summary table was not re-swept. A Phase-5 agent reading the log would chase the wrong decision. |
+| 5 | **D9 / Q6's "Each already names `Archived-reason:` in its byte-identical list" is true of two of the three paragraphs, not three.** M25 — D4's and M27 — D6's paragraphs name it; M18's (as widened by M28 — D5) says "other metadata" generically. Phase 1 names **both** `Archived:` and `Archived-reason:` explicitly in that paragraph, so all three now read alike. The M26 *Safe explicit archive selection* paragraph's own byte-identity list gains `Archived:` for the same reason. | Factual correction, found by reading the three paragraphs rather than the claim about them. Q6's decision is unchanged and is now literally true; the fix strengthens the weakest of the three. |
+
+### Step-1 resolutions (BINDING)
+
+Nine questions were raised by Step-1 planning. **OQ-7 is an operator
+decision.** OQ-1 was resolved by the conductor as a clear defect in D5's
+literal wording. The remaining seven are conductor-resolved from the specs, the
+frozen material, or the measured evidence. All nine are binding; Phases 2–10 do
+not re-open them.
+
+| # | Question | Resolution |
+|---|---|---|
+| OQ-1 | Where exactly does Leg 2's refusal sit, given `_cmd_mv` returns at `--dry-run` before the pre-flight? | **Conductor.** In `_cmd_mv`, immediately after `old_rel` / `new_rel` are derived and **before** the `--dry-run` branch. It refuses in every mode. Amendment 2 above; item (F). |
+| OQ-2 | Which rule owns an `Archived:` value that does not parse? (D3 deferred this to Phase 1.) | **Conductor. `bad-date`**, message form C, **one** finding for that document and **no** drift finding. `bad-date` stays the single vocabulary entry for *a date field that does not parse*, exactly parallel to `Updated:`. The residual is named in the upgrade note: a hand-adopted foreign tree carrying a non-date `Archived:` value gains a new error — E6 measured **zero** occurrences anywhere, and `docs migrate` demotes a foreign one (D7). |
+| OQ-3 | `parse_date` hardcodes the label `Updated:` in its message, so a malformed witness would name the wrong field. | **Conductor.** Add a keyword-only `label: str = "Updated"` parameter in Phase 5. Every existing call site keeps a **byte-identical** message — verified explicitly and locked by a test. One parser survives, and the two messages cannot drift. Item (H). |
+| OQ-4 | Which root-relative expression does the rule use? | **Conductor.** The pure `_root_relative(path, root)`, never `path.resolve().relative_to(root.resolve())`: D3 forbids filesystem access and `body_link_findings` is the precedent. For every real `check_tree` walk the two agree, because paths come from `os.walk(root)`. Item (C) step 3. |
+| OQ-5 | What about an `[archive] date_format` containing `/` (e.g. `%Y/%m/%d`)? | **Conductor. Document only.** One sentence in `convention.md` › *Archive subtree* saying the archive date must render as a single path segment, plus *Follow-ups* item 6. **No** code and **no** test: the shape is already broken pre-M28a and D3's first-segment reading pins it. Same treatment as defect E8. |
+| OQ-6 | Does `convention.md`'s *Optional fields* table gain a row? | **Conductor.** Both an `Archived` row **and** the currently-missing `Archived-reason` row. |
+| OQ-7 | Should Leg 2's predicate widen to refuse `docs mv archive/<date>/x.md archive/x.md` — leaving a dated directory for the archive root? | **OPERATOR. No — do not widen.** It stays a permitted neighbour, because refusing it would also refuse a legitimate reorganisation of the archive subtree, which the convention permits. Instead, all three of: (a) D8's residual sentence names this second, tool-driven residual honestly; (b) a Phase-2 lock proves Leg 1 **does** catch it (message form B) for witness-carrying documents; (c) it is registered as *Follow-ups* item 7. |
+| OQ-8 | The implementation log's Q→D summary table contradicts this document. | **Conductor.** Corrected in place as a factual correction, and said to be one in the Phase-1 log entry. Amendment 4 above. |
+| OQ-9 | How is the compatibility proof phrased so a later milestone's archive event cannot falsify it? | **Conductor.** As the durable property: `check_tree(docs/)` yields **zero** `archive-date-drift` findings over a tree with **at least 46** archived documents. Never as "no archived document carries `Archived:`" — that becomes false the first time a later milestone archives anything. The exact "46 carry no field" measurement stays in the Phase-9 dogfood record, as dated evidence. |
+
+### (A) The field
+
+- **Label: `Archived`**, rendered `Archived: <value>`. Permanent (D1 / Q1).
+- **Value: the same `date_str`** `_archive_one` already receives —
+  `archive_date.strftime(config.date_format)`, computed once in `_cmd_archive`
+  and already used by `_archive_destination` to name the dated directory. One
+  value, one source, one rendering. Never a second `strftime`, and never a
+  `date.today()` re-read inside `_archive_one`.
+- **Written by `_archive_one` to every member** (D2 / A2).
+  `apply_archive_plan`'s `plan.reason if index == 0 else None` special case is
+  **not** touched: the reason stays primary-only, the date does not.
+- **Position: pinned by the `set_metadata_field` call order** in
+  `_archive_one`, which becomes `Lifecycle` → `Updated` → **`Archived`** →
+  `Archived-reason` (conditional). `set_metadata_field` appends a new inline
+  label at the end of the inline run and replaces an existing one in place, so
+  an archived document reads:
+
+```
+Lifecycle: archived
+Role: <role>
+Project: <project>
+Updated: <date_str>
+Archived: <date_str>
+Archived-reason: <reason>
+```
+
+- **Pinned edge cases.** A document that **already** carries `Archived:` has it
+  replaced in place — the archive event's date wins. A `Related:` bare-label
+  group still follows the inline run, because `set_metadata_field` inserts
+  before the first bare-label group.
+- **No other verb writes it.** `docs new`, `docs stamp`, `docs touch`,
+  `docs relate` and `docs migrate` never do, and there is no backfill (D6, D7).
+
+### (B) The vocabulary — three changes and one deliberate non-change
+
+| Surface | Change |
+|---|---|
+| `_BUILTIN_METADATA_FIELDS` | gains `"Archived"` — M25's `Revision:` reason verbatim: a label the tool writes must never trip the tool's own allowlist warning |
+| `parse()`'s `known` set | **unchanged** — the field surfaces via `Doc.extra` into `doc_to_json`'s `extra_fields`, exactly as `Archived-reason:` and `Revision:` already do. M28a adds no field to any JSON record |
+| migrate's supersession set `_REQUIRED_METADATA_FIELDS` | **unchanged** — so a foreign `Archived:` line is demoted by `_render_migrated_metadata_section` to `Migrated-Archived:` under `## Migrated metadata`, preserved but never promoted (D7) |
+| `Finding`'s docstring rule enumeration, and `cli.md`'s `rule` table row | gain `archive-date-drift` |
+
+### (C) Leg 1 — the corroboration predicate
+
+Two pure helpers. `archive_dir_date` is shared with Leg 2, so the two legs can
+never disagree about what a dated archive directory is.
+
+**`archive_dir_date(rel, config)`** — the date of the dated archive directory
+`rel` sits in, or `None`:
+
+1. `_is_archived_rel(rel, config)` is False → `None`. (`Config` validates that
+   `archive_dir` is a **single path segment**, which is what makes step 3
+   unambiguous.)
+2. `parts = rel.split("/")`; `len(parts) < 3` → `None`. This is what makes
+   `archive/x.md` — a document directly in the archive root — carry no date.
+3. `parse_date(parts[1], config.date_format)` → the date; `MetadataError` →
+   `None`.
+
+Step 3 is the D3 pin honoured literally: the **same** `parse_date` path
+`check_doc` already uses for `Updated:`, always with `config.date_format`,
+never through `parse()`'s hardcoded default (defect E8, *Follow-ups* item 1).
+It deliberately does **not** copy `detect_archive_layout`'s hardcoded
+`datetime.strptime(parts[1], "%Y-%m-%d")`.
+
+**`archive_date_findings(path, metadata, root, config)`** — the evaluation
+order is BINDING:
+
+1. `recorded = metadata.get("Archived")`. Not a `str`, or blank → `[]`
+   (**present-only**, D6). This also covers a bare `Archived:` bullet group,
+   which `parse_metadata_block` yields as a `tuple` — pinned as *absent*,
+   mirroring how `check_doc` already silently skips a tuple-valued `Updated:`.
+2. `parse_date(recorded, config.date_format, label="Archived")` → on
+   `MetadataError`, return **one `bad-date`** finding (form C) and stop. **No**
+   drift finding for that document (OQ-2).
+3. `rel = _root_relative(path, root)` — **not**
+   `path.resolve().relative_to(root.resolve())`. `body_link_findings` is the
+   precedent, and `.resolve()` is filesystem access, which D3 forbids. For
+   every real `check_tree` walk the two expressions agree, because paths come
+   from `os.walk(root)` (OQ-4).
+4. `dir_date = archive_dir_date(rel, config)`. Equal to the recorded date →
+   `[]`. `None` → form B. Otherwise → form A.
+
+**No filesystem access of any kind**, in either helper — pinned by a purity
+test that monkeypatches `Path.exists` / `Path.is_file` / `Path.open` to raise.
+
+Pinned consequences:
+
+- **Deeper paths corroborate.** `archive/<date>/sub/x.md` reads `parts[1]`.
+- **Parsed, never string, equality.** `archive/2026-1-1/` corroborates
+  `Archived: 2026-01-01` under the default format — `strptime` accepts
+  unpadded fields.
+- **`archive-date-drift` and `status-drift` are independent** and may both fire
+  on one document (Q7).
+- A `malformed` document (no H1) never reaches the rule: `check_doc` returns
+  early.
+- `duplicate-field` still fires independently on a doubled `Archived:` label;
+  the rule reads the last occurrence, as every rule does.
+- **The compatibility proof is phrased as a durable property** (OQ-9):
+  `check_tree` over this repository's `docs/` yields **zero**
+  `archive-date-drift` findings over a tree with **at least 46** archived
+  documents.
+
+### (D) Leg 1 — the rule's position, severity and cardinality
+
+`findings.extend(archive_date_findings(path, metadata, root, config))` goes
+**immediately after the lifecycle/location `status-drift` block** and
+**before** the M25 `duplicate-field` block, so the two location-versus-metadata
+rules stay adjacent — M27's reason for placing `body_link_findings` immediately
+after the `broken-ref` group. The frozen intra-document order asserted by
+`test_check_tree_findings_grouped_by_path` is unaffected.
+
+Severity `error`, exit **2** through the existing `exit_code_for`. **One
+finding per document** — a document has one recorded date and one location. No
+opt-out, no `check_tree` second pass, no graph traversal, and `Finding`'s key
+set stays closed at four (D4).
+
+### (E) The frozen message catalogue
+
+Leg 1 — the `Finding.message` field; the human line is
+`  error: [<rule>] <message>`:
+
+```
+A  archive-date-drift : Archived: <recorded> but the file is in <archive_dir>/<segment>/ (move it back, or correct the recorded date)
+B  archive-date-drift : Archived: <recorded> but the file is not under a dated <archive_dir>/ directory (move it back, or remove the field)
+C  bad-date           : Archived: malformed date '<value>' (expected <date_format>)
+```
+
+`<recorded>` and `<segment>` are the raw strings as written on disk — both
+already proven to parse for form A. Form A is the headline case and names
+**both** dates. Form B covers both non-dated shapes — outside the archive
+subtree, and an undated subdirectory of it — which is Q7's "one rule, two
+message forms". Form C is `parse_date`'s **own** message with its `label`
+argument set to `Archived` (OQ-3), so there is exactly one date-error message
+in the tool and it cannot drift from `Updated:`'s.
+
+Leg 2 — two lines on stderr, both printed **even under `--quiet`**, as every
+refusal is:
+
+```
+docs: mv: <old-rel> -> <new-rel> crosses dated archive directories (<D1> to <D2>); refusing before any write
+docs: mv: the dated directory records when a document was archived; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check`
+```
+
+`<D1>` / `<D2>` are the raw directory segments. The two-line shape is
+`docs archive`'s leg-1 precedent — a per-condition line, then a second line —
+and it is what makes "the escape ships in the same breath as the refusal" true
+in the CLI as well as in both specs.
+
+### (F) Leg 2 — the predicate, its position and its permitted neighbours
+
+`cross_dated_archive_move(old_rel, new_rel, config)` returns
+`(seg_old, seg_new)` — the two raw directory segments — iff
+`archive_dir_date(old_rel, config)` and `archive_dir_date(new_rel, config)` are
+both non-`None` **and different**; otherwise `None`. Path arithmetic only: no
+metadata, no filesystem, no graph, and therefore independent of whether the
+moving document carries the witness.
+
+**Position (BINDING, amendment 2).** Evaluated in `_cmd_mv` immediately after
+`old_rel` / `new_rel` are derived and **before** the `--dry-run` branch — the
+plan-before-move window, where nothing has been written and no `--json` record
+has been emitted. Three reasons, each with a precedent on disk:
+
+1. It is an **invalid invocation**, not a state-dependent consequence —
+   decidable from the two arguments alone, exactly like `docs archive`'s
+   `--cascade-only` shape check, which `cli.md` pins as "a MALFORMED
+   INVOCATION, not a selection outcome, so it refuses in every mode — a
+   preview included".
+2. `_cmd_mv` returns at its `--dry-run` branch *before* `preflight_move_plan`.
+   Inside the pre-flight, `docs mv --dry-run` would print `would move …` at
+   exit 0 for an operation the apply refuses.
+3. Before the walk, it gives M26's stated precedence — naming the document the
+   operator asked for is strictly more actionable — and makes exclusion
+   irrelevant to the predicate, which is exactly what *Also settled* pins:
+   exclusion governs the walk, never the predicate.
+
+It is **not** placed inside `preflight_move_plan`, which `_cmd_archive` also
+calls: archive never moves an already-archived member, so the predicate would
+be dead code there.
+
+Exit **2**, zero bytes written, no `--json` record. **Permitted neighbours** —
+D5's three, plus the fourth Q2's parsed-date comparison implies:
+
+| # | Move | Verdict |
+|---|---|---|
+| 1 | a rename within one dated directory (`archive/D/a.md` to `archive/D/b.md`, and to `archive/D/sub/b.md`) | completes |
+| 2 | one end outside the archive subtree | completes; `status-drift` owns the aftermath, and this leg does not double-report it |
+| 3 | the two segments do not both parse (`archive/D/x.md` to `archive/misc/x.md` or to `archive/x.md`, either direction) | completes — **and this is D8's second residual**, named in D8 and registered as *Follow-ups* item 7 |
+| 4 | two spellings of one date (`archive/2026-01-01/` to `archive/2026-1-1/`) | completes — the predicate compares **parsed** dates (Q2) |
+
+### (G) The author-facing surface
+
+- `cli.md` › `docs archive`: step 2 records the date on **every** document the
+  operation moves; a following paragraph pins the block position, the
+  every-member rule, the replace-in-place edge case, and that no other verb
+  writes it.
+- `cli.md` › `docs check`: an `archive-date-drift` bullet in the rule list, the
+  `rule` table row, the exit-2 line, the built-in always-allowed field set —
+  and, because form C exists, the `bad-date` bullet widens from "`Updated:` not
+  parseable" to "a date field that does not parse — `Updated:`, or `Archived:`".
+  A new *Archive-date corroboration* subsection carries the three conditions,
+  the two message forms verbatim, the present-only contract, the independence
+  from `status-drift`, and its own *Upgrading from 1.x*.
+- `cli.md` › `docs mv`: a *Cross-dated archived relocations* subsection
+  carrying the refusal, its exit code, its zero-bytes guarantee, both frozen
+  lines, its four permitted neighbours **and its by-hand escape in the same
+  subsection**; one amended row in the `docs mv` exit-code table and one in the
+  global exit-code summary.
+- `convention.md` › *Optional fields*: an `Archived` row and the
+  previously-missing `Archived-reason` row (OQ-6).
+- `convention.md` › *Archive subtree*: the witness, the present-only rule, the
+  fact that M28a never requires a dated directory, D5's refusal with its
+  escape, and the single-path-segment constraint on `[archive] dir` and
+  `[archive] date_format` (OQ-5).
+- `convention.md`: **all three** archived-immutability paragraphs name
+  `Archived:` on the byte-identical side beside `Archived-reason:`, and M26's
+  *Safe explicit archive selection* byte-identity list gains it too
+  (amendment 5).
+- **Authoring traps** (M28 item (M), still binding): no `](../` and no
+  link-shaped span in either spec — both ship byte-identically in the wheel and
+  are validated by the dogfood `docs check`. Every `Archived:` sample and every
+  `docs mv archive/...` example goes in a fence or in inline code.
+
+### (H) The Phase-5 signatures
+
+```python
+def parse_date(
+    value: str, date_format: str = "%Y-%m-%d", *, label: str = "Updated"
+) -> date:
+    """Parse a date string, raising MetadataError on malformed input.
+
+    `label` names the field in the error message (M28a — OQ-3). Every
+    pre-M28a call site keeps a byte-identical message.
+    """
+
+
+def archive_dir_date(rel: str, config: Config) -> date | None:
+    """The date of the dated archive directory `rel` sits in, or None (M28a — D3)."""
+
+
+def archive_date_findings(
+    path: Path,
+    metadata: Mapping[str, str | tuple[str, ...]],
+    root: Path,
+    config: Config,
+) -> list[Finding]:
+    """`archive-date-drift` for one document (M28a — D3). Pure; no filesystem access."""
+
+
+def cross_dated_archive_move(
+    old_rel: str, new_rel: str, config: Config
+) -> tuple[str, str] | None:
+    """The two dated-directory segments when a move crosses them, else None (M28a — D5)."""
+```
+
 ## Follow-ups recorded for later milestones
 
 Raised during setup, judged out of M28a's scope, and deliberately **not**
@@ -1219,6 +1554,8 @@ implemented here.
 | 3 | **`docs migrate --apply` writing the witness for the archive-shaped files it relocates** (Q5). Refused here because migrate's date is inferred from `Updated:` or mtime. It becomes available if migrate ever gains a date an operator asserts per file rather than per run. | Later |
 | 4 | **Three inlined copies of the archive-subtree predicate** (E7). `check_doc`, the `docs list` walk, and `docs project set` each spell `rel == config.archive_dir or rel.startswith(config.archive_dir + "/")` inline, although `_is_archived_rel` already provides exactly that. A `/simplify` candidate M28a's Phase 10 should evaluate, not a defect. | M28a Phase 10 / Later |
 | 5 | **`docs migrate --apply` rewriting references across its own moves** (M28 *Follow-ups* item 1, unchanged and still deferred). | Later |
+| 6 | **An `[archive] date_format` that renders with a `/`** (e.g. `%Y/%m/%d`). `Config` already validates that `[archive] dir` is a single path segment, but nothing validates the rendered date. Such a tree's dated directory is two segments deep, which every archive-subtree rule in this convention — `status-drift`, `_is_archived_rel`, `detect_archive_layout`, and now M28a's corroboration — reads as one. The shape is already broken pre-M28a and D3's first-segment reading pins it, so M28a adds **no** code and **no** test for it and documents the constraint in `convention.md` › *Archive subtree* instead. Same treatment as defect E8 (Phase-1 resolution OQ-5). | Later |
+| 7 | **A tool-driven relocation out of a dated directory that is not cross-dated** — `docs mv archive/<D>/x.md archive/x.md`, or into an undated archive subdirectory. Permitted by design (D5's third neighbour), because refusing it would also refuse a legitimate reorganisation of the archive subtree; but it destroys the only archive-date record a pre-2.0 archived document has, and `status-drift` is silent because the destination is still inside the archive subtree. D8's second residual, made explicit by Phase-1 amendment 1. Closable only by a narrower refusal that distinguishes reorganisation from erasure — which needs a signal the two paths alone do not carry (operator decision, OQ-7). | Later |
 
 ## Testing and quality gate
 

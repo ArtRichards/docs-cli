@@ -101,9 +101,36 @@ Exits 0 always (warnings printed to stderr; use `docs check` for hard validation
 Atomically archive a doc.
 
 1. Reads `<file>`, validates it has required metadata.
-2. Writes `Lifecycle: archived` and bumps `Updated:` to today (or `--date`).
+2. Writes `Lifecycle: archived`, bumps `Updated:` to today (or `--date`), and
+   records that same date as `Archived:` — on **every** document the
+   operation moves (M28a — D1 / D2).
 3. Moves the file to `<archive_dir>/<YYYY-MM-DD>/<basename>`.
 4. Regenerates INDEX.md.
+
+**The archive-date witness (M28a — D1 / D2).** Step 2's `Archived:` line
+carries the **same** date that names the dated directory — one value, one
+source, rendered once in the tree's `[archive] date_format`. Unlike
+`Archived-reason:` it is written to the named primary **and** to every
+selected cascade candidate, because the date is a fact about each
+document's own move rather than about why the operation was requested. Its
+position in the metadata block is pinned, so an archived document reads:
+
+```
+Lifecycle: archived
+Role: <role>
+Project: <project>
+Updated: <date>
+Archived: <date>
+Archived-reason: <reason>
+```
+
+A document that already carries an `Archived:` line has it replaced in
+place — the archive event's date wins — and a `Related:` bullet group still
+follows the inline run. **No other verb writes it**: `docs new`,
+`docs stamp`, `docs touch`, `docs relate` and `docs migrate` never do (M28a
+— D6 / D7), and there is no backfill for documents archived before 2.0.0.
+`docs check` corroborates it against the document's location — see
+`docs check` › *Archive-date corroboration*.
 
 `--reason` is appended as a free-form `Archived-reason:` metadata line
 (harvested but uninterpreted). It applies to the **primary document
@@ -905,6 +932,51 @@ the own-edge half and gives `mv` the same edge-integrity contract as
 `archive`. M28's class-2 rebasing is the body-link half of the same
 guarantee.
 
+##### Cross-dated archived relocations (M28a — D5)
+
+`docs mv` **refuses** a move whose source and destination are two **different
+dated archive directories**. The dated directory is the only record of when a
+document was archived, and this is the one relocation the tool itself performs
+that would silently falsify it — for documents that carry the `Archived:`
+witness and, more importantly, for the whole population archived before 2.0.0
+that never can.
+
+**The predicate is decidable from the two paths alone.** Both paths are under
+the configured `[archive] dir`, and the first path segment under it parses, in
+the tree's `[archive] date_format`, to **different** dates. No metadata, no
+filesystem probe and no graph is examined, so the refusal does not depend on
+whether the moving document carries the witness. It is evaluated in the
+plan-before-move window, **before** any byte is written and before any `--json`
+record is emitted, so it refuses in **every** mode — `--dry-run` and `--quiet`
+included, because a preview that says `would move` for an operation the apply
+refuses is a preview that lies. Exit **2**, **zero bytes written**, no `--json`
+record. Both lines print even under `--quiet`, as every refusal does, and the
+escape ships in the same breath as the refusal:
+
+```
+docs: mv: archive/2026-01-01/x.md -> archive/2026-03-04/x.md crosses dated archive directories (2026-01-01 to 2026-03-04); refusing before any write
+docs: mv: the dated directory records when a document was archived; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check`
+```
+
+**What it does not refuse**, stated so the predicate cannot creep. Each of
+these completes exactly as it does today:
+
+| Move | Why it completes |
+|---|---|
+| A rename **within** one dated directory, `archive/D/a.md` to `archive/D/b.md` or to `archive/D/sub/b.md` | the basename or the depth changes; the date does not |
+| A move with **one end outside** the archive subtree | `status-drift` already catches both directions at exit 2, and this leg does not double-report them |
+| A move whose two segments do not **both** parse as dates, e.g. `archive/D/x.md` to `archive/notes/x.md`, or to `archive/x.md`, in either direction | there is no pair of dates to disagree |
+| Two spellings of **one** date, `archive/2026-01-01/` to `archive/2026-1-1/` | the predicate compares parsed dates, so these are the same date |
+
+The third row has a knowable cost: moving a document out of its dated
+directory to an undated one, or to the archive root, destroys the only
+archive-date record a pre-2.0 document has, and `status-drift` stays silent
+because the destination is still inside the archive subtree. Refusing it would
+also refuse a legitimate reorganisation of the archive subtree, which the
+convention permits, so the move stays permitted — but for a document that
+**does** carry the witness, `docs check` reports the result as
+`archive-date-drift` (the second message form).
+
 ##### `docs mv` preview and `--json` (M28 — D7)
 
 `--dry-run` is a real preview: it walks the tree, builds the whole
@@ -966,13 +1038,13 @@ An **INDEX-refresh** failure is the one exception, mirroring
 **is** emitted, with `"applied": true, "index_refreshed": false`, and the
 run exits 2 after printing `docs: INDEX refresh failed: <err>`.
 
-##### `docs mv` exit codes (M14 — A1 / A4; M28 — D4)
+##### `docs mv` exit codes (M14 — A1 / A4; M28 — D4; M28a — D5)
 
 | Exit | Condition |
 |---|---|
 | 0 | Success; `--dry-run` preview |
 | 1 | `<old>` is not a file; collision — `<new>` already exists |
-| 2 | Malformed `.docs.toml`; either path outside the docs root; a malformed tree caught by the validate-all-first pre-flight walk (A1) — since M28 **also under `--dry-run`**, because a preview cannot describe a tree it cannot read; an **unreadable** document in that same walk; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); INDEX-refresh failure |
+| 2 | Malformed `.docs.toml`; either path outside the docs root; a **cross-dated archived relocation** (M28a — D5), in every mode including `--dry-run`; a malformed tree caught by the validate-all-first pre-flight walk (A1) — since M28 **also under `--dry-run`**, because a preview cannot describe a tree it cannot read; an **unreadable** document in that same walk; a planned referrer that is not writable, or whose recorded destination span no longer matches its text, or that carries two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); INDEX-refresh failure |
 
 ### `docs list [--lifecycle L] [--role R] [--project P] [--stale N] [--json] [--exclude PATTERN]`
 
@@ -1010,7 +1082,12 @@ Validate the tree. Reports (and exits nonzero on) any of:
 
 - Missing or empty required metadata fields (`Lifecycle`, `Role`, `Updated`).
 - `Lifecycle` or `Role` not in the (built-in ∪ configured) vocab.
-- `Updated:` not parseable as `YYYY-MM-DD`.
+- A date field that does not parse — `Updated:`, or (M28a) `Archived:` — rule
+  `bad-date`. Both are parsed in the tree's `[archive] date_format`, and the
+  message names the field, so `bad-date` stays the single rule id for *a date
+  field that does not parse*. A document whose `Archived:` value does not
+  parse yields exactly one `bad-date` finding and **no** `archive-date-drift`
+  finding: there is no date to compare.
 - Structural breakage: a missing H1. (A malformed line inside the metadata block ends the block early rather than raising; its effect surfaces as a missing required field, not as a separate finding.)
 - Lifecycle/location mismatch (`Lifecycle: archived` outside archive subtree, or any other lifecycle inside) — rule `status-drift` (stable rule id from M3).
 - `Related:` paths that don't resolve to a file under the docs root.
@@ -1021,7 +1098,7 @@ Validate the tree. Reports (and exits nonzero on) any of:
   `medium-confidence-inference`, exit code 1.
 - (M10 — OQ-F + OQ-H) An extra metadata label that is neither on the
   built-in always-allowed set (`Lifecycle` / `Role` / `Project` /
-  `Updated` / `Related` / `Archived-reason` / `Revision`) NOR on the
+  `Updated` / `Related` / `Archived` / `Archived-reason` / `Revision`) NOR on the
   `[vocabulary] add_fields = [...]` allowlist in `.docs.toml`
   produces `severity: warning`, rule `unknown-field`, exit code 1.
   The rule is **opt-in**: an absent or empty `add_fields` switches
@@ -1030,7 +1107,8 @@ Validate the tree. Reports (and exits nonzero on) any of:
   allows `Owner:` but not `owner:`. `Revision:` joins the built-in
   set in M25 because `docs relate` itself writes that label onto an
   archived endpoint (see `docs relate` below) — a label the tool
-  writes must never trip the tool's own allowlist warning.
+  writes must never trip the tool's own allowlist warning. `Archived:`
+  joins it in M28a for exactly that reason: `docs archive` writes it.
 - (M25 — D7) A **metadata label that appears more than once** in one
   document's metadata block — `severity: error`, rule `duplicate-field`,
   exit code 2, one finding per repeated label. See *Duplicate metadata
@@ -1051,6 +1129,11 @@ Validate the tree. Reports (and exits nonzero on) any of:
   code 2, one finding per occurrence, decided by path arithmetic alone
   with no filesystem access outside the root. See *Markdown body-link
   validation* below.
+- (M28a — D3) A document carrying an `Archived:` line **whose location does
+  not corroborate it** — `severity: error`, rule `archive-date-drift`, exit
+  code 2, **one finding per document**. The rule fires only when the field is
+  present, so a document archived before 2.0.0 never produces one. See
+  *Archive-date corroboration* below.
 
 Output is grouped by file; one line per finding. `--json` emits an array of records, one per finding. Schema — **stable from M3 onward**:
 
@@ -1058,22 +1141,25 @@ Output is grouped by file; one line per finding. `--json` emits an array of reco
 |---|---|---|
 | `path` | string | Root-relative POSIX path of the doc. |
 | `severity` | string | `error` or `warning`. |
-| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), `unknown-field` (M10), `duplicate-field` (M25), `missing-inverse` (M25), `broken-body-link` (M27), or `outside-root-body-link` (M27). |
+| `rule` | string | Stable rule id: `missing-field`, `bad-vocab`, `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`, `medium-confidence-inference` (M7), `unknown-field` (M10), `duplicate-field` (M25), `missing-inverse` (M25), `broken-body-link` (M27), `outside-root-body-link` (M27), or `archive-date-drift` (M28a). |
 | `message` | string | Human-readable description of the finding. |
 
-The record's **key set is closed** and unchanged by M25 or M27:
-`missing-inverse`, `broken-body-link`, and `outside-root-body-link` each add
+The record's **key set is closed** and unchanged by M25, M27 or M28a:
+`missing-inverse`, `broken-body-link`, `outside-root-body-link`, and
+`archive-date-drift` each add
 **no** new JSON field. Everything an agent needs to repair the edge — source,
 verb, target, and the exact missing inverse — is carried in `message`, and
 everything it needs to repair a body link — the 1-based line, the raw
 destination as written, and the path the destination normalises to — is
 carried there too. A new rule adds a value to `rule`, never a field to the
-record.
+record. `archive-date-drift` carries **both** dates — the recorded value and
+the directory segment the file now sits in — in `message`, for the same
+reason.
 
 Exit codes:
 - 0 — clean.
 - 1 — warnings only (stale docs; medium-confidence inferences; unknown-field warnings).
-- 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs, duplicate metadata labels, missing inverses, broken body links, body links that leave the docs root).
+- 2 — errors (missing required fields, invalid vocab, malformed structure, lifecycle/location drift, broken refs, duplicate metadata labels, missing inverses, broken body links, body links that leave the docs root, an uncorroborated `Archived:` date).
 
 **Duplicate metadata labels (M25 — D7).** A metadata label may appear
 **at most once** per document. Repeatability lives in the **bullets** under
@@ -1631,6 +1717,85 @@ docs check                # read the findings: line, raw destination, candidate
                           # outside-root-body-link → replace it with a URL
 docs check                # clean
 ```
+
+#### Archive-date corroboration (M28a — D1 / D3)
+
+`docs archive` records the archive date as an `Archived:` metadata line
+(see `docs archive` above). `docs check` asks one question of it: **does this
+document's location corroborate the archive date it records?**
+
+**Present-only, and that is the whole compatibility story.** A document that
+carries no `Archived:` line produces nothing, ever. Every document archived
+before 2.0.0 was archived by a tool that never wrote a witness, so a 1.x tree
+gains **zero** findings from this rule on upgrade. There is no backfill and no
+repair verb.
+
+**Corroboration, as three exact conditions.** A present `Archived:` value is
+corroborated when **all** of the following hold, computed from the document's
+root-relative path and the tree's config, with **no filesystem access**:
+
+1. the path's first segment is the configured `[archive] dir`;
+2. the segment immediately after it parses, in the tree's
+   `[archive] date_format`, as a date;
+3. that date **equals** the parsed recorded value.
+
+Anything else is a finding. Three properties bind the predicate:
+
+- **Comparison is on parsed dates, never on raw strings.** `date_format` is
+  configurable and a document must never carry two date spellings, so
+  `archive/2026-1-1/` corroborates `Archived: 2026-01-01` under the default
+  format. Both sides are parsed with the tree's `[archive] date_format`.
+- **Deeper paths still corroborate.** Corroboration reads the **first**
+  segment under the archive directory, matching how `status-drift` already
+  treats the subtree, so a document at `archive/<date>/sub/x.md` corroborates
+  `<date>`.
+- **The tool never requires a dated directory.** The rule reports a document
+  whose *own recorded date* is not corroborated; it never reports a tree whose
+  layout it dislikes. A hand-organised undated archive subdirectory carrying
+  no witness stays silent.
+
+**Two non-corroborating shapes, one rule, two message forms.** One finding per
+document — a document has one recorded date and one location:
+
+```
+Archived: 2026-01-01 but the file is in archive/2026-03-04/ (move it back, or correct the recorded date)
+Archived: 2026-01-01 but the file is not under a dated archive/ directory (move it back, or remove the field)
+```
+
+The first is the headline case: a **different** dated directory. The second
+covers both shapes that have no dated directory at all — the document is not
+under the archive subtree, or it sits under an undated subdirectory of it.
+`archive/` in both lines is the configured `[archive] dir`.
+
+**`archive-date-drift` and `status-drift` are independent** and may both fire
+on one document. They report different facts — a lifecycle that disagrees with
+a location, and a recorded date that does — and the case that motivates this
+rule (a document moved out of the archive whose `Lifecycle:` is then
+hand-edited to an active value) is precisely the one where `status-drift` is
+silent.
+
+**A value that does not parse is `bad-date`, not drift.** It yields exactly
+one `bad-date` finding naming the field, and no drift finding for that
+document, because there is no date to compare:
+
+```
+Archived: malformed date '2026-13-01' (expected %Y-%m-%d)
+```
+
+There is **no opt-out**. `[exclude]` / `.docsignore` decide which documents are
+walked, exactly as they already do for every other rule; they never soften the
+predicate.
+
+##### Upgrading from 1.x
+
+Nothing an adopter already has starts failing, and the witness begins with
+their next archive. The rule is present-only, so every document archived
+before 2.0.0 stays silent forever.
+
+The one behaviour change is in `docs mv`, not in `docs check`: a move between
+two different dated archive directories used to complete at exit 0 and now
+refuses at exit 2 with zero bytes written. See `docs mv` › *Cross-dated
+archived relocations*.
 
 **Stale-window resolution (M19 — D2).** The stale window the `stale` rule
 applies is resolved as **CLI `--stale` > `[check] stale_days` > unset**:
@@ -2959,7 +3124,7 @@ M12 / M14 / M15 / M25-specific exit-code shape:
 | `new` (strict-root refusal, M14 — A2) | success / dry-run | existing file | no `.docs.toml` ancestor (cwd-resolved) or `--root` without `.docs.toml`; invalid role / slug (incl. empty final segment, M14 — A3) |
 | `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5 / M28 — D4 / D6) | success | the primary is missing, does not parse, or resolves outside the resolved docs root; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); a still-active document outside the plan declaring itself `child-of` a plan member (M28 — D6, leg 1); `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 | `archive --cascade-dry-run` / `--dry-run` (M26 — D6; M28 — D6) | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing, and **including** a plan whose leg-1 strand verdict it reports rather than adopts | a referring doc has malformed metadata — the preview now walks the tree, so it adopts this plan-**construction** failure (M28) | — |
-| `mv` (M14 — A1 / A4; M28 — D4) | success / dry-run preview | `<old>` is not a file; collision (`<new>` exists) | malformed tree caught by the validate-all-first pre-flight (A1), since M28 **also under `--dry-run`**; an unreadable document in that walk; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); both paths outside the docs root; malformed `.docs.toml`; INDEX-refresh failure |
+| `mv` (M14 — A1 / A4; M28 — D4; M28a — D5) | success / dry-run preview | `<old>` is not a file; collision (`<new>` exists) | a cross-dated archived relocation (M28a — D5), in every mode including `--dry-run`; malformed tree caught by the validate-all-first pre-flight (A1), since M28 **also under `--dry-run`**; an unreadable document in that walk; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); both paths outside the docs root; malformed `.docs.toml`; INDEX-refresh failure |
 | `relate add\|remove` (M25 — D3 / D4 / D5) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; unknown verb; self-edge; malformed `--date`; empty or multi-line `--reason`; an archived endpoint without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
 
 **Cross-verb exit-code convention (no-root vs outside-root).** Two distinct
