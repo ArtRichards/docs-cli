@@ -6,8 +6,7 @@ Project: docs
 Updated: 2026-08-16
 
 Related:
-- child-of: m29-pypi-publish-2-0-0.md
-- pairs-with: m29-pypi-publish-2-0-0.md
+- pairs-with: archive/2026-08-16/m29-pypi-publish-2-0-0.md
 - pairs-with: status.md
 - pairs-with: release-runbook.md
 - references: feedback-log.md
@@ -25,15 +24,24 @@ M9/M11/M13/M17/M20/M24).
 
 - Project: docs
 - Milestone: M29 — PyPI publish 2.0.0
-- Started: 2026-08-16 (milestone setup; no runbook phase started)
-- Progress: **Setup complete 2026-08-16; no runbook phase started.** The whole
-  v2.0 train is merged to `main` — M25 (`822e086`), M26 (`393fb53`), M27
-  (`58955ef`), M28 (`b1ec74b`), M28a (`91cc839`) — and the tree is
-  publish-ready except for the two pieces of work M29 owns by design: the
-  single version bump `1.8.0` → `2.0.0`, and dating the `## UNRELEASED`
-  CHANGELOG heading. Setup ran the read-only half of the runbook's Phase 1 and
-  Phase 2 gates and produced seven pieces of measured evidence (**E1–E7**), one
-  of which is a **release blocker in the toolchain, not the package** (E3).
+- Started: 2026-08-16 (milestone setup)
+- Progress: **Complete 2026-08-16 — `docs-cli==2.0.0` shipped to PyPI.** All
+  five runbook phases done in one session, the same day M28a merged. The whole
+  v2.0 train — M25 (`822e086`), M26 (`393fb53`), M27 (`58955ef`), M28
+  (`b1ec74b`), M28a (`91cc839`) — went public in one `main` push of **101
+  commits** (`f855b80..408ef6c`), tagged `v2.0.0` at the chain-of-custody
+  commit. **Chain of custody bit-perfect for both wheel and sdist**; the
+  nine-check headline-contract script passed **9/9 against all three builds**
+  (local, TestPyPI-served, PyPI-served). Driven under **D2** — the operator
+  authorized the irreversible set (upload, `main` push, tag, release)
+  explicitly before Phase 4. Decisions: **D1** upgraded twine 6.2.0 → 7.0.0 and
+  moved the floor into the `[dev]` extra, clearing the one blocker setup found;
+  **D3** archived the five plan/log pairs plus the M29 milestone doc, this log
+  staying active; **D4** refreshed the README in Phase 2 (it ships as the PyPI
+  long description) and re-verified its links after the closeout archive.
+  **One success criterion is outstanding**: issue #1's reply is verified
+  against the shipped artifact but was **not posted** — `gh issue comment` was
+  blocked by a local permission classifier.
 
 (Note: doc-lifecycle status is in the front-matter `Lifecycle:` field above.
 This section tracks milestone-implementation progress, which is distinct.)
@@ -48,8 +56,8 @@ M9/M11/M13/M17/M20/M24).
 | 1. Operator one-time prep | Complete | 2026-08-16 | Re-confirmed: PyPI `2.0.0` slot free (released `1.3.0 1.4.0 1.5.0 1.6.0 1.6.5 1.8.0`); `docs-cli-rehearsal` `2.0.0` free; TestPyPI squatter unchanged (`0.1.0`, author `None`) so the detour continues; `~/.pypirc` `600` with two `pypi-` tokens; `gh` holds `repo`. |
 | 2. Pre-publish prep | Complete | 2026-08-16 | D1 twine 6.2.0 → **7.0.0** (+ `twine>=7.0.0` added to the `[dev]` extra); version `1.8.0` → **2.0.0** across `pyproject.toml` and the four packaging pins; CHANGELOG `## UNRELEASED` → `## 2.0.0 — 2026-08-16`; README refreshed (all four items). Gate green: **1504 passed**, ruff/format/mypy clean, `docs check` 0, index idempotent, INDEX == fixture, mirrors byte-identical. Build: wheel `bcd8aa45…`, sdist `3cd137ab…`, both `twine check` **PASSED** at `Metadata-Version: 2.5`; CHANGELOG not in sdist (0). Local smoke `docs 2.0.0` + **9/9** headline contracts. |
 | 3. TestPyPI rehearsal | Complete | 2026-08-16 | Uploaded `docs-cli-rehearsal==2.0.0` (detour kept); both `twine check` PASSED. Installed from TestPyPI first try. Served-wheel smoke: install-skill byte-identical, `--symlink` exit 2, `check` 0, `index --dry-run` 0, and **9/9** headline contracts. `docs --version` → `docs 0.0.0+local`, the known M13 rehearsal-name caveat. Rename reverted (`git diff pyproject.toml` empty); canonical rebuild wheel `bcd8aa45…` **byte-identical to Phase 2**, sdist `33ceac03…` moved via `docs/` drift. **GO.** |
-| 4. Real PyPI publish | Pending | — | Irreversible. Operator authorization at the gate (D2). |
-| 5. Post-release | Pending | — | Tag, GitHub release, host-skill refresh, issue #1 reply, README refresh (E6), docs closeout + archive manifest (D3). |
+| 4. Real PyPI publish | Complete | 2026-08-16 | Operator authorized the irreversible set explicitly (D2). `main` fast-forwarded `f855b80..408ef6c` (**101 commits** — the whole v2.0 train) and pushed; canonical rebuild at the tag-target commit `408ef6c`; both `twine check` PASSED; **uploaded to PyPI**; install from PyPI first try → `docs 2.0.0`; **chain of custody BIT-PERFECT for wheel AND sdist** (`bcd8aa45…` / `c62f22d3…`); **9/9** headline contracts against the PyPI-served wheel. |
+| 5. Post-release | Complete | 2026-08-16 | Annotated `v2.0.0` tag at `408ef6c` pushed; GitHub release live with the `## 2.0.0` notes; **host skill refreshed** from the published wheel, byte-identical, recorded dest corrected to `~/.claude/skills/docs`; workflow-skill sweep found **real drift** (below); doc closeouts + D3's eleven-document archive. **Issue #1 reply verified but NOT posted** — blocked by a local permission classifier, left for the operator. |
 
 ## Setup — readiness measurement (2026-08-16)
 
@@ -355,3 +363,233 @@ similar-looking manual runs.
   the two builds. M13 established exactly this — the wheel is stable across
   rebuilds of the same `src/`, the sdist tracks `docs/`.
 - **GO** recorded for Phase 4.
+
+## Phase 4 — Real PyPI publish (2026-08-16)
+
+### Objective
+
+Publish `docs-cli==2.0.0`, and prove the bytes PyPI serves are the bytes this
+tree built.
+
+### Authorization (D2)
+
+The operator authorized the irreversible set explicitly — the PyPI upload, the
+`main` push, the tag and the GitHub release — before this phase began. D2's
+"author now, confirm at the gate" was satisfied by that instruction; every step
+below ran under it.
+
+### Actions Taken
+
+1. **`main` fast-forwarded and pushed** — `f855b80..408ef6c`, **101 commits**:
+   the entire v2.0 train (M25, M26, M27, M28, M28a and M29's own three commits)
+   became public in one push. `main` had been held locally since M24's ship,
+   which is the project's deliberate pattern — main moves at publish, not at
+   merge.
+2. **Canonical rebuild at the tag-target commit `408ef6c`**, on a clean tree,
+   so the sdist captures the `docs/` state that ships.
+3. `twine check` — both **PASSED**.
+4. **Uploaded to PyPI**: https://pypi.org/project/docs-cli/2.0.0/
+5. Installed from PyPI into a throwaway venv, first try.
+
+### Test Results
+
+**Chain of custody — BIT-PERFECT for both artifacts.** The PyPI-served bytes,
+pulled back with `pip download`, are byte-identical to the local Phase-4 build:
+
+| Artifact | sha256 | Served == local |
+|---|---|---|
+| `docs_cli-2.0.0-py3-none-any.whl` | `bcd8aa453415dfe66868f22830fce318c7149d6642935d6167d4de9b2cdaab23` | **yes** |
+| `docs_cli-2.0.0.tar.gz` | `c62f22d35067cb42a8c241e1d36e161f60ac533b33658ab41f804a2a2c862b66` | **yes** |
+
+The wheel sha has been stable across **all three** builds — Phase 2, the
+post-rehearsal canonical rebuild, and Phase 4 — confirming both that the
+rehearsal rename left no trace and that no `docs/` churn reaches the wheel.
+
+Against the **PyPI-served** wheel: `docs --version` → `docs 2.0.0` (the
+canonical-name check the rehearsal could not make); `install-skill`
+byte-identical, no-op on re-run at exit 0, `--symlink` refused at exit 2;
+`check` on the minimal fixture exit 0; `index --root docs --dry-run` exit 0;
+and the headline-contract probe **9/9**, the third identical run of the same
+script across local, TestPyPI-served and PyPI-served builds.
+
+## Phase 5 — Post-release (2026-08-16)
+
+### Objective
+
+Tag, release, refresh the host skill, sweep the workflow skills, answer the
+issue that shaped the train, and close the docs out.
+
+### Actions Taken
+
+**Tag + release.** Annotated `v2.0.0` at `408ef6c` — the chain-of-custody
+commit, so the tagged tree is exactly what PyPI serves — pushed, and the GitHub
+release created with the `## 2.0.0` CHANGELOG section as its notes
+(https://github.com/ArtRichards/docs-cli/releases/tag/v2.0.0).
+
+**Host-machine skill refresh.** Per the CLAUDE.md policy that production ship
+is the only time `~/.claude/skills/` moves, the host `docs` skill was
+re-materialised **from the published wheel** with `install-skill --force` and
+verified byte-identical to the published bundle. This also corrected the M23
+recorded dest, which the pre-publish smoke runs had left pointing at a scratch
+directory; it now records `~/.claude/skills/docs`.
+
+**Workflow-skill sweep — this one found real drift.** The policy's sweep of the
+workflow skills' docs-cli prescriptions turned up **nine bare `--cascade`
+prescriptions that 2.0 retires**, spread across two skills:
+
+| Skill | File | Occurrences |
+|---|---|---|
+| `create-milestones` | `SKILL.md` | 3 (invariant 4, invariant 7, completion checklist) |
+| `create-milestones` | `references/milestone-playbook.md` | 3 (Step 4, its explanation, the worked example) |
+| `create-milestones` | `references/tdd-phases.md` | 1 (Phase 10 exit) |
+| `create-milestones` | `README.md` | 1 (deliverables) |
+| `project-foundation` | `references/role-mapping.md` | 1 (milestone lifecycle row) |
+
+Every one of them is the **milestone-completion step** — `docs archive
+<slug>.md --cascade --reason "…"` — which under 2.0 refuses at exit 2 and
+writes nothing. The correct form is a preview with `--cascade-dry-run` followed
+by an explicit `docs archive <slug>.md --cascade-only '<glob>' --reason "…"`.
+
+This is **recorded, not fixed here**: the milestone doc's *Closeout intent*
+scopes the Agent Playbook Suite update out of M29 as a cross-repository change,
+and that constraint is now discharged — 2.0.0 is available, so the suite update
+is unblocked and is M29's named follow-on. It is worth stating plainly that the
+sweep earned its place in the policy: without it, the first milestone closeout
+after this release would have failed at exit 2 with the operator's own playbook
+telling them to run the retired flag. This closeout hit exactly that hazard and
+used `--cascade-only`.
+
+**Issue #1 — verified, prepared, NOT posted.** Every claim in the prepared
+reply was re-verified against the **shipped** wheel rather than the plan, which
+is what the milestone doc demanded:
+
+| Claim | Verified against the PyPI-served wheel |
+|---|---|
+| bare `--cascade` refuses, writes nothing | exit 2, 75 files unchanged |
+| already-archived candidates are reported | verbatim `ineligible (already archived)`, 4 of them |
+| `archive --json` carries `strands` **and** `rewrites` | top-level keys include both |
+| `mv --dry-run` / `--json` carry the rewrite plan | 42 `rewrites` entries |
+| `broken-body-link`, `missing-inverse`, `archive-date-drift` | all fire |
+| the `Archived:` witness on every moved member | both members, one shared date |
+| the cross-dated `mv` refusal | exit 2, zero writes |
+
+The comment could not be posted: `gh issue comment` was **blocked by a local
+permission classifier**, not by GitHub. The verified body is left for the
+operator to post with `gh issue comment 1 --body-file <path>` followed by
+`gh issue close 1 --reason completed`. **This is the one M29 success criterion
+not met inside the milestone**, and it is deliberately recorded as outstanding
+rather than quietly dropped.
+
+### Issues/Decisions
+
+- **Two runbook corrections** found by walking it, both landing in the runbook
+  at this closeout:
+  1. *Artifact build* still says to install twine "if not already present" — the
+     shape of the trap D1 hit, since a stale twine **is** present. It now
+     carries the `twine>=7.0.0` floor and the `[dev]`-extra pointer.
+  2. *Post-release* still says "the archive verb doesn't rewrite referring
+     edges; that's `docs mv` territory". **M18 and M28 made that false**: this
+     closeout's own archive rebased the referring edges and body links
+     automatically. The enhancement candidate it points at has shipped.
+- The version bump needs an **editable reinstall** before the gate; added to the
+  runbook's Phase-2 block so the next publish does not rediscover it.
+- **The closeout archive was refused by M26's leg-1 strand check — correctly.**
+  D3 archives the milestone doc while the log stays active (M17/M20/M24), but
+  the log declared `child-of: m29-pypi-publish-2-0-0.md`, so `docs archive`
+  refused at exit 2 with zero bytes written:
+
+  ```
+  docs: archive: m29-pypi-publish-2-0-0-impl.md is still active and declares
+  'child-of: m29-pypi-publish-2-0-0.md', which this operation would archive;
+  refusing before any write
+  docs: archive: 1 still-active child(ren) would be stranded; zero bytes written
+  ```
+
+  This is the milestone's own train catching a modelling error in the project's
+  own precedent, and it is the single most satisfying moment of the release: a
+  rule written for issue #1's "parent archived out from under a live child"
+  fired on the closeout of the release that shipped it. The fix is not to
+  suppress the rule but to model the relationship honestly — a publish log that
+  **deliberately outlives** its milestone doc is that doc's **pair**, not its
+  child. The `child-of` / `parent-of` edge was dropped from both sides, leaving
+  the `pairs-with` that already described them, and the archive completed at
+  exit 0.
+
+  The whole eleven-document manifest was rehearsed on a **throwaway copy** of
+  the tree before touching the live one, which is how the refusal was met
+  without a half-finished closeout to unwind. Note for the next publish:
+  `m17-`, `m20-` and `m24-pypi-publish-impl.md` carry the same `child-of` edge
+  into `archive/`, where it is harmless — the rule fires only when the plan
+  would archive a **live** parent — so this is an inherited pattern that will
+  recur at the next closeout unless those edges are re-modelled too.
+
+## Milestone-completion summary (2026-08-16)
+
+**M29 is complete: `docs-cli==2.0.0` is live on PyPI**, published from commit
+`408ef6c` and tagged `v2.0.0`. All five runbook phases ran in one session on
+2026-08-16, the same day M28a merged.
+
+### What shipped
+
+The whole v2.0 safety train as one breaking release — M25 reciprocal
+relationship integrity and `docs relate`, M26 safe explicit archive selection,
+M27 Markdown body-link validation, M28 move-safe body-link rewrites, M28a the
+structured archive-date witness. M25 — D6 held the package at `1.8.0` across
+all five so the train could ship together; M29 performed the single bump.
+
+### Verification
+
+| Anchor | Value |
+|---|---|
+| Wheel sha256 | `bcd8aa453415dfe66868f22830fce318c7149d6642935d6167d4de9b2cdaab23` |
+| Sdist sha256 | `c62f22d35067cb42a8c241e1d36e161f60ac533b33658ab41f804a2a2c862b66` |
+| Chain of custody | **bit-perfect, wheel and sdist** |
+| Tag target | `408ef6c` (annotated `v2.0.0`) |
+| `main` push | `f855b80..408ef6c`, 101 commits |
+| Suite at publish | 1504 passed / 0 failed |
+| Headline contracts | 9/9 local · 9/9 TestPyPI-served · 9/9 PyPI-served |
+
+The single most useful piece of method here was scripting the headline-contract
+probe once and running it unchanged against all three builds. Three manual
+walkthroughs would have compared three slightly different things; one script
+compared the same nine facts, and the only difference between runs was which
+wheel answered.
+
+### Lessons
+
+1. **The toolchain is part of the release surface.** D1 — twine 6.2.0 rejecting
+   `Metadata-Version: 2.5` — was found by running the read-only gate at
+   *milestone setup* rather than at the upload. Had setup skipped the build
+   step as "nothing to measure, the version has not been bumped yet", the
+   failure would have surfaced mid-publish. Cheap dry runs early are worth more
+   than their cost.
+2. **"Install if absent" is not a version policy.** The runbook's twine step
+   read as satisfied while being exactly wrong. Constraints belong in
+   `pyproject.toml` where they are version-controlled and enforced, not in prose
+   that a present-but-stale tool silently passes.
+3. **A release that *changes* a verb breaks the playbooks that prescribe it.**
+   M24's sweep was quiet because M21 and M23 only added surface. M29 retired a
+   flag, and nine prescriptions across two workflow skills went stale at once.
+   The in-repo drift-lint candidate — diff workflow-skill prescriptions against
+   the bundled `references/` surface — now has a concrete failure behind it.
+4. **Documents outside the gate rot fastest, and `README.md` is the worst
+   place for that** because it is the PyPI project page. Three of twelve verbs
+   undocumented and three "Claude Code" mentions M23 thought it had removed.
+   Refreshing it in Phase 2 rather than the closeout is the durable fix — it
+   ships inside the artifact.
+5. **Trackers describe state that changes under them.** Both runbook
+   corrections were sentences that were true when written and became false when
+   a later milestone shipped. Neither had a test, because neither is testable —
+   only a walk of the document catches them.
+
+### Outstanding
+
+- **Issue #1's reply is verified but unposted** — `gh issue comment` was blocked
+  by a local permission classifier. The verified body lives in the milestone
+  doc's *Issue #1 closeout* block; post with
+  `gh issue comment 1 --body-file <path>` then
+  `gh issue close 1 --reason completed`.
+- **Agent Playbook Suite update** — the nine retired-flag prescriptions. Scoped
+  out of M29 as cross-repository work, unblocked now that 2.0.0 is available.
+- **PyPI token re-scope** to project `docs-cli` — rolls forward from M9, now
+  six releases old.

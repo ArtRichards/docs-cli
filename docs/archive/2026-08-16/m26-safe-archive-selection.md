@@ -1,25 +1,27 @@
 # M26 — Safe explicit archive selection
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
+Archived: 2026-08-16
+Archived-reason: Milestone complete; docs-cli==2.0.0 shipped to PyPI 2026-08-16
 
 Related:
 - child-of: plan.md
-- parent-of: m26-safe-archive-selection-impl.md
+- parent-of: archive/2026-08-16/m26-safe-archive-selection-impl.md
 - implements: charter.md
-- pairs-with: m26-safe-archive-selection-impl.md
+- pairs-with: archive/2026-08-16/m26-safe-archive-selection-impl.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: test-strategy.md
 - pairs-with: status.md
 - references: feedback-log.md
-- follows: m25-reciprocal-relationship-integrity.md
-- precedes: m27-markdown-body-link-validation.md
-- required-by: m28-move-safe-body-link-rewrites.md
-- required-by: m29-pypi-publish-2-0-0.md
-- required-by: m28a-archive-date-witness.md
+- follows: archive/2026-08-16/m25-reciprocal-relationship-integrity.md
+- precedes: archive/2026-08-16/m27-markdown-body-link-validation.md
+- required-by: archive/2026-08-16/m28-move-safe-body-link-rewrites.md
+- required-by: archive/2026-08-16/m29-pypi-publish-2-0-0.md
+- required-by: archive/2026-08-16/m28a-archive-date-witness.md
 
 ## Overview
 

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: runbook
 Project: docs
-Updated: 2026-07-03
+Updated: 2026-08-16
 
 Related:
 - pairs-with: archive/2026-05-25/m9-pypi-publish.md
@@ -168,6 +168,13 @@ publish milestone's job at this block is **verification**:
 
 - [ ] `pyproject.toml` `version` matches the about-to-publish
       version.
+- [ ] **After bumping, re-run `.venv/bin/pip install -e ".[dev]"`
+      before the gate.** `__version__` resolves through
+      `importlib.metadata`, which reads the *installed*
+      dist-info, not `pyproject.toml` — so an un-refreshed
+      editable install fails `test_version_matches_pyproject`
+      with the old version on the left. M29 hit this; the test
+      is doing its job, the install is stale.
 - [ ] `__version__` in `src/docs_cli/cli.py` matches.
 - [ ] `tests/test_packaging.py` A3 assertion is pinned at the
       about-to-publish version.
@@ -270,9 +277,18 @@ shipped stale in 1.6.0; see the M17 entry in
       untouched between them, even though the CHANGELOG is
       dated in between (M13 confirmed). Across milestones the
       sdist sha moves because `docs/` evolves.
-- [ ] `.venv/bin/pip install --quiet twine` (if not already
-      present; `twine 6.2.0` was the version smoke-tested at M6
-      ship and re-used unchanged through M11).
+- [ ] `.venv/bin/pip install --quiet --upgrade 'twine>=7.0.0'`.
+      **Upgrade, do not merely check for presence.** M29
+      (2026-08-16) lost a gate to exactly that: `twine 6.2.0`
+      monkeypatches `packaging.metadata._VALID_METADATA_VERSIONS`
+      to stop at `2.4`, so it rejects the `Metadata-Version: 2.5`
+      artifacts an unpinned `hatchling` now builds — while
+      `packaging` itself accepts 2.5, PyPI accepts 2.5, and
+      `twine 7.0.0` passes. A stale twine **is** already
+      present, so "if not already present" skips the fix and
+      fails at the gate. The floor now also lives in
+      `pyproject.toml`'s `[dev]` extra, so
+      `pip install -e ".[dev]"` carries it.
 - [ ] `.venv/bin/twine check dist/*` — both artifacts PASS.
 
 ### Local-install smoke (no PyPI involvement)
@@ -488,12 +504,19 @@ empty.
       "Milestone M<N> complete; docs-cli==<VERSION> shipped to
       PyPI <DATE>"`. The impl log stays at root with
       `Lifecycle: active` per the M8 / M9 / M10 / M11 pattern.
-      After archive, update referring `Related:` edges in
-      `status.md` and the impl log to point at the
-      `archive/<DATE>/` path (the archive verb doesn't rewrite
-      referring edges; that's `docs mv` territory — see the
-      [Cumulative lessons + deviations](#cumulative-lessons--deviations)
-      enhancement candidate).
+      **Referring edges and body links are rebased by the
+      archive verb itself** as of M18 (`Related:`) and M28
+      (Markdown body links) — the manual fix-up this step used
+      to prescribe is obsolete, and the enhancement candidate it
+      pointed at has shipped. Verify with `docs check` rather
+      than by hand.
+- [ ] **Archiving more than the primary needs an explicit
+      scope.** Bare `--cascade` is retired as of 2.0 and refuses
+      at exit 2 writing nothing. Preview with
+      `docs archive <file> --cascade-dry-run`, then write with
+      `docs archive <file> --cascade-only '<glob>'`. Check the
+      agent playbooks before a closeout: skills written against
+      1.x still prescribe the retired flag.
 - [ ] Clean up scratch dirs:
       ```sh
       rm -rf /tmp/docs-*-venv /tmp/docs-*-skill /tmp/skill-smoke* /tmp/docs-pypi-served /tmp/<foreign-tree>
@@ -780,3 +803,56 @@ release closeout; do **not** rewrite past entries.
   Phase 1 — unchanged (`latest: 0.1.0`, author None). The `docs-cli-rehearsal`
   detour continues. Token re-scope to project-`docs-cli` rolls forward as the
   M9 open follow-on.
+
+### From M29 (2026-08-16, `docs-cli==2.0.0`)
+
+- **The release toolchain can break without the package changing.** M29's
+  pre-publish gate failed at `twine check` on artifacts that were otherwise
+  perfect: an unpinned `hatchling` had started emitting
+  `Metadata-Version: 2.5`, and `twine 6.2.0` monkeypatches
+  `packaging.metadata._VALID_METADATA_VERSIONS` down to a list ending at `2.4`
+  (`twine/package.py:32`). The installed `packaging` accepted 2.5, **PyPI**
+  accepted 2.5, and `twine 7.0.0` passed — the checker was the only thing that
+  did not. Two lasting changes came out of it: the *Artifact build* step now
+  says **upgrade** twine rather than install-if-absent (the old wording is what
+  let a stale twine survive), and the `twine>=7.0.0` floor moved into
+  `pyproject.toml`'s `[dev]` extra so the constraint is version-controlled
+  rather than living in this file's prose. Pinning `hatchling` backwards was
+  considered and rejected: it would freeze the build backend to accommodate a
+  stale checker and leave the real constraint undocumented.
+- **A version bump needs an editable reinstall before the gate.**
+  `test_version_matches_pyproject` failed at `'1.8.0' == '2.0.0'` immediately
+  after the bump, because `__version__` resolves through `importlib.metadata`
+  and reads the *installed* dist-info. `pip install -e ".[dev]"` fixed it. The
+  test is correct; the install was stale. Now a checklist item in
+  *Version + CHANGELOG verification*.
+- **The workflow-skill sweep found real drift for the first time, and it was a
+  retired flag.** Nine bare `--cascade` prescriptions across `create-milestones`
+  (SKILL.md, `milestone-playbook.md`, `tdd-phases.md`, README) and
+  `project-foundation` (`role-mapping.md`) — every one the milestone-completion
+  step, which under 2.0 refuses at exit 2 and writes nothing. This is the case
+  M24's entry predicted in the abstract: a release that **changes** a verb the
+  workflow skills prescribe, not one that only adds surface. M29's own closeout
+  hit the hazard and used `--cascade-only`. The in-repo drift-lint candidate —
+  diff workflow-skill docs-cli prescriptions against the bundled `references/`
+  surface — is now more than a nicety and rolls forward with a concrete failure
+  behind it.
+- **Chain of custody bit-perfect for both artifacts, and the wheel sha was
+  stable across all three builds** (Phase 2, post-rehearsal canonical rebuild,
+  Phase 4) — proof that the rehearsal-name detour leaves no trace in what
+  ships. The sdist moved between builds exactly as M13 predicted, tracking
+  `docs/`.
+- **`README.md` is the PyPI project page and sits outside every parity gate.**
+  M29 found it three releases stale: 3 of 12 verbs undocumented and three
+  "Claude Code skill" mentions that M23's neutralisation never swept, in the
+  one file no test reads. It was refreshed in **Phase 2**, not the closeout,
+  because it ships inside the artifact as the long description. Future
+  releases should treat the README as a Phase-2 artifact, not a doc chore.
+- **The archive verb now rebases referring edges.** This runbook's post-release
+  step told the operator to fix them by hand and pointed at an enhancement
+  candidate; M18 shipped the `Related:` half and M28 the body-link half, so the
+  instruction was obsolete and has been corrected in place.
+- **Squatter still parked.** TestPyPI bare `docs-cli` re-checked at M29
+  Phase 1 — unchanged (`0.1.0`, author None). The `docs-cli-rehearsal` detour
+  continues. Token re-scope to project-`docs-cli` rolls forward as the M9 open
+  follow-on, now six releases old.

@@ -1,13 +1,14 @@
 # M28 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
+Archived: 2026-08-16
 
 Related:
-- child-of: m28-move-safe-body-link-rewrites.md
-- pairs-with: m28-move-safe-body-link-rewrites.md
+- child-of: archive/2026-08-16/m28-move-safe-body-link-rewrites.md
+- pairs-with: archive/2026-08-16/m28-move-safe-body-link-rewrites.md
 - pairs-with: status.md
 - references: feedback-log.md
 

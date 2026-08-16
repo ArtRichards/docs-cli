@@ -1,13 +1,14 @@
 # M28a — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-08-16
+Archived: 2026-08-16
 
 Related:
-- child-of: m28a-archive-date-witness.md
-- pairs-with: m28a-archive-date-witness.md
+- child-of: archive/2026-08-16/m28a-archive-date-witness.md
+- pairs-with: archive/2026-08-16/m28a-archive-date-witness.md
 - pairs-with: status.md
 - references: feedback-log.md
 

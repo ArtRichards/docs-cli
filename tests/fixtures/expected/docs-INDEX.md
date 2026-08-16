@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-16. 28 docs active, 46 archived._
+_Generated 2026-08-16. 17 docs active, 57 archived._
 
 ## Project — docs
 
@@ -26,24 +26,10 @@ _Generated 2026-08-16. 28 docs active, 46 archived._
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-16.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-16.
 
-### Active — Milestone
-
-- [m28a-archive-date-witness.md](m28a-archive-date-witness.md) — _milestone_ — - Milestone: M28a (v2.0 train) - Title: Structured archive-date witness - Surface: **two legs.** `docs archive` records…. Updated 2026-08-16.
-- [m29-pypi-publish-2-0-0.md](m29-pypi-publish-2-0-0.md) — _milestone_ — > **Activated 2026-08-16**, immediately after M28a merged to `main` > (merge commit `91cc839`). Every milestone M29…. Updated 2026-08-16.
-- [m26-safe-archive-selection.md](m26-safe-archive-selection.md) — _milestone_ — - Milestone: M26 (v2.0 train) - Title: Safe explicit archive selection - Surface: decouple relationship context from…. Updated 2026-08-15.
-- [m28-move-safe-body-link-rewrites.md](m28-move-safe-body-link-rewrites.md) — _milestone_ — - Milestone: M28 (v2.0 train) - Title: Move-safe Markdown body-link rewrites - Surface: extend `docs mv` and `docs…. Updated 2026-08-15.
-- [m27-markdown-body-link-validation.md](m27-markdown-body-link-validation.md) — _milestone_ — - Milestone: M27 (v2.0 train) - Title: Markdown body-link validation - Surface: parse a deliberately bounded set of…. Updated 2026-08-14.
-- [m25-reciprocal-relationship-integrity.md](m25-reciprocal-relationship-integrity.md) — _milestone_ — - Milestone: M25 (v2.0 train) - Title: Reciprocal relationship integrity and `docs relate` - Surface: define three…. Updated 2026-08-12.
-
 ### Active — Log
 
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-16.
-- [m28a-archive-date-witness-impl.md](m28a-archive-date-witness-impl.md) — _log_ — Chronological implementation log for M28a — Structured archive-date witness. Append one evidence-backed section per TDD…. Updated 2026-08-16.
 - [m29-pypi-publish-2-0-0-impl.md](m29-pypi-publish-2-0-0-impl.md) — _log_ — Chronological log of work on **M29 — PyPI publish 2.0.0**. Append a section per runbook phase (operator prep →…. Updated 2026-08-16.
-- [m28-move-safe-body-link-rewrites-impl.md](m28-move-safe-body-link-rewrites-impl.md) — _log_ — Chronological implementation log for M28 — Move-safe Markdown body-link rewrites. Append one evidence-backed section…. Updated 2026-08-15.
-- [m27-markdown-body-link-validation-impl.md](m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-14.
-- [m26-safe-archive-selection-impl.md](m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-13.
-- [m25-reciprocal-relationship-integrity-impl.md](m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-12.
 - [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) — _log_ — Chronological log of work on **M24 — PyPI publish 1.8.0**. Append a section per runbook phase (operator prep →…. Updated 2026-07-03.
 - [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-12.
 - [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-03.
@@ -55,7 +41,7 @@ _Generated 2026-08-16. 28 docs active, 46 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-07-03.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-08-16.
 
 ### Active — Reference
 
@@ -71,6 +57,17 @@ _Generated 2026-08-16. 28 docs active, 46 archived._
 
 ## Archived
 
+- [archive/2026-08-16/m25-reciprocal-relationship-integrity-impl.md](archive/2026-08-16/m25-reciprocal-relationship-integrity-impl.md) — _log_ — Chronological implementation log for M25 — Reciprocal relationship integrity and `docs relate`. Append one…. Updated 2026-08-16.
+- [archive/2026-08-16/m25-reciprocal-relationship-integrity.md](archive/2026-08-16/m25-reciprocal-relationship-integrity.md) — _milestone_ — - Milestone: M25 (v2.0 train) - Title: Reciprocal relationship integrity and `docs relate` - Surface: define three…. Updated 2026-08-16.
+- [archive/2026-08-16/m26-safe-archive-selection-impl.md](archive/2026-08-16/m26-safe-archive-selection-impl.md) — _log_ — Chronological implementation log for M26 — Safe explicit archive selection. Append one evidence-backed section per TDD…. Updated 2026-08-16.
+- [archive/2026-08-16/m26-safe-archive-selection.md](archive/2026-08-16/m26-safe-archive-selection.md) — _milestone_ — - Milestone: M26 (v2.0 train) - Title: Safe explicit archive selection - Surface: decouple relationship context from…. Updated 2026-08-16.
+- [archive/2026-08-16/m27-markdown-body-link-validation-impl.md](archive/2026-08-16/m27-markdown-body-link-validation-impl.md) — _log_ — Chronological implementation log for M27 — Markdown body-link validation. Append one evidence-backed section per TDD…. Updated 2026-08-16.
+- [archive/2026-08-16/m27-markdown-body-link-validation.md](archive/2026-08-16/m27-markdown-body-link-validation.md) — _milestone_ — - Milestone: M27 (v2.0 train) - Title: Markdown body-link validation - Surface: parse a deliberately bounded set of…. Updated 2026-08-16.
+- [archive/2026-08-16/m28-move-safe-body-link-rewrites-impl.md](archive/2026-08-16/m28-move-safe-body-link-rewrites-impl.md) — _log_ — Chronological implementation log for M28 — Move-safe Markdown body-link rewrites. Append one evidence-backed section…. Updated 2026-08-16.
+- [archive/2026-08-16/m28-move-safe-body-link-rewrites.md](archive/2026-08-16/m28-move-safe-body-link-rewrites.md) — _milestone_ — - Milestone: M28 (v2.0 train) - Title: Move-safe Markdown body-link rewrites - Surface: extend `docs mv` and `docs…. Updated 2026-08-16.
+- [archive/2026-08-16/m28a-archive-date-witness-impl.md](archive/2026-08-16/m28a-archive-date-witness-impl.md) — _log_ — Chronological implementation log for M28a — Structured archive-date witness. Append one evidence-backed section per TDD…. Updated 2026-08-16.
+- [archive/2026-08-16/m28a-archive-date-witness.md](archive/2026-08-16/m28a-archive-date-witness.md) — _milestone_ — - Milestone: M28a (v2.0 train) - Title: Structured archive-date witness - Surface: **two legs.** `docs archive` records…. Updated 2026-08-16.
+- [archive/2026-08-16/m29-pypi-publish-2-0-0.md](archive/2026-08-16/m29-pypi-publish-2-0-0.md) — _milestone_ — > **Activated 2026-08-16**, immediately after M28a merged to `main` > (merge commit `91cc839`). Every milestone M29…. Updated 2026-08-16.
 - [archive/2026-05-20/m1-parser-and-index.md](archive/2026-05-20/m1-parser-and-index.md) — _milestone_ — - Milestone: M1 - Title: Parser and `docs index` - Surface: Python module `docs`, CLI subcommand `docs index` - Status:…. Updated 2026-08-14.
 - [archive/2026-05-21/m2-mutating-verbs-log.md](archive/2026-05-21/m2-mutating-verbs-log.md) — _log_ — - Project: docs - Milestone: M2 — Mutating verbs (`new`, `archive`, `mv`, `touch`) - Started: 2026-05-21 - Progress:…. Updated 2026-08-14.
 - [archive/2026-05-21/m2-mutating-verbs.md](archive/2026-05-21/m2-mutating-verbs.md) — _milestone_ — - Milestone: M2 - Title: Mutating verbs (`new`, `archive`, `mv`, `touch`) - Surface: four new CLI subcommands on the…. Updated 2026-08-14.

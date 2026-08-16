@@ -1,13 +1,14 @@
 # M27 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-08-14
+Updated: 2026-08-16
+Archived: 2026-08-16
 
 Related:
-- child-of: m27-markdown-body-link-validation.md
-- pairs-with: m27-markdown-body-link-validation.md
+- child-of: archive/2026-08-16/m27-markdown-body-link-validation.md
+- pairs-with: archive/2026-08-16/m27-markdown-body-link-validation.md
 - pairs-with: status.md
 - references: feedback-log.md
 

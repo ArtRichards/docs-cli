@@ -1,22 +1,24 @@
 # M25 — Reciprocal relationship integrity and docs relate
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-16
+Archived: 2026-08-16
+Archived-reason: Milestone complete; docs-cli==2.0.0 shipped to PyPI 2026-08-16
 
 Related:
 - child-of: plan.md
-- parent-of: m25-reciprocal-relationship-integrity-impl.md
+- parent-of: archive/2026-08-16/m25-reciprocal-relationship-integrity-impl.md
 - implements: charter.md
-- pairs-with: m25-reciprocal-relationship-integrity-impl.md
+- pairs-with: archive/2026-08-16/m25-reciprocal-relationship-integrity-impl.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: test-strategy.md
 - pairs-with: status.md
 - references: feedback-log.md
-- precedes: m26-safe-archive-selection.md
-- required-by: m29-pypi-publish-2-0-0.md
+- precedes: archive/2026-08-16/m26-safe-archive-selection.md
+- required-by: archive/2026-08-16/m29-pypi-publish-2-0-0.md
 
 ## Overview
 

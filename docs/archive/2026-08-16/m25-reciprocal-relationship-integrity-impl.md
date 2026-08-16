@@ -1,13 +1,14 @@
 # M25 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-08-12
+Updated: 2026-08-16
+Archived: 2026-08-16
 
 Related:
-- child-of: m25-reciprocal-relationship-integrity.md
-- pairs-with: m25-reciprocal-relationship-integrity.md
+- child-of: archive/2026-08-16/m25-reciprocal-relationship-integrity.md
+- pairs-with: archive/2026-08-16/m25-reciprocal-relationship-integrity.md
 - pairs-with: status.md
 - references: feedback-log.md
 
