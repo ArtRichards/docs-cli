@@ -45,8 +45,8 @@ M9/M11/M13/M17/M20/M24).
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Operator one-time prep | Pending | — | Credentials + registry slots pre-measured at setup (E1, E2); no action expected beyond re-confirmation on the day. |
-| 2. Pre-publish prep | Pending | — | Version bump + CHANGELOG dating land here (E7); **twine must be upgraded first** (E3). |
+| 1. Operator one-time prep | Complete | 2026-08-16 | Re-confirmed: PyPI `2.0.0` slot free (released `1.3.0 1.4.0 1.5.0 1.6.0 1.6.5 1.8.0`); `docs-cli-rehearsal` `2.0.0` free; TestPyPI squatter unchanged (`0.1.0`, author `None`) so the detour continues; `~/.pypirc` `600` with two `pypi-` tokens; `gh` holds `repo`. |
+| 2. Pre-publish prep | Complete | 2026-08-16 | D1 twine 6.2.0 → **7.0.0** (+ `twine>=7.0.0` added to the `[dev]` extra); version `1.8.0` → **2.0.0** across `pyproject.toml` and the four packaging pins; CHANGELOG `## UNRELEASED` → `## 2.0.0 — 2026-08-16`; README refreshed (all four items). Gate green: **1504 passed**, ruff/format/mypy clean, `docs check` 0, index idempotent, INDEX == fixture, mirrors byte-identical. Build: wheel `bcd8aa45…`, sdist `3cd137ab…`, both `twine check` **PASSED** at `Metadata-Version: 2.5`; CHANGELOG not in sdist (0). Local smoke `docs 2.0.0` + **9/9** headline contracts. |
 | 3. TestPyPI rehearsal | Pending | — | `docs-cli-rehearsal` detour continues — the bare `docs-cli` TestPyPI name is still squatted (E2). |
 | 4. Real PyPI publish | Pending | — | Irreversible. Operator authorization at the gate (D2). |
 | 5. Post-release | Pending | — | Tag, GitHub release, host-skill refresh, issue #1 reply, README refresh (E6), docs closeout + archive manifest (D3). |
@@ -170,6 +170,132 @@ import time via `importlib.metadata`, so there is no second literal to move.
 This is M25 — D6 working as intended, and it means M29's Phase 2 does the
 version bump, the packaging-pin flip and the CHANGELOG dating in one commit.
 
-## Phase 1 — Operator one-time prep
+## Phase 1 — Operator one-time prep (2026-08-16)
 
-_Not started._
+### Objective
+
+Re-verify, not establish. The accounts and tokens have shipped six releases;
+this phase confirms nothing rotted between setup and publish day.
+
+### Results
+
+Every setup probe re-run unchanged, same day:
+
+- **PyPI** — released `1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.6.5, 1.8.0`; the `2.0.0`
+  slot is free.
+- **TestPyPI** — the bare `docs-cli` name is still the unrelated squatted
+  `0.1.0` project (author `None`), so the **`docs-cli-rehearsal` detour stays in
+  force**; its `2.0.0` slot is free.
+- **`~/.pypirc`** — mode `600`, `[pypi]` + `[testpypi]`, both
+  `username = __token__`, both passwords `pypi-`-prefixed (prefixes only; no
+  value printed).
+- **`gh`** — authenticated as `ArtRichards` with the `repo` scope.
+
+No action was required. Nothing on this list has moved since M24.
+
+## Phase 2 — Pre-publish prep (2026-08-16)
+
+### Objective
+
+The only phase that changes the source tree: clear the E3 blocker, perform the
+single version bump, date the CHANGELOG, refresh the README, then run the full
+gate and build the artifacts that Phase 3 rehearses and Phase 4 publishes.
+
+### Files Changed
+
+| File | Action | Notes |
+|------|--------|-------|
+| `pyproject.toml` | modified | `version` `1.8.0` → `2.0.0`; `[dev]` extra gains `twine>=7.0.0` |
+| `tests/test_packaging.py` | modified | A3, B1, B2, C2 pins moved to `2.0.0`; docstrings re-attributed from M23 to M29 |
+| `CHANGELOG.md` | modified | `## UNRELEASED` → `## 2.0.0 — 2026-08-16`; the "stays 1.8.0 until then" note replaced with the release summary |
+| `README.md` | modified | all four E6 items |
+| `dist/` | rebuilt | `docs_cli-2.0.0-py3-none-any.whl` + `docs_cli-2.0.0.tar.gz` |
+
+### Actions Taken
+
+**1. D1 — the toolchain fix, first.** `.venv/bin/pip install --upgrade
+'twine>=7.0.0'` → **twine 7.0.0**. To keep the constraint documented rather than
+machine-local — the stated reason D1 rejected pinning hatchling — `twine>=7.0.0`
+was also added to the `[dev]` extra, which previously listed only pytest, ruff,
+mypy and build. This is the first release whose toolchain requirement is
+recorded in `pyproject.toml` instead of in the runbook's prose.
+
+**2. The single version bump.** `pyproject.toml` `1.8.0` → `2.0.0`, in lockstep
+with all four packaging pins (A3 `[project].version`, B1 wheel filename, B2
+sdist filename, C2 `docs --version`). `__version__` needed no edit — M12's
+version SoT reads it from `importlib.metadata`. `tests/test_update_check.py`
+needed no edit either: it computes `CURRENT` from `cli.__version__` and uses a
+`99.0.0` sentinel for "newer", deliberately bump-proof.
+
+**3. CHANGELOG dated.** `## UNRELEASED` → `## 2.0.0 — 2026-08-16`. The
+placeholder's "the package version deliberately stays `1.8.0` until then" note
+was replaced with a summary naming the five milestones and the reason for the
+major bump. A sweep of the whole release section for the M11-lesson wording
+classes — `UNRELEASED`, "ready locally", "not on PyPI", "deferred to MX",
+forward references to M29 — found **zero**; the section was authored to survive
+publication. Its `### Upgrading from 1.x` subsection was already in place.
+
+**4. README refresh — all four E6 items.** The `## Commands` block now
+documents **12 of 12** shipped verbs (mechanically verified against
+`docs --help`), with `relate`, `stamp` and `project rename|set` added and
+`archive`'s cascade flags and `touch --check` shown. A new
+**What 2.0 enforces** section covers the five behaviour changes an upgrader
+meets, and points at the CHANGELOG's *Upgrading from 1.x* for the repair
+recipes. All three "Claude Code skill" mentions are now "agent skill"; the only
+surviving `.claude` string is the factual default destination
+`~/.claude/skills/docs/`, which `--help` also prints. The *Status* section's
+claim that the `Status:` → `Lifecycle:` rename is "the only breaking keyword
+change to date" was **true but misleading** at 2.0 and now distinguishes what
+2.0 breaks — automation — from what it does not: on-disk data, since `Archived:`
+is added going forward and no upgrade rewrites an existing file.
+
+### Test Results
+
+| Gate | Result |
+|---|---|
+| `pytest -q` | **1504 passed / 0 failed** (M24 shipped at 636) |
+| `ruff check .` | All checks passed |
+| `ruff format --check .` | 48 files already formatted |
+| `mypy` | Success: no issues found in 49 source files |
+| `docs check --root docs` | exit 0 |
+| `docs index --root docs --dry-run` | exit 0, idempotent |
+| INDEX vs `tests/fixtures/expected/docs-INDEX.md` | identical |
+| bundled `references/{cli,convention}.md` vs `docs/` | byte-identical |
+| "Claude Code" in `src/docs_cli/` + `README.md` | 0 |
+
+**Artifacts (chain-of-custody anchors):**
+
+```
+bcd8aa453415dfe66868f22830fce318c7149d6642935d6167d4de9b2cdaab23  dist/docs_cli-2.0.0-py3-none-any.whl
+3cd137ab2dadd67a6446e9bc2490225923d3f80170d8ca7b091457a822e6bb74  dist/docs_cli-2.0.0.tar.gz
+```
+
+Both `twine check` **PASSED** at `Metadata-Version: 2.5` — D1 confirmed in
+practice, on the exact artifacts twine 6.2.0 rejected. `tar tzf … | grep -c
+CHANGELOG` → **0**, as M13 established.
+
+**Local-install smoke** (throwaway venv, wheel only): `docs --version` →
+`docs 2.0.0`; `install-skill` byte-identical to `src/docs_cli/skill/`, no-op on
+re-run at exit 0, `--symlink` refused at exit 2; `check` on the minimal fixture
+exit 0; `index --root docs --dry-run` exit 0. The **headline-contract probe**
+was scripted so the identical nine checks can be re-run against each served
+artifact: **9/9 passed** — baseline clean, `missing-inverse`, the bare
+`--cascade` refusal at exit 2 with 75 files unchanged, `broken-body-link`, `mv
+--dry-run` planning **42** rewrites with nothing written, the strand report, the
+`Archived:` witness on both members with one shared date, the cross-dated `mv`
+refusal, and `archive-date-drift`.
+
+### Issues/Decisions
+
+- **One expected failure, resolved:** the first full run after the bump failed
+  `test_version_matches_pyproject` at `'1.8.0' == '2.0.0'`. This is the editable
+  install's recorded metadata lagging `pyproject.toml` — `__version__` resolves
+  through `importlib.metadata`, which reads the installed dist-info, not the
+  source file. `pip install -e ".[dev]"` refreshed it and the suite returned to
+  1504. Worth a runbook note: **the version bump requires an editable
+  reinstall before the gate**, and the test that catches it is doing exactly its
+  job.
+- No test was relaxed, deleted or rewritten. `tests/test_packaging.py` is the
+  only test file touched, and only where the version literal is the assertion's
+  subject; the four docstrings were re-attributed from M23 to M29 so the
+  provenance stays honest.

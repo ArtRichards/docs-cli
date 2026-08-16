@@ -5,11 +5,14 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## 2.0.0 — 2026-08-16
 
-_The v2.0 train (M25–M28a) accumulates here; M29 names and dates this
-heading at publish time. The package version deliberately stays `1.8.0`
-until then._
+_The v2.0 safety train — M25 reciprocal relationship integrity, M26 safe
+explicit archive selection, M27 Markdown body-link validation, M28 move-safe
+body-link rewrites, and M28a the structured archive-date witness — published as
+one release. The major bump is intentional: two new hard `docs check` rules and
+the retirement of bare `--cascade` change existing automation. See **Upgrading**
+at the end of this section._
 
 ### Added
 
