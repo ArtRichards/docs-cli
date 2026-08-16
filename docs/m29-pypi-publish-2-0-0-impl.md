@@ -47,7 +47,7 @@ M9/M11/M13/M17/M20/M24).
 |---|---|---|---|
 | 1. Operator one-time prep | Complete | 2026-08-16 | Re-confirmed: PyPI `2.0.0` slot free (released `1.3.0 1.4.0 1.5.0 1.6.0 1.6.5 1.8.0`); `docs-cli-rehearsal` `2.0.0` free; TestPyPI squatter unchanged (`0.1.0`, author `None`) so the detour continues; `~/.pypirc` `600` with two `pypi-` tokens; `gh` holds `repo`. |
 | 2. Pre-publish prep | Complete | 2026-08-16 | D1 twine 6.2.0 → **7.0.0** (+ `twine>=7.0.0` added to the `[dev]` extra); version `1.8.0` → **2.0.0** across `pyproject.toml` and the four packaging pins; CHANGELOG `## UNRELEASED` → `## 2.0.0 — 2026-08-16`; README refreshed (all four items). Gate green: **1504 passed**, ruff/format/mypy clean, `docs check` 0, index idempotent, INDEX == fixture, mirrors byte-identical. Build: wheel `bcd8aa45…`, sdist `3cd137ab…`, both `twine check` **PASSED** at `Metadata-Version: 2.5`; CHANGELOG not in sdist (0). Local smoke `docs 2.0.0` + **9/9** headline contracts. |
-| 3. TestPyPI rehearsal | Pending | — | `docs-cli-rehearsal` detour continues — the bare `docs-cli` TestPyPI name is still squatted (E2). |
+| 3. TestPyPI rehearsal | Complete | 2026-08-16 | Uploaded `docs-cli-rehearsal==2.0.0` (detour kept); both `twine check` PASSED. Installed from TestPyPI first try. Served-wheel smoke: install-skill byte-identical, `--symlink` exit 2, `check` 0, `index --dry-run` 0, and **9/9** headline contracts. `docs --version` → `docs 0.0.0+local`, the known M13 rehearsal-name caveat. Rename reverted (`git diff pyproject.toml` empty); canonical rebuild wheel `bcd8aa45…` **byte-identical to Phase 2**, sdist `33ceac03…` moved via `docs/` drift. **GO.** |
 | 4. Real PyPI publish | Pending | — | Irreversible. Operator authorization at the gate (D2). |
 | 5. Post-release | Pending | — | Tag, GitHub release, host-skill refresh, issue #1 reply, README refresh (E6), docs closeout + archive manifest (D3). |
 
@@ -299,3 +299,59 @@ refusal, and `archive-date-drift`.
   only test file touched, and only where the version literal is the assertion's
   subject; the four docstrings were re-attributed from M23 to M29 so the
   provenance stays honest.
+
+## Phase 3 — TestPyPI rehearsal (2026-08-16)
+
+### Objective
+
+Publish the real artifact shape to a throwaway index first, install it the way
+a user will, and prove the served bytes behave — before the append-only PyPI
+upload.
+
+### Actions Taken
+
+The Phase-1 re-check found the TestPyPI squatter unchanged, so the
+**`docs-cli-rehearsal` detour stayed in force**: `pyproject.toml`
+`[project] name` was temporarily renamed, `dist/` rebuilt
+(`docs_cli_rehearsal-2.0.0`, wheel `01ce7177…`, sdist `21ffe80a…`, both
+`twine check` PASSED), and both artifacts uploaded to
+`https://test.pypi.org/project/docs-cli-rehearsal/2.0.0/`.
+
+Installed into a throwaway venv from the TestPyPI simple index with
+`--extra-index-url https://pypi.org/simple/`; **first try, no retry needed** and
+no JSON-lag workaround required, since `pip` reads the simple index.
+
+### Test Results
+
+Against the **TestPyPI-served** wheel:
+
+| Probe | Result |
+|---|---|
+| `docs --version` | `docs 0.0.0+local` — **expected**, see below |
+| `install-skill --dest …` | byte-identical to `src/docs_cli/skill/` |
+| `install-skill --symlink` | exit 2 |
+| `check tests/fixtures/trees/minimal/` | exit 0 |
+| `index --root docs --dry-run` | exit 0 |
+| headline-contract probe | **9/9 passed** |
+
+The nine contracts are the same script Phase 2 ran against the local wheel, so
+local and served builds are compared on identical evidence rather than on
+similar-looking manual runs.
+
+### Issues/Decisions
+
+- **`docs 0.0.0+local` is the documented M13 caveat, not a failure.**
+  `__version__` resolves `importlib.metadata.version("docs-cli")`, and the
+  rehearsal installs as `docs-cli-rehearsal`, so the lookup misses and hits the
+  `PackageNotFoundError` fallback. The version-string contract is verified
+  against the canonical-name local wheel (Phase 2) and the PyPI wheel (Phase 4)
+  — never the rehearsal wheel.
+- **Rename reverted and proven:** `git diff pyproject.toml` is empty. The
+  canonical rebuild then produced a wheel at **`bcd8aa45…`, byte-identical to
+  Phase 2's**, confirming that the rename detour left no trace in the artifact
+  that ships.
+- **The sdist sha moved** (`3cd137ab…` → `33ceac03…`) and that is correct: the
+  sdist captures `docs/`, and the Phase-2 impl-log entry was committed between
+  the two builds. M13 established exactly this — the wheel is stable across
+  rebuilds of the same `src/`, the sdist tracks `docs/`.
+- **GO** recorded for Phase 4.
