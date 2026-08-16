@@ -1767,10 +1767,68 @@ its fixture mean what its docstring says, T2 replaced containment with
 equality, T5 replaced a tautology with the real producer), two were **added**,
 and none was weakened, deleted or rewritten to pass.
 
+## Second `/simplify` pass — 2026-08-16
+
+Run on `m28a/simplify` over the whole M28a surface after the same-instance
+audit and the fresh-eyes fold-in, mirroring M28's second pass. **Outcome: no
+changes.** The code is already minimal, and that verdict is measured rather
+than asserted.
+
+**Why M28's second pass found three collapses and this one finds none.** M28's
+was justified by a real gap — "the surface Phase 10's `/simplify` last saw is
+not the surface that shipped", because the audit and the fold-in had reshaped
+`cli.py` afterwards. That gap does not exist here. `git diff e099f55..HEAD --
+src/docs_cli/cli.py` is **twelve changed lines (+8 / −4), all of them prose
+inside two argparse `description=` strings** (F2's archive-help extension and
+the form-B overclaim fix). Not one executable line of M28a moved after Phase 10's pass, so its
+analysis is still current and its four recorded rejections still hold — each
+was re-examined against the shipped code and none has changed.
+
+**Two mechanical sweeps, to avoid resting on the prior pass's word.**
+
+- A duplicate-block scan over **all 3,209 added lines** (`src/` + `tests/`,
+  6-line window) found exactly **one** repeated block in the whole milestone:
+  the three purity locks' `mp.setattr(Path, …)` scaffolding. Nothing else in
+  M28a repeats anywhere.
+- An extended lint sweep the project does not run — `ruff --isolated --select
+  C90,RET,PLR,SIM,C4,PERF,FURB,RUF` — produced exactly **one** finding inside
+  M28a's line ranges: `PLR2004` on `len(parts) < 3`. (The `check_doc`
+  findings it also reports are pre-existing; M28a added one line to that
+  function.) `SIM` is already in the project's enabled set and is clean, which
+  independently rules out the nested-`if`, redundant-boolean and
+  `if`/`else`-return collapses.
+
+### Candidates evaluated and REJECTED
+
+| Candidate | Rejected because |
+|---|---|
+| Collapse the three purity locks in `tests/test_check.py` into one `_no_filesystem(...)` context manager — the milestone's only duplicated block | The inline spelling is the idiom every purity lock in the suite already uses — `test_body_links.py` (M27) and `test_move_links.py` (M28) each spell their own `_boom` — and the door lists deliberately **differ** per lock: M27's normalise lock guards `exists`/`is_file`/`resolve`, M28's planner lock adds `read_text`, M28a's adds `is_dir`/`open`. A shared helper would either freeze one list for locks it does not own or take the list as a parameter, at which point it saves nothing. A module-local abstraction contradicting both sibling modules costs a reader more than the ~10 lines it saves, and the sentinel list is precisely what a purity test exists to make visible. |
+| Name the `3` in `archive_dir_date`'s `len(parts) < 3` (the lone `PLR2004`) | A constant **adds** a concept rather than removing one. Step 2 of the docstring already says exactly what the 3 means — "there is a segment after it… what makes `archive/x.md` carry no date" — and item (C) step 2 freezes the literal `len(parts) < 3` as the contract. |
+| Pass `check_doc`'s already-computed `rel` into `archive_date_findings` instead of it calling `_root_relative` | Three independent blocks. It changes the item-(H) **frozen** signature; `check_doc`'s `rel` comes from `path.resolve().relative_to(root.resolve())`, the expression **OQ-4 binds the rule away from**; and `check_doc` computes it only inside the `if lifecycle` branch, so the rule would inherit a conditional. It is also a behaviour change on synthetic and symlinked paths — the two expressions agree only for a real `os.walk`. |
+| Rewrite `_cmd_mv`'s refusal guard with a walrus — `if (crossed := cross_dated_archive_move(...)) is not None:` | `cli.py` contains **zero** walrus operators across 8,985 lines, while the plain `is not None` guard appears at **32** sites. It saves one line at the cost of introducing the file's only instance of a second idiom. |
+| Trim the banner above the three helpers, which restates the purity property and the shared-`_is_archived_rel` reason that both reappear in the docstrings below it | The banner's shared-notion sentence is a deliberate **output** of Phase 10's pass — this log records that it "now records the positive reason (the shared notion) instead of excusing the layout". Cutting it would reverse that decision, not simplify past it. |
+
+Phase 10's own four rejections — widening `archive_dir_date`'s return type,
+merging the two frozen message forms, extracting `_cmd_mv`'s refusal into a
+helper, and folding `len(parts) < 3` into the `_is_archived_rel` guard — were
+re-read against the shipped code and all four still hold for the reasons
+recorded above.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `pytest -q` | **1504 passed / 0 failed**, before and after (no code changed) |
+| `ruff check .` / `ruff format --check .` / `mypy src/ tests/` | clean |
+| `docs check --root docs` | no violations (exit 0) |
+| both skill mirrors | byte-identical |
+| `git diff` over `src/` and `tests/` | **empty** — the pass is analysis, and the log entry is its only artifact |
+
 ## Milestone completion summary
 
 **M28a — Structured archive-date witness is implementation-complete across all
-ten TDD phases, same-instance audited and independently fresh-eyes reviewed** (Step 1 — Phases 1–4 — on `m28a/phases-1-4`, 2026-08-15/16;
+ten TDD phases, same-instance audited, independently fresh-eyes reviewed and
+re-simplified** (Step 1 — Phases 1–4 — on `m28a/phases-1-4`, 2026-08-15/16;
 Step 2 — Phases 5–10 — on `m28a/phases-5-10`, 2026-08-16). The suite is
 **1504 passed / 0 failed**, every quality gate is clean, and
 `docs check --root docs` exits 0.
