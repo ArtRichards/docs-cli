@@ -48,11 +48,15 @@ Related:
 ## Current milestone
 
 **M28a — Structured archive-date witness is the current milestone, and it is
-now IMPLEMENTATION-COMPLETE across all ten TDD phases, audited and
-fresh-eyes reviewed** — **1504 passed / 0 failed**, every quality gate clean,
+now IMPLEMENTATION-COMPLETE across all ten TDD phases, audited,
+fresh-eyes reviewed and MERGED TO `main`** (2026-08-16, merge `91cc839`) —
+**1504 passed / 0 failed**, every quality gate clean,
 `docs check --root docs` exit 0, both bundled mirrors byte-identical, and
 `feedback-log.md` issue #1 CLOSED. It
-stays `Lifecycle: active` until the M29 publish closeout. Step 1 —
+stays `Lifecycle: active` until the M29 publish closeout. With it landed,
+**every implementation milestone in the v2.0 train (M25–M28a) is merged**, and
+**M29 — PyPI publish 2.0.0** is the only milestone left in the train; it is
+still a registered draft stub and is scoped when it starts. Step 1 —
 Phases 1–4 — completed on `m28a/phases-1-4` (contract 2026-08-15; RED tests,
 fixtures and the classified baseline 2026-08-16), and Step 2 — Phases 5–10 —
 on `m28a/phases-5-10` (2026-08-16). **Phase 5 — Update Base Interfaces
@@ -974,8 +978,12 @@ runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
 **Next action:** **M29 — PyPI publish 2.0.0**, which the whole v2.0 train
-(M25–M28a) is now waiting on. M28a is implementation-complete across all ten
-TDD phases and stays `Lifecycle: active` until that closeout. Its Step-2
+(M25–M28a) is now waiting on — every implementation milestone it releases is
+merged to `main`, so nothing but the publish itself is outstanding. M28a is
+complete and **merged to `main`** (2026-08-16, merge `91cc839`) across all ten
+TDD phases — Step 1 on `m28a/phases-1-4`, Step 2 on `m28a/phases-5-10`, Step 3
+on `m28a/simplify` — and stays `Lifecycle: active` until that closeout. The
+merged suite is **1504 GREEN** with the gate clean tree-wide. Its Step-2
 **same-instance audit** found and fixed **fifteen** issues — ten of them one
 family, trackers updated forward phase by phase but never swept backward for
 statements that had since become false — and an independent **fresh-eyes
