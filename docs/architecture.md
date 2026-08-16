@@ -23,7 +23,7 @@ inside the same wheel as package data.
 ```
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
-├── cli.py                               ─ the CLI module (~7.7k lines)
+├── cli.py                               ─ the CLI module (~9k lines)
 │   ├── dunder version                   (__version__ = importlib.metadata.version("docs-cli"))
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
@@ -33,12 +33,16 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
 │   ├── index         — INDEX.md render with marker-block preservation
 │   ├── archive       — atomic move + lifecycle edit (M2; M7 rename;
 │   │                   M12 referring-edge rewrite; M26 plan/pre-flight/
-│   │                   apply + `--json` operation record)
-│   ├── mv            — rename + Related: rewrite across tree (M2)
+│   │                   apply + `--json` operation record; M28a
+│   │                   `Archived:` witness on every member)
+│   ├── mv            — rename + Related: rewrite across tree (M2;
+│   │                   M28 plan-before-move + body-link rebase;
+│   │                   M28a cross-dated archive refusal)
 │   ├── new           — scaffolded doc creation (M2)
 │   ├── touch         — Updated: bump (M2; M12 outside-root refusal)
 │   ├── check         — validation rules + exit-code matrix (M3;
-│   │                   M25 reciprocity; M27 body-link scanner)
+│   │                   M25 reciprocity; M27 body-link scanner;
+│   │                   M28a archive-date corroboration)
 │   ├── list          — query view, human + --json (M3)
 │   ├── migrate       — foreign-tree inference + plan/apply (M4)
 │   ├── project       — rename verb (M12)

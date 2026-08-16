@@ -22,9 +22,10 @@ the milestone checklist synchronized.
 - Project: docs
 - Milestone: M28a — Structured archive-date witness
 - Started: 2026-08-15 (milestone setup; no TDD phase started)
-- Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
-  fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
-  flight on `m28a/phases-5-10`; Phases 5–8 complete 2026-08-16 with the suite
+- Progress: **M28a is IMPLEMENTATION-COMPLETE across all ten TDD phases.**
+  Step 1 (Phases 1–4) on `m28a/phases-1-4` — contract 2026-08-15; RED tests,
+  fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) on
+  `m28a/phases-5-10`; Phases 5–8 complete 2026-08-16 with the suite
   fully **GREEN at 1502 passed / 0 failed**, every gate clean and 0 of the
   1341 pre-existing ids removed or failing, Phase 9 complete across ten
   dogfood flows, and **Phase 10 complete — M28a is implementation-complete
@@ -72,8 +73,8 @@ the milestone checklist synchronized.
 | 6. Implement Offline/Core Path | Complete | 2026-08-16 | **2 failed / 1500 passed** — the 26 ids the Phase-4 classification assigned here, flipped; only the two Phase-7 bundled-skill ids remain. One `set_metadata_field` call in `_archive_one` at the pinned position; one `findings.extend` in `check_doc` at the frozen position; and D5's refusal in `docs mv`'s plan-before-move window at the position Phase-1 amendment 2 froze — immediately after `old_rel` / `new_rel` are derived, before the `--dry-run` branch and before the first byte moves. Follow-through item 9's remaining three in-code prose surfaces landed here with the rule they describe. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-08-16 | **1502 passed / 0 failed** — the suite is fully GREEN one phase early, as Phase 8 is the verification phase. Phase 1 had already landed the author-facing halves in `cli.md` / `convention.md`, so this phase **verified** them item by item and found two real gaps, both corrected: `convention.md`'s built-in always-allowed label list omitted `Archived`, and its `docs mv` refusal paragraph still said three permitted neighbours where amendment 6 says four. Bundled `SKILL.md` (three verb rows) and `references/use-cases.md` (three rows plus a new *Upgrade: the archive-date witness* section) landed; both mirrors re-copied in the same commit. Two argparse `description` strings gained one clause each (RESOLVED OQ-1) — the flag delta itself is **confirmed empty**, measured against `7f7853b`. `UNRELEASED` CHANGELOG gained both `Added` entries, the BREAKING `Changed` entry and the upgrade note including OQ-2's residual; `feedback-log.md` issue #1 is **CLOSED**. No new flag, no version bump. |
 | 8. Run Tests (GREEN) | Complete | 2026-08-16 | **1502 passed / 0 failed**, 0 errors / xfails / warnings. `ruff check`, `ruff format --check` and `mypy src/ tests/` clean; `docs check --root docs` exit 0; both mirrors byte-identical. Mechanical proof against `7f7853b`: **0** of the 1341 pre-existing ids removed, 161 added, and **0 deleted lines in every test SOURCE file** — the only deletions anywhere under `tests/` are 8 lines in the frozen INDEX snapshot, every one an `Updated:` value or the generated-on line. **No test was relaxed, weakened, deleted or rewritten**, and Step 2 changed no test source at all. |
-| 9. Integrate / Accept / Dogfood | Complete | 2026-08-16 | **Ten flows, all on throwaway copies.** E1d refuses at exit 2 with the copy byte-identical, on a document **without** the witness and on one **with** it, in every mode (`--dry-run` prints no `would move` line; `--json` prints 0 bytes). A hand-made relocation adds exactly **one** `archive-date-drift` where the pre-M28a CLI on the same tree adds none. All **four** permitted neighbours complete, the two-spellings-of-one-date case included. A non-default `attic` / `%d-%m-%Y` tree refuses on its configured dir and **completes** on an ordinary `archive/` subdirectory — both polarities of the config-blindness trap. All **46** pre-witness archived documents stay silent (0 findings total, exit 0). A real `--cascade-only 'm26-*'` closeout writes the witness to **every** member with one shared date, the reason to the primary alone, `docs check` clean. `migrate --apply` writes **no** witness and demotes a foreign one. The **7** cross-dated `pairs-with` edges emit nothing. Runtime delta below the 10 ms floor. One operator error during flow 8 wrote to the repository root and was fully reverted from HEAD with nothing lost; recorded in the entry rather than hidden. Original scope: | Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
-| 10. Quality, Docs, Refactor | Complete | 2026-08-16 | `/simplify` took *Follow-ups* item 4 in full — **five** inline copies of the archive-subtree predicate (E7 counted three; reading for the collapse found two more, in `walk` and `_known_projects`) are now calls, and `_is_archived_rel` was hoisted beside `_root_relative`, which also removes Phase 5's forward reference. Behaviour-preserving: 1502 passed before and after, `docs check` runtime unchanged at 0.18 s over 74 documents. Four candidates evaluated and **rejected** with reasons. `architecture.md`'s `check`, `archive` **and `mv`** sections closed (RESOLVED OQ-4 places `mv` here); `test-strategy.md` gained the `archivedate-*/` family; completion summaries written. M28a stays `Lifecycle: active` for the M29 closeout. Original scope: | `/simplify`, close `architecture.md` and `test-strategy.md`, completion summaries, hand to M29. |
+| 9. Integrate / Accept / Dogfood | Complete | 2026-08-16 | **Ten flows, all on throwaway copies.** E1d refuses at exit 2 with the copy byte-identical, on a document **without** the witness and on one **with** it, in every mode (`--dry-run` prints no `would move` line; `--json` prints 0 bytes). A hand-made relocation adds exactly **one** `archive-date-drift` where the pre-M28a CLI on the same tree adds none. All **four** permitted neighbours complete, the two-spellings-of-one-date case included. A non-default `attic` / `%d-%m-%Y` tree refuses on its configured dir and **completes** on an ordinary `archive/` subdirectory — both polarities of the config-blindness trap. All **46** pre-witness archived documents stay silent (0 findings total, exit 0). A real `--cascade-only 'm26-*'` closeout writes the witness to **every** member with one shared date, the reason to the primary alone, `docs check` clean. `migrate --apply` writes **no** witness and demotes a foreign one. The **7** cross-dated `pairs-with` edges emit nothing. Runtime delta below the 10 ms floor. One operator error during flow 8 wrote to the repository root and was fully reverted from HEAD with nothing lost; recorded in the entry rather than hidden. Original scope: Replay E1d and prove `docs mv` now **refuses** it with the tree byte-identical, on a document with **and** without the witness; reproduce the relocation by hand on a witness-carrying document and prove `docs check` exits 2 naming both dates; prove all four permitted neighbours still complete; prove all 46 field-less archived documents stay silent; run a real closeout and prove every member carries the field; prove `migrate --apply` writes none; measure the added `docs check` runtime. The real tree is never written to. |
+| 10. Quality, Docs, Refactor | Complete | 2026-08-16 | `/simplify` took *Follow-ups* item 4 in full — **five** inline copies of the archive-subtree predicate (E7 counted three; reading for the collapse found two more, in `walk` and `_known_projects`) are now calls, and `_is_archived_rel` was hoisted beside `_root_relative`, which also removes Phase 5's forward reference. Behaviour-preserving: 1502 passed before and after, `docs check` runtime unchanged at 0.18 s over 73 documents. Four candidates evaluated and **rejected** with reasons. `architecture.md`'s `check`, `archive` **and `mv`** sections closed (RESOLVED OQ-4 places `mv` here); `test-strategy.md` gained the `archivedate-*/` family; completion summaries written. M28a stays `Lifecycle: active` for the M29 closeout. Original scope: `/simplify`, close `architecture.md` and `test-strategy.md`, completion summaries, hand to M29. |
 
 ## Setup record — 2026-08-15
 
@@ -1389,7 +1390,9 @@ archived↔archived `pairs-with` edges spanning different dated directories —
 the rule emits **0** findings on it. The declined rule would have emitted 7 on
 a correct tree; the witness emits 0.
 
-**10 — runtime.** Five runs each of `docs check` over the 74-document copy:
+**10 — runtime.** Five runs each of `docs check` over the copy — **73**
+documents plus the generated `INDEX.md`, the tree the milestone's Phase-9
+instruction calls the 73-document tree:
 HEAD **0.18 s** (steady state; 0.23 s cold), pre-M28a `7f7853b` **0.18 s**.
 The delta is **below the 10 ms measurement floor** — indistinguishable from
 zero, which is what pure path arithmetic with no filesystem access and no
@@ -1458,7 +1461,7 @@ root-relative POSIX string already lives. Two things follow:
 
 Verified behaviour-preserving: **1502 passed** before and after, gate clean,
 `docs check --root docs` exit 0, and the `docs check` runtime over the
-74-document copy unchanged at **0.18 s** (five runs each) — `walk` is the
+73-document copy unchanged at **0.18 s** (five runs each) — `walk` is the
 hottest path in the tool, so the loss of its hoisted local was measured rather
 than assumed.
 
@@ -1509,7 +1512,7 @@ Recorded with reasons, as M28's simplify pass did:
 | `ruff check .` / `ruff format --check .` / `mypy src/ tests/` | clean |
 | `docs check --root docs` | no violations (exit 0) |
 | both skill mirrors | byte-identical |
-| `docs check` runtime over 74 documents | 0.18 s, unchanged by the hoist |
+| `docs check` runtime over 73 documents | 0.18 s, unchanged by the hoist |
 
 ## Milestone completion summary
 

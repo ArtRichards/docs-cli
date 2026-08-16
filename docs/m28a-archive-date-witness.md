@@ -30,9 +30,10 @@ Related:
   does not corroborate (**detect**); `docs mv` refuses a move whose source and
   destination are different dated archive directories, before it writes
   anything (**prevent**).
-- Progress: **Step 1 (Phases 1–4) complete — contract 2026-08-15; RED tests,
-  fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) is in
-  flight on `m28a/phases-5-10`: Phase 5 — Update Base Interfaces complete
+- Progress: **M28a is IMPLEMENTATION-COMPLETE across all ten TDD phases.**
+  Step 1 (Phases 1–4) on `m28a/phases-1-4` — contract 2026-08-15; RED tests,
+  fixtures and the classified baseline 2026-08-16. Step 2 (Phases 5–10) on
+  `m28a/phases-5-10`, 2026-08-16: Phase 5 — Update Base Interfaces complete
   2026-08-16 (the vocabulary entry, `parse_date`'s keyword-only `label` and all
   three pure helpers, wired nowhere; 43 ids flipped, suite 28 failed / 1474
   passed), and Phase 6 — Implement Offline/Core Path complete 2026-08-16 (the
@@ -53,9 +54,10 @@ Related:
   `archivedate-*` fixture trees against it — 131 in Phase 2, five more at the
   same-instance audit and thirteen at the fresh-eyes fold-in, which closed the
   one wrong implementation the suite had not caught (a config-blind Leg-2
-  predicate). The suite stands at **1502 collected, 71 RED and 90 GREEN** of
-  the 161 new ids, in exactly two exception classes, with **no** pre-existing
-  id removed or failing and `cli.py` untouched. M28 is implementation-complete
+  predicate). That baseline captured **1502 collected, 71 RED and 90
+  GREEN** of the 161 new ids, in exactly two exception classes, with **no**
+  pre-existing id removed or failing and `cli.py` still untouched; Phases 5–10
+  then took the suite to **1502 passed / 0 failed**. M28 is implementation-complete
   and merged to `main` (`b1ec74b`), so M28a is the last implementation
   milestone in the v2.0 train before the M29 publish. Setup measured this
   repository read-only and reproduced the reported drift on throwaway copies,
@@ -1698,7 +1700,7 @@ nothing; all **four** permitted neighbours complete, the two-spellings-of-one-da
 case included; a non-default `attic` / `%d-%m-%Y` tree refuses on its
 configured directory and completes on an ordinary `archive/` subdirectory;
 `docs migrate --apply` writes no witness and demotes a foreign one; and the
-added `docs check` runtime over 74 documents is below the 10 ms measurement
+added `docs check` runtime over 73 documents is below the 10 ms measurement
 floor. `feedback-log.md` issue #1 is **CLOSED** — finding 3's archive-date
 half was its last open item.
 

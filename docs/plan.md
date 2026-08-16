@@ -213,8 +213,10 @@ and nine Step-1 resolutions (OQ-1 … OQ-9, OQ-7 an operator decision), then
 authoring 149 test ids and six `archivedate-*` fixture trees against it — 1502
 collected, 71 RED and 90 GREEN, no pre-existing id removed or failing, plus a
 same-instance audit and a no-blocker fresh-eyes review that between them fixed
-eleven issues, added eighteen locks and escalated nothing. Step 2
-(Phases 5–10) is next. Setup's
+nineteen findings — eight at the audit, eleven at the review — closed the one
+wrong implementation the suite had not caught, added eighteen locks and
+escalated nothing. Step 2 (Phases 5–10) then completed on
+`m28a/phases-5-10` (2026-08-16), taking the suite fully GREEN at 1502 passed. Setup's
 headline is that **exactly one of the four ways a document can move relative
 to the archive subtree is silent**, that it is reachable through `docs mv` in
 one command at exit 0 with `docs check` clean, and that **M28 removed the
@@ -266,8 +268,9 @@ is the half that answers issue #1's actual complaint. **Q3 (A3)** gives
 --json` a `strands` array, and answers issue #1 finding 4 by declining
 `--report-links` as a design while adopting its output — and Phase 7 wrote
 both answers back onto the issue #1 entry, so the feedback trail is closed
-rather than silently absorbed. M28a is in flight (Step 1, Phases 1–4,
-complete 2026-08-16) and M29 remains a registered draft stub.
+rather than silently absorbed. M28a is implementation-complete across all ten
+TDD phases (Step 1 — contract 2026-08-15, RED baseline 2026-08-16; Step 2 —
+2026-08-16) and M29 remains a registered draft stub.
 Execution order is expressed by reciprocal
 `precedes`/`follows`; durable prerequisites use
 `depends-on`/`required-by`; no transient blocker exists at setup.
