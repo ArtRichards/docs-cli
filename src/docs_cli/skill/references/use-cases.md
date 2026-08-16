@@ -67,7 +67,7 @@ not guess whether the edge should be completed or deleted.
 | The edge is right — complete it | `docs relate add <source> <verb> <target>` | Copy the paths straight out of the finding; relative endpoints resolve root-relative first. Only the missing half is written; INDEX refreshes once. |
 | The edge is wrong — delete the pair | `docs relate remove <source> <verb> <target>` | Removes whichever halves exist. Equally valid; `check` is clean either way. |
 | Preview before touching anything | `docs relate add … --dry-run` | Writes nothing at all, INDEX included. The `--json` record has the same shape as a real apply, so a preview and an apply are diffable. |
-| Repair an archived endpoint | `docs relate add … --reason "…"` | Required whenever either endpoint is under `archive/`. Only the one `Related:` bullet, `Updated:`, and a dated `Revision:` audit bullet may change; lifecycle, `Archived-reason:`, and prose are byte-identical. |
+| Repair an archived endpoint | `docs relate add … --reason "…"` | Required whenever either endpoint is under `archive/`. Only the one `Related:` bullet, `Updated:`, and a dated `Revision:` audit bullet may change; lifecycle, `Archived:`, `Archived-reason:`, and prose are byte-identical. |
 | Re-run safely | any of the above | Fully idempotent: an already-satisfied invocation writes zero bytes, bumps no `Updated:`, adds no `Revision:` bullet, and does not reindex. |
 
 The loop is `check → relate add|remove → check` until clean. Free-form
@@ -115,7 +115,7 @@ backfill verb, because no honest source for a historical archive date exists.
 |---|---|---|
 | Close out a milestone and keep the evidence | `docs archive <primary> --cascade-only 'GLOB'` | Every moved member carries `Archived: <date>` with the operation's one shared date — the same date that names the dated directory. `Archived-reason:` still lands on the primary alone. |
 | A doc was relocated between dated archive directories | `docs mv` → **refused** | Exit 2, zero bytes, in every mode including `--dry-run` and `--quiet`, naming both dates. Every other archive-subtree move still completes: a rename inside one dated directory, a move with one end outside the archive, a move whose segments do not both parse as dates, and two spellings of one date. |
-| Something else relocated it — a hand `git mv`, a script, an `rsync` | `docs check` | `archive-date-drift`, a hard error naming the recorded date and the directory the file now sits in. Repair by moving the doc back to its recorded directory, or by correcting the `Archived:` line to match where it now lives, then re-run `docs check`. |
+| Something else relocated it — a hand `git mv`, a script, an `rsync` | `docs check` | `archive-date-drift`, a hard error naming the recorded date — and, when the doc is in a *different* dated directory, that directory too. Repair by moving the doc back to its recorded directory, or by correcting the `Archived:` line to match where it now lives, then re-run `docs check`. |
 | The `Archived:` value is not a date in the tree's format | `docs check` | `bad-date`, naming `Archived:` rather than `Updated:`. The likeliest source is a hand-adopted foreign tree; `docs migrate` itself never writes the witness and demotes a foreign `Archived:` line to `Migrated-Archived:`. |
 
 ## Distribution: install + share

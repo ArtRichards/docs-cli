@@ -1160,9 +1160,11 @@ verb, target, and the exact missing inverse — is carried in `message`, and
 everything it needs to repair a body link — the 1-based line, the raw
 destination as written, and the path the destination normalises to — is
 carried there too. A new rule adds a value to `rule`, never a field to the
-record. `archive-date-drift` carries **both** dates — the recorded value and
-the directory segment the file now sits in — in `message`, for the same
-reason.
+record. `archive-date-drift` carries everything an agent needs in `message`
+for the same reason: message form A names **both** the recorded value and the
+dated directory segment the file now sits in, and form B names the recorded
+value and says there is no dated directory to compare it against — because in
+that shape there is no second date to name.
 
 Exit codes:
 - 0 — clean.
@@ -2350,11 +2352,12 @@ archive rule above.
 2. the `Updated:` line's value;
 3. the `Revision:` group — created, or one bullet appended.
 
-`Lifecycle: archived`, the original `Archived-reason:`, `Role:`,
-`Project:`, every other `Related:` bullet, every other metadata field, the
-H1, the prose body, the file's location, and its trailing-newline state
-are **byte-identical**. Archived-reason keeps its original meaning: it
-explains entry into the archive, never a later repair.
+`Lifecycle: archived`, the original `Archived:` and `Archived-reason:`,
+`Role:`, `Project:`, every other `Related:` bullet, every other metadata
+field, the H1, the prose body, the file's location, and its trailing-newline
+state are **byte-identical**. The witness and the reason keep their original
+meaning: they record entry into the archive, never a later repair (M28a —
+D9 / Q6).
 
 **`Revision:` encoding.** A repeatable bare-label bullet group at the
 **end** of the metadata block (after `Related:`, separated by one blank

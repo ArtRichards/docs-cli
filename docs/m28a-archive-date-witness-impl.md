@@ -1514,6 +1514,136 @@ Recorded with reasons, as M28's simplify pass did:
 | both skill mirrors | byte-identical |
 | `docs check` runtime over 73 documents | 0.18 s, unchanged by the hoist |
 
+## Step-2 same-instance audit — 2026-08-16
+
+Run against Phases 5–10 after the last phase and before returning, per the
+ship-milestone consistency / completeness / accuracy checklist. **Fifteen
+issues found; all fifteen fixed here.** Nothing found changes milestone scope
+or behaviour intent, so nothing is escalated as a decision; three observations
+are recorded at the end for the operator's awareness.
+
+### Issues found and fixed — documentation consistency (ten)
+
+A cross-document sweep of `status.md`, `plan.md`, the milestone doc and this
+log against measured reality found that the trackers had been updated *forward*
+phase by phase but never swept *backward* for statements written at an earlier
+phase that had since become false.
+
+1. **`status.md`'s M28a milestone-table row was a whole step behind** — "Step 1
+   (Phases 1–4) complete", "Phase 5 next", and "71 RED / 90 GREEN" as the live
+   state, all contradicting the same file's own *Current milestone* section
+   twelve hundred lines above it.
+2. **`status.md`'s v2.0 backlog bullet still said "IN FLIGHT, Step 1 — Phases
+   1–4 — complete".**
+3. **`status.md`'s M28 narrative still said "M28a and M29 are next"**, while
+   the same file's *Next action* paragraph correctly named M29 alone.
+4. **`plan.md` said "Step 2 (Phases 5–10) is next."**
+5. **`plan.md` said "M28a is in flight (Step 1, Phases 1–4, complete
+   2026-08-16)"** — which also mis-dated Phase 1, whose contract is
+   2026-08-15 everywhere else.
+6. **The milestone doc's `Progress:` bullet opened with "Step 2 is in flight"
+   and declared the milestone implementation-complete six lines later.**
+7. **This log's `Progress:` bullet had the same defect.**
+8. **`status.md` said "No product code has changed"** in the present tense,
+   inside a section that had already listed the three touch points.
+9. **The milestone doc said "The suite stands at 1502 collected, 71 RED and 90
+   GREEN … and `cli.py` untouched"** — true of the Phase-4 baseline, false of
+   the shipped state. Reworded as the captured baseline it describes.
+10. **`plan.md` said the Step-1 audit and review "between them fixed eleven
+    issues".** This log records eight at the audit and eleven at the review,
+    plus the one wrong implementation the suite had not caught. Corrected to
+    nineteen, with the split named.
+
+### Issues found and fixed — accuracy against the code (five)
+
+11. **This log's phase-progress table had a stray `|` in rows 9 and 10**,
+    giving those two rows a fifth column: the "Original scope:" text appended
+    to each ran into the cell's own terminator. Found by counting pipes per
+    row rather than by reading.
+12. **`architecture.md`'s module map was stale in four places.**
+    `cli.py (~7.7k lines)` against an actual 8,981; the `check` line
+    enumerated the rule-adding milestones M3 / M25 / M27 but not M28a; the
+    `archive` line stopped at M26; and the `mv` line still stopped at M2,
+    missing M28's plan-before-move as well as M28a's refusal. All four
+    corrected — the `mv` one is a correction of an M28-era omission made in
+    passing, recorded so it does not read as M28a's.
+13. **`cli.md` claimed `archive-date-drift` "carries **both** dates" in
+    `message`.** That is true of message form A and **false of form B**, which
+    names the recorded value and says there is no dated directory to compare
+    it against — because in that shape there is no second date to name. The
+    same file printed the form-B line correctly 600 lines later, so the spec
+    contradicted itself. Reworded to state both forms.
+14. **Three parallel byte-identity lists outside `convention.md` still named
+    only `Archived-reason:`.** Q6 / D9 requires the witness to be named
+    wherever an archived-document guarantee is enumerated — a field not named
+    in those lists is a field with no stated guarantee — and Phase 1 swept
+    `convention.md`'s four (three immutability paragraphs plus M26's list) but
+    not their siblings elsewhere: `cli.md`'s `docs relate` archived-endpoint
+    list, the `UNRELEASED` CHANGELOG's M25 `relate` entry, and the bundled
+    `references/use-cases.md` repair row. All three now name `Archived:`
+    beside `Archived-reason:`. The code already agreed with `convention.md` —
+    `docs relate` writes only `Related:` / `Updated:` / `Revision:`, and the
+    sole writer of `Archived` is `_archive_one` — so these were incomplete
+    enumerations rather than wrong ones.
+15. **`references/use-cases.md` overstated the drift message the same way as
+    issue 13** ("naming the recorded date and the directory the file now sits
+    in"). Corrected to name the directory only for the different-dated-directory
+    shape.
+
+`docs/cli.md` changed for issues 13 and 14, so **both mirrors were re-copied
+and the INDEX artifacts re-synced in the same commit**, per the CLAUDE.md
+surface-parity gate.
+
+### Checked clean
+
+- **Every deliverable and success criterion in Phases 5–10's range is met**,
+  verified against the milestone doc read rather than recalled: the witness on
+  every member at the pinned position; the pure config-aware helper and the
+  rule at the frozen position; the vocabulary entry with both deliberate
+  non-changes still in place (`parse()`'s `known` set at `cli.py:1234` and
+  migrate's `_REQUIRED_METADATA_FIELDS` at `:4276` are unchanged, confirmed by
+  reading); both specs, both mirrors, the CHANGELOG and the feedback log; the
+  dogfood; and Leg 2.
+- **All four item-(H) signatures match the freeze byte-for-byte**, confirmed
+  by `inspect.signature` rather than by eye.
+- **Every frozen message string is byte-identical** across `cli.py`,
+  `docs/cli.md`, `CHANGELOG.md` and the tests — both `docs mv` refusal lines,
+  both `archive-date-drift` forms, and the `Archived:` `bad-date` line.
+- No placeholder, `NotImplementedError`, TODO or commented-out code anywhere
+  in the Step-2 diff.
+- The diff contains **only** M28a's work: 23 hunks in `cli.py`, each traceable
+  to a named change (vocabulary, `parse_date`, the three helpers, the three
+  touch points, four in-code prose surfaces, two argparse strings, and the
+  five simplify sites plus the hoist), and fifteen files in total with no
+  unrelated edit.
+- Both exit-code tables in `cli.md` — the `docs mv` one and the global summary
+  — carry the refusal and the exit-1 precedence.
+- `docs check --root docs` exits 0; every edited doc's `Updated:` was bumped by
+  `docs touch`; `docs/INDEX.md` and `tests/fixtures/expected/docs-INDEX.md` are
+  in lockstep; both skill mirrors are byte-identical.
+- Six commits, one per phase, plus this audit; messages follow the project's
+  convention; no secrets in the diff.
+
+### Observations for the operator (no decision required)
+
+1. **The real tree was transiently mutated during Phase 9 and fully
+   reverted.** A failed `cp -a` and its failed `cd` left a subsequent
+   `docs migrate . --apply` pointing at the repository root. No commit was
+   involved, `git restore --source=HEAD` returned the tree to `19147ea`
+   exactly, and zero deletions or renames were involved. It is recorded in the
+   Phase-9 entry rather than hidden, and every later flow used absolute
+   `--root` paths only.
+2. **`cli.md`'s M18 archive-exception paragraph still says "other metadata"
+   generically** where `convention.md`'s now names `Archived:` and
+   `Archived-reason:` explicitly (Phase-1 amendment 5). That asymmetry is
+   deliberate: amendment 5 scoped the explicit naming to `convention.md`'s
+   three paragraphs, and `cli.md`'s generic phrasing remains true. Left as
+   Phase 1 decided it.
+3. **`architecture.md`'s `mv` module-map line was stale for M28, not just
+   M28a**, and was corrected here. If a future audit wants a rule, it is that
+   the module map's per-verb annotations are not covered by any test and are
+   swept only when a milestone happens to read them.
+
 ## Milestone completion summary
 
 **M28a — Structured archive-date witness is implementation-complete across all

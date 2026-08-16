@@ -70,8 +70,8 @@ until then._
   subtree may be repaired, but only with an explicit `--reason` (a single
   non-empty line). The **only** bytes that may change are the one recognized
   `Related:` bullet, the `Updated:` value, and a new dated `Revision:` audit
-  bullet; lifecycle, `Archived-reason:`, role, project, other edges, the H1,
-  and the prose are byte-identical. `Revision:` is a repeatable bare-label
+  bullet; lifecycle, `Archived:` and `Archived-reason:` (M28a), role, project,
+  other edges, the H1, and the prose are byte-identical. `Revision:` is a repeatable bare-label
   group at the end of the metadata block and is a **built-in always-allowed
   metadata label**, so a tree with a `[vocabulary] add_fields` allowlist
   never sees `unknown-field` on a label the tool itself writes.
