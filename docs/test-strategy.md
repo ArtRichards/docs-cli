@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
 
 Related:
 - pairs-with: architecture.md
@@ -81,6 +81,27 @@ Three sources of test docs, in increasing realism:
      the M25 rule, plus one M28-specific reason, which is that no committed
      fixture filename may carry a space or a parenthesis (`tests/` ships in
      every sdist).
+   - `archivedate-*/` — the M28a family, **one semantic per tree**, for the
+     archive-date witness and its two legs: `-clean` (a corroborated witness,
+     one of them nested a level deeper so the first-segment reading is pinned,
+     plus a deliberate cross-dated `pairs-with` pair that locks the **declined**
+     rule), `-drifted` (the witness against a *different* dated directory —
+     message form A, the headline E1d case), `-absent` (a pre-2.0 archived
+     document carrying `Archived-reason:` and **no** witness, so the
+     present-only contract is measured rather than asserted), `-outside` (the
+     witness on a document in the active tree, in both the `status-drift`-firing
+     and `status-drift`-silent polarities), `-undated` (the witness under an
+     undated archive subdirectory — form B's second shape), and
+     `-two-dated-dirs` (two populated dated directories holding a
+     witness-carrying and a witness-less document plus an ordinary `archive/notes/`
+     sibling, so Leg 2's refusal, its permitted same-directory rename and its
+     archive-root neighbour are all reachable on one tree). Structure only, with
+     fixed past dates, never run-time ones. Three of the six are **deliberately
+     drifted**, which is why they get their own `_pre_m28a_tree_names()` sweep
+     rather than widening `_legacy_tree_names` — widening one would both move
+     pre-existing parametrized ids and make these three fail it. Every
+     non-default `[archive] dir` / `date_format` case and every
+     write-then-byte-compare case uses inline `tmp_path` builders, the M25 rule.
    - `reciprocal-*/` — the M25 family, **one semantic per tree**, for the
      `missing-inverse` rule: `-clean` (all three pairs complete),
      `-missing` (the one-sided edge), `-freeform` (the supersedes trap),

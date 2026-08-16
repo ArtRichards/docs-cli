@@ -471,3 +471,101 @@ def test_bundled_use_cases_teaches_the_move_rewrite_and_the_strand_check() -> No
         "the catalog must name the strand refusal, which is the one case where a "
         "previously-completing archive now exits 2"
     )
+
+
+# --- M28a — the bundled skill must teach the witness and the refusal -------
+
+
+def test_skill_md_teaches_the_archive_date_witness_and_the_mv_refusal() -> None:
+    """M28a — D9 surface parity: the skill's `docs archive` and `docs mv` rows
+    must name the witness and the refusal.
+
+    Both are things an agent has to know BEFORE it invokes the verb: an archive
+    now writes a field the agent did not ask for, and a `docs mv` that used to
+    complete now exits 2. An agent reading only the current rows would be
+    surprised by the second and would not know the first exists.
+
+    Intended RED until Phase 7 (the bundled skill lands in the SAME change as
+    the CLI surface; there is nothing to mirror at Phase 2).
+    """
+    _frontmatter, body = _split_frontmatter(_read_skill())
+    rows = [line for line in body.split("\n") if line.startswith("|")]
+    archive_rows = "\n".join(line for line in rows if "docs archive" in line)
+    mv_rows = "\n".join(line for line in rows if "docs mv" in line)
+
+    assert archive_rows, "the skill body's verb table must carry a `docs archive` row"
+    assert mv_rows, "the skill body's verb table must carry a `docs mv` row"
+
+    assert "Archived:" in archive_rows, (
+        "the archive row must name the field the verb now writes, by its exact label"
+    )
+    assert "refus" in mv_rows.lower(), (
+        "the mv row must say a cross-dated archived relocation now REFUSES — "
+        "the milestone's one behaviour change"
+    )
+    assert "archive" in mv_rows.lower(), (
+        "…and must say which moves it applies to, or the refusal reads as universal"
+    )
+
+
+def test_bundled_use_cases_teaches_the_archive_date_witness() -> None:
+    """M28a — D9: the shipped use-case catalog carries the same prescription.
+
+    The catalog is where an agent looks for the closeout recipe, so it is where
+    the two new facts belong: a closeout now records the archive date on every
+    member it moves, and `docs check` reports a document whose location
+    contradicts it.
+
+    Intended RED until Phase 7.
+    """
+    text = (SKILL_DIR / "references" / "use-cases.md").read_text()
+    assert "Archived:" in text, "the catalog must name the field a closeout now writes"
+    assert "archive-date-drift" in text, (
+        "…and the rule id an adopter will see in `docs check` output"
+    )
+
+
+def test_argparse_help_teaches_the_archive_date_witness_and_the_mv_refusal() -> None:
+    """M28a — D9 surface parity, at the argparse layer this time.
+
+    The milestone's *Testing and quality gate* names `docs archive --help` /
+    `docs check --help` / `cli.md` surface parity, and D9 says the argparse
+    surface must describe the same behaviour as the specs and the skill. M28a
+    adds no flag, so nothing in the option set moves — which is exactly why
+    the `description` strings are the only thing that can carry the change,
+    and why nothing else in the suite would notice one going missing.
+
+    All three verbs are asserted, because the one that was silently dropped
+    at Phase 7 was `archive` — the verb that WRITES the field.
+    """
+    parser = _build_parser()
+    sub = next(
+        a
+        for a in parser._actions
+        if isinstance(a, argparse._SubParsersAction) and a.dest == "command"
+    )
+
+    archive_help = sub.choices["archive"].description or ""
+    assert "Archived:" in archive_help, (
+        "`docs archive --help` must name the field the verb now writes, by its exact label"
+    )
+    assert "EVERY" in archive_help or "every" in archive_help, (
+        "…and must say it lands on every document the operation moves, not the primary only"
+    )
+
+    mv_help = sub.choices["mv"].description or ""
+    assert "REFUSES" in mv_help or "refuses" in mv_help, (
+        "`docs mv --help` must say a cross-dated archived relocation now refuses — "
+        "the milestone's one behaviour change, and a move that used to exit 0"
+    )
+    assert "archive" in mv_help.lower(), (
+        "…and must say which moves it applies to, or the refusal reads as universal"
+    )
+
+    check_help = sub.choices["check"].description or ""
+    assert "Archived:" in check_help, "`docs check --help` must name the rule's subject field"
+    assert "archived document" not in check_help, (
+        "the rule is NOT limited to archived documents — Q7's motivating case is a "
+        "document moved OUT of the archive whose Lifecycle: was then hand-edited, "
+        "where status-drift is silent. Both specs say 'a document'."
+    )

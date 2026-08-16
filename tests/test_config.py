@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import docs as _cli
 from docs import (
     BUILTIN_ROLES,
     BUILTIN_STATUSES,
@@ -200,3 +201,32 @@ def test_load_config_stale_days_defaults_to_none(tmp_path):
 )
 def test_resolve_stale_precedence(cli_stale, config_stale_days, expected):
     assert resolve_stale(cli_stale, config_stale_days) == expected
+
+
+# --- M28a (D1 / E6) — `Archived` is a built-in, so `add_fields` is irrelevant
+
+
+@pytest.mark.parametrize(
+    "toml",
+    [
+        '[project]\nname = "x"\n',
+        '[project]\nname = "x"\n\n[vocabulary]\nadd_fields = ["Owner"]\n',
+        '[project]\nname = "x"\n\n[vocabulary]\nadd_fields = ["Archived-reason", "Revision"]\n',
+    ],
+    ids=["no-add-fields", "unrelated-add-fields", "add-fields-without-the-label"],
+)
+def test_config_never_needs_archived_on_the_add_fields_allowlist(tmp_path, toml):
+    """E6 / D1: `Archived` joins `_BUILTIN_METADATA_FIELDS`, NOT `Config.fields`.
+
+    `[vocabulary] add_fields` stays opt-in and off by default, and a tree that
+    sets it must not be forced to list a label the tool itself writes — M25's
+    reason for `Revision:`, verbatim. Asserted at the config seam so a Phase-5
+    implementer cannot satisfy the vocabulary requirement by widening the
+    per-tree allowlist instead.
+    """
+    (tmp_path / ".docs.toml").write_text(toml)
+    cfg = load_config(tmp_path)
+    assert "Archived" not in cfg.fields, "the label is built-in, never config-sourced"
+    assert "Archived" in _cli._BUILTIN_METADATA_FIELDS, (
+        "a label the tool writes must never trip the tool's own allowlist warning"
+    )

@@ -3740,3 +3740,317 @@ def test_archive_never_rewrites_or_reports_an_excluded_document(docs_script, tmp
     assert "vendor" not in proc.stderr
     assert excluded.read_text() == before, "an excluded document is never rewritten"
     assert f"[the plan]({_M28_DATED}/plan.md)" in (root / "keep.md").read_text()
+
+
+# ===========================================================================
+# M28a — the archive-date witness, at the writer.
+#
+# The contract under test is the milestone's *Decisions (Phase 1 — BINDING)*
+# items (A) and (B), and `cli.md` › `docs archive` ›
+# *The archive-date witness*.
+# ===========================================================================
+
+_M28A_DATE = "2026-03-04"
+_M28A_DATED = f"archive/{_M28A_DATE}"
+
+
+def test_archive_records_the_witness_matching_the_dated_directory(
+    docs_script, fixtures_dir, tmp_path
+):
+    """D1: the recorded value is the SAME date that names the dated directory.
+
+    Sibling of `test_archive_bumps_updated`. RED reason: `_archive_one` writes
+    `Lifecycle`, `Updated` and (conditionally) `Archived-reason`, and nothing
+    else (Phase 6).
+    """
+    root = _minimal_tree(fixtures_dir, tmp_path)
+    proc = _run(docs_script, "archive", str(root / "lone-doc.md"))
+    assert proc.returncode == 0, proc.stderr
+    today = date.today().isoformat()
+    moved = root / "archive" / today / "lone-doc.md"
+    assert f"Archived: {today}" in moved.read_text()
+
+
+def test_archive_date_flag_controls_the_directory_and_the_field_from_one_value(
+    docs_script, fixtures_dir, tmp_path
+):
+    """D1: one value, one source, one rendering — never a second `strftime`
+    and never a `date.today()` re-read inside `_archive_one`.
+
+    `--date` is what makes the two provably the same value rather than two
+    computations that happen to agree on the day the test runs.
+    """
+    root = _minimal_tree(fixtures_dir, tmp_path)
+    proc = _run(docs_script, "archive", str(root / "lone-doc.md"), "--date", _M28A_DATE)
+    assert proc.returncode == 0, proc.stderr
+    moved = root / _M28A_DATED / "lone-doc.md"
+    assert moved.is_file(), "the dated directory is named by --date"
+    text = moved.read_text()
+    assert f"Archived: {_M28A_DATE}" in text
+    assert date.today().isoformat() not in text, (
+        "today's date must appear nowhere: the witness is the archive event's date"
+    )
+
+
+def test_archive_writes_the_witness_at_the_pinned_block_position(
+    docs_script, fixtures_dir, tmp_path
+):
+    """E7 / D1: nothing else pins a new field's position — there is no
+    field-order list and no `field-order` rule, and `set_metadata_field`
+    appends a new inline label at the end of the inline run. The position is
+    therefore decided solely by the `set_metadata_field` call order in
+    `_archive_one`, and this asserts the exact block, byte for byte.
+
+    `Archived:` comes BEFORE `Archived-reason:` — the date, then the reason
+    for it.
+    """
+    root = _minimal_tree(fixtures_dir, tmp_path)
+    proc = _run(docs_script, "archive", str(root / "lone-doc.md"), "--date", _M28A_DATE)
+    assert proc.returncode == 0, proc.stderr
+    block = (root / _M28A_DATED / "lone-doc.md").read_text().split("\n\n")[1]
+    assert block.splitlines() == [
+        "Lifecycle: archived",
+        "Role: notes",
+        "Project: minimal",
+        f"Updated: {_M28A_DATE}",
+        f"Archived: {_M28A_DATE}",
+    ], block
+
+
+def test_archive_with_reason_writes_the_witness_before_the_reason(
+    docs_script, fixtures_dir, tmp_path
+):
+    """E7's coverage row, second half: the same byte-level block order with
+    `--reason` present."""
+    root = _minimal_tree(fixtures_dir, tmp_path)
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "lone-doc.md"),
+        "--date",
+        _M28A_DATE,
+        "--reason",
+        "milestone closed out",
+    )
+    assert proc.returncode == 0, proc.stderr
+    block = (root / _M28A_DATED / "lone-doc.md").read_text().split("\n\n")[1]
+    assert block.splitlines() == [
+        "Lifecycle: archived",
+        "Role: notes",
+        "Project: minimal",
+        f"Updated: {_M28A_DATE}",
+        f"Archived: {_M28A_DATE}",
+        "Archived-reason: milestone closed out",
+    ], block
+
+
+def test_archive_cascade_writes_the_witness_to_every_member(docs_script, fixtures_dir, tmp_path):
+    """D2 / A2 / E4: the ONE place M28a deliberately does not copy
+    `Archived-reason:`'s primary-only rule.
+
+    The reported case was a cascaded trio split across two dated directories,
+    and a trio's non-primary members are exactly the documents a primary-only
+    witness would leave blind. Every member carries the operation's single
+    date; `Archived-reason:` stays on the primary alone (M26 — D1, untouched).
+    """
+    root = _tree(fixtures_dir, tmp_path, "archive-trio")
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "feature.md"),
+        "--cascade-only",
+        "feature-*.md",
+        "--reason",
+        "trio closed out",
+        "--date",
+        _M28A_DATE,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    members = ["feature.md", "feature-impl.md", "feature-test-matrix.md"]
+    for name in members:
+        moved = root / _M28A_DATED / name
+        assert moved.is_file(), f"{name} must have moved"
+        assert f"Archived: {_M28A_DATE}" in moved.read_text(), (
+            f"{name} must carry the witness with the operation's single date"
+        )
+
+    primary = (root / _M28A_DATED / "feature.md").read_text()
+    assert "Archived-reason: trio closed out" in primary
+    for name in members[1:]:
+        assert "Archived-reason:" not in (root / _M28A_DATED / name).read_text(), (
+            "a cascaded candidate still never receives the primary's Archived-reason:"
+        )
+
+
+def test_archive_leaves_the_tree_check_clean(docs_script, fixtures_dir, tmp_path):
+    """The over-fire guard at the CLI: the new rule must not fire on the tree
+    the writer just produced. A witness whose own writer trips the rule would
+    be worse than no witness at all.
+
+    GREEN at baseline (degenerate — neither the writer nor the rule exists);
+    the strongest single end-to-end assertion in the milestone after Phase 6.
+    """
+    root = _tree(fixtures_dir, tmp_path, "archive-trio")
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "feature.md"),
+        "--cascade-only",
+        "feature-*.md",
+        "--date",
+        _M28A_DATE,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout
+    assert "archive-date-drift" not in check.stdout
+
+
+def test_archive_replaces_an_existing_witness_rather_than_duplicating_it(docs_script, tmp_path):
+    """Item (A)'s pinned edge case: `set_metadata_field` replaces an existing
+    inline label in place, so the archive event's date WINS and the document
+    never ends up with two `Archived:` lines (which `duplicate-field` would
+    then report as data loss).
+    """
+    root = tmp_path / "prewitnessed"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "prewitnessed"\n')
+    (root / "thing.md").write_text(
+        "# Thing\n\nLifecycle: active\nRole: notes\nProject: prewitnessed\n"
+        "Updated: 2026-05-20\nArchived: 2020-01-01\n\n## Body\n\nProse.\n"
+    )
+    proc = _run(docs_script, "archive", str(root / "thing.md"), "--date", _M28A_DATE)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    text = (root / _M28A_DATED / "thing.md").read_text()
+    assert text.count("Archived:") == 1, f"exactly one Archived: line, got:\n{text}"
+    assert f"Archived: {_M28A_DATE}" in text
+    assert "2020-01-01" not in text
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_archive_keeps_a_related_group_after_the_witness(docs_script, fixtures_dir, tmp_path):
+    """Item (A)'s second pinned edge case: `set_metadata_field` inserts a new
+    inline label BEFORE the first bare-label group, so a `Related:` group still
+    follows the inline run and the block stays convention-shaped."""
+    root = _tree(fixtures_dir, tmp_path, "archive-trio")
+    proc = _run(docs_script, "archive", str(root / "feature-impl.md"), "--date", _M28A_DATE)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    lines = (root / _M28A_DATED / "feature-impl.md").read_text().splitlines()
+    assert f"Archived: {_M28A_DATE}" in lines
+    assert lines.index(f"Archived: {_M28A_DATE}") < lines.index("Related:"), (
+        "the witness is an INLINE label and must precede the bare-label group"
+    )
+
+
+def test_archive_renders_the_witness_in_the_trees_date_format(docs_script, tmp_path):
+    """E8-adjacent: on a `[archive] dir = "attic"`, `date_format = "%d-%m-%Y"`
+    tree the witness renders in the tree's format — ONE spelling in the file,
+    never a second hardcoded ISO one (M25's rule, restated by Q2).
+
+    The run's pre-existing exit-2 tail is asserted EXPLICITLY: `parse()` uses
+    the hardcoded default while `check_doc` honours `config.date_format`
+    (defect E8, *Follow-ups* item 1), so the end-of-batch INDEX refresh fails.
+    M28a does not fix it, and pinning it strictly is what stops the witness
+    half of this test from being satisfied by a run that succeeded for some
+    other reason.
+
+    The consequence, stated plainly rather than left to be discovered: a later
+    milestone that FIXES E8 will break this test, deliberately — its expected
+    exit code becomes 0 and the INDEX-refresh assertions go away, while the
+    three `Archived:` / `Updated:` / no-second-spelling assertions survive
+    unchanged. *Follow-ups* item 1 names this test for exactly that reason.
+    """
+    root = tmp_path / "attic-tree"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "attictree"\n\n[archive]\ndir = "attic"\ndate_format = "%d-%m-%Y"\n'
+    )
+    (root / "thing.md").write_text(
+        "# Thing\n\nLifecycle: active\nRole: notes\nProject: attictree\n"
+        "Updated: 2026-05-20\n\n## Body\n\nProse.\n"
+    )
+    proc = _run(docs_script, "archive", str(root / "thing.md"), "--date", "04-03-2026")
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "docs: INDEX refresh failed:" in proc.stderr, (
+        "the pre-existing E8 defect, pinned so this test measures the WITNESS"
+    )
+    assert "Updated: malformed date '04-03-2026' (expected %Y-%m-%d)" in proc.stderr
+
+    text = (root / "attic" / "04-03-2026" / "thing.md").read_text()
+    assert "Archived: 04-03-2026" in text
+    assert "Updated: 04-03-2026" in text
+    assert "2026-03-04" not in text, "no second date spelling anywhere in the file"
+
+
+def test_archive_json_top_level_key_set_does_not_widen(docs_script, fixtures_dir, tmp_path):
+    """*Also settled*: M28a adds no new JSON field, anywhere. `archive --json`
+    already carries `date`, which is the same value the field records.
+
+    GREEN at baseline and a genuine regression lock: it is what stops a
+    Phase-6/7 implementer from adding an `archived` key beside it.
+    """
+    root = _tree(fixtures_dir, tmp_path, "archive-trio")
+    proc = _run(
+        docs_script,
+        "archive",
+        str(root / "feature.md"),
+        "--cascade-only",
+        "feature-*.md",
+        "--date",
+        _M28A_DATE,
+        "--json",
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    record = json.loads(proc.stdout)
+    assert list(record) == _JSON_TOP_LEVEL_KEYS, list(record)
+    assert record["date"] == _M28A_DATE
+
+
+def test_archive_leaves_an_archived_referrers_witness_byte_identical(docs_script, tmp_path):
+    """D9 / Q6 for the ARCHIVE half of M18's move-driven exception, as widened
+    by M28 — D5.
+
+    `convention.md` promises that only the moving destination and the moving
+    bullet change in an already-archived referrer: `Lifecycle:`, `Archived:`,
+    `Archived-reason:`, `Role:`, `Project:`, `Updated:`, the H1 and all other
+    prose stay byte-identical, and no `Revision:` bullet is added. `docs mv`'s
+    half of that promise has its own lock; this is the `docs archive` half, and
+    without it the widened exception is only half tested.
+
+    GREEN at baseline (the witness it preserves is hand-authored, since no verb
+    writes one until Phase 6) and genuine afterwards.
+    """
+    root = tmp_path / "referrer"
+    (root / "archive" / "2026-01-01").mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "referrer"\n')
+    (root / "target.md").write_text(
+        "# Target\n\nLifecycle: active\nRole: notes\nProject: referrer\n"
+        "Updated: 2026-05-20\n\n## Body\n\nThe document about to be archived.\n"
+    )
+    referrer = root / "archive" / "2026-01-01" / "old.md"
+    referrer.write_text(
+        "# Old\n\nLifecycle: archived\nRole: plan\nProject: referrer\n"
+        "Updated: 2026-01-01\nArchived: 2026-01-01\nArchived-reason: completed\n\n"
+        "Related:\n- references: target.md\n\n"
+        "## Body\n\nSee [the target](../../target.md) for the current shape.\n"
+    )
+    before = referrer.read_text()
+
+    proc = _run(docs_script, "archive", str(root / "target.md"), "--date", _M28A_DATE)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    after = referrer.read_text()
+    expected = before.replace("- references: target.md", f"- references: {_M28A_DATED}/target.md")
+    expected = expected.replace("(../../target.md)", f"(../{_M28A_DATE}/target.md)")
+    assert after == expected, (
+        "only the moving bullet and the moving destination may change in an "
+        "already-archived referrer"
+    )
+    assert "Archived: 2026-01-01" in after, "the witness is byte-identical"
+    assert "Archived-reason: completed" in after
+    assert "Updated: 2026-01-01" in after, "no Updated: bump for another document's move"
+    assert "Revision:" not in after, "and no audit bullet — the widened exception adds none"
+    assert _run(docs_script, "check", str(root)).returncode == 0

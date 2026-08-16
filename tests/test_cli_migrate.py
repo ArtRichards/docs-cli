@@ -617,3 +617,67 @@ def test_migrate_apply_keeps_archive_parent_with_remaining_siblings(docs_script,
     # the sibling is still there.
     assert archived.is_dir(), "archived/ must remain when a sibling file is still present"
     assert sibling.is_file(), "non-migrating sibling must survive --apply"
+
+
+# ===========================================================================
+# M28a — D7: `docs migrate` never writes the witness, and never promotes a
+# foreign one.
+# ===========================================================================
+
+
+def test_migrate_apply_writes_no_archive_date_witness(docs_script, fixtures_dir, tmp_path):
+    """D7 / Q5 / E9: migrate's archive-directory date comes from each file's
+    own `Updated:` line, falling back to its **mtime** — which on a fresh clone
+    is today. A migrate that wrote the witness would stamp today's date as the
+    archive date on every historical document it adopts, and would give a
+    filesystem timestamp the authority of a tool-written record.
+
+    GREEN at baseline (D7 is satisfied by construction) and a genuine
+    regression lock: it is what stops Phase 6 from "helpfully" threading the
+    witness into `apply_migration` beside `Lifecycle: archived`.
+    """
+    root = tmp_path / "adopted"
+    shutil.copytree(fixtures_dir / "trees" / "real-trees" / "archive-subdir", root)
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    archived = sorted((root / "archive" / "2026-05-22").glob("*.md"))
+    assert archived, "the archive-style subdir's docs must have been relocated"
+    for md in archived:
+        text = md.read_text()
+        assert "Lifecycle: archived" in text, f"{md.name} must have been adopted as archived"
+        assert "\nArchived:" not in text, (
+            f"{md.name} must carry NO archive-date witness — migrate's date is inferred"
+        )
+
+    offenders = [md.name for md in root.rglob("*.md") if "\nArchived:" in md.read_text()]
+    assert offenders == [], f"migrate wrote a witness somewhere: {offenders!r}"
+
+
+def test_migrate_apply_demotes_a_foreign_archived_line_without_promoting_it(docs_script, tmp_path):
+    """D7: a foreign document that already carries an `Archived:` line keeps
+    today's behaviour — demoted into the `## Migrated metadata` body section as
+    `Migrated-Archived:`, preserved but never promoted into a tool-trusted
+    witness. The label is therefore NOT added to migrate's supersession set.
+
+    GREEN at baseline and a genuine regression lock: adding `Archived` to
+    `_REQUIRED_METADATA_FIELDS` — an easy Phase-5 mistake, since the label is
+    joining `_BUILTIN_METADATA_FIELDS` in the same change — would silently
+    DROP the foreign assertion instead of preserving it.
+    """
+    root = tmp_path / "foreign-witness"
+    root.mkdir()
+    (root / "old-spec.md").write_text(
+        "# Old spec\n\nArchived: 2020-01-01\nOwner: someone\n\nProse from another convention.\n"
+    )
+    proc = _run(docs_script, "migrate", str(root), "--apply", "--date", "2026-05-22")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+
+    migrated = next(root.rglob("old-spec.md"))
+    text = migrated.read_text()
+    assert "## Migrated metadata" in text
+    assert "Migrated-Archived: 2020-01-01" in text, (
+        "the foreign assertion is preserved, verbatim, in the body"
+    )
+    doc = parse(text, migrated, root)
+    assert "Archived" not in doc.extra, "…and is never promoted into a tool-trusted metadata field"

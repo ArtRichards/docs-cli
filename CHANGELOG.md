@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED
 
-_The v2.0 train (M25–M28) accumulates here; M29 names and dates this
+_The v2.0 train (M25–M28a) accumulates here; M29 names and dates this
 heading at publish time. The package version deliberately stays `1.8.0`
 until then._
 
@@ -70,8 +70,8 @@ until then._
   subtree may be repaired, but only with an explicit `--reason` (a single
   non-empty line). The **only** bytes that may change are the one recognized
   `Related:` bullet, the `Updated:` value, and a new dated `Revision:` audit
-  bullet; lifecycle, `Archived-reason:`, role, project, other edges, the H1,
-  and the prose are byte-identical. `Revision:` is a repeatable bare-label
+  bullet; lifecycle, `Archived:` and `Archived-reason:` (M28a), role, project,
+  other edges, the H1, and the prose are byte-identical. `Revision:` is a repeatable bare-label
   group at the end of the metadata block and is a **built-in always-allowed
   metadata label**, so a tree with a `[vocabulary] add_fields` allowlist
   never sees `unknown-field` on a label the tool itself writes.
@@ -236,6 +236,59 @@ until then._
   inbound reference into the newly-archived set, `Related:` bullets and body
   links alike, with both ends named.
 
+- **The `Archived:` archive-date witness** (M28a). `docs archive` now records
+  the archive date as a structured metadata field on **every** document the
+  operation moves — the named primary *and* each selected cascade member, so a
+  closeout's own metadata records the event that created it rather than only
+  the directory it happens to sit in. This deliberately does **not** follow
+  `Archived-reason:`'s primary-only rule: a reason explains why one operation
+  was requested, while a date is a fact about each document's own move. The
+  value is the **same** date string that names the dated archive directory —
+  one value, one source, rendered once in the tree's `[archive] date_format` —
+  and its position in the block is pinned:
+
+  ```
+  Lifecycle: archived
+  Role: <role>
+  Project: <project>
+  Updated: <date>
+  Archived: <date>
+  Archived-reason: <reason>
+  ```
+
+  The label joins the built-in always-allowed metadata set, so it never trips
+  `unknown-field` and needs no `[vocabulary] add_fields` entry. It stays out of
+  the parsed field set, so it surfaces through `docs list --json` under
+  `extra_fields` exactly as `Archived-reason:` and `Revision:` already do — no
+  JSON record gains a key. No other verb writes it: `docs new`, `docs stamp`,
+  `docs touch`, `docs relate` and `docs migrate` never do, there is no
+  backfill, and a document that already carries the label has it replaced in
+  place by the archive event's own date.
+
+- **`archive-date-drift` check rule** (M28a). `docs check` reports an archived
+  document whose location does not corroborate the archive date it records — a
+  hard **error** (exit 2), **one finding per document**, on the existing closed
+  four-key `Finding` record (`path`, `severity`, `rule`, `message`), with no
+  new flag, no new JSON key and no opt-out. Corroboration is decided by path
+  arithmetic and the tree's own config alone — no filesystem probe, no graph
+  traversal, no second pass: the first path segment is the configured
+  `[archive] dir`, the segment after it parses in the tree's `date_format`, and
+  that date equals the recorded one. Comparison is on **parsed** dates, never
+  raw strings, so `archive/2026-1-1/` corroborates `Archived: 2026-01-01`.
+  Two message forms, one for each non-corroborating shape:
+
+  ```
+  error: [archive-date-drift] Archived: 2026-01-01 but the file is in archive/2026-03-04/ (move it back, or correct the recorded date)
+  error: [archive-date-drift] Archived: 2026-01-01 but the file is not under a dated archive/ directory (move it back, or remove the field)
+  ```
+
+  The rule fires **only when the field is present**. A document that does not
+  carry it produces nothing, ever. `archive-date-drift` and `status-drift` are
+  independent and may both fire on one document — they report different facts,
+  and the case that motivates the rule (a document moved out of the archive
+  whose `Lifecycle:` is then hand-edited) is precisely the one where
+  `status-drift` is silent.
+
 ### Changed
 
 - **BREAKING — a one-sided recognized reciprocal edge now exits 2.** Trees
@@ -246,6 +299,36 @@ until then._
   duplicate label passed `docs check` before this release, while silently
   losing every value under the earlier copy. It now fails. There is no
   automatic merge: `docs` will not guess which entries you meant to keep.
+- **BREAKING — `docs mv` between two dated archive directories now refuses**
+  (M28a). A move whose source and destination are both under the configured
+  `[archive] dir` and whose first segments under it parse, in the tree's
+  `date_format`, to **different** dates used to complete at exit 0, rewriting
+  every stale reference so nothing dangled and leaving `docs check` clean. It
+  now **refuses at exit 2 with zero bytes written**, in **every** mode —
+  `--dry-run` and `--quiet` included, because a preview that says `would move`
+  for an operation the apply refuses is a preview that lies — and it emits no
+  `--json` record. The dated directory is the only record of when a document
+  was archived, and this is the one relocation the tool itself performs that
+  would silently falsify it. The predicate is decided from the two paths and
+  the tree's config alone, so it protects **every** archived document, whether
+  or not it carries the new `Archived:` field. Both lines print even under
+  `--quiet`, and the escape ships in the same breath as the refusal:
+
+  ```console
+  $ docs mv archive/2026-01-01/x.md archive/2026-03-04/x.md
+  docs: mv: archive/2026-01-01/x.md -> archive/2026-03-04/x.md crosses dated archive directories (2026-01-01 to 2026-03-04); refusing before any write
+  docs: mv: the dated directory records when a document was archived; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check`
+  ```
+
+  The predicate is the narrowest one that closes the hole, and every
+  neighbouring move still completes exactly as before: a rename **within** one
+  dated directory, a move with one end **outside** the archive subtree
+  (`status-drift` already owns both directions, and this leg does not
+  double-report them), a move whose two segments do not **both** parse as
+  dates, and two spellings of **one** date (`archive/2026-01-01/` to
+  `archive/2026-1-1/`), because the comparison is on parsed dates.
+  The two exit-1 argument errors still win: a cross-dated move onto an
+  occupied destination exits 1 naming the collision.
 - **BREAKING — a broken or escaping local Markdown body link now exits 2.**
   A tree that has carried unnoticed prose damage starts failing `docs check`.
   That is deliberate, and it is what the 2.0 major version exists to carry.
@@ -458,6 +541,36 @@ Three things change for existing automation:
    positive evidence the new rewrite phase ran rather than silently doing
    nothing. If you parse either verb's stderr, switch to `--json`: `docs mv`
    gains a record in this release precisely so nothing has to.
+
+**The archive-date witness needs no upgrade work at all.** This is the one
+change in the train with that property, and it is deliberate: the
+`archive-date-drift` rule fires **only when a document carries the
+`Archived:` field**, and nothing before 2.0.0 ever wrote one. A 1.x tree
+therefore gains **zero** findings from it on upgrade — however large its
+archive, and however it was organised. There is **no backfill**, no
+`docs fix-dates`, and no sweep: no honest source exists for the archive date
+of a document the tool never observed being archived, and inventing one is
+precisely the falsification the rule exists to prevent. Coverage grows by
+use — your **next** archive writes the witness for the documents it moves,
+and the historical population stays silent forever. `docs migrate --apply`
+likewise never writes it (its archive-directory dates come from `Updated:`
+or the file's mtime, which on a fresh clone is *today*), and a foreign
+`Archived:` line it finds is demoted into the `## Migrated metadata` body
+section as `Migrated-Archived:` — preserved, never promoted.
+
+Two things do change, and neither is a repair queue:
+
+1. **`docs mv` between two dated archive directories now refuses** — see
+   *Changed*. If you have automation that performs one, it now exits 2 and
+   writes nothing. The by-hand escape is in the refusal's own second line.
+2. **A hand-adopted tree that already carries an `Archived:` label whose
+   value is not a date in the tree's `date_format` gains a new `bad-date`
+   error** naming `Archived:` rather than `Updated:`. This is the one
+   residual of the present-only contract, and it is narrow by measurement:
+   there are zero such labels anywhere in this project's own tree or its
+   fixture corpus, and a tree adopted through `docs migrate` cannot acquire
+   one, because migrate demotes rather than promotes. Repair it by giving
+   the field a real date in the tree's format, or by removing the line.
 
 ## 1.8.0 — 2026-07-03
 

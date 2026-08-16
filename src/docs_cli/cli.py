@@ -163,8 +163,25 @@ MOVE_STRAND_KINDS: frozenset[str] = frozenset({"related", "body-link"})
 # never trip the tool's own allowlist warning, so it joins the built-in
 # always-allowed set rather than requiring every tree with an
 # `add_fields` allowlist to list it.
+#
+# M28a (D1, item (B)) adds `Archived:` — the archive-date witness
+# `docs archive` writes onto every document it moves — for exactly M25's
+# `Revision:` reason. It joins the built-in set ONLY; it stays out of
+# `parse()`'s `known` set (so it surfaces through `docs list --json` under
+# `extra_fields`, as `Archived-reason:` and `Revision:` already do) and out
+# of migrate's `_REQUIRED_METADATA_FIELDS` (so a foreign `Archived:` line is
+# demoted to `Migrated-Archived:`, never promoted — D7).
 _BUILTIN_METADATA_FIELDS: frozenset[str] = frozenset(
-    {"Lifecycle", "Role", "Project", "Updated", "Related", "Archived-reason", "Revision"}
+    {
+        "Lifecycle",
+        "Role",
+        "Project",
+        "Updated",
+        "Related",
+        "Archived",
+        "Archived-reason",
+        "Revision",
+    }
 )
 
 
@@ -415,8 +432,9 @@ class Finding:
             ``bad-vocab``, ``bad-date``, ``status-drift``, ``broken-ref``,
             ``stale``, ``malformed``, ``unknown-field`` (M10),
             ``medium-confidence-inference`` (`docs migrate --triage`),
-            ``duplicate-field`` / ``missing-inverse`` (M25), or
-            ``broken-body-link`` / ``outside-root-body-link`` (M27).
+            ``duplicate-field`` / ``missing-inverse`` (M25),
+            ``broken-body-link`` / ``outside-root-body-link`` (M27), or
+            ``archive-date-drift`` (M28a).
             Emitted in ``--json`` output so CI
             hooks can filter on it. The JSON record's key set is closed at
             ``{path, severity, rule, message}``; a new rule adds a value
@@ -910,17 +928,23 @@ class MovePlan:
 # ---------------------------------------------------------------------------
 
 
-def parse_date(value: str, date_format: str = "%Y-%m-%d") -> date:
+def parse_date(value: str, date_format: str = "%Y-%m-%d", *, label: str = "Updated") -> date:
     """Parse a date string, raising MetadataError on malformed input.
 
     The default format matches `convention.md`. Trims surrounding whitespace
     before parsing so trailing newlines from metadata-line splits don't trip
     the parser.
+
+    `label` names the field in the error message (M28a — OQ-3), so a malformed
+    `Archived:` value does not report itself as a malformed `Updated:` line.
+    Keyword-only, and defaulted, so every pre-M28a call site keeps a
+    byte-identical message and no positional caller can be silently re-bound.
+    One parser survives, and the two messages cannot drift.
     """
     try:
         return datetime.strptime(value.strip(), date_format).date()
     except ValueError as exc:
-        raise MetadataError(f"Updated: malformed date {value!r} (expected {date_format})") from exc
+        raise MetadataError(f"{label}: malformed date {value!r} (expected {date_format})") from exc
 
 
 def validate_lifecycle(value: str, lifecycles: frozenset[str]) -> None:
@@ -1247,7 +1271,6 @@ def walk(
     ``predicate(rel)`` is True. Defaults to ``None`` (no filtering) so
     pre-M8 callers stay backward-compatible.
     """
-    archive_prefix = config.archive_dir
     yielded: list[Doc] = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
@@ -1264,7 +1287,7 @@ def walk(
                 continue
             text = file_path.read_text()
             doc = parse(text, file_path, root)
-            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+            if _is_archived_rel(rel, config):
                 doc = replace(doc, archived=True)
             yielded.append(doc)
     yielded.sort(key=lambda d: d.path.relative_to(root).as_posix())
@@ -1603,7 +1626,8 @@ def set_metadata_field(text: str, label: str, value: str) -> str:
     Only the metadata block is considered: a `Label:`-shaped line in the body
     is never matched. The file's trailing-newline state is preserved.
 
-    Used by `touch` (Updated), `archive` (Lifecycle, Updated, Archived-reason).
+    Used by `touch` (Updated), `archive` (Lifecycle, Updated, Archived,
+    Archived-reason).
 
     Raises:
         MetadataError: `text` has no H1 / metadata block.
@@ -2125,6 +2149,25 @@ def _root_relative(path: Path, root: Path) -> str:
         return path.relative_to(root).as_posix()
     except ValueError:
         return path.name
+
+
+def _is_archived_rel(rel: str, config: Config) -> bool:
+    """True iff `rel` IS the configured archive subtree or lies under it.
+
+    The **single** spelling of the archive-subtree test. It lives here, beside
+    `_root_relative`, because every consumer takes a root-relative POSIX
+    string: `walk`, `check_doc`, `query_docs`, `_known_projects`,
+    `_cmd_project_set`, `docs relate`, M26's plan members, and M28a's
+    `archive_dir_date`. M28a's Phase 10 collapsed five hand-spelled copies of
+    the expression into calls (*Follow-ups* item 4) — E7 had counted three,
+    and reading for the collapse found two more.
+
+    Deliberately NOT `_in_archive_subdir`, which hardcodes `archive` /
+    `archived` / `project-history` and ignores `[archive] dir`: on a tree
+    configured with ``dir = "history"`` a plain `archive/` directory is an
+    ordinary subdirectory whose docs are perfectly eligible candidates.
+    """
+    return rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
 
 
 def _canonical_related_target(target: str) -> str:
@@ -3336,6 +3379,134 @@ def move_plan_to_json(plan: MovePlan) -> dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
+# M28a — the archive-date witness: the pure seam shared by both legs
+#
+# Three pure functions of their arguments — no filesystem access of any kind
+# (D3), pinned by purity locks that monkeypatch `Path.exists` / `is_file` /
+# `is_dir` / `resolve` / `open` to raise. They sit here, immediately above
+# `check_doc`, for M27's reason for placing `body_link_findings` here: the
+# rule reads from this slot.
+#
+# `archive_dir_date` calls `_is_archived_rel` (defined above, beside
+# `_root_relative`) rather than re-deriving the test, because item (C)
+# requires the SHARED notion of "is this under the archive subtree" — the
+# same reason Leg 2's predicate delegates to `archive_dir_date`.
+# ---------------------------------------------------------------------------
+
+
+def archive_dir_date(rel: str, config: Config) -> date | None:
+    """The date of the dated archive directory `rel` sits in, or None (M28a — D3).
+
+    Three conditions, computed from the root-relative path and the tree's
+    config alone:
+
+    1. `rel` is under the configured `[archive] dir` — the SHARED
+       `_is_archived_rel` notion, which is now the tool's single spelling of
+       that test, so Leg 1 and Leg 2 can never disagree about what the
+       archive subtree is.
+    2. There is a segment after it — `len(parts) < 3` is what makes
+       `archive/x.md`, a document directly in the archive root, carry no date.
+    3. `parts[1]` — the FIRST segment under the archive dir, so
+       `archive/<date>/sub/x.md` corroborates `<date>` — parses through
+       `parse_date` with `config.date_format`. Deliberately NOT
+       `detect_archive_layout`'s hardcoded `strptime(parts[1], "%Y-%m-%d")`,
+       which ignores `Config` entirely (E7), and never `parse()`'s hardcoded
+       default (defect E8, *Follow-ups* item 1).
+    """
+    if not _is_archived_rel(rel, config):
+        return None
+    parts = rel.split("/")
+    if len(parts) < 3:
+        return None
+    try:
+        return parse_date(parts[1], config.date_format)
+    except MetadataError:
+        return None
+
+
+def cross_dated_archive_move(old_rel: str, new_rel: str, config: Config) -> tuple[str, str] | None:
+    """The two dated-directory segments when a move crosses them, else None (M28a — D5).
+
+    Leg 2's predicate, decided from the two root-relative paths and the tree's
+    config alone: no metadata, no filesystem, no graph — and therefore
+    independent of whether the moving document carries the witness, which is
+    the whole reason this leg exists.
+
+    Delegating to `archive_dir_date` IS the contract, not an implementation
+    detail: it is what makes the two legs share one notion of a dated archive
+    directory, and it is what keeps the comparison on PARSED dates (so
+    `archive/2026-01-01/` to `archive/2026-1-1/` is one date, not two —
+    permitted neighbour 4).
+
+    Returns the RAW directory segments, which item (E) interpolates into the
+    refusal's `<D1>` and `<D2>`; never a re-rendered `strftime` spelling.
+    """
+    old_date = archive_dir_date(old_rel, config)
+    new_date = archive_dir_date(new_rel, config)
+    if old_date is None or new_date is None or old_date == new_date:
+        return None
+    return old_rel.split("/")[1], new_rel.split("/")[1]
+
+
+def archive_date_findings(
+    path: Path,
+    metadata: Mapping[str, str | tuple[str, ...]],
+    root: Path,
+    config: Config,
+) -> list[Finding]:
+    """`archive-date-drift` for one document (M28a — D3). Pure; no filesystem access.
+
+    The evaluation order is BINDING (item (C)):
+
+    1. **Present-only** (D6) — not a `str`, or blank, and there is nothing to
+       report, ever. That is the entire compatibility story: a 1.x tree gains
+       zero findings. `isinstance(..., str)` rather than `is not None` also
+       covers a bare `Archived:` bullet group, which `parse_metadata_block`
+       yields as a tuple and item (C) pins as *absent*, mirroring how
+       `check_doc` already skips a tuple-valued `Updated:`.
+    2. A value that does not parse is **one `bad-date`** finding (form C) and
+       **no** drift finding — there is no date to compare (OQ-2). `bad-date`
+       stays the single vocabulary entry for a date field that does not parse.
+    3. `_root_relative`, never `path.resolve().relative_to(root.resolve())`:
+       `.resolve()` is filesystem access, which D3 forbids, and
+       `body_link_findings` is the precedent (OQ-4).
+    4. Corroborated → nothing. No dated directory → form B. A different one →
+       form A, naming BOTH dates.
+
+    `recorded` and the directory segment are interpolated as the RAW strings
+    from disk, never re-rendered through `config.date_format` — an operator
+    told to look at a re-rendered directory would be told to look at one the
+    tree does not have. Values arrive pre-stripped from `parse_metadata_block`,
+    and `recorded` is interpolated as received, matching `parse_date`'s own
+    un-stripped `{value!r}`.
+    """
+    recorded = metadata.get("Archived")
+    if not isinstance(recorded, str) or not recorded.strip():
+        return []
+    try:
+        recorded_date = parse_date(recorded, config.date_format, label="Archived")
+    except MetadataError as exc:
+        return [Finding(path, "error", "bad-date", str(exc))]
+
+    rel = _root_relative(path, root)
+    dir_date = archive_dir_date(rel, config)
+    if dir_date == recorded_date:
+        return []
+    if dir_date is None:
+        message = (
+            f"Archived: {recorded} but the file is not under a dated "
+            f"{config.archive_dir}/ directory (move it back, or remove the field)"
+        )
+    else:
+        segment = rel.split("/")[1]
+        message = (
+            f"Archived: {recorded} but the file is in {config.archive_dir}/{segment}/ "
+            "(move it back, or correct the recorded date)"
+        )
+    return [Finding(path, "error", "archive-date-drift", message)]
+
+
+# ---------------------------------------------------------------------------
 # Check rules, query, and JSON records (M3)
 # ---------------------------------------------------------------------------
 
@@ -3357,14 +3528,18 @@ def check_doc(
       error, rule ``missing-field``.
     - ``Lifecycle`` / ``Role`` not in the configured vocabulary — error,
       rule ``bad-vocab``.
-    - ``Updated:`` not parseable in the configured date format — error,
-      rule ``bad-date``.
+    - a date field that does not parse in the configured date format —
+      ``Updated:``, or M28a's ``Archived:`` — error, rule ``bad-date``.
     - structural breakage — a missing H1 — error, rule ``malformed``.
     - lifecycle / location mismatch (``Lifecycle: archived`` outside the
       archive subtree, or any other lifecycle inside it) — error, rule
       ``status-drift``.
     - a ``Related:`` target that does not resolve to a file under ``root`` —
       error, rule ``broken-ref``.
+    - M28a (D3): a document whose recorded ``Archived:`` date its location
+      does not corroborate — error, rule ``archive-date-drift``. Present-only,
+      so a document that does not carry the field produces nothing, ever.
+      Independent of ``status-drift``: both may fire on one document.
     - M27 (D4 / D4b): a local Markdown **body** link whose destination names
       no existing path under ``root`` — error, rule ``broken-body-link``; or
       whose destination leaves the root, decided by path arithmetic alone —
@@ -3461,7 +3636,7 @@ def check_doc(
             rel = path.resolve().relative_to(root.resolve()).as_posix()
         except ValueError:
             rel = path.name
-        in_archive = rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
+        in_archive = _is_archived_rel(rel, config)
         lifecycle_value = lifecycle.strip()
         if lifecycle_value == "archived" and not in_archive:
             findings.append(
@@ -3481,6 +3656,15 @@ def check_doc(
                     f"Lifecycle: {lifecycle_value!r} but the file is inside the archive subtree",
                 )
             )
+
+    # --- M28a (D3 / D4) archive-date corroboration -----------------------
+    # Immediately after the lifecycle/location `status-drift` block and BEFORE
+    # M25's `duplicate-field`, so the two location-versus-metadata rules stay
+    # adjacent — M27's reason for placing `body_link_findings` right after the
+    # `broken-ref` group. Present-only: a document with no `Archived:` line
+    # produces nothing, ever, which is the entire compatibility story. Pure —
+    # no filesystem access, and no second `check_tree` pass.
+    findings.extend(archive_date_findings(path, metadata, root, config))
 
     # --- M25 (D7) duplicate metadata labels ------------------------------
     # Evaluated against the metadata block's RAW label lines, because by the
@@ -3556,8 +3740,9 @@ def check_doc(
     # `Status:` …) are simply opaque to this rule. Once the allowlist
     # is configured, any label not on the built-in always-allowed set
     # AND not on `config.fields` drives a warning. The built-in set
-    # carries the required labels + `Related:` + `Archived-reason:`
-    # so structural metadata is never flagged.
+    # carries the required labels + `Related:` + `Archived:` (M28a) +
+    # `Archived-reason:` + `Revision:` so structural metadata and every
+    # label the tool itself writes is never flagged.
     if config.fields:
         allowed = _BUILTIN_METADATA_FIELDS | config.fields
         for label in metadata:
@@ -3757,7 +3942,7 @@ def query_docs(
             # `list` stays lenient so it can still exit 0 on a messy tree.
             continue
         rel = path.relative_to(root).as_posix()
-        if rel == config.archive_dir or rel.startswith(config.archive_dir + "/"):
+        if _is_archived_rel(rel, config):
             # `parse()` hardcodes archived=False; recompute it as `walk()` does.
             doc = replace(doc, archived=True)
         docs.append(doc)
@@ -5330,7 +5515,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "(exit 2, zero bytes) when a still-active document outside the plan "
             "declares itself `child-of` a document the plan would archive; "
             "every other still-active inbound reference is reported, not "
-            "refused."
+            "refused. Since M28a it also records the archive date as an "
+            "Archived: metadata line on EVERY document the operation moves — "
+            "the named primary and each selected cascade member — carrying "
+            "the same date that names the dated directory; --reason's "
+            "Archived-reason: line stays on the primary alone."
         ),
     )
     archive_p.add_argument("file", help="Path to the doc to archive.")
@@ -5384,6 +5573,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "destination it makes stale — both the links pointing AT <old> and "
             "the links INSIDE it — as one plan built and validated before the "
             "first byte moves, so a handled failure writes nothing at all. "
+            "Since M28a a move between two different dated archive directories "
+            "REFUSES (exit 2, zero bytes) in every mode, --dry-run included, "
+            "because it would falsify the archive-date record; every other "
+            "archive-subtree move still completes. "
             "--dry-run names every planned rewrite; --json emits the same plan "
             "as a record."
         ),
@@ -5553,9 +5746,10 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "Walk the docs root and report convention violations: missing or "
             "malformed metadata, unknown vocabulary, status/location drift, "
-            "broken Related: references, and local Markdown body links that "
-            "name no existing path or that leave the docs root. Exit 0 clean, "
-            "1 warnings only, 2 errors."
+            "broken Related: references, local Markdown body links that "
+            "name no existing path or that leave the docs root, and a "
+            "document whose recorded Archived: date its location does not "
+            "corroborate. Exit 0 clean, 1 warnings only, 2 errors."
         ),
     )
     check_p.add_argument(
@@ -6014,19 +6208,6 @@ def _cmd_new(args: argparse.Namespace) -> int:
 _CASCADE_VERBS = ("pairs-with", "child-of")
 
 
-def _is_archived_rel(rel: str, config: Config) -> bool:
-    """True iff `rel` IS the configured archive subtree or lies under it.
-
-    The idiom `check_doc` and `_cmd_relate` already use, lifted to a named
-    helper because M26 asks it of every plan member. Deliberately NOT
-    `_in_archive_subdir`, which hardcodes `archive` / `archived` /
-    `project-history` and ignores `[archive] dir`: on a tree configured with
-    ``dir = "history"`` a plain `archive/` directory is an ordinary
-    subdirectory whose docs are perfectly eligible candidates.
-    """
-    return rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
-
-
 def _archive_destination(root: Path, config: Config, date_str: str, name: str) -> Path:
     """The archive destination of a document named `name`.
 
@@ -6450,8 +6631,18 @@ def _archive_one(
 ) -> Path:
     """Archive a single doc: edit metadata, then move it into the dated dir.
 
-    Sets `Lifecycle: archived`, bumps `Updated:` to `date_str`, and appends an
+    Sets `Lifecycle: archived`, bumps `Updated:` to `date_str`, records the
+    archive-date witness as `Archived: <date_str>`, and appends an
     `Archived-reason:` line when `reason` is given.
+
+    M28a (item (A) / D2): the witness is the SAME `date_str` that names the
+    dated directory — one value, one source, computed once in `_cmd_archive`
+    and never re-derived here — and it is written to **every** member the
+    operation moves, not the primary only. `apply_archive_plan`'s
+    `plan.reason if index == 0 else None` is untouched: the reason stays
+    primary-only (M26 — D1), the date does not (A2). The witness's position in
+    the block is decided ONLY by the `set_metadata_field` call order below,
+    which is why item (A) pins it.
 
     M28 (E step 3): `text` is the member's already-planned text — its body-link
     splices and `Related:` rewrites already applied — and the metadata edits
@@ -6477,6 +6668,7 @@ def _archive_one(
         path.read_text() if text is None else text, "Lifecycle", "archived"
     )
     new_text = set_metadata_field(new_text, "Updated", date_str)
+    new_text = set_metadata_field(new_text, "Archived", date_str)
     if reason:
         new_text = set_metadata_field(new_text, "Archived-reason", reason)
     dest = root / config.archive_dir / date_str / path.name
@@ -7139,6 +7331,33 @@ def _cmd_mv(args: argparse.Namespace) -> int:
         print(f"docs: mv: both paths must be under the docs root {root}", file=sys.stderr)
         return 2
 
+    # M28a (D5 / item (F), amendment 2) — the cross-dated archived relocation
+    # refusal. Decidable from the two root-relative paths and the tree's config
+    # alone, so it sits HERE: after `old_rel` / `new_rel` exist, and BEFORE the
+    # `--dry-run` branch and the validate-all-first walk. It therefore refuses
+    # in EVERY mode (a preview must not print `would move …` for an operation
+    # the apply refuses) and names the document the operator asked for rather
+    # than an unrelated malformed sibling (M26's stated precedence). The two
+    # exit-1 argument errors above still win — an occupied destination is wrong
+    # in a way that must be fixed before the refusal is even meaningful. Both
+    # lines print even under `--quiet`, as every refusal does, and the escape
+    # ships in the same breath as the refusal.
+    crossed = cross_dated_archive_move(old_rel, new_rel, config)
+    if crossed is not None:
+        seg_old, seg_new = crossed
+        print(
+            f"docs: mv: {old_rel} -> {new_rel} crosses dated archive directories "
+            f"({seg_old} to {seg_new}); refusing before any write",
+            file=sys.stderr,
+        )
+        print(
+            "docs: mv: the dated directory records when a document was archived; "
+            "to correct a genuinely mis-dated archive, move the file by hand, "
+            "correct its `Archived:` line, and re-run `docs check`",
+            file=sys.stderr,
+        )
+        return 2
+
     # M14 (A6): the plan, rewrite and reindex walks all honour persistent
     # [exclude] / .docsignore (no new CLI flag), so a malformed *excluded* file
     # never fails any of them.
@@ -7589,7 +7808,6 @@ def _known_projects(root: Path, config: Config) -> set[str]:
     its root project in the known set.
     """
     known: set[str] = {config.project}
-    archive_prefix = config.archive_dir
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
         for fname in filenames:
@@ -7599,7 +7817,7 @@ def _known_projects(root: Path, config: Config) -> set[str]:
             rel = file_path.relative_to(root).as_posix()
             if rel == INDEX_FILENAME:
                 continue
-            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+            if _is_archived_rel(rel, config):
                 continue
             try:
                 doc = parse(file_path.read_text(), file_path, root)
@@ -7677,7 +7895,6 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
     # archived token refuses (exit 2) regardless of where that token sits
     # relative to a missing / outside / malformed one.
     root_resolved = root.resolve()
-    archive_dir = config.archive_dir
 
     # Archived-only pre-pass: if ANY named doc's root-relative first segment is
     # the archive dir, refuse the whole batch (exit 2) naming the path — even
@@ -7689,7 +7906,7 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
             arc_rel = target.resolve().relative_to(root_resolved).as_posix()
         except ValueError:
             continue  # outside the root → cannot be archived; deferred to next pass
-        if arc_rel == archive_dir or arc_rel.startswith(archive_dir + "/"):
+        if _is_archived_rel(arc_rel, config):
             print(
                 f"docs: project set: {arc_rel} is under the archive subtree (read-only); refusing",
                 file=sys.stderr,

@@ -375,3 +375,32 @@ def test_stamp_refuses_when_no_docs_toml(docs_script, tmp_path):
     assert "docs: stamp:" in proc.stderr, proc.stderr
     assert "is not under a docs root" in proc.stderr, proc.stderr
     assert "refusing" in proc.stderr, proc.stderr
+
+
+# --- M28a (A) — `docs stamp` never writes the archive-date witness ---------
+
+
+def test_stamp_never_writes_the_archive_date_witness(docs_script, tmp_path):
+    """Item (A): `docs stamp` writes `Lifecycle: draft` onto a fresh file and
+    only bumps `Updated:` on an already-stamped one. It never archives a
+    document, so it has no date to witness — stamping one in would give a
+    filesystem-shaped guess the authority of a tool-written record.
+
+    GREEN at baseline and genuine: `cli.md` claims five verbs never write it,
+    and this is one of the two that nothing else in the suite covers. The
+    second call also proves a re-stamp does not introduce one.
+    """
+    root = tmp_path / "stamped"
+    root.mkdir()
+    (root / ".docs.toml").write_text('[project]\nname = "stamped"\n')
+    doc = root / "note.md"
+    doc.write_text("# Note\n\nSome prose an agent already wrote.\n")
+
+    first = _run(docs_script, "stamp", str(doc), "--root", str(root))
+    assert first.returncode == 0, (first.stdout, first.stderr)
+    assert "Lifecycle: draft" in doc.read_text(), "the block must actually have been stamped"
+    assert "\nArchived:" not in doc.read_text()
+
+    second = _run(docs_script, "stamp", str(doc), "--root", str(root))
+    assert second.returncode == 0, (second.stdout, second.stderr)
+    assert "\nArchived:" not in doc.read_text(), "…and a re-stamp introduces none either"
