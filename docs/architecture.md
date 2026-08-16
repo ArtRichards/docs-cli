@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-15
+Updated: 2026-08-16
 
 Related:
 - implements: charter.md
@@ -314,8 +314,8 @@ the marker block and the derived content.
   — every **single-document** rule (`missing-field`, `bad-vocab`,
   `bad-date`, `status-drift`, `broken-ref`, `stale`, `malformed`,
   `unknown-field`, `duplicate-field`, `broken-body-link`,
-  `outside-root-body-link`). Never raises: a validator must
-  describe malformed input, not blow up on it.
+  `outside-root-body-link`, `archive-date-drift`). Never raises: a
+  validator must describe malformed input, not blow up on it.
 - M25 (D7) adds `duplicate-field` via `_duplicate_labels(text)`, which
   counts the metadata block's **raw label lines** rather than reading
   `parse_metadata_block`'s output. It has to: that function assigns
@@ -342,6 +342,30 @@ the marker block and the derived content.
   need only the referring document's own text and its own directory, so
   there is **no** second `check_tree` pass and `docs touch --check` inherits
   them for free through `_run_touch_check` → `check_tree`.
+- M28a (D3/D4) adds `archive-date-drift` the same way — one
+  `findings.extend(archive_date_findings(path, metadata, root, config))`
+  inside `check_doc`, placed immediately after the lifecycle/location
+  `status-drift` block so the two location-versus-metadata rules stay
+  adjacent. It rests on **two pure helpers**, and their relationship is the
+  design point:
+  - `archive_dir_date(rel, config) -> date | None` — the date of the dated
+    archive directory `rel` sits in. It is **shared by both legs**:
+    `archive_date_findings` (Leg 1, in `check`) and
+    `cross_dated_archive_move` (Leg 2, in `mv`) both read it, so the two can
+    never disagree about what a dated archive directory is. It is also the
+    **config-aware sibling `detect_archive_layout` is not** — that one
+    hardcodes the literal `"archive"` and `"%Y-%m-%d"`, takes no `Config` at
+    all, and lives in the migrate half; this one honours `config.archive_dir`
+    (through `_is_archived_rel`) and parses the segment with
+    `config.date_format` through the same `parse_date` path `check_doc`
+    already uses for `Updated:`.
+  - `archive_date_findings(path, metadata, root, config) -> list[Finding]` —
+    the rule itself, shaped exactly after `body_link_findings`: per-document,
+    **no filesystem access of any kind** (it uses `_root_relative`, never
+    `path.resolve()`), and therefore no second `check_tree` pass. It is
+    **present-only** — a document with no `Archived:` line produces nothing,
+    ever — which is what lets a hard error be additive on every existing
+    tree.
 - The pipeline behind them is pure and stdlib-only: `_mask_code(text)` →
   `scan_body_links(text) -> tuple[BodyLink, ...]` →
   `classify_destination(raw)` → `normalise_body_link_target(doc_rel, path)` →
@@ -458,7 +482,7 @@ apply_move_plan(plan)                                one atomic_write per change
   not a filesystem transaction — two files cannot be renamed atomically as
   a unit on POSIX, and the spec says so rather than implying otherwise.
 
-### `archive` (M26, extended by M28)
+### `archive` (M26, extended by M28 and M28a)
 
 The same plan/apply split as `relate`, one stage longer and with a
 deliberately different failure boundary:
@@ -512,9 +536,22 @@ precedence M26 froze at step 7 is unchanged.
 - The two exceptions share one carrier. `CoordinatedWriteError` now spans
   both verbs; `exit_code` on the exception carries M26's exit-1/exit-2 split
   so `preflight_archive_plan` can stay `-> None`.
-- `_archive_one` is unchanged since M2 — `apply_archive_plan` is only its
-  ordered driver. The per-member work, and its edit-then-move atomicity,
-  live where they always did.
+- `_archive_one` is the one place per-member metadata is written —
+  `apply_archive_plan` is only its ordered driver, and the edit-then-move
+  atomicity lives where it always did. **M28a adds exactly one
+  `set_metadata_field` call there**, writing `Archived: <date_str>` between
+  the `Updated:` bump and the conditional `Archived-reason:`. Two properties
+  come free from that placement rather than from new code: the value is the
+  **same `date_str`** `_cmd_archive` computed once and threaded to every
+  member, the one that also names the dated directory (never a second
+  `strftime`, never a `date.today()` re-read); and the field's **position in
+  the block is decided only by this call order**, because
+  `set_metadata_field` appends a new inline label at the end of the inline
+  run and inserts before the first bare-label group. There is no field-order
+  rule anywhere in the tool, which is why the order of these calls *is* the
+  contract. `apply_archive_plan`'s `plan.reason if index == 0 else None`
+  special case is untouched: the **reason** stays primary-only (M26 — D1),
+  the **date** reaches every member (M28a — D2).
 - **Authorization is a CLI-layer concept, discovery is not.**
   `archive_candidates` reports the whole neighborhood with each member's
   state; `_cmd_archive` decides what that means for the exit code. That is
@@ -528,7 +565,7 @@ precedence M26 froze at step 7 is unchanged.
   parameters default to the pre-M28 behaviour, so a direct caller with no
   rewrite plan is unaffected.
 
-### `mv` (M14, inverted by M28)
+### `mv` (M14, inverted by M28, refusing cross-dated relocations since M28a)
 
 `docs mv` had no plan/apply split before M28 — it renamed the file and rewrote
 references afterwards. A class-2 rebase needs the moved document's own text
@@ -536,6 +573,9 @@ references afterwards. A class-2 rebase needs the moved document's own text
 complete before the move, so the order is inverted:
 
 ```
+(cross-dated archived refusal)               M28a — exit 2, zero bytes,
+        │                                    BEFORE the walk and the preview
+        ▼
 walk(root, config, predicate) -> entries     M14 (A1)'s pre-flight walk, now
         │                                    doubling as M28's plan walk
         ▼
@@ -566,6 +606,25 @@ directory the file is not in, so `_mv_partial_state` reports the moved document
 under `Moved:` **iff the rename succeeded** and under `Rewritten:` otherwise.
 `moved` is absent from the plan only when `[exclude]` / `.docsignore` hid the
 document from the walk (R11), in which case the file is simply renamed.
+
+**M28a's refusal sits above the whole pipeline, not inside it.**
+`cross_dated_archive_move(old_rel, new_rel, config)` is decidable from the two
+root-relative paths and the tree's config alone, so it is evaluated the moment
+those two strings exist — after the two exit-1 argument guards (`<old>` is not
+a file, `<new>` already exists, which are wrong in a way that must be fixed
+first) and **before** the `--dry-run` branch and the validate-all-first walk.
+Three consequences follow from that position and none of them is incidental:
+the refusal reaches **every** mode, so a preview cannot print `would move …`
+for an operation the apply refuses; it names the document the operator asked
+for rather than an unrelated malformed sibling the walk would have hit first;
+and it is unreachable by `[exclude]` / `.docsignore`, which govern the walk and
+never the predicate. It is deliberately **not** inside `preflight_move_plan` —
+`_cmd_mv` returns at `--dry-run` before that call, and `_cmd_archive` calls the
+same pre-flight, where the predicate would be dead code because archive never
+moves an already-archived member. The predicate delegates to the same
+`archive_dir_date` the `check` rule uses, which is what makes "the two legs
+can never disagree about what a dated archive directory is" structural rather
+than a promise.
 
 ### `cli`
 

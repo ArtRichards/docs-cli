@@ -42,8 +42,11 @@ Related:
   the suite fully **GREEN at 1502 passed / 0 failed**, and Phase 8 — Run Tests
   (GREEN) complete 2026-08-16 with every gate clean and 0 of the 1341
   pre-existing ids removed or failing, and Phase 9 — Integrate / Accept /
-  Dogfood complete 2026-08-16 across ten flows on throwaway copies. Phase 10 —
-  Quality, Docs, Refactor is next.** The machine-facing contract is
+  Dogfood complete 2026-08-16 across ten flows on throwaway copies, and
+  Phase 10 — Quality, Docs, Refactor complete 2026-08-16. **M28a is
+  implementation-complete across all ten TDD phases** at 1502 passed / 0
+  failed with every gate clean, and stays `Lifecycle: active` until the M29
+  publish closeout.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
   an operator decision). Phases 2–4 authored **149** test ids and six
@@ -906,7 +909,7 @@ coverage* below.
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
 - [x] Phase 9 — Integrate / Accept / Dogfood
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 
@@ -1659,3 +1662,52 @@ their hand-written registration tuple; `docs archive --help` /
   are GREEN; specs and bundled mirrors byte-identical; and `feedback-log.md`
   issue #1's last open finding is closed, leaving M29 ready to publish the
   train.
+
+## Milestone completion summary
+
+**M28a is implementation-complete across all ten TDD phases** — Step 1
+(Phases 1–4) on `m28a/phases-1-4`, 2026-08-15/16; Step 2 (Phases 5–10) on
+`m28a/phases-5-10`, 2026-08-16. The suite is **1502 passed / 0 failed**, every
+quality gate is clean, `docs check --root docs` exits 0, and both bundled
+mirrors are byte-identical to their sources. The full record — per-phase
+objective, actions, decisions and verification — is in
+[m28a-archive-date-witness-impl.md](m28a-archive-date-witness-impl.md).
+
+**Both legs shipped, in three touch points.** One `set_metadata_field` call in
+`_archive_one` records `Archived: <date_str>` — the same value that names the
+dated archive directory, computed once and threaded to every member — on
+**every** document an archive operation moves, at the pinned block position,
+while `Archived-reason:` stays primary-only (A2). One `findings.extend` in
+`check_doc` reports a document whose location does not corroborate its own
+recorded date as `archive-date-drift`: hard error, exit 2, one finding per
+document, on the unchanged four-key `Finding` record, with no new flag, no new
+JSON key and no opt-out. One refusal in `_cmd_mv`, at the position Phase-1
+amendment 2 froze, blocks a move between two different dated archive
+directories at exit 2 with zero bytes written in **every** mode. Behind them
+are three pure helpers with no filesystem access of any kind, and both legs
+read the same `archive_dir_date`, so they can never disagree about what a
+dated archive directory is.
+
+**Every success criterion is met and measured.** A cascaded closeout writes the
+witness to every member with one shared date and leaves `docs check` clean;
+a hand-made relocation of a witness-carrying document adds exactly **one**
+finding where the pre-M28a CLI on the same tree adds none; all **46** of this
+tree's pre-witness archived documents stay silent at exit 0; the **7**
+cross-dated `pairs-with` edges the declined rule would have fired on produce
+nothing; all **four** permitted neighbours complete, the two-spellings-of-one-date
+case included; a non-default `attic` / `%d-%m-%Y` tree refuses on its
+configured directory and completes on an ordinary `archive/` subdirectory;
+`docs migrate --apply` writes no witness and demotes a foreign one; and the
+added `docs check` runtime over 74 documents is below the 10 ms measurement
+floor. `feedback-log.md` issue #1 is **CLOSED** — finding 3's archive-date
+half was its last open item.
+
+**Deliberately not done, and recorded rather than forgotten.** Defect E8 is
+untouched (*Follow-ups* item 1, which names the test that must change with
+it). D8's second residual stays a permitted neighbour by operator decision
+(OQ-7), pinned by a KNOWN-GAP test and registered as *Follow-ups* item 7. No
+version bump — the package stays `1.8.0` and **M29** performs the single bump
+to `2.0.0`, at which point the host-machine skills refresh.
+
+M28a stays `Lifecycle: active` until the M29 publish closeout and is handed to
+M29.

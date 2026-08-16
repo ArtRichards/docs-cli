@@ -1271,7 +1271,6 @@ def walk(
     ``predicate(rel)`` is True. Defaults to ``None`` (no filtering) so
     pre-M8 callers stay backward-compatible.
     """
-    archive_prefix = config.archive_dir
     yielded: list[Doc] = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
@@ -1288,7 +1287,7 @@ def walk(
                 continue
             text = file_path.read_text()
             doc = parse(text, file_path, root)
-            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+            if _is_archived_rel(rel, config):
                 doc = replace(doc, archived=True)
             yielded.append(doc)
     yielded.sort(key=lambda d: d.path.relative_to(root).as_posix())
@@ -2150,6 +2149,25 @@ def _root_relative(path: Path, root: Path) -> str:
         return path.relative_to(root).as_posix()
     except ValueError:
         return path.name
+
+
+def _is_archived_rel(rel: str, config: Config) -> bool:
+    """True iff `rel` IS the configured archive subtree or lies under it.
+
+    The **single** spelling of the archive-subtree test. It lives here, beside
+    `_root_relative`, because every consumer takes a root-relative POSIX
+    string: `walk`, `check_doc`, `query_docs`, `_known_projects`,
+    `_cmd_project_set`, `docs relate`, M26's plan members, and M28a's
+    `archive_dir_date`. M28a's Phase 10 collapsed five hand-spelled copies of
+    the expression into calls (*Follow-ups* item 4) — E7 had counted three,
+    and reading for the collapse found two more.
+
+    Deliberately NOT `_in_archive_subdir`, which hardcodes `archive` /
+    `archived` / `project-history` and ignores `[archive] dir`: on a tree
+    configured with ``dir = "history"`` a plain `archive/` directory is an
+    ordinary subdirectory whose docs are perfectly eligible candidates.
+    """
+    return rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
 
 
 def _canonical_related_target(target: str) -> str:
@@ -3369,12 +3387,10 @@ def move_plan_to_json(plan: MovePlan) -> dict[str, object]:
 # `check_doc`, for M27's reason for placing `body_link_findings` here: the
 # rule reads from this slot.
 #
-# `archive_dir_date` forward-references `_is_archived_rel`, which is defined
-# further down beside the archive verb. That is legal at module level and it
-# is DELIBERATE: item (C) requires the SHARED notion of "is this under the
-# archive subtree", and hoisting the helper is *Follow-ups* item 4's job in
-# Phase 10, where it can be done together with the three inlined copies as
-# one justified move.
+# `archive_dir_date` calls `_is_archived_rel` (defined above, beside
+# `_root_relative`) rather than re-deriving the test, because item (C)
+# requires the SHARED notion of "is this under the archive subtree" — the
+# same reason Leg 2's predicate delegates to `archive_dir_date`.
 # ---------------------------------------------------------------------------
 
 
@@ -3385,8 +3401,9 @@ def archive_dir_date(rel: str, config: Config) -> date | None:
     config alone:
 
     1. `rel` is under the configured `[archive] dir` — the SHARED
-       `_is_archived_rel` notion, so Leg 1 and Leg 2 can never disagree about
-       what the archive subtree is.
+       `_is_archived_rel` notion, which is now the tool's single spelling of
+       that test, so Leg 1 and Leg 2 can never disagree about what the
+       archive subtree is.
     2. There is a segment after it — `len(parts) < 3` is what makes
        `archive/x.md`, a document directly in the archive root, carry no date.
     3. `parts[1]` — the FIRST segment under the archive dir, so
@@ -3619,7 +3636,7 @@ def check_doc(
             rel = path.resolve().relative_to(root.resolve()).as_posix()
         except ValueError:
             rel = path.name
-        in_archive = rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
+        in_archive = _is_archived_rel(rel, config)
         lifecycle_value = lifecycle.strip()
         if lifecycle_value == "archived" and not in_archive:
             findings.append(
@@ -3925,7 +3942,7 @@ def query_docs(
             # `list` stays lenient so it can still exit 0 on a messy tree.
             continue
         rel = path.relative_to(root).as_posix()
-        if rel == config.archive_dir or rel.startswith(config.archive_dir + "/"):
+        if _is_archived_rel(rel, config):
             # `parse()` hardcodes archived=False; recompute it as `walk()` does.
             doc = replace(doc, archived=True)
         docs.append(doc)
@@ -6187,19 +6204,6 @@ def _cmd_new(args: argparse.Namespace) -> int:
 _CASCADE_VERBS = ("pairs-with", "child-of")
 
 
-def _is_archived_rel(rel: str, config: Config) -> bool:
-    """True iff `rel` IS the configured archive subtree or lies under it.
-
-    The idiom `check_doc` and `_cmd_relate` already use, lifted to a named
-    helper because M26 asks it of every plan member. Deliberately NOT
-    `_in_archive_subdir`, which hardcodes `archive` / `archived` /
-    `project-history` and ignores `[archive] dir`: on a tree configured with
-    ``dir = "history"`` a plain `archive/` directory is an ordinary
-    subdirectory whose docs are perfectly eligible candidates.
-    """
-    return rel == config.archive_dir or rel.startswith(config.archive_dir + "/")
-
-
 def _archive_destination(root: Path, config: Config, date_str: str, name: str) -> Path:
     """The archive destination of a document named `name`.
 
@@ -7800,7 +7804,6 @@ def _known_projects(root: Path, config: Config) -> set[str]:
     its root project in the known set.
     """
     known: set[str] = {config.project}
-    archive_prefix = config.archive_dir
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
         for fname in filenames:
@@ -7810,7 +7813,7 @@ def _known_projects(root: Path, config: Config) -> set[str]:
             rel = file_path.relative_to(root).as_posix()
             if rel == INDEX_FILENAME:
                 continue
-            if rel == archive_prefix or rel.startswith(archive_prefix + "/"):
+            if _is_archived_rel(rel, config):
                 continue
             try:
                 doc = parse(file_path.read_text(), file_path, root)
@@ -7888,7 +7891,6 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
     # archived token refuses (exit 2) regardless of where that token sits
     # relative to a missing / outside / malformed one.
     root_resolved = root.resolve()
-    archive_dir = config.archive_dir
 
     # Archived-only pre-pass: if ANY named doc's root-relative first segment is
     # the archive dir, refuse the whole batch (exit 2) naming the path — even
@@ -7900,7 +7902,7 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
             arc_rel = target.resolve().relative_to(root_resolved).as_posix()
         except ValueError:
             continue  # outside the root → cannot be archived; deferred to next pass
-        if arc_rel == archive_dir or arc_rel.startswith(archive_dir + "/"):
+        if _is_archived_rel(arc_rel, config):
             print(
                 f"docs: project set: {arc_rel} is under the archive subtree (read-only); refusing",
                 file=sys.stderr,

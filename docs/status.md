@@ -47,10 +47,14 @@ Related:
 
 ## Current milestone
 
-**M28a — Structured archive-date witness is the current milestone. Step 1 —
-Phases 1–4 — is complete on `m28a/phases-1-4` (contract 2026-08-15; RED tests,
+**M28a — Structured archive-date witness is the current milestone, and it is
+now IMPLEMENTATION-COMPLETE across all ten TDD phases** — 1502 passed / 0
+failed, every quality gate clean, `docs check --root docs` exit 0, both
+bundled mirrors byte-identical, and `feedback-log.md` issue #1 CLOSED. It
+stays `Lifecycle: active` until the M29 publish closeout. Step 1 —
+Phases 1–4 — completed on `m28a/phases-1-4` (contract 2026-08-15; RED tests,
 fixtures and the classified baseline 2026-08-16), and Step 2 — Phases 5–10 —
-is in flight on `m28a/phases-5-10`: **Phase 5 — Update Base Interfaces
+on `m28a/phases-5-10` (2026-08-16). **Phase 5 — Update Base Interfaces
 completed 2026-08-16**, landing the vocabulary entry, `parse_date`'s
 keyword-only `label`, and all three pure helpers wired nowhere — 43 ids
 flipped, the suite at **28 failed / 1474 passed**, and `check_doc`,
@@ -80,8 +84,17 @@ subdirectory; all **46** pre-witness archived documents stay silent; a real
 `--cascade-only 'm26-*'` closeout writes the witness to every member with one
 shared date and leaves `docs check` clean; `migrate --apply` writes none and
 demotes a foreign one; the **7** cross-dated `pairs-with` edges emit nothing;
-and the runtime delta is below the 10 ms measurement floor.
-Phase 10 — Quality, Docs, Refactor is next.** All seven
+and the runtime delta is below the 10 ms measurement floor. **Phase 10 —
+Quality, Docs, Refactor completed 2026-08-16**: `/simplify` took *Follow-ups*
+item 4 in full — **five** inline copies of the archive-subtree predicate (E7
+counted three; reading for the collapse found two more) are now calls to
+`_is_archived_rel`, which was hoisted beside `_root_relative`, also removing
+Phase 5's forward reference — behaviour-preserving at 1502 passed before and
+after with the `docs check` runtime unchanged, and four further candidates
+evaluated and rejected with reasons. `architecture.md`'s `check`, `archive`
+and `mv` sections and `test-strategy.md`'s fixture-source list are closed, and
+the completion summaries are written. **M28a is implementation-complete and
+handed to M29.** All seven
 setup questions were RESOLVED before Phase 1,
 and Phase 1 froze the contract against them without re-opening any: the
 machine-facing contract is items (A)–(H) of the milestone's *Decisions
@@ -942,8 +955,9 @@ milestone-completion summary for the published version, wheel
 runbook recorded for v1.4+ releases. The release-runbook stays
 the operative reference for future publishes.
 
-**Next action:** **M28a Step 2 — Phase 8 onward**, then
-**M29 — PyPI publish 2.0.0**. **Phase 7 — Update Tool/Wrapper Layer completed
+**Next action:** **M29 — PyPI publish 2.0.0**, which the whole v2.0 train
+(M25–M28a) is now waiting on. M28a is implementation-complete across all ten
+TDD phases and stays `Lifecycle: active` until that closeout. **Phase 7 — Update Tool/Wrapper Layer completed
 2026-08-16** on `m28a/phases-5-10`, taking the suite fully **GREEN at 1502
 passed / 0 failed**: the bundled `SKILL.md` and `references/use-cases.md`
 carry the witness, the refusal and `archive-date-drift`; the argparse flag
