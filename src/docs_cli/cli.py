@@ -5515,7 +5515,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "(exit 2, zero bytes) when a still-active document outside the plan "
             "declares itself `child-of` a document the plan would archive; "
             "every other still-active inbound reference is reported, not "
-            "refused."
+            "refused. Since M28a it also records the archive date as an "
+            "Archived: metadata line on EVERY document the operation moves — "
+            "the named primary and each selected cascade member — carrying "
+            "the same date that names the dated directory; --reason's "
+            "Archived-reason: line stays on the primary alone."
         ),
     )
     archive_p.add_argument("file", help="Path to the doc to archive.")
@@ -5743,9 +5747,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "Walk the docs root and report convention violations: missing or "
             "malformed metadata, unknown vocabulary, status/location drift, "
             "broken Related: references, local Markdown body links that "
-            "name no existing path or that leave the docs root, and an "
-            "archived document whose recorded Archived: date its location "
-            "does not corroborate. Exit 0 clean, 1 warnings only, 2 errors."
+            "name no existing path or that leave the docs root, and a "
+            "document whose recorded Archived: date its location does not "
+            "corroborate. Exit 0 clean, 1 warnings only, 2 errors."
         ),
     )
     check_p.add_argument(

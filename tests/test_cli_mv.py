@@ -989,8 +989,15 @@ def test_mv_refuses_a_cross_dated_relocation_of_a_witness_carrying_document(
     )
 
     assert proc.returncode == 2, (proc.stdout, proc.stderr)
-    assert _M28A_REFUSAL.format(name="with-witness.md") in proc.stderr
-    assert _M28A_ESCAPE in proc.stderr, "the escape ships in the same breath as the refusal"
+    # By EQUALITY, not containment: the refusal is exactly these two lines in
+    # exactly this order and nothing else. Containment alone would accept a
+    # third line, a `would move …` preamble, or the two lines swapped — and
+    # the escape reading BEFORE the reason it escapes is not "the escape ships
+    # in the same breath as the refusal".
+    assert proc.stderr.splitlines() == [
+        _M28A_REFUSAL.format(name="with-witness.md"),
+        _M28A_ESCAPE,
+    ], proc.stderr
     assert proc.stdout == "", "no --json record on a refusal (M26's frozen rule)"
     assert _snapshot(root) == before, "a refusal writes zero bytes"
 
@@ -1423,8 +1430,8 @@ def _attic_tree(tmp_path: Path) -> Path:
     for rel, lifecycle, archived in (
         ("attic/01-01-2026/old.md", "archived", "01-01-2026"),
         ("attic/04-03-2026/other.md", "archived", "04-03-2026"),
-        ("archive/2026-01-01/note.md", "active", None),
-        ("archive/2026-03-04/sibling.md", "active", None),
+        ("archive/01-01-2026/note.md", "active", None),
+        ("archive/04-03-2026/sibling.md", "active", None),
     ):
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1472,19 +1479,61 @@ def test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory(docs_s
     document between them is a reorganisation the convention permits, so it
     must complete — `_is_archived_rel`'s docstring names exactly this case, and
     D5's predicate inherits its answer by using the same helper.
+
+    The two directories are named in the TREE's own `%d-%m-%Y` format, not in
+    ISO. `_attic_tree` varies BOTH config axes at once, so with ISO-named
+    children a predicate that hardcoded only the directory (`"archive"`) but
+    honoured `config.date_format` would pass this test for the wrong reason:
+    the segments would simply fail to parse. Naming them in the tree's format
+    means only a predicate that honours `config.archive_dir` can complete.
     """
     root = _attic_tree(tmp_path)
     proc = _run(
         docs_script,
         "mv",
-        "archive/2026-01-01/note.md",
-        "archive/2026-03-04/note.md",
+        "archive/01-01-2026/note.md",
+        "archive/04-03-2026/note.md",
         cwd=root,
     )
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert "crosses dated archive directories" not in proc.stderr
-    assert (root / "archive" / "2026-03-04" / "note.md").is_file()
-    assert not (root / "archive" / "2026-01-01" / "note.md").exists()
+    assert (root / "archive" / "04-03-2026" / "note.md").is_file()
+    assert not (root / "archive" / "01-01-2026" / "note.md").exists()
+
+
+def test_mv_cross_dated_refusal_ignores_exclusion(docs_script, fixtures_dir, tmp_path):
+    """Item (F) reason 3, and *Also settled*: `[exclude]` / `.docsignore` govern
+    the WALK, never the predicate.
+
+    The refusal is evaluated from the two root-relative paths and the tree's
+    config alone, before the validate-all-first walk runs at all — so hiding
+    the moving document from the walk cannot buy an operator the move. An
+    implementation that evaluated the predicate against walked entries, or
+    inside `preflight_move_plan` (which only ever sees walked documents),
+    would let an excluded archived document be silently re-dated: the exact
+    hole M28a exists to close, reachable by adding one line to `.docs.toml`.
+
+    Both frozen lines and zero bytes written, exactly as on an included one.
+    """
+    root = _archivedate_tree(fixtures_dir, tmp_path, "archivedate-two-dated-dirs")
+    sidecar = root / ".docs.toml"
+    sidecar.write_text(sidecar.read_text() + '\n[exclude]\nglobs = ["archive/**"]\n')
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "mv",
+        "archive/2026-01-01/with-witness.md",
+        "archive/2026-03-04/with-witness.md",
+        cwd=root,
+    )
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert proc.stderr.splitlines() == [
+        _M28A_REFUSAL.format(name="with-witness.md"),
+        _M28A_ESCAPE,
+    ], proc.stderr
+    assert _snapshot(root) == before, "a refusal writes zero bytes, excluded or not"
 
 
 def test_mv_collision_still_exits_1_before_the_cross_dated_refusal(

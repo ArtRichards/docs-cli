@@ -1798,14 +1798,25 @@ predicate.
 
 ##### Upgrading from 1.x
 
-Nothing an adopter already has starts failing, and the witness begins with
-their next archive. The rule is present-only, so every document archived
-before 2.0.0 stays silent forever.
+Nothing an adopter's `docs archive` history starts failing, and the witness
+begins with their next archive. The rule is present-only, so every document
+archived before 2.0.0 stays silent forever, however large the archive and
+however it is organised. There is no backfill and no sweep.
 
-The one behaviour change is in `docs mv`, not in `docs check`: a move between
-two different dated archive directories used to complete at exit 0 and now
-refuses at exit 2 with zero bytes written. See `docs mv` › *Cross-dated
-archived relocations*.
+**Two** things do change, and neither is a repair queue:
+
+1. **`docs mv` between two different dated archive directories now refuses.**
+   It used to complete at exit 0; it now exits 2 with zero bytes written, in
+   every mode. See `docs mv` › *Cross-dated archived relocations*, which
+   carries the by-hand escape in the same subsection.
+2. **A tree that already carries an `Archived:` label whose value is not a
+   date in the tree's `date_format` gains a new `bad-date` error** — naming
+   `Archived:` rather than `Updated:` — where it exited 0 before. This is the
+   one residual of the present-only contract, and it is narrow: only a
+   **hand-adopted** tree can reach it, because no version of `docs archive`
+   has ever written a non-date value and `docs migrate` demotes a foreign
+   `Archived:` line rather than promoting it. Repair it by giving the field a
+   real date in the tree's format, or by removing the line.
 
 **Stale-window resolution (M19 — D2).** The stale window the `stale` rule
 applies is resolved as **CLI `--stale` > `[check] stale_days` > unset**:
@@ -2902,7 +2913,12 @@ and renames each label with a `Migrated-` prefix (`Owner:` →
 `Migrated-Owner:`, `Status:` → `Migrated-Status:`, `Related:` →
 `Migrated-Related:`, keeping any bullet sub-items beneath it
 unchanged). A foreign doc with no extra fields gets no such
-section. Because the preserved fields live in the body — under
+section. **A foreign `Archived:` line takes exactly this route** —
+it is demoted to `Migrated-Archived:`, preserved but never
+promoted into a tool-trusted archive-date witness, because
+`migrate` infers its archive-directory dates from `Updated:` or
+the file's mtime and neither is a date the tool observed
+(M28a — D7). Because the preserved fields live in the body — under
 a `## ` heading — `docs check` does not validate them, so a
 stale foreign `Related:` path cannot fail the applied tree's
 check. The dry-run plan reports how many extra fields each

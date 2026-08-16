@@ -60,7 +60,7 @@ separate bodies of work by `Project:` metadata, not by folder. See
 | Stamp a metadata block onto a file you already wrote | `docs stamp <file>...` | `--role` (default `notes`), `--project`, `--title`; write-then-stamp, idempotent re-stamp refreshes `Updated:` |
 | Regenerate the index | `docs index` | idempotent; rewrites only the marker block |
 | Archive a finished doc | `docs archive <file>` | `--reason`, `--date`, `--json`; archives that ONE doc. To include related docs: preview the whole one-hop neighbourhood with `--cascade-dry-run`, then write exactly the set you meant with `--cascade-only GLOB`. From 2.0 it also rebases every stale local Markdown **body link**, and **refuses (exit 2, zero bytes)** when a still-active doc outside the plan declares itself `child-of` a doc the plan would archive — archive the child first, or widen the scope to include it. Every other still-active inbound reference is reported (`strand` lines + the record's `strands` array), never refused. From 2.0 it also records the archive date as an `Archived:` metadata line on **every** doc the operation moves — the primary and each cascade member — while `Archived-reason:` stays on the primary alone |
-| Rename or move a doc | `docs mv <old> <new>` | `--dry-run`, `--json`, `--quiet`; rewrites `Related:` tree-wide and, from 2.0, rebases every local Markdown **body link** the move makes stale — both the ones pointing AT `<old>` and the ones INSIDE it, in other people's docs too. `--dry-run` names every planned rewrite before you commit to it; `--json` emits the same plan as a record. From 2.0 it **refuses (exit 2, zero bytes, in every mode)** a move between two different dated **archive** directories — that would falsify the archive-date record; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check`. Every other archive-subtree move still completes |
+| Rename or move a doc | `docs mv <old> <new>` | `--dry-run`, `--json`, `--quiet`; rewrites `Related:` tree-wide and, from 2.0, rebases every local Markdown **body link** the move makes stale — both the ones pointing AT `<old>` and the ones INSIDE it, in other people's docs too. `--dry-run` names every planned rewrite before you commit to it; `--json` emits the same plan as a record. From 2.0 it **refuses (exit 2, zero bytes, in every mode)** a move between two different dated **archive** directories — that would falsify the archive-date record; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check` — the **one sanctioned exception** to the never-hand-edit rules below. Every other archive-subtree move still completes |
 | List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
 | Bump a doc's `Updated:` | `docs touch <file> [--check [--stale N]]` | reindexes; `--check` folds in `docs check` (touch-then-validate in one invocation; `--stale N` is the check's stale window) |
 | Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors; a one-sided reciprocal edge is a hard `missing-inverse` error (`docs relate` repairs it), a repeated metadata label is a hard `duplicate-field` error (hand-merge the bullets under one label), and from 2.0 a local Markdown **body** link is checked too — `broken-body-link` when the destination names no existing path (rebase the destination; it resolves from the linking doc's own directory) and `outside-root-body-link` when it leaves the tree root (replace it with a URL). From 2.0 an archived doc whose recorded `Archived:` date its location does not corroborate is a hard `archive-date-drift` error — present-only, so a doc without the field never fires it |
@@ -128,8 +128,19 @@ the check entirely. See [`references/cli.md`](references/cli.md) "Update check".
   `Lifecycle:` to or from `archived`. Run `docs archive` so lifecycle
   and location move together.
 - **A metadata block** — `Lifecycle:` / `Role:` / `Project:` /
-  `Updated:` / `Related:`. Use `docs new` to scaffold a new block;
-  `docs touch` to bump the date. Never hand-write or hand-edit.
+  `Updated:` / `Archived:` / `Related:`. Use `docs new` to scaffold a
+  new block; `docs touch` to bump the date. Never hand-write or
+  hand-edit.
+
+**The one sanctioned exception**, and it is the escape `docs mv` prints
+when it refuses a cross-dated archived relocation: correcting a
+genuinely **mis-dated** archive. No verb can do it — `docs mv` refuses
+it precisely because it would falsify the archive-date record silently —
+so you move the file between dated directories by hand, hand-correct
+that document's `Archived:` line to match its new directory, and re-run
+`docs check`, which then confirms the two agree. Nothing else about the
+block or the location is hand-edited, and `docs check` is what proves
+the repair landed.
 
 ## Reference
 

@@ -44,10 +44,13 @@ Related:
   (GREEN) complete 2026-08-16 with every gate clean and 0 of the 1341
   pre-existing ids removed or failing, and Phase 9 — Integrate / Accept /
   Dogfood complete 2026-08-16 across ten flows on throwaway copies, and
-  Phase 10 — Quality, Docs, Refactor complete 2026-08-16. **M28a is
-  implementation-complete across all ten TDD phases** at 1502 passed / 0
-  failed with every gate clean, and stays `Lifecycle: active` until the M29
-  publish closeout.** The machine-facing contract is
+  Phase 10 — Quality, Docs, Refactor complete 2026-08-16. A same-instance
+  audit then fixed **fifteen** issues, and an independent **fresh-eyes review
+  returned no blockers and mutation-tested the suite at 19 killed / 0
+  survivors**, returning four should-fixes and six binding nits — every one
+  folded in. **M28a is implementation-complete across all ten TDD phases** at
+  **1504 passed / 0 failed** with every gate clean, and stays
+  `Lifecycle: active` until the M29 publish closeout.** The machine-facing contract is
   frozen in *Decisions (Phase 1 — BINDING)* below, with **six** amendments to
   setup-frozen material and nine Step-1 resolutions (OQ-1 … OQ-9, one of them
   an operator decision). Phases 2–4 authored **149** test ids and six
@@ -57,7 +60,8 @@ Related:
   predicate). That baseline captured **1502 collected, 71 RED and 90
   GREEN** of the 161 new ids, in exactly two exception classes, with **no**
   pre-existing id removed or failing and `cli.py` still untouched; Phases 5–10
-  then took the suite to **1502 passed / 0 failed**. M28 is implementation-complete
+  then took the suite to **1502 passed / 0 failed**, and the audit and
+  fresh-eyes fold-in to **1504**. M28 is implementation-complete
   and merged to `main` (`b1ec74b`), so M28a is the last implementation
   milestone in the v2.0 train before the M29 publish. Setup measured this
   repository read-only and reproduced the reported drift on throwaway copies,
@@ -1591,15 +1595,18 @@ def cross_dated_archive_move(
 
 ## Follow-ups recorded for later milestones
 
-Raised during setup, judged out of M28a's scope, and deliberately **not**
-implemented here.
+Raised during setup and judged out of M28a's *behavioural* scope. Every item
+below is deliberately **not** implemented here — **except item 4**, which was
+registered as a `/simplify` candidate for M28a's own Phase 10 rather than as
+deferred work, and which Phase 10 took. It is kept in this table, marked
+DONE, so the trail from E7's measurement to the collapse stays readable.
 
 | # | Follow-up | Home |
 |---|---|---|
 | 1 | **The `date_format` asymmetry between `parse()` and `check_doc` — a pre-existing defect, explicitly NOT fixed here** (E8). On a tree with a non-default `[archive] date_format`, `docs archive thing.md --date 04-03-2026` writes `attic/04-03-2026/thing.md` with `Updated: 04-03-2026` correctly and **then exits 2** on the INDEX refresh: `INDEX refresh failed: … Updated: malformed date '04-03-2026' (expected %Y-%m-%d)`. Root cause: `parse()` parses `Updated:` with the hardcoded default while `check_doc` honours `config.date_format`. It predates M28a, it is unowned by any milestone, and M28a does **not** touch it — instead D3 pins that **both sides** of the drift comparison are parsed with `config.date_format` via the same path `check_doc` already uses, so M28a's own logic never depends on the broken one. Registered separately in `feedback-log.md` (2026-08-15). **A milestone that fixes this must also update `tests/test_cli_archive.py::test_archive_renders_the_witness_in_the_trees_date_format`**, which asserts the exit-2 INDEX-refresh failure explicitly so that the witness half of that test cannot be satisfied by the defect being fixed elsewhere. Fixing E8 will therefore break it, deliberately, and its expected exit code and stderr are what change. | Later |
 | 2 | **Backfilling the witness onto pre-2.0 archived documents** (Q3). Refused here because no honest source for the date exists. If a later milestone wants it, the only defensible source is the repository's own history, which makes it a git-aware operation the charter currently keeps out (*"Git owns history; `docs` owns lifecycle"*). | Later |
 | 3 | **`docs migrate --apply` writing the witness for the archive-shaped files it relocates** (Q5). Refused here because migrate's date is inferred from `Updated:` or mtime. It becomes available if migrate ever gains a date an operator asserts per file rather than per run. | Later |
-| 4 | **Three inlined copies of the archive-subtree predicate** (E7). `check_doc`, the `docs list` walk, and `docs project set` each spell `rel == config.archive_dir or rel.startswith(config.archive_dir + "/")` inline, although `_is_archived_rel` already provides exactly that. A `/simplify` candidate M28a's Phase 10 should evaluate, not a defect. | M28a Phase 10 / Later |
+| 4 | **DONE in Phase 10 — inlined copies of the archive-subtree predicate** (E7). E7 counted **three** (`check_doc`, the `docs list` walk, `docs project set`) each spelling `rel == config.archive_dir or rel.startswith(config.archive_dir + "/")` inline although `_is_archived_rel` already provides exactly that. Reading for the collapse found **five**: `walk` and `_known_projects` additionally hoist the prefix into a local and spell the test by hand inside their `os.walk` loop. All five are now calls, and `_is_archived_rel` was hoisted beside `_root_relative`, which also removed Phase 5's forward reference. Behaviour-preserving (1502 passed before and after; `docs check` runtime unchanged). | **M28a Phase 10 — done** |
 | 5 | **`docs migrate --apply` rewriting references across its own moves** (M28 *Follow-ups* item 1, unchanged and still deferred). | Later |
 | 6 | **An `[archive] date_format` that renders with a `/`** (e.g. `%Y/%m/%d`). `Config` already validates that `[archive] dir` is a single path segment, but nothing validates the rendered date. Such a tree's dated directory is two segments deep, which every archive-subtree rule in this convention — `status-drift`, `_is_archived_rel`, `detect_archive_layout`, and now M28a's corroboration — reads as one. The shape is already broken pre-M28a and D3's first-segment reading pins it, so M28a adds **no** code and **no** test for it and documents the constraint in `convention.md` › *Archive subtree* instead. Same treatment as defect E8 (Phase-1 resolution OQ-5). | Later |
 | 7 | **A tool-driven relocation out of a dated directory that is not cross-dated** — `docs mv archive/<D>/x.md archive/x.md`, or into an undated archive subdirectory. Permitted by design (D5's third neighbour), because refusing it would also refuse a legitimate reorganisation of the archive subtree; but it destroys the only archive-date record a pre-2.0 archived document has, and `status-drift` is silent because the destination is still inside the archive subtree. D8's second residual, made explicit by Phase-1 amendment 1. Closable only by a narrower refusal that distinguishes reorganisation from erasure — which needs a signal the two paths alone do not carry (operator decision, OQ-7). | Later |
@@ -1667,9 +1674,11 @@ their hand-written registration tuple; `docs archive --help` /
 
 ## Milestone completion summary
 
-**M28a is implementation-complete across all ten TDD phases** — Step 1
+**M28a is implementation-complete across all ten TDD phases, same-instance
+audited and independently fresh-eyes reviewed** — Step 1
 (Phases 1–4) on `m28a/phases-1-4`, 2026-08-15/16; Step 2 (Phases 5–10) on
-`m28a/phases-5-10`, 2026-08-16. The suite is **1502 passed / 0 failed**, every
+`m28a/phases-5-10`, 2026-08-16 — audited and fresh-eyes reviewed. The suite is
+**1504 passed / 0 failed**, every
 quality gate is clean, `docs check --root docs` exits 0, and both bundled
 mirrors are byte-identical to their sources. The full record — per-phase
 objective, actions, decisions and verification — is in

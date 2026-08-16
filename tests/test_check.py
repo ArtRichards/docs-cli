@@ -2123,12 +2123,28 @@ def test_exit_code_for_archive_date_drift_is_2():
     """D4: severity `error`, so the tree exits 2 through the existing
     `exit_code_for` — no new exit code and no opt-out.
 
-    GREEN at baseline and DEGENERATE by construction: `exit_code_for` keys on
-    `severity`, never on `rule`. Kept deliberately as the ground truth that
-    makes "no new exit code" a property rather than a promise.
+    Hand-constructing a `Finding(..., "error", ...)` and asserting
+    `exit_code_for` returns 2 would be a TAUTOLOGY: `exit_code_for` keys on
+    `severity` and never on `rule`, so that assertion tests `exit_code_for`,
+    not M28a. This wires the REAL producer to the real consumer instead —
+    both drift forms and the `bad-date` form, each taken from
+    `archive_date_findings` itself — so an implementation that emitted
+    `severity="warning"` (the one plausible way to get this wrong, and the
+    one M27 — Q6 explicitly declined for an objective rule) fails here rather
+    than passing a test about a function it never touched.
     """
-    finding = Finding(Path("/r/x.md"), "error", "archive-date-drift", "…")
-    assert exit_code_for([finding]) == 2
+    produced = [
+        _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-01-01"}),
+        _archive_date_findings("escaped.md", {"Archived": "2026-01-01"}),
+        _archive_date_findings("archive/2026-03-04/x.md", {"Archived": "2026-13-01"}),
+    ]
+    assert [len(f) for f in produced] == [1, 1, 1], produced
+    for findings in produced:
+        assert findings[0].severity == "error", findings[0]
+        assert exit_code_for(findings) == 2, findings[0]
+
+    # …and the whole set together is still 2, never a new code.
+    assert exit_code_for([f for group in produced for f in group]) == 2
 
 
 # --- (B) the vocabulary: `Archived:` never trips `unknown-field` -----------
