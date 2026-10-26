@@ -87,6 +87,8 @@ hand-edits the metadata block and never stops to ask the operator.
 - [ ] Surface parity: argparse help, `cli.md`, `convention.md`, bundled
       skill + byte-identical references, CHANGELOG.
 - [ ] Dogfood the primary use case on a throwaway copy of this tree.
+- [ ] Hand-off note for the publish milestone: its closeout sweep must
+      retire the Agent Playbook Suite verbless-metadata stopgap (below).
 
 ## TDD plan summary
 
@@ -134,3 +136,14 @@ hand-edits the metadata block and never stops to ask the operator.
 - Recognized-verb `relate` behaviour and the archive cascade set are
   byte-for-byte unchanged.
 - Full quality, compatibility, and dogfood gates are GREEN.
+- **The suite stopgap is retired in the suite release that pins the docs-cli
+  version carrying M30** — not at M30's merge or at the PyPI publish alone,
+  because downstream projects follow the suite's pin and keep the 2.0 surface
+  until it moves. That one suite PR bumps `DOCS_CLI_VERSION`, replaces every
+  operator-approved hand-edit prescription with `docs lifecycle` / free-form
+  `docs relate`, deletes `_shared/references/verbless-metadata-edits.md`, and
+  drops ship-milestone Step 0's up-front approval. The suite CI guard
+  *Validate verbless-metadata stopgap matches the pinned docs-cli* enforces
+  it: it fails while the stopgap still covers an edit the pinned binary can
+  perform. If Phase 1 descopes either verb, only that half of the stopgap
+  retires.
