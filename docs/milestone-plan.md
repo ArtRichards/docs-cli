@@ -47,7 +47,7 @@ M-number survives only as a prose label.
 
 | Order | Milestone | State | Depends on | Notes |
 |---:|---|---|---|---|
-| 100 | [lifecycle-and-free-form-relate](lifecycle-and-free-form-relate.md) | planned | — | M30 — `docs lifecycle` verb + one-sided free-form `docs relate`; from feedback-log 2026-10-26 |
+| 100 | [lifecycle-and-free-form-relate](lifecycle-and-free-form-relate.md) | active | — | M30 — `docs lifecycle` verb + one-sided free-form `docs relate`; from feedback-log 2026-10-26 |
 
 ## Sequencing
 
