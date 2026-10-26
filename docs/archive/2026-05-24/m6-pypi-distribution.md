@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-24/m6-pypi-distribution-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: architecture.md
 - pairs-with: cli.md
@@ -854,7 +854,7 @@ of each. This mirrors M5's milestone-setup precedent.
 
 ## OPEN QUESTIONS — resolved
 
-_All five milestone-setup questions were triaged against [plan.md](../../plan.md)
+_All five milestone-setup questions were triaged against [plan.md](../../milestone-plan.md)
 and the M1–M5 precedent and operator-confirmed on 2026-05-23. Each
 resolution is recorded as a Decision in the "Decisions" section above
 (OQ1–OQ5). The full question, why-it-matters, and recommendation text is

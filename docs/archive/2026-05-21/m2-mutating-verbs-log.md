@@ -582,5 +582,5 @@ drift-free against a copy of `docs/`.
 
 Per-phase detail is in the phase logs above; the milestone summary and the
 recorded decisions live in [m2-mutating-verbs.md](m2-mutating-verbs.md) and
-[plan.md](../../plan.md). Next milestone: M3 — Validation and query (`check`,
+[plan.md](../../milestone-plan.md). Next milestone: M3 — Validation and query (`check`,
 `list`).

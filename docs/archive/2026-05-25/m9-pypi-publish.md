@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-25/m9-pypi-publish-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - pairs-with: release-runbook.md
 - pairs-with: archive/2026-05-24/m6-pypi-distribution.md
 - pairs-with: archive/2026-05-25/m7-migration-accuracy.md

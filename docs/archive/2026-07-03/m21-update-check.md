@@ -6,7 +6,7 @@ Project: docs
 Updated: 2026-07-03
 
 Related:
-- child-of: plan.md
+- child-of: milestone-plan.md
 - parent-of: archive/2026-07-03/m21-update-check-impl.md
 - implements: charter.md
 - pairs-with: archive/2026-07-03/m21-update-check-impl.md

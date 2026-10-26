@@ -33,7 +33,7 @@ section tracks milestone progress, which is distinct.)
 ## Milestone-setup open questions — resolved (2026-05-22)
 
 Four questions were surfaced while authoring the task plan; all four were
-triaged against [plan.md](../../plan.md) and the M1–M3 precedent and operator-
+triaged against [plan.md](../../milestone-plan.md) and the M1–M3 precedent and operator-
 confirmed. Each is recorded as a Decision in
 [m4-migration-helper.md](m4-migration-helper.md):
 

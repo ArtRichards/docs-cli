@@ -103,7 +103,7 @@ v1.7 to **v1.6.5**. Two parts plus a cosmetic fold-in:
   stale spec text).** The one-line `docs new --body-from` argparse
   help-string fix (`src/docs_cli/cli.py:2900-2905`, still describing the
   pre-M15-C4 "first 20 lines" heuristic; correct wording is in the
-  [m17-pypi-publish-impl.md](../../m17-pypi-publish-impl.md) Open follow-on note).
+  [m17-pypi-publish-impl.md](../2026-10-26/m17-pypi-publish-impl.md) Open follow-on note).
   → **D3**; closes that follow-on.
 
 Code anchors (verified against the current tree at scaffold time, 2026-06-12):

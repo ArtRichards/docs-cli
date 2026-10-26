@@ -120,7 +120,7 @@ For current state, see the canonical sources — kept in sync by the tooling rat
 
 - [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) — the current version and full release history.
 - [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) — development progress.
-- [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) — the roadmap.
+- [`docs/milestone-plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/milestone-plan.md) — the roadmap.
 
 ## License
 

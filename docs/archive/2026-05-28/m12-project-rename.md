@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-28/m12-project-rename-impl.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - pairs-with: status.md
 - pairs-with: cli.md
 - pairs-with: convention.md

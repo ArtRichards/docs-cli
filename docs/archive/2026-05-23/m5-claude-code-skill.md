@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-23/m5-claude-code-skill-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: convention.md
 - pairs-with: cli.md
@@ -139,7 +139,7 @@ Milestone-completion summary at the bottom of this file._
   authoring guidance (the `skill-creator` skill on this host) sets the rules
   M5 follows: concise body under ~500 lines, imperative voice, no auxiliary
   documentation files, progressive disclosure if the body grows.
-- **What plan.md asks for.** [plan.md](../../plan.md)'s M5 section: a `SKILL.md`
+- **What plan.md asks for.** [plan.md](../../milestone-plan.md)'s M5 section: a `SKILL.md`
   "at `~/.claude/skills/docs/` (or wherever the install convention lands)";
   triggers on editing a `.md` under a `.docs.toml` root, on archive/list/
   create-doc requests, and before an agent appends to a hand-curated INDEX;
@@ -330,7 +330,7 @@ Decision):
   [definition-of-ready.md](../../definition-of-ready.md)'s parked cross-host
   portability risk is now addressed (note it as resolved against the OQ2
   Decision; leave the risk table itself as historical record). Per the OQ3
-  Decision, add a one-line note to [plan.md](../../plan.md) that v1 is complete and
+  Decision, add a one-line note to [plan.md](../../milestone-plan.md) that v1 is complete and
   the parked extra-field allowlist question carries forward to v1.1 — without
   resolving it. Append milestone-completion summaries here and in the log;
   regenerate `docs/INDEX.md` + the snapshot in lockstep.
@@ -381,7 +381,7 @@ QUESTIONS — resolved" below):
   host-specific path lives only in the documented install step. This is the
   resolution of `definition-of-ready.md`'s parked cross-host-portability risk.
 - **OQ3 — M5 opens no new `plan.md` open question (RESOLVED, approved as
-  recommended).** The skill's scope is fully determined by [plan.md](../../plan.md)'s
+  recommended).** The skill's scope is fully determined by [plan.md](../../milestone-plan.md)'s
   M5 section and the skill-authoring conventions; nothing in M5 is undecided at
   the `plan.md` level. The parked extra-field allowlist question stays parked
   as **post-v1** work — M5 does not resolve it. Phase 10 adds a one-line note
@@ -389,7 +389,7 @@ QUESTIONS — resolved" below):
   to v1.1, but does not resolve it. (Follows the M4 precedent — a milestone
   need not open a `plan.md` question.)
 - **OQ4 — the skill `name` is `docs` (RESOLVED).** The skill is named `docs` —
-  the project's name, the binary's name, and the path [plan.md](../../plan.md)
+  the project's name, the binary's name, and the path [plan.md](../../milestone-plan.md)
   explicitly writes (`~/.claude/skills/docs/`). No host collision is known.
   The over-triggering concern is handled by the `description` text (and the
   checklist's negative rows), not by the `name`; a collision would be a
@@ -404,7 +404,7 @@ QUESTIONS — resolved" below):
   inside the project's methodology rather than treating the last milestone as
   an exception.
 - **The skill lives in this repo at `skills/docs/`, installed from there.**
-  [plan.md](../../plan.md) says "`~/.claude/skills/docs/` (or wherever the install
+  [plan.md](../../milestone-plan.md) says "`~/.claude/skills/docs/` (or wherever the install
   convention lands)". The skill is *authored and version-controlled* in the
   repo at `skills/docs/` — it is a project deliverable and must be diffable,
   testable, and shipped with the code it drives. Installation onto a host is a
@@ -414,7 +414,7 @@ QUESTIONS — resolved" below):
   `definition-of-ready.md`'s parked cross-host-portability risk: the artifact
   is host-agnostic; the host-specific path is the install step, not baked into
   the committed file.
-- **The skill teaches verbs, not the convention.** [plan.md](../../plan.md) is
+- **The skill teaches verbs, not the convention.** [plan.md](../../milestone-plan.md) is
   explicit: the skill documents triggers and verbs "without re-teaching the
   convention (that lives in `convention.md`)". The body therefore points at
   `convention.md` and `cli.md` and never restates the metadata-block format,
@@ -464,7 +464,7 @@ QUESTIONS — resolved" below):
   **no Python**, so the question is untouched here and remains deferred to
   v1.1. Recorded so Phase 10 does not re-open it.
 - **M5 is the final v1 milestone.** Closing M5 completes the five-milestone
-  roadmap in [plan.md](../../plan.md). Phase 10 marks the project v1-complete in
+  roadmap in [plan.md](../../milestone-plan.md). Phase 10 marks the project v1-complete in
   [status.md](../../status.md), not merely "M5 done, M6 next".
 
 ## Testing / Quality Gate
@@ -498,7 +498,7 @@ M5 is complete when:
 - [x] `skills/docs/SKILL.md` exists with valid frontmatter (exactly `name` +
       `description`) and an imperative, verb-redirecting body within the
       skill-authoring size budget.
-- [x] The `description` triggers on the contexts [plan.md](../../plan.md) names
+- [x] The `description` triggers on the contexts [plan.md](../../milestone-plan.md) names
       (editing a `.md` under a `.docs.toml` root; archive/list/create-doc
       requests; about to hand-edit `INDEX.md`) and does not over-trigger —
       verified against the trigger-scenario checklist's negative rows.
@@ -521,7 +521,7 @@ M5 is complete when:
 
 ## OPEN QUESTIONS — resolved
 
-_All four milestone-setup questions were triaged against [plan.md](../../plan.md) and
+_All four milestone-setup questions were triaged against [plan.md](../../milestone-plan.md) and
 the M1–M4 precedent and operator-confirmed on 2026-05-22. Each resolution is
 recorded as a Decision in the "Decisions" section above (OQ1–OQ4). The full
 question, why-it-matters, and recommendation text is preserved here as the
@@ -593,7 +593,7 @@ the skill in-repo at `skills/docs/`; document a manual copy/symlink into
 `~/.claude/skills/docs/` parallel to the `bin/docs` install. No installer
 script, no `$HOME` write inside the milestone. See the OQ2 Decision above.
 
-**Question.** [plan.md](../../plan.md) says the skill lands "at
+**Question.** [plan.md](../../milestone-plan.md) says the skill lands "at
 `~/.claude/skills/docs/` (or wherever the install convention lands)". Should
 M5 (a) author the skill in-repo at `skills/docs/` and document a manual
 install copy/symlink, or (b) additionally ship an installer that writes into
@@ -612,7 +612,7 @@ copy/symlink into `~/.claude/skills/docs/` in
 existing `ln -s …/bin/docs ~/bin/docs` instruction. No installer script, no
 `$HOME` write inside the milestone. The committed artifact stays host-
 agnostic; the host-specific path lives only in the documented install step.
-This is the smallest surface that satisfies [plan.md](../../plan.md) and is the
+This is the smallest surface that satisfies [plan.md](../../milestone-plan.md) and is the
 recommendation. (Revisit an installer post-v1 only if manual install proves
 a real friction point.)
 
@@ -624,7 +624,7 @@ no new `plan.md` open question; the parked extra-field allowlist question stays
 parked as post-v1 work; Phase 10 notes v1 completion. (Conductor auto-resolved
 — conventional, follows the M4 precedent.) See the OQ3 Decision above.
 
-**Question.** [plan.md](../../plan.md) currently carries one Open question — the
+**Question.** [plan.md](../../milestone-plan.md) currently carries one Open question — the
 post-v1 `[vocabulary] add_fields` allowlist. M5 is the final milestone. Does
 M5 open any new `plan.md` question, and is the parked allowlist question
 resolved, left parked, or moved to a "v1.1 backlog"?
@@ -634,7 +634,7 @@ state. M4 set the precedent that a milestone need not open a `plan.md`
 question (M4 opened none, operator-confirmed).
 
 **Recommended answer.** M5 opens **no new `plan.md` open question** — the
-skill's scope is fully determined by [plan.md](../../plan.md)'s M5 section and the
+skill's scope is fully determined by [plan.md](../../milestone-plan.md)'s M5 section and the
 skill-authoring conventions; nothing in M5 is genuinely undecided at the
 `plan.md` level. The parked extra-field allowlist question is explicitly
 *post-v1* and is **left parked as-is** — M5 does not resolve it (it is
@@ -647,7 +647,7 @@ completion. Operator to confirm.
 ### OQ4 — Skill `name`: `docs` vs. a less collision-prone slug
 
 **RESOLVED (operator-confirmed 2026-05-22) — use `docs`.** Consistent with
-[plan.md](../../plan.md)'s `~/.claude/skills/docs/` path; no host collision exists.
+[plan.md](../../milestone-plan.md)'s `~/.claude/skills/docs/` path; no host collision exists.
 (Conductor auto-resolved — naming with an obvious default.) See the OQ4
 Decision above.
 
@@ -662,7 +662,7 @@ directory. A collision on a host would be confusing; an over-generic trigger
 name can also nudge the skill toward over-triggering.
 
 **Recommended answer.** Name the skill **`docs`**. It is the project's name,
-the binary's name, and [plan.md](../../plan.md) explicitly writes
+the binary's name, and [plan.md](../../milestone-plan.md) explicitly writes
 `~/.claude/skills/docs/`. The over-triggering concern is handled by the
 `description` text (OQ1's checklist has negative rows), not by the `name`.
 A collision is a host-install concern, mitigated by the documented install
@@ -739,6 +739,6 @@ The post-ship work refined OQ-B's *implementation* (its intent — host-agnostic
 
 - **`skills/docs/SKILL.md` rewritten as a lean trigger surface.** The 143-total / 112-non-blank body is now 82 total / 60 non-blank: an explicit "When this skill applies / when it doesn't" section that handles the cwd-fallback honestly; a compact 8-row verb-task table; the "never hand-edit" guardrail; and real markdown links to the bundled references. The trigger `description` is unchanged from the Phase-5 wording. Per-verb prose detail relocated to `references/cli.md`.
 - **`skills/docs/references/{convention,cli}.md` bundled** as byte-identical mirrors of the source specs. `tests/test_skill_refs.py` enforces lockstep with two parametrized tests. `test_every_relative_link_resolves` finally has real coverage.
-- **`docs/cli.md` and `docs/convention.md` cleaned for the user-facing reference audience.** The two spec docs now carry only the mutual `pairs-with: <sibling>` in `Related:`; ADR / charter / plan / milestone cross-refs were removed (each of those dev artifacts already declares its own back-link from its side). The two dev-only `##` sections in cli.md ("Using `docs` from a Claude Code skill", "What's deliberately not in v1") were removed; their substance lives canonically in [architecture.md](../../architecture.md) and [plan.md](../../plan.md)'s "Out of scope for v1" respectively (one unique bullet — "Templates beyond `docs new` defaults" — was relocated to plan.md).
+- **`docs/cli.md` and `docs/convention.md` cleaned for the user-facing reference audience.** The two spec docs now carry only the mutual `pairs-with: <sibling>` in `Related:`; ADR / charter / plan / milestone cross-refs were removed (each of those dev artifacts already declares its own back-link from its side). The two dev-only `##` sections in cli.md ("Using `docs` from a Claude Code skill", "What's deliberately not in v1") were removed; their substance lives canonically in [architecture.md](../../architecture.md) and [plan.md](../../milestone-plan.md)'s "Out of scope for v1" respectively (one unique bullet — "Templates beyond `docs new` defaults" — was relocated to plan.md).
 
 Closing state after the adjustments: `pytest tests/` → **246 passed** (244 + the 2 lockstep tests); quality gate clean tree-wide; `docs check docs/` exit 0. See [m5-claude-code-skill-log.md](m5-claude-code-skill-log.md)'s post-ship section for the four-commit breakdown.

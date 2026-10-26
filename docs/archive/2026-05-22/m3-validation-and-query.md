@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-22/m3-validation-and-query-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: convention.md
 - pairs-with: cli.md
@@ -200,7 +200,7 @@ complete — see the Milestone-completion summary at the end of this file.**
 
 - **Objective:** Close out M3.
 - **Actions:** full quality gate; update [status.md](../../status.md) (M3 → Complete,
-  M4 → next) and [plan.md](../../plan.md) (resolve the INDEX-grouping open question);
+  M4 → next) and [plan.md](../../milestone-plan.md) (resolve the INDEX-grouping open question);
   append milestone-completion summaries here and in the log.
 - **Exit:** quality gate green; docs updated; ready to start M4.
 
@@ -230,7 +230,7 @@ and `dual-status-adr.md`):
   wraps `validate_status` / `validate_role` / `parse_date` so a rejection
   becomes a `Finding` instead of an exception. `list` shares the lenient
   traversal so it can still exit 0 on a messy tree.
-- **INDEX grouped by `Project` then `Role`.** The [plan.md](../../plan.md) open
+- **INDEX grouped by `Project` then `Role`.** The [plan.md](../../milestone-plan.md) open
   question (group the INDEX by directory or `Project`) is resolved: by
   `Project`. It is metadata-driven — consistent with the convention's
   deliberate replacement of role-bucket subdirectories with `Role:` metadata —
@@ -243,7 +243,7 @@ and `dual-status-adr.md`):
   extra `Label: value` lines as a designed feature. There is nothing
   implementable to warn about; Phase 1 removed the phrase from cli.md. Exit 1
   is stale docs only. A possible future opt-in extra-field allowlist is scoped
-  as an open question in [plan.md](../../plan.md).
+  as an open question in [plan.md](../../milestone-plan.md).
 - **`Finding` carries a stable `rule` id.** Beyond `severity` and `message`,
   each finding has a machine-readable `rule` (`missing-field`, `bad-vocab`,
   `bad-date`, `malformed`, `status-drift`, `broken-ref`, `stale`). It is
@@ -287,7 +287,7 @@ M3 is complete when:
 - [x] `docs list --json` output validates against the schema pinned in cli.md.
 - [x] The INDEX renders the two-level `Project` → `Role` layout.
 - [x] All Deliverables above are checked off.
-- [x] [status.md](../../status.md) reflects M3 → Complete and [plan.md](../../plan.md)'s
+- [x] [status.md](../../status.md) reflects M3 → Complete and [plan.md](../../milestone-plan.md)'s
       INDEX-grouping open question is resolved.
 - [x] [m3-validation-and-query-log.md](m3-validation-and-query-log.md) contains
       a milestone-completion summary.

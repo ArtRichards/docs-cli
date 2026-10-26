@@ -32,7 +32,7 @@ section tracks milestone progress, which is distinct.)
 ## Milestone-setup open questions — resolved (2026-05-22)
 
 Four questions were surfaced while authoring the task plan; all four were
-triaged against [plan.md](../../plan.md) and the M1–M4 precedent and operator-
+triaged against [plan.md](../../milestone-plan.md) and the M1–M4 precedent and operator-
 confirmed on 2026-05-22. Each is recorded in full — question, why it matters,
 recommendation, and a **RESOLVED** verdict — under "OPEN QUESTIONS — resolved"
 in [m5-claude-code-skill.md](m5-claude-code-skill.md), and as a Decision
@@ -53,7 +53,7 @@ in [m5-claude-code-skill.md](m5-claude-code-skill.md), and as a Decision
    stays parked as post-v1 work; Phase 10 notes v1 completion. (Conductor
    auto-resolved — conventional, follows the M4 precedent.)
 4. **Skill `name` (OQ4) — RESOLVED: use `docs`.** Consistent with
-   [plan.md](../../plan.md)'s `~/.claude/skills/docs/` path; no host collision
+   [plan.md](../../milestone-plan.md)'s `~/.claude/skills/docs/` path; no host collision
    exists; over-triggering is handled by the `description`, not the name.
    (Conductor auto-resolved — naming with an obvious default.)
 

@@ -1,9 +1,11 @@
 # M20 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-12
+Updated: 2026-10-26
+Archived: 2026-10-26
+Archived-reason: Release complete; impl log archived at the 2026-10-26 milestone-tracker migration
 
 Related:
 - child-of: archive/2026-06-12/m20-pypi-publish.md
@@ -452,7 +454,7 @@ _Executed 2026-06-12 on `main` as the M20 closeout._
 **M20 complete — `docs-cli==1.6.5` shipped to PyPI 2026-06-12**, the
 publish-only counterpart to **M19** shipped **one-to-one** (as M13 shipped M12
 and M11 shipped M10; M9 and M17 were the batched shapes). Driven end-to-end as
-a fully-autonomous run walking [release-runbook.md](release-runbook.md)
+a fully-autonomous run walking [release-runbook.md](../../release-runbook.md)
 directly (M20 has no TDD code phases; the runbook sections are the phases); the
 operator authorized the irreversible PyPI upload + `main` push + tag + release
 up front (Q1 resolution). **NEW vs M17:** the closeout refreshed the

@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-20/m1-parser-and-index-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: convention.md
 - pairs-with: cli.md
@@ -134,7 +134,7 @@ Milestone-completion summary at the bottom of this file._
   - Run full quality gate (see Phase 8).
   - Refactor any code that's grown past the readable budget.
   - Update [status.md](../../status.md): set M1 to Complete, M2 to ACTIVE; update Current Milestone block.
-  - Update [plan.md](../../plan.md) if the M1 work surfaced changes to the M2-M5 plan.
+  - Update [plan.md](../../milestone-plan.md) if the M1 work surfaced changes to the M2-M5 plan.
   - Append milestone-completion summary to [m1-parser-and-index-log.md](m1-parser-and-index-log.md).
   - Append the milestone-completion summary to this file (lessons learned, files added).
 - **Exit:** Quality gate green; docs updated; ready to start M2.

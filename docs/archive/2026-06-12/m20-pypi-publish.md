@@ -7,8 +7,8 @@ Updated: 2026-08-14
 Archived-reason: Milestone M20 complete; docs-cli==1.6.5 shipped to PyPI 2026-06-12
 
 Related:
-- parent-of: m20-pypi-publish-impl.md
-- child-of: plan.md
+- parent-of: archive/2026-10-26/m20-pypi-publish-impl.md
+- child-of: milestone-plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - pairs-with: archive/2026-06-12/m18-archive-edge-integrity.md
@@ -443,7 +443,7 @@ skill-update-flow policy.
   CHANGELOG not in sdist/wheel → the sdist sha moved from the GO-report build
   only because `docs/` evolved, not the date edit). No forced `1.6.x` bump. Full
   deviation prose in
-  [m20-pypi-publish-impl.md](../../m20-pypi-publish-impl.md)'s milestone-completion
+  [m20-pypi-publish-impl.md](../2026-10-26/m20-pypi-publish-impl.md)'s milestone-completion
   summary, including the new M20 host-skill-drift finding.
 
 ## OPEN QUESTIONS

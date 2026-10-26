@@ -1,9 +1,11 @@
 # M17 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-06-03
+Updated: 2026-10-26
+Archived: 2026-10-26
+Archived-reason: Release complete; impl log archived at the 2026-10-26 milestone-tracker migration
 
 Related:
 - child-of: archive/2026-06-03/m17-pypi-publish.md
@@ -371,7 +373,7 @@ _Executed 2026-06-03 on `m17/milestone-setup` as the M17 closeout._
 **M17 complete — `docs-cli==1.6.0` shipped to PyPI 2026-06-03**, batching
 **M14 + M15** into one public release (as M9 batched M6+M7+M8; M11→M10 and
 M13→M12 were one-to-one). Driven end-to-end as a fully-autonomous run
-walking [release-runbook.md](release-runbook.md) directly (M17 has no TDD
+walking [release-runbook.md](../../release-runbook.md) directly (M17 has no TDD
 code phases; the runbook sections are the phases); the operator authorized
 the irreversible PyPI upload + `main` push + tag + release up front.
 
@@ -458,6 +460,6 @@ fix (turnkey):
 > fine). Pass body content only; `docs new` owns the frontmatter.
 
 This miss motivated the new **surface-parity gate** (CLI `--help` + bundled
-skill) added to [plan.md](plan.md) and
-[release-runbook.md](release-runbook.md) — see the M17 entry in the runbook's
+skill) added to [plan.md](../../milestone-plan.md) and
+[release-runbook.md](../../release-runbook.md) — see the M17 entry in the runbook's
 Cumulative lessons + deviations.

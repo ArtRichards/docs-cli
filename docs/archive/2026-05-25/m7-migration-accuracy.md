@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-25/m7-migration-accuracy-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: convention.md
 - pairs-with: archive/2026-05-22/m4-migration-helper.md

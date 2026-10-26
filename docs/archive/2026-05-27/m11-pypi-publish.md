@@ -8,7 +8,7 @@ Archived-reason: Milestone M11 complete; docs-cli==1.4.0 shipped to PyPI 2026-05
 
 Related:
 - parent-of: archive/2026-05-27/m11-pypi-publish-impl.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - pairs-with: archive/2026-05-27/m10-adoption-polish.md

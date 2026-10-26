@@ -6,7 +6,7 @@ Project: docs
 Updated: 2026-06-12
 
 Related:
-- child-of: plan.md
+- child-of: milestone-plan.md
 - parent-of: archive/2026-06-12/m18-archive-edge-integrity-impl.md
 - pairs-with: archive/2026-06-12/m18-archive-edge-integrity-impl.md
 - pairs-with: cli.md

@@ -12,7 +12,7 @@ Related:
 - pairs-with: archive/2026-05-25/m7-migration-accuracy.md
 - pairs-with: archive/2026-05-25/m8-adoption-workflow.md
 - pairs-with: status.md
-- pairs-with: plan.md
+- pairs-with: milestone-plan.md
 
 The operator-driven checklist for shipping `docs-cli` to PyPI.
 This runbook drove **M9 — `docs-cli==1.3.0`** (shipped
@@ -698,7 +698,7 @@ release closeout; do **not** rewrite past entries.
   + bundled `references/cli.md` were already correct — so the fix
   is doc-only and one line. **Not fixed in 1.6.0** (already
   shipped); logged as a v1.7 one-line follow-on (see
-  [m17-pypi-publish-impl.md](m17-pypi-publish-impl.md)'s Open
+  [m17-pypi-publish-impl.md](archive/2026-10-26/m17-pypi-publish-impl.md)'s Open
   follow-on note). This miss motivated the new
   [Surface parity (help + bundled skill)](#surface-parity-help--bundled-skill)
   pre-publish gate above — **replaced-behavior drift** (not just

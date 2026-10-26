@@ -1,9 +1,11 @@
 # M24 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-07-03
+Updated: 2026-10-26
+Archived: 2026-10-26
+Archived-reason: Release complete; impl log archived at the 2026-10-26 milestone-tracker migration
 
 Related:
 - child-of: archive/2026-07-03/m24-pypi-publish.md

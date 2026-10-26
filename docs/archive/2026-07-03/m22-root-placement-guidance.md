@@ -7,7 +7,7 @@ Updated: 2026-07-03
 
 Related:
 - parent-of: archive/2026-07-03/m22-root-placement-guidance-impl.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: convention.md
 
