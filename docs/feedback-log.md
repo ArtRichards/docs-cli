@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: log
 Project: docs
-Updated: 2026-08-16
+Updated: 2026-10-26
 
 ## Purpose
 
@@ -14,6 +14,21 @@ without starting implementation. When feedback is promoted, its entry remains
 as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
+
+### 2026-10-26 — No verb for draft→active or free-form `Related:` edges; suite and bundled skill disagree on the hand-edit fallback
+
+- Source: operator-relayed excerpt from a downstream agent session running `agent-playbook-suite:create-milestones` (0.8.3) against released docs-cli 2.0.0 (PyPI). The agent halted at milestone activation, reported that 2.0 has no draft-to-active verb and that the project forbids a manual fallback, and resumed only on an operator approval it scoped to the lifecycle field. It then found that the workflow's required `pairs-with` / `child-of` edges have no verb either, held that the approval did not cover them, and left them unwritten.
+- Verification method: re-run 2026-10-26 against the installed `docs 2.0.0` (`--help` of every verb) and the suite skill text in the host plugin cache. Findings below record measured surface, not inference.
+- Finding 1, no verb writes a non-archived `Lifecycle:` — **confirmed**. `docs new` and `docs stamp` always write `Lifecycle: draft`; `docs touch` writes `Updated:` only; `docs archive` writes `archived` only. Moving between `draft`, `active`, `blocked`, `done` and `superseded` has no supported path.
+- Finding 2, no verb writes `pairs-with`, `child-of` / `parent-of`, or any other free-form verb — **confirmed**. `docs relate add` accepts only the six recognized reciprocal verbs (`precedes`/`follows`, `depends-on`/`required-by`, `blocks`/`blocked-by`); every other verb is free-form and unvalidated by design (`convention.md`, *Related*), and `docs new` has no `--related` option.
+- Finding 3, the two skills contradict each other — **confirmed, and the real cause of the halt**. `create-milestones` SKILL.md rule 3 sanctions exactly two direct metadata edits after `docs new`: `Lifecycle:` when a draft artifact becomes active, and free-form `Related:` links such as companion `pairs-with` edges. The bundled `docs` skill's *Three things never to hand-edit* forbids hand-editing any metadata block — `Lifecycle:` and `Related:` named explicitly — and grants one exception only, the mis-dated archive correction. An agent holding both skills cannot complete the suite's activation step without breaking one of them; this one obeyed the stricter rule, so every milestone activation in a downstream tree now costs an operator round-trip.
+- Agent behaviour worth preserving: the exception was scoped to what the operator actually approved, and not widened to adjacent edits on the grounds that they belong to the same workflow. Minor: the agent browsed the GitHub repository to establish the CLI surface where `docs --help` and `docs relate add --help` answer it locally.
+- Desired behaviour: a workflow the suite prescribes is completable without an operator exception, and the two skills state the same rule.
+- Candidate, finding 1: a narrow verb — working name `docs lifecycle FILE STATE` — over the top-level states only, refusing any transition to or from `archived` (owned by `docs archive`, which moves lifecycle and location together), bumping `Updated:` and reindexing once, with the usual `--dry-run` / `--json` / `--quiet`. Preferred over a second sanctioned hand-edit exception: the charter's *run the verb* principle weakens with every carve-out, and a verb lets `docs check` stay the only arbiter.
+- Open design question, finding 2: (a) let `docs relate add|remove` write a free-form verb one-sided, with no inverse obligation; (b) promote `pairs-with` to a recognized **symmetric** pair (its own inverse); (c) leave free-form edges to guidance as a sanctioned exception. Constraints any choice must respect: `child-of` / `parent-of` were deliberately kept out of reciprocal validation (`convention.md`), and `pairs-with` / `child-of` are the edges that feed the archive candidate set (M26 — D1) and M28's leg-1 `child-of` strand refusal, so (b) changes what `missing-inverse` reports on every existing tree and needs an upgrade measurement first.
+- Ownership: docs-cli for the verb(s) and the bundled skill wording — through a test-first milestone, since both touch the convention and the surface-parity gate. Agent Playbook Suite for aligning `create-milestones` rule 3, best folded into the post-2.0 suite sweep M29 already scoped out (nine bare `--cascade` prescriptions).
+- Stopgap until a verb ships: reconcile the two skills' wording so a downstream agent has one rule — either the bundled skill names the suite's two carve-outs as sanctioned, or the suite drops them in favour of an operator ask. Leaving the contradiction in place is the worst of the three.
+- Status: **open, unowned** (2026-10-26). Candidate for a post-2.0.0 milestone; finding 2 needs an operator decision before it can be promoted.
 
 ### 2026-08-15 — Issue #1: cascade parent-archiving, archived re-dating, and post-move validation gaps
 

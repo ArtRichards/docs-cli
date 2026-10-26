@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-08-16. 17 docs active, 57 archived._
+_Generated 2026-10-26. 17 docs active, 57 archived._
 
 ## Project — docs
 
@@ -28,7 +28,7 @@ _Generated 2026-08-16. 17 docs active, 57 archived._
 
 ### Active — Log
 
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-08-16.
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-26.
 - [m29-pypi-publish-2-0-0-impl.md](m29-pypi-publish-2-0-0-impl.md) — _log_ — Chronological log of work on **M29 — PyPI publish 2.0.0**. Append a section per runbook phase (operator prep →…. Updated 2026-08-16.
 - [m24-pypi-publish-impl.md](m24-pypi-publish-impl.md) — _log_ — Chronological log of work on **M24 — PyPI publish 1.8.0**. Append a section per runbook phase (operator prep →…. Updated 2026-07-03.
 - [m20-pypi-publish-impl.md](m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-06-12.
