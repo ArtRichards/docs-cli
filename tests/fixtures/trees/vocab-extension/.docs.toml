@@ -1,0 +1,10 @@
+[project]
+name = "vocab-extension"
+
+[archive]
+dir = "archive"
+date_format = "%Y-%m-%d"
+
+[vocabulary]
+add_lifecycles = ["shipped"]
+add_roles = ["adr"]

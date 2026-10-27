@@ -98,7 +98,7 @@ checklist and the test matrix synchronized.
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-10-27 | Freeze against the answered Q1–Q9: `docs lifecycle`'s `*files, <state>` grammar, state vocabulary (built-ins plus `add_lifecycles` extensions, minus `archived`), refusal set and order, idempotence and single-reindex rules, output lines and `--json` record; free-form `relate`'s grammar (`[a-z][a-z0-9-]*`, D6), endpoint rules (archived SOURCE refused, archived TARGET never written, any existing file as TARGET), one-sided write and record; recognized-verb byte stability; the `--body-from` sentence; D10's config-aware `parse()` signature and how its sites obtain the config (D10's behaviour, `render_index` placement and `docs stamp` refusal are frozen); the stamp refusal's message; argparse's leading-hyphen handling; the upgrade note's three D10 changes; the surface list; the Phase-5 signatures. |
 | 2. Write Tests (RED) | Complete | 2026-10-27 | New `tests/test_cli_lifecycle.py`; free-form additions to `tests/test_cli_relate.py` and `tests/test_relate_plan.py`; archive-invariance locks; the `--body-from` lock; skill parity; the 2.1.0 pin; both suite-probe replicas; D10's vocabulary, date-format, `render_index` and `docs stamp` locks; the pre-existing tests edited exactly as the task plan's *Pre-existing tests that change* lists. |
-| 3. Create Data/Fixtures | Pending | — | Inline `tmp_path` builders for every write-then-compare case; archive invariance by copying `archive-neighborhood` / `movelink-strand` and re-linking through `relate`; for D10, one `vocab-extension/` tree with the sweep registration updated, inline builders for every non-default `date_format` case, and the `tests/test_cli_mv.py` `_attic_tree` correction. |
+| 3. Create Data/Fixtures | Complete | 2026-10-27 | Inline `tmp_path` builders for every write-then-compare case; archive invariance by copying `archive-neighborhood` / `movelink-strand` and re-linking through `relate`; for D10, one `vocab-extension/` tree with the sweep registration updated, inline builders for every non-default `date_format` case, and the `tests/test_cli_mv.py` `_attic_tree` correction. |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
 | 5. Update Base Interfaces | Pending | — | Free-form verb validator; one-sided relate planning; lifecycle plan record and pure planner; D10's config-aware `parse()` signature with a built-in default — wired nowhere. |
 | 6. Implement Offline/Core Path | Pending | — | Register `docs lifecycle`; route free-form verbs in `_cmd_relate` with D5's endpoint rules and D6's grammar; pass the tree's config at the seven `parse()` call sites and the new verbs' sites (D10). |
@@ -793,6 +793,74 @@ exactly as the task plan's authoritative list says — no more.
 - `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
   `.venv/bin/mypy src/ tests/` — clean.
 - `git diff e48adb9 --stat -- src/docs_cli/cli.py` — empty.
+
+## Phase 3 — Create Data/Fixtures — 2026-10-27
+
+### Objective
+
+Provide the data the Phase 2 tests point at — one semantic per fixture,
+structure-only, with fixed past dates — and make the two pre-existing fixture
+edits the authoritative list names.
+
+### Actions taken
+
+- **One committed tree, `tests/fixtures/trees/vocab-extension/`** (OQ-8):
+  `.docs.toml` with `[project] name = "vocab-extension"`, the explicit
+  default `[archive]` pair, and `[vocabulary] add_lifecycles = ["shipped"]`,
+  `add_roles = ["adr"]`;
+  - `shipped-spec.md` — `shipped` / `spec`, `Project: vocab-extension`,
+    carrying `precedes: draft-note.md` and the free-form
+    `pairs-with: decision-record.md`;
+  - `decision-record.md` — `active` / `adr`, `Project: beta` — the only
+    document in project `beta`, so `beta` is a known project only when this
+    document is read with the tree's configuration;
+  - `draft-note.md` — `draft` / `notes`, `Project: vocab-extension`, carrying
+    the reciprocal `follows: shipped-spec.md`, so the pair is complete and the
+    two extension documents are the only reason a walk could fail.
+  Every `Updated:` is the fixed `2026-06-01`; no body carries a Markdown link;
+  no filename carries a space or a parenthesis.
+- **`_attic_tree`** (`tests/test_cli_mv.py`): its four `Updated:` lines move
+  from ISO to the tree's `%d-%m-%Y` (`20-05-2026`), and its docstring's
+  defect paragraph is replaced by one sentence stating that every date is in
+  the tree's own format.
+- **`tests/fixtures/stamp/raw-invalid-block.md`**: prose only — the
+  BODYMARKER paragraph's second line and the `## Section` paragraph now
+  describe the refusal its renamed test expects; the block (lines 1–6) and
+  the BODYMARKER line are unchanged.
+- Every non-default `date_format` case stays an inline `tmp_path` builder
+  (the M25 rule): each asserts on written bytes or needs its own sidecar.
+
+### Decisions / issues
+
+- **Sweep bookkeeping, verified rather than assumed.** The tree joins the
+  three directory-derived sweeps in `tests/test_check.py` as **+3 ids**, all
+  GREEN — it uses one complete recognized pair (no `missing-inverse`), no body
+  link, and no archive-date field. The parse-agreement sweep in
+  `tests/test_model.py` selects trees by configuration, so it excludes this
+  tree because it configures extensions and its 53 ids do not move.
+- **The planned RED flip happened.** With `_attic_tree` corrected,
+  `test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory`
+  goes RED — `docs mv`'s walk still reads `20-05-2026` with the ISO default —
+  exactly as the plan predicted; `test_mv_refuses_a_cross_dated_relocation_on_a_non_default_archive_tree`
+  stays GREEN because the refusal fires before the walk.
+- **The vocabulary-dependent tests now fail for the behaviour, not the
+  fixture.** Before this phase they failed on "the committed
+  `vocab-extension` fixture tree must exist"; now each fails on the real 2.0.0
+  refusal (`Role: 'adr' not in vocabulary`, `Lifecycle: 'shipped' not in
+  vocabulary`, the `beta` typo-guard refusal).
+
+### Verification
+
+- `docs check tests/fixtures/trees/vocab-extension` — no violations (exit 0).
+- `git diff --name-status e48adb9 -- tests/fixtures` — `M` for
+  `stamp/raw-invalid-block.md` (prose lines only) and the INDEX snapshot,
+  plus the four added `vocab-extension/` files; every pre-existing fixture
+  tree is byte-identical.
+- `.venv/bin/python -m pytest --co -q` — **1691 collected** (1688 + the 3
+  swept ids), 0 errors.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean; `git diff e48adb9 --stat --
+  src/docs_cli/cli.py` — empty.
 
 ## Milestone completion summary
 

@@ -1408,9 +1408,8 @@ def _attic_tree(tmp_path: Path) -> Path:
     between those two directories is an everyday reorganisation the tool must
     not touch.
 
-    Every `Updated:` is ISO because `parse()` still reads it with the hardcoded
-    default (defect E8, *Follow-ups* item 1); the tree's own `date_format`
-    governs the dated directories and the witness, which is what is under test.
+    Every date — `Updated:`, the witness, the dated directories — is in the
+    tree's own `date_format`, the one spelling every verb reads on this tree.
     """
     root = tmp_path / "attictree"
     root.mkdir()
@@ -1421,7 +1420,7 @@ def _attic_tree(tmp_path: Path) -> Path:
     def _doc(title: str, lifecycle: str, archived: str | None) -> str:
         text = (
             f"# {title}\n\nLifecycle: {lifecycle}\nRole: notes\nProject: attictree\n"
-            "Updated: 2026-05-20\n"
+            "Updated: 20-05-2026\n"
         )
         if archived is not None:
             text += f"Archived: {archived}\n"
