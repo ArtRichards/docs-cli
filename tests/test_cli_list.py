@@ -179,7 +179,8 @@ def test_list_includes_a_doc_in_an_extension_lifecycle(docs_script, fixtures_dir
     proc = _run(docs_script, "list", "--root", str(tree), "--json")
 
     assert proc.returncode == 0, proc.stderr
-    assert proc.stderr == "", "no document is dropped with an error"
+    # `docs list` omits a document it cannot read SILENTLY, so stderr proves
+    # nothing; the complete listed set below is the check.
     listed = {(r["path"], r["lifecycle"], r["role"]) for r in json.loads(proc.stdout)}
     assert listed == {
         ("shipped-spec.md", "shipped", "spec"),

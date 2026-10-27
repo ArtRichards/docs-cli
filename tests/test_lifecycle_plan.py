@@ -121,6 +121,7 @@ def test_plan_lifecycle_refuses_a_source_already_marked_archived(tmp_path):
 def test_plan_lifecycle_lists_a_duplicated_document_once(tmp_path):
     """Deduplicated on the root-relative path, first occurrence kept (OQ-3)."""
     root = _root(tmp_path, {"a.md": _doc("A", "draft"), "b.md": _doc("B", "draft")})
+    (root / "sub").mkdir()  # so `sub/../a.md` is a real second spelling, not a dangling one
 
     plan = _plan(root, ["a.md", "b.md", "./a.md", "sub/../a.md"], "active")
 

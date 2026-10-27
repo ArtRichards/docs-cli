@@ -527,9 +527,7 @@ def test_stamp_refusal_in_a_batch_writes_no_file(docs_script, fixtures_dir, tmp_
     assert _whole_tree(root) == before
 
 
-def test_stamp_keeps_todays_behaviour_for_a_block_failing_for_an_unrelated_reason(
-    docs_script, tmp_path
-):
+def test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed(docs_script, tmp_path):
     """A complete block that fails `parse()` for a reason unrelated to the
     configured vocabulary or date format — here a `Related:` bullet with no
     colon — keeps today's fresh stamping (the refusal covers vocabulary and
@@ -546,3 +544,69 @@ def test_stamp_keeps_todays_behaviour_for_a_block_failing_for_an_unrelated_reaso
     assert "## Migrated metadata" in text
     assert "Migrated-Related:" in text
     assert "BODYMARKER" in text
+
+
+def test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes(
+    docs_script, tmp_path
+):
+    """ "Complete" means `Lifecycle:`, `Role:` and `Updated:` — `Project:` is
+    not required, exactly as for `parse()` — so a block with no `Project:`
+    line whose role is outside the vocabulary refuses, naming `Role:`."""
+    root = _configured_tree(
+        tmp_path,
+        "",
+        {"a.md": "# Stamped\n\nLifecycle: active\nRole: adrr\nUpdated: 2026-05-20\n\nProse.\n"},
+    )
+    before = _whole_tree(root)
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert (
+        f"docs: stamp: {root.resolve() / 'a.md'}: Role: 'adrr' not in vocabulary"
+        + _STAMP_REFUSAL_TAIL
+    ) in proc.stderr, proc.stderr
+    assert _whole_tree(root) == before
+
+
+def test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value(
+    docs_script, tmp_path
+):
+    """The other side of the "complete block" boundary: a block missing
+    `Updated:` is not complete, so its out-of-vocabulary `Lifecycle:` does not
+    trigger the refusal and the file is freshly stamped, as today. GREEN at
+    baseline; it rejects a refusal that ignores the completeness test."""
+    root = _configured_tree(
+        tmp_path, "", {"a.md": "# Stamped\n\nLifecycle: activ\nRole: spec\n\nBODYMARKER prose.\n"}
+    )
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert f"docs: stamped {root.resolve() / 'a.md'}" in proc.stderr, proc.stderr
+    text = (root / "a.md").read_text()
+    assert "Lifecycle: draft" in text.splitlines()
+    assert "BODYMARKER" in text
+
+
+def test_stamp_keeps_a_correctly_dated_document_on_a_non_default_date_format_tree(
+    docs_script, tmp_path
+):
+    """The date half of E12: on a `%d-%m-%Y` tree a document dated in the
+    tree's own format is already stamped — only `Updated:` changes, rendered
+    in that format (2.0.0 re-stamped it and parked its `Related:` edge)."""
+    original = _block("active", "spec", "20-05-2026", related="pairs-with: other.md")
+    root = _configured_tree(
+        tmp_path,
+        '\n[archive]\ndate_format = "%d-%m-%Y"\n',
+        {"a.md": original, "other.md": _block("active", "notes", "20-05-2026")},
+    )
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "already stamped — refreshed Updated:" in proc.stderr, proc.stderr
+    today = date.today().strftime("%d-%m-%Y")
+    assert (root / "a.md").read_text() == original.replace(
+        "Updated: 20-05-2026", f"Updated: {today}"
+    )

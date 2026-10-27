@@ -470,12 +470,6 @@ def test_relate_plan_to_json_shape(tmp_path):
 # ===========================================================================
 
 
-def _symbol(name: str) -> Any:
-    """Fetch a seam symbol that may not exist yet — a clean `AttributeError`,
-    never a collection error (ruff's B009 forbids a literal `getattr`)."""
-    return getattr(cli, name)
-
-
 def _plan_one_sided(root: Path, **kwargs: Any) -> Any:
     """Plan a free-form edge; a refusal to plan one is the behaviour under test."""
     try:
@@ -638,7 +632,7 @@ def test_apply_relate_plan_writes_only_the_source_for_a_free_form_edge(tmp_path)
 def test_relate_verb_grammar_accepts_and_rejects_generated_verbs():
     """D6 at the pure predicate, with independently generated valid and
     invalid verbs (fixed seed): over-acceptance and over-refusal both fail."""
-    in_grammar = _symbol("relate_verb_in_grammar")
+    in_grammar = _m25("relate_verb_in_grammar")
     rng = random.Random(20261027)
     tail = string.ascii_lowercase + string.digits + "-"
 

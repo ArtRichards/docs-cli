@@ -27,8 +27,6 @@ from pathlib import Path
 
 import pytest
 
-_TODAY = date.today().isoformat()
-
 
 def _run(script: Path, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -81,12 +79,15 @@ def _snapshot(root: Path) -> dict[str, bytes]:
     }
 
 
-def _promoted(text: str, *, to: str, updated: str = _TODAY) -> str:
+def _promoted(text: str, *, to: str, updated: str | None = None) -> str:
     """`text` with exactly its `Lifecycle:` and `Updated:` metadata lines replaced.
 
     The expected bytes of a lifecycle edit, derived from the contract (two
     lines change, nothing else) rather than from the implementation.
+    `updated` defaults to today in ISO, computed at call time.
     """
+    if updated is None:
+        updated = date.today().isoformat()
     lines = text.splitlines(keepends=True)
     out: list[str] = []
     seen: set[str] = set()
@@ -139,7 +140,8 @@ def test_lifecycle_promotes_a_draft_to_active_and_bumps_updated(docs_script, tmp
     assert "docs: lifecycle: set m.md from draft to active" in proc.stderr
     assert (root / "m.md").read_text() == _promoted(original, to="active")
     index = (root / "INDEX.md").read_text()
-    assert f"Updated {_TODAY}." in index, "the INDEX is refreshed with the new state's date"
+    today = date.today().isoformat()
+    assert f"Updated {today}." in index, "the INDEX is refreshed with the new state's date"
 
 
 def test_lifecycle_accepts_several_files_then_one_state_and_refreshes_the_index(
@@ -158,7 +160,8 @@ def test_lifecycle_accepts_several_files_then_one_state_and_refreshes_the_index(
     index = (root / "INDEX.md").read_text()
     for name in originals:
         assert f"- [{name}]({name})" in index
-    assert index.count(f"Updated {_TODAY}.") == 3, "the INDEX reflects the final state"
+    today = date.today().isoformat()
+    assert index.count(f"Updated {today}.") == 3, "the INDEX reflects the final state"
 
 
 def test_lifecycle_mixed_batch_rewrites_only_the_documents_that_change(docs_script, tmp_path):
@@ -267,6 +270,41 @@ def test_lifecycle_writes_an_extension_state_and_the_tree_reindexes(docs_script,
     assert _run(docs_script, "index", "--root", str(root)).returncode == 0
     check = _run(docs_script, "check", str(root))
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree(
+    docs_script, tmp_path
+):
+    """D10 for `docs lifecycle` itself: on a `%d-%m-%Y` tree with an
+    `add_lifecycles` extension, a named source already in the extension state
+    parses, its `Updated:` is rewritten in the TREE's spelling (the record's
+    `date` too), the INDEX is refreshed, the tree stays `docs check` clean, and
+    a repeated call is a zero-byte no-op."""
+    original = _doc("M", lifecycle="shipped", updated="20-05-2026")
+    root = _tree(
+        tmp_path,
+        {"m.md": original},
+        sidecar_extra=(
+            '\n[archive]\ndate_format = "%d-%m-%Y"\n\n[vocabulary]\nadd_lifecycles = ["shipped"]\n'
+        ),
+    )
+    today = date.today().strftime("%d-%m-%Y")
+
+    proc = _run(docs_script, "lifecycle", "m.md", "active", "--root", str(root), "--json")
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert (root / "m.md").read_text() == _promoted(original, to="active", updated=today)
+    record = json.loads(proc.stdout)
+    assert record["date"] == today
+    assert record["edits"] == [{"path": "m.md", "before": "shipped", "change": "set"}]
+    assert f"Updated {today}." in (root / "INDEX.md").read_text()
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout + check.stderr
+
+    settled = _snapshot(root)
+    again = _run(docs_script, "lifecycle", "m.md", "active", "--root", str(root))
+    assert again.returncode == 0, (again.stdout, again.stderr)
+    assert _snapshot(root) == settled, "a repeated call writes nothing, INDEX included"
 
 
 # --- refusals: the archive boundary (D2) ------------------------------------
@@ -495,6 +533,47 @@ def test_lifecycle_malformed_sidecar_exits_2_and_writes_nothing(docs_script, tmp
     assert _snapshot(root) == before
 
 
+def test_lifecycle_refusals_follow_the_frozen_order_and_emit_no_record(docs_script, tmp_path):
+    """P1.1's order, at its two seams that a reordering would flip: the target
+    state is judged before any document (L5 beats L7), and the status-drift
+    guard runs only after every document resolved and parsed (a missing
+    document's L9 beats a status-drift L11 named before it). A refused
+    `--json` run emits no record."""
+    root = _tree(
+        tmp_path,
+        {
+            "stray.md": _doc("Stray", lifecycle="archived"),
+            "archive/2026-01-01/old.md": _doc("Old", lifecycle="archived"),
+        },
+    )
+    before = _snapshot(root)
+
+    state_first = _run(
+        docs_script,
+        "lifecycle",
+        "archive/2026-01-01/old.md",
+        "archived",
+        "--root",
+        str(root),
+        "--json",
+    )
+    assert state_first.returncode == 2, (state_first.stdout, state_first.stderr)
+    assert "docs: lifecycle: 'archived' is not a lifecycle target" in state_first.stderr, (
+        state_first.stderr
+    )
+    assert "under the archive subtree" not in state_first.stderr
+    assert state_first.stdout == "", "no record on a refusal"
+
+    drift_last = _run(
+        docs_script, "lifecycle", "stray.md", "missing.md", "active", "--root", str(root), "--json"
+    )
+    assert drift_last.returncode == 1, (drift_last.stdout, drift_last.stderr)
+    assert "docs: lifecycle: file not found: " in drift_last.stderr, drift_last.stderr
+    assert "status-drift" not in drift_last.stderr
+    assert drift_last.stdout == "", "no record on a refusal"
+    assert _snapshot(root) == before
+
+
 # --- preview, output, record -------------------------------------------------
 
 
@@ -523,7 +602,7 @@ def test_lifecycle_json_record_has_a_closed_key_set(docs_script, tmp_path):
     record = json.loads(proc.stdout)
     assert set(record) == {"state", "date", "dry_run", "applied", "index_refreshed", "edits"}
     assert record["state"] == "active"
-    assert record["date"] == _TODAY
+    assert record["date"] == date.today().isoformat()
     assert record["dry_run"] is False
     assert record["applied"] is True
     assert record["index_refreshed"] is True

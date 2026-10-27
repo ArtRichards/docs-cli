@@ -1523,6 +1523,136 @@ def test_relate_free_form_target_symlink_escaping_the_root_exits_1(docs_script, 
     assert _snapshot(root) == before
 
 
+def test_relate_free_form_symlinked_target_is_written_as_the_file_it_points_at(
+    docs_script, tmp_path
+):
+    """A TARGET that is a symlink inside the tree is resolved like every
+    endpoint: the bullet names the root-relative file it points at."""
+    root = _pair_tree(tmp_path, "fflink")
+    (root / "link.md").symlink_to(root / "b.md")
+
+    proc = _run(docs_script, "relate", "add", "a.md", "references", "link.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "- references: b.md" in (root / "a.md").read_text()
+    assert "link.md" not in (root / "a.md").read_text()
+
+
+def test_relate_free_form_accepts_a_malformed_markdown_target_without_reading_it(
+    docs_script, tmp_path
+):
+    """TARGET is never parsed — not even a `.md` one — so a Markdown file that
+    does not parse is a valid free-form TARGET (an extension-based "parse the
+    `.md` targets" rule fails here). `--dry-run` isolates the endpoint check
+    from the reindex; the real write uses an excluded target so the
+    end-of-run reindex does not walk the malformed file."""
+    preview_root = _pair_tree(tmp_path / "preview", "ffbroken")
+    (preview_root / "broken.md").write_text("no H1 and no metadata block\n")
+    before = _every_file(preview_root)
+    preview = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "references",
+        "broken.md",
+        "--root",
+        str(preview_root),
+        "--dry-run",
+    )
+    assert preview.returncode == 0, (preview.stdout, preview.stderr)
+    assert "docs: relate: would add 'references: broken.md' to a.md" in preview.stderr
+    assert _every_file(preview_root) == before
+
+    write_root = _pair_tree(tmp_path / "write", "ffbroken")
+    with (write_root / ".docs.toml").open("a") as sidecar:
+        sidecar.write('\n[exclude]\ndirs = ["vendor"]\n')
+    (write_root / "vendor").mkdir()
+    (write_root / "vendor" / "broken.md").write_text("no H1 and no metadata block\n")
+    written = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "references",
+        "vendor/broken.md",
+        "--root",
+        str(write_root),
+    )
+    assert written.returncode == 0, (written.stdout, written.stderr)
+    assert "- references: vendor/broken.md" in (write_root / "a.md").read_text()
+    assert (write_root / "INDEX.md").is_file()
+
+
+_R4_TARGETS = [
+    ("b\nc.md", "a-line-break"),
+    ("b\rc.md", "a-carriage-return"),
+    (" b.md", "a-leading-space"),
+    ("b.md ", "a-trailing-space"),
+]
+
+
+@pytest.mark.parametrize(
+    "name", [name for name, _ in _R4_TARGETS], ids=[case_id for _, case_id in _R4_TARGETS]
+)
+def test_relate_free_form_refuses_a_target_path_a_bullet_cannot_carry(docs_script, tmp_path, name):
+    """R4 — a free-form TARGET whose root-relative path holds a line break or
+    leading or trailing whitespace would be written as a bullet that ends the
+    metadata block or reads back as a different target, so it refuses at exit
+    2 with zero bytes (the TARGET-side twin of the verb grammar's injection
+    guard)."""
+    root = _pair_tree(tmp_path, "ffr4")
+    (root / name).write_text("an existing file whose name a bullet cannot carry\n")
+    before = _every_file(root)
+
+    proc = _run(docs_script, "relate", "add", "a.md", "references", name, "--root", str(root))
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert (
+        f"docs: relate: TARGET {name!r} cannot be written into a Related: bullet — it contains "
+        "a line break or leading or trailing whitespace; refusing"
+    ) in proc.stderr, proc.stderr
+    assert _every_file(root) == before
+
+
+def test_relate_free_form_refusals_follow_the_frozen_order(docs_script, tmp_path):
+    """P1.2's order, at the seams a reordering would flip: the grammar refuses
+    before either endpoint is resolved (R1 beats a missing SOURCE), and an
+    archived free-form SOURCE refuses before `--reason` is shape-checked (R2
+    beats an empty reason)."""
+    root = _archived_pair_tree(tmp_path, "fforder", inverse_present=False)
+    before = _snapshot(root)
+
+    grammar_first = _run(
+        docs_script, "relate", "add", "nope.md", "see also", "also-nope.md", "--root", str(root)
+    )
+    assert grammar_first.returncode == 2, (grammar_first.stdout, grammar_first.stderr)
+    assert _r1("see also") in grammar_first.stderr, grammar_first.stderr
+    assert "file not found" not in grammar_first.stderr
+
+    source_before_reason = _run(
+        docs_script,
+        "relate",
+        "add",
+        "archive/2026-01-01/old.md",
+        "references",
+        "a.md",
+        "--root",
+        str(root),
+        "--reason",
+        "",
+    )
+    assert source_before_reason.returncode == 2, (
+        source_before_reason.stdout,
+        source_before_reason.stderr,
+    )
+    assert "a free-form edge is never written to an archived document" in (
+        source_before_reason.stderr
+    ), source_before_reason.stderr
+    assert "--reason must not be empty" not in source_before_reason.stderr
+    assert _snapshot(root) == before
+
+
 _GRAMMAR_CASES = [
     ("pairs-with", True, "accepts-pairs-with"),
     ("child-of", True, "accepts-child-of"),
@@ -1635,27 +1765,22 @@ def _valid_verb(rng: random.Random) -> str:
             return verb
 
 
-def _invalid_verb(rng: random.Random) -> str:
-    """A verb generated from the grammar's complement, one defect per verb,
-    each category independently of the valid generator."""
-    base = _valid_verb(rng)
-    cut = rng.randrange(len(base) + 1)
-    defect = rng.choice(
-        [
-            lambda: base[:cut] + rng.choice(string.ascii_uppercase) + base[cut:],
-            lambda: rng.choice(string.digits) + base,
-            lambda: "-" + base,
-            lambda: base[:cut] + " " + base[cut:],
-            lambda: base[:cut] + ":" + base[cut:],
-            lambda: base + "\n",
-            lambda: base[:cut] + "\r" + base[cut:],
-            lambda: base[:cut] + rng.choice("_.@#!$/,;'\"") + base[cut:],
-            lambda: base[:cut] + rng.choice("éßøΩж") + base[cut:],
-            lambda: base[:cut] + rng.choice("٣१１") + base[cut:],
-            lambda: "",
-        ]
-    )
-    return defect()
+# One invalid verb per category the grammar refuses. Exhaustive invalid
+# generation is the pure-predicate fuzz's job (`test_relate_plan.py`) and the
+# named boundary table's; through the CLI a small fixed set suffices.
+_INVALID_THROUGH_THE_CLI = (
+    "Pairs-With",
+    "9to5",
+    "-x",
+    "see also",
+    "pairs:with",
+    "pairs-with\n",
+    "pairs\rwith",
+    "pairs_with",
+    "\u00e9",
+    "a\u0663",
+    "",
+)
 
 
 def _fuzz_root(base: Path, index: int) -> Path:
@@ -1668,14 +1793,14 @@ def _fuzz_root(base: Path, index: int) -> Path:
 
 
 def test_relate_free_form_verb_fuzz_round_trips_valid_and_refuses_invalid(tmp_path, capsys):
-    """D6 fuzz, in process through `cli.main` (a real path, no mock), with a
-    fixed seed: every generated valid verb succeeds and is parsed back as the
-    identical verb; every generated invalid verb refuses with R1 and zero
-    bytes. The two generators are independent, so an over-accepting grammar
-    and an over-refusing one both fail here."""
+    """D6, in process through `cli.main` (a real path, no mock): every verb
+    generated from the grammar with a fixed seed is written and parsed back as
+    the identical verb, TARGET untouched; one invalid verb per refused category
+    gets R1 and zero bytes. A leading hyphen reaches the grammar because every
+    operand follows `--`."""
     rng = random.Random(20261027)
     cases = [(_valid_verb(rng), True) for _ in range(30)]
-    cases += [(_invalid_verb(rng), False) for _ in range(40)]
+    cases += [(verb, False) for verb in _INVALID_THROUGH_THE_CLI]
 
     for index, (verb, valid) in enumerate(cases):
         root = _fuzz_root(tmp_path, index)

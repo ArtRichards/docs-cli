@@ -27,10 +27,12 @@ checklist and the test matrix synchronized.
   2026-10-27 on `lifecycle-and-free-form-relate/phases-1-4`
 - Step 1: **Phases 1–4 complete (2026-10-27); review pending** — the
   contract is frozen in the task plan's *Decisions (Phase 1 — BINDING)* and
-  the RED baseline is recorded (restated after the same-instance audit:
-  1696 collected, 191 failed, 1505 passed); per-phase results are in the
-  phase sections below, the audit in *Step 1 same-instance audit*, and the
-  review ledger in *Step 1 review-pass-001*.
+  the RED baseline is recorded (restated after the same-instance audit —
+  1696 collected, 191 failed, 1505 passed — and again after the review
+  resolution: **1656 collected, 150 failed, 1506 passed**); per-phase results
+  are in the phase sections below, the audit in *Step 1 same-instance
+  audit*, and the review ledger in *Step 1 review-pass-001* (both reviews
+  returned; findings resolved; finalization pending).
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -220,10 +222,10 @@ written with free-form `docs relate add` once this milestone ships.
 | **E1** | `_archive_one` is the only post-creation writer of `Lifecycle:` — `set_metadata_field(…, "Lifecycle", "archived")`. `docs new` and `docs stamp` write `draft`; `docs touch` writes `Updated:` only. | The editor the lifecycle verb needs exists and is exercised by every archive; the verb is a thin wrapper with `docs project set` as its template. | D1–D3 |
 | **E2** | In a fresh tree of two `docs new spec` documents, `docs relate add a.md pairs-with b.md --dry-run` exits 2: `unknown verb 'pairs-with'; expected one of: blocked-by, blocks, depends-on, follows, precedes, required-by`. `docs --help` renders its verbs as one brace group with no `lifecycle`. The suite's CI step runs exactly that probe and parses exactly that group. | The suite guard is an external contract consumer: it reads `lifecycle verb: False`, `free-form relate: False` against 2.0.0, and it is the signal that retires the stopgap. Both probes become product tests. | D1, D9 |
 | **E3** | `docs/` (live and archive): **417** `Related:` edges in 74 documents — **391** free-form across 7 verbs (`pairs-with` 238, `child-of` 59, `parent-of` 52, `implements` 21, `references` 17, `decision` 2, `spec-of` 2) and **26** recognized. Fixtures: 96 edges, 13 verbs (adds `see-also`, `supersedes`, `superseded-by`, `blocks`, `blocked-by`). Bundled skill: 5 edges, 3 verbs. Suite prescriptions: `pairs-with`, `child-of`, `implements`, `references`. **Every verb matches `[a-z][a-z0-9-]*`.** | Free-form is 94% of the real graph, and a strict lowercase token loses nothing measured anywhere. | D6, Q3 |
-| **E4** | Hand-written bullets on a throwaway tree: `- : target.md`, `- see also: target.md`, `- @#!$: target.md`, `- Precedes: target.md` and `- pairs-with  : target.md` all pass `docs check` with no finding; `docs list --json` reads their verbs as `""`, `"see also"`, `"@#!$"`, `"Precedes"`, `"pairs-with"`. Only a missing colon / empty target (`malformed`) or an unresolvable target (`broken-ref`, e.g. `.`) fails. | `docs check` parses no token grammar — it accepts anything before the first colon. The registered recommendation "accept exactly the token grammar `docs check` already parses" therefore does not pin a grammar. | D6, Q3, A2 |
+| **E4** | Hand-written bullets on a throwaway tree: `- : target.md`, `- see also: target.md`, `- @#!$: target.md`, `- Precedes: target.md` and `- pairs-with  : target.md` all pass `docs check` with no finding; `docs list --json` reads their verbs as `""`, `"see also"`, `"@#!$"`, `"Precedes"`, `"pairs-with"`. Only a missing colon / empty target (`malformed`) or an unresolvable target (`broken-ref`, e.g. `.`) fails. *(Corrected at the Step 1 review resolution: a missing colon (`- no-colon-here`) and an empty target (`- verb:`) both pass `docs check` at exit 0 — only the unresolvable target fails — while every verb that parses the document refuses it with `malformed Related entry`.)* | `docs check` parses no token grammar — it accepts anything before the first colon. The registered recommendation "accept exactly the token grammar `docs check` already parses" therefore does not pin a grammar. | D6, Q3, A2 |
 | **E5** | `docs relate add a.md Precedes b.md --dry-run` exits 2 (`unknown verb 'Precedes'`), pinned by `test_relate_case_variant_verb_refuses`. | Under a parser-mirroring grammar this refusal becomes an exit-0 one-sided `Precedes:` edge that reciprocity ignores — a silently wrong edge. | D6, Q3 |
 | **E6** | `docs new spec a --body-from body.md`, body opening `Related:` / `- pairs-with: b.md` / `- references: b.md`: the group lands in the metadata block; `docs list --json` lists both edges; `docs check` clean. A body opening with a `Revision:` group lands in the block of an **active** document the same way. A lone `Lifecycle: active` line after the blank line stays body. `references/use-cases.md` row *Sidecar a non-md artifact* prescribes `--body-from -` with `Related: artifact-of: <binary>` ("No new verb — uses the M8 `--body-from` flag"); `references/adoption-playbook.md` repeats it and describes the refusal heuristic as `^[A-Z][A-Za-z-]+:\s` — the pre-M15 — C4 wording. No test in `tests/test_body_from.py` or `tests/test_cli_new.py` mentions `Related`. | The route is the skill's documented intent — supported, not an accident — and it is untested. **Corrected by the Step 0 review (claude-S2):** both skill examples spell `Related:` inline, and `printf 'Related: artifact-of: deck.html\n\n## Body\n' \| docs new notes inline --body-from -` yields no edge (`docs list --json`: `[]`), while the group form yields `artifact-of: deck.html`; Phase 7 rewrites both examples. Its generality (any bare-label group) is a separate leak; the playbook line is stale bundled guidance. | D8, Q5, A3 |
-| **E7** | `.docs.toml` with `[vocabulary] add_lifecycles = ["shipped"]`, one document hand-set to `Lifecycle: shipped`: `docs index` exit 2 (`Lifecycle: 'shipped' not in vocabulary`); `docs touch b.md` (another document) writes, then exit 2 `INDEX refresh failed`; `docs list` and `docs list --json` omit the document, printing the error on stderr, exit 0; `docs relate add a.md precedes b.md` exit 1; `docs archive a.md --dry-run` exit 1; `docs mv b.md c.md --dry-run` exit 2; `docs check` **no violations, exit 0**. With `add_roles = ["adr"]`: `docs new adr x` exit 0, then `docs index` exit 2. Cause: `parse()` calls `validate_lifecycle(lifecycle, BUILTIN_STATUSES)` and `validate_role(role, BUILTIN_ROLES)` rather than the tree's merged vocabulary, and `walk()`, `query_docs`, `_cmd_archive`, `_known_projects`, `_cmd_project_set`, `_resolve_relate_endpoint` and `_cmd_stamp` all go through it. Five fixture sidecars carry `add_roles = []`; none exercises a non-empty extension through a walk. This repository's `.docs.toml` and the bundled template advertise the feature. | The registered clause "any `add_lifecycles` extension … and reindexes once" cannot hold on 2.0.0: the verb would write a state that its own reindex rejects. Both new verbs validate endpoints through `parse()`, so the answer decides whether they work on such trees at all. | D2, Q7, A1 |
+| **E7** | `.docs.toml` with `[vocabulary] add_lifecycles = ["shipped"]`, one document hand-set to `Lifecycle: shipped`: `docs index` exit 2 (`Lifecycle: 'shipped' not in vocabulary`); `docs touch b.md` (another document) writes, then exit 2 `INDEX refresh failed`; `docs list` and `docs list --json` omit the document, exit 0 — silently (corrected at the Step 1 review resolution, claude-N7: setup said "printing the error on stderr"; re-measured, stderr is empty); `docs relate add a.md precedes b.md` exit 1; `docs archive a.md --dry-run` exit 1; `docs mv b.md c.md --dry-run` exit 2; `docs check` **no violations, exit 0**. With `add_roles = ["adr"]`: `docs new adr x` exit 0, then `docs index` exit 2. Cause: `parse()` calls `validate_lifecycle(lifecycle, BUILTIN_STATUSES)` and `validate_role(role, BUILTIN_ROLES)` rather than the tree's merged vocabulary, and `walk()`, `query_docs`, `_cmd_archive`, `_known_projects`, `_cmd_project_set`, `_resolve_relate_endpoint` and `_cmd_stamp` all go through it. Five fixture sidecars carry `add_roles = []`; none exercises a non-empty extension through a walk. This repository's `.docs.toml` and the bundled template advertise the feature. | The registered clause "any `add_lifecycles` extension … and reindexes once" cannot hold on 2.0.0: the verb would write a state that its own reindex rejects. Both new verbs validate endpoints through `parse()`, so the answer decides whether they work on such trees at all. | D2, Q7, A1 |
 | **E8** | `.docs.toml` with `[archive] date_format = "%d-%m-%Y"`: `docs new spec a` writes `Updated: 26-10-2026`; the next `docs index` exits 2 (`Updated: malformed date '26-10-2026' (expected %Y-%m-%d)`); `docs touch a.md` writes, then exits 2 the same way; `docs check` exit 0. | The same config-blindness, in the date half — wider than the 2026-08-15 entry recorded (it named `docs archive`). Bears on whether Q7 fixes both halves. | Q7 |
 | **E9** | `docs relate add a.md precedes coverage.xml` exits 1 (`coverage.xml: missing H1`); a hand-written `- references: coverage.xml` passes `docs check` at exit 0. | `relate` parses both endpoints because both are written for a recognized pair; a free-form TARGET is never written, and the convention and the bundled skill's quality-artifact guidance allow non-Markdown targets. | D5, Q6 |
 | **E10** | Three pre-existing ids pin the free-form refusal: `test_relate_unknown_verb_refuses`, `test_relate_quiet_suppresses_success_but_never_a_refusal` (both `pairs-with`), `test_relate_case_variant_verb_refuses` (`Precedes`). `test_every_named_verb_is_a_real_subcommand` derives the real verb set from the parser, so registering `lifecycle` without the skill naming it fails the suite. Archive candidates come from `_CASCADE_VERBS = ("pairs-with", "child-of")` over parsed `Doc.related`. | The behaviour change is visible in exactly three ids; the parity gate self-enforces; archive invariance reduces to byte-identity of the written bullet. | D4, D7, D9 |
@@ -840,7 +842,11 @@ edits the authoritative list names.
   GREEN — it uses one complete recognized pair (no `missing-inverse`), no body
   link, and no archive-date field. The parse-agreement sweep in
   `tests/test_model.py` selects trees by configuration, so it excludes this
-  tree because it configures extensions and its 53 ids do not move.
+  tree because it configures extensions and its 53 ids do not move. *(Step 1
+  review, claude-N9: the swept ids of the pre-M27 and pre-M28a sweeps now
+  include this later fixture — harmless, since each asserts only that its own
+  rule stays silent, and their names are not changed. The review resolution
+  also consolidated the 53-id agreement sweep into one test, claude-T1.)*
 - **The planned RED flip happened.** With `_attic_tree` corrected,
   `test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory`
   goes RED — `docs mv`'s walk still reads `20-05-2026` with the ISO default —
@@ -891,6 +897,18 @@ collected, 191 failed, 1505 passed**; 189 authored ids, 183 of them RED;
 `AssertionError` 180, `AttributeError` 11; Phase 6's count becomes 106. The
 figures in this section are the measurement taken at the Phase 4 commit and
 stay true of it.)*
+
+*(Restated again after the Step 1 review resolution: **1656 collected, 150
+failed, 1506 passed**; `AssertionError` 139, `AttributeError` 11; 149
+authored ids — 142 RED, 7 GREEN — plus the 3 swept; landing 24 at Phase 5,
+117 at Phase 6, 9 at Phase 7. The deltas: twelve new ids from the blockers
+and should-fixes (Phase 6, all RED, except
+`test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value`,
+a new GREEN lock that rejects a stamp refusal ignoring the completeness
+test); the 53-id parse-agreement sweep consolidated into one test (Phase 5:
+55 → 3); and `test_stamp_keeps_todays_behaviour_for_a_block_failing_for_an_unrelated_reason`
+renamed `test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed`.
+The pass entry below records each finding.)*
 
 | Population | Ids | RED | GREEN |
 |---|---|---|---|
@@ -1117,7 +1135,9 @@ operator decision.
   `_minimal_tree`, `_stamp_tree`, `_two_doc_root`, `_archived_pair_root`,
   `_plan`, `_m25`); new helpers are module-local; stdlib only; no mock.
 - **Patch bloat — noted for the reviewers, not hidden.** The test diff is
-  **+2,723 / −96 lines** against the plan's +900 to +1,300 for the whole
+  **+2,826 / −96 lines** at the review `HEAD` `6f94a0a` (corrected at the
+  review, claude-N8: the first figure here, +2,723, was measured before the
+  five audit tests landed) against the plan's +900 to +1,300 for the whole
   milestone. It traces to the authored id count (189 against the ~120
   planned: the 22-case boundary, the five-state round trip, the 53-id
   agreement sweep, the planner modules) and to `ruff format`'s
@@ -1153,56 +1173,120 @@ operator decision.
   (`lifecycle-and-free-form-relate-impl.md#step-0-review-pass-001`), closed,
   with `final-sync: ready` in `e48adb9f9bddaf6169e2387280907e66d531c71b`. No
   `contract-rework` entry exists between them.
-- Status: `open` — written by the implementation agent at the review-ready
-  handoff; both provider slots are `pending` and no finding exists yet.
-- Packet inputs (the conductor freezes the packet at the review-ready `HEAD`
-  reported in the handoff): slug `lifecycle-and-free-form-relate`; step 1,
+- Status: `open` — both provider attempts are terminal (both returned), every
+  finding is dispositioned with evidence in the review-resolution checkpoint,
+  and the conductor ruled the conditional re-review not required;
+  finalization (the correcting commit's hash written here, then
+  `final-sync: ready`) is pending.
+- Frozen packet (conductor): slug `lifecycle-and-free-form-relate`; step 1,
   Phases 1–4; branch `lifecycle-and-free-form-relate/phases-1-4`; base
-  `e48adb9f9bddaf6169e2387280907e66d531c71b`; content `HEAD`
-  `c9e913e8f3b252bad7e249f7ecfc10fb012da614` (the audit commit) — the
-  review-ready commit on top of it adds only this entry (`docs/INDEX.md` and
-  its snapshot are unchanged by it). Phase commits: Phase 1 `d3c216ce36d6272a6cdb955707b06ed5c2f91931`,
-  Phase 2 `03e0cdbeefd3d2da9d54a7fa66a5efe7eca29b36`, Phase 3
-  `0e8c756c388e8b6c51a7bde6db7492183a4b5bee`, Phase 4
-  `90cea8efcdff0b27c2ab3b8ed850f0388162c248`, audit
-  `c9e913e8f3b252bad7e249f7ecfc10fb012da614`. Risk Standard (Q8); no
-  Phase-4 operator checkpoint.
+  `e48adb9f9bddaf6169e2387280907e66d531c71b`; review `HEAD`
+  `6f94a0addca41140e1dff32b87d3bc6d2e91507f` (`…(review-ready): open Step 1
+  review-pass-001`); predecessor `Step 0 review-pass-001` (closed); project
+  `docs`, path `""`, stem `lifecycle-and-free-form-relate`; tracker row 100
+  `active`; claim `2ad941e`; branch root `lifecycle-and-free-form-relate/`;
+  risk Standard. Gates the conductor re-ran at the review `HEAD`: `ruff`,
+  `ruff format`, `mypy` clean; pytest 1696 collected / 191 failed (the
+  intended RED) / 1505 passed, with one extra intermittent failure seen once
+  — the known `test_d4_install_skill_is_idempotent` flake; `docs check` exit
+  0; mirrors and the INDEX snapshot byte-identical. Both reviewers received
+  the identical provider-neutral prompt with the Step 1 test-quality clause,
+  isolated from each other.
+- Packet inputs as handed off: content `HEAD`
+  `c9e913e8f3b252bad7e249f7ecfc10fb012da614` (the audit commit); Phase
+  commits `d3c216c` (1), `03e0cdb` (2), `0e8c756` (3), `90cea8e` (4); the
+  review-ready commit added only this entry.
 - Tracker: `milestone-plan.md` in the docs root; owning project `docs`;
   project path empty (dedicated docs root); artifact stem
   `lifecycle-and-free-form-relate`; row `100 | lifecycle-and-free-form-relate
   | active | — |`, Notes unchanged; claim checkpoint
   `2ad941e269339f5a125856f5bcda9339cd9f5b15`; semantic branch root
-  `lifecycle-and-free-form-relate/`; artifacts
-  `lifecycle-and-free-form-relate.md`, `-impl.md`, `-test-matrix.md`.
-- Context for reviewers: the contract is the task plan's *Decisions (Phase 1
-  — BINDING)* (P1.1–P1.9, OQ-1 … OQ-15) and the specs it names
-  (`cli.md`, `convention.md`); the RED baseline and lock classification are
-  *Phase 4* above; the audit is *Step 1 same-instance audit* above,
-  including the patch-bloat note (tests +2,723 / −96 against a planned
-  +900 to +1,300 for the whole milestone). Changed paths since the base: the
-  two specs and their mirrors, the milestone trio, `docs/INDEX.md` and its
-  snapshot, `tests/fixtures/stamp/raw-invalid-block.md`, the new
-  `tests/fixtures/trees/vocab-extension/` (4 files), the new
-  `tests/test_cli_lifecycle.py` and `tests/test_lifecycle_plan.py`, and 16
-  existing test modules. `src/docs_cli/cli.py` is unchanged.
-- Checks at the content `HEAD` (selected commands and results):
-  `.venv/bin/ruff check .` — clean; `.venv/bin/ruff format --check .` — 50
-  files formatted; `.venv/bin/mypy src/ tests/` — no issues in 51 files;
-  `.venv/bin/python -m pytest -q` — **191 failed, 1505 passed** (the
-  intended RED baseline: 183 authored ids and the 8 pre-existing ids on the
-  authoritative list RED; 0 collection errors, tracebacks, xfails or errors);
-  `docs check .` from the docs root — exit 0; both mirrors and the INDEX
-  snapshot — byte-identical; the mechanical `comm` / AST-diff proof — exactly
-  the authoritative list.
-- Claude slot: `pending`.
-- GPT slot: `pending`.
+  `lifecycle-and-free-form-relate/`.
+- Claude slot: `returned` — Anthropic Claude family, Claude Opus 5.5
+  (`claude-opus-5-5`), host-reported; a fresh Claude Code sub-agent at xhigh
+  effort.
+- GPT slot: `returned` — OpenAI GPT family; Codex CLI 0.160.0, `codex exec -m
+  gpt-6-astra -c model_reasoning_effort=xhigh -s read-only`; the session log
+  reports `model: gpt-6-astra` (the reviewer self-reported "GPT-6 (Codex)").
 
-**Findings and dispositions.** None yet — recorded here when the reviews
-return.
+**Findings and dispositions.**
 
-**Taste triage.** Pending.
+Source ids are the reviewers' own; gpt-B1 and claude-B1 are one gap found
+independently, and gpt-B2 and claude-S3 were merged and treated as a
+blocker by the conductor. **Correcting commit** for every row: the
+review-resolution checkpoint `lifecycle-and-free-form-relate(phase 1-4):
+resolve Step 1 review-pass-001 findings` — a commit cannot carry its own
+hash, so it is written here at finalization. Every new test's RED reason was
+checked by running it at the checkpoint; the counts are in *Verification*
+below.
 
-**Re-review.** Pending — decided after reconciliation.
+| Id | Severity | Disposition | Evidence |
+|---|---|---|---|
+| gpt-B1 / claude-B1 | blocker | **fixed** | Nothing pinned `docs lifecycle` on a non-default `date_format` tree or with a named source already in an extension state. Added `tests/test_cli_lifecycle.py::test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree`: a `%d-%m-%Y` tree with `add_lifecycles = ["shipped"]`, source `shipped` / `20-05-2026`; `docs lifecycle m.md active --json` must exit 0 with the promoted bytes and today in `%d-%m-%Y` (file and record `date`), refresh the INDEX, leave `docs check` clean, and make a repeated call a zero-byte no-op. RED (`invalid choice: 'lifecycle'` → `AssertionError`); lands at Phase 6; in the matrix's *Boundary — date format* row. |
+| gpt-B2 + claude-S3 | blocker | **fixed** | The stamp "complete block" boundary (`Lifecycle`, `Role`, `Updated` required, `Project` not) was unprotected. Added `tests/test_cli_stamp.py::test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes` (RED — 2.0.0 re-stamps at exit 0; the frozen message naming `Role:` and zero bytes asserted) and the GREEN lock `::test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` (`Lifecycle: activ`, no `Updated:` → `docs: stamped …`, exit 0), which rejects a refusal that ignores the completeness test. Together they kill both directions of mutation target 11's completeness check. |
+| claude-S4 | should-fix | **fixed** | The date half of E12 had no lock. Added `tests/test_cli_stamp.py::test_stamp_keeps_a_correctly_dated_document_on_a_non_default_date_format_tree`: only `Updated:` changes, rendered `%d-%m-%Y`. RED (2.0.0's reindex refuses the tree's own spelling). |
+| gpt-S1 | should-fix | **fixed** | Added `tests/test_cli_relate.py::test_relate_free_form_accepts_a_malformed_markdown_target_without_reading_it`: a `.md` TARGET that does not parse is accepted under `--dry-run` (zero bytes) and written when excluded (so the reindex never walks it) — an extension-based "parse the `.md` targets" rule fails it. RED. |
+| gpt-S2 | should-fix | **fixed** | `tests/test_model.py::test_bare_parse_keeps_the_built_in_defaults` now writes a sidecar extending the vocabulary AND the date format at the very root it passes, and still sees the built-ins and ISO — so it rejects a `parse()` that picks up ambient config. The explicit-config half shares the same sidecar (`_EXTENDED_SIDECAR`) in `::test_parse_with_a_config_accepts_its_extensions_and_date_format` (RED until Phase 5); the two are kept separate so the lock still guards at baseline. |
+| gpt-S3 + claude-S1 | should-fix | **fixed** | D10 aligns the vocabulary and date judgement only. Measured: a malformed `Related:` bullet and a multi-valued `Project:` pass `docs check` (exit 0) and fail `docs index` (exit 2); `docs list` omits such a document with nothing on stderr. Scoped every copy of the claim: `cli.md` *Invocation*, `convention.md` *Archive subtree*, the P1.7 upgrade note, D9's upgrade note, the *Contract* invariant and compatibility line, the D10 deliverable, A1's resolution and a success criterion ("no verb starts refusing a document `docs check` accepts"), and the matrix's risk line, C7 (now carrying both D10 directions) and C22. E7's "with a stderr error" corrected in the task plan and in this log's setup row (claude-N7). Found while measuring: E4's "a missing colon or empty target fails as `malformed`" was also wrong — both pass `docs check` — corrected in both places. Mirrors re-synced. |
+| claude-S2 (JC1) | should-fix | **fixed — conductor decision JC1, option (a)** | Free-form `relate` now refuses (frozen) a TARGET whose root-relative path holds a line break or leading or trailing whitespace: **R4**, exit 2, zero bytes — added to P1.2's catalogue (with its predicate), the check order (step 5a, after TARGET resolves, before the self-edge check), a post-review amendment paragraph, `cli.md` (*What must parse*, stage 1, *Exits*, the exit summary) and `convention.md` (*Writing an edge*); mirrors re-synced; matrix C10. Tests: `tests/test_cli_relate.py::test_relate_free_form_refuses_a_target_path_a_bullet_cannot_carry[a-line-break \| a-carriage-return \| a-leading-space \| a-trailing-space]`, RED. Recognized verbs stay byte-for-byte unchanged (D4); their injection — re-measured: `docs relate add a.md precedes $'b\nLifecycle: archived\nx.md'` exits 0 and writes a `Lifecycle: archived` line into `a.md` — is *Follow-ups* item 9, with no lock freezing it. Option (b) would override D4 and was not taken. |
+| gpt-N1 | nit | **fixed** | `test_stamp_keeps_todays_behaviour_for_a_block_failing_for_an_unrelated_reason` → `test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed`. |
+| claude-N1 | nit | **fixed** | `tests/test_cli_lifecycle.py` computes today inside each test (`_promoted` defaults at call time); no import-time `_TODAY`. |
+| claude-N2 | nit | **fixed** | `test_plan_lifecycle_lists_a_duplicated_document_once` creates `sub/`, so `sub/../a.md` is a real second spelling. |
+| claude-N3 (+ claude-T3) | nit | **fixed** | `tests/test_relate_plan.py` reuses `_m25`; its `_symbol` is removed. |
+| claude-N4 | nit | **fixed** | `cli.md`'s `docs lifecycle` *Resolution*: "every success line and JSON field names the root-relative POSIX form" (refusals L8–L9 name the path as checked). |
+| claude-N5 | nit | **fixed** | `tests/test_cli_lifecycle.py::test_lifecycle_refusals_follow_the_frozen_order_and_emit_no_record` (L5 before L7; L9 before an earlier-named L11; no stdout record on a refused `--json`) and `tests/test_cli_relate.py::test_relate_free_form_refusals_follow_the_frozen_order` (R1 before endpoint resolution; R2 before the `--reason` shape check). Both RED. |
+| claude-N6 | nit | **fixed** | A symlinked TARGET inside the tree resolves to the file it points at — stated in `cli.md` *What must parse* and P1.2's TARGET rules, pinned by `tests/test_cli_relate.py::test_relate_free_form_symlinked_target_is_written_as_the_file_it_points_at` (RED). |
+| claude-N7 | nit | **fixed** | The list test's misleading `stderr == ""` assertion is replaced by a comment (`docs list` omits silently; the complete listed set is the check); E7 corrected (row gpt-S3 + claude-S1). |
+| claude-N8 | nit | **fixed** | The audit's footprint is corrected to **+2,826 / −96** at the review `HEAD` (its +2,723 predated the five audit tests); after this resolution **+3,100 / −96**. |
+| claude-N9 | nit | **fixed** | A note in *Phase 3*: the pre-M27 and pre-M28a sweeps' swept ids include the later `vocab-extension` fixture — harmless; no rename. |
+
+**Taste triage** (conductor decisions, binding at Standard risk).
+
+- GPT: approach sound; no subjective findings.
+- claude-T1 (the 53-id parse-agreement sweep was close to a tautology per
+  id): **fixed** — one test,
+  `test_config_aware_parse_agrees_with_bare_parse_on_every_pre_existing_tree`,
+  loops over the configuration-selected trees and `docs/` and reports each
+  disagreement by file; 53 ids become 1 (Phase 5's count 55 → 3).
+- claude-T2 (the CLI fuzz duplicated the pure-predicate fuzz's invalid
+  generation): **fixed** — the in-process CLI fuzz keeps its 30 generated
+  valid verbs and takes a fixed set of 11 invalid verbs, one per refused
+  category; exhaustive invalid generation stays with the 600-case
+  pure-predicate fuzz and the 22-case boundary table.
+- claude-T3 (`_symbol` beside `_m25`): **fixed** through claude-N3.
+- claude-T4 (the task plan restates D10 six or more times): **waived** by the
+  conductor — the gpt-S3 / claude-S1 fix corrected every restated copy now,
+  and collapsing the document's structure mid-milestone would churn reviewed
+  text; recorded as a candidate project convention, *Follow-ups* item 10.
+- Patch bloat: both reviewers judged it explained (authored-id breadth plus
+  formatting); T1 and T2 reduce the id count.
+
+**Re-review.** **Not required** (conductor decision). Both blocker
+resolutions are additive tests whose correctness is objectively verifiable by
+inspection and by their recorded RED reason (an `AssertionError` or
+`AttributeError` for the missing behaviour), and the conductor verifies them
+directly at the resolution checkpoint; they do not change the reviewed
+contract. JC1 (R4) is a should-fix resolved by a narrow new refusal on new
+surface only, consistent with D6's injection rationale; the conductor
+verifies its catalogue entry, spec text and tests.
+
+**Verification at the review-resolution checkpoint.**
+
+- `.venv/bin/ruff check .` — clean; `.venv/bin/ruff format --check .` — 50
+  files formatted; `.venv/bin/mypy src/ tests/` — no issues in 51 files.
+- `.venv/bin/python -m pytest -q --tb=line -rfxXE` — **1656 collected, 150
+  failed, 1506 passed**; 0 collection errors, tracebacks, INTERNALERRORs,
+  xfails, xpasses or errors; census `AssertionError` 139, `AttributeError`
+  11. RED: 142 authored ids and the 8 pre-existing ids on the authoritative
+  list; GREEN: 7 authored locks and 3 swept ids.
+- Id proof against `e48adb9`: removed exactly the four renamed ids
+  (`test_relate_unknown_verb_refuses`, `test_stamp_supersedes_invalid_existing_block`,
+  `test_a3_project_version_is_2_0_0`, `test_c2_docs_version_is_2_0_0`); 156
+  added; the four pre-existing own ids failing are the listed ones. The AST
+  diff of pre-existing test functions is unchanged: exactly the authoritative
+  list plus `_attic_tree`.
+- `docs check .` from the docs root — exit 0; both mirrors and the INDEX
+  snapshot byte-identical; `git diff e48adb9 -- src/docs_cli/cli.py` empty.
 
 - final-sync: `pending`.
 

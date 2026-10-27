@@ -22,7 +22,7 @@ The binary expects to find a docs root by walking up from the current directory 
 
 **Create/mutate refusal (M14 — A2; M12 — OQ-C).** The verbs that *create* a doc (`docs new`) or stamp/rename in place (`docs touch`, `docs project rename`) refuse the cwd-as-root fallback: if no `.docs.toml` is found up the ancestor chain and no `--root` is given, they exit 2 and write nothing rather than silently scaffolding into an unmanaged directory with default config. (The read verbs above keep the silent cwd-fallback — surfacing the wrong tree on a read is recoverable; writing into it is not.) See each verb's Exits paragraph for the exact message.
 
-**The tree's configured vocabulary and date format (M30 — D10).** Every verb that reads a document's metadata — `index`, `list`, `touch`, `archive`, `mv`, `project rename`, `project set`, `relate`, `lifecycle` and `stamp` — judges `Lifecycle:` and `Role:` against the tree's configured vocabulary (the built-ins plus `.docs.toml` `[vocabulary] add_lifecycles` / `add_roles`) and reads `Updated:` in the tree's `[archive] date_format`: exactly the judgement `docs check` makes. A verb and `docs check` therefore never disagree about whether a document's metadata parses. A document `docs check` accepts is readable by every verb, extension states and roles included; one it reports as `bad-vocab` or `bad-date` is refused by every verb that reads it (`docs list` omits it), with the same message, in the self-locating form `docs: <path>: <detail>`. A tree accepts one spelling of `Updated:` — its own `date_format` — never two. `docs migrate` is the one deliberate exception: its inference adopts a foreign tree against the built-in sets.
+**The tree's configured vocabulary and date format (M30 — D10).** Every verb that reads a document's metadata — `index`, `list`, `touch`, `archive`, `mv`, `project rename`, `project set`, `relate`, `lifecycle` and `stamp` — judges `Lifecycle:` and `Role:` against the tree's configured vocabulary (the built-ins plus `.docs.toml` `[vocabulary] add_lifecycles` / `add_roles`) and reads `Updated:` in the tree's `[archive] date_format`: on those three fields, exactly the judgement `docs check` makes. So a verb never refuses a document for its lifecycle, role or date when `docs check` accepts them — extension states and roles included — and a document `docs check` reports as `bad-vocab` or `bad-date` is refused, with the same message in the self-locating form `docs: <path>: <detail>`, by every verb that reads it (`docs list` silently omits it instead). The alignment covers those three fields only: a structural fault `docs check` tolerates — a malformed `Related:` bullet, a multi-valued `Project:` — still fails every verb that parses the document, as it always has. A tree accepts one spelling of `Updated:` — its own `date_format` — never two. `docs migrate` is the one deliberate exception: its inference adopts a foreign tree against the built-in sets.
 
 Global flags:
 
@@ -2247,8 +2247,8 @@ a `--root` without one exits 2 with
 against the resolved docs root and an **absolute** one is used as given —
 `docs project set`'s rule. The document is read, parsed and written through
 its root-relative path, so a named symlink inside the tree updates the file
-it points at, and every message and JSON field names the root-relative POSIX
-form.
+it points at, and every success line and JSON field names the root-relative
+POSIX form.
 
 **The target state.** Checked first, before any named document is resolved.
 `<state>` must be in the tree's lifecycle vocabulary minus `archived` — the
@@ -2471,7 +2471,23 @@ root is a valid target — a Markdown document or not, parseable or not, a
 binary included — which is `broken-ref`'s existence test plus containment
 (`convention.md`: a `Related:` target need not be a `.md` doc). A free-form
 `TARGET` that is missing, a directory, or outside the root — including
-through a symlink that escapes it — keeps the exit-1 refusals above.
+through a symlink that escapes it — keeps the exit-1 refusals above. A
+`TARGET` that is a symlink inside the tree is resolved like every endpoint:
+the bullet names the root-relative file it points at, not the link.
+
+**A free-form `TARGET` must be a path a bullet can carry (M30 — R4).** Its
+root-relative path is written verbatim into `SOURCE`'s bullet, so a path that
+contains a line break (any boundary `str.splitlines()` recognises) or has
+leading or trailing whitespace would end the metadata block early or be read
+back as a different target. Such a `TARGET` refuses — after it resolves,
+before anything is written — with exit 2:
+
+```
+docs: relate: TARGET '<rel>' cannot be written into a Related: bullet — it contains a line break or leading or trailing whitespace; refusing
+```
+
+`<rel>` is rendered with Python's `repr`. Recognized verbs keep their
+byte-for-byte behaviour.
 
 Root-relative-first matches how `Related:` paths are written on disk, so
 the argument an agent copies out of a `missing-inverse` finding resolves
@@ -2739,9 +2755,10 @@ written correctly — so the record **is** emitted there, with
 Five ordered stages; the first four write **nothing**:
 
 1. **Validate all.** Root resolution; verb in the grammar (a recognized verb
-   or a free-form one); both endpoints resolve, exist, lie under the root and
-   are distinct; `SOURCE` parses, and `TARGET` too for a recognized verb; an
-   archived free-form `SOURCE` refuses; `--reason` shape; the recognized-pair
+   or a free-form one); both endpoints resolve, exist and lie under the root;
+   `SOURCE` parses, and `TARGET` too for a recognized verb; a free-form
+   `TARGET` path a bullet can carry; the endpoints are distinct; an archived
+   free-form `SOURCE` refuses; `--reason` shape; the recognized-pair
    archived-`--reason` rule; `--date` parse — in that order.
 2. **Stage.** Every complete new text is computed in memory (pure — no
    I/O beyond the reads): two for a recognized verb, `SOURCE`'s alone for a
@@ -2820,8 +2837,9 @@ docs: no violations found
   is "missing".
 - **2** — no `.docs.toml` ancestor or `--root` without one; a verb outside
   the free-form grammar (the `unknown verb` refusal), or a verb starting
-  with a hyphen that argparse reads as an option; self-edge; an archived
-  free-form `SOURCE`; malformed `--date`; empty or multi-line `--reason`; an
+  with a hyphen that argparse reads as an option; a free-form `TARGET` path
+  a bullet cannot carry; self-edge; an archived free-form `SOURCE`; malformed
+  `--date`; empty or multi-line `--reason`; an
   archived endpoint of a recognized pair without `--reason`; an unwritable
   endpoint; a coordinated-write failure; an INDEX-refresh failure. Note the
   last one is a *post-repair* failure: the written endpoints are correct and
@@ -3453,7 +3471,7 @@ M12 / M14 / M15 / M25 / M30-specific exit-code shape:
 | `archive` (M12 / M14 — A4 / M26 — D2 / D4 / D5 / M28 — D4 / D6) | success | the primary is missing, does not parse, or resolves outside the resolved docs root; a plan member has no editable metadata block; the archive destination slot is already occupied; a referring doc has malformed metadata (the whole-tree pre-flight walk aborts the move) | retired `--cascade` / `--interactive`; already-archived primary; empty, comment-only, or negated `--cascade-only`; a `--cascade-only` **write** that selects nothing; intra-plan destination collision; unwritable source or destination directory; malformed `.docs.toml` or `--date`; an unreadable primary, plan member, or referring doc; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); a still-active document outside the plan declaring itself `child-of` a plan member (M28 — D6, leg 1); `OSError` mid edge-rewrite (M14 — A4); the mid-execution partial-state admission; INDEX-refresh failure |
 | `archive --cascade-dry-run` / `--dry-run` (M26 — D6; M28 — D6) | preview only; writes nothing (exit 0), **including** a `--cascade-only` that selected nothing, and **including** a plan whose leg-1 strand verdict it reports rather than adopts | a referring doc has malformed metadata — the preview now walks the tree, so it adopts this plan-**construction** failure (M28) | — |
 | `mv` (M14 — A1 / A4; M28 — D4; M28a — D5) | success / dry-run preview | `<old>` is not a file; collision (`<new>` exists) | a cross-dated archived relocation (M28a — D5), in every mode including `--dry-run`; malformed tree caught by the validate-all-first pre-flight (A1), since M28 **also under `--dry-run`**; an unreadable document in that walk; an unwritable planned referrer, a stale recorded span, or two overlapping planned spans (M28 — D4); `OSError` during execution → the partial-state admission (A4); both paths outside the docs root; malformed `.docs.toml`; INDEX-refresh failure |
-| `relate add\|remove` (M25 — D3 / D4 / D5; M30 — D4–D6) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort; a free-form `TARGET` need only exist) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; a verb outside the free-form grammar; self-edge; an archived free-form `SOURCE`; malformed `--date`; empty or multi-line `--reason`; an archived endpoint of a recognized pair without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
+| `relate add\|remove` (M25 — D3 / D4 / D5; M30 — D4–D6) | success / idempotent no-op / dry-run | a named endpoint is missing, malformed, or resolves outside the resolved docs root (validate-all-first abort; a free-form `TARGET` need only exist) | no `.docs.toml` ancestor or `--root` without `.docs.toml`; a verb outside the free-form grammar; a free-form `TARGET` path a bullet cannot carry; self-edge; an archived free-form `SOURCE`; malformed `--date`; empty or multi-line `--reason`; an archived endpoint of a recognized pair without `--reason`; an unwritable endpoint; coordinated-write failure; INDEX-refresh failure |
 
 **Cross-verb exit-code convention (no-root vs outside-root).** Two distinct
 "out of the tree" conditions map to *different* codes for the explicit-path

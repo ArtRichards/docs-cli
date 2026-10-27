@@ -298,7 +298,8 @@ stale_days = 30                          # M19: default --stale window for this 
 For a free-form verb — any verb other than the six reciprocal ones below —
 `relate` writes `SOURCE`'s bullet alone: a free-form edge carries no inverse
 obligation, so it is one-sided by design, and `TARGET`, which may be any
-existing file under the root, is never written (and never read). `relate`
+existing file under the root whose path a bullet can carry (no line break,
+no leading or trailing whitespace), is never written (and never read). `relate`
 writes a free-form verb only in the lowercase kebab form `[a-z][a-z0-9-]*` —
 every conventional verb above is one. That grammar binds what `relate`
 writes, not the convention: `docs check` still accepts any verb text before
@@ -452,7 +453,7 @@ completed. That report is the operation's consequence, not a defect list.
 
 Completed work moves to an archive subtree. Default subdir name: `archive/`. Convention: `archive/YYYY-MM-DD/` per archive event. Configurable via `[archive] dir` in `.docs.toml`. `[archive] dir` must be a **single path segment**, and `[archive] date_format` must render as one too — a format containing `/` would make the dated directory two segments deep, which every archive-subtree rule in this convention reads as one.
 
-`[archive] date_format` governs more than the archive: it is the one spelling of every date field in the tree — `Updated:` in every document, the dated directories, and the `Archived:` witness — and every verb reads `Updated:` in it, exactly as `docs check` does (M30 — D10). A tree accepts one spelling, never two: on a `%d-%m-%Y` tree an ISO `Updated: 2026-10-27` is a `bad-date` error for `docs check` and the same refusal for every verb that reads the document.
+`[archive] date_format` governs more than the archive: it is the one spelling of every date field in the tree — `Updated:` in every document, the dated directories, and the `Archived:` witness — and every verb reads `Updated:` in it, exactly as `docs check` does (M30 — D10). A tree accepts one spelling, never two: on a `%d-%m-%Y` tree an ISO `Updated: 2026-10-27` is a `bad-date` error for `docs check`, and every verb that reads the document refuses it with the same message (`docs list` silently omits it).
 
 Lifecycle/location consistency rules:
 
