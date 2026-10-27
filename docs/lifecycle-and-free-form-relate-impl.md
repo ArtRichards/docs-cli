@@ -27,10 +27,12 @@ checklist and the test matrix synchronized.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
-  review-pass-001 returned from both providers; its two blockers and every
-  should-fix and nit are folded in (one nit waived), and a targeted re-review
-  of the two blockers is pending inside the same pass. Phase 1 — Define
-  Contract follows and does not re-open any of the nine questions or D10.**
+  review-pass-001 is **closed**: both providers returned, every blocker,
+  should-fix and nit is dispositioned (one nit waived), the targeted re-review
+  confirmed both original blockers fixed, and the one blocker it raised
+  (claude-RR-B1) is fixed in the sync commit that closes the pass. Phase 1 —
+  Define Contract follows and does not re-open any of the nine questions or
+  D10.**
   This bullet is the milestone's progress narrative; the task plan's
   *Overview* points here. Setup measured this repository read-only and
   reproduced every behaviour on throwaway trees in the session scratchpad,
@@ -354,9 +356,9 @@ Verification after finalization:
   (docs root `/home/user/opt/docs-cli/docs`; repository path
   `docs/lifecycle-and-free-form-relate-impl.md#step-0-review-pass-001`).
 - Predecessor: none — the first entry in this milestone's review sequence.
-- Status: `open` — both provider attempts are terminal and every finding is
-  dispositioned; a targeted re-review of the two blockers is required and
-  pending (see *Re-review*).
+- Status: `closed` — both provider attempts are terminal, every finding is
+  dispositioned with evidence, the required targeted re-review is complete,
+  and `final-sync` is `ready`.
 - Frozen packet: slug `lifecycle-and-free-form-relate`; step 0; branch
   `lifecycle-and-free-form-relate/milestone-setup`; base
   `2ad941e269339f5a125856f5bcda9339cd9f5b15` (the claim checkpoint);
@@ -386,13 +388,17 @@ Verification after finalization:
 **Findings and dispositions.**
 
 Source finding ids are the reviewers' own; gpt-B1 and claude-B1 are one
-defect found independently.
+defect found independently. **Correcting commit** for every row below except
+claude-RR-B1: `3fed1f6d6d02303cfbcac267e88b806898789a27` (`lifecycle-and-free-form-relate(setup): resolve Step 0
+review-pass-001 findings`). claude-RR-B1, raised by the targeted re-review, is
+fixed in the `sync-and-commit` commit that closes this pass; a commit cannot
+carry its own hash, so its evidence below is the changed artifacts.
 
 | Id | Severity | Disposition | Evidence |
 |---|---|---|---|
-| gpt-B1 / claude-B1 | blocker | **fixed** | `render_index` builds its role order from `CANONICAL_ROLE_ORDER` only, so an extension-role document a config-aware `parse()` admits would be counted and not rendered — reproduced here (E13). The task plan's D10 now names `render_index` beside the seven `parse()` call sites with a **frozen** placement (extension-role groups after the built-in order, alphabetical, no new `Config` field; Phase 1 may not re-open D10); evidence E13 added to the plan and this log; D10's footprint estimate (+60 to +110 lines) and taste anchors revised; matrix clause C25, crosswalk row, mutation target 10; the C20/C25 index lock `test_index_renders_an_extension_role_group_after_the_built_in_roles` asserts the entry is **rendered** under `### Active — Adr` after every built-in group with the summary count equal to rendered entries, plus the pure `test_render_index_orders_extension_roles_alphabetically_after_built_ins`. |
-| claude-B2 | blocker | **fixed** (operator decision, Packet A) | On 2.0.0 `docs stamp` destructively re-stamps a valid extension-state document — reproduced here three ways (E12). D10 gains the stamp clause: a full block failing the configured vocabulary or date format refuses with zero bytes written, exit 1, naming the field and pointing at `docs check` / `docs touch`, accepting that a typo'd lifecycle on a default tree is refused too; a configured extension state is "already stamped". Evidence E12; matrix clause C24 with byte-level zero-write locks in `tests/test_cli_stamp.py` for the extension-vocabulary tree and the E11 date shape; mutation target 11; the "only behaviour change D10 makes" claim, the D9 upgrade note (now three changes), the Risk Level wording and the Phase 7 `cli.md` `docs stamp` idempotence paragraph corrected or scheduled; a dated bullet on the M30-owned vocabulary entry in `feedback-log.md`. Risk stays Standard. |
-| claude-S1 (+ gpt-N1) | should-fix | **fixed** | One authoritative old → new list, *Test Strategy* › *Pre-existing tests that change*, replaces every "four named edits" count in the plan, the matrix and this log: the three `relate` refusal ids (one renamed), the archive date-format test (correctly formatted success input; malformed-date behaviour moved to a new refusal test — gpt-N1), the `_attic_tree` correction covering two `test_cli_mv.py` ids, and the four 2.1.0 packaging pins (two renamed). Phases 4 and 8 gate on the explicit mapping; `tests/test_cli_mv.py` added to Phases 2–3 and the matrix; E11 reworded. |
+| gpt-B1 / claude-B1 | blocker | **fixed** in `3fed1f6d6d02303cfbcac267e88b806898789a27`; re-review: resolved | `render_index` builds its role order from `CANONICAL_ROLE_ORDER` only, so an extension-role document a config-aware `parse()` admits would be counted and not rendered — reproduced here (E13). The task plan's D10 now names `render_index` beside the seven `parse()` call sites with a **frozen** placement (extension-role groups after the built-in order, alphabetical, no new `Config` field; Phase 1 may not re-open D10); evidence E13 added to the plan and this log; D10's footprint estimate (+60 to +110 lines) and taste anchors revised; matrix clause C25, crosswalk row, mutation target 10; the C20/C25 index lock `test_index_renders_an_extension_role_group_after_the_built_in_roles` asserts the entry is **rendered** under `### Active — Adr` after every built-in group with the summary count equal to rendered entries, plus the pure `test_render_index_orders_extension_roles_alphabetically_after_built_ins`. |
+| claude-B2 | blocker | **fixed** (operator decision, Packet A) in `3fed1f6d6d02303cfbcac267e88b806898789a27`; re-review: resolved in substance | On 2.0.0 `docs stamp` destructively re-stamps a valid extension-state document — reproduced here three ways (E12). D10 gains the stamp clause: a full block failing the configured vocabulary or date format refuses with zero bytes written, exit 1, naming the field and pointing at `docs check` / `docs touch`, accepting that a typo'd lifecycle on a default tree is refused too; a configured extension state is "already stamped". Evidence E12; matrix clause C24 with byte-level zero-write locks in `tests/test_cli_stamp.py` for the extension-vocabulary tree and the E11 date shape; mutation target 11; the "only behaviour change D10 makes" claim, the D9 upgrade note (now three changes), the Risk Level wording and the Phase 7 `cli.md` `docs stamp` idempotence paragraph corrected or scheduled; a dated bullet on the M30-owned vocabulary entry in `feedback-log.md`. Risk stays Standard. |
+| claude-S1 (+ gpt-N1) | should-fix | **fixed** in `3fed1f6d6d02303cfbcac267e88b806898789a27` | One authoritative old → new list, *Test Strategy* › *Pre-existing tests that change*, replaces every "four named edits" count in the plan, the matrix and this log: the three `relate` refusal ids (one renamed), the archive date-format test (correctly formatted success input; malformed-date behaviour moved to a new refusal test — gpt-N1), the `_attic_tree` correction covering two `test_cli_mv.py` ids, and the four 2.1.0 packaging pins (two renamed). Phases 4 and 8 gate on the explicit mapping; `tests/test_cli_mv.py` added to Phases 2–3 and the matrix; E11 reworded. |
 | claude-S2 | should-fix | **fixed** | The skill's sidecar examples use the inline `Related: artifact-of: x` form, which `--body-from` does not parse as metadata — reproduced (E6 row). E6, A3, D8 and Q5 corrected; Phase 7 rewrites both lines to the group form or `docs relate add <sidecar> artifact-of <binary>`; C14 now locks the skill's literal example and the inline form's body-text reading. |
 | claude-S3 | should-fix | **fixed** (conductor-resolved, Packet C) | D2: `docs lifecycle` refuses, exit 2 and zero bytes, a source whose current `Lifecycle:` is `archived` wherever it sits, naming the `status-drift` and `docs archive`; matrix C23, visible test `test_lifecycle_refuses_an_active_tree_document_already_marked_archived`, mutation target 3, an error-table row and an acceptance example. |
 | claude-S4 | should-fix | **fixed** | Planned visible tests added: TARGET outside the root, a directory, missing, and a symlink escaping the root; the `docs lifecycle` INDEX-refresh-failure tail; its strict-root refusal; an archived document mixed into a batch (moved from the hidden categories to a visible test). |
@@ -409,6 +415,7 @@ defect found independently.
 | claude-N8 | nit | **fixed** | The phase-progress sentence is removed from `status.md`; phase lives in this log. |
 | claude-N9 | nit | **fixed** | In `feedback-log.md`'s 2026-08-15 `date_format` entry, `Status:` is the last bullet again; the new stamp bullet on the vocabulary entry is placed before its `Status:`. |
 | claude-N10 | nit | **fixed** | The Phase 7 stale-wording grep covers the output of `docs relate --help`, `docs relate add --help` and `docs relate remove --help`, and adds "Only the six recognized verbs". |
+| claude-RR-B1 | blocker (raised by the targeted re-review) | **fixed** in the `sync-and-commit` commit that closes this pass | The B2 stamp refusal breaks the pre-existing `tests/test_cli_stamp.py::test_stamp_supersedes_invalid_existing_block` (fixture `tests/fixtures/stamp/raw-invalid-block.md`: a full block with `Role: not-a-real-role` on a default tree), which the authoritative list omitted; the reviewer's D10 + stamp simulation gave 3 failed / 1501 passed (two listed, this one unlisted). Confirmed by reading the test and fixture. Fix: a row in the plan's *Test Strategy* › *Pre-existing tests that change* renames it to `test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes`, expecting exit 1, zero bytes written and `Role:` named (reason: D10 / Packet A / E12); the list's renamed-row count, D10's stamp clause, the E12 evidence row and Phase 3's file list (fixture prose updated in Phase 2/3) reference it; the matrix moves the default-tree invalid-vocabulary case from the hidden column into C24's visible locks. The conductor's non-blocking note is recorded in D10 and C24: a full block failing `parse()` for a reason unrelated to the configured vocabulary or date format keeps today's stamping. |
 | claude-N11 | nit | **waived** | Adding `parent-of: lifecycle-and-free-form-relate.md` to `milestone-plan.md` is a free-form hand-edit to a document outside the operator-approved set (this milestone's own three artifacts) and is not required by the tracker contract — the milestone's `child-of: milestone-plan.md` already gives navigation. Recorded as the plan's *Follow-ups* item 6; the waiver lifts once free-form `docs relate` exists. |
 
 **Taste triage.**
@@ -430,14 +437,78 @@ defect found independently.
 **Re-review.**
 
 **Required** (conductor decision): B1's fix changes D10's binding contract,
-and B2 adds a new operator-decided clause, so the correction cannot be proved
-objectively by the checks alone. A targeted re-review runs inside this same
-review-pass-001 against the corrected HEAD — the review-resolution checkpoint
-commit that carries this update, whose SHA is returned in the hand-off: the
-Claude reviewer re-checks only B1 and B2 (which it raised), and the GPT
-reviewer re-checks only B1. Result: pending.
+and B2 adds a new operator-decided clause, so the correction could not be
+proved objectively by the checks alone. **Complete.**
 
-- final-sync: `pending`.
+- Packet: correcting commit `3fed1f6d6d02303cfbcac267e88b806898789a27` against the reviewed HEAD
+  `f8ec7f0a4d3a444265dff43ec9ef9793b3f35c20`, each reviewer re-checking only
+  its own blockers, inside this review-pass-001. Line references below are to
+  the documents at `3fed1f6d6d02303cfbcac267e88b806898789a27`.
+- GPT reviewer — Codex CLI, model `gpt-6-astra` per the session log
+  (self-reported "GPT-6, exact variant not exposed"): **gpt-B1 resolved**
+  (plan :425, :659, :676; log :393; matrix :104). New blockers introduced:
+  none.
+- Claude reviewer — the same Claude Opus 5.5 sub-agent (`claude-opus-5-5`):
+  **claude-B1 resolved** (plan :425–433; matrix C25 :70, row :104, mutation
+  target 10 :192); **claude-B2 resolved in substance** (plan :434–444,
+  :453–459, :378–387; matrix C24 :69, row :106, mutation target 11). It
+  raised **one new blocker introduced by the correction, claude-RR-B1** —
+  dispositioned `fixed` above — and a non-blocking note, conductor-resolved
+  and recorded in D10: a full block failing `parse()` for an unrelated reason
+  keeps today's stamp behaviour.
+- Re-review of claude-RR-B1's fix: **not required** (conductor decision) — the
+  correction is objectively verifiable: one named row in the authoritative
+  list plus a matrix row move, checkable by inspection and by the Phase 4/8
+  mechanical old → new id-mapping gate; it changes neither the contract nor
+  the approach.
+
+**Closure check.** Predecessor chain: this is the first entry in the
+sequence (predecessor none), and no earlier entry or frozen packet exists to
+alter. One frozen packet is named (base `2ad941e…`, review HEAD `f8ec7f0…`).
+Both provider slots are terminal and both returned, from different families,
+with host-reported identities. Every reviewer-labeled blocker — gpt-B1 /
+claude-B1, claude-B2, claude-RR-B1 — has a completed disposition with
+evidence. Every taste finding is fixed or waived with a reason. The required
+re-review is complete with packet, reviewers and result.
+
+**Verification report (sync-and-commit, ship-milestone Step 0).**
+
+- Risk level: Standard (operator-confirmed).
+- Fast gate commands run: `.venv/bin/ruff check .`; `.venv/bin/ruff format
+  --check .`; `.venv/bin/mypy src/ tests/`; `.venv/bin/python -m pytest -q`;
+  from the docs root `docs index .`, `docs check .` and `docs check . --stale
+  14`; `docs/INDEX.md` compared with `tests/fixtures/expected/docs-INDEX.md`.
+- Deep gate commands run: none — Step 0 changes documentation only.
+- Deferred / not configured gates: coverage, hidden suite and mutation tooling
+  are not configured in this project; property/stateful, fuzz and the
+  hand-applied mutation smoke are planned for Phases 2–8 and have no code to
+  run against at Step 0.
+- Visible test result: GREEN — 1504 passed, the expected state for a
+  documentation-only step.
+- Hidden/generalization, coverage, mutation, property/stateful, fuzz,
+  benchmark/security/schema/migration: not applicable at Step 0 (no product
+  code changed).
+- Mock audit: no mocks added.
+- Taste triage: complete — fixed or waived with reasons, none untriaged.
+- Ship-milestone Step 0 review ledger: this pass, closed; `final-sync` ready.
+- Semantic tracker row / branch identity: `milestone-plan.md` row `100 |
+  lifecycle-and-free-form-relate | active | — |` with its Notes unchanged;
+  project `docs`, project path empty, artifact stem
+  `lifecycle-and-free-form-relate`, task plan / log / matrix at the three
+  derived paths, branch `lifecycle-and-free-form-relate/milestone-setup` under
+  root `lifecycle-and-free-form-relate/`; no recognized relationship applies;
+  `status.md` links the tracker without copying rows or naming next work.
+- Contract/test matrix status: current, with C1–C25 and the decision ↔ clause
+  crosswalk.
+- Docs check: exit 0; `--stale 14` exit 1 with the nine pre-existing
+  evergreen-document stale warnings, reviewed.
+- Diff scope: the milestone's task plan, implementation log and test matrix,
+  plus the regenerated INDEX if it changes — documentation only.
+- Operator approvals: Q3, Q7, Q8 and Packet A, as recorded above.
+- High-risk RED-baseline approval: not applicable (Standard).
+- Remaining risks: none open at Step 0.
+
+- final-sync: `ready`.
 
 ## Phase 1 — Define Contract
 

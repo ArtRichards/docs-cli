@@ -438,10 +438,18 @@ reaches them:
   whose metadata block carries all the required fields but fails the tree's
   configured vocabulary or date format, it **refuses with zero bytes written,
   exit 1**, naming the failing field and pointing at `docs check` and `docs
-  touch`. Accepted consequence: a typo'd lifecycle on a default tree is
-  refused too, instead of being re-stamped. A file in a configured extension
-  state is "already stamped" and gets only the `Updated:` refresh. Files with
-  no block, or a block missing required fields, keep today's stamping.
+  touch`. Accepted consequence: a typo'd lifecycle — or an invalid `Role:` —
+  on a default tree is refused too, instead of being re-stamped, which changes
+  the pre-existing `test_stamp_supersedes_invalid_existing_block` as listed in
+  *Test Strategy* › *Pre-existing tests that change* (Step 0 re-review,
+  claude-RR-B1). A file in a configured extension state is "already stamped"
+  and gets only the `Updated:` refresh. Files with no block, or a block
+  missing required fields, keep today's stamping. **A full block that fails
+  `parse()` for a reason unrelated to the tree's configured vocabulary or date
+  format — a malformed `Related:` bullet, for example — also keeps today's
+  stamping**: the operator's Packet A decision covers only vocabulary and
+  date-format failures (conductor-resolved at the Step 0 re-review), and
+  Phase 1 does not re-open it.
 
 Consequences, stated as contract:
 
@@ -955,7 +963,7 @@ this repository is a 75-document dogfood corpus carrying 417 real edges.
 | E9 non-Markdown target | D5 | `docs relate add <doc> references coverage.xml` succeeds and `docs check` is clean; a missing target, a directory target and an outside-root target keep exit 1 |
 | E10 archive invariance | D7 | for a trio linked by `relate`: each written bullet line and the parsed `Related:` list match the hand-written trio, its `--cascade-dry-run --json` candidate records are identical, and leg 1 refuses a `relate`-written live `child-of` child; full-file byte identity is asserted only for the `archive-neighborhood` copy, with `relate` run under `--date` set to the fixture's own `Updated:` |
 | E11 the one changed outcome | D10 | a non-default-`date_format` tree carrying an ISO `Updated:` fails the walking verbs with the `bad-date` diagnosis `docs check` already gives; a correctly dated non-default tree archives at exit 0 (`test_archive_renders_the_witness_in_the_trees_date_format` rewritten as its docstring foresees); every pre-existing fixture tree and this repository's tree reindex byte-identically |
-| E12 `docs stamp` data loss | D10 | on an extension-vocabulary tree, stamping a document in a configured extension state changes only `Updated:` (lifecycle, role and `Related:` byte-identical); a full block outside the configured vocabulary, and the E11 non-default-date shape, each refuse at exit 1 with zero bytes written |
+| E12 `docs stamp` data loss | D10 | on an extension-vocabulary tree, stamping a document in a configured extension state changes only `Updated:` (lifecycle, role and `Related:` byte-identical); a full block outside the configured vocabulary — on an extension tree and on a default tree (the renamed `test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes`) — and the E11 non-default-date shape each refuse at exit 1 with zero bytes written; a block failing for an unrelated reason keeps today's stamping |
 | E13 extension roles dropped from the INDEX | D10 | an extension-role document is rendered under its own `### Active — <Role>` heading after every built-in group, extension groups sorted alphabetically, and the summary count equals the rendered entries |
 | Q2 archived SOURCE | D5 | free-form `add` and `remove` on an archived SOURCE refuse at exit 2 even when nothing would change; an archived TARGET needs no `--reason` and is never written |
 
@@ -973,9 +981,10 @@ the test matrix. See the matrix for the planned names per clause.
 
 This is the only list of pre-existing tests the milestone edits; every other
 count or mention defers to it. Phases 4 and 8 prove mechanically that each of
-the 1504 pre-existing ids is present — under its own id, or, for the three
+the 1504 pre-existing ids is present — under its own id, or, for the four
 renamed rows below, under its new id — and that no pre-existing test body is
-edited unless it appears here.
+edited unless it appears here. The Step 0 re-review added the
+`test_cli_stamp.py` row (claude-RR-B1).
 
 | Old id | New id | Change | Reason |
 |---|---|---|---|
@@ -989,6 +998,7 @@ edited unless it appears here.
 | `tests/test_packaging.py::test_c2_docs_version_is_2_0_0` | `tests/test_packaging.py::test_c2_docs_version_is_2_1_0` | renamed; expects 2.1.0 | same |
 | `tests/test_packaging.py::test_b1_wheel_builds` | unchanged | expects a `docs_cli-2.1.0-*` wheel | same |
 | `tests/test_packaging.py::test_b2_sdist_builds` | unchanged | expects `docs_cli-2.1.0.tar.gz` | same |
+| `tests/test_cli_stamp.py::test_stamp_supersedes_invalid_existing_block` | `tests/test_cli_stamp.py::test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes` | renamed; on the same default-tree fixture (`tests/fixtures/stamp/raw-invalid-block.md`, a full block with `Role: not-a-real-role`) it now expects exit 1, zero bytes written, and the failing field `Role:` named, instead of the supersede; the fixture's prose is updated in Phase 2/3 | D10's stamp clause — operator Packet A, E12 |
 
 ### Non-product checks
 
@@ -1184,7 +1194,8 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   the fixture-sweep registration updated in the same change; every
   non-default `date_format` case as an inline builder; and the
   `tests/test_cli_mv.py` `_attic_tree` builder corrected to the tree's own
-  date format.
+  date format; and the prose of `tests/fixtures/stamp/raw-invalid-block.md`
+  updated to describe the refusal its renamed test now expects.
 - Exit: fixtures parse deterministically, are structure-only (never
   date-sensitive at run time), and every pre-M30 fixture tree stays
   byte-identical with zero new findings.
