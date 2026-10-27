@@ -99,7 +99,7 @@ checklist and the test matrix synchronized.
 | 1. Define Contract | Complete | 2026-10-27 | Freeze against the answered Q1–Q9: `docs lifecycle`'s `*files, <state>` grammar, state vocabulary (built-ins plus `add_lifecycles` extensions, minus `archived`), refusal set and order, idempotence and single-reindex rules, output lines and `--json` record; free-form `relate`'s grammar (`[a-z][a-z0-9-]*`, D6), endpoint rules (archived SOURCE refused, archived TARGET never written, any existing file as TARGET), one-sided write and record; recognized-verb byte stability; the `--body-from` sentence; D10's config-aware `parse()` signature and how its sites obtain the config (D10's behaviour, `render_index` placement and `docs stamp` refusal are frozen); the stamp refusal's message; argparse's leading-hyphen handling; the upgrade note's three D10 changes; the surface list; the Phase-5 signatures. |
 | 2. Write Tests (RED) | Complete | 2026-10-27 | New `tests/test_cli_lifecycle.py`; free-form additions to `tests/test_cli_relate.py` and `tests/test_relate_plan.py`; archive-invariance locks; the `--body-from` lock; skill parity; the 2.1.0 pin; both suite-probe replicas; D10's vocabulary, date-format, `render_index` and `docs stamp` locks; the pre-existing tests edited exactly as the task plan's *Pre-existing tests that change* lists. |
 | 3. Create Data/Fixtures | Complete | 2026-10-27 | Inline `tmp_path` builders for every write-then-compare case; archive invariance by copying `archive-neighborhood` / `movelink-strand` and re-linking through `relate`; for D10, one `vocab-extension/` tree with the sweep registration updated, inline builders for every non-default `date_format` case, and the `tests/test_cli_mv.py` `_attic_tree` correction. |
-| 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
+| 4. Run Tests (RED Baseline) | Complete | 2026-10-27 | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
 | 5. Update Base Interfaces | Pending | — | Free-form verb validator; one-sided relate planning; lifecycle plan record and pure planner; D10's config-aware `parse()` signature with a built-in default — wired nowhere. |
 | 6. Implement Offline/Core Path | Pending | — | Register `docs lifecycle`; route free-form verbs in `_cmd_relate` with D5's endpoint rules and D6's grammar; pass the tree's config at the seven `parse()` call sites and the new verbs' sites (D10). |
 | 7. Update Tool/Wrapper Layer | Pending | — | Argparse help; `cli.md` / `convention.md`; the skill body, *Three things never to hand-edit*, `use-cases.md`, the adoption playbook's stale heuristic line; both mirrors; README verb list; 2.1.0 pin and `## 2.1.0 — UNRELEASED` with both behaviour changes in the upgrade note; dated notes on the 2026-10-26 promotion entry and on the two config-blindness entries D10 closes. |
@@ -861,6 +861,178 @@ edits the authoritative list names.
 - `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
   `.venv/bin/mypy src/ tests/` — clean; `git diff e48adb9 --stat --
   src/docs_cli/cli.py` — empty.
+
+## Phase 4 — Run Tests (RED Baseline) — 2026-10-27
+
+### Objective
+
+Prove the new tests fail for the intended missing behaviour and for nothing
+else, prove mechanically that every pre-existing test id is present, and
+classify every GREEN-at-baseline lock. Risk is Standard (Q8): no operator
+checkpoint; the evidence below feeds the end-of-Step-1 reviews.
+
+### The baseline
+
+```
+.venv/bin/python -m pytest --co -q              ->  1691 tests collected
+.venv/bin/python -m pytest -q --tb=line -rfxXE  ->  186 failed, 1505 passed in 65.42s
+```
+
+The arithmetic closes: **1504** pre-existing ids (1500 under their own id +
+the 4 renamed) + **184** authored ids + **3** swept ids
+(`vocab-extension` in the three `tests/test_check.py` sweeps) = **1691**.
+
+| Population | Ids | RED | GREEN |
+|---|---|---|---|
+| pre-existing, own id | 1500 | 4 — all on the authoritative list | 1496 |
+| pre-existing, renamed | 4 | 4 — all on the authoritative list | 0 |
+| authored | 184 | 178 | 6 — the locks below |
+| swept | 3 | 0 | 3 — the locks below |
+| **total** | **1691** | **186** | **1505** |
+
+### Probes
+
+- **Collection errors: 0.**
+- **xfail / xpass / errors: 0** — `-rfxXE` emits no `XFAIL`, `XPASS` or
+  `ERROR` line, and no warnings summary.
+- **Tracebacks: 0, INTERNALERROR: 0** — counted over the `--tb=line` output,
+  which prints no test source (M28's false-positive lesson: several tests
+  assert `"Traceback" not in proc.stderr` in their own source).
+
+### Exception-class census (`--tb=line`)
+
+| Class | Count | Where | Why |
+|---|---|---|---|
+| `AttributeError` | 11 | `tests/test_lifecycle_plan.py` (10, on `plan_lifecycle`) and the pure grammar fuzz in `tests/test_relate_plan.py` (1, on `relate_verb_in_grammar`) | the Phase-5 symbols are fetched through `_symbol(name)`, so the RED reason is one clean missing attribute, never a collection error |
+| `AssertionError` | 175 | everything else | the behaviour is absent, not the symbol |
+
+No `TypeError` (the `parse(..., config=)` callers assert the keyword on
+`inspect.signature` first), no `ValueError` (`_plan_one_sided` reports
+`plan_relate`'s refusal of a free-form verb as an assertion), no domain error
+escaping a test (in-process walks re-raise as assertions), and no bare
+`assert` line.
+
+### Mechanical no-regression proof
+
+Ids collected in a throwaway `git worktree` at the pre-Phase-1 commit
+`e48adb9` and at HEAD, compared with `comm`; failing ids from `-rf`:
+
+| Measure | Result |
+|---|---|
+| ids at `e48adb9` | **1504** |
+| ids at HEAD | **1691** |
+| `comm -23` — removed | **4**, exactly the renamed rows: `test_relate_unknown_verb_refuses`, `test_stamp_supersedes_invalid_existing_block`, `test_a3_project_version_is_2_0_0`, `test_c2_docs_version_is_2_0_0` — each present under its new id |
+| `comm -13` — added | **191** (184 authored + 3 swept + the 4 new ids of the renamed rows) |
+| pre-existing own ids failing | **4** — `test_archive_renders_the_witness_in_the_trees_date_format`, `test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory`, `test_b1_wheel_builds`, `test_b2_sdist_builds` |
+| AST function-body diff of every pre-existing `tests/*.py` function (`ast.dump` without positions) | changed: exactly the archive date-format test, `_attic_tree`, the quiet and case-variant `relate` tests, `test_b1`, `test_b2`; removed: exactly the four renamed functions. Nothing else |
+| `git diff --numstat e48adb9 -- tests/fixtures` | `stamp/raw-invalid-block.md` (prose only) and the INDEX snapshot modified; `trees/vocab-extension/` added; every other fixture byte-identical |
+| `git diff --stat e48adb9 -- src/docs_cli/cli.py` | **empty** |
+
+Every expected-RED pre-existing id is on the authoritative list — the renamed
+grammar refusal, the archive date-format test, the second `_attic_tree` test,
+the four packaging pins, the renamed stamp test — and every other
+pre-existing id is GREEN, including the edited quiet and case-variant `relate`
+tests and `test_mv_refuses_a_cross_dated_relocation_on_a_non_default_archive_tree`
+(its refusal fires before the walk).
+
+### RED classification — every failure traced to a family and a landing point
+
+| # | Family | Landing |
+|---|---|---|
+| 10 | **The lifecycle planner** (`tests/test_lifecycle_plan.py`): staging, the `Updated:` rule, the four guards, deduplication, an extension state, apply, the record | **Phase 5** — `LifecycleEdit`, `LifecyclePlan`, `plan_lifecycle`, `apply_lifecycle_plan`, `lifecycle_plan_to_json` |
+| 11 | **The one-sided relate planner** (`tests/test_relate_plan.py`): one edit, no inverse, TARGET never read, the archived-source and grammar guards, the record, apply, the pure fuzz | **Phase 5** — `relate_verb_in_grammar`, `RelatePlan.inverse: str \| None`, the free-form branch of `plan_relate` |
+| 55 | **`parse()` honours a config** (`tests/test_model.py`): accepts extensions and the date format, rejects the ISO spelling on a `%d-%m-%Y` tree, and agrees with the bare call on all 53 default-configuration trees | **Phase 5** — `parse(..., *, config=None)` |
+| 31 | **`docs lifecycle` at the CLI** (`tests/test_cli_lifecycle.py`, all but the help test) | **Phase 6** — register the verb, `_cmd_lifecycle` |
+| 47 | **Free-form `relate` at the CLI** (`tests/test_cli_relate.py`: the renamed grammar refusal and 46 authored ids — R1, R2, the TARGET rules, the boundary, the fuzz, the probe, an extension-state endpoint) | **Phase 6** — `_cmd_relate`'s grammar check and free-form route, `_resolve_relate_endpoint(..., config, parse_endpoint=)` |
+| 6 | **The stamp refusal** (`tests/test_cli_stamp.py`: the renamed test and 5 authored) | **Phase 6** — `_stamp_config_failure` and its use in `_cmd_stamp` |
+| 2 | **Archive invariance for relate-written edges** (`tests/test_cli_archive.py`) | **Phase 6** — they rebuild their trees with free-form `relate` |
+| 15 | **The config passed at every walking site** — `test_walker.py` (1), `test_cli_list.py` (1), `test_cli_touch.py` (2), `test_cli_index.py` (2), `test_index.py` (1, `render_index`), `test_cli_project_set.py` (2), `test_cli_project_rename.py` (1), `test_cli_mv.py` (1 + the pre-existing `_attic_tree` test), `test_cli_archive.py` (the walking-verb `bad-date` lock, an extension-state primary, and the pre-existing date-format test) | **Phase 6** — config at the seven `parse()` sites; `render_index`'s extension groups |
+| 1 | **`docs lifecycle --help` wording** (`test_lifecycle_help_documents_the_grammar_and_flags`) | **Phase 7** (help strings), or Phase 6 if the registration lands its final description |
+| 2 | **The skill's sidecar examples, run literally** (`tests/test_body_from.py`) | **Phase 7** — the frozen P1.3 text (the relate form also needs Phase 6) |
+| 2 | **Skill routing and stale wording** (`tests/test_skill.py`) | **Phase 7** |
+| 4 | **The 2.1.0 pins** (`tests/test_packaging.py`) | **Phase 7** |
+
+The arithmetic closes: 10 + 11 + 55 = **76 at Phase 5**; 31 + 47 + 6 + 2 + 15
+= **101 at Phase 6**; 1 + 2 + 2 + 4 = **9 at Phase 7** — 186 in total.
+
+### GREEN at baseline — every lock classified, with the wrong answer it rejects
+
+| Lock | Classification |
+|---|---|
+| `test_relate_recognized_pair_still_writes_both_halves_unchanged` | **genuine** — exact files, exact two-record plan, exact lines; rejects any free-form branch that perturbs the recognized path (D4's byte-for-byte promise) |
+| `test_relate_leading_hyphen_verb_is_consumed_by_argparse_and_writes_nothing` | **genuine** — rejects a change (`parse_known_args`, `prefix_chars`) that lets a hyphen-led verb reach the command and write (R3) |
+| `test_bare_parse_keeps_the_built_in_defaults` | **genuine** — rejects a `parse()` whose bare call picks up configuration from ambient state or changes its defaults |
+| `test_stamp_keeps_todays_behaviour_for_a_block_failing_for_an_unrelated_reason` | **genuine** — rejects an over-broad stamp refusal that refuses every complete block failing `parse()`, which the operator's decision excludes |
+| `test_body_opening_with_a_related_group_becomes_metadata` | **genuine** — rejects a change to `docs new` or the C4 heuristic that drops the creation-time route the skill relies on |
+| `test_inline_related_line_stays_body_text` | **genuine** — rejects a parser change that starts reading an inline `Label: value` after the blank line as metadata, silently rewriting bodies |
+| the three `[vocab-extension]` sweep ids in `tests/test_check.py` | **genuine** fixture-shape locks — the new tree trips no `missing-inverse`, body-link or archive-date rule, so every assertion against it measures the vocabulary |
+
+Pre-existing locks worth naming, all GREEN: every recognized-verb
+`test_cli_relate.py` / `test_relate_plan.py` id; the edited quiet and
+case-variant tests (R1 keeps the stem); the reference byte-identity tests
+(Phase 1 kept both mirrors identical); the live-INDEX snapshot; the dogfood
+`docs check` test.
+
+### Falsely-GREEN check at this gate
+
+- **Every intended-exit-2 test asserts a frozen string**, because argparse's
+  `invalid choice: 'lifecycle'` and today's `unknown verb` both already exit
+  2. Every intended-exit-0 test asserts bytes, a record, or a listed edge,
+  never a bare exit code.
+- **The planner refusals cannot pass for the wrong reason.** "Refuses an
+  out-of-grammar verb" and "refuses an archived free-form source" first plan
+  a grammar-valid free-form edge (RED today) before asserting the
+  `ValueError`; a bare `pytest.raises` would have been GREEN on today's
+  recognized-only guard.
+- **Fixture-backed tests assert their tree exists**, so between Phase 2 and
+  Phase 3 they failed on the missing tree rather than passing on an empty
+  copy; after Phase 3 each fails on the real 2.0.0 refusal.
+- **Two parametrizations were given readable ids at this gate** — the
+  injection refusals (`[a-colon]`, `[a-newline]`, `[a-carriage-return]`) and
+  the planner's grammar guard (`[an-empty-verb]` instead of `[]`); no
+  assertion changed.
+- **Naming lint** (token-based, over the 191 added ids): no milestone,
+  decision, clause, phase, step or review token. Two tokens were examined and
+  kept: `milestone` in `test_milestone_setup_needs_no_hand_edit` is the
+  scenario's domain word (setting up a milestone is the primary use case),
+  and `c2` in `test_c2_docs_version_is_2_1_0` is `tests/test_packaging.py`'s
+  own check-number scheme (OQ-15).
+
+### Phase-5/6/7 follow-through, carried from Phase 1
+
+1. Phase 5: `parse(..., *, config=None)`; `_RELATE_VERB_RE` /
+   `relate_verb_in_grammar`; `RelatePlan.inverse: str | None` and
+   `plan_relate`'s one-sided branch (source only, never reads TARGET,
+   `ValueError` on an out-of-grammar verb or an archived free-form source);
+   the lifecycle records, planner, apply and record; `_stamp_config_failure`
+   — wired nowhere, so the CLI tests stay honestly RED at the seam.
+2. Phase 6: register `lifecycle`; `_cmd_lifecycle` per P1.1's order;
+   `_cmd_relate`'s grammar check, free-form route and R2;
+   `_resolve_relate_endpoint`'s `config` and `parse_endpoint`; the config at
+   the seven `parse()` sites; `render_index`'s extension groups; the stamp
+   refusal.
+3. Phase 7: every surface in P1.8, the frozen P1.3 text, the 2.1.0 pins and
+   the editable reinstall `tests/test_version_metadata.py` needs, the
+   CHANGELOG (P1.7), and `feedback-log.md` — the three owned entries closed or
+   noted and follow-ups 2, 3, 7 and 8 registered (OQ-11).
+4. In-code prose no test polices, named so Phases 5–7 do not miss it:
+   `parse()`'s docstring (its *Raises* paragraph still says validation "uses
+   BUILTIN_STATUSES and BUILTIN_ROLES"), `RelatePlan`'s docstring ("`inverse`:
+   `verb`'s recognized inverse", "`edits`: Always exactly two"),
+   `plan_relate`'s docstring ("`verb`: A recognized reciprocal verb"),
+   `inverse_verb`'s docstring (`_cmd_relate` "refuse it"),
+   `_add_relate_subverb`'s docstring, `render_index`'s *Format details*, and
+   `_cmd_stamp`'s classification comment.
+
+### Verification
+
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `docs check .` from the docs root — no violations found (exit 0).
+- `cmp` of both mirrors against the specs, and of `docs/INDEX.md` against
+  the frozen snapshot — identical.
+- `git diff --stat e48adb9 -- src/docs_cli/cli.py` — **empty**. Phases 1–4
+  change no product code, by design.
 
 ## Milestone completion summary
 

@@ -1530,7 +1530,11 @@ def test_relate_free_form_verb_grammar_boundary(docs_script, tmp_path, verb, acc
         assert _snapshot(root) == before
 
 
-@pytest.mark.parametrize("verb", ["pairs:with", "pairs\nwith", "pairs\rwith"])
+@pytest.mark.parametrize(
+    "verb",
+    ["pairs:with", "pairs\nwith", "pairs\rwith"],
+    ids=["a-colon", "a-newline", "a-carriage-return"],
+)
 def test_relate_verb_that_would_corrupt_the_block_is_refused(docs_script, tmp_path, verb):
     """The metadata-injection guard: a `:` would split the bullet differently
     and a line break would end the block — both refused with zero bytes, and

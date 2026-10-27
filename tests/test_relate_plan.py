@@ -558,7 +558,11 @@ def test_plan_relate_free_form_refuses_an_archived_source(tmp_path):
         )
 
 
-@pytest.mark.parametrize("verb", ["see also", "Pairs-With", "pairs:with", "pairs-with\n", ""])
+@pytest.mark.parametrize(
+    "verb",
+    ["see also", "Pairs-With", "pairs:with", "pairs-with\n", ""],
+    ids=["an-internal-space", "uppercase", "a-colon", "a-trailing-newline", "an-empty-verb"],
+)
 def test_plan_relate_refuses_a_verb_outside_the_grammar(tmp_path, verb):
     """The planner's guard is the grammar, not the recognized list: it plans a
     grammar-valid free-form verb and refuses an out-of-grammar one."""

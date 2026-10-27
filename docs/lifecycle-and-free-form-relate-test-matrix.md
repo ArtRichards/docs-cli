@@ -297,14 +297,19 @@ Agent Playbook Suite probes against a locally built wheel
 
 ## Results summary
 
-- Visible tests: pending (setup baseline 1504 passed).
+- Visible tests: RED baseline (Phase 4, 2026-10-27) — 1691 collected, 186
+  failed, 1505 passed: 178 authored ids and the 8 pre-existing ids on the
+  task plan's authoritative list RED for missing behaviour; 6 authored locks
+  and 3 swept ids GREEN (classified in the implementation log's Phase 4).
+  GREEN pending Phase 8.
 - Hidden/generalization: pending — categories only.
 - Property/stateful: pending.
 - Mutation: pending — hand-applied smoke, eleven targets.
-- Fuzz: pending.
+- Fuzz: written (Phase 2) — RED at baseline; results at Phase 8.
 - Benchmark/security/schema: pending; benchmark not applicable.
 - Coverage: not configured.
-- Mock audit: no mocks planned.
+- Mock audit: no mocks added in Phases 1–4 (sentinel INDEX, a real malformed
+  sibling, inode checks and in-process `cli.main` instead); audited at Phase 8.
 - Open risks: none outstanding at setup — Q3, Q7 and Q8 answered by the
   operator on 2026-10-27; the Step 0 review's blockers are fixed, the
   targeted re-review confirmed B1 and B2, and the one blocker it raised
