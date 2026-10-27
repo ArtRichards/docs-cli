@@ -98,20 +98,19 @@ def test_a2_project_name_is_docs_cli() -> None:
     )
 
 
-def test_a3_project_version_is_2_0_0() -> None:
-    """A3: `[project].version` is `2.0.0` (M29).
+def test_a3_project_version_is_2_1_0() -> None:
+    """A3: `[project].version` is `2.1.0`.
 
-    M29 Phase 2 bumps the pyproject `version` string from 1.8.0 to 2.0.0
-    (the single version source of truth; `__version__` reads it via
-    `importlib.metadata`). This is the **single** bump for the whole v2.0
-    train: M25 — D6 held the package at 1.8.0 through M25, M26, M27, M28 and
-    M28a so the train ships as one public release. A major bump is the right
-    SemVer bucket because the train breaks existing automation — two new hard
-    `docs check` rules and the retirement of bare `--cascade`.
+    The pyproject `version` string is the single version source of truth
+    (`__version__` reads it via `importlib.metadata`). The minor bump from
+    2.0.0 carries an additive change — the new `docs lifecycle` verb and
+    free-form `docs relate` — following the single-milestone release pattern:
+    the feature milestone bumps, a separate publish milestone ships
+    (`lifecycle-and-free-form-relate` — D9).
     """
     data = _load_pyproject()
-    assert data["project"]["version"] == "2.0.0", (
-        f"[project].version must be '2.0.0'; got {data['project']['version']!r}"
+    assert data["project"]["version"] == "2.1.0", (
+        f"[project].version must be '2.1.0'; got {data['project']['version']!r}"
     )
 
 
@@ -194,25 +193,24 @@ def built_dist(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def test_b1_wheel_builds(built_dist: dict) -> None:
-    """B1: `python -m build` produces a wheel named `docs_cli-2.0.0-*.whl`.
+    """B1: `python -m build` produces a wheel named `docs_cli-2.1.0-*.whl`.
 
-    M29 Phase 2 bumped the pyproject `version` to 2.0.0, so the build
-    produces a 2.0.0 wheel — the artifact this milestone publishes.
+    The pyproject `version` is 2.1.0 (A3), so the build produces a 2.1.0 wheel.
     """
     assert built_dist["wheel"].exists()
-    assert built_dist["wheel"].name.startswith("docs_cli-2.0.0-"), (
-        f"wheel filename must encode version 2.0.0; got {built_dist['wheel'].name}"
+    assert built_dist["wheel"].name.startswith("docs_cli-2.1.0-"), (
+        f"wheel filename must encode version 2.1.0; got {built_dist['wheel'].name}"
     )
 
 
 def test_b2_sdist_builds(built_dist: dict) -> None:
-    """B2: `python -m build` produces an sdist `docs_cli-2.0.0.tar.gz`.
+    """B2: `python -m build` produces an sdist `docs_cli-2.1.0.tar.gz`.
 
-    M29 Phase 2: same bump as B1 — pyproject is at 2.0.0.
+    Same bump as B1 — pyproject is at 2.1.0.
     """
     assert built_dist["sdist"].exists()
-    assert built_dist["sdist"].name == "docs_cli-2.0.0.tar.gz", (
-        f"sdist filename must be 'docs_cli-2.0.0.tar.gz'; got {built_dist['sdist'].name}"
+    assert built_dist["sdist"].name == "docs_cli-2.1.0.tar.gz", (
+        f"sdist filename must be 'docs_cli-2.1.0.tar.gz'; got {built_dist['sdist'].name}"
     )
 
 
@@ -327,12 +325,11 @@ def test_c1_docs_on_path_in_venv(wheel_venv: Path) -> None:
     assert wheel_venv.is_file()
 
 
-def test_c2_docs_version_is_2_0_0(wheel_venv: Path) -> None:
-    """C2: `docs --version` prints `2.0.0` (M29).
+def test_c2_docs_version_is_2_1_0(wheel_venv: Path) -> None:
+    """C2: `docs --version` prints `2.1.0`.
 
-    M29 Phase 2 bumped `__version__` (sourced from `importlib.metadata`)
-    to 2.0.0 by bumping the pyproject `version`. The built wheel installed
-    into `wheel_venv` reports 2.0.0.
+    `__version__` is sourced from `importlib.metadata`, so the pyproject
+    bump (A3) is what the built wheel installed into `wheel_venv` reports.
     """
     result = subprocess.run(
         [str(wheel_venv), "--version"],
@@ -344,12 +341,12 @@ def test_c2_docs_version_is_2_0_0(wheel_venv: Path) -> None:
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
     combined = (result.stdout + result.stderr).strip()
-    # Exact-token match: bare substring `"2.0.0" in combined` would also
-    # accept `12.0.0` or `2.0.0.dev0`. Split on whitespace and require the
+    # Exact-token match: bare substring `"2.1.0" in combined` would also
+    # accept `12.1.0` or `2.1.0.dev0`. Split on whitespace and require the
     # version token to appear verbatim.
     tokens = combined.split()
-    assert "2.0.0" in tokens, (
-        f"`docs --version` must print '2.0.0' as a standalone token; got: {combined!r}"
+    assert "2.1.0" in tokens, (
+        f"`docs --version` must print '2.1.0' as a standalone token; got: {combined!r}"
     )
 
 

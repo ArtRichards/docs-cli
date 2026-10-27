@@ -540,3 +540,50 @@ def test_project_set_single_token_is_grammar_error(docs_script, fixtures_dir, tm
     assert "need at least one" in proc.stderr.lower() or "at least" in proc.stderr.lower(), (
         proc.stderr
     )
+
+
+def _vocab_extension_tree(fixtures_dir: Path, tmp_path: Path) -> Path:
+    source = fixtures_dir / "trees" / "vocab-extension"
+    assert source.is_dir(), "the committed `vocab-extension` fixture tree must exist"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+    return root
+
+
+def test_project_set_rewrites_a_doc_in_an_extension_state(docs_script, fixtures_dir, tmp_path):
+    """A named document in a configured `add_lifecycles` state parses, so its
+    `Project:` is rewritten and its lifecycle kept (2.0.0 refused it at exit 1)
+    — milestone `lifecycle-and-free-form-relate` — D10. `--new-project`
+    isolates the named document's own parse from the typo guard."""
+    root = _vocab_extension_tree(fixtures_dir, tmp_path)
+
+    proc = _run(
+        docs_script,
+        "project",
+        "set",
+        "shipped-spec.md",
+        "gamma",
+        "--new-project",
+        "--root",
+        str(root),
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    text = (root / "shipped-spec.md").read_text()
+    assert "Project: gamma" in text
+    assert "Lifecycle: shipped" in text
+
+
+def test_project_set_knows_a_project_carried_only_by_an_extension_vocabulary_doc(
+    docs_script, fixtures_dir, tmp_path
+):
+    """The typo guard's known-project set reads every active document with the
+    tree's configuration, so `beta` — carried only by an `add_roles` document —
+    is a known project (2.0.0 skipped that document and refused `beta` as a
+    typo) — milestone `lifecycle-and-free-form-relate` — D10."""
+    root = _vocab_extension_tree(fixtures_dir, tmp_path)
+
+    proc = _run(docs_script, "project", "set", "draft-note.md", "beta", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "Project: beta" in (root / "draft-note.md").read_text()

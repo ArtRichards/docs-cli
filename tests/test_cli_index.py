@@ -124,3 +124,70 @@ def test_index_nested_doc_link_is_root_relative(docs_script, fixtures_dir, tmp_p
     assert proc.returncode == 0, proc.stderr
     index = (dst / "INDEX.md").read_text()
     assert "(topics/deep-dive.md)" in index
+
+
+def _configured_tree(tmp_path: Path, sidecar_extra: str, docs: dict[str, str]) -> Path:
+    root = tmp_path / "tree"
+    root.mkdir()
+    (root / ".docs.toml").write_text(f'[project]\nname = "tree"\n{sidecar_extra}')
+    for name, text in docs.items():
+        (root / name).write_text(text)
+    return root
+
+
+def _doc(title: str, role: str, updated: str) -> str:
+    return (
+        f"# {title}\n\nLifecycle: active\nRole: {role}\nProject: tree\nUpdated: {updated}\n\n"
+        f"## Body\n\nThe {title} document.\n"
+    )
+
+
+def test_index_renders_an_extension_role_group_after_the_built_in_roles(docs_script, tmp_path):
+    """A document in a configured `add_roles` role is RENDERED, under its own
+    `### Active — Adr` heading after every built-in group, and the summary
+    counts exactly the entries rendered (milestone
+    `lifecycle-and-free-form-relate` — D10; 2.0.0 exits 2 on this tree, and a
+    config-aware parse alone would count the document without rendering it)."""
+    root = _configured_tree(
+        tmp_path,
+        '\n[vocabulary]\nadd_roles = ["adr"]\n',
+        {
+            "decision.md": _doc("Decision", "adr", "2026-05-20"),
+            "spec.md": _doc("Spec", "spec", "2026-05-20"),
+            "notes.md": _doc("Notes", "notes", "2026-05-20"),
+        },
+    )
+
+    proc = _run(docs_script, "index", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    lines = (root / "INDEX.md").read_text().splitlines()
+    headings = [line for line in lines if line.startswith("### Active — ")]
+    assert headings == ["### Active — Spec", "### Active — Notes", "### Active — Adr"]
+    adr_at = lines.index("### Active — Adr")
+    assert any(line.startswith("- [decision.md](decision.md)") for line in lines[adr_at:])
+    entries = [line for line in lines if line.startswith("- [")]
+    assert len(entries) == 3
+    assert any("3 docs active" in line for line in lines)
+
+
+def test_index_reads_a_non_default_date_format_tree(docs_script, tmp_path):
+    """On a `%d-%m-%Y` tree, `Updated:` is read in the tree's format: the INDEX
+    renders, entries carry the tree's spelling, and they sort by DATE (1 June
+    before 31 May, which a string sort would reverse)."""
+    root = _configured_tree(
+        tmp_path,
+        '\n[archive]\ndate_format = "%d-%m-%Y"\n',
+        {
+            "may.md": _doc("May", "spec", "31-05-2026"),
+            "june.md": _doc("June", "spec", "01-06-2026"),
+        },
+    )
+
+    proc = _run(docs_script, "index", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    entries = [ln for ln in (root / "INDEX.md").read_text().splitlines() if ln.startswith("- [")]
+    assert [entry.split("]")[0] for entry in entries] == ["- [june.md", "- [may.md"]
+    assert entries[0].endswith("Updated 01-06-2026.")
+    assert entries[1].endswith("Updated 31-05-2026.")

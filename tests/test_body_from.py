@@ -23,8 +23,11 @@ Refusal coverage is carried by `real-frontmatter-body.md` (cluster) and
 
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -460,3 +463,135 @@ def test_new_body_from_help_no_first_20_lines(docs_script):
     assert "Lifecycle" in help_text, (
         "the help must describe the real C4 detector shape (required-field cluster)"
     )
+
+
+# --- 7. a leading `Related:` group is a supported creation-time route --------
+#
+# Milestone `lifecycle-and-free-form-relate` — D8 (`cli.md` › `docs new` ›
+# `--body-from`; the task plan's *Decisions (Phase 1 — BINDING)* › P1.3). The
+# first two are locks — the route has worked since M8 but was never tested —
+# and the third runs the bundled skill's own sidecar examples, frozen in P1.3
+# and rewritten in the skill at Phase 7.
+
+_SKILL_REFS = Path(__file__).resolve().parents[1] / "src" / "docs_cli" / "skill" / "references"
+
+
+def _listed_edges(docs_script: Path, root: Path, rel: str) -> list[tuple[str, str]]:
+    proc = _run(docs_script, "list", "--root", str(root), "--json")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    for record in json.loads(proc.stdout):
+        if record["path"] == rel:
+            return [(edge["verb"], edge["target"]) for edge in record["related"]]
+    raise AssertionError(f"{rel} is missing from `docs list --json`")
+
+
+def test_body_opening_with_a_related_group_becomes_metadata(docs_script, tmp_path):
+    """A body whose first block is `Related:` alone on its line, then bullets,
+    lands in the metadata block: the edges are listed and `docs check` is clean
+    — the convention's multi-value-group grammar, not a special case. GREEN at
+    baseline; it locks a route the bundled skill has relied on since M8."""
+    root = _minimal_tree(tmp_path)
+    (root / "data.csv").write_text("a,b\n1,2\n")
+    made = _run(docs_script, "new", "notes", "other", "--root", str(root))
+    assert made.returncode == 0, (made.stdout, made.stderr)
+    body = "Related:\n- pairs-with: other.md\n- references: data.csv\n\n## Overview\n\nThe body.\n"
+
+    proc = _run(
+        docs_script, "new", "spec", "feature", "--body-from", "-", "--root", str(root), stdin=body
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert _listed_edges(docs_script, root, "feature.md") == [
+        ("pairs-with", "other.md"),
+        ("references", "data.csv"),
+    ]
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_inline_related_line_stays_body_text(docs_script, tmp_path):
+    """An INLINE `Related: verb: target` line after the blank line is body
+    text, like every inline `Label: value` there — no edge is written. GREEN
+    at baseline; it is why the skill's old inline spelling never worked."""
+    root = _minimal_tree(tmp_path)
+    (root / "deck.html").write_text("<html></html>\n")
+
+    proc = _run(
+        docs_script,
+        "new",
+        "notes",
+        "inline",
+        "--body-from",
+        "-",
+        "--root",
+        str(root),
+        stdin="Related: artifact-of: deck.html\n\n## Body\n\nProse.\n",
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert _listed_edges(docs_script, root, "inline.md") == []
+    assert "Related: artifact-of: deck.html" in (root / "inline.md").read_text()
+
+
+def _sidecar_substitutions(text: str) -> str:
+    return (
+        text.replace("<role>", "notes")
+        .replace("<slug>", "deck")
+        .replace("<sidecar>", "deck.md")
+        .replace("<binary>", "deck.html")
+    )
+
+
+def _use_cases_relate_form() -> list[str]:
+    """The relate form: the `docs relate add` span in the use-cases sidecar row."""
+    text = (_SKILL_REFS / "use-cases.md").read_text()
+    rows = [ln for ln in text.splitlines() if ln.startswith("| Sidecar a non-md artifact |")]
+    assert len(rows) == 1, "use-cases.md must carry exactly one *Sidecar a non-md artifact* row"
+    spans = re.findall(r"`(docs relate add <sidecar> artifact-of <binary>)`", rows[0])
+    assert spans, "the sidecar row must name `docs relate add <sidecar> artifact-of <binary>`"
+    return _sidecar_substitutions(spans[0]).split()[1:]
+
+
+def _adoption_playbook_group_form() -> tuple[list[str], str]:
+    """The group form: the fenced `sh` snippet inside the playbook's sidecar
+    bullet, as (argv without `docs`, the heredoc body)."""
+    text = (_SKILL_REFS / "adoption-playbook.md").read_text()
+    start = text.find("- **Sidecars for non-md binaries")
+    assert start != -1, "adoption-playbook.md must carry the *Sidecars for non-md binaries* bullet"
+    bullet = text[start:]
+    next_bullet = bullet.find("\n- **", 1)
+    if next_bullet != -1:
+        bullet = bullet[:next_bullet]
+    fence = re.search(r"\n[ \t]*```sh\n(.*?)\n[ \t]*```", bullet, re.S)
+    assert fence, "the sidecar bullet must carry a fenced `sh` group-form snippet"
+    lines = textwrap.dedent(fence.group(1)).splitlines()
+    assert lines[0] == "docs new <role> <slug> --body-from - <<'EOF'", lines[0]
+    assert "EOF" in lines, "the heredoc must close with an `EOF` line"
+    body = "\n".join(lines[1 : lines.index("EOF")]) + "\n"
+    argv = _sidecar_substitutions(lines[0]).split()[1:-1]  # drop `docs` and `<<'EOF'`
+    return argv, _sidecar_substitutions(body)
+
+
+@pytest.mark.parametrize(
+    "form", ["relate-add-on-an-existing-sidecar", "body-from-group-at-creation"]
+)
+def test_skill_sidecar_example_yields_its_edge(docs_script, tmp_path, form):
+    """C14: each of the bundled skill's two sidecar examples, run literally
+    (placeholders substituted), leaves the sidecar carrying the
+    `artifact-of` edge and the tree `docs check` clean."""
+    root = _minimal_tree(tmp_path)
+    (root / "deck.html").write_text("<html><body>slides</body></html>\n")
+
+    if form == "relate-add-on-an-existing-sidecar":
+        argv = _use_cases_relate_form()
+        made = _run(docs_script, "new", "notes", "deck", "--root", str(root))
+        assert made.returncode == 0, (made.stdout, made.stderr)
+        proc = _run(docs_script, *argv, "--root", str(root))
+    else:
+        argv, body = _adoption_playbook_group_form()
+        proc = _run(docs_script, *argv, "--root", str(root), stdin=body)
+
+    assert proc.returncode == 0, (argv, proc.stdout, proc.stderr)
+    assert ("artifact-of", "deck.html") in _listed_edges(docs_script, root, "deck.md")
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout + check.stderr

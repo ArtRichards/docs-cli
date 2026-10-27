@@ -5,7 +5,17 @@ Targets: `walk()`. Uses fixture trees under tests/fixtures/trees/.
 
 from __future__ import annotations
 
-from docs import BUILTIN_ROLES, BUILTIN_STATUSES, Config, walk
+from datetime import date
+
+from docs import (
+    BUILTIN_ROLES,
+    BUILTIN_STATUSES,
+    Config,
+    MetadataError,
+    VocabularyError,
+    load_config,
+    walk,
+)
 
 
 def _default_config(project: str = "test") -> Config:
@@ -96,3 +106,36 @@ def test_walk_yields_active_and_archived_in_with_archive_fixture(fixtures_dir):
     archived = [d for d in docs if d.archived]
     assert len(active) >= 1
     assert len(archived) >= 1
+
+
+def test_walk_yields_docs_in_extension_vocabulary_and_the_trees_date_format(fixtures_dir, tmp_path):
+    """`walk()` honours the tree's configuration: documents in configured
+    extension lifecycles and roles are yielded, and `Updated:` is read in the
+    tree's `date_format` (milestone `lifecycle-and-free-form-relate` — D10).
+    A parse failure inside the walk is the missing behaviour, reported as an
+    assertion."""
+    tree = fixtures_dir / "trees" / "vocab-extension"
+    assert tree.is_dir(), "the committed `vocab-extension` fixture tree must exist"
+    try:
+        docs = list(walk(tree, load_config(tree)))
+    except (MetadataError, VocabularyError) as exc:
+        raise AssertionError(f"walk must read the tree's extension vocabulary: {exc}") from exc
+    assert {(d.path.name, d.lifecycle, d.role) for d in docs} == {
+        ("shipped-spec.md", "shipped", "spec"),
+        ("decision-record.md", "active", "adr"),
+        ("draft-note.md", "draft", "notes"),
+    }
+
+    dmy = tmp_path / "dmy"
+    dmy.mkdir()
+    (dmy / ".docs.toml").write_text(
+        '[project]\nname = "dmy"\n\n[archive]\ndate_format = "%d-%m-%Y"\n'
+    )
+    (dmy / "a.md").write_text(
+        "# A\n\nLifecycle: active\nRole: notes\nProject: dmy\nUpdated: 01-06-2026\n\n## Body\n"
+    )
+    try:
+        dated = list(walk(dmy, load_config(dmy)))
+    except MetadataError as exc:
+        raise AssertionError(f"walk must read Updated: in the tree's date_format: {exc}") from exc
+    assert [d.updated for d in dated] == [date(2026, 6, 1)]

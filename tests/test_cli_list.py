@@ -167,3 +167,26 @@ def test_list_explicit_stale_unaffected_by_config(docs_script, tmp_path):
         return {rec["path"] for rec in json.loads(proc.stdout)}
 
     assert _stale_paths(with_cfg) == _stale_paths(without_cfg) == {"ancient.md"}
+
+
+def test_list_includes_a_doc_in_an_extension_lifecycle(docs_script, fixtures_dir):
+    """`docs list` reads documents in a configured `add_lifecycles` state and
+    `add_roles` role — exactly as `docs check` accepts them — instead of
+    silently omitting them (milestone `lifecycle-and-free-form-relate` — D10)."""
+    tree = fixtures_dir / "trees" / "vocab-extension"
+    assert tree.is_dir(), "the committed `vocab-extension` fixture tree must exist"
+
+    proc = _run(docs_script, "list", "--root", str(tree), "--json")
+
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stderr == "", "no document is dropped with an error"
+    listed = {(r["path"], r["lifecycle"], r["role"]) for r in json.loads(proc.stdout)}
+    assert listed == {
+        ("shipped-spec.md", "shipped", "spec"),
+        ("decision-record.md", "active", "adr"),
+        ("draft-note.md", "draft", "notes"),
+    }
+
+    shipped = _run(docs_script, "list", "--root", str(tree), "--lifecycle", "shipped", "--json")
+    assert shipped.returncode == 0, shipped.stderr
+    assert [r["path"] for r in json.loads(shipped.stdout)] == ["shipped-spec.md"]

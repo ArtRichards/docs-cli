@@ -13,11 +13,17 @@ Phase 7 wires the verb and flips these GREEN.
 from __future__ import annotations
 
 import json
+import random
 import stat
+import string
 import subprocess
 import sys
 from datetime import date
 from pathlib import Path
+
+import pytest
+
+from docs_cli import cli
 
 
 def _run(script: Path, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -301,14 +307,14 @@ def test_relate_quiet_suppresses_success_but_never_a_refusal(docs_script, tmp_pa
         "relate",
         "add",
         "a.md",
-        "pairs-with",
+        "Pairs-With",
         "b.md",
         "--root",
         str(root),
         "--quiet",
     )
     assert refused.returncode == 2
-    assert "docs: relate: unknown verb 'pairs-with'" in refused.stderr, (
+    assert "docs: relate: unknown verb 'Pairs-With'" in refused.stderr, (
         "--quiet must never silence a refusal"
     )
 
@@ -327,20 +333,21 @@ def test_relate_json_stdout_parses_alone(docs_script, tmp_path):
 # --- refusals (each asserts the contract stderr AND byte-identity) ---------
 
 
-def test_relate_unknown_verb_refuses(docs_script, tmp_path):
+def test_relate_verb_outside_the_free_form_grammar_refuses(docs_script, tmp_path):
     root = _pair_tree(tmp_path, "unknownverb")
     before = _snapshot(root)
-    proc = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root))
+    proc = _run(docs_script, "relate", "add", "a.md", "see also", "b.md", "--root", str(root))
     assert proc.returncode == 2
     assert (
-        "docs: relate: unknown verb 'pairs-with'; expected one of: "
-        "blocked-by, blocks, depends-on, follows, precedes, required-by"
-    ) in proc.stderr
+        "docs: relate: unknown verb 'see also'; expected a reciprocal verb "
+        "(blocked-by, blocks, depends-on, follows, precedes, required-by) "
+        "or a free-form verb matching [a-z][a-z0-9-]*"
+    ) in proc.stderr, proc.stderr
     assert _snapshot(root) == before
 
 
 def test_relate_case_variant_verb_refuses(docs_script, tmp_path):
-    """Matching is case-sensitive exact: `Precedes` is a free-form verb."""
+    """Matching is case-sensitive exact: `Precedes` is outside the grammar."""
     root = _pair_tree(tmp_path, "caseverb")
     before = _snapshot(root)
     proc = _run(docs_script, "relate", "add", "a.md", "Precedes", "b.md", "--root", str(root))
@@ -1085,3 +1092,662 @@ def test_relate_archived_repair_leaves_the_witness_byte_identical(docs_script, t
     assert _run(docs_script, "check", str(root)).returncode == 0, (
         "and the repaired document still corroborates its dated directory"
     )
+
+
+# ===========================================================================
+# Free-form edges, one-sided (milestone `lifecycle-and-free-form-relate` —
+# D4–D6; the task plan's *Decisions (Phase 1 — BINDING)* › P1.2, whose
+# message ids R1–R3 the docstrings cite). RED until free-form `relate` lands:
+# today every verb outside the six recognized ones refuses at exit 2 with the
+# old `expected one of:` message, so every test below asserts the frozen R1
+# text, the written bytes, or a zero-byte refusal — never a bare exit code.
+# ===========================================================================
+
+_R1_TAIL = (
+    "; expected a reciprocal verb (blocked-by, blocks, depends-on, follows, precedes, "
+    "required-by) or a free-form verb matching [a-z][a-z0-9-]*"
+)
+
+
+def _r1(verb: str) -> str:
+    """The frozen grammar refusal for `verb` — rendered with `repr`, so a verb
+    carrying a newline stays on one line."""
+    return f"docs: relate: unknown verb {verb!r}{_R1_TAIL}"
+
+
+def _every_file(root: Path) -> dict[str, bytes]:
+    """Every file under `root`, not only Markdown — binary targets included."""
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def _listed_edges(docs_script: Path, root: Path, rel: str) -> list[tuple[str, str]]:
+    """`rel`'s `Related:` edges as `docs list --json` reads them back."""
+    proc = _run(docs_script, "list", "--root", str(root), "--json")
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    for record in json.loads(proc.stdout):
+        if record["path"] == rel:
+            return [(edge["verb"], edge["target"]) for edge in record["related"]]
+    raise AssertionError(f"{rel} is missing from `docs list --json`")
+
+
+def test_relate_free_form_add_writes_only_the_source_bullet(docs_script, tmp_path):
+    """D4: SOURCE gains the bullet (its `Related:` group created) and today's
+    `Updated:`; TARGET is byte-identical; the INDEX is refreshed."""
+    root = _pair_tree(tmp_path, "ffadd")
+    b_before = (root / "b.md").read_bytes()
+
+    proc = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    relate_lines = [ln for ln in proc.stderr.splitlines() if ln.startswith("docs: relate:")]
+    assert relate_lines == ["docs: relate: added 'pairs-with: b.md' to a.md"], (
+        "one line, about SOURCE — TARGET is never an edit"
+    )
+    today = date.today().isoformat()
+    assert (root / "a.md").read_text() == _doc("A", "ffadd", "pairs-with: b.md", updated=today)
+    assert (root / "b.md").read_bytes() == b_before
+    assert (root / "INDEX.md").is_file()
+
+
+def test_relate_free_form_remove_drops_only_the_source_bullet(docs_script, tmp_path):
+    """D4: `remove` drops SOURCE's bullet (and the emptied group); TARGET keeps
+    its own back-edge — a free-form edge has no inverse to unwrite."""
+    root = _pair_tree(
+        tmp_path, "ffrm", source_edge="pairs-with: b.md", target_edge="pairs-with: a.md"
+    )
+    b_before = (root / "b.md").read_bytes()
+
+    proc = _run(docs_script, "relate", "remove", "a.md", "pairs-with", "b.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "docs: relate: removed 'pairs-with: b.md' from a.md" in proc.stderr
+    today = date.today().isoformat()
+    assert (root / "a.md").read_text() == _doc("A", "ffrm", None, updated=today)
+    assert (root / "b.md").read_bytes() == b_before
+
+
+def test_relate_free_form_is_idempotent(docs_script, tmp_path):
+    """A satisfied `add` or `remove` writes zero bytes, INDEX included."""
+    root = _pair_tree(tmp_path, "ffidem")
+    first = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root))
+    assert first.returncode == 0, (first.stdout, first.stderr)
+    after_add = _snapshot(root)
+
+    again = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root))
+    assert again.returncode == 0, (again.stdout, again.stderr)
+    assert "docs: relate: no change — 'pairs-with: b.md' already present in a.md" in again.stderr
+    assert _snapshot(root) == after_add
+
+    removed = _run(
+        docs_script, "relate", "remove", "a.md", "pairs-with", "b.md", "--root", str(root)
+    )
+    assert removed.returncode == 0, (removed.stdout, removed.stderr)
+    after_remove = _snapshot(root)
+    twice = _run(docs_script, "relate", "remove", "a.md", "pairs-with", "b.md", "--root", str(root))
+    assert twice.returncode == 0, (twice.stdout, twice.stderr)
+    assert "docs: relate: no change — 'pairs-with: b.md' already absent from a.md" in twice.stderr
+    assert _snapshot(root) == after_remove
+
+
+@pytest.mark.parametrize(
+    "existing_edge",
+    [None, "references: b.md"],
+    ids=["without-a-related-group", "with-an-existing-related-group"],
+)
+def test_relate_free_form_add_then_remove_restores_the_original_bytes(
+    docs_script, tmp_path, existing_edge
+):
+    """The round-trip property, from an initially ABSENT edge: add then remove,
+    both under `--date` equal to the original `Updated:`, restores every byte —
+    whether the group had to be created (and dropped) or already existed."""
+    root = _pair_tree(tmp_path, "ffround", source_edge=existing_edge)
+    original = (root / "a.md").read_bytes()
+
+    for action in ("add", "remove"):
+        proc = _run(
+            docs_script,
+            "relate",
+            action,
+            "a.md",
+            "child-of",
+            "b.md",
+            "--root",
+            str(root),
+            "--date",
+            "2026-05-20",
+        )
+        assert proc.returncode == 0, (action, proc.stdout, proc.stderr)
+
+    assert (root / "a.md").read_bytes() == original
+
+
+def test_relate_free_form_matches_a_non_canonical_existing_bullet(docs_script, tmp_path):
+    """Canonical-target matching, as for recognized verbs: `./b.md` is `b.md`."""
+    root = _pair_tree(tmp_path, "ffcanon", source_edge="pairs-with: ./b.md")
+    before = _snapshot(root)
+
+    add = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root))
+    assert add.returncode == 0, (add.stdout, add.stderr)
+    assert _snapshot(root) == before, "an existing `./b.md` bullet already satisfies the edge"
+
+    rm = _run(docs_script, "relate", "remove", "a.md", "pairs-with", "b.md", "--root", str(root))
+    assert rm.returncode == 0, (rm.stdout, rm.stderr)
+    assert "pairs-with" not in (root / "a.md").read_text(), "…and `remove` drops it"
+
+
+def test_relate_free_form_write_rewrites_exactly_one_managed_document(docs_script, tmp_path):
+    """The write footprint: SOURCE plus the one INDEX refresh — nothing else."""
+    root = _pair_tree(tmp_path, "fffoot")
+    (root / "c.md").write_text(_doc("C", "fffoot", "pairs-with: a.md"))
+    assert _run(docs_script, "index", "--root", str(root)).returncode == 0
+    before = _every_file(root)
+
+    proc = _run(docs_script, "relate", "add", "a.md", "references", "c.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    after = _every_file(root)
+    assert set(after) == set(before), "no file appears or disappears"
+    changed = sorted(rel for rel in before if before[rel] != after[rel])
+    assert changed == ["INDEX.md", "a.md"]
+
+
+def test_relate_free_form_json_record_has_null_inverse_and_one_edit(docs_script, tmp_path):
+    """C15: the recognized record's eleven keys, `inverse: null`, one edit."""
+    root = _pair_tree(tmp_path, "ffjson")
+
+    proc = _run(
+        docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root), "--json"
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    record = json.loads(proc.stdout)
+    assert set(record) == {
+        "action",
+        "verb",
+        "inverse",
+        "source",
+        "target",
+        "reason",
+        "date",
+        "dry_run",
+        "applied",
+        "index_refreshed",
+        "edits",
+    }
+    assert record["inverse"] is None
+    assert (record["action"], record["verb"]) == ("add", "pairs-with")
+    assert (record["source"], record["target"]) == ("a.md", "b.md")
+    assert record["reason"] is None
+    assert (record["applied"], record["index_refreshed"], record["dry_run"]) == (True, True, False)
+    assert record["edits"] == [
+        {
+            "path": "a.md",
+            "archived": False,
+            "edge": "pairs-with: b.md",
+            "present_before": False,
+            "present_after": True,
+            "change": "added",
+            "updated_bumped": True,
+            "revision_appended": False,
+        }
+    ]
+
+
+def test_relate_free_form_dry_run_writes_nothing(docs_script, tmp_path):
+    root = _pair_tree(tmp_path, "ffpreview")
+    before = _snapshot(root)
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "pairs-with",
+        "b.md",
+        "--root",
+        str(root),
+        "--dry-run",
+        "--json",
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "docs: relate: would add 'pairs-with: b.md' to a.md" in proc.stderr
+    record = json.loads(proc.stdout)
+    assert (record["dry_run"], record["applied"], record["index_refreshed"]) == (True, False, False)
+    assert len(record["edits"]) == 1
+    assert _snapshot(root) == before
+    assert not (root / "INDEX.md").exists(), "a preview does not reindex"
+
+
+def test_relate_free_form_self_edge_is_refused(docs_script, tmp_path):
+    """The self-edge refusal stays for free-form verbs (*Also settled*)."""
+    root = _pair_tree(tmp_path, "ffself")
+    before = _snapshot(root)
+    proc = _run(docs_script, "relate", "add", "a.md", "pairs-with", "a.md", "--root", str(root))
+    assert proc.returncode == 2
+    assert "docs: relate: SOURCE and TARGET must be different documents" in proc.stderr, proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_relate_free_form_refuses_an_archived_source_even_when_nothing_would_change(
+    docs_script, tmp_path
+):
+    """R2 — an archived SOURCE refuses in the validate-all-first pass, for
+    `add` and `remove`, with or without `--reason`, even when the edge is
+    already in the requested state (`old.md` already carries
+    `references: a.md`): predictable, not plan-dependent."""
+    root = _archived_pair_tree(tmp_path, "ffarchsrc", inverse_present=False)
+    before = _snapshot(root)
+    refusal = (
+        "docs: relate: archive/2026-01-01/old.md is under the archive subtree; "
+        "a free-form edge is never written to an archived document"
+    )
+
+    for action, extra in (("add", ()), ("remove", ()), ("add", ("--reason", "context"))):
+        proc = _run(
+            docs_script,
+            "relate",
+            action,
+            "archive/2026-01-01/old.md",
+            "references",
+            "a.md",
+            "--root",
+            str(root),
+            *extra,
+        )
+        assert proc.returncode == 2, (action, extra, proc.stdout, proc.stderr)
+        assert refusal in proc.stderr, (action, extra, proc.stderr)
+        assert _snapshot(root) == before
+
+
+def test_relate_free_form_archived_target_needs_no_reason_and_is_untouched(docs_script, tmp_path):
+    """D5: an archived TARGET is never written, so no `--reason` is needed and
+    no `Revision:` is ever written; a given `--reason` is still echoed."""
+    root = _archived_pair_tree(tmp_path, "ffarchtgt", inverse_present=False)
+    archived = root / "archive" / "2026-01-01" / "old.md"
+    archived_before = archived.read_bytes()
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "references",
+        "archive/2026-01-01/old.md",
+        "--root",
+        str(root),
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    a_text = (root / "a.md").read_text()
+    assert "- references: archive/2026-01-01/old.md" in a_text
+    assert "Revision:" not in a_text
+    assert archived.read_bytes() == archived_before
+
+    reasoned = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "pairs-with",
+        "archive/2026-01-01/old.md",
+        "--root",
+        str(root),
+        "--reason",
+        "historical context",
+        "--json",
+    )
+    assert reasoned.returncode == 0, (reasoned.stdout, reasoned.stderr)
+    record = json.loads(reasoned.stdout)
+    assert record["reason"] == "historical context"
+    assert [e["revision_appended"] for e in record["edits"]] == [False]
+    assert "Revision:" not in (root / "a.md").read_text()
+    assert archived.read_bytes() == archived_before
+
+
+def test_relate_free_form_accepts_a_non_markdown_target(docs_script, tmp_path):
+    """D5 / E9: any existing file under the root is a TARGET — a report, or a
+    binary that is not even UTF-8, which proves TARGET is never read — and the
+    tree stays `docs check` clean."""
+    root = _pair_tree(tmp_path, "ffnonmd")
+    (root / "coverage.xml").write_text('<coverage line-rate="0.9"/>\n')
+    (root / "deck.bin").write_bytes(b"\xff\xfe\x00 not utf-8 \x80\x81")
+    blobs = {name: (root / name).read_bytes() for name in ("coverage.xml", "deck.bin")}
+
+    for verb, target in (("references", "coverage.xml"), ("artifact-of", "deck.bin")):
+        proc = _run(docs_script, "relate", "add", "a.md", verb, target, "--root", str(root))
+        assert proc.returncode == 0, (verb, proc.stdout, proc.stderr)
+        assert "Traceback" not in proc.stderr
+
+    a_text = (root / "a.md").read_text()
+    assert "- references: coverage.xml" in a_text
+    assert "- artifact-of: deck.bin" in a_text
+    assert {name: (root / name).read_bytes() for name in blobs} == blobs
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_relate_free_form_target_outside_the_root_exits_1(docs_script, tmp_path):
+    root = _pair_tree(tmp_path, "ffoutside")
+    stray = tmp_path / "stray.txt"
+    stray.write_text("outside the tree\n")
+    before = _snapshot(root)
+    proc = _run(docs_script, "relate", "add", "a.md", "references", str(stray), "--root", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "docs: relate: " in proc.stderr
+    assert "is outside the resolved docs root" in proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_relate_free_form_target_that_is_a_directory_exits_1(docs_script, tmp_path):
+    """A directory is not a file: today's `file not found:` refusal."""
+    root = _pair_tree(tmp_path, "ffdir")
+    (root / "sub").mkdir()
+    before = _snapshot(root)
+    proc = _run(docs_script, "relate", "add", "a.md", "references", "sub", "--root", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "docs: relate: file not found: " in proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_relate_free_form_missing_target_exits_1(docs_script, tmp_path):
+    root = _pair_tree(tmp_path, "ffmissing")
+    before = _snapshot(root)
+    proc = _run(docs_script, "relate", "add", "a.md", "references", "nope.md", "--root", str(root))
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "docs: relate: file not found: " in proc.stderr
+    assert "nope.md" in proc.stderr
+    assert _snapshot(root) == before
+
+
+def test_relate_free_form_target_symlink_escaping_the_root_exits_1(docs_script, tmp_path):
+    """Containment is checked on the RESOLVED path, so a symlink inside the
+    tree that points outside it is refused like any outside path."""
+    root = _pair_tree(tmp_path, "ffsymlink")
+    outside = tmp_path / "secret.txt"
+    outside.write_text("outside the tree\n")
+    (root / "escape.txt").symlink_to(outside)
+    before = _snapshot(root)
+    proc = _run(
+        docs_script, "relate", "add", "a.md", "references", "escape.txt", "--root", str(root)
+    )
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "is outside the resolved docs root" in proc.stderr
+    assert _snapshot(root) == before
+
+
+_GRAMMAR_CASES = [
+    ("pairs-with", True, "accepts-pairs-with"),
+    ("child-of", True, "accepts-child-of"),
+    ("a", True, "accepts-a-single-letter"),
+    ("a-", True, "accepts-a-trailing-hyphen"),
+    ("a--b", True, "accepts-a-doubled-hyphen"),
+    ("x9", True, "accepts-a-digit-after-the-first-letter"),
+    ("", False, "refuses-an-empty-verb"),
+    ("see also", False, "refuses-an-internal-space"),
+    (" pairs-with", False, "refuses-a-leading-space"),
+    ("pairs-with ", False, "refuses-a-trailing-space"),
+    ("pairs-with\n", False, "refuses-a-trailing-newline"),
+    ("pairs-with\r", False, "refuses-a-trailing-carriage-return"),
+    ("pairs:with", False, "refuses-a-colon"),
+    ("9to5", False, "refuses-a-leading-digit"),
+    ("Pairs-With", False, "refuses-uppercase"),
+    ("Precedes", False, "refuses-a-capitalised-recognized-verb"),
+    ("pairs_with", False, "refuses-an-underscore"),
+    ("pairs.with", False, "refuses-a-dot"),
+    ("@#!$", False, "refuses-punctuation"),
+    ("é", False, "refuses-a-non-ascii-letter"),
+    ("a٣", False, "refuses-an-arabic-indic-digit"),
+    ("a１", False, "refuses-a-fullwidth-digit"),
+]
+
+
+@pytest.mark.parametrize(
+    ("verb", "accepted"),
+    [(verb, accepted) for verb, accepted, _ in _GRAMMAR_CASES],
+    ids=[case_id for _, _, case_id in _GRAMMAR_CASES],
+)
+def test_relate_free_form_verb_grammar_boundary(docs_script, tmp_path, verb, accepted):
+    """D6, at its boundary: `[a-z][a-z0-9-]*` in full, ASCII only. An accepted
+    verb is written as typed and read back by the parser as the identical
+    verb; a refused one gets R1 and zero bytes. `pairs-with\\n` is what
+    `re.match` with `$` would wrongly accept, and the two non-ASCII digits are
+    what `\\d` would."""
+    root = _pair_tree(tmp_path, "ffgrammar")
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "relate", "add", "a.md", verb, "b.md", "--root", str(root))
+
+    if accepted:
+        assert proc.returncode == 0, (proc.stdout, proc.stderr)
+        assert _listed_edges(docs_script, root, "a.md") == [(verb, "b.md")]
+    else:
+        assert proc.returncode == 2, (proc.stdout, proc.stderr)
+        assert _r1(verb) in proc.stderr, proc.stderr
+        assert _snapshot(root) == before
+
+
+@pytest.mark.parametrize("verb", ["pairs:with", "pairs\nwith", "pairs\rwith"])
+def test_relate_verb_that_would_corrupt_the_block_is_refused(docs_script, tmp_path, verb):
+    """The metadata-injection guard: a `:` would split the bullet differently
+    and a line break would end the block — both refused with zero bytes, and
+    the tree is still `docs check` clean afterwards."""
+    root = _pair_tree(tmp_path, "ffinject")
+    before = _snapshot(root)
+    proc = _run(docs_script, "relate", "add", "a.md", verb, "b.md", "--root", str(root))
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert _r1(verb) in proc.stderr, proc.stderr
+    assert _snapshot(root) == before
+    assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+def test_relate_leading_hyphen_verb_is_consumed_by_argparse_and_writes_nothing(
+    docs_script, tmp_path
+):
+    """R3 — `-x` is read as an option before the grammar sees it: an argparse
+    usage error at exit 2 that never reaches the command, and zero bytes."""
+    root = _pair_tree(tmp_path, "ffhyphen")
+    before = _snapshot(root)
+    proc = _run(docs_script, "relate", "add", "a.md", "-x", "b.md", "--root", str(root))
+    assert proc.returncode == 2
+    assert "usage:" in proc.stderr and "error:" in proc.stderr, proc.stderr
+    assert "docs: relate:" not in proc.stderr, "argparse refused it; the command never ran"
+    assert _snapshot(root) == before
+
+
+def test_relate_leading_hyphen_verb_after_a_separator_is_refused_by_the_grammar(
+    docs_script, tmp_path
+):
+    """R3 — after `--` (in either position), or as a bare `-`, the verb reaches
+    the command, and the grammar refuses it with R1."""
+    root = _pair_tree(tmp_path, "ffseparator")
+    before = _snapshot(root)
+    for argv, verb in (
+        (("a.md", "--", "-x", "b.md"), "-x"),
+        (("--", "a.md", "-x", "b.md"), "-x"),
+        (("a.md", "-", "b.md"), "-"),
+    ):
+        proc = _run(docs_script, "relate", "add", "--root", str(root), *argv)
+        assert proc.returncode == 2, (argv, proc.stdout, proc.stderr)
+        assert _r1(verb) in proc.stderr, (argv, proc.stderr)
+        assert _snapshot(root) == before
+
+
+def _valid_verb(rng: random.Random) -> str:
+    """A verb generated FROM the grammar: a lowercase letter, then lowercase
+    letters, digits and hyphens — trailing and doubled hyphens included."""
+    tail = string.ascii_lowercase + string.digits + "-"
+    while True:
+        length = rng.choice([0, 0, 1, 2, 5, 12, 40])
+        verb = rng.choice(string.ascii_lowercase) + "".join(rng.choice(tail) for _ in range(length))
+        if verb not in cli.RECIPROCAL_VERBS:  # a recognized verb is not free-form
+            return verb
+
+
+def _invalid_verb(rng: random.Random) -> str:
+    """A verb generated from the grammar's complement, one defect per verb,
+    each category independently of the valid generator."""
+    base = _valid_verb(rng)
+    cut = rng.randrange(len(base) + 1)
+    defect = rng.choice(
+        [
+            lambda: base[:cut] + rng.choice(string.ascii_uppercase) + base[cut:],
+            lambda: rng.choice(string.digits) + base,
+            lambda: "-" + base,
+            lambda: base[:cut] + " " + base[cut:],
+            lambda: base[:cut] + ":" + base[cut:],
+            lambda: base + "\n",
+            lambda: base[:cut] + "\r" + base[cut:],
+            lambda: base[:cut] + rng.choice("_.@#!$/,;'\"") + base[cut:],
+            lambda: base[:cut] + rng.choice("éßøΩж") + base[cut:],
+            lambda: base[:cut] + rng.choice("٣१１") + base[cut:],
+            lambda: "",
+        ]
+    )
+    return defect()
+
+
+def _fuzz_root(base: Path, index: int) -> Path:
+    root = base / f"fuzz-{index}"
+    root.mkdir(parents=True)
+    (root / ".docs.toml").write_text('[project]\nname = "fuzz"\n')
+    (root / "a.md").write_text(_doc("A", "fuzz", None))
+    (root / "b.md").write_text(_doc("B", "fuzz", None))
+    return root
+
+
+def test_relate_free_form_verb_fuzz_round_trips_valid_and_refuses_invalid(tmp_path, capsys):
+    """D6 fuzz, in process through `cli.main` (a real path, no mock), with a
+    fixed seed: every generated valid verb succeeds and is parsed back as the
+    identical verb; every generated invalid verb refuses with R1 and zero
+    bytes. The two generators are independent, so an over-accepting grammar
+    and an over-refusing one both fail here."""
+    rng = random.Random(20261027)
+    cases = [(_valid_verb(rng), True) for _ in range(30)]
+    cases += [(_invalid_verb(rng), False) for _ in range(40)]
+
+    for index, (verb, valid) in enumerate(cases):
+        root = _fuzz_root(tmp_path, index)
+        before = _every_file(root)
+        argv = ["relate", "add", "--root", str(root), "--quiet", "--", "a.md", verb, "b.md"]
+        code = cli.main(argv)
+        stderr = capsys.readouterr().err
+        if valid:
+            assert code == 0, (verb, stderr)
+            doc = cli.parse((root / "a.md").read_text(), root / "a.md", root)
+            assert doc.related == ((verb, "b.md"),), (verb, doc.related)
+            assert (root / "b.md").read_bytes() == before["b.md"], verb
+        else:
+            assert code == 2, (verb, stderr)
+            assert _r1(verb) in stderr, (verb, stderr)
+            assert _every_file(root) == before, verb
+
+
+def test_relate_recognized_pair_still_writes_both_halves_unchanged(docs_script, tmp_path):
+    """D4's byte-for-byte promise, locked at the byte level: the exact files
+    and the exact two-record `--json` plan a recognized verb produces today.
+    GREEN at baseline; it rejects any free-form branch that perturbs the
+    recognized path."""
+    root = _pair_tree(tmp_path, "recognized")
+
+    proc = _run(
+        docs_script,
+        "relate",
+        "add",
+        "a.md",
+        "precedes",
+        "b.md",
+        "--root",
+        str(root),
+        "--date",
+        "2026-06-01",
+        "--json",
+    )
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert (root / "a.md").read_text() == _doc(
+        "A", "recognized", "precedes: b.md", updated="2026-06-01"
+    )
+    assert (root / "b.md").read_text() == _doc(
+        "B", "recognized", "follows: a.md", updated="2026-06-01"
+    )
+    assert json.loads(proc.stdout) == {
+        "action": "add",
+        "verb": "precedes",
+        "inverse": "follows",
+        "source": "a.md",
+        "target": "b.md",
+        "reason": None,
+        "date": "2026-06-01",
+        "dry_run": False,
+        "applied": True,
+        "index_refreshed": True,
+        "edits": [
+            {
+                "path": "a.md",
+                "archived": False,
+                "edge": "precedes: b.md",
+                "present_before": False,
+                "present_after": True,
+                "change": "added",
+                "updated_bumped": True,
+                "revision_appended": False,
+            },
+            {
+                "path": "b.md",
+                "archived": False,
+                "edge": "follows: a.md",
+                "present_before": False,
+                "present_after": True,
+                "change": "added",
+                "updated_bumped": True,
+                "revision_appended": False,
+            },
+        ],
+    }
+    assert proc.stderr.splitlines()[:2] == [
+        "docs: relate: added 'precedes: b.md' to a.md",
+        "docs: relate: added 'follows: a.md' to b.md",
+    ]
+
+
+def test_relate_accepts_an_endpoint_in_an_extension_lifecycle(docs_script, tmp_path):
+    """D10: an endpoint in a configured `add_lifecycles` state parses, so the
+    recognized pair is written exactly as on any other tree (2.0.0 refused the
+    endpoint at exit 1)."""
+    root = tmp_path / "ffextension"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "ffextension"\n\n[vocabulary]\nadd_lifecycles = ["shipped"]\n'
+    )
+    (root / "a.md").write_text(_doc("A", "ffextension", None).replace("active", "shipped", 1))
+    (root / "b.md").write_text(_doc("B", "ffextension", None))
+
+    proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "- precedes: b.md" in (root / "a.md").read_text()
+    assert "Lifecycle: shipped" in (root / "a.md").read_text()
+    assert "- follows: a.md" in (root / "b.md").read_text()
+
+
+def test_playbook_guard_free_form_dry_run_probe_exits_0(docs_script, tmp_path):
+    """The Agent Playbook Suite's CI probe, replicated exactly: an EMPTY
+    `.docs.toml`, two `docs new spec` documents, then a free-form `--dry-run`
+    from the tree's own cwd with no `--root` — exit 0 and nothing written
+    (`lifecycle-and-free-form-relate` — D9)."""
+    tree = tmp_path / "guard"
+    tree.mkdir()
+    (tree / ".docs.toml").write_text("", encoding="utf-8")
+    for slug in ("a", "b"):
+        made = _run(docs_script, "new", "spec", slug, "--quiet", cwd=tree)
+        assert made.returncode == 0, (made.stdout, made.stderr)
+    before = _every_file(tree)
+
+    probe = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--dry-run", cwd=tree)
+
+    assert probe.returncode == 0, (probe.stdout, probe.stderr)
+    assert _every_file(tree) == before

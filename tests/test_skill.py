@@ -569,3 +569,90 @@ def test_argparse_help_teaches_the_archive_date_witness_and_the_mv_refusal() -> 
         "document moved OUT of the archive whose Lifecycle: was then hand-edited, "
         "where status-drift is silent. Both specs say 'a document'."
     )
+
+
+# --- lifecycle and free-form edges are routed through verbs -----------------
+#
+# Milestone `lifecycle-and-free-form-relate` — D9's surface parity (the task
+# plan's *Decisions (Phase 1 — BINDING)* › P1.8): the bundled skill lands in
+# the SAME change as the CLI surface, so these are RED until Phase 7.
+
+
+def _section(body: str, heading: str) -> str:
+    """The text of the `## <heading>` section of `body`, up to the next `## `."""
+    start = body.index(f"## {heading}\n")
+    end = body.find("\n## ", start + 1)
+    return body[start:] if end == -1 else body[start:end]
+
+
+def test_skill_routes_lifecycle_and_free_form_edges_through_verbs() -> None:
+    """The skill names `docs lifecycle` and free-form `docs relate` as the
+    routes for the two edits it used to leave without a verb: its description,
+    its verb table, *Three things never to hand-edit*, the *Quality artifacts*
+    guidance for linking a report, and the bundled use-case catalog."""
+    frontmatter, body = _split_frontmatter(_read_skill())
+    description = _parse_frontmatter(frontmatter)["description"]
+    assert "lifecycle" in description, "the description's verb list must name `lifecycle`"
+
+    rows = [line for line in body.split("\n") if line.startswith("|")]
+    assert any("`docs lifecycle" in row for row in rows), "the verb table needs a lifecycle row"
+    relate_rows = "\n".join(row for row in rows if "docs relate" in row)
+    assert "free-form" in relate_rows, "the relate row must cover free-form edges"
+
+    never = _section(body, "Three things never to hand-edit")
+    assert "docs lifecycle" in never, "the hand-edit guardrail must route lifecycle to its verb"
+    assert "docs relate" in never, "…and free-form `Related:` edits to `docs relate`"
+
+    quality = _section(body, "Quality artifacts")
+    assert "docs relate add" in quality, "a generated report is linked with `docs relate add`"
+    linking = (SKILL_DIR / "references" / "quality-artifacts.md").read_text()
+    assert "docs relate add" in _section(linking, "Linking reports")
+
+    catalog = (SKILL_DIR / "references" / "use-cases.md").read_text()
+    catalog_rows = [line for line in catalog.split("\n") if line.startswith("|")]
+    assert any("`docs lifecycle" in row for row in catalog_rows), "a lifecycle use-case row"
+    assert any("docs relate add" in row and "free-form" in row for row in catalog_rows), (
+        "a free-form edge use-case row"
+    )
+
+
+_STALE_PHRASES = (
+    "free-form verbs stay hand-edited",
+    "refuses to edit them",
+    "Only the six recognized verbs",
+)
+
+
+def test_shipped_surface_no_longer_says_free_form_verbs_are_hand_edited() -> None:
+    """Nothing an agent reads — the bundled skill and its references, or the
+    `docs relate` help text — may still say free-form edges are hand-edits,
+    and the help must name the free-form grammar it now enforces."""
+    offenders = [
+        f"{md.relative_to(SKILL_DIR).as_posix()}: {phrase!r}"
+        for md in sorted(SKILL_DIR.rglob("*.md"))
+        for phrase in _STALE_PHRASES
+        if phrase in " ".join(md.read_text(encoding="utf-8").split())
+    ]
+
+    parser = _build_parser()
+    sub = next(
+        a
+        for a in parser._actions
+        if isinstance(a, argparse._SubParsersAction) and a.dest == "command"
+    )
+    relate = sub.choices["relate"]
+    helps = {"docs relate --help": relate.format_help()}
+    relate_sub = next(a for a in relate._actions if isinstance(a, argparse._SubParsersAction))
+    for action in ("add", "remove"):
+        helps[f"docs relate {action} --help"] = relate_sub.choices[action].format_help()
+    offenders += [
+        f"{name}: {phrase!r}"
+        for name, text in helps.items()
+        for phrase in _STALE_PHRASES
+        if phrase in " ".join(text.split())
+    ]
+    assert not offenders, "stale hand-edit wording ships:\n" + "\n".join(offenders)
+
+    for action in ("add", "remove"):
+        text = helps[f"docs relate {action} --help"]
+        assert "[a-z][a-z0-9-]*" in text, f"`docs relate {action} --help` must name the grammar"

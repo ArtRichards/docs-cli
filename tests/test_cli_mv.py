@@ -1570,3 +1570,22 @@ def test_mv_collision_still_exits_1_before_the_cross_dated_refusal(
         "the collision is the actionable message; the refusal does not preempt it"
     )
     assert _snapshot(root) == before
+
+
+def test_mv_moves_a_doc_in_a_tree_with_extension_vocabulary(docs_script, fixtures_dir, tmp_path):
+    """`docs mv`'s whole-tree pre-flight walk reads configured extension
+    lifecycles and roles, so the move completes and its referrer — itself in
+    an extension state — is rewritten (2.0.0 refused at exit 2) — milestone
+    `lifecycle-and-free-form-relate` — D10."""
+    source = fixtures_dir / "trees" / "vocab-extension"
+    assert source.is_dir(), "the committed `vocab-extension` fixture tree must exist"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+
+    proc = _run(docs_script, "mv", "draft-note.md", "notes/draft-note.md", cwd=root)
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert (root / "notes" / "draft-note.md").is_file()
+    assert "- precedes: notes/draft-note.md" in (root / "shipped-spec.md").read_text()
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 0, check.stdout + check.stderr

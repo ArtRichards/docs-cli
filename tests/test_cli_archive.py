@@ -3949,18 +3949,12 @@ def test_archive_renders_the_witness_in_the_trees_date_format(docs_script, tmp_p
     tree the witness renders in the tree's format — ONE spelling in the file,
     never a second hardcoded ISO one (M25's rule, restated by Q2).
 
-    The run's pre-existing exit-2 tail is asserted EXPLICITLY: `parse()` uses
-    the hardcoded default while `check_doc` honours `config.date_format`
-    (defect E8, *Follow-ups* item 1), so the end-of-batch INDEX refresh fails.
-    M28a does not fix it, and pinning it strictly is what stops the witness
-    half of this test from being satisfied by a run that succeeded for some
-    other reason.
-
-    The consequence, stated plainly rather than left to be discovered: a later
-    milestone that FIXES E8 will break this test, deliberately — its expected
-    exit code becomes 0 and the INDEX-refresh assertions go away, while the
-    three `Archived:` / `Updated:` / no-second-spelling assertions survive
-    unchanged. *Follow-ups* item 1 names this test for exactly that reason.
+    The input `Updated:` is written in the tree's own format, the one spelling
+    every verb reads on this tree, so the archive completes at exit 0 with its
+    INDEX refreshed. The malformed-date behaviour this test once pinned as a
+    known defect now lives in
+    `test_walking_verbs_report_bad_date_on_a_mis_spelled_non_default_tree`
+    (milestone `lifecycle-and-free-form-relate` — D10, E11).
     """
     root = tmp_path / "attic-tree"
     root.mkdir()
@@ -3969,15 +3963,11 @@ def test_archive_renders_the_witness_in_the_trees_date_format(docs_script, tmp_p
     )
     (root / "thing.md").write_text(
         "# Thing\n\nLifecycle: active\nRole: notes\nProject: attictree\n"
-        "Updated: 2026-05-20\n\n## Body\n\nProse.\n"
+        "Updated: 20-05-2026\n\n## Body\n\nProse.\n"
     )
     proc = _run(docs_script, "archive", str(root / "thing.md"), "--date", "04-03-2026")
 
-    assert proc.returncode == 2, (proc.stdout, proc.stderr)
-    assert "docs: INDEX refresh failed:" in proc.stderr, (
-        "the pre-existing E8 defect, pinned so this test measures the WITNESS"
-    )
-    assert "Updated: malformed date '04-03-2026' (expected %Y-%m-%d)" in proc.stderr
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
     text = (root / "attic" / "04-03-2026" / "thing.md").read_text()
     assert "Archived: 04-03-2026" in text
@@ -4054,3 +4044,140 @@ def test_archive_leaves_an_archived_referrers_witness_byte_identical(docs_script
     assert "Updated: 2026-01-01" in after, "no Updated: bump for another document's move"
     assert "Revision:" not in after, "and no audit bullet — the widened exception adds none"
     assert _run(docs_script, "check", str(root)).returncode == 0
+
+
+# ===========================================================================
+# Milestone `lifecycle-and-free-form-relate` — D7 (archive-candidate and
+# strand invariance for edges written by `docs relate`) and D10 (`parse()`
+# honours the tree's configuration). The two invariance tests need free-form
+# `relate` to rebuild their trees, so they are RED until it lands.
+# ===========================================================================
+
+
+def _related_bullets(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """Split `text` into (text without its `Related:` group, the group's edges)."""
+    match = re.search(r"\nRelated:\n((?:- .*\n)+)", text)
+    assert match, "fixture document must carry a Related: group"
+    edges = [tuple(line[2:].split(": ", 1)) for line in match.group(1).splitlines()]
+    return text.replace(match.group(0), "", 1), [(verb, target) for verb, target in edges]
+
+
+def test_cascade_candidates_match_when_edges_were_written_by_relate(
+    docs_script, fixtures_dir, tmp_path
+):
+    """D7 / C13: rebuild every `Related:` group of `archive-neighborhood` with
+    `docs relate add`, in order, under `--date` equal to the fixture's own
+    `Updated:` — every document comes out byte-identical to the hand-written
+    tree, and `--cascade-dry-run --json` names the identical candidates."""
+    canonical = _tree(fixtures_dir, tmp_path, "archive-neighborhood", into="canonical")
+    relinked = _tree(fixtures_dir, tmp_path, "archive-neighborhood", into="relinked")
+
+    plan: list[tuple[str, str, str]] = []
+    for path in sorted(relinked.glob("*.md")):
+        stripped, edges = _related_bullets(path.read_text())
+        path.write_text(stripped)
+        plan.extend((path.name, verb, target) for verb, target in edges)
+    for source, verb, target in plan:
+        argv = ("relate", "add", source, verb, target, "--date", "2026-06-01", "--quiet")
+        proc = _run(docs_script, *argv, cwd=relinked)
+        assert proc.returncode == 0, (source, verb, target, proc.stdout, proc.stderr)
+
+    for path in sorted(canonical.glob("*.md")):
+        assert (relinked / path.name).read_bytes() == path.read_bytes(), path.name
+
+    records = []
+    for root in (canonical, relinked):
+        argv = ("archive", "milestone.md", "--cascade-dry-run", "--json", "--date", _M26_DATE)
+        proc = _run(docs_script, *argv, cwd=root)
+        assert proc.returncode == 0, (proc.stdout, proc.stderr)
+        records.append(json.loads(proc.stdout))
+    assert records[0] == records[1]
+    assert len(records[0]["candidates"]) == 6, "the preview still names all six one-hop edges"
+
+
+def test_strand_refusal_fires_on_a_child_of_written_by_relate(docs_script, fixtures_dir, tmp_path):
+    """D7 / C13: leg 1 refuses a live `child-of` child whose edge `docs relate`
+    wrote exactly as it refuses a hand-written one — the same exit, the same
+    lines, and zero bytes."""
+    root = _m28_tree(fixtures_dir, tmp_path, "movelink-strand")
+    for child in ("live-child.md", "milestone.md"):
+        path = root / child
+        path.write_text(path.read_text().replace("- child-of: plan.md\n", "", 1))
+        argv = ("relate", "add", child, "child-of", "plan.md", "--date", "2026-05-20", "--quiet")
+        proc = _run(docs_script, *argv, cwd=root)
+        assert proc.returncode == 0, (child, proc.stdout, proc.stderr)
+        assert "- child-of: plan.md" in path.read_text()
+    before = _m28_snapshot(root)
+
+    proc = _run(docs_script, "archive", "plan.md", "--date", _M28_DATE, "--json", cwd=root)
+
+    assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+    for child in ("live-child.md", "milestone.md"):
+        assert (
+            f"docs: archive: {child} is still active and declares 'child-of: plan.md', "
+            "which this operation would archive; refusing before any write"
+        ) in proc.stderr, proc.stderr
+    assert (
+        "docs: archive: 2 still-active child(ren) would be stranded; zero bytes written"
+        in proc.stderr
+    )
+    assert proc.stdout == ""
+    assert _m28_snapshot(root) == before
+
+
+def test_walking_verbs_report_bad_date_on_a_mis_spelled_non_default_tree(docs_script, tmp_path):
+    """D10 / E11: on a `%d-%m-%Y` tree, a document still carrying an ISO
+    `Updated:` already fails `docs check` with `bad-date`; every verb that
+    walks the tree now refuses it with that same diagnosis, at each verb's own
+    exit code for a malformed document, instead of disagreeing with the gate."""
+    root = tmp_path / "misspelled"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "misspelled"\n\n[archive]\ndate_format = "%d-%m-%Y"\n'
+    )
+    (root / "stale.md").write_text(
+        "# Stale\n\nLifecycle: active\nRole: notes\nProject: misspelled\n"
+        "Updated: 2026-10-27\n\n## Body\n\nProse.\n"
+    )
+    (root / "fine.md").write_text(
+        "# Fine\n\nLifecycle: active\nRole: notes\nProject: misspelled\n"
+        "Updated: 27-10-2026\n\n## Body\n\nProse.\n"
+    )
+    diagnosis = "stale.md: Updated: malformed date '2026-10-27' (expected %d-%m-%Y)"
+
+    check = _run(docs_script, "check", str(root))
+    assert check.returncode == 2, "the precondition: the gate already rejects this tree"
+    assert "bad-date" in check.stdout
+
+    for argv, code in (
+        (("index", "--root", str(root)), 2),
+        (("touch", "fine.md"), 2),
+        (("mv", "fine.md", "renamed.md", "--dry-run"), 2),
+        (("archive", "fine.md", "--dry-run"), 1),
+        (("project", "rename", "other", "--dry-run"), 1),
+    ):
+        proc = _run(docs_script, *argv, cwd=root)
+        assert proc.returncode == code, (argv, proc.stdout, proc.stderr)
+        assert diagnosis in proc.stderr, (argv, proc.stderr)
+
+
+def test_archive_accepts_a_primary_in_an_extension_state(docs_script, tmp_path):
+    """D10: a primary in a configured `add_lifecycles` state parses, so it
+    archives like any other document (2.0.0 refused it at exit 1)."""
+    root = tmp_path / "extension-archive"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "extension-archive"\n\n[vocabulary]\nadd_lifecycles = ["shipped"]\n'
+    )
+    (root / "shipped.md").write_text(
+        "# Shipped\n\nLifecycle: shipped\nRole: spec\nProject: extension-archive\n"
+        "Updated: 2026-05-20\n\n## Body\n\nProse.\n"
+    )
+
+    proc = _run(docs_script, "archive", "shipped.md", "--date", _M26_DATE, cwd=root)
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    moved = (root / _M26_DATED / "shipped.md").read_text()
+    assert "Lifecycle: archived" in moved
+    assert f"Archived: {_M26_DATE}" in moved
+    assert not (root / "shipped.md").exists()

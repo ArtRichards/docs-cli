@@ -97,7 +97,7 @@ checklist and the test matrix synchronized.
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-10-27 | Freeze against the answered Q1–Q9: `docs lifecycle`'s `*files, <state>` grammar, state vocabulary (built-ins plus `add_lifecycles` extensions, minus `archived`), refusal set and order, idempotence and single-reindex rules, output lines and `--json` record; free-form `relate`'s grammar (`[a-z][a-z0-9-]*`, D6), endpoint rules (archived SOURCE refused, archived TARGET never written, any existing file as TARGET), one-sided write and record; recognized-verb byte stability; the `--body-from` sentence; D10's config-aware `parse()` signature and how its sites obtain the config (D10's behaviour, `render_index` placement and `docs stamp` refusal are frozen); the stamp refusal's message; argparse's leading-hyphen handling; the upgrade note's three D10 changes; the surface list; the Phase-5 signatures. |
-| 2. Write Tests (RED) | Pending | — | New `tests/test_cli_lifecycle.py`; free-form additions to `tests/test_cli_relate.py` and `tests/test_relate_plan.py`; archive-invariance locks; the `--body-from` lock; skill parity; the 2.1.0 pin; both suite-probe replicas; D10's vocabulary, date-format, `render_index` and `docs stamp` locks; the pre-existing tests edited exactly as the task plan's *Pre-existing tests that change* lists. |
+| 2. Write Tests (RED) | Complete | 2026-10-27 | New `tests/test_cli_lifecycle.py`; free-form additions to `tests/test_cli_relate.py` and `tests/test_relate_plan.py`; archive-invariance locks; the `--body-from` lock; skill parity; the 2.1.0 pin; both suite-probe replicas; D10's vocabulary, date-format, `render_index` and `docs stamp` locks; the pre-existing tests edited exactly as the task plan's *Pre-existing tests that change* lists. |
 | 3. Create Data/Fixtures | Pending | — | Inline `tmp_path` builders for every write-then-compare case; archive invariance by copying `archive-neighborhood` / `movelink-strand` and re-linking through `relate`; for D10, one `vocab-extension/` tree with the sweep registration updated, inline builders for every non-default `date_format` case, and the `tests/test_cli_mv.py` `_attic_tree` correction. |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
 | 5. Update Base Interfaces | Pending | — | Free-form verb validator; one-sided relate planning; lifecycle plan record and pure planner; D10's config-aware `parse()` signature with a built-in default — wired nowhere. |
@@ -678,6 +678,121 @@ and no test changes** — the M25–M28a precedent.
 - `docs check .` from the docs root — no violations found (exit 0).
 - `cmp` of both mirrors against `docs/cli.md` / `docs/convention.md`, and
   of `docs/INDEX.md` against the frozen snapshot — identical.
+
+## Phase 2 — Write Tests (RED) — 2026-10-27
+
+### Objective
+
+Express every clause of the frozen contract as a test before any
+implementation, with RED tests for the missing behaviour, GREEN-at-baseline
+locks for the behaviour that must survive, and the pre-existing tests edited
+exactly as the task plan's authoritative list says — no more.
+
+### Actions taken
+
+- **184 new test ids** across two new and fourteen existing modules (the
+  matrix's *Visible tests* has the per-module counts and names), plus the
+  four renamed ids on the authoritative list.
+- `tests/test_cli_lifecycle.py` (new, 32 ids) and `tests/test_lifecycle_plan.py`
+  (new, 10 ids): every L-catalogue message asserted verbatim; every write
+  asserted on bytes through a `_promoted` helper that derives the expected
+  text from the contract (exactly two lines change) rather than from an
+  implementation; "not rewritten" observed through an unchanged inode; "no
+  reindex on a no-op" through a sentinel `INDEX.md`; the INDEX-refresh
+  failure through a real malformed sibling. No mock anywhere.
+- `tests/test_cli_relate.py` (+48): one-sided `add` / `remove` with exact
+  bytes, idempotence, the add-then-remove round trip with and without an
+  existing group under `--date`, the write footprint, the closed record, the
+  archived-source (R2) and archived-target rules, a non-UTF-8 binary target,
+  the four TARGET refusals, the 22-case grammar boundary, the injection
+  refusals, both R3 cases, a 70-verb fixed-seed fuzz through in-process
+  `cli.main`, the recognized-pair byte lock, an extension-state endpoint, and
+  the suite's probe replicated exactly.
+- `tests/test_relate_plan.py` (+11): the one-sided plan through
+  `_plan_one_sided`, which turns today's `ValueError` into an assertion
+  naming the missing behaviour; the grammar guard; a 600-verb pure-predicate
+  fuzz with independent valid and invalid generators.
+- `tests/test_cli_archive.py` (+4), `tests/test_body_from.py` (+4),
+  `tests/test_cli_stamp.py` (+6), `tests/test_index.py` (+1),
+  `tests/test_cli_index.py` (+2), `tests/test_cli_list.py` (+1),
+  `tests/test_cli_touch.py` (+2), `tests/test_walker.py` (+1),
+  `tests/test_cli_project_set.py` (+2), `tests/test_cli_project_rename.py`
+  (+1), `tests/test_cli_mv.py` (+1), `tests/test_model.py` (+56),
+  `tests/test_skill.py` (+2).
+- **Pre-existing edits, exactly the authoritative list:**
+  `test_relate_unknown_verb_refuses` → `test_relate_verb_outside_the_free_form_grammar_refuses`
+  (verb `see also`, the full R1 message); `test_relate_quiet_suppresses_success_but_never_a_refusal`
+  (verb `Pairs-With`); `test_relate_case_variant_verb_refuses` (docstring
+  only — R1 keeps the stem, OQ-4); `test_archive_renders_the_witness_in_the_trees_date_format`
+  (input `Updated: 20-05-2026`, exit 0, the two INDEX assertions dropped, the
+  three witness assertions kept, the docstring pointing at the new walking-verb
+  test); `test_stamp_supersedes_invalid_existing_block` →
+  `test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes`;
+  the four packaging pins at 2.1.0 (`test_a3_project_version_is_2_1_0`,
+  `test_c2_docs_version_is_2_1_0` renamed; `test_b1_wheel_builds`,
+  `test_b2_sdist_builds` in place). The `_attic_tree` builder and the stamp
+  fixture's prose are Phase 3's.
+- Updated the test matrix's table with the final ids.
+
+### Decisions / issues
+
+- **Three planned names corrected so they claim only what a test can
+  observe** (Check calibration — the behaviour asserted is unchanged):
+  `…_then_one_state_and_reindexes_once` became `…_and_refreshes_the_index`,
+  and `test_lifecycle_names_a_duplicated_path_once_and_writes_it_once` became
+  `test_lifecycle_plans_and_reports_a_duplicated_path_once` — a reindex or
+  write *count* is unobservable without a mock, which the mock policy rules
+  out; `test_project_set_knows_a_project_carried_only_by_an_extension_state_doc`
+  became `…_by_an_extension_vocabulary_doc`, because in the planned tree the
+  document carrying `Project: beta` is the extension-*role* one.
+- **Two planner tests added beyond the plan's list**, both pinning the P1.9
+  contract: `test_plan_lifecycle_refuses_an_unknown_state` (P1.9 names the
+  `ValueError` for an unknown state) and
+  `test_apply_lifecycle_plan_writes_only_the_changed_documents` (the planner
+  module otherwise never exercised `apply_lifecycle_plan`).
+- **Planner tests kept honest.** `plan_relate` already raises `ValueError` for
+  every unrecognized verb, so a bare `pytest.raises(ValueError)` would be
+  falsely GREEN for "refuses an out-of-grammar verb" and "refuses an archived
+  free-form source". Each of those tests first plans a grammar-valid
+  free-form edge (RED today) and then asserts the refusal, so it pins that the
+  guard is the grammar, and the source, rather than the recognized list.
+- **One planned RED test is GREEN at baseline, and is recorded as a lock:**
+  `test_relate_leading_hyphen_verb_is_consumed_by_argparse_and_writes_nothing`.
+  argparse already consumes `-x` before any command runs, and R3 freezes that
+  behaviour; the test rejects a later change (a `parse_known_args`, a
+  `prefix_chars` tweak) that would let a hyphen-led verb reach a write.
+- **The grammar boundary does not repeat the separator case.** The planned
+  `-x` after `--` boundary case is covered, in both separator positions and
+  for a bare `-`, by the dedicated
+  `test_relate_leading_hyphen_verb_after_a_separator_is_refused_by_the_grammar`.
+- **The parse-agreement sweep selects trees by configuration, not by name**
+  (OQ-8): `_trees_with_default_vocabulary_and_date_format()` keeps every tree
+  whose `.docs.toml` adds no vocabulary and keeps the ISO date format, so the
+  vocabulary-extension tree Phase 3 adds is excluded because of what it
+  configures; the parametrized ids do not change when it lands.
+- **The C14 extraction was proven against the frozen text.** A scratchpad copy
+  of the skill references with the P1.3 row and bullet substituted yields
+  `relate add deck.md artifact-of deck.html` and a group-form body that
+  `docs new` turns into the `artifact-of: deck.html` edge today.
+- **RED reasons are assertions.** New symbols are fetched through a
+  module-local `_symbol(name)`; `parse(..., config=)` asserts the keyword on
+  `inspect.signature` first; in-process walk failures are re-raised as
+  assertions naming the missing behaviour. Three failures that first printed
+  as bare `assert` lines gained messages.
+
+### Verification
+
+- `.venv/bin/python -m pytest --co -q` — **1688 collected**, 0 errors.
+- `.venv/bin/python -m pytest -q` — **185 failed, 1503 passed**. Of the 184
+  new ids plus the 4 renamed ids, 182 are RED and 6 GREEN (the five planned
+  locks and the argparse lock above); the 3 other failures are pre-existing
+  ids on the authoritative list (the archive date-format test, `test_b1`,
+  `test_b2`).
+- `comm` against the ids collected at `e48adb9`: exactly the four renamed ids
+  removed; 188 added.
+- `.venv/bin/ruff check .`, `.venv/bin/ruff format --check .`,
+  `.venv/bin/mypy src/ tests/` — clean.
+- `git diff e48adb9 --stat -- src/docs_cli/cli.py` — empty.
 
 ## Milestone completion summary
 

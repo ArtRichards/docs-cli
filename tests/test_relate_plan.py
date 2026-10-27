@@ -14,7 +14,10 @@ boundary), and D5 (staged publish + rollback) of the milestone's
 
 from __future__ import annotations
 
+import random
+import string
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -456,3 +459,210 @@ def test_relate_plan_to_json_shape(tmp_path):
             "revision_appended",
         }
         assert edit["change"] in {"added", "removed", "unchanged"}
+
+
+# ===========================================================================
+# Free-form edges at the seam (milestone `lifecycle-and-free-form-relate` —
+# D4–D6; *Decisions (Phase 1 — BINDING)* › P1.2 and the P1.9 signatures).
+# Today `plan_relate` raises `ValueError` for every verb outside the six
+# recognized ones; `_plan_one_sided` reports that refusal as the missing
+# behaviour, so these tests are RED on an assertion, not on a stray error.
+# ===========================================================================
+
+
+def _symbol(name: str) -> Any:
+    """Fetch a seam symbol that may not exist yet — a clean `AttributeError`,
+    never a collection error (ruff's B009 forbids a literal `getattr`)."""
+    return getattr(cli, name)
+
+
+def _plan_one_sided(root: Path, **kwargs: Any) -> Any:
+    """Plan a free-form edge; a refusal to plan one is the behaviour under test."""
+    try:
+        return _plan(root, **kwargs)
+    except ValueError as exc:
+        raise AssertionError(f"plan_relate must plan a free-form edge one-sided: {exc}") from exc
+
+
+def test_plan_relate_free_form_stages_only_the_source(tmp_path):
+    """D4: one edit — SOURCE's — and no inverse; planning stays pure."""
+    root = _two_doc_root(tmp_path)
+    before = {p: p.read_bytes() for p in sorted(root.glob("*.md"))}
+
+    plan = _plan_one_sided(
+        root,
+        action="add",
+        source=root / "a.md",
+        verb="pairs-with",
+        target=root / "b.md",
+        reason=None,
+        date_str=_DATE,
+    )
+
+    assert {p: p.read_bytes() for p in sorted(root.glob("*.md"))} == before
+    assert plan.inverse is None
+    assert (plan.verb, plan.source_rel, plan.target_rel) == ("pairs-with", "a.md", "b.md")
+    assert [(e.rel, e.edge, e.change) for e in plan.edits] == [
+        ("a.md", "pairs-with: b.md", "added")
+    ]
+    assert plan.edits[0].updated_bumped is True
+    assert plan.edits[0].revision_appended is False
+
+
+def test_plan_relate_free_form_never_reads_the_target(tmp_path):
+    """D5: TARGET is never read — a non-UTF-8 binary target would raise
+    `UnicodeDecodeError` the moment anything tried."""
+    root = _two_doc_root(tmp_path)
+    (root / "deck.bin").write_bytes(b"\xff\xfe\x00 not utf-8 \x80\x81")
+
+    plan = _plan_one_sided(
+        root,
+        action="add",
+        source=root / "a.md",
+        verb="artifact-of",
+        target=root / "deck.bin",
+        reason=None,
+        date_str=_DATE,
+    )
+
+    assert [(e.rel, e.edge) for e in plan.edits] == [("a.md", "artifact-of: deck.bin")]
+
+
+def test_plan_relate_free_form_refuses_an_archived_source(tmp_path):
+    """D5: the planner plans a free-form edge from an active SOURCE to an
+    archived TARGET, and refuses the same verb from the archived SOURCE — the
+    guard behind R2, specific to the source, not to the verb."""
+    root = _archived_pair_root(tmp_path)
+    archived = root / "archive" / "2026-01-01" / "old.md"
+
+    toward = _plan_one_sided(
+        root,
+        action="add",
+        source=root / "a.md",
+        verb="references",
+        target=archived,
+        reason=None,
+        date_str=_DATE,
+    )
+    assert [e.rel for e in toward.edits] == ["a.md"], "an archived TARGET is fine"
+
+    with pytest.raises(ValueError):
+        _plan(
+            root,
+            action="add",
+            source=archived,
+            verb="references",
+            target=root / "a.md",
+            reason="context",
+            date_str=_DATE,
+        )
+
+
+@pytest.mark.parametrize("verb", ["see also", "Pairs-With", "pairs:with", "pairs-with\n", ""])
+def test_plan_relate_refuses_a_verb_outside_the_grammar(tmp_path, verb):
+    """The planner's guard is the grammar, not the recognized list: it plans a
+    grammar-valid free-form verb and refuses an out-of-grammar one."""
+    root = _two_doc_root(tmp_path)
+    kwargs: dict[str, Any] = {
+        "action": "add",
+        "source": root / "a.md",
+        "target": root / "b.md",
+        "reason": None,
+        "date_str": _DATE,
+    }
+    _plan_one_sided(root, verb="pairs-with", **kwargs)
+
+    with pytest.raises(ValueError):
+        _plan(root, verb=verb, **kwargs)
+
+
+def test_relate_plan_to_json_free_form_record_has_null_inverse_and_one_edit(tmp_path):
+    """C15: the recognized record's eleven keys, `inverse: null`, one edit."""
+    root = _two_doc_root(tmp_path)
+    plan = _plan_one_sided(
+        root,
+        action="add",
+        source=root / "a.md",
+        verb="pairs-with",
+        target=root / "b.md",
+        reason=None,
+        date_str=_DATE,
+    )
+
+    record = _m25("relate_plan_to_json")(plan, dry_run=False, applied=True, index_refreshed=True)
+
+    assert record["inverse"] is None
+    assert len(record["edits"]) == 1
+    assert record["edits"][0]["path"] == "a.md"
+    assert set(record) == {
+        "action",
+        "verb",
+        "inverse",
+        "source",
+        "target",
+        "reason",
+        "date",
+        "dry_run",
+        "applied",
+        "index_refreshed",
+        "edits",
+    }
+
+
+def test_apply_relate_plan_writes_only_the_source_for_a_free_form_edge(tmp_path):
+    """Apply publishes SOURCE and leaves TARGET's file alone — its bytes and
+    its inode, so it was not rewritten either."""
+    root = _two_doc_root(tmp_path)
+    target = root / "b.md"
+    target_bytes, target_inode = target.read_bytes(), target.stat().st_ino
+    plan = _plan_one_sided(
+        root,
+        action="add",
+        source=root / "a.md",
+        verb="pairs-with",
+        target=target,
+        reason=None,
+        date_str=_DATE,
+    )
+
+    _m25("apply_relate_plan")(plan)
+
+    assert "- pairs-with: b.md" in (root / "a.md").read_text()
+    assert (target.read_bytes(), target.stat().st_ino) == (target_bytes, target_inode)
+
+
+def test_relate_verb_grammar_accepts_and_rejects_generated_verbs():
+    """D6 at the pure predicate, with independently generated valid and
+    invalid verbs (fixed seed): over-acceptance and over-refusal both fail."""
+    in_grammar = _symbol("relate_verb_in_grammar")
+    rng = random.Random(20261027)
+    tail = string.ascii_lowercase + string.digits + "-"
+
+    for _ in range(300):
+        length = rng.choice([0, 1, 2, 3, 8, 30, 80])
+        verb = rng.choice(string.ascii_lowercase) + "".join(rng.choice(tail) for _ in range(length))
+        assert in_grammar(verb) is True, verb
+
+    defects = [
+        string.ascii_uppercase,
+        string.digits,
+        "-",
+        " \t",
+        ":",
+        "\n\r",
+        "_.@#!$/,;'\"",
+        "éßøΩж",
+        "٣१１",
+    ]
+    for _ in range(300):
+        base = rng.choice(string.ascii_lowercase) + "".join(
+            rng.choice(tail) for _ in range(rng.randrange(6))
+        )
+        pool = rng.choice(defects)
+        if pool in (string.digits, "-"):
+            verb = rng.choice(pool) + base  # a leading digit or hyphen
+        else:
+            cut = rng.randrange(len(base) + 1)
+            verb = base[:cut] + rng.choice(pool) + base[cut:]
+        assert in_grammar(verb) is False, repr(verb)
+    assert in_grammar("") is False

@@ -254,46 +254,31 @@ def test_stamp_preserves_foreign_metadata(docs_script, fixtures_dir, tmp_path):
 # --- Partial / invalid existing metadata block (fresh-insert path) ----------
 
 
-def test_stamp_supersedes_invalid_existing_block(docs_script, fixtures_dir, tmp_path):
-    """A file with an H1 + a block whose `Role:` is invalid.
-
-    Such a file fails the strict `parse()` (the bogus Role is not in the
-    vocabulary) → stamp falls to the FRESH-insert path. `insert_metadata_block`
-    supersedes the four required fields (the bogus `Role:` is replaced with the
-    valid default, NOT parked under `## Migrated metadata` — it is a required
-    field). The result must carry exactly ONE valid metadata block — no
-    orphaned/doubled block, no stray `Role: not-a-real-role` line — and the
-    stamped tree must pass `docs check` (exit 0).
+def test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes(
+    docs_script, fixtures_dir, tmp_path
+):
+    """A file whose COMPLETE metadata block carries a `Role:` outside the
+    vocabulary is refused — exit 1, the failing field named, zero bytes
+    written — instead of being re-stamped, which would replace its lifecycle,
+    role and project (milestone `lifecycle-and-free-form-relate` — D10, the
+    stamp clause decided by the operator; *Decisions (Phase 1 — BINDING)* ›
+    P1.5). The fixture is a default tree: the refusal is not limited to
+    extension vocabularies.
     """
     root = _stamp_tree(fixtures_dir, tmp_path, "raw-invalid-block.md")
     target = root / "raw-invalid-block.md"
-    proc = _run(docs_script, "stamp", "raw-invalid-block.md", "--role", "spec", "--root", str(root))
-    assert proc.returncode == 0, (proc.stdout, proc.stderr)
-    text = target.read_text()
+    before = target.read_bytes()
 
-    # Exactly ONE of each required field — no doubled block. Count metadata
-    # lines (a line that starts with the label); the block lives in the header,
-    # so a simple per-line scan is unambiguous.
-    lines = text.splitlines()
-    for label in ("Lifecycle:", "Role:", "Project:", "Updated:"):
-        hits = [ln for ln in lines if ln.startswith(label)]
-        assert len(hits) == 1, (f"{label} appears {len(hits)}x, expected 1", text)
-    # The bogus Role was SUPERSEDED (valid value present), not preserved.
-    assert "Role: spec" in text, text
-    assert "not-a-real-role" not in text, text
-    # No Migrated-metadata section: the only "foreign" lines were required
-    # fields, which are superseded rather than parked.
-    assert "## Migrated metadata" not in text, text
-    # The body survives the stamp.
-    assert "BODYMARKER" in text, text
-    # The stamped tree passes docs check (the block round-trips through parse).
-    chk = _run(docs_script, "check", "--root", str(root))
-    assert chk.returncode == 0, (chk.stdout, chk.stderr)
-    # And the doc parses to a single valid block: a re-stamp is now idempotent
-    # (clean parse → only Updated refreshes, reported as already-stamped).
-    re_proc = _run(docs_script, "stamp", "raw-invalid-block.md", "--root", str(root))
-    assert re_proc.returncode == 0, (re_proc.stdout, re_proc.stderr)
-    assert "already stamped" in re_proc.stderr, re_proc.stderr
+    proc = _run(docs_script, "stamp", "raw-invalid-block.md", "--role", "spec", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert (
+        f"docs: stamp: {root.resolve() / 'raw-invalid-block.md'}: Role: 'not-a-real-role' "
+        "not in vocabulary; the file already carries a complete metadata block — refusing to "
+        "re-stamp it (run docs check, correct the field, then docs touch)"
+    ) in proc.stderr, proc.stderr
+    assert target.read_bytes() == before
+    assert not (root / "INDEX.md").exists(), "a refusal writes nothing, INDEX included"
 
 
 # --- Dry-run writes nothing -------------------------------------------------
@@ -404,3 +389,160 @@ def test_stamp_never_writes_the_archive_date_witness(docs_script, tmp_path):
     second = _run(docs_script, "stamp", str(doc), "--root", str(root))
     assert second.returncode == 0, (second.stdout, second.stderr)
     assert "\nArchived:" not in doc.read_text(), "…and a re-stamp introduces none either"
+
+
+# --- a complete block judged by the tree's configuration ---------------------
+#
+# Milestone `lifecycle-and-free-form-relate` — D10's stamp clause (operator
+# Packet A; *Decisions (Phase 1 — BINDING)* › P1.5): a block in a configured
+# extension state is already stamped; a complete block that fails the tree's
+# vocabulary or date format is refused with zero bytes; any other failure
+# keeps today's stamping.
+
+_STAMP_REFUSAL_TAIL = (
+    "; the file already carries a complete metadata block — refusing to re-stamp it "
+    "(run docs check, correct the field, then docs touch)"
+)
+
+
+def _configured_tree(tmp_path: Path, sidecar_extra: str, docs: dict[str, str]) -> Path:
+    root = tmp_path / "tree"
+    root.mkdir()
+    (root / ".docs.toml").write_text(f'[project]\nname = "tree"\n{sidecar_extra}')
+    for name, text in docs.items():
+        (root / name).write_text(text)
+    return root
+
+
+def _block(lifecycle: str, role: str, updated: str, *, related: str | None = None) -> str:
+    text = f"# Stamped\n\nLifecycle: {lifecycle}\nRole: {role}\nProject: tree\nUpdated: {updated}\n"
+    if related is not None:
+        text += f"\nRelated:\n- {related}\n"
+    return text + "\nBODYMARKER prose.\n"
+
+
+def _whole_tree(root: Path) -> dict[str, bytes]:
+    return {
+        p.relative_to(root).as_posix(): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def test_stamp_keeps_a_document_in_a_configured_extension_state(docs_script, tmp_path):
+    """A `docs check`-clean document in an `add_lifecycles` state is already
+    stamped: only `Updated:` changes — lifecycle, role and `Related:` stay
+    byte-identical (2.0.0 re-stamped it to `draft` / `notes` and parked the
+    edge under `## Migrated metadata`)."""
+    original = _block("shipped", "spec", "2026-05-20", related="pairs-with: other.md")
+    root = _configured_tree(
+        tmp_path,
+        '\n[vocabulary]\nadd_lifecycles = ["shipped"]\n',
+        {"a.md": original, "other.md": _block("active", "notes", "2026-05-20")},
+    )
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert "already stamped — refreshed Updated:" in proc.stderr, proc.stderr
+    today = date.today().isoformat()
+    assert (root / "a.md").read_text() == original.replace(
+        "Updated: 2026-05-20", f"Updated: {today}"
+    )
+
+
+def test_stamp_refuses_a_block_outside_the_configured_vocabulary_with_zero_bytes(
+    docs_script, tmp_path
+):
+    """On an extension tree, a complete block whose lifecycle is outside the
+    CONFIGURED vocabulary refuses: exit 1, `Lifecycle:` named, zero bytes."""
+    root = _configured_tree(
+        tmp_path,
+        '\n[vocabulary]\nadd_lifecycles = ["shipped"]\n',
+        {"a.md": _block("shiped", "spec", "2026-05-20")},
+    )
+    before = _whole_tree(root)
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert (
+        f"docs: stamp: {root.resolve() / 'a.md'}: Lifecycle: 'shiped' not in vocabulary"
+        + _STAMP_REFUSAL_TAIL
+    ) in proc.stderr, proc.stderr
+    assert _whole_tree(root) == before
+
+
+def test_stamp_refuses_a_typod_lifecycle_on_a_default_tree_with_zero_bytes(docs_script, tmp_path):
+    """The accepted consequence of the operator's decision: a typo'd lifecycle
+    on a default tree refuses too — and the refusal happens before the
+    `--dry-run` branch, so a preview refuses identically."""
+    root = _configured_tree(tmp_path, "", {"a.md": _block("activ", "spec", "2026-05-20")})
+    before = _whole_tree(root)
+    refusal = (
+        f"docs: stamp: {root.resolve() / 'a.md'}: Lifecycle: 'activ' not in vocabulary"
+        + _STAMP_REFUSAL_TAIL
+    )
+
+    for extra in ((), ("--dry-run",)):
+        proc = _run(docs_script, "stamp", "a.md", "--root", str(root), *extra)
+        assert proc.returncode == 1, (extra, proc.stdout, proc.stderr)
+        assert refusal in proc.stderr, (extra, proc.stderr)
+        assert _whole_tree(root) == before
+
+
+def test_stamp_refuses_a_block_dated_outside_the_trees_date_format_with_zero_bytes(
+    docs_script, tmp_path
+):
+    """The E11 shape: on a `%d-%m-%Y` tree a complete block with an ISO
+    `Updated:` refuses, naming `Updated:` in the tree's format."""
+    root = _configured_tree(
+        tmp_path,
+        '\n[archive]\ndate_format = "%d-%m-%Y"\n',
+        {"a.md": _block("active", "spec", "2026-05-20")},
+    )
+    before = _whole_tree(root)
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert (
+        f"docs: stamp: {root.resolve() / 'a.md'}: Updated: malformed date '2026-05-20' "
+        "(expected %d-%m-%Y)" + _STAMP_REFUSAL_TAIL
+    ) in proc.stderr, proc.stderr
+    assert _whole_tree(root) == before
+
+
+def test_stamp_refusal_in_a_batch_writes_no_file(docs_script, fixtures_dir, tmp_path):
+    """Validate-all-first: a fresh file named BEFORE the refused one is not
+    stamped either, and the INDEX is not written."""
+    root = _stamp_tree(fixtures_dir, tmp_path, "raw-no-frontmatter.md")
+    (root / "bad.md").write_text(_block("activ", "spec", "2026-05-20"))
+    before = _whole_tree(root)
+
+    proc = _run(docs_script, "stamp", "raw-no-frontmatter.md", "bad.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "Lifecycle: 'activ' not in vocabulary" + _STAMP_REFUSAL_TAIL in proc.stderr
+    assert _whole_tree(root) == before
+
+
+def test_stamp_keeps_todays_behaviour_for_a_block_failing_for_an_unrelated_reason(
+    docs_script, tmp_path
+):
+    """A complete block that fails `parse()` for a reason unrelated to the
+    configured vocabulary or date format — here a `Related:` bullet with no
+    colon — keeps today's fresh stamping (the refusal covers vocabulary and
+    date failures only). GREEN at baseline; it rejects an over-broad refusal."""
+    root = _configured_tree(
+        tmp_path, "", {"odd.md": _block("active", "spec", "2026-01-01", related="no-colon-here")}
+    )
+
+    proc = _run(docs_script, "stamp", "odd.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert f"docs: stamped {root.resolve() / 'odd.md'}" in proc.stderr, proc.stderr
+    text = (root / "odd.md").read_text()
+    assert "## Migrated metadata" in text
+    assert "Migrated-Related:" in text
+    assert "BODYMARKER" in text
