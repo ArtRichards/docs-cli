@@ -31,9 +31,8 @@ Related:
 - Implementation log:
   [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md)
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
-  complete — the contract is frozen in *Decisions (Phase 1 — BINDING)* and
-  the RED baseline recorded — its end-of-step reviews returned and their
-  findings are resolved, pending finalization; the narrative, evidence
+  complete, reviewed and synced — the contract is frozen in *Decisions
+  (Phase 1 — BINDING)* and the RED baseline recorded; the narrative, evidence
   headline and per-phase results live in the implementation log.
 
 ### Identity note

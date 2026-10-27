@@ -25,14 +25,15 @@ checklist and the test matrix synchronized.
   dependencies ([milestone-plan.md](milestone-plan.md))
 - Started: 2026-10-26 (milestone setup); Step 1 (Phases 1–4) started
   2026-10-27 on `lifecycle-and-free-form-relate/phases-1-4`
-- Step 1: **Phases 1–4 complete (2026-10-27); review pending** — the
-  contract is frozen in the task plan's *Decisions (Phase 1 — BINDING)* and
-  the RED baseline is recorded (restated after the same-instance audit —
-  1696 collected, 191 failed, 1505 passed — and again after the review
-  resolution: **1656 collected, 150 failed, 1506 passed**); per-phase results
-  are in the phase sections below, the audit in *Step 1 same-instance
-  audit*, and the review ledger in *Step 1 review-pass-001* (both reviews
-  returned; findings resolved; finalization pending).
+- Step 1: **complete (2026-10-27)** — Phases 1–4 done, the same-instance
+  audit folded in, and `Step 1 review-pass-001` closed: both providers
+  returned, both blockers and every accepted should-fix, nit and taste
+  finding fixed in `9b8c83e` (one taste finding waived), re-review not
+  required. The contract is frozen in the task plan's *Decisions (Phase 1 —
+  BINDING)*, with R4 added by the review; the RED baseline stands at **1656
+  collected, 150 failed, 1506 passed** (classified in *Phase 4* and its
+  restatements). Details: the phase sections below, *Step 1 same-instance
+  audit*, and *Step 1 review-pass-001*.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -95,7 +96,9 @@ checklist and the test matrix synchronized.
 - Taste triage: Step 0 review-pass-001 triaged — GPT: sound, no subjective
   findings; claude-T1 partially fixed and the remainder waived with reason;
   claude-T2 and claude-T3 fixed; patch bloat in line with precedent (see the
-  pass entry below).
+  pass entry below). Step 1 review-pass-001 triaged — GPT: sound, no
+  subjective findings; claude-T1, T2 and T3 fixed; claude-T4 waived with
+  reason (*Follow-ups* item 10).
 
 ## TDD phase progress
 
@@ -1173,11 +1176,11 @@ operator decision.
   (`lifecycle-and-free-form-relate-impl.md#step-0-review-pass-001`), closed,
   with `final-sync: ready` in `e48adb9f9bddaf6169e2387280907e66d531c71b`. No
   `contract-rework` entry exists between them.
-- Status: `open` — both provider attempts are terminal (both returned), every
-  finding is dispositioned with evidence in the review-resolution checkpoint,
-  and the conductor ruled the conditional re-review not required;
-  finalization (the correcting commit's hash written here, then
-  `final-sync: ready`) is pending.
+- Status: `closed` — both provider attempts are terminal (both returned),
+  every finding is dispositioned with evidence, the correcting commit
+  `9b8c83eb69c11cf3aeab3b69989e64f998d95c38` is recorded, the conditional re-review is
+  recorded `not required` with the conductor's evidence, and `final-sync` is
+  `ready`.
 - Frozen packet (conductor): slug `lifecycle-and-free-form-relate`; step 1,
   Phases 1–4; branch `lifecycle-and-free-form-relate/phases-1-4`; base
   `e48adb9f9bddaf6169e2387280907e66d531c71b`; review `HEAD`
@@ -1213,17 +1216,17 @@ operator decision.
 
 Source ids are the reviewers' own; gpt-B1 and claude-B1 are one gap found
 independently, and gpt-B2 and claude-S3 were merged and treated as a
-blocker by the conductor. **Correcting commit** for every row: the
-review-resolution checkpoint `lifecycle-and-free-form-relate(phase 1-4):
-resolve Step 1 review-pass-001 findings` — a commit cannot carry its own
-hash, so it is written here at finalization. Every new test's RED reason was
+blocker by the conductor. **Correcting commit** for every row:
+`9b8c83eb69c11cf3aeab3b69989e64f998d95c38` (`lifecycle-and-free-form-relate(phase 1-4):
+resolve Step 1 review-pass-001 findings`), written here at finalization — a
+commit never carries its own hash. Every new test's RED reason was
 checked by running it at the checkpoint; the counts are in *Verification*
 below.
 
 | Id | Severity | Disposition | Evidence |
 |---|---|---|---|
-| gpt-B1 / claude-B1 | blocker | **fixed** | Nothing pinned `docs lifecycle` on a non-default `date_format` tree or with a named source already in an extension state. Added `tests/test_cli_lifecycle.py::test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree`: a `%d-%m-%Y` tree with `add_lifecycles = ["shipped"]`, source `shipped` / `20-05-2026`; `docs lifecycle m.md active --json` must exit 0 with the promoted bytes and today in `%d-%m-%Y` (file and record `date`), refresh the INDEX, leave `docs check` clean, and make a repeated call a zero-byte no-op. RED (`invalid choice: 'lifecycle'` → `AssertionError`); lands at Phase 6; in the matrix's *Boundary — date format* row. |
-| gpt-B2 + claude-S3 | blocker | **fixed** | The stamp "complete block" boundary (`Lifecycle`, `Role`, `Updated` required, `Project` not) was unprotected. Added `tests/test_cli_stamp.py::test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes` (RED — 2.0.0 re-stamps at exit 0; the frozen message naming `Role:` and zero bytes asserted) and the GREEN lock `::test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` (`Lifecycle: activ`, no `Updated:` → `docs: stamped …`, exit 0), which rejects a refusal that ignores the completeness test. Together they kill both directions of mutation target 11's completeness check. |
+| gpt-B1 / claude-B1 | blocker | **fixed** in `9b8c83eb69c11cf3aeab3b69989e64f998d95c38`; re-review: not required | Nothing pinned `docs lifecycle` on a non-default `date_format` tree or with a named source already in an extension state. Added `tests/test_cli_lifecycle.py::test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree`: a `%d-%m-%Y` tree with `add_lifecycles = ["shipped"]`, source `shipped` / `20-05-2026`; `docs lifecycle m.md active --json` must exit 0 with the promoted bytes and today in `%d-%m-%Y` (file and record `date`), refresh the INDEX, leave `docs check` clean, and make a repeated call a zero-byte no-op. RED (`invalid choice: 'lifecycle'` → `AssertionError`); lands at Phase 6; in the matrix's *Boundary — date format* row. |
+| gpt-B2 + claude-S3 | blocker | **fixed** in `9b8c83eb69c11cf3aeab3b69989e64f998d95c38`; re-review: not required | The stamp "complete block" boundary (`Lifecycle`, `Role`, `Updated` required, `Project` not) was unprotected. Added `tests/test_cli_stamp.py::test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes` (RED — 2.0.0 re-stamps at exit 0; the frozen message naming `Role:` and zero bytes asserted) and the GREEN lock `::test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` (`Lifecycle: activ`, no `Updated:` → `docs: stamped …`, exit 0), which rejects a refusal that ignores the completeness test. Together they kill both directions of mutation target 11's completeness check. |
 | claude-S4 | should-fix | **fixed** | The date half of E12 had no lock. Added `tests/test_cli_stamp.py::test_stamp_keeps_a_correctly_dated_document_on_a_non_default_date_format_tree`: only `Updated:` changes, rendered `%d-%m-%Y`. RED (2.0.0's reindex refuses the tree's own spelling). |
 | gpt-S1 | should-fix | **fixed** | Added `tests/test_cli_relate.py::test_relate_free_form_accepts_a_malformed_markdown_target_without_reading_it`: a `.md` TARGET that does not parse is accepted under `--dry-run` (zero bytes) and written when excluded (so the reindex never walks it) — an extension-based "parse the `.md` targets" rule fails it. RED. |
 | gpt-S2 | should-fix | **fixed** | `tests/test_model.py::test_bare_parse_keeps_the_built_in_defaults` now writes a sidecar extending the vocabulary AND the date format at the very root it passes, and still sees the built-ins and ISO — so it rejects a `parse()` that picks up ambient config. The explicit-config half shares the same sidecar (`_EXTENDED_SIDECAR`) in `::test_parse_with_a_config_accepts_its_extensions_and_date_format` (RED until Phase 5); the two are kept separate so the lock still guards at baseline. |
@@ -1263,12 +1266,39 @@ below.
 
 **Re-review.** **Not required** (conductor decision). Both blocker
 resolutions are additive tests whose correctness is objectively verifiable by
-inspection and by their recorded RED reason (an `AssertionError` or
-`AttributeError` for the missing behaviour), and the conductor verifies them
-directly at the resolution checkpoint; they do not change the reviewed
-contract. JC1 (R4) is a should-fix resolved by a narrow new refusal on new
-surface only, consistent with D6's injection rationale; the conductor
-verifies its catalogue entry, spec text and tests.
+inspection and by their recorded RED reason, and they do not change the
+reviewed contract; JC1 (R4) is a should-fix resolved by a narrow new refusal
+on new surface only, consistent with D6's injection rationale. The conductor
+verified the correction directly at `9b8c83eb69c11cf3aeab3b69989e64f998d95c38`:
+
+- `test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree`
+  is RED with an `AssertionError` at `tests/test_cli_lifecycle.py:295`,
+  because `lifecycle` is not a registered subcommand (argparse usage) — the
+  correct reason;
+- `test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes`
+  is RED at `tests/test_cli_stamp.py:564`, because 2.0.0 re-stamps the file
+  (`docs: stamped …`) — the correct reason;
+- `test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value`
+  passes, as the intended GREEN lock;
+- R4 is present at `docs/cli.md:2478` and mirrored;
+- `src/docs_cli/cli.py` is unchanged against `6f94a0a`;
+- the full suite is 1656 collected / 150 failed / 1506 passed, and
+  `docs check` exits 0.
+
+No re-review packet was frozen and no reviewer was re-engaged.
+
+**Closure check.** Predecessor chain: this entry follows `Step 0
+review-pass-001` (closed, `final-sync: ready` in `e48adb9`), whose text and
+frozen packet are byte-identical to their state at `e48adb9`; no
+`contract-rework` entry intervenes. One frozen packet is named for this pass
+(base `e48adb9…`, review `HEAD` `6f94a0a…`). Both provider slots are
+terminal and both returned, from different families, with host-reported
+identities. Both reviewer-labeled blockers — gpt-B1 / claude-B1 and gpt-B2 +
+claude-S3 — are `fixed` with the correcting commit and test evidence. Every
+taste finding is fixed (claude-T1, T2, T3) or waived with a reason
+(claude-T4); GPT raised none. The conditional re-review is recorded `not
+required` with the conductor's evidence. The tracker row is still `100 |
+lifecycle-and-free-form-relate | active | — |` under its frozen identity.
 
 **Verification at the review-resolution checkpoint.**
 
@@ -1288,7 +1318,71 @@ verifies its catalogue entry, spec text and tests.
 - `docs check .` from the docs root — exit 0; both mirrors and the INDEX
   snapshot byte-identical; `git diff e48adb9 -- src/docs_cli/cli.py` empty.
 
-- final-sync: `pending`.
+
+**Verification report (sync-and-commit, ship-milestone Step 1).**
+
+- Risk level: Standard (operator-confirmed, Q8).
+- Fast gate commands run: `.venv/bin/ruff check .`; `.venv/bin/ruff format
+  --check .`; `.venv/bin/mypy src/ tests/`; `.venv/bin/python -m pytest -q
+  --tb=line -rfxXE`; from the docs root `docs touch` (task plan, this log,
+  `status.md`), `docs index .`, `docs check .` and `docs check . --stale 14`;
+  `cmp` of both mirrors against the specs and of `docs/INDEX.md` against
+  `tests/fixtures/expected/docs-INDEX.md`.
+- Deep gate commands run: none — no deep gate is configured; the mechanical
+  `comm` / AST-diff id proof against `e48adb9` ran at the resolution
+  checkpoint (exactly the four renamed ids removed; the AST diff exactly the
+  authoritative list plus `_attic_tree`).
+- Deferred / not configured gates: coverage, hidden suite and mutation tooling
+  — not configured; the hand-applied mutation smoke and the property / fuzz
+  results — Phase 8, per the milestone.
+- Visible test result: **1656 collected, 150 failed, 1506 passed**; 0
+  collection errors, tracebacks, INTERNALERRORs, xfails, xpasses or errors;
+  `AssertionError` 139, `AttributeError` 11; the failing set is identical to
+  the one the conductor verified at `9b8c83e`.
+- Expected visible-test state: **intentional Step 1 RED** — 142 authored ids
+  and the 8 pre-existing ids on the authoritative list fail for the missing
+  milestone behaviour (classified in *Phase 4* and its restatements); 7
+  authored locks and 3 swept ids pass; no unexpected pass, no unrelated
+  failure.
+- Hidden/generalization: categories only (repository fully visible); not
+  applicable at Step 1.
+- Coverage: not configured. Mutation: not configured (hand-applied smoke at
+  Phase 8).
+- Property/stateful and fuzz: written and RED at baseline; results at Phase 8.
+- Benchmark/security/schema/migration: schema and injection refusals written
+  (RED); benchmark not applicable; migration not applicable.
+- Mock audit: no mocks added.
+- Taste triage: complete — claude-T1, T2, T3 fixed; claude-T4 waived with a
+  reason; GPT raised none.
+- Ship-milestone Step 1 review ledger: this pass — predecessor chain intact,
+  both slots returned, blockers fixed with evidence, re-review `not required`
+  with the conductor's evidence; `final-sync: ready` below.
+- Semantic tracker row / branch identity: `milestone-plan.md` row `100 |
+  lifecycle-and-free-form-relate | active | — |`, Notes unchanged; project
+  `docs`, project path empty, artifact stem `lifecycle-and-free-form-relate`,
+  the three artifacts at their derived paths; branch
+  `lifecycle-and-free-form-relate/phases-1-4` under root
+  `lifecycle-and-free-form-relate/`; no recognized relationship applies;
+  `status.md` links the tracker as narrative only (its narrative did not
+  change, so its body was not edited).
+- Contract/test matrix status: current — C1–C25 with the crosswalk, the
+  final Phase 2 ids, and the review's additions (R4; the new tests).
+- Docs check: exit 0; `--stale 14` exit 1 with seven pre-existing `stale`
+  warnings on evergreen documents (`architecture.md`, `charter.md`,
+  `definition-of-ready.md`, `dual-status-adr.md`, `release-runbook.md`,
+  `test-strategy.md`, `vocab-adr.md`), reviewed — two fewer than at Step 0,
+  because Phase 1 updated `cli.md` and `convention.md`.
+- Diff scope: specs and mirrors, the milestone trio, the INDEX and its
+  snapshot, the new `vocab-extension` fixture tree, one stamp fixture's
+  prose, and test modules; `src/docs_cli/cli.py` unchanged since `e48adb9`.
+- Operator approvals: Q3, Q7, Q8 and Packet A (setup); none new — JC1 is a
+  conductor decision under Standard-risk authority.
+- High-risk RED-baseline approval: not applicable (Standard).
+- Remaining risks: the intermittent `test_d4_install_skill_is_idempotent`
+  segfault (seen twice in full runs, never in isolation; no product code
+  involved); follow-ups 7–10 await their Phase 7 / Phase 10 homes.
+
+- final-sync: `ready`.
 
 ## Milestone completion summary
 
