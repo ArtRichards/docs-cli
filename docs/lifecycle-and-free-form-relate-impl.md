@@ -25,9 +25,12 @@ checklist and the test matrix synchronized.
   dependencies ([milestone-plan.md](milestone-plan.md))
 - Started: 2026-10-26 (milestone setup); Step 1 (Phases 1–4) started
   2026-10-27 on `lifecycle-and-free-form-relate/phases-1-4`
-- Step 1: **in progress** — the contract is frozen in the task plan's
-  *Decisions (Phase 1 — BINDING)*; per-phase results are in the phase
-  sections below and the *TDD phase progress* table.
+- Step 1: **Phases 1–4 complete (2026-10-27); review pending** — the
+  contract is frozen in the task plan's *Decisions (Phase 1 — BINDING)* and
+  the RED baseline is recorded (restated after the same-instance audit:
+  1696 collected, 191 failed, 1505 passed); per-phase results are in the
+  phase sections below, the audit in *Step 1 same-instance audit*, and the
+  review ledger in *Step 1 review-pass-001*.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -882,6 +885,13 @@ The arithmetic closes: **1504** pre-existing ids (1500 under their own id +
 the 4 renamed) + **184** authored ids + **3** swept ids
 (`vocab-extension` in the three `tests/test_check.py` sweeps) = **1691**.
 
+*(Restated after the Step-1 same-instance audit, which added five RED tests
+pinning frozen clauses no test covered — see that section: **1696
+collected, 191 failed, 1505 passed**; 189 authored ids, 183 of them RED;
+`AssertionError` 180, `AttributeError` 11; Phase 6's count becomes 106. The
+figures in this section are the measurement taken at the Phase 4 commit and
+stay true of it.)*
+
 | Population | Ids | RED | GREEN |
 |---|---|---|---|
 | pre-existing, own id | 1500 | 4 — all on the authoritative list | 1496 |
@@ -1033,6 +1043,105 @@ case-variant tests (R1 keeps the stem); the reference byte-identity tests
   the frozen snapshot — identical.
 - `git diff --stat e48adb9 -- src/docs_cli/cli.py` — **empty**. Phases 1–4
   change no product code, by design.
+
+## Step 1 same-instance audit — 2026-10-27
+
+Run against Phases 1–4 after the last phase and before returning, per
+ship-milestone's *consistency / completeness / accuracy audit*. Every item was
+worked; findings were fixed in the audit commit, and nothing needs an
+operator decision.
+
+### Issues found and fixed
+
+1. **Catalogue message L4 had no `docs lifecycle` test.** Every other
+   L-message was asserted; a malformed `.docs.toml` was not, so an
+   implementation that forgot to catch `TOMLDecodeError` would have shipped a
+   traceback. Added `test_lifecycle_malformed_sidecar_exits_2_and_writes_nothing`
+   (RED).
+2. **OQ-1's path rule was not pinned.** Every `docs lifecycle` test passes
+   `--root` with a path that exists only root-relative, which a cwd-first or
+   root-then-cwd rule would also satisfy. Added
+   `test_lifecycle_resolves_a_relative_path_against_the_docs_root_not_the_cwd`
+   (RED): from `sub/`, `x.md` refuses and `sub/x.md` succeeds.
+3. **P1.2's "`--reason` is still shape-checked when given" had no free-form
+   test.** Added `test_relate_free_form_still_shape_checks_a_given_reason`
+   (RED): empty and multi-line reasons refuse with the unchanged messages.
+4. **No test killed a free-form path that skips parsing SOURCE.** The
+   existing malformed-endpoint test covers a recognized verb's TARGET, so a
+   `parse_endpoint=False` leaking to SOURCE would have reached the editor and
+   raised. Added `test_relate_free_form_source_must_parse_and_exits_1_when_malformed`
+   (RED).
+5. **D4 / C7's E11 direction for `relate` had no test** — the Phase 1 wording
+   fix (OQ-6) named it, nothing asserted it. Added
+   `test_relate_refuses_an_endpoint_dated_outside_the_trees_date_format`
+   (RED); at baseline it fails the instructive way — 2.0.0 refuses the
+   correctly dated endpoint and accepts the mis-spelled one.
+6. **`cli.md` said "one line per named document"** for `docs lifecycle`'s
+   human output, where P1.1 freezes one line per *distinct* named document in
+   first-seen order. Corrected; mirror re-synced.
+7. **The progress lines lagged.** The task plan's *Overview* and this log's
+   *Implementation metadata* still said Step 1 was in progress; both now say
+   Phases 1–4 are complete and the review is pending.
+8. **The baseline is restated** (Phase 4 carries the note): **1696
+   collected, 191 failed, 1505 passed**; `AssertionError` 180,
+   `AttributeError` 11; 0 tracebacks, xfails or errors; the five new RED ids
+   land at Phase 6 (76 / 106 / 9); `comm` still removes exactly the four
+   renamed ids, and the AST diff is unchanged. The matrix carries the new ids.
+
+### Checked clean
+
+- **Completeness.** The one Deliverable in range — the frozen flag / exit /
+  message matrix, records and Phase-5 signatures — is met; every phase in
+  range has a log section and a dated row; no placeholder, TODO or
+  commented-out code was added.
+- **Accuracy.** No product code changed (`git diff e48adb9 --
+  src/docs_cli/cli.py` is empty), so the only code-versus-spec divergence is
+  the deliberate one the M25–M28a precedent accepts: `cli.md` and
+  `convention.md` describe the frozen 2.1 surface ahead of its Phase 5–7
+  implementation. The specs' statements about *existing* behaviour were
+  re-read against the code; the three that were wrong are fixed (`docs index`
+  exits, `docs stamp`'s required fields, `docs stamp`'s INDEX-refresh exit 2).
+- **Tracker and identity.** `milestone-plan.md` row `100 |
+  lifecycle-and-free-form-relate | active | — |`, Notes unchanged; slug, stem
+  and branch root `lifecycle-and-free-form-relate/` agree; the three
+  artifacts resolve; no recognized relationship applies; `status.md` stays
+  narrative-only with no phase progress (nothing in its narrative changed).
+- **Documentation.** Every edited document was `docs touch`ed (no hand-set
+  `Updated:`); `docs check .` exits 0; both mirrors are byte-identical; the
+  INDEX snapshot matches. Follow-ups 7 and 8 live only in the task plan for
+  now because OQ-11 — a binding conductor resolution — schedules their
+  `feedback-log.md` registration (with 2 and 3) at Phase 7; the archive that
+  could lose them is Step 3's, so nothing is at risk.
+- **Codebase.** Tests reuse every planned helper unmodified (`_pair_tree`,
+  `_archived_pair_tree`, `_snapshot`, `_tree`, `_m28_tree`, `_m28_snapshot`,
+  `_minimal_tree`, `_stamp_tree`, `_two_doc_root`, `_archived_pair_root`,
+  `_plan`, `_m25`); new helpers are module-local; stdlib only; no mock.
+- **Patch bloat — noted for the reviewers, not hidden.** The test diff is
+  **+2,723 / −96 lines** against the plan's +900 to +1,300 for the whole
+  milestone. It traces to the authored id count (189 against the ~120
+  planned: the 22-case boundary, the five-state round trip, the 53-id
+  agreement sweep, the planner modules) and to `ruff format`'s
+  one-argument-per-line layout of subprocess argv lists and literal JSON
+  records; every id traces to a clause and a planned or audit-added name, and
+  no helper or fixture exists for a single assertion.
+- **Tests pin the contract** without over-constraining it: exact bytes, exact
+  records and exact messages appear only where the contract freezes them (the
+  surgical-edit promise, D4's byte-for-byte promise, the L/R catalogues, the
+  stamp message); write counts and reindex counts are never claimed, because
+  they are unobservable without a mock.
+- **Adequacy and mocks.** Every clause C1–C25 maps to named tests;
+  hidden/generalization categories are recorded without cases; the property
+  checks and both fuzzers are written (RED, results at Phase 8); the mutation
+  smoke is Phase 8's; no mock was added.
+- **Metrics.** `visible_pass_rate` at a RED baseline is not meaningful
+  (1505 / 1696); hidden suite, coverage and mutation tooling are not
+  configured.
+- **A transient interpreter crash, recorded.** One full run showed
+  `tests/test_packaging.py::test_d4_install_skill_is_idempotent` failing with
+  the wheel venv's `docs` exiting −11 (SIGSEGV) on its second invocation. It
+  passed three times in isolation, the whole packaging module showed only the
+  four listed pins failing, and the next full run was the clean restated
+  baseline above. No product code is involved; noted in case it recurs.
 
 ## Milestone completion summary
 

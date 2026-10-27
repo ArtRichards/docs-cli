@@ -1333,6 +1333,50 @@ def test_relate_free_form_self_edge_is_refused(docs_script, tmp_path):
     assert _snapshot(root) == before
 
 
+def test_relate_free_form_still_shape_checks_a_given_reason(docs_script, tmp_path):
+    """P1.2 step 8: a free-form edge never NEEDS `--reason`, but a reason that
+    is given is still shape-checked — empty or multi-line refuses with the
+    unchanged messages, and nothing is written."""
+    root = _pair_tree(tmp_path, "ffreason")
+    before = _snapshot(root)
+    for reason, message in (
+        ("   ", "docs: relate: --reason must not be empty"),
+        ("first line\nsecond line", "docs: relate: --reason must be a single line"),
+    ):
+        proc = _run(
+            docs_script,
+            "relate",
+            "add",
+            "a.md",
+            "pairs-with",
+            "b.md",
+            "--root",
+            str(root),
+            "--reason",
+            reason,
+        )
+        assert proc.returncode == 2, (reason, proc.stdout, proc.stderr)
+        assert message in proc.stderr, (reason, proc.stderr)
+        assert _snapshot(root) == before
+
+
+def test_relate_free_form_source_must_parse_and_exits_1_when_malformed(docs_script, tmp_path):
+    """SOURCE is written, so it must parse even for a free-form verb: a
+    malformed SOURCE is the parser's own exit-1 refusal, never a traceback
+    from the editor (only TARGET is exempt from parsing)."""
+    root = _pair_tree(tmp_path, "ffbadsource")
+    (root / "a.md").write_text("no h1 at all\n")
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "relate", "add", "a.md", "pairs-with", "b.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "Traceback" not in proc.stderr
+    assert str(root / "a.md") in proc.stderr, proc.stderr
+    assert "missing H1" in proc.stderr
+    assert _snapshot(root) == before
+
+
 def test_relate_free_form_refuses_an_archived_source_even_when_nothing_would_change(
     docs_script, tmp_path
 ):
@@ -1736,6 +1780,29 @@ def test_relate_accepts_an_endpoint_in_an_extension_lifecycle(docs_script, tmp_p
     assert "- precedes: b.md" in (root / "a.md").read_text()
     assert "Lifecycle: shipped" in (root / "a.md").read_text()
     assert "- follows: a.md" in (root / "b.md").read_text()
+
+
+def test_relate_refuses_an_endpoint_dated_outside_the_trees_date_format(docs_script, tmp_path):
+    """D4's second D10 qualification (the E11 direction): on a `%d-%m-%Y` tree,
+    an endpoint still carrying an ISO `Updated:` — which `docs check` already
+    rejects as `bad-date` — is refused at exit 1 with that same diagnosis
+    (2.0.0 accepted it and wrote the pair)."""
+    root = tmp_path / "ffdmy"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "ffdmy"\n\n[archive]\ndate_format = "%d-%m-%Y"\n'
+    )
+    (root / "a.md").write_text(_doc("A", "ffdmy", None, updated="20-05-2026"))
+    (root / "b.md").write_text(_doc("B", "ffdmy", None))  # ISO: mis-spelled here
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "relate", "add", "a.md", "precedes", "b.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert "b.md: Updated: malformed date '2026-05-20' (expected %d-%m-%Y)" in proc.stderr, (
+        proc.stderr
+    )
+    assert _snapshot(root) == before
 
 
 def test_playbook_guard_free_form_dry_run_probe_exits_0(docs_script, tmp_path):

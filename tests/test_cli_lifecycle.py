@@ -459,6 +459,42 @@ def test_lifecycle_refuses_outside_a_docs_root(docs_script, tmp_path):
     assert _snapshot(bare) == before
 
 
+def test_lifecycle_resolves_a_relative_path_against_the_docs_root_not_the_cwd(
+    docs_script, tmp_path
+):
+    """OQ-1 — a relative `<file>` resolves against the resolved docs root
+    (`docs project set`'s rule), never the cwd: from inside `sub/`, `x.md`
+    names the missing `<root>/x.md` and refuses, while `sub/x.md` names the
+    document."""
+    original = _doc("X")
+    root = _tree(tmp_path, {"sub/x.md": original})
+    cwd = root / "sub"
+
+    bare = _run(docs_script, "lifecycle", "x.md", "active", cwd=cwd)
+    assert bare.returncode == 1, (bare.stdout, bare.stderr)
+    assert "docs: lifecycle: file not found: " in bare.stderr, bare.stderr
+    assert (root / "sub" / "x.md").read_text() == original, "the cwd is never consulted"
+
+    rooted = _run(docs_script, "lifecycle", "sub/x.md", "active", cwd=cwd)
+    assert rooted.returncode == 0, (rooted.stdout, rooted.stderr)
+    assert (root / "sub" / "x.md").read_text() == _promoted(original, to="active")
+
+
+def test_lifecycle_malformed_sidecar_exits_2_and_writes_nothing(docs_script, tmp_path):
+    """L4 — a `.docs.toml` that does not parse is a hard refusal, in the shared
+    `malformed .docs.toml` voice, never a traceback."""
+    root = _tree(tmp_path, {"m.md": _doc("M")})
+    (root / ".docs.toml").write_text('[project\nname = "lc"\n')
+    before = _snapshot(root)
+
+    proc = _run(docs_script, "lifecycle", "m.md", "active", "--root", str(root))
+
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert "docs: malformed .docs.toml: " in proc.stderr, proc.stderr
+    assert "Traceback" not in proc.stderr
+    assert _snapshot(root) == before
+
+
 # --- preview, output, record -------------------------------------------------
 
 

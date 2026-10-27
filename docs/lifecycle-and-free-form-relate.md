@@ -30,8 +30,9 @@ Related:
   [lifecycle-and-free-form-relate-test-matrix.md](lifecycle-and-free-form-relate-test-matrix.md)
 - Implementation log:
   [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md)
-- Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4) in
-  progress — the contract is frozen in *Decisions (Phase 1 — BINDING)*; the
+- Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
+  complete — the contract is frozen in *Decisions (Phase 1 — BINDING)* and
+  the RED baseline recorded — and awaiting its end-of-step reviews; the
   narrative, evidence headline and per-phase results live in the
   implementation log.
 

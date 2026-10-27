@@ -2313,7 +2313,8 @@ is a whole-batch no-op: exit 0, zero bytes written, **no INDEX refresh**. A
 mixed batch writes only the documents that change.
 
 **Human output** (stderr, gated on `not --quiet`; refusals always print). One
-line per named document, printed after the writes and before the reindex:
+line per distinct named document, in first-seen order, printed after the
+writes and before the reindex:
 
 ```
 docs: lifecycle: set <rel> from <before> to <state>
