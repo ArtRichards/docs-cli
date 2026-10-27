@@ -366,13 +366,29 @@ Done in four commands + one config edit. `docs check` exit 0.
   ... ]` to keep them out of the convention permanently.
 - **Sidecars for non-md binaries (M8 F7 + F9).** When a non-md
   file (a slide deck, a spreadsheet) is referenced from prose,
-  author a Markdown sidecar via `docs new <role> <slug>
-  --body-from -` — single Bash call, atomic; the sidecar carries
-  the convention's metadata, then links the binary via
-  `Related: artifact-of: <binary>`. The OQ-E refusal heuristic
-  catches bodies that accidentally contain a metadata-shaped
-  block (`^[A-Z][A-Za-z-]+:\s`) — pass body content only;
-  `docs new` owns the frontmatter.
+  author a Markdown sidecar that carries the convention's
+  metadata and links the binary. Write the edge at creation
+  time by opening the `--body-from` body with a `Related:`
+  group — the label alone on its line, then the bullet:
+
+  ```sh
+  docs new <role> <slug> --body-from - <<'EOF'
+  Related:
+  - artifact-of: <binary>
+
+  ## Summary
+
+  What the artifact is and why it is tracked.
+  EOF
+  ```
+
+  On a sidecar that already exists, run
+  `docs relate add <sidecar> artifact-of <binary>` instead. An
+  inline `Related: artifact-of: <binary>` line is body text, not
+  an edge. `docs new` refuses a body only when it carries a real
+  metadata block — a leading `---` fence, or two or more of
+  `Lifecycle:` / `Role:` / `Updated:` on adjacent lines — so pass
+  body content only; `docs new` owns the frontmatter.
 - **Multi-project subdir (F5 hint).** If `multi_project_hints`
   surfaces a subdir that looks like a separate project (≥ 5
   files with a shared prefix distinct from the parent's), do

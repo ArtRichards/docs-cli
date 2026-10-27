@@ -36,7 +36,7 @@ checklist and the test matrix synchronized.
   audit*, and *Step 1 review-pass-001*.
 - Step 2 (Phases 5–10): **in progress** on
   `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`; Phases
-  5–6 complete (see the phase sections below).
+  5–7 complete (see the phase sections below).
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -113,7 +113,7 @@ checklist and the test matrix synchronized.
 | 4. Run Tests (RED Baseline) | Complete | 2026-10-27 | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
 | 5. Update Base Interfaces | Complete | 2026-10-27 | `relate_verb_in_grammar` / `_RELATE_VERB_RE`; `parse(..., *, config=None)`; `RelatePlan.inverse: str \| None` and `plan_relate`'s one-sided branch; `LifecycleEdit`, `LifecyclePlan`, `plan_lifecycle`, `apply_lifecycle_plan`, `lifecycle_plan_to_json` — wired nowhere. 126 failed / 1530 passed: exactly the 24 Phase-5 ids flipped. |
 | 6. Implement Offline/Core Path | Complete | 2026-10-27 | `docs lifecycle` registered (final help) over the planner; free-form `relate` with R1, R2, R4 and the never-parsed TARGET; the config at the seven `parse()` sites; `render_index`'s extension groups; the stamp refusal. 9 failed / 1647 passed: the 8 Phase-7 ids plus the expected transient skill-completeness guard. |
-| 7. Update Tool/Wrapper Layer | Pending | — | Argparse help; `cli.md` / `convention.md`; the skill body, *Three things never to hand-edit*, `use-cases.md`, the adoption playbook's stale heuristic line; both mirrors; README verb list; 2.1.0 pin and `## 2.1.0 — UNRELEASED` with both behaviour changes in the upgrade note; dated notes on the 2026-10-26 promotion entry and on the two config-blindness entries D10 closes. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-10-27 | Help text for `relate`, `stamp`, `--body-from` and `main()`; specs reconciled (no change needed); the skill body, *Three things never to hand-edit*, *Quality artifacts*, `use-cases.md` (frozen P1.3 row + two new rows), the adoption playbook (frozen P1.3 bullet), *Linking reports*; README; 2.1.0 and `## 2.1.0 — UNRELEASED`; feedback-log closures, the promotion note, follow-ups 1, 2, 3, 7, 8, 9 registered. 1656 passed; stale-wording grep empty. |
 | 8. Run Tests (GREEN) | Pending | — | Full gate with exact counts; mechanical no-regression proof against the 1504 pre-existing ids; property checks, grammar fuzz, hand-applied mutation smoke; mock audit. |
 | 9. Integrate / Accept / Dogfood | Pending | — | The primary use case on a throwaway copy of this tree with zero hand-edits; both suite probes against the editable build and a local wheel; closeout-plan identity for a `relate`-linked trio; the extension-vocabulary and non-default-`date_format` trees (D10); this tree reindexing byte-identically; runtime recorded. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`; close `architecture.md` and `test-strategy.md`; hand-off note to a live home; taste triage and boundary sweep; completion summaries. |
@@ -1618,6 +1618,109 @@ All in `src/docs_cli/cli.py`; no test or fixture changed.
   `3e2c3ca`.
 - `docs check .` exit 0 on this tree; mirrors and the INDEX snapshot
   byte-identical.
+
+## Phase 7 — Update Tool/Wrapper Layer — 2026-10-27
+
+### Objective
+
+Reconcile every parallel surface with the shipped behaviour — help text,
+specs, the bundled skill and its references, README, version, CHANGELOG —
+and record the milestone's outcomes and follow-ups in `feedback-log.md`.
+
+### Actions taken
+
+1. **Help text** (`src/docs_cli/cli.py`, strings and docstrings only).
+   The `relate` namespace and `relate add` / `relate remove` describe both
+   kinds of verb — "free-form verbs stay hand-edited" and "Only the six
+   recognized verbs are accepted" are gone; `VERB`'s help names the literal
+   grammar `[a-z][a-z0-9-]*`; `TARGET`'s says "for a free-form verb, any
+   existing file under the root; never read"; `--reason` is "REQUIRED for a
+   recognized pair with an endpoint under the archive subtree". The comment
+   above the namespace and `_add_relate_subverb`'s docstring (R1's text, no
+   stale "eight tests" count) are updated. `docs stamp`'s description gains
+   the refusal; the `--body-from` help gains one clause for the leading
+   `Related:` group (it fit); `main()`'s verb list gains `lifecycle` and the
+   free-form half of `relate`.
+2. **Specs.** `docs/cli.md` and `docs/convention.md` already carried the
+   frozen 2.1 text from Phase 1. Reconciled against `docs lifecycle --help`,
+   `docs relate [add|remove] --help` and `docs stamp --help`: no divergence,
+   so neither spec nor its mirror changed in this phase.
+3. **Bundled skill** (`src/docs_cli/skill/`). `SKILL.md`: the description
+   gains "change a doc's lifecycle, link docs with a Related: edge" and
+   `lifecycle` in its verb list (743 → 813 of 1024 characters); a `docs
+   lifecycle <file>... <state>` verb-table row; the relate row now "Link
+   docs, or repair a reciprocal pair", covering free-form edges and the
+   grammar; *Three things never to hand-edit* routes `Lifecycle:` to `docs
+   lifecycle` (keeping to-or-from `archived` with `docs archive`) and
+   `Related:` edges to `docs relate add` / `remove`; *Quality artifacts*
+   links a report with `docs relate add <companion> references <report>`.
+   `references/use-cases.md`: the sidecar row is the **frozen P1.3 text,
+   verbatim** (checked byte-for-byte against the task plan); new Greenfield
+   rows *Promote or change a doc's lifecycle* and *Link related docs with a
+   free-form edge*; the "`relate` refuses to edit them" sentence now says
+   `relate` writes them one-sided. `references/adoption-playbook.md`: the
+   sidecar bullet is the **frozen P1.3 bullet, verbatim**, including its
+   fenced `sh` group form and the M15 — C4 heuristic description.
+   `references/quality-artifacts.md` *Linking reports* names `docs relate
+   add`. The M16-pinned phrases are untouched.
+4. **README** *Commands*: a `docs lifecycle <file>... <state>` line; the
+   `docs relate` line covers free-form edges.
+5. **Version and CHANGELOG.** `pyproject.toml` → `version = "2.1.0"`, then
+   `.venv/bin/pip install -e ".[dev]"` (the runbook form; `docs --version`
+   and `importlib.metadata` both report 2.1.0 — the host's
+   `~/.local/bin/docs` stays 2.0.0, untouched). CHANGELOG gains `## 2.1.0 —
+   UNRELEASED` above `## 2.0.0` with P1.7's Added / Changed ×3 / Fixed
+   bullets and the closing "unchanged" sentence — **UNRELEASED** per D9 (the
+   M19 → M20 practice), superseding the runbook's "date it at Phase 10"
+   (pressure-test item 6). The packaging pins were edited in Phase 2.
+6. **`feedback-log.md`.** The 2026-10-26 vocabulary entry and the 2026-08-15
+   `date_format` entry are **CLOSED at M30 Phase 7** (implemented,
+   unreleased, pending the 2.1.0 publish), each with a dated closure note;
+   the vocabulary entry's reproduction claimed `docs list` prints the error
+   on stderr — the closure note corrects it (it prints nothing, as Step 1
+   measured). The 2026-10-26 promotion entry gains a dated note recording
+   the Q1–Q9 / D1–D10 answers and the implemented-unreleased status; it
+   stays **open** until the suite pin moves. Follow-ups **1, 2, 3, 7, 8 and
+   9** are registered as six separate open, unowned 2026-10-27 entries
+   (Step 2 planning OQ-1, conductor-resolved: item 1 too), and the task
+   plan's *Follow-ups* rows point at them. Item 9 was re-measured against
+   the 2.1.0 development build on a throwaway tree: the recognized verb
+   still plans the injecting bullet (`--dry-run` exit 0), the free-form
+   verb refuses it with R4 (exit 2).
+
+### Decisions / issues
+
+- **The transient RED closed.**
+  `tests/test_skill.py::test_every_named_verb_is_a_real_subcommand` is GREEN
+  again now that the skill names `docs lifecycle`.
+- **Stale-wording grep — empty.** Scoped to the shipped and live surfaces
+  (pressure-test item 5): every `src/docs_cli/skill/**/*.md`,
+  `docs/cli.md`, `docs/convention.md`, `README.md`, `CHANGELOG.md`
+  (whitespace-normalised, so a phrase broken across lines still counts) and
+  the output of `docs relate --help`, `docs relate add --help` and `docs
+  relate remove --help`, for "free-form verbs stay hand-edited", "refuses
+  to edit them" and "Only the six recognized verbs" — no match. The
+  milestone trio and `archive/` quote the phrases on purpose and are out
+  of scope.
+- **Observation for the operator — a host skill tracks this repository.**
+  `~/.claude/skills/docs-local-source-backup-20260525-134621` is a
+  pre-existing symlink (dated 2026-05-23) to this repository's
+  `src/docs_cli/skill`, so the bundled-skill edits above are visible to
+  agents on this host at once, while the host binary `~/.local/bin/docs`
+  is still 2.0.0 and has no `docs lifecycle`. Not touched (hard boundary:
+  `~/.claude/skills` is read-only to this run); surfaced in the Step 2
+  return for the operator.
+
+### Verification
+
+- ruff, ruff format, mypy clean.
+- `.venv/bin/python -m pytest -q` — **1656 passed**, 0 failed (the exit
+  criterion; the known `test_d4_install_skill_is_idempotent` flake did not
+  recur).
+- Both mirrors byte-identical to the specs; the INDEX snapshot identical;
+  `docs check .` exit 0.
+- `docs lifecycle --help`, `docs relate --help`, `docs relate add|remove
+  --help`, `docs stamp --help` and `cli.md` agree (read side by side).
 
 ## Milestone completion summary
 

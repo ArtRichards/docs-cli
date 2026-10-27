@@ -56,10 +56,11 @@ one-off override.
 
 ## Linking reports
 
-`Related:` may point at non-Markdown files when the local docs-cli convention
-supports artifact references. If a project version rejects non-Markdown
-`Related:` targets, link generated report paths in the body instead and keep
-the Markdown companion as the indexed summary.
+Link a generated report from its Markdown companion with
+`docs relate add <companion> references <report>`. It is a free-form edge,
+written on the companion alone: a `Related:` target need not be Markdown, so
+the report may be any existing file under the docs root, and it is never read
+or written. The Markdown companion stays the indexed summary.
 
 ## Important limitation
 

@@ -33,7 +33,7 @@ Related:
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
-  in progress — Phases 5–6 complete. The narrative, evidence headline and
+  in progress — Phases 5–7 complete. The narrative, evidence headline and
   per-phase results live in the implementation log.
 
 ### Identity note
@@ -1352,7 +1352,7 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - [x] Phase 4 — Run Tests (RED Baseline)
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
-- [ ] Phase 7 — Update Tool/Wrapper Layer
+- [x] Phase 7 — Update Tool/Wrapper Layer
 - [ ] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
@@ -2201,15 +2201,15 @@ Raised during setup, judged out of this milestone's scope, and deliberately
 
 | # | Follow-up | Home |
 |---|---|---|
-| 1 | **`--body-from` admits any leading bare-label group as metadata**, not only `Related:` — measured with a `Revision:` group landing on an active document, which the convention says the tool never writes (E6). Whether to narrow the C4 heuristic is a behaviour change nobody has asked for. | Later (registered in `feedback-log.md` at Phase 7) |
-| 2 | **Removing a dangling free-form edge** whose TARGET no longer exists. `relate` still requires TARGET to resolve, so a `broken-ref` repair stays move-driven or manual. | Later (registered in `feedback-log.md` at Phase 7 — Phase 1 resolution OQ-11) |
-| 3 | **Widening the free-form verb grammar** beyond `[a-z][a-z0-9-]*`, if a real tree needs an exotic verb `relate` should write. Additive — no caller breaks (D6, Q3). | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
+| 1 | **`--body-from` admits any leading bare-label group as metadata**, not only `Related:` — measured with a `Revision:` group landing on an active document, which the convention says the tool never writes (E6). Whether to narrow the C4 heuristic is a behaviour change nobody has asked for. | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (Step 2 planning question OQ-1, conductor-resolved: register it with items 2, 3, 7, 8 and 9) |
+| 2 | **Removing a dangling free-form edge** whose TARGET no longer exists. `relate` still requires TARGET to resolve, so a `broken-ref` repair stays move-driven or manual. | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
+| 3 | **Widening the free-form verb grammar** beyond `[a-z][a-z0-9-]*`, if a real tree needs an exotic verb `relate` should write. Additive — no caller breaks (D6, Q3). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 4 | **Registering the publish milestone** that ships 2.1.0, refreshes host skills, and carries the stopgap hand-off. Not registered in this run (operator, 2026-10-27); the hand-off note names it. | Operator (tracker) |
 | 5 | **The suite pin-bump PR** that retires the verbless-metadata stopgap (*Success criteria*). | Agent Playbook Suite |
 | 6 | **A `parent-of` back-edge on `milestone-plan.md`** pointing at this milestone (Step 0 review claude-N11, waived): a free-form hand-edit to a document outside the operator-approved set, and not required by the tracker contract, since this milestone's `child-of: milestone-plan.md` already gives navigation. The waiver lifts once free-form `docs relate` exists. | Later (decided at Phase 10 — OQ-11) |
-| 7 | **No verb repairs an out-of-vocabulary `Lifecycle:` or `Role:`.** `docs lifecycle` exits 1 on a source that fails `parse()` (`Lifecycle: activ`, or `shipped` after its extension was removed from `.docs.toml`), and `docs stamp`'s refusal points at "correct the field, then `docs touch`" — while the bundled skill forbids hand-editing a metadata block. Raised at Phase 1 (OQ-5); the skill sanctions no new hand-edit. | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
-| 8 | **`[vocabulary]` entries are not validated at config load.** `load_config` merges `add_lifecycles` / `add_roles` with an unchecked `frozenset()`: an empty or padded entry is accepted silently, and a bare string (`add_lifecycles = "shipped"`) becomes its single letters. D10 makes every verb honour the configured vocabulary, so such an entry now reaches every walk, not only `docs check`. Raised at Phase 1 (OQ-5). | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
-| 9 | **A recognized-verb TARGET path can inject metadata.** `docs relate add a.md precedes $'b\nLifecycle: archived\nx.md'` exits 0 and writes a bullet that ends `a.md`'s `Related:` group and adds a `Lifecycle: archived` line (measured at the Step 1 review). Free-form `relate` refuses such a TARGET (R4); recognized verbs stay byte-for-byte unchanged under D4, so the fix — a refusal, or path validation shared by both kinds — is a later, deliberate behaviour change (Step 1 review claude-S2, conductor decision JC1). | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
+| 7 | **No verb repairs an out-of-vocabulary `Lifecycle:` or `Role:`.** `docs lifecycle` exits 1 on a source that fails `parse()` (`Lifecycle: activ`, or `shipped` after its extension was removed from `.docs.toml`), and `docs stamp`'s refusal points at "correct the field, then `docs touch`" — while the bundled skill forbids hand-editing a metadata block. Raised at Phase 1 (OQ-5); the skill sanctions no new hand-edit. | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
+| 8 | **`[vocabulary]` entries are not validated at config load.** `load_config` merges `add_lifecycles` / `add_roles` with an unchecked `frozenset()`: an empty or padded entry is accepted silently, and a bare string (`add_lifecycles = "shipped"`) becomes its single letters. D10 makes every verb honour the configured vocabulary, so such an entry now reaches every walk, not only `docs check`. Raised at Phase 1 (OQ-5). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
+| 9 | **A recognized-verb TARGET path can inject metadata.** `docs relate add a.md precedes $'b\nLifecycle: archived\nx.md'` exits 0 and writes a bullet that ends `a.md`'s `Related:` group and adds a `Lifecycle: archived` line (measured at the Step 1 review). Free-form `relate` refuses such a TARGET (R4); recognized verbs stay byte-for-byte unchanged under D4, so the fix — a refusal, or path validation shared by both kinds — is a later, deliberate behaviour change (Step 1 review claude-S2, conductor decision JC1). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 10 | **Candidate project convention: state a binding decision once.** This task plan restates D10 in six or more places, so every wording correction must touch every copy (Step 1 review claude-T4, waived for this milestone). A convention for later milestone docs — one authoritative statement, pointers elsewhere — would make such drift impossible. | Phase 10 (taste triage and compounding), or the project's agent context |
 
 ## Testing and quality gate

@@ -5549,46 +5549,64 @@ def _add_relate_subverb(
     common: argparse.ArgumentParser,
     action: str,
 ) -> None:
-    """Register `docs relate add` / `docs relate remove` (M25 — D3).
+    """Register `docs relate add` / `docs relate remove` (M25 — D3; M30 — D4).
 
     Both subverbs take the identical `SOURCE VERB TARGET` grammar and the
-    same flags; only the help wording differs.
+    same flags; only the help wording differs. `VERB` is a recognized
+    reciprocal verb (both halves written) or a free-form verb inside
+    `relate_verb_in_grammar` (SOURCE's bullet alone).
 
     `VERB` deliberately does NOT use argparse `choices=`: argparse's own
-    "invalid choice" message would replace the frozen
-    ``docs: relate: unknown verb '<verb>'; expected one of: …`` refusal that
-    `cli.md` pins and eight tests assert.
+    "invalid choice" message would replace the frozen R1 refusal
+    (``docs: relate: unknown verb '<verb>'; expected a reciprocal verb (…) or
+    a free-form verb matching …``) that `cli.md` pins and the tests assert.
     """
     verbing = "Add" if action == "add" else "Remove"
     p = sub.add_parser(
         action,
         parents=[common],
-        help=f"{verbing} one reciprocal relationship pair across two docs.",
+        help=f"{verbing} one relationship edge: a reciprocal pair, or a free-form edge.",
         description=(
-            f"{verbing} the reciprocal relationship pair `VERB` between "
-            "SOURCE and TARGET (M25 — D3). Writes BOTH halves as one "
-            "coordinated operation: SOURCE's `<VERB>: <target>` bullet and "
-            "TARGET's `<inverse>: <source>` bullet. Only the six recognized "
-            "verbs are accepted. Idempotent — a fully-satisfied invocation "
+            f"{verbing} the relationship edge `VERB` between SOURCE and "
+            "TARGET (M25 — D3; M30 — D4). For one of the six recognized "
+            "reciprocal verbs, writes BOTH halves as one coordinated "
+            "operation: SOURCE's `<VERB>: <target>` bullet and TARGET's "
+            "`<inverse>: <source>` bullet. For a free-form verb, writes "
+            "SOURCE's bullet only — one-sided, with no inverse obligation; "
+            "TARGET is never read or written and may be any existing file "
+            "under the root. Idempotent — a fully-satisfied invocation "
             "writes zero bytes, bumps no `Updated:`, and does not reindex. "
-            "Every endpoint whose bytes change gets its `Updated:` bumped; "
-            "INDEX.md is refreshed exactly once at the end. An endpoint "
-            "under the archive subtree requires `--reason` and receives a "
-            "dated `Revision:` audit bullet."
+            "Every document whose bytes change gets its `Updated:` bumped; "
+            "INDEX.md is refreshed exactly once at the end. For a recognized "
+            "pair, an endpoint under the archive subtree requires `--reason` "
+            "and receives a dated `Revision:` audit bullet; a free-form edge "
+            "is never written to an archived SOURCE, and an archived TARGET "
+            "needs no `--reason`."
         ),
     )
     p.add_argument("source", metavar="SOURCE", help="The declaring document.")
     p.add_argument(
         "verb",
         metavar="VERB",
-        help="One of: precedes, follows, depends-on, required-by, blocks, blocked-by.",
+        help=(
+            "A recognized reciprocal verb (precedes, follows, depends-on, "
+            "required-by, blocks, blocked-by), or a free-form verb matching "
+            "[a-z][a-z0-9-]* (pairs-with, child-of, references, …)."
+        ),
     )
-    p.add_argument("target", metavar="TARGET", help="The other endpoint.")
+    p.add_argument(
+        "target",
+        metavar="TARGET",
+        help=(
+            "The other endpoint. For a free-form verb, any existing file "
+            "under the root; never read."
+        ),
+    )
     p.add_argument(
         "--reason",
         help=(
-            "Audit reason; REQUIRED when either endpoint is under the "
-            "archive subtree. Single non-empty line."
+            "Audit reason; REQUIRED for a recognized pair with an endpoint "
+            "under the archive subtree. Single non-empty line."
         ),
     )
     p.add_argument(
@@ -5687,7 +5705,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "the scaffold's frontmatter. Refused (exit 2) only if the body itself "
             "contains a metadata block — a leading `---` fence or >=2 adjacent "
             "{Lifecycle, Role, Updated} lines (lone prose like a `Plan:` line is "
-            "fine). Pass body content only; `docs new` owns the frontmatter."
+            "fine). A body opening with a `Related:` group (the label alone, then "
+            "`- <verb>: <target>` bullets) joins the metadata block. Pass body "
+            "content only; `docs new` owns the frontmatter."
         ),
     )
 
@@ -5832,7 +5852,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "project is `--project` else the docs root's configured project; "
             "title is the file's H1 (or `--title`, or synthesised from the "
             "filename). Re-stamping an already-stamped file refreshes only "
-            "Updated:. Foreign metadata is parked under `## Migrated "
+            "Updated:. A file whose complete metadata block (Lifecycle:, "
+            "Role:, Updated:) fails the tree's configured vocabulary or date "
+            "format is refused (exit 1, nothing written) rather than "
+            "re-stamped. Foreign metadata is parked under `## Migrated "
             "metadata`. Atomic multi-file batch; one end-of-batch INDEX "
             "refresh; `--dry-run` previews."
         ),
@@ -5950,19 +5973,23 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # M25 (D3): `docs relate` verb namespace with nested subverbs, shaped
-    # like `docs project`. Deliberately narrow — it edits only the six
-    # recognized reciprocal verbs, only two documents, and only one pair per
-    # invocation. It is the repair verb for `docs check`'s `missing-inverse`.
+    # like `docs project`. Deliberately narrow — one edge per invocation and
+    # never more than two documents: a recognized reciprocal pair (the
+    # repair verb for `docs check`'s `missing-inverse`), or — M30 (D4) — a
+    # free-form edge written on SOURCE alone.
     relate_p = subparsers.add_parser(
         "relate",
-        help="Add or remove one reciprocal relationship pair across two docs.",
+        help="Add or remove one relationship edge: a reciprocal pair, or a free-form edge.",
         description=(
-            "Relationship-namespace verbs (M25). Today: `add`, `remove`. "
-            "The repair verb for `docs check`'s `missing-inverse` finding: "
-            "`check` names the incomplete edge, you decide whether it should "
-            "exist, and `relate` writes (or unwrites) both halves as one "
-            "coordinated operation. Not a generic `Related:` editor — free-"
-            "form verbs stay hand-edited."
+            "Relationship-namespace verbs (M25; M30). Today: `add`, `remove`. "
+            "One edge per invocation. For a recognized reciprocal verb, "
+            "`relate` writes (or unwrites) both halves of the pair as one "
+            "coordinated operation — the repair verb for `docs check`'s "
+            "`missing-inverse` finding: `check` names the incomplete edge, "
+            "you decide whether it should exist. For a free-form verb (a "
+            "lowercase kebab token matching [a-z][a-z0-9-]* — pairs-with, "
+            "child-of, references, …) it writes SOURCE's bullet alone, "
+            "one-sided, and never writes TARGET or an archived document."
         ),
     )
     relate_sub = relate_p.add_subparsers(dest="relate_command", required=True)
@@ -9444,8 +9471,10 @@ def main(argv: list[str] | None = None) -> int:
         check, list — validation and query verbs (M3).
         migrate — adopt a non-conforming foreign directory (M4).
         install-skill — materialise the bundled agent skill (M6).
+        lifecycle — set a top-level lifecycle state (M30).
         project rename|set — project-namespace verbs (M12/M15).
-        relate add|remove — reciprocal relationship repair (M25).
+        relate add|remove — one relationship edge: a reciprocal pair
+            (M25) or a one-sided free-form edge (M30).
 
     Exit codes (per cli.md):
         0 — success (or warnings-only on `check`).
