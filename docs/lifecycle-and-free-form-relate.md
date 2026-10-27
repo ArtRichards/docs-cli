@@ -30,33 +30,9 @@ Related:
   [lifecycle-and-free-form-relate-test-matrix.md](lifecycle-and-free-form-relate-test-matrix.md)
 - Implementation log:
   [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md)
-- Progress: **Milestone setup complete (2026-10-27); Phase 1 — Define
-  Contract is next.** No TDD phase has started. Setup measured this
-  repository read-only and reproduced every behaviour on throwaway trees,
-  producing eleven pieces of evidence (**E1–E11**). Four of them shaped the
-  milestone. **E7** found that a vocabulary extension — the `add_lifecycles`
-  states the registered scope promises `docs lifecycle` will write — already
-  breaks every verb except `docs check`, and **E8** that a non-default
-  `date_format` does the same: one cause, `parse()` ignoring the tree's
-  config. The operator answered **Q7** by bringing that fix into scope, so the
-  registered clause stands and a tenth binding decision makes it hold
-  (**D10**; *Decisions recorded at setup* › *A1*). **E4** found that the
-  grammar `docs check` parses for a `Related:` verb is "anything before the
-  first colon", so the stub's verb-syntax recommendation did not pin a
-  grammar; the operator answered **Q3** with a strict lowercase kebab token,
-  which refuses every case variant of a recognized verb with no special case
-  (**D6**; *A2*). **E6** answered the feedback log's `--body-from` question
-  from the bundled skill itself — a documented use case since M8, with no
-  test behind it (**Q5**; *A3*). And **E2** names the milestone's one
-  external consumer: the Agent Playbook Suite's CI guard probes `docs --help`
-  for a top-level `lifecycle` verb and runs `docs relate add a.md pairs-with
-  b.md --dry-run`, expecting exit 0 — both probes are product-test locks
-  here. **All nine setup questions are RESOLVED**: Q3, Q7 and Q8 by operator
-  decision on 2026-10-27, each as recommended; Q1, Q2, Q4, Q5, Q6 and Q9
-  conductor-resolved from the convention, the specs, the measured evidence,
-  and the M15/M25/M19 precedents. Risk is **Standard**, confirmed by the
-  operator. Phase 1 freezes the contract against these answers and does not
-  re-open them.
+- Progress: setup complete, Step 0 review findings folded in — the narrative,
+  evidence headline and question outcomes live in the implementation log's
+  *Implementation metadata*; Phase 1 — Define Contract is next.
 
 ### Identity note
 
@@ -95,8 +71,8 @@ acceptance flows, each run unattended with no stdin:
   changed, reindexes once, and exits 0. Run again, it writes zero bytes and
   does not reindex.
 - **Link, one edge per call.** `docs relate add <milestone> pairs-with
-  <companion>` writes exactly one bullet into `<milestone>` and touches no
-  other file. The companion's back-edge is its own call, because free-form
+  <companion>` writes exactly one bullet into `<milestone>`, rewrites no
+  other managed document, and refreshes the generated INDEX once. The companion's back-edge is its own call, because free-form
   edges carry no inverse obligation.
 - **Never into, never out of, the archive.** `docs lifecycle <doc> archived`
   refuses and names `docs archive`; `docs lifecycle archive/<date>/<doc>
@@ -134,13 +110,18 @@ not proposed: *public APIs* (the change is additive to the CLI surface, and its
 one external consumer is locked by product tests) and *data integrity* (the
 verbs write metadata, but only through guarded editors with zero-byte
 refusals). The operator's answer to Q7 brings `parse()` — the core read
-path every verb uses — into scope (D10), and the level stays Standard with
-that known: the fix only widens what parses on a tree `docs check` already
-passes (the configured vocabulary is a superset of the built-ins by
-construction, and on a default-format tree the configured `date_format` is
-the ISO format `parse()` hardcodes today); the one tree shape whose verb
-outcome changes already fails `docs check` (E11); and its regression surface
-is the full 1504-test suite plus this repository's own tree.
+path every verb uses — into scope (D10), together with the two places that
+follow from it: `render_index`, which must render the extension-role groups a
+config-aware `parse()` admits (E13), and `docs stamp`, which must refuse
+rather than destructively re-stamp a block that fails the tree's config
+(E12, operator Packet A). The level stays Standard with that known: the
+vocabulary half only widens what parses on a tree `docs check` already passes
+(the configured vocabulary is a superset of the built-ins by construction,
+and on a default-format tree the configured `date_format` is the ISO format
+`parse()` hardcodes today); the outcomes that change are on documents that
+already fail `docs check` (E11, and the stamp refusal) or on a 2.0.0 data-loss
+path (E12); and the regression surface is the full 1504-test suite plus this
+repository's own tree.
 
 Selected gates (Standard):
 
@@ -154,8 +135,9 @@ Selected gates (Standard):
   repository is fully visible to the implementer, so generalization is carried
   by the categories in the test matrix and by property-style checks.
 - Property/stateful smoke: **selected** — the contract is invariant-heavy
-  (idempotence, add-then-remove restoring the bytes, no transition yielding
-  `status-drift`, a free-form write touching exactly one file).
+  (idempotence, add-then-remove from an absent edge restoring the bytes, no
+  transition yielding `status-drift`, a free-form write rewriting exactly one
+  managed document plus one INDEX refresh).
 - Mock audit: **selected** — no new mocks are expected; any failure-injection
   monkeypatch follows the existing `atomic_write` pattern and is audited.
 - Reviewer signoff: the ship-milestone Claude-family and GPT-family reviews at
@@ -168,7 +150,10 @@ question it resolves; the reasoning is in *Setup questions (Q1–Q9)*, and the
 three setup findings that change something already written down are restated
 in *Decisions recorded at setup (BINDING)*. **All nine setup questions are
 resolved** — Q3, Q7 and Q8 by the operator on 2026-10-27 — so nothing here is
-pending. Phase 1 makes the decisions exact and does not re-open them.
+pending. Phase 1 makes the decisions exact and does not re-open them; D10
+in particular is frozen as amended by the Step 0 review (its `render_index`
+placement and its `docs stamp` clause included). The matrix ids each
+decision maps to are in the test matrix's *Decision ↔ clause crosswalk*.
 
 The registered stub's binding bullets are carried forward verbatim inside the
 decisions they belong to and marked *(registered)*.
@@ -210,6 +195,14 @@ set refuses at exit 2 and names the states the tree accepts; `archived`
 refuses with a pointer to `docs archive`. Matching is case-sensitive exact, the
 `validate_lifecycle` rule, so `Archived` is an unknown state, not a spelling of
 `archived`.
+
+**A source whose current `Lifecycle:` is `archived` refuses too, wherever it
+sits** *(Step 0 review, conductor-resolved)*. A document outside the archive
+subtree that already reads `Lifecycle: archived` is in `status-drift`, and
+flipping it to a top-level state would silently "unarchive" it by hand. The
+verb refuses it at exit 2 with zero bytes written, naming the `status-drift`
+and `docs archive` — the same whole-batch refusal as a source under the
+archive subtree.
 
 **The extension-state clause holds** *(Q7, operator: A)*. Setup measured
 that a document carrying an `add_lifecycles` state makes every reindexing verb
@@ -263,6 +256,12 @@ free-form record's shape — expected to be the same object with `"inverse":
 null` and exactly one `edits` record — is frozen in Phase 1 without changing
 one byte of the recognized-verb record.
 
+The one qualification is D10's: on a tree with vocabulary extensions or a
+non-default `date_format`, an endpoint that 2.0.0 refused at exit 1 because
+`parse()` misread its metadata now resolves, and the pair is then written
+exactly as on any other tree. On every tree 2.0.0 could read, recognized-verb
+behaviour is byte-for-byte unchanged.
+
 ### D5 — Free-form endpoints: an archived SOURCE refuses; an archived TARGET is never written; any existing file may be a TARGET
 
 *(Q2 and Q6, conductor.)*
@@ -281,10 +280,10 @@ one byte of the recognized-verb record.
   stays accepted-but-unused and echoed in the record, exactly as M25 already
   treats an all-active pair.
 - **TARGET may be any existing file under the root** — a Markdown document or
-  not, parseable or not — the same test `docs check`'s `broken-ref` applies
-  (`convention.md`: *the target file does not need to be a `.md` doc*). A
-  missing TARGET, a directory, or one outside the root keeps today's exit-1
-  refusals. Recognized verbs keep the rule that both endpoints parse, because
+  not, parseable or not — `broken-ref`'s existence test plus containment
+  under the root (`convention.md`: *the target file does not need to be a `.md`
+  doc*). A missing TARGET, a directory, or one outside the root — including
+  through a symlink that escapes it — keeps today's exit-1 refusals. Recognized verbs keep the rule that both endpoints parse, because
   both are written. Without this, `docs relate add <matrix> references
   coverage.xml` — the edge the bundled skill's quality-artifact guidance
   prescribes — would still refuse (E9), and the hand-edit gap would survive
@@ -318,6 +317,11 @@ rejects or reads differently.
   outside the grammar stays valid in a tree, and `relate` simply will not
   write or remove it. Every verb measured in this tree, the fixtures, the
   bundled skill and the suite's prescriptions is inside it (E3).
+- **A leading hyphen reaches argparse first.** `docs relate add a.md -x
+  b.md` is parsed as an option before the grammar ever sees `-x`. Phase 1's
+  message catalogue freezes exactly what that invocation does, and whether a
+  `--` separator passes such a verb through to the grammar refusal; either
+  way nothing is written.
 - **Widening later is additive.** A later milestone may admit more verbs
   without breaking any caller, whereas narrowing would break automation —
   which is why the grammar starts at the strict end. Recorded as *Follow-ups*
@@ -338,16 +342,24 @@ byte-identity of the written bullet is the whole of the invariance (E10).
 ### D8 — `--body-from`'s leading `Related:` group is a supported creation-time route — locked and documented
 
 *(Q5, conductor.)* A body whose first block is a bare-label multi-value group
-becomes part of the metadata block — a consequence of `convention.md`'s
-block grammar, not of `docs new`'s code — and the bundled skill has prescribed
-exactly this for non-Markdown sidecars since M8 (E6). It is therefore a
-supported route, not an accident: M30 adds the regression lock it never had,
-states the consequence in `cli.md`'s `--body-from` paragraph, keeps M15 —
-C4's refusal heuristic unchanged, and has the skill name both routes —
-`--body-from` at creation time, `docs relate add` on an existing document. The
-wider observation setup made — that *any* leading bare-label group lands as
-metadata, including a `Revision:` group on an active document — is recorded
-as *Follow-ups* item 1, not fixed here.
+— `Related:` on its own line, then `- <verb>: <target>` bullets — becomes part
+of the metadata block: a consequence of `convention.md`'s block grammar, not
+of `docs new`'s code. The bundled skill has prescribed linking a non-Markdown
+sidecar's binary through `Related:` since M8, but its two examples spell it in
+the **inline** form `Related: artifact-of: <binary>`, which the grammar reads
+as body text: an inline `Label: value` line after a blank line is never
+metadata (E6, corrected by the Step 0 review). The route is therefore
+supported in its group form, not an accident: M30 adds the regression lock it
+never had, states the consequence in `cli.md`'s `--body-from` paragraph, keeps
+M15 — C4's refusal heuristic unchanged, and has the skill name both routes —
+`--body-from` with a leading `Related:` group at creation time, `docs relate
+add` on an existing document. Phase 7 rewrites both skill examples
+(`references/use-cases.md`, `references/adoption-playbook.md`) to the group
+form or to `docs relate add <sidecar> artifact-of <binary>`, and the C14 lock
+runs the skill's literal example. The wider observation setup made — that
+*any* leading bare-label group lands as metadata, including a `Revision:`
+group on an active document — is recorded as *Follow-ups* item 1, not fixed
+here.
 
 ### D9 — Compatibility, 2.1.0, surface parity, the external consumer, and the stopgap hand-off
 
@@ -361,14 +373,18 @@ as *Follow-ups* item 1, not fixed here.
   here. A separate publish milestone ships it — the M19 → M20 pattern — and is
   not yet registered in the tracker; registering it is a tracker operation for
   when the operator schedules it.
-- **Upgrade note.** Two behaviour changes, both stated plainly: `docs
+- **Upgrade note.** Three behaviour changes, each stated plainly: `docs
   relate` writes a grammar-valid free-form verb it used to refuse (case
-  variants and other out-of-grammar verbs still refuse, now by grammar); and
-  on a non-default `date_format` tree whose dates already fail `docs check`,
-  the walking verbs now report the same `bad-date` diagnosis instead of
-  disagreeing with the gate (D10, E11). Vocabulary extensions and non-default
-  date formats start working. `docs check`, every existing record, and every
-  other refusal are unchanged.
+  variants and other out-of-grammar verbs still refuse, now by grammar); on a
+  non-default `date_format` tree whose dates already fail `docs check`, the
+  walking verbs now report the same `bad-date` diagnosis instead of
+  disagreeing with the gate (D10, E11); and `docs stamp` refuses, at exit 1
+  with zero bytes written, a file whose full metadata block fails the tree's
+  configured vocabulary or date format — where 2.0.0 silently re-stamped it,
+  discarding its lifecycle, role and `Related:` edges (D10, E12). Vocabulary
+  extensions and non-default date formats start working, and extension-role
+  documents appear in the INDEX (E13). `docs check`, every existing record,
+  and every other refusal are unchanged.
 - *(registered)* CLI help, `cli.md`, `convention.md`, the bundled `docs` skill
   and its references, and CHANGELOG describe the same surface (surface-parity
   gate). The bundled skill's *Three things never to hand-edit* names the two
@@ -392,37 +408,69 @@ as *Follow-ups* item 1, not fixed here.
 
 ### D10 — `parse()` honours the tree's config: vocabulary extensions and `date_format`, in every verb
 
-*(Q7, operator: option (A), 2026-10-27.)* `parse()` validates `Lifecycle:`
-and `Role:` against the tree's configured vocabulary (`config.lifecycles`,
-`config.roles` — the built-ins plus `[vocabulary] add_lifecycles` /
-`add_roles`) and parses `Updated:` in the tree's `[archive] date_format`,
-exactly as `check_doc` already does. The tree's config is passed at **every**
-call site — the seven that exist today (`walk()`, `query_docs`,
-`_cmd_archive`, `_known_projects`, `_cmd_project_set`,
-`_resolve_relate_endpoint`, `_cmd_stamp`) and every site the two new verbs
-add. A bare `parse(text, path, root)` with no config keeps today's built-in
-defaults, so direct callers and the existing unit tests are unaffected.
+*(Q7, operator: option (A), 2026-10-27; amended by the Step 0 review —
+B1, B2 and operator Packet A. Frozen: Phase 1 does not re-open D10.)*
+`parse()` validates `Lifecycle:` and `Role:` against the tree's configured
+vocabulary (`config.lifecycles`, `config.roles` — the built-ins plus
+`[vocabulary] add_lifecycles` / `add_roles`) and parses `Updated:` in the
+tree's `[archive] date_format`, exactly as `check_doc` already does. The
+tree's config is passed at **every** call site — the seven that exist today
+(`walk()`, `query_docs`, `_cmd_archive`, `_known_projects`,
+`_cmd_project_set`, `_resolve_relate_endpoint`, `_cmd_stamp`) and every site
+the two new verbs add. A bare `parse(text, path, root)` with no config keeps
+today's built-in defaults, so direct callers and the existing unit tests are
+unaffected. Two further sites are named, because a config-aware `parse()`
+reaches them:
+
+- **`render_index` renders extension roles** (B1, E13). Its role order is
+  built from `CANONICAL_ROLE_ORDER` alone, so an extension-role document that
+  now parses would be counted in the summary line and silently left out of
+  the body. Frozen placement: within each project, the built-in groups render
+  first in today's order (`status` pinned first, then
+  `CANONICAL_ROLE_ORDER`), and every extension-role group renders **after**
+  them, sorted alphabetically by role, each with the usual `### Active —
+  <Role>` heading; no new `Config` field. Every active document the summary
+  counts is rendered.
+- **`docs stamp` refuses a full block that fails the tree's config** (B2,
+  E12; operator decision, Packet A). `_cmd_stamp` treats "a clean `parse()`"
+  as "already stamped" and re-stamps anything else — which on 2.0.0
+  destroys a valid extension-state document. When `docs stamp` meets a file
+  whose metadata block carries all the required fields but fails the tree's
+  configured vocabulary or date format, it **refuses with zero bytes written,
+  exit 1**, naming the failing field and pointing at `docs check` and `docs
+  touch`. Accepted consequence: a typo'd lifecycle on a default tree is
+  refused too, instead of being re-stamped. A file in a configured extension
+  state is "already stamped" and gets only the `Updated:` refresh. Files with
+  no block, or a block missing required fields, keep today's stamping.
+
+Consequences, stated as contract:
 
 - **No tree that passes today starts failing.** `Config` already guarantees
   `lifecycles ⊇ BUILTIN_STATUSES` and `roles ⊇ BUILTIN_ROLES`, so the
   vocabulary half only widens what parses; on a default-format tree the
   configured `date_format` *is* the ISO format `parse()` hardcodes, so the
-  date half changes nothing there. The one shape whose verb outcome changes —
-  a non-default `date_format` tree carrying dates in another spelling —
-  already fails `docs check` with `bad-date` at exit 2 today (E11); after the
-  fix its walking verbs report the same diagnosis instead of silently
-  disagreeing with the gate. The upgrade note says so, and it is the only
-  behaviour change D10 makes.
+  date half changes nothing there.
+- **D10 changes three outcomes, all named in the upgrade note (D9):** a
+  non-default `date_format` tree carrying dates in another spelling — which
+  already fails `docs check` with `bad-date` at exit 2 (E11) — now fails its
+  walking verbs with the same diagnosis instead of disagreeing with the gate;
+  `docs stamp` refuses a full block that fails the configured vocabulary or
+  date format, where 2.0.0 destructively re-stamped it (E12); and
+  extension-role documents appear in the INDEX (E13).
 - **One spelling, never two.** `parse()` does not learn to accept both the ISO
   and the configured spelling — the 2026-08-15 feedback entry's reasoning, and
   M25's when it wrote `Revision:`: a second accepted spelling reintroduces the
   ambiguity the convention refuses.
+- **Locked across every verb that reads the tree** — `index`, `touch`,
+  `list`, `relate`, `lifecycle`, `archive`, `mv`, `project set`, `project
+  rename` and `stamp` — as test-matrix clauses C20–C22, C24 and C25.
 - **`docs migrate` is unchanged.** Its inference deliberately adopts foreign
   trees against the built-in sets, and it stays out of scope.
 - **Both feedback entries are owned here.** The 2026-08-15 `date_format`
   entry and the 2026-10-26 vocabulary entry name this milestone as owner and
   close at Phase 7.
 
+## Contract
 ## Contract
 
 The contract below is the setup draft; Phase 1 freezes its exact messages,
@@ -455,6 +503,9 @@ following the M25–M28a precedent.
   the ISO default instead of the tree's config (E7, E8). `Config` guarantees
   that its vocabulary is a superset of the built-ins, and the one tree shape
   whose verb outcome a fix would change already fails `docs check` (E11).
+- Two consumers sit downstream of `parse()`'s verdict: `render_index` renders
+  only the built-in roles (E13), and `_cmd_stamp` reads "a clean `parse()`" as
+  "already stamped" and re-stamps everything else (E12).
 
 ### Assumptions
 
@@ -481,8 +532,9 @@ following the M25–M28a precedent.
   write uses `relate`'s staged publish with rollback or `touch` / `project
   set`'s sequential write (default: the `project set` precedent, since its
   batch shape is the one adopted); D10's exact `parse()` signature and how
-  each call site obtains its config; and the exact `cli.md` /
-  `convention.md` / skill wording.
+  each call site obtains its config (D10's behaviour itself is frozen);
+  argparse's handling of a leading-hyphen verb (D6); and the exact
+  `cli.md` / `convention.md` / skill wording.
 
 ### Inputs
 
@@ -516,7 +568,9 @@ following the M25–M28a precedent.
   the archive subtree through `docs lifecycle` or a free-form `relate`; write
   a free-form bullet into TARGET; write a bullet `docs check` would reject or
   re-read differently; change the recognized-verb `relate` behaviour or the
-  archive candidate set.
+  archive candidate set; leave out of the INDEX body an active document its
+  summary counts; let `docs stamp` rewrite a document whose full block fails
+  the tree's config.
 - If a named document is already in the requested state (or already carries /
   lacks the edge), then it is not written at all — no `Updated:` bump, no
   `Revision:`, and, when nothing in the run changed, no reindex.
@@ -533,10 +587,12 @@ following the M25–M28a precedent.
 | State outside the tree's top-level vocabulary | exit 2, nothing written | names the allowed states |
 | State `archived` | exit 2, nothing written | points at `docs archive` |
 | A named document under the archive subtree | exit 2, whole batch refused | names the path |
+| A named document outside the archive subtree whose current `Lifecycle:` is `archived` | exit 2, whole batch refused, nothing written | names the `status-drift` and points at `docs archive` |
 | A named document missing, malformed, or outside the root | exit 1, nothing written | names the path (validate-all-first) |
 | Free-form verb outside D6's grammar | exit 2, nothing written | names the verb and the grammar |
 | Free-form SOURCE under the archive subtree | exit 2, nothing written, even if a no-op | names the path |
-| Free-form TARGET missing, a directory, or outside the root | exit 1, nothing written | today's messages |
+| Free-form TARGET missing, a directory, or outside the root (including through an escaping symlink) | exit 1, nothing written | today's messages |
+| `docs stamp` on a file whose full metadata block fails the tree's configured vocabulary or date format | exit 1, zero bytes written | names the failing field; points at `docs check` and `docs touch` |
 | INDEX refresh fails after a successful write | exit 2; documents already correct | `docs: INDEX refresh failed: …`; the `--json` record still emitted with `"index_refreshed": false` |
 | A walked document whose `Lifecycle:`, `Role:` or `Updated:` does not parse under the tree's config | the walking verb fails as today's walk errors do (e.g. `docs index` exit 2), now judged by the same config `docs check` uses | the self-locating `docs: <path>: …` message naming the configured vocabulary or format |
 
@@ -548,11 +604,11 @@ following the M25–M28a precedent.
 - Security/privacy constraints: TARGET containment under the root is
   unchanged; a verb containing `:` or a newline is refused because it would
   corrupt the metadata block — the metadata-injection guard.
-- Compatibility/migration constraints: no tree that `docs check` passes today
-  fails any verb after the upgrade (D10 — the one changed outcome, E11, is a
-  tree that already fails `docs check`); no `docs check` rule, finding or record key changes; the
-  recognized-verb `relate` record is byte-identical; stdlib only on Python
-  3.11+ (charter).
+- Compatibility/migration constraints: no tree that `docs check` passes
+  today fails any verb after the upgrade; D10's three changed outcomes (E11,
+  E12, E13) are named in the upgrade note; no `docs check` rule, finding or
+  record key changes; the recognized-verb `relate` record is byte-identical;
+  stdlib only on Python 3.11+ (charter).
 - Reliability/observability needs: every refusal is zero-byte and prints even
   under `--quiet`; every write is atomic per file.
 
@@ -560,24 +616,35 @@ following the M25–M28a precedent.
 
 - Given a draft `m.md` in the active tree, when `docs lifecycle m.md active`
   runs, then `m.md` reads `Lifecycle: active` with today's `Updated:`, INDEX is
-  refreshed once, and exit is 0; run again, zero bytes change and INDEX is not
-  refreshed.
+  refreshed once, and exit is 0; run again, nothing is written at all —
+  neither `m.md` nor the INDEX.
 - Given `m.md`, when `docs lifecycle m.md archived` runs, then exit is 2, the
   message names `docs archive`, and the tree is byte-identical.
 - Given `archive/2026-08-16/x.md`, when `docs lifecycle
   archive/2026-08-16/x.md active` runs, then exit is 2 and nothing is written.
+- Given `stray.md` in the active tree reading `Lifecycle: archived`, when
+  `docs lifecycle stray.md active` runs, then exit is 2, the message names
+  the `status-drift` and `docs archive`, and nothing is written.
 - Given `m.md` and `m-impl.md`, when `docs relate add m.md pairs-with
-  m-impl.md` runs, then only `m.md` changes — it gains `- pairs-with:
-  m-impl.md` and today's `Updated:` — and `docs check` is clean.
+  m-impl.md` runs, then `m.md` is the only managed document rewritten — it
+  gains `- pairs-with: m-impl.md` and today's `Updated:` — the INDEX is
+  refreshed once, and `docs check` is clean.
 - Given an archived `archive/2026-08-16/old.md`, when `docs relate add m.md
   references archive/2026-08-16/old.md` runs without `--reason`, then exit is
-  0 and only `m.md` changes; when `docs relate add archive/2026-08-16/old.md
+  0 and `m.md` is the only managed document rewritten; when `docs relate add archive/2026-08-16/old.md
   references m.md` runs, then exit is 2 and nothing is written.
 - Given a tree with `[vocabulary] add_lifecycles = ["shipped"]`, when
   `docs lifecycle m.md shipped` runs, then exit is 0, the INDEX is refreshed,
   and `docs list`, `docs relate` and `docs index` all read `m.md` afterwards.
 - Given `m.md` and `n.md`, when `docs relate add m.md Pairs-With n.md` runs,
   then exit is 2 and nothing is written.
+- Given a tree with `add_lifecycles = ["shipped"]` and `a.md` at `Lifecycle:
+  shipped` carrying `Related:` edges, when `docs stamp a.md` runs, then only
+  its `Updated:` changes; given `a.md` at a lifecycle outside the configured
+  set, `docs stamp a.md` exits 1, names `Lifecycle:`, and writes nothing.
+- Given a tree with `add_roles = ["adr"]` and an `adr` document, when `docs
+  index` runs, then the document is rendered under `### Active — Adr` after
+  every built-in role group.
 - Given the primary use case, when it runs end to end on a throwaway tree, then
   no file is edited outside a verb and `docs check` exits 0.
 
@@ -589,7 +656,9 @@ following the M25–M28a precedent.
   `plan_relate`, `_plan_relate_edit`, `relate_plan_to_json` and
   `_print_relate_lines`** for the free-form path; **`_cmd_touch`** for the
   write loop and its INDEX-refresh tail; **`check_doc`** for D10 — the
-  config-aware validation `parse()` must match.
+  config-aware validation `parse()` must match; **`render_index`**'s existing
+  role grouping, extended rather than replaced, for the extension-role groups;
+  and `_cmd_stamp`'s validate-all-first abort for its new refusal.
 - In-project libraries to reuse: `set_metadata_field`, `add_related_edge` /
   `remove_related_edge`, `_canonical_related_target`, `atomic_write`,
   `_refresh_index` with `compile_exclude_predicate`, `_resolve_managed_root`,
@@ -606,12 +675,14 @@ following the M25–M28a precedent.
   with no milestone or decision identifiers.
 - Expected diff footprint: `src/docs_cli/cli.py` roughly +250 to +400 lines
   (one new verb, its parser entry and plan record, and a one-sided branch in
-  the relate planner and CLI), plus about +30 to +60 for D10's config
-  threading across seven call sites; tests
-  roughly +700 to +1,000 lines across one new and five existing modules;
+  the relate planner and CLI), plus about +60 to +110 for D10 — config
+  threading across seven call sites, `render_index`'s extension-role groups,
+  and `docs stamp`'s refusal; tests roughly +900 to +1,300 lines across one
+  new and about a dozen existing modules;
   documentation — one new `cli.md` section, edits to its `relate` and
-  `--body-from` sections, two `convention.md` sections, the skill's verb
-  table, *Three things never to hand-edit* and use-case rows, the README verb
+  `--body-from` sections and its `docs stamp` idempotence paragraph, two
+  `convention.md` sections, the skill's verb table, *Three things never to
+  hand-edit*, use-case rows and the two sidecar examples, the README verb
   list, and one CHANGELOG section. A diff several times larger triggers a
   minimality look.
 - Dependency policy: stdlib only at runtime (charter); no new development
@@ -625,9 +696,8 @@ following the M25–M28a precedent.
 - Do not weaken valid tests or configured explicit checks merely to obtain
   GREEN. Correct erroneous expectations under the shared quality model's Check
   calibration rule; preserve the agreed behavior and meaningful coverage. The
-  pre-existing tests that pin today's behaviour change only as named,
-  justified behaviour-change edits — E10's three `relate` refusals and E11's
-  date-format pin.
+  pre-existing tests that pin today's behaviour change only as listed in
+  *Test Strategy* › *Pre-existing tests that change*, each with its reason.
 - Do not implement `docs lifecycle` by shelling out to, or re-entering,
   another verb's command function; do not let any spelling reach `archived`.
 - Do not write TARGET in a free-form operation, even to "normalise" it.
@@ -639,21 +709,27 @@ following the M25–M28a precedent.
   `tests/test_cli_relate.py` and `tests/test_relate_plan.py`; invariance locks
   in `tests/test_cli_archive.py`; the `--body-from` lock in
   `tests/test_body_from.py`; skill parity in `tests/test_skill.py`; the version
-  pin in `tests/test_packaging.py`; and D10's vocabulary and date-format locks
-  across the walking verbs.
+  pins in `tests/test_packaging.py`; D10's vocabulary, date-format,
+  `render_index` and `docs stamp` locks across the verbs that read the tree;
+  and the `_attic_tree` correction in `tests/test_cli_mv.py`.
 - Explicit non-product checks, outside default product-test discovery: none
   new — `docs check` from the docs root and the existing live-INDEX snapshot
   test are the documentation gates.
 - Hidden/generalization categories to hold back: listed in *Test Strategy*.
-- Property/stateful invariants: idempotence; add-then-remove restores the
-  original bytes apart from `Updated:`; no transition yields `status-drift`; a
-  free-form operation changes exactly one file.
+- Property/stateful invariants: idempotence; add-then-remove from an
+  initially absent edge restores the original bytes apart from `Updated:`; no
+  transition yields `status-drift`; a free-form operation rewrites exactly
+  one managed document and refreshes the INDEX once.
 - Mutation-sensitive logic: the `archived` target guard; the archive-subtree
-  source guard; the recognized-versus-free-form branch; the `if changed`
-  idempotence guard; the reindex-once guard; the verb grammar's anchors; the
-  config passed to `parse()`.
-- Fuzz targets: the verb grammar boundary — every generated string either
-  refuses or round-trips through `parse()` to the identical verb.
+  source guard; the current-`archived` source guard; the
+  recognized-versus-free-form branch; the `if changed` idempotence guard; the
+  no-reindex-on-a-no-op guard; the verb grammar (`fullmatch` versus `match`
+  with `$`, `[0-9]` versus `\d`); the config passed to `parse()`;
+  `render_index`'s extension-role placement; `docs stamp`'s block
+  classification.
+- Fuzz targets: the verb grammar — valid and invalid inputs generated
+  independently from D6's grammar; valid ones succeed and round-trip, invalid
+  ones refuse with zero writes.
 - Benchmark/security/schema checks: both `--json` key sets asserted closed;
   the metadata-injection refusals; runtime recorded, not budgeted.
 
@@ -743,13 +819,17 @@ The measurements:
   parser it would succeed and write a one-sided `Precedes:` edge that
   reciprocity ignores — an agent that mistyped a recognized verb would get
   neither the pair nor an error.
-- **E6 — the `--body-from` route is a documented use case with no test.** A
-  body opening with a `Related:` group lands in the metadata block (`docs list
-  --json` lists the edges; `docs check` clean). The bundled skill's
-  `references/use-cases.md` row *Sidecar a non-md artifact* prescribes
-  `docs new <role> <slug> --body-from -` with `Related: artifact-of: <binary>`
-  ("No new verb — uses the M8 `--body-from` flag"), and
-  `references/adoption-playbook.md` says the same. No test covers it. The
+- **E6 — the `--body-from` route is a documented intent with no test, and
+  the skill's spelling of it does not work.** A body opening with a
+  `Related:` group — the label alone on its line, then bullets — lands in the
+  metadata block (`docs list --json` lists the edges; `docs check` clean). The
+  bundled skill's `references/use-cases.md` row *Sidecar a non-md artifact*
+  prescribes `docs new <role> <slug> --body-from -` with `Related:
+  artifact-of: <binary>` ("No new verb — uses the M8 `--body-from` flag"), and
+  `references/adoption-playbook.md` says the same — but both spell it in the
+  **inline** form, and an inline `Related: artifact-of: deck.html` line is
+  read as body text: `docs list --json` shows no edge (measured by the Step 0
+  review, claude-S2, and reproduced). No test covers either form. The
   behaviour is generic: a leading `Revision:` group also lands as metadata on
   an active document. And the adoption playbook's description of the refusal
   heuristic (`^[A-Z][A-Za-z-]+:\s`) is the pre-M15 — C4 wording.
@@ -793,14 +873,37 @@ The measurements:
   carries an ISO `Updated: 2026-10-27`: `docs check` reports `bad-date` at
   exit 2 today, while `docs index` exits 0. After D10 the walking verbs agree
   with the gate. No committed fixture sidecar sets a non-default
-  `date_format`, and this repository uses the default, so the shape appears
-  nowhere here. One pre-existing test pins today's disagreement on purpose:
-  `test_archive_renders_the_witness_in_the_trees_date_format` asserts that an
-  archive on such a tree exits 2 on its INDEX refresh, and its docstring names
-  its own successor — the milestone that fixes the defect makes its expected
-  exit 0 and drops its two INDEX-refresh assertions, while its three witness
-  assertions survive. It is the fourth named behaviour-change edit, beside
-  E10's three.
+  `date_format` and this repository uses the default, but two inline test
+  builders carry the shape: `tests/test_cli_mv.py`'s `_attic_tree` writes ISO
+  `Updated:` lines on a `%d-%m-%Y` tree (its docstring cites this very defect
+  as the reason), and
+  `test_archive_renders_the_witness_in_the_trees_date_format` pins today's
+  exit-2 INDEX-refresh tail on purpose, its docstring naming its own
+  successor. Both are corrected in the same change; they are listed in *Test
+  Strategy* › *Pre-existing tests that change*.
+- **E12 — `docs stamp` destroys a valid extension-state document on 2.0.0**
+  (found by the Step 0 review, claude-B2; reproduced by the conductor and
+  again here). On a tree with `add_lifecycles = ["shipped"]`, a `docs
+  check`-clean document at `Lifecycle: shipped`, `Role: spec`, with a
+  `Related:` edge: `docs stamp a.md` exits 0 and rewrites it to `Lifecycle:
+  draft`, `Role: notes`, today's `Updated:`, and moves its `Related:` group
+  into a `## Migrated metadata` body section as `Migrated-Related:`. With a
+  free-form edge, `docs check` afterwards still exits 0 — the edge is simply
+  gone from the metadata; with a recognized `precedes` pair, the partner's
+  `follows` is left dangling and `docs check` exits 2 (`missing-inverse`). A
+  typo'd `Lifecycle: activ` on a default tree is re-stamped the same way, its
+  `Project:` replaced by the root's. Cause: `_cmd_stamp` reads "a clean
+  `parse()`" as "already stamped", and `parse()` rejects every extension value.
+  D10's config-aware `parse()` fixes the extension case; operator Packet A
+  turns every remaining full-block failure into a zero-byte refusal.
+- **E13 — `render_index` would silently drop extension-role documents once
+  they parse** (found independently by both Step 0 reviewers, gpt-B1 and
+  claude-B1; reproduced here). `render_index` builds its role order from
+  `["status"] + CANONICAL_ROLE_ORDER` and renders only roles in that list. A
+  direct probe — one `spec` document and one document whose role is the
+  configured extension `adr` — renders `_Generated …. 2 docs active, 0
+  archived._` and a body containing only the `spec` entry. Today the defect is
+  masked by E7 (the `adr` document never parses); D10 would expose it.
 
 Structural risks:
 
@@ -820,12 +923,13 @@ Structural risks:
 - **Recognized-verb drift.** Branching the planner for one-sided edits can
   perturb the two-endpoint path. Mitigated by byte-level locks on the
   recognized-verb record, messages and files, and by the existing 2.0 relate
-  suite staying GREEN unedited apart from the E10 ids.
+  suite staying GREEN unedited apart from the listed pre-existing changes.
 - **A change on the core read path.** D10 reaches the function every verb
   uses. Mitigated by a backward-compatible signature (a bare call keeps the
   built-in defaults), by `Config`'s superset guarantee, by E11's proof that
-  the only changed outcome is on a tree that already fails the gate, and by the
-  full suite plus this repository's own tree.
+  the changed outcomes are on documents that already fail the gate or on a
+  data-loss path, by naming `render_index` and `docs stamp` as sites of their
+  own (E12, E13), and by the full suite plus this repository's own tree.
 - **Surface sprawl.** The change reaches argparse, two specs, their mirrors,
   the skill body, two skill references, the README and the CHANGELOG. Phase 1
   enumerates every surface, and the skill completeness guard catches the
@@ -841,16 +945,18 @@ this repository is a 75-document dogfood corpus carrying 417 real edges.
 | Evidence | Addressed by | Named coverage (Phases 2–3) |
 |---|---|---|
 | E1 no lifecycle verb | D1–D3 | `docs lifecycle` promotes, demotes and re-promotes across every top-level state; a mixed batch writes only the changed documents and reindexes once; an already-satisfied batch writes zero bytes and does not reindex |
-| E1 the archive boundary | D2 | `archived` as a target and a document under the archive subtree as a source each refuse at exit 2 with the tree byte-identical, including in a batch where every other document is valid |
+| E1 the archive boundary | D2 | `archived` as a target, a document under the archive subtree as a source, and an active-tree source already reading `Lifecycle: archived` each refuse at exit 2 with the tree byte-identical, including in a batch where every other document is valid |
 | E2 the suite guard | D1, D9 | the brace list of `docs --help` contains `lifecycle`; `docs relate add a.md pairs-with b.md --dry-run` in a fresh two-document `docs new spec` tree exits 0 and writes nothing |
 | E3 / E4 / E5 the verb grammar | D6 | `[a-z][a-z0-9-]*` pinned at its boundary — every measured verb accepted; empty, `:`, newline, padded, spaced, punctuated, digit-first and uppercase verbs refused at exit 2 with zero bytes written, `Precedes` and `Pairs-With` included; the fuzz check round-trips every accepted verb through `parse()` unchanged |
 | E4 one-sided write | D4 | a free-form `add` changes SOURCE only (TARGET byte-identical); `remove` drops only SOURCE's bullet; both are idempotent; the free-form `--json` record shape is pinned |
-| E5 recognized verbs unchanged | D4 | every pre-existing `test_cli_relate.py` / `test_relate_plan.py` id except the E10 refusals stays GREEN unedited; a byte-level lock on the recognized-verb record and files |
-| E6 `--body-from` route | D8 | a body opening with a `Related:` group yields those edges in `docs list --json` and a clean `docs check`; the C4 refusal heuristic's existing locks unchanged |
-| E7 / E8 config-blindness | D2, D10 | extension-lifecycle, extension-role and non-default-`date_format` locks across `index`, `touch`, `list`, `relate`, `lifecycle`, `archive`, `mv`, `project set` and `stamp`; a bare `parse()` call keeps the built-in defaults |
+| E5 recognized verbs unchanged | D4 | every pre-existing `test_cli_relate.py` / `test_relate_plan.py` id stays GREEN unedited except those listed under *Pre-existing tests that change*; a byte-level lock on the recognized-verb record and files |
+| E6 `--body-from` route | D8 | a body opening with a `Related:` group yields those edges in `docs list --json` and a clean `docs check`; the skill's literal sidecar example, as rewritten in Phase 7, yields its edge; the inline form stays body text; the C4 refusal heuristic's existing locks unchanged |
+| E7 / E8 config-blindness | D2, D10 | extension-lifecycle, extension-role and non-default-`date_format` locks across `index`, `touch`, `list`, `relate`, `lifecycle`, `archive`, `mv`, `project set`, `project rename` and `stamp`; a bare `parse()` call keeps the built-in defaults |
 | E9 non-Markdown target | D5 | `docs relate add <doc> references coverage.xml` succeeds and `docs check` is clean; a missing target, a directory target and an outside-root target keep exit 1 |
-| E10 archive invariance | D7 | a trio linked by `relate` is byte-identical to the hand-written trio, its `--cascade-dry-run --json` candidates are identical, and leg 1 refuses a `relate`-written live `child-of` child |
+| E10 archive invariance | D7 | for a trio linked by `relate`: each written bullet line and the parsed `Related:` list match the hand-written trio, its `--cascade-dry-run --json` candidate records are identical, and leg 1 refuses a `relate`-written live `child-of` child; full-file byte identity is asserted only for the `archive-neighborhood` copy, with `relate` run under `--date` set to the fixture's own `Updated:` |
 | E11 the one changed outcome | D10 | a non-default-`date_format` tree carrying an ISO `Updated:` fails the walking verbs with the `bad-date` diagnosis `docs check` already gives; a correctly dated non-default tree archives at exit 0 (`test_archive_renders_the_witness_in_the_trees_date_format` rewritten as its docstring foresees); every pre-existing fixture tree and this repository's tree reindex byte-identically |
+| E12 `docs stamp` data loss | D10 | on an extension-vocabulary tree, stamping a document in a configured extension state changes only `Updated:` (lifecycle, role and `Related:` byte-identical); a full block outside the configured vocabulary, and the E11 non-default-date shape, each refuse at exit 1 with zero bytes written |
+| E13 extension roles dropped from the INDEX | D10 | an extension-role document is rendered under its own `### Active — <Role>` heading after every built-in group, extension groups sorted alphabetically, and the summary count equals the rendered entries |
 | Q2 archived SOURCE | D5 | free-form `add` and `remove` on an archived SOURCE refuse at exit 2 even when nothing would change; an archived TARGET needs no `--reason` and is never written |
 
 ## Test Strategy For This Milestone
@@ -862,6 +968,27 @@ behaviour, one per acceptance flow and error row in *Contract*, plus pure
 planner tests for the one-sided relate plan and the lifecycle plan. Names state
 the scenario and the observable outcome; provenance stays in this document and
 the test matrix. See the matrix for the planned names per clause.
+
+### Pre-existing tests that change (authoritative list)
+
+This is the only list of pre-existing tests the milestone edits; every other
+count or mention defers to it. Phases 4 and 8 prove mechanically that each of
+the 1504 pre-existing ids is present — under its own id, or, for the three
+renamed rows below, under its new id — and that no pre-existing test body is
+edited unless it appears here.
+
+| Old id | New id | Change | Reason |
+|---|---|---|---|
+| `tests/test_cli_relate.py::test_relate_unknown_verb_refuses` | `tests/test_cli_relate.py::test_relate_verb_outside_the_free_form_grammar_refuses` | renamed; refuses an out-of-grammar verb instead of `pairs-with`, with Phase 1's message | `pairs-with` becomes a valid free-form verb (D4, D6) |
+| `tests/test_cli_relate.py::test_relate_quiet_suppresses_success_but_never_a_refusal` | unchanged | its refused verb changes from `pairs-with` to an out-of-grammar verb | same |
+| `tests/test_cli_relate.py::test_relate_case_variant_verb_refuses` | unchanged | still refuses at exit 2 with zero bytes; its expected message follows Phase 1's catalogue | D6 |
+| `tests/test_cli_archive.py::test_archive_renders_the_witness_in_the_trees_date_format` | unchanged | its fixture's input `Updated:` is written in the tree's `%d-%m-%Y`; expected exit 0; the two INDEX-refresh assertions are dropped and the three witness assertions kept; the malformed-date behaviour moves to the new `test_walking_verbs_report_bad_date_on_a_mis_spelled_non_default_tree` | D10 fixes the defect it pinned, as its docstring foresees (E11) |
+| `tests/test_cli_mv.py::test_mv_refuses_a_cross_dated_relocation_on_a_non_default_archive_tree` | unchanged | through the shared `_attic_tree` builder: `Updated:` lines move from ISO to `%d-%m-%Y`, and the builder's docstring drops its defect sentence | D10 reads `Updated:` in the tree's format (E11) |
+| `tests/test_cli_mv.py::test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory` | unchanged | the same `_attic_tree` correction | same |
+| `tests/test_packaging.py::test_a3_project_version_is_2_0_0` | `tests/test_packaging.py::test_a3_project_version_is_2_1_0` | renamed; expects 2.1.0 | the 2.1.0 bump (D9); the M23 / M29 rename precedent |
+| `tests/test_packaging.py::test_c2_docs_version_is_2_0_0` | `tests/test_packaging.py::test_c2_docs_version_is_2_1_0` | renamed; expects 2.1.0 | same |
+| `tests/test_packaging.py::test_b1_wheel_builds` | unchanged | expects a `docs_cli-2.1.0-*` wheel | same |
+| `tests/test_packaging.py::test_b2_sdist_builds` | unchanged | expects `docs_cli-2.1.0.tar.gz` | same |
 
 ### Non-product checks
 
@@ -877,32 +1004,53 @@ extension vocabularies; non-default `date_format` and `[archive] dir`; nested
 subdirectory documents; non-canonical target spellings (`./b.md`,
 `sub/../b.md`); non-Markdown and excluded targets; duplicate paths inside one
 `docs lifecycle` batch; grammar-boundary verbs; and a real milestone trio in
-this repository's own tree.
+this repository's own tree. (An archived document mixed into a `docs
+lifecycle` batch is a visible test, not a held-back category.)
 
 ### Property/stateful invariants
 
 - Applying the same `docs lifecycle` or `relate` invocation twice equals
   applying it once, byte for byte.
-- `relate add` then `relate remove` of a free-form edge restores the original
-  bytes except `Updated:`.
+- `relate add` then `relate remove` of a free-form edge that was initially
+  **absent** restores the original bytes except `Updated:` — whether SOURCE
+  started with no `Related:` group (created, then dropped) or a non-empty one.
+  From an arbitrary initial state the assertion is the contractual one: the
+  edge set afterwards is the initial set minus the edge, and every unrelated
+  byte is preserved.
 - For every active-tree document and every allowed state, the post-state tree
   has no `status-drift` finding.
-- A free-form operation changes exactly one file; a recognized one changes at
-  most two.
+- Write footprint, counting editable documents separately from the generated
+  INDEX: a no-op or `--dry-run` writes nothing at all, INDEX included; a real
+  free-form operation rewrites exactly one managed document, a recognized one
+  at most two, and a lifecycle batch exactly the documents whose state
+  differed — each followed by one INDEX refresh.
 
 ### Mutation-sensitive logic
 
-The `archived` target guard, the archive-subtree source guard, the
-recognized-versus-free-form branch, the `if changed` idempotence guard, the
-reindex-once guard, the grammar's anchors, and the config passed to
-`parse()`. Mutation testing is **not configured** in this project; Phase 8
-runs a hand-applied mutation smoke over these seven points, the M28a precedent, and records the result.
+The `archived` target guard; the archive-subtree source guard; the
+current-`archived` source guard; the recognized-versus-free-form branch; the
+`if changed` idempotence guard; the no-reindex-on-a-no-op guard, observed
+through a sentinel INDEX that must stay byte-identical, with the refreshed
+INDEX asserted to reflect the final state (a call counter needs a justified
+entry under *Mock policy*); the grammar — `re.fullmatch` versus `re.match`
+with `$` (which accepts a trailing newline) and `[0-9]` versus `\d` (which
+accepts non-ASCII digits); the config passed to `parse()`; `render_index`'s
+extension-role placement; and `docs stamp`'s block classification. Mutation
+testing is **not configured** in this project; Phase 8 runs a hand-applied
+mutation smoke over these points, the M28a precedent, and records which test
+kills each.
 
 ### Fuzz targets
 
-The free-form verb grammar: a fixed-seed generator over printable strings
-asserts that every input either refuses with zero bytes written or is written
-and read back by `parse()` as the identical verb. Stdlib only.
+The free-form verb grammar, with **valid and invalid inputs generated
+independently** from D6's grammar by a fixed-seed, stdlib-only generator:
+valid inputs (including trailing and doubled hyphens, digits after the first
+letter, and length extremes) must succeed and be read back by `parse()` as the
+identical verb; invalid inputs (uppercase letters, a leading digit or hyphen,
+spaces, `:`, embedded and trailing newlines, punctuation, and non-ASCII
+letters and digits) must refuse with zero bytes written. A generator that only
+fed printable strings and checked "refuses or round-trips" could not tell an
+over-accepting grammar from a correct one.
 
 ### Benchmark/security/schema checks
 
@@ -925,6 +1073,7 @@ and read back by `parse()` as the identical verb. Stdlib only.
 ## Test Matrix
 
 Link: [lifecycle-and-free-form-relate-test-matrix.md](lifecycle-and-free-form-relate-test-matrix.md)
+— its *Decision ↔ clause crosswalk* maps each D-id here to the matrix's C-ids.
 
 ## Deliverables
 
@@ -945,11 +1094,15 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - [ ] Cascade-candidate and strand-check regression locks. Consumer: every
       later milestone closeout.
 - [ ] The `--body-from` leading-`Related:` route locked by test and stated in
-      `cli.md`. Consumer: the bundled skill's sidecar use case.
+      `cli.md`, and the skill's two sidecar examples rewritten to a form that
+      works. Consumer: the bundled skill's sidecar use case.
 - [ ] `parse()` honours the tree's config (D10): vocabulary extensions and
       `date_format` at all seven existing call sites and in both new verbs,
-      with locks across every walking verb, a bare call keeping the built-in
-      defaults, and no tree that `docs check` passes today failing any verb.
+      with locks across every verb that reads the tree, a bare call keeping
+      the built-in defaults, and no tree that `docs check` passes today failing
+      any verb; `render_index` rendering extension-role groups after the
+      built-in ones; and `docs stamp` refusing a full block that fails the
+      configured vocabulary or date format.
       Closes the 2026-08-15 `date_format` and 2026-10-26 vocabulary entries in
       `feedback-log.md`. Consumer: adopters with extension vocabularies or a
       non-default date format, and both new verbs.
@@ -979,9 +1132,11 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   endpoint rules (archived SOURCE, archived TARGET, non-Markdown TARGET), its
   one-sided write, its `--json` record and its messages; the statement that
   recognized-verb `relate` is byte-for-byte unchanged; the `--body-from`
-  sentence; D10's config-aware `parse()` signature, its seven call sites and
-  the upgrade note's E11 sentence; the full surface list; and the Phase-5
-  signatures. No business
+  sentence; D10's config-aware `parse()` signature and how its sites obtain
+  the config (D10's behaviour, `render_index` placement and `docs stamp`
+  refusal are frozen already); the stamp refusal's message; argparse's
+  handling of a leading-hyphen verb; the upgrade note's three D10 changes;
+  the full surface list; and the Phase-5 signatures. No business
   logic lands, and Phase 1 does not re-open the setup decisions.
 - Files: `docs/cli.md` (a new `docs lifecycle` section; the `relate`
   section's verb paragraph, *Archived endpoints*, *Output*, *Exits* and
@@ -1008,10 +1163,14 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   `tests/test_body_from.py`, `tests/test_skill.py`, `tests/test_packaging.py`,
   and, for D10, `tests/test_cli_index.py`, `tests/test_cli_list.py`,
   `tests/test_cli_touch.py`, `tests/test_walker.py`, `tests/test_model.py`,
-  `tests/test_cli_project_set.py` and `tests/test_cli_stamp.py`.
-- Exit: the new tests are RED **only** for missing M30 behaviour; the E10
-  refusal ids and E11's date-format pin are rewritten as named
-  behaviour-change edits with their reason recorded; every other pre-existing id is untouched; no collection errors.
+  `tests/test_cli_project_set.py`, `tests/test_cli_project_rename.py`,
+  `tests/test_cli_stamp.py` (byte-level zero-write locks for the
+  extension-vocabulary and E11 tree shapes), `tests/test_index.py` and
+  `tests/test_cli_mv.py`.
+- Exit: the new tests are RED **only** for missing M30 behaviour; the
+  pre-existing tests in *Test Strategy* › *Pre-existing tests that change*
+  are edited exactly as listed, with their reason recorded; every other
+  pre-existing id is untouched; no collection errors.
 
 ### Phase 3 — Create Data/Fixtures
 
@@ -1022,8 +1181,10 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   `movelink-strand` trees and rewrite their edges through `relate` rather
   than committing duplicates; for D10, one committed `vocab-extension/` tree
   (extension lifecycles and roles) if a walk-level assertion needs it, with
-  the fixture-sweep registration updated in the same change, and every
-  non-default `date_format` case as an inline builder.
+  the fixture-sweep registration updated in the same change; every
+  non-default `date_format` case as an inline builder; and the
+  `tests/test_cli_mv.py` `_attic_tree` builder corrected to the tree's own
+  date format.
 - Exit: fixtures parse deterministically, are structure-only (never
   date-sensitive at run time), and every pre-M30 fixture tree stays
   byte-identical with zero new findings.
@@ -1035,9 +1196,8 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - Files: implementation log only.
 - Exit: full baseline with exact counts; zero collection errors, tracebacks
   and xfails; every one of the **1504** pre-existing ids mechanically proven
-  present, with the four behaviour-change ids (E10, E11) accounted for by
-  name; every GREEN-at-baseline
-  lock classified. Risk is Standard (Q8), so there is no operator checkpoint
+  present through the explicit old → new mapping in *Pre-existing tests
+  that change*; every GREEN-at-baseline lock classified. Risk is Standard (Q8), so there is no operator checkpoint
   here; Phase 5 starts once these exit criteria hold.
 
 ### Phase 5 — Update Base Interfaces
@@ -1074,9 +1234,13 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   and free-form `docs relate`); `references/use-cases.md` (new rows; its "and
   `relate` refuses to edit them" sentence; the sidecar row naming both routes);
   `references/adoption-playbook.md`'s stale heuristic description; both
+  skill sidecar examples rewritten from the inline `Related: artifact-of:`
+  form to the group form or `docs relate add <sidecar> artifact-of
+  <binary>`; `cli.md`'s `docs stamp` idempotence paragraph and exit codes
+  for the new refusal; both
   byte-identical mirrors; the README verb list; `pyproject.toml` and the
   packaging pin at 2.1.0; the `## 2.1.0 — UNRELEASED` CHANGELOG section with
-  its upgrade note (both behaviour changes, D9); and dated notes on
+  its upgrade note (all three behaviour changes, D9); and dated notes on
   `feedback-log.md` — the 2026-10-26 promotion entry recording the answers,
   and the 2026-08-15 `date_format` and 2026-10-26 vocabulary entries recording
   their closure by D10 — as M28 and M28a closed issue #1.
@@ -1088,7 +1252,9 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - Exit: subprocess, reference byte-identity and skill-parity tests GREEN;
   `docs lifecycle --help`, `docs relate --help` and `cli.md` agree; a grep for
   wording describing the replaced behaviour ("free-form verbs stay
-  hand-edited", "refuses to edit them") finds nothing.
+  hand-edited", "refuses to edit them", "Only the six recognized verbs") over
+  the docs, the skill and the output of `docs relate --help`, `docs relate
+  add --help` and `docs relate remove --help` finds nothing.
 
 ### Phase 8 — Run Tests (GREEN)
 
@@ -1096,8 +1262,8 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   reference byte identity and docs integrity, and the Standard-risk gates.
 - Files: implementation log only unless a real defect is found.
 - Exit: all gates GREEN with exact counts; every pre-existing id mechanically
-  proven present and GREEN with the four behaviour-change edits (E10, E11)
-  named; property checks, the
+  proven present and GREEN through the old → new mapping in *Pre-existing
+  tests that change*; property checks, the
   grammar fuzz and the hand-applied mutation smoke recorded; mock audit
   complete.
 
@@ -1112,8 +1278,10 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   locally built wheel. Preview and apply a closeout of the `relate`-linked trio
   and compare its plan with a hand-linked twin. Confirm the archive refusals.
   Repeat the use case on an extension-vocabulary tree and a
-  non-default-`date_format` tree (D10), and confirm this repository's tree
-  reindexes byte-identically. Measure the added runtime. The real tree is
+  non-default-`date_format` tree (D10) — including a `docs stamp` of an
+  extension-state document, which must change only `Updated:`, and an
+  extension-role document, which must appear in the INDEX — and confirm this
+  repository's tree reindexes byte-identically. Measure the added runtime. The real tree is
   never written to.
 - Files: throwaway trees only; the committed docs record the evidence.
 - Exit: every flow runs unattended; the use case needs no hand-edit; both
@@ -1231,12 +1399,14 @@ free-form `Related:` bullet, and the feedback log's promotion observation asks
 whether the `--body-from` route is *"a supported path to document or an
 accident to pin"*.
 
-**The bundled skill answered that in M8.** E6 found the route prescribed in
-`references/use-cases.md` (*Sidecar a non-md artifact* — "No new verb — uses
-the M8 `--body-from` flag") and in `references/adoption-playbook.md`, with no
-test behind it. The current-state statement is therefore narrowed to *on an
-existing document*, and the observation is resolved as D8: supported, locked,
-and stated in `cli.md`.
+**The bundled skill answered that in M8 — in intent.** E6 found the route
+prescribed in `references/use-cases.md` (*Sidecar a non-md artifact* — "No new
+verb — uses the M8 `--body-from` flag") and in `references/adoption-playbook.md`,
+with no test behind it. The Step 0 review then found that both examples spell
+`Related:` inline, which the grammar reads as body text; only the group form
+works. The current-state statement is therefore narrowed to *on an existing
+document*, and the observation is resolved as D8: supported in its group form,
+locked, stated in `cli.md`, and with both skill examples corrected in Phase 7.
 
 ## Setup questions (Q1–Q9)
 
@@ -1364,9 +1534,10 @@ tracker operation for the operator.
 that is a supported path to document or an accident to pin.")*
 **RESOLVED → D8 (conductor).**
 
-It is supported, and was documented before anyone asked: the bundled skill
-has prescribed `docs new … --body-from -` with `Related: artifact-of:
-<binary>` since M8 (E6). The convention's block grammar is what makes a body's
+It is supported, and its intent was documented before anyone asked: the
+bundled skill has prescribed `docs new … --body-from -` with `Related:
+artifact-of: <binary>` since M8 (E6) — though in an inline spelling the
+grammar reads as body text, which Phase 7 corrects to the group form. The convention's block grammar is what makes a body's
 leading bare-label group metadata, and `cli.md` refuses a body "only when it
 carries an actual metadata block" by a closed two-signal heuristic that M15 —
 C4 deliberately narrowed. Refusing the route now would break a documented use
@@ -1377,7 +1548,8 @@ separate question nobody has asked yet, recorded as *Follow-ups* item 1.
 
 ### Q6 — Must a free-form TARGET parse as a managed Markdown document?
 
-**RESOLVED → D5 (conductor).** No — any existing file under the root.
+**RESOLVED → D5 (conductor).** No — any existing file under the root:
+`broken-ref`'s existence test plus containment.
 
 `relate` parses both endpoints because, for a recognized pair, both are
 written. A free-form TARGET is never written, and `convention.md` allows a
@@ -1513,6 +1685,7 @@ Raised during setup, judged out of this milestone's scope, and deliberately
 | 3 | **Widening the free-form verb grammar** beyond `[a-z][a-z0-9-]*`, if a real tree needs an exotic verb `relate` should write. Additive — no caller breaks (D6, Q3). | Later |
 | 4 | **Registering the publish milestone** that ships 2.1.0, refreshes host skills, and carries the stopgap hand-off. Not registered in this run (operator, 2026-10-27); the hand-off note names it. | Operator (tracker) |
 | 5 | **The suite pin-bump PR** that retires the verbless-metadata stopgap (*Success criteria*). | Agent Playbook Suite |
+| 6 | **A `parent-of` back-edge on `milestone-plan.md`** pointing at this milestone (Step 0 review claude-N11, waived): a free-form hand-edit to a document outside the operator-approved set, and not required by the tracker contract, since this milestone's `child-of: milestone-plan.md` already gives navigation. The waiver lifts once free-form `docs relate` exists. | Later |
 
 ## Testing and quality gate
 
@@ -1556,8 +1729,9 @@ Evidence-anchored criteria added at setup:
 - Both Agent Playbook Suite probes pass against this milestone's build: the
   `docs --help` brace list contains `lifecycle`, and `docs relate add a.md
   pairs-with b.md --dry-run` exits 0 in a fresh two-document tree (E2).
-- A free-form operation writes exactly one file; an archived SOURCE refuses
-  with zero bytes written; an archived TARGET is never written and needs no
+- A free-form operation rewrites exactly one managed document and refreshes
+  the INDEX once (a no-op or `--dry-run` writes nothing); an archived SOURCE
+  refuses with zero bytes written; an archived TARGET is never written and needs no
   `--reason`; a non-Markdown TARGET is accepted (D5, E9).
 - The free-form verb grammar `[a-z][a-z0-9-]*` is pinned at its boundary:
   every accepted verb round-trips through `parse()` unchanged, and case
@@ -1568,12 +1742,22 @@ Evidence-anchored criteria added at setup:
   `docs index`, `docs list` and `docs relate` with exit 0, and no tree that
   `docs check` passes today fails any verb after the upgrade (D2, D10, E7, E8,
   E11).
+- `docs lifecycle` refuses, with zero bytes written, an `archived` target, a
+  source under the archive subtree, and an active-tree source already reading
+  `Lifecycle: archived` (D2).
+- `docs stamp` never destroys a document: a configured extension state is
+  "already stamped", and a full block that fails the configured vocabulary or
+  date format refuses at exit 1 with zero bytes written (D10, E12).
+- Every active document the INDEX summary counts is rendered, extension-role
+  groups after the built-in ones in alphabetical order (D10, E13).
+- Recognized-verb `relate` is byte-for-byte unchanged on every tree 2.0.0
+  could read; on an extension-vocabulary or non-default-date tree, an endpoint
+  2.0.0 refused at exit 1 now resolves (D4, D10).
 - The `--body-from` leading-`Related:` route is locked by test and stated in
-  `cli.md` (D8, E6).
+  `cli.md`, and the skill's sidecar examples use a form that works (D8, E6).
 - `docs check`'s rules, findings and record keys are unchanged, and every
-  pre-existing test id is present and GREEN except the four named
-  behaviour-change edits — E10's three `relate` refusals and E11's date-format
-  pin — each rewritten with its reason recorded.
+  pre-existing test id is present and GREEN under the explicit old → new
+  mapping in *Test Strategy* › *Pre-existing tests that change*.
 - Specs and bundled mirrors are byte-identical, the skill's *Three things never
   to hand-edit* names both verbs, and the hand-off note lives outside the
   archive scope.

@@ -59,11 +59,14 @@ non-default `date_format` already breaks every verb except `docs check`,
 because `parse()` ignores the tree's config; the operator brought that fix
 into the milestone, so both new verbs — and every existing one — will work
 on any configured tree, and the two feedback-log entries for the defect are
-now owned here. Free-form verbs `relate` writes are a strict lowercase kebab
-token, and the `--body-from` route for `Related:` edges, documented in the
-bundled skill since M8, gets the test it never had. All nine setup questions
-are resolved and the risk level is Standard; the milestone is at its Step 0
-review before Phase 1. Order, state and dependencies stay in the
+now owned here. The same fix reaches `docs stamp`, which on 2.0.0 silently
+re-stamps a valid extension-state document and will instead refuse a block
+that fails the tree's config, and the INDEX, which will render extension-role
+documents instead of dropping them. Free-form verbs `relate` writes are a
+strict lowercase kebab token, and the `--body-from` route for `Related:`
+edges, which the bundled skill has described since M8, gets the test it never
+had and a working example. All nine setup questions are resolved and the risk
+level is Standard. Order, state and dependencies stay in the
 [Milestone Plan](milestone-plan.md).
 
 **Milestone tracker adopted (2026-10-26).** The project moved to the Agent
