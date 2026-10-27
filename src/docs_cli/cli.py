@@ -616,32 +616,76 @@ class RelatePlan:
     """A complete, write-free `docs relate add|remove` operation (M25 — D3).
 
     The `MigrationPlan` analogue for the relationship verbs: `plan_relate`
-    builds it by reading both endpoints, `apply_relate_plan` publishes it,
-    and `relate_plan_to_json` renders the `--json` operation record. The
-    same object backs a `--dry-run` preview and a real apply, which is why
-    the two are diffable.
+    builds it by reading the endpoints it writes, `apply_relate_plan`
+    publishes it, and `relate_plan_to_json` renders the `--json` operation
+    record. The same object backs a `--dry-run` preview and a real apply,
+    which is why the two are diffable.
 
     Attributes:
         action: ``"add"`` or ``"remove"``.
-        verb: The recognized verb as typed.
-        inverse: `verb`'s recognized inverse (`inverse_verb`).
+        verb: The verb as typed — recognized, or free-form (M30 — D4).
+        inverse: `verb`'s recognized inverse (`inverse_verb`), or None for
+            a free-form verb, which carries no inverse obligation.
         source_rel / target_rel: Root-relative POSIX endpoint paths.
         reason: The `--reason` value, or None. Required by the CLI
-            whenever either endpoint is archived; accepted but unused on
-            an all-active pair.
+            whenever an endpoint of a recognized pair is archived; accepted
+            but unused otherwise.
         date_str: The date written into `Updated:` and any `Revision:`
             bullet, already rendered in the tree's `date_format`.
-        edits: Always exactly two, ``(source, target)`` in that order.
+        edits: ``(source, target)`` in that order for a recognized verb;
+            ``(source,)`` alone for a free-form one — TARGET is never
+            written.
     """
 
     action: str
     verb: str
-    inverse: str
+    inverse: str | None
     source_rel: str
     target_rel: str
     reason: str | None
     date_str: str
     edits: tuple[RelateEdit, ...]
+
+
+@dataclass(frozen=True)
+class LifecycleEdit:
+    """One named document's place in a `docs lifecycle` operation (M30 — D1–D3).
+
+    The `RelateEdit` analogue for the lifecycle verb: produced by
+    `plan_lifecycle`, consumed by `apply_lifecycle_plan`,
+    `_print_lifecycle_lines` and `lifecycle_plan_to_json`.
+
+    Attributes:
+        path: ``root / rel`` — the path read and written, so a named symlink
+            inside the tree edits the file it points at (OQ-13).
+        rel: The root-relative POSIX path every line and JSON field names.
+        before: The document's `Lifecycle:` at planning time.
+        new_text: The complete staged text — `Lifecycle:` then `Updated:`
+            replaced. Equal to the text as read when nothing changes.
+        change: ``"set"`` or ``"unchanged"``.
+    """
+
+    path: Path
+    rel: str
+    before: str
+    new_text: str
+    change: str
+
+
+@dataclass(frozen=True)
+class LifecyclePlan:
+    """A complete, write-free `docs lifecycle` operation (M30 — D1–D3).
+
+    Attributes:
+        state: The target state — top-level, never ``"archived"``.
+        date_str: The `Updated:` value written to each changed document,
+            already rendered in the tree's `date_format`.
+        edits: One per distinct named document, in first-seen order.
+    """
+
+    state: str
+    date_str: str
+    edits: tuple[LifecycleEdit, ...]
 
 
 @dataclass(frozen=True)
@@ -965,9 +1009,27 @@ def inverse_verb(verb: str) -> str | None:
     Case-sensitive exact match, mirroring the `add_fields` precedent:
     `Precedes` is a free-form verb, not a recognized one. A None result is
     the single "this verb gains no reciprocal validation" signal shared by
-    `reciprocity_findings` (skip it) and `_cmd_relate` (refuse it).
+    `reciprocity_findings` (skip it) and `_cmd_relate` (write it one-sided,
+    M30 — D4, once `relate_verb_in_grammar` admits it).
     """
     return RECIPROCAL_INVERSES.get(verb)
+
+
+# M30 — D6: the free-form verb grammar `docs relate` writes. `fullmatch`,
+# never `match` with `$` (which accepts a trailing newline); `[0-9]`, never
+# `\d` (which accepts non-ASCII digits). The six recognized verbs are inside it.
+_RELATE_VERB_RE = re.compile(r"[a-z][a-z0-9-]*")
+
+
+def relate_verb_in_grammar(verb: str) -> bool:
+    """True iff `verb` is a lowercase kebab token `docs relate` may write (M30 — D6).
+
+    The grammar binds `relate`, not the convention: `docs check` keeps
+    accepting any verb text before the first colon. Every verb it admits is
+    written as typed and read back by `parse()` as the identical verb, and
+    every case variant of a recognized verb falls outside it.
+    """
+    return _RELATE_VERB_RE.fullmatch(verb) is not None
 
 
 _LABEL_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):(.*)$")
@@ -1147,7 +1209,7 @@ def atomic_write(path: Path, content: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def parse(text: str, path: Path, root: Path) -> Doc:
+def parse(text: str, path: Path, root: Path, *, config: Config | None = None) -> Doc:
     """Parse a Markdown doc into a Doc.
 
     Reads the H1 title, the metadata block (a contiguous run of
@@ -1160,19 +1222,26 @@ def parse(text: str, path: Path, root: Path) -> Doc:
             for error messages.
         root: Docs root (used to determine the archived flag and to
             keep `Related:` paths root-relative).
+        config: The tree's config (M30 — D10). When given, `Lifecycle:` and
+            `Role:` are validated against `config.lifecycles` /
+            `config.roles` and `Updated:` is parsed in
+            `config.date_format` — exactly as `check_doc` judges them. When
+            None (every bare call), the built-in vocabulary and the ISO
+            format apply; the root's `.docs.toml` is never read here.
+            Keyword-only, the `parse_date` `label` precedent, so no
+            positional caller can be silently re-bound.
 
     Returns:
-        A frozen `Doc` instance.
+        A frozen `Doc` instance. `archived` is always False — callers that
+        know the location set it.
 
     Raises:
         MetadataError: structural problems (missing H1, missing
             required label, malformed Updated, etc.).
-        VocabularyError: Lifecycle or Role value not in the vocabulary.
-            Vocabulary validation is performed at parse time but
-            requires a Config; in practice this means callers should
-            re-validate via the walker when a Config is available.
-            For the bare `parse()` call (used in tests), validation
-            uses BUILTIN_STATUSES and BUILTIN_ROLES.
+        VocabularyError: Lifecycle or Role value not in the vocabulary —
+            the config's when one is given, otherwise BUILTIN_STATUSES /
+            BUILTIN_ROLES. Messages are identical either way, so a failure
+            reads exactly as `docs check`'s `bad-vocab` / `bad-date` text.
     """
     # `parse_metadata_block`, `validate_lifecycle`, `validate_role`, and
     # `parse_date` all raise without a path prefix (they're path-agnostic
@@ -1198,10 +1267,14 @@ def parse(text: str, path: Path, root: Path) -> Doc:
     assert isinstance(role, str)
     assert isinstance(updated_raw, str)
 
+    if config is None:
+        lifecycles, roles, date_format = BUILTIN_STATUSES, BUILTIN_ROLES, "%Y-%m-%d"
+    else:
+        lifecycles, roles, date_format = config.lifecycles, config.roles, config.date_format
     try:
-        validate_lifecycle(lifecycle, BUILTIN_STATUSES)
-        validate_role(role, BUILTIN_ROLES)
-        updated = parse_date(updated_raw)
+        validate_lifecycle(lifecycle, lifecycles)
+        validate_role(role, roles)
+        updated = parse_date(updated_raw, date_format)
     except MetadataError as exc:
         raise MetadataError(f"{path}: {exc}") from exc
     except VocabularyError as exc:
@@ -5043,11 +5116,13 @@ def plan_relate(
     reason: str | None,
     date_str: str,
 ) -> RelatePlan:
-    """Stage both endpoints' complete new texts without writing (M25 — D3/D5).
+    """Stage every written endpoint's complete new text without writing (M25 — D3/D5).
 
     The `plan_migration` analogue for the relationship verbs, and D5's
-    stages 1–2: both files are read, both new texts are computed in memory,
-    and nothing is written. `apply_relate_plan` publishes the result.
+    stages 1–2: the endpoints are read, their new texts are computed in
+    memory, and nothing is written. `apply_relate_plan` publishes the
+    result. For a recognized verb both endpoints are staged; for a
+    free-form verb (M30 — D4) only SOURCE is, and TARGET is never read.
 
     Per endpoint the edit is applied, then — only when the edge actually
     moved — `Updated:` is bumped and, for an archived endpoint, a
@@ -5061,44 +5136,48 @@ def plan_relate(
         config: The tree's config (supplies `archive_dir`).
         action: ``"add"`` or ``"remove"``.
         source: Absolute path of the declaring endpoint.
-        verb: A recognized reciprocal verb.
+        verb: A recognized reciprocal verb, or a free-form verb inside
+            `relate_verb_in_grammar`.
         target: Absolute path of the other endpoint.
-        reason: The `--reason` value; required when either endpoint is
-            archived (the CLI enforces that before planning).
+        reason: The `--reason` value; required when an endpoint of a
+            recognized pair is archived (the CLI enforces that before
+            planning).
         date_str: The date to write, already in the tree's `date_format`.
 
     Raises:
-        ValueError: `verb` is not recognized, or an archived endpoint would
-            change without a `reason` — both programming errors, refused by
-            `_cmd_relate` long before planning.
+        ValueError: `verb` is neither recognized nor inside the grammar, a
+            free-form edge's SOURCE is archived (M30 — D5), or an archived
+            endpoint would change without a `reason` — all programming
+            errors, refused by `_cmd_relate` long before planning.
         MetadataError: an endpoint has no H1 / metadata block.
         OSError: an endpoint cannot be read.
     """
     inverse = inverse_verb(verb)
-    if inverse is None:
-        raise ValueError(f"not a recognized reciprocal verb: {verb!r}")
+    if inverse is None and not relate_verb_in_grammar(verb):
+        raise ValueError(f"{verb!r} is neither a recognized verb nor inside the free-form grammar")
 
     source_rel = _root_relative(source, root)
     target_rel = _root_relative(target, root)
-    return RelatePlan(
-        action=action,
-        verb=verb,
-        inverse=inverse,
-        source_rel=source_rel,
-        target_rel=target_rel,
-        reason=reason,
-        date_str=date_str,
-        edits=(
-            _plan_relate_edit(
-                source,
-                source_rel,
-                config,
-                action=action,
-                verb=verb,
-                other_rel=target_rel,
-                reason=reason,
-                date_str=date_str,
-            ),
+    # Explicit, not left to `_plan_relate_edit`: with a reason given and the
+    # edge already present, that guard would never fire (D5 — even a no-op
+    # refuses).
+    if inverse is None and _is_archived_rel(source_rel, config):
+        raise ValueError(f"{source_rel} is under the archive subtree; a free-form edge is refused")
+
+    edits = [
+        _plan_relate_edit(
+            source,
+            source_rel,
+            config,
+            action=action,
+            verb=verb,
+            other_rel=target_rel,
+            reason=reason,
+            date_str=date_str,
+        )
+    ]
+    if inverse is not None:
+        edits.append(
             _plan_relate_edit(
                 target,
                 target_rel,
@@ -5108,8 +5187,17 @@ def plan_relate(
                 other_rel=source_rel,
                 reason=reason,
                 date_str=date_str,
-            ),
-        ),
+            )
+        )
+    return RelatePlan(
+        action=action,
+        verb=verb,
+        inverse=inverse,
+        source_rel=source_rel,
+        target_rel=target_rel,
+        reason=reason,
+        date_str=date_str,
+        edits=tuple(edits),
     )
 
 
@@ -5287,7 +5375,8 @@ def relate_plan_to_json(
 
     One object with the same shape for a `--dry-run` preview and for a real
     apply, so the two are diffable (the schema cli.md pins). `edits` is
-    always exactly two records, ``[source, target]`` in that order.
+    ``[source, target]`` in that order for a recognized verb, and
+    ``[source]`` alone, with `inverse` null, for a free-form one (M30 — D4).
 
     Args:
         plan: The plan produced by `plan_relate`.
@@ -5321,6 +5410,97 @@ def relate_plan_to_json(
                 "revision_appended": edit.revision_appended,
             }
             for edit in plan.edits
+        ],
+    }
+
+
+def plan_lifecycle(
+    root: Path,
+    config: Config,
+    *,
+    files: Sequence[Path],
+    state: str,
+    date_str: str,
+) -> LifecyclePlan:
+    """Stage each named document's lifecycle edit without writing (M30 — D1–D3).
+
+    The `plan_relate` analogue for the lifecycle verb. Each file is reduced
+    to its root-relative path `rel` (deduplicated, first occurrence kept —
+    OQ-3), read and parsed through ``root / rel`` with the tree's config,
+    and staged: a document already in `state` is ``"unchanged"`` with its
+    text as read; any other gets `Lifecycle:` and then `Updated:` replaced —
+    `_archive_one`'s order — and nothing else.
+
+    Args:
+        root: The resolved docs root.
+        config: The tree's config (vocabulary, `archive_dir`, date format).
+        files: The named documents, each under `root`.
+        state: The target state.
+        date_str: The `Updated:` value, already in the tree's `date_format`.
+
+    Raises:
+        ValueError: `state` is `archived` or outside the configured
+            vocabulary, a document lies under the archive subtree, or a
+            document already reads `Lifecycle: archived` — programming
+            errors, refused by `_cmd_lifecycle` long before planning.
+        MetadataError / VocabularyError: a document does not parse.
+        OSError: a document cannot be read.
+    """
+    if state == "archived" or state not in config.lifecycles:
+        raise ValueError(f"not a top-level lifecycle state: {state!r}")
+
+    root_resolved = root.resolve()
+    seen: set[str] = set()
+    edits: list[LifecycleEdit] = []
+    for file in files:
+        rel = file.resolve().relative_to(root_resolved).as_posix()
+        if rel in seen:
+            continue
+        seen.add(rel)
+        if _is_archived_rel(rel, config):
+            raise ValueError(f"{rel} is under the archive subtree")
+        path = root / rel
+        text = path.read_text()
+        doc = parse(text, path, root, config=config)
+        if doc.lifecycle == "archived":
+            raise ValueError(f"{rel} already reads 'Lifecycle: archived'")
+        if doc.lifecycle == state:
+            edits.append(LifecycleEdit(path, rel, doc.lifecycle, text, "unchanged"))
+        else:
+            new_text = set_metadata_field(text, "Lifecycle", state)
+            new_text = set_metadata_field(new_text, "Updated", date_str)
+            edits.append(LifecycleEdit(path, rel, doc.lifecycle, new_text, "set"))
+    return LifecyclePlan(state=state, date_str=date_str, edits=tuple(edits))
+
+
+def apply_lifecycle_plan(plan: LifecyclePlan) -> None:
+    """Write every ``"set"`` edit of a `LifecyclePlan`, in plan order (M30 — OQ-2).
+
+    Sequential `atomic_write` per changed document — `_cmd_project_set`'s
+    precedent: no staged publish and no rollback. An ``"unchanged"``
+    document is never opened for writing.
+    """
+    for edit in plan.edits:
+        if edit.change == "set":
+            atomic_write(edit.path, edit.new_text)
+
+
+def lifecycle_plan_to_json(
+    plan: LifecyclePlan, *, dry_run: bool, applied: bool, index_refreshed: bool
+) -> dict[str, object]:
+    """Convert a `LifecyclePlan` to its `docs lifecycle --json` record (M30 — P1.1).
+
+    One object with the same shape for a `--dry-run` preview and for a real
+    apply (the schema cli.md pins); its key set is closed.
+    """
+    return {
+        "state": plan.state,
+        "date": plan.date_str,
+        "dry_run": dry_run,
+        "applied": applied,
+        "index_refreshed": index_refreshed,
+        "edits": [
+            {"path": edit.rel, "before": edit.before, "change": edit.change} for edit in plan.edits
         ],
     }
 
