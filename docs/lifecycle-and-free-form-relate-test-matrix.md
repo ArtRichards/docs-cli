@@ -31,33 +31,48 @@ operator checkpoint.
 ## Check classification
 
 Product tests belong in default test discovery (`.venv/bin/python -m pytest
--q`). Non-product checks run only when selected as explicit workflow gates;
-this milestone adds none — `docs check` from the docs root and the existing
-live-INDEX snapshot test remain the documentation gates.
+-q`) — including the reference byte-identity and stale-wording checks, because
+the bundled skill and the `--help` text ship. Non-product checks run only when
+selected as explicit workflow gates, never in default discovery:
+
+- `docs check .` from the docs root;
+- the live-INDEX snapshot: `cmp docs/INDEX.md tests/fixtures/expected/docs-INDEX.md`;
+- the Phase 4 / Phase 8 mechanical proof — test ids collected in a throwaway
+  `git worktree` at the pre-Phase-1 commit `e48adb9` and at HEAD, compared
+  with `comm`, plus an AST function-body diff of every pre-existing
+  `tests/*.py` function (only the authoritative list's tests, `_attic_tree`
+  and the stamp fixture's prose may differ); scratchpad scripts, results in
+  the implementation log;
+- a naming lint over the new test names (no `m30`, decision, clause, phase,
+  step or review identifiers);
+- the Phase 8 hand-applied mutation smoke.
 
 ## Contract clauses
 
 Clause ids are local to this matrix; each cites the task plan's binding
 decision (D1–D10) it traces to. Every setup question is resolved, so no
-clause is pending; Phase 1 freezes the exact messages and records.
+clause is pending. Phase 1 froze the exact messages and records in the task
+plan's *Decisions (Phase 1 — BINDING)*: the ids `L1`–`L12` (the
+`docs lifecycle` catalogue, P1.1) and `R1`–`R3` (free-form `relate`, P1.2)
+below refer to it.
 
 | Id | Clause | Source |
 |---|---|---|
-| C1 | `docs lifecycle <file>... <state>`: the last token is the state; a single token refuses (exit 2); the batch is validate-all-first | D1 |
-| C2 | The target state must be in the tree's lifecycle vocabulary minus `archived`; `archived` refuses with a pointer to `docs archive`; any other unknown state refuses naming the allowed states | D2 |
-| C3 | A named document under the archive subtree refuses the whole batch (exit 2), nothing written | D2 |
+| C1 | `docs lifecycle <file>... <state>`: the last token is the state; a single token refuses (exit 2, L1); a relative path resolves against the root (OQ-1); outside-root, missing and unparseable documents exit 1 (L8–L10); the strict-root refusals (L2–L4); the batch is validate-all-first | D1 |
+| C2 | The target state must be in the tree's lifecycle vocabulary minus `archived`, matched case-sensitively; `archived` refuses with a pointer to `docs archive` (L5); any other unknown state — `Archived` included — refuses naming the allowed states (L6) | D2 |
+| C3 | A named document under the archive subtree refuses the whole batch (exit 2, L7) before any per-document check, whatever its position, nothing written | D2 |
 | C4 | Extension states (`add_lifecycles`) are valid `docs lifecycle` targets and round-trip through every walking verb (Q7 → A) | D2, D10, A1 |
-| C5 | Only a document whose `Lifecycle:` changes is rewritten and gets its `Updated:` bumped; an all-current batch or a `--dry-run` writes nothing at all, INDEX included; a real change is followed by one INDEX refresh | D3 |
+| C5 | Only a document whose `Lifecycle:` changes is rewritten and gets its `Updated:` bumped; an all-current batch or a `--dry-run` writes nothing at all, INDEX included; a real change is followed by one INDEX refresh (honouring exclusions); a path named twice is planned, listed and written once (OQ-3); the frozen success lines; an INDEX-refresh failure exits 2 with the documents written (L12) | D3 |
 | C6 | A free-form `relate add` / `relate remove` rewrites SOURCE's bullet only; TARGET is never written; canonical-target matching; group created/dropped; idempotent; one INDEX refresh after a real change | D4 |
 | C7 | Recognized-verb `relate` is byte-for-byte unchanged on every tree 2.0.0 could read — messages, exits, two-record `--json`, `Revision:`, coordinated-write contract; on an extension-vocabulary or non-default-date tree an endpoint 2.0.0 refused at exit 1 now resolves (D10) | D4, D10 |
-| C8 | A free-form SOURCE under the archive subtree refuses (exit 2) for `add` and `remove`, even when nothing would change | D5 |
+| C8 | A free-form SOURCE under the archive subtree refuses (exit 2, R2) for `add` and `remove`, even when nothing would change | D5 |
 | C9 | A free-form TARGET under the archive subtree is allowed, never written, needs no `--reason`, and no `Revision:` is written | D5 |
 | C10 | A free-form TARGET may be any existing file under the root, Markdown or not — `broken-ref`'s existence test plus containment; missing / directory / outside-root (including through an escaping symlink) keep exit 1 | D5 |
-| C11 | A verb containing `:` or a newline, an empty verb, or a padded verb refuses (exit 2) with zero bytes written; a leading-hyphen verb's argparse behaviour is frozen in Phase 1 and writes nothing | D6 |
-| C12 | A free-form verb must match `[a-z][a-z0-9-]*` in full (Q3 → c); case variants of recognized verbs and every other out-of-grammar verb refuse at exit 2 with zero bytes written; widening later is additive | D6, A2 |
+| C11 | A verb containing `:` or a newline, an empty verb, or a padded verb refuses (exit 2, R1) with zero bytes written; a leading-hyphen verb is consumed by argparse — exit 2, usage error, nothing written — and after `--` reaches R1 (R3) | D6 |
+| C12 | A free-form verb must match `[a-z][a-z0-9-]*` in full (Q3 → c; ASCII only, `fullmatch`); case variants of recognized verbs and every other out-of-grammar verb refuse at exit 2 with the R1 message and zero bytes written; widening later is additive | D6, A2 |
 | C13 | For edges written by `relate`: each written bullet line and the parsed `Related:` list match the hand-written edges; the `--cascade-dry-run --json` candidate records are identical; leg 1's strand refusal fires identically; full-file byte identity only for the `archive-neighborhood` copy, `relate` run under `--date` equal to the fixture's `Updated:` | D7 |
 | C14 | A `docs new --body-from` body opening with a `Related:` group (label alone on its line, then bullets) yields those edges as metadata; the skill's literal sidecar example, as rewritten in Phase 7, does too; the inline `Related: x: y` form stays body text | D8 |
-| C15 | `--json` records: `docs lifecycle`'s key set is closed; the free-form `relate` record's key set is closed (one edit, no inverse); preview and apply share one shape | D3, D4 |
+| C15 | `--json` records: `docs lifecycle`'s key set is closed (P1.1: `state`, `date`, `dry_run`, `applied`, `index_refreshed`, `edits[path, before, change]`); the free-form `relate` record is the recognized record's eleven keys with `inverse: null` and one edit (P1.2); preview and apply share one shape | D3, D4 |
 | C16 | The Agent Playbook Suite CI probes pass: `lifecycle` in the `docs --help` brace list; `docs relate add a.md pairs-with b.md --dry-run` exits 0 in a fresh two-document tree | D1, D9 |
 | C17 | Surface parity: argparse help, `cli.md`, `convention.md`, byte-identical skill references, the skill body and *Three things never to hand-edit*, the two skill sidecar examples, the README verb list, the CHANGELOG | D9 |
 | C18 | Version 2.1.0 in `pyproject.toml` and the packaging pins; `## 2.1.0 — UNRELEASED` CHANGELOG section | D9 |
@@ -65,8 +80,8 @@ clause is pending; Phase 1 freezes the exact messages and records.
 | C20 | `parse()` validates `Lifecycle:` / `Role:` against the tree's configured vocabulary at every call site (seven existing, plus the new verbs'), so extension lifecycles and roles work in every verb — `index`, `touch`, `list`, `relate`, `lifecycle`, `archive`, `mv`, `project set`, `project rename`, `stamp` | D10 |
 | C21 | `parse()` reads `Updated:` in the tree's `[archive] date_format` at every call site — one spelling, never two — so a non-default format works in every verb | D10 |
 | C22 | A bare `parse(text, path, root)` keeps the built-in defaults; no tree that `docs check` passes today fails any verb after the upgrade; D10's three changed outcomes are exactly E11 (walking verbs report the `bad-date` diagnosis `docs check` gives), E12 (C24) and E13 (C25) | D10 |
-| C23 | `docs lifecycle` refuses (exit 2, zero bytes, whole batch) a source outside the archive subtree whose current `Lifecycle:` is `archived`, naming the `status-drift` and `docs archive` | D2 |
-| C24 | `docs stamp` on a file whose full metadata block fails the tree's configured vocabulary or date format refuses with zero bytes written, exit 1, naming the failing field and pointing at `docs check` / `docs touch` — on a default tree too (an invalid `Role:` or a typo'd lifecycle); a block in a configured extension state is "already stamped" (`Updated:` refresh only); a full block failing `parse()` for a reason unrelated to the configured vocabulary or date format (e.g. a malformed `Related:` bullet) keeps today's stamping | D10 |
+| C23 | `docs lifecycle` refuses (exit 2, zero bytes, whole batch, L11) a source outside the archive subtree whose current `Lifecycle:` is `archived`, naming the `status-drift` and `docs archive` | D2 |
+| C24 | `docs stamp` on a file whose full metadata block fails the tree's configured vocabulary or date format refuses with zero bytes written, exit 1, naming the failing field and pointing at `docs check` / `docs touch` (the P1.5 message) — on a default tree too (an invalid `Role:` or a typo'd lifecycle); a block in a configured extension state is "already stamped" (`Updated:` refresh only); a full block failing `parse()` for a reason unrelated to the configured vocabulary or date format (e.g. a malformed `Related:` bullet) keeps today's stamping | D10 |
 | C25 | `render_index` renders every active document its summary counts: extension-role groups after the built-in role order, sorted alphabetically, each under `### Active — <Role>`; no new `Config` field | D10 |
 
 ## Decision ↔ clause crosswalk
@@ -87,8 +102,9 @@ clause is pending; Phase 1 freezes the exact messages and records.
 
 ## Matrix
 
-Visible test names are **planned** at setup; Phase 2 writes them, and this
-table is updated with the final ids. Pre-existing tests that change are
+Visible test names were planned at setup and aligned with the frozen
+catalogue in Phase 1; Phase 2 writes them, and this table is updated with
+the final ids. Pre-existing tests that change are
 listed only in the task plan's *Test Strategy* › *Pre-existing tests that
 change*.
 

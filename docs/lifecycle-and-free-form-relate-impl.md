@@ -23,7 +23,11 @@ checklist and the test matrix synchronized.
   free-form `docs relate`
 - Tracker: order 100, `active` since the claim commit `2ad941e`, no
   dependencies ([milestone-plan.md](milestone-plan.md))
-- Started: 2026-10-26 (milestone setup; no TDD phase started)
+- Started: 2026-10-26 (milestone setup); Step 1 (Phases 1–4) started
+  2026-10-27 on `lifecycle-and-free-form-relate/phases-1-4`
+- Step 1: **in progress** — the contract is frozen in the task plan's
+  *Decisions (Phase 1 — BINDING)*; per-phase results are in the phase
+  sections below and the *TDD phase progress* table.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -92,7 +96,7 @@ checklist and the test matrix synchronized.
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | Freeze against the answered Q1–Q9: `docs lifecycle`'s `*files, <state>` grammar, state vocabulary (built-ins plus `add_lifecycles` extensions, minus `archived`), refusal set and order, idempotence and single-reindex rules, output lines and `--json` record; free-form `relate`'s grammar (`[a-z][a-z0-9-]*`, D6), endpoint rules (archived SOURCE refused, archived TARGET never written, any existing file as TARGET), one-sided write and record; recognized-verb byte stability; the `--body-from` sentence; D10's config-aware `parse()` signature and how its sites obtain the config (D10's behaviour, `render_index` placement and `docs stamp` refusal are frozen); the stamp refusal's message; argparse's leading-hyphen handling; the upgrade note's three D10 changes; the surface list; the Phase-5 signatures. |
+| 1. Define Contract | Complete | 2026-10-27 | Freeze against the answered Q1–Q9: `docs lifecycle`'s `*files, <state>` grammar, state vocabulary (built-ins plus `add_lifecycles` extensions, minus `archived`), refusal set and order, idempotence and single-reindex rules, output lines and `--json` record; free-form `relate`'s grammar (`[a-z][a-z0-9-]*`, D6), endpoint rules (archived SOURCE refused, archived TARGET never written, any existing file as TARGET), one-sided write and record; recognized-verb byte stability; the `--body-from` sentence; D10's config-aware `parse()` signature and how its sites obtain the config (D10's behaviour, `render_index` placement and `docs stamp` refusal are frozen); the stamp refusal's message; argparse's leading-hyphen handling; the upgrade note's three D10 changes; the surface list; the Phase-5 signatures. |
 | 2. Write Tests (RED) | Pending | — | New `tests/test_cli_lifecycle.py`; free-form additions to `tests/test_cli_relate.py` and `tests/test_relate_plan.py`; archive-invariance locks; the `--body-from` lock; skill parity; the 2.1.0 pin; both suite-probe replicas; D10's vocabulary, date-format, `render_index` and `docs stamp` locks; the pre-existing tests edited exactly as the task plan's *Pre-existing tests that change* lists. |
 | 3. Create Data/Fixtures | Pending | — | Inline `tmp_path` builders for every write-then-compare case; archive invariance by copying `archive-neighborhood` / `movelink-strand` and re-linking through `relate`; for D10, one `vocab-extension/` tree with the sweep registration updated, inline builders for every non-default `date_format` case, and the `tests/test_cli_mv.py` `_attic_tree` correction. |
 | 4. Run Tests (RED Baseline) | Pending | — | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
@@ -510,9 +514,170 @@ re-review is complete with packet, reviewers and result.
 
 - final-sync: `ready`.
 
-## Phase 1 — Define Contract
+## Phase 1 — Define Contract — 2026-10-27
 
-_Not started._
+### Objective
+
+Freeze, against the answered Q1–Q9, operator Packet A and the Step 1
+planning pass's fifteen open questions (all conductor-resolved), everything
+Phase 2 will assert against: `docs lifecycle`'s grammar, path rule, refusal
+order, message catalogue (L1–L12), success lines, `--json` record, edits and
+write strategy; free-form `relate`'s grammar, check order, messages (R1–R3),
+`TARGET` rule, archived-endpoint rules and record; the `--body-from`
+sentence and the skill's two sidecar examples with their extraction
+contract; D10's `parse()` signature and how each call site obtains its
+config; the `docs stamp` refusal's classification and message; the upgrade
+note; the full surface list; and the Phase-5 signatures. **No product code
+and no test changes** — the M25–M28a precedent.
+
+### Working contract, restated before any code
+
+- **Invariants.** No transition into or out of `archived` through
+  `docs lifecycle` (an `archived` target, a source under the archive subtree,
+  and a source already reading `Lifecycle: archived` all refuse); a free-form
+  `relate` writes `SOURCE` alone and never reads or writes `TARGET`, and
+  never writes an archived document; recognized-verb `relate` and the archive
+  candidate set and strand refusal are byte-for-byte unchanged on every tree
+  `docs check` passes; a no-op or `--dry-run` writes nothing, INDEX included,
+  and a real change refreshes the INDEX once; every refusal is zero-byte and
+  prints under `--quiet`; `docs check`'s rules, findings and records are
+  unchanged; a bare `parse()` keeps the built-in defaults and a
+  config-aware one agrees with `docs check`, with unchanged messages and one
+  date spelling per tree; `render_index` renders every document it counts;
+  `docs stamp` never destroys a document.
+- **Forbidden shortcuts.** No special-casing of visible examples
+  (`pairs-with`, fixture names, test literals) or test-only branches — the
+  free-form path is the grammar, not a list; no weakening, skipping,
+  deleting or rewriting of tests to obtain GREEN, and pre-existing test edits
+  limited to the authoritative list; `docs lifecycle` never re-enters another
+  verb's command function and no spelling reaches `archived`; a free-form
+  operation never writes `TARGET`; `docs check` is never relaxed; no new
+  dependency and no hand-rolled equivalent of an in-project library without a
+  logged decision; green visible tests are not sufficient on their own where
+  the risk level selects deeper gates.
+- **Visible product tests that drive the implementation.** The Phase 2 set:
+  the new `tests/test_cli_lifecycle.py` and `tests/test_lifecycle_plan.py`,
+  and additions to the `relate`, relate-plan, `archive`, `--body-from`,
+  `stamp`, index (pure and CLI), `list`, `touch`, walker, `project set`,
+  `project rename`, `mv`, model and skill test modules — plus the
+  pre-existing tests on the authoritative list.
+- **Explicit non-product workflow gates.** `docs check .` from the docs root;
+  the live-INDEX snapshot comparison; the Phase 4 / Phase 8 mechanical id and
+  AST-diff proof; the naming lint over new test names; the Phase 8 mutation
+  smoke.
+- **Risk and gates.** Standard (operator, Q8). Selected: contract; visible
+  product tests; `ruff check`, `ruff format --check`, `mypy src/ tests/`;
+  `docs check`; reference byte-identity; the live-INDEX snapshot;
+  property/stateful smoke; mock audit; the end-of-step reviews. Coverage,
+  hidden suite and mutation tooling are not configured. No Phase-4 operator
+  checkpoint.
+- **Mock policy.** No new mocks: the INDEX-refresh failure uses a real
+  malformed sibling, the no-reindex check a sentinel INDEX, and the fuzz runs
+  through in-process `cli.main` (a real path). Phase 8 audits.
+- **Taste anchors.** `_cmd_project_set` (lifecycle), `_cmd_relate` /
+  `plan_relate` / `_plan_relate_edit` / `relate_plan_to_json` /
+  `_print_relate_lines` (free-form), `_cmd_touch` (write-and-reindex tail),
+  `check_doc` (the `parse()` fix), `render_index` extended rather than
+  replaced, `_cmd_stamp`'s validate-all-first abort; reuse
+  `set_metadata_field`, `add_related_edge` / `remove_related_edge`,
+  `atomic_write`, `_refresh_index` + `compile_exclude_predicate`,
+  `_resolve_managed_root`, `_resolve_relate_endpoint`, `_is_archived_rel`,
+  `validate_lifecycle` / `validate_role`, `inverse_verb`, `load_config`,
+  `parse_date`, `RelatePlan` / `RelateEdit`; the `docs: <verb>:` voice,
+  validate-all-first, one JSON shape for preview and apply, frozen dataclass
+  plans; `cli.py` +310 to +510 lines, tests +900 to +1,300; stdlib only.
+
+### Actions taken
+
+- Wrote **Decisions (Phase 1 — BINDING)** in the task plan: P1.1
+  `docs lifecycle` (argparse, paths, an eleven-step refusal order, the
+  L1–L12 catalogue, success lines, the record, edits, sequential writes,
+  deduplication); P1.2 free-form `relate` (the grammar, an eleven-step check
+  order, R1–R3, the never-read `TARGET`, archived endpoints, the record, byte
+  stability in both D10 directions); P1.3 the `--body-from` route plus the
+  **frozen** Phase-7 text of both skill sidecar examples and the extraction
+  contract the C14 test follows; P1.4 the `parse()` signature and the
+  per-site config table; P1.5 the stamp classification and message; P1.6
+  `render_index`; P1.7 the upgrade note; P1.8 the full surface list; P1.9
+  the Phase-5 signatures and the pull-style interface map; the fifteen
+  resolved questions; and three logged deviations.
+- Landed the author-facing halves in `docs/cli.md`: *Invocation* gains the
+  configured-vocabulary-and-date-format paragraph (D10, every verb that
+  reads metadata); `docs new`'s `--body-from` gains the leading-`Related:`
+  bullet (D8); `docs index` gains the extension-role placement and its real
+  exit codes (OQ-10 — it said "Exits 0 always", but it exits 1 on a missing
+  root and 2 on a malformed `.docs.toml` or document); a new **`docs
+  lifecycle`** section carries every catalogue message, the record and the
+  exits; `docs relate` is rewritten for the two kinds of verb — intro, the
+  free-form grammar with R1 and R3, *What must parse*, *What gets written*,
+  idempotency, *Archived endpoints* with R2, the record table and a
+  free-form example, stage 1 and 2 of the coordinated-write contract,
+  *Exits* and *Non-goals*; `docs stamp` gains the refusal and its exit row,
+  its "four required fields" becomes three plus `Project:` (OQ-10), and its
+  exit 2 now names the INDEX-refresh failure the code already returned; the
+  exit-code summary gains a `lifecycle` row and updated `relate` / `stamp`
+  rows; the cross-verb convention names `lifecycle`.
+- Landed the convention halves in `docs/convention.md`: `Updated:`'s type is
+  the tree's `date_format`; *Changing lifecycle* under the Lifecycle table;
+  *Every verb honours the additions* under *Extending vocabularies*;
+  *Writing an edge* under *Relationship verbs* (the grammar binds `relate`,
+  not the convention); the reciprocal *Repair with `docs relate`* paragraph;
+  the active-tree lifecycle rule now names `add_lifecycles` extensions (what
+  `status-drift` already accepts) and `date_format` governs every `Updated:`
+  in every verb; the audited-repair exception is stated recognized-only; the
+  *What `docs` does not promise* graph line names one edge per invocation.
+- Applied the task plan's wording fixes, none re-opening D10: the duplicate
+  `## Contract` heading removed; D4 (and the matrix's C7) gain the E11
+  direction and the D9 upgrade note says "every verb that reads metadata"
+  (OQ-6); the error table says "the same message `docs check` gives"
+  (OQ-6); the Phase 2 objective's locks corrected (OQ-9) and
+  `tests/test_lifecycle_plan.py` added to its files (OQ-12); Phase 7 gains
+  `references/quality-artifacts.md` and `SKILL.md`'s *Quality artifacts*
+  paragraph (OQ-14); *Ambiguities* points at the frozen items; *Non-product
+  checks* names the QUALITY PLAN's explicit gates; the authoritative list's
+  three `relate` rows name their exact verbs; *Follow-ups* gains items 7 and
+  8 and records homes for 2, 3 and 6 (OQ-5, OQ-11).
+- Aligned the test matrix: clauses cite the catalogue ids (`L1`–`L12`,
+  `R1`–`R3`), deduplication (OQ-3) and the closed record keys; *Check
+  classification* lists the explicit non-product gates.
+- Mirrored both specs byte-identically into `src/docs_cli/skill/references/`
+  and regenerated `docs/INDEX.md` and its frozen snapshot after `docs touch`.
+
+### Contract decisions worth calling out
+
+- **The archive-subtree pre-pass runs before every per-document check, and
+  the status-drift guard after.** L7 is decidable from paths alone, so — as
+  in `project set` — a batch naming an archived document refuses at exit 2
+  even when another named document is missing; L11 needs a parsed
+  `Lifecycle:`, so it can only run once every document has parsed, and a
+  missing sibling therefore exits 1 first. Either way nothing is written.
+- **`archived` is tested before membership.** It is a member of
+  `config.lifecycles`, so a membership-only test would let it through; L5
+  names `docs archive` rather than listing it as merely unknown.
+- **A leading-hyphen verb is argparse's, frozen loosely.** Measured on
+  Python 3.12.3: `relate add a.md -x b.md` and `-1x` exit 2 with argparse's
+  *the following arguments are required: TARGET*; after `--` (in either
+  position) or as a bare `-`, the verb reaches the command. R3 freezes
+  "exit 2, usage error, zero bytes" and leaves argparse's wording free.
+- **The free-form record keeps all eleven keys.** `inverse: null` and a
+  one-element `edits` let a consumer read both kinds of record with one
+  parser; `_print_relate_lines` needs no change because it already iterates
+  the edits.
+- **The skill's sidecar wording is frozen now, not in Phase 7.** C14 runs
+  "the skill's literal example", so the example a Phase 2 test extracts has
+  to exist as frozen text before the test is written (OQ-7).
+
+### Verification
+
+- `git diff e48adb9 -- src/docs_cli/cli.py tests/` — empty except the
+  regenerated `tests/fixtures/expected/docs-INDEX.md` snapshot.
+- `.venv/bin/ruff check .` — All checks passed.
+- `.venv/bin/ruff format --check .` — 48 files already formatted.
+- `.venv/bin/mypy src/ tests/` — no issues found in 49 source files.
+- `.venv/bin/python -m pytest -q` — **1504 passed** (unchanged).
+- `docs check .` from the docs root — no violations found (exit 0).
+- `cmp` of both mirrors against `docs/cli.md` / `docs/convention.md`, and
+  of `docs/INDEX.md` against the frozen snapshot — identical.
 
 ## Milestone completion summary
 

@@ -30,9 +30,10 @@ Related:
   [lifecycle-and-free-form-relate-test-matrix.md](lifecycle-and-free-form-relate-test-matrix.md)
 - Implementation log:
   [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md)
-- Progress: setup complete, Step 0 review findings folded in — the narrative,
-  evidence headline and question outcomes live in the implementation log's
-  *Implementation metadata*; Phase 1 — Define Contract is next.
+- Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4) in
+  progress — the contract is frozen in *Decisions (Phase 1 — BINDING)*; the
+  narrative, evidence headline and per-phase results live in the
+  implementation log.
 
 ### Identity note
 
@@ -256,11 +257,15 @@ free-form record's shape — expected to be the same object with `"inverse":
 null` and exactly one `edits` record — is frozen in Phase 1 without changing
 one byte of the recognized-verb record.
 
-The one qualification is D10's: on a tree with vocabulary extensions or a
-non-default `date_format`, an endpoint that 2.0.0 refused at exit 1 because
-`parse()` misread its metadata now resolves, and the pair is then written
-exactly as on any other tree. On every tree 2.0.0 could read, recognized-verb
-behaviour is byte-for-byte unchanged.
+The one qualification is D10's, in both directions. On a tree with
+vocabulary extensions or a non-default `date_format`, an endpoint that 2.0.0
+refused at exit 1 because `parse()` misread its metadata now resolves, and
+the pair is then written exactly as on any other tree. Conversely, on the E11
+shape — a non-default `date_format` tree whose endpoint still carries a date
+in another spelling, a tree that already fails `docs check` with `bad-date` —
+an endpoint 2.0.0 accepted now refuses at exit 1 with that same `bad-date`
+diagnosis (Phase 1 resolution OQ-6). On every tree `docs check` passes,
+recognized-verb behaviour is byte-for-byte unchanged.
 
 ### D5 — Free-form endpoints: an archived SOURCE refuses; an archived TARGET is never written; any existing file may be a TARGET
 
@@ -376,9 +381,9 @@ here.
 - **Upgrade note.** Three behaviour changes, each stated plainly: `docs
   relate` writes a grammar-valid free-form verb it used to refuse (case
   variants and other out-of-grammar verbs still refuse, now by grammar); on a
-  non-default `date_format` tree whose dates already fail `docs check`, the
-  walking verbs now report the same `bad-date` diagnosis instead of
-  disagreeing with the gate (D10, E11); and `docs stamp` refuses, at exit 1
+  non-default `date_format` tree whose dates already fail `docs check`, every
+  verb that reads metadata now reports the same `bad-date` diagnosis instead
+  of disagreeing with the gate (D10, E11); and `docs stamp` refuses, at exit 1
   with zero bytes written, a file whose full metadata block fails the tree's
   configured vocabulary or date format — where 2.0.0 silently re-stamped it,
   discarding its lifecycle, role and `Related:` edges (D10, E12). Vocabulary
@@ -479,11 +484,11 @@ Consequences, stated as contract:
   close at Phase 7.
 
 ## Contract
-## Contract
 
-The contract below is the setup draft; Phase 1 freezes its exact messages,
-records and signatures in a *Decisions (Phase 1 — BINDING)* section here,
-following the M25–M28a precedent.
+The contract below is the setup draft; Phase 1 froze its exact messages,
+records and signatures in *Decisions (Phase 1 — BINDING)* below, following
+the M25–M28a precedent. Where this draft and that section differ, that
+section — and the specs it points at — win.
 
 ### Facts
 
@@ -534,15 +539,15 @@ following the M25–M28a precedent.
   (Q3 → `[a-z][a-z0-9-]*`, D6); the extension-state scope (Q7 → fix
   `parse()`'s config-blindness, both halves, D10); the risk level (Q8 →
   Standard).
-- **Phase-1 freeze items (not operator questions):** the `docs lifecycle`
-  message catalogue and `--json` record; the free-form `relate` record shape
-  (D4) and its grammar-refusal message; whether a multi-file `docs lifecycle`
-  write uses `relate`'s staged publish with rollback or `touch` / `project
-  set`'s sequential write (default: the `project set` precedent, since its
-  batch shape is the one adopted); D10's exact `parse()` signature and how
-  each call site obtains its config (D10's behaviour itself is frozen);
-  argparse's handling of a leading-hyphen verb (D6); and the exact
-  `cli.md` / `convention.md` / skill wording.
+- **Phase-1 freeze items — frozen** in *Decisions (Phase 1 — BINDING)*: the
+  `docs lifecycle` message catalogue and `--json` record (P1.1); the
+  free-form `relate` record shape and its grammar-refusal message (P1.2);
+  the multi-file `docs lifecycle` write — sequential, the `project set`
+  precedent (P1.1, OQ-2); D10's exact `parse()` signature and how each call
+  site obtains its config (P1.4); argparse's handling of a leading-hyphen
+  verb (P1.2, R3); and the `cli.md` / `convention.md` wording, with the skill
+  wording frozen where a test extracts it (P1.3) and listed for Phase 7
+  otherwise (P1.8).
 
 ### Inputs
 
@@ -602,7 +607,7 @@ following the M25–M28a precedent.
 | Free-form TARGET missing, a directory, or outside the root (including through an escaping symlink) | exit 1, nothing written | today's messages |
 | `docs stamp` on a file whose full metadata block fails the tree's configured vocabulary or date format | exit 1, zero bytes written | names the failing field; points at `docs check` and `docs touch` |
 | INDEX refresh fails after a successful write | exit 2; documents already correct | `docs: INDEX refresh failed: …`; the `--json` record still emitted with `"index_refreshed": false` |
-| A walked document whose `Lifecycle:`, `Role:` or `Updated:` does not parse under the tree's config | the walking verb fails as today's walk errors do (e.g. `docs index` exit 2), now judged by the same config `docs check` uses | the self-locating `docs: <path>: …` message naming the configured vocabulary or format |
+| A walked document whose `Lifecycle:`, `Role:` or `Updated:` does not parse under the tree's config | the walking verb fails as today's walk errors do (e.g. `docs index` exit 2), now judged by the same config `docs check` uses | the self-locating `docs: <path>: …` message — the same message `docs check` gives as `bad-vocab` / `bad-date` (Phase 1 resolution OQ-6: messages unchanged) |
 
 ### Non-functional constraints
 
@@ -720,9 +725,8 @@ following the M25–M28a precedent.
   pins in `tests/test_packaging.py`; D10's vocabulary, date-format,
   `render_index` and `docs stamp` locks across the verbs that read the tree;
   and the `_attic_tree` correction in `tests/test_cli_mv.py`.
-- Explicit non-product checks, outside default product-test discovery: none
-  new — `docs check` from the docs root and the existing live-INDEX snapshot
-  test are the documentation gates.
+- Explicit non-product checks, outside default product-test discovery:
+  listed in *Test Strategy* › *Non-product checks*.
 - Hidden/generalization categories to hold back: listed in *Test Strategy*.
 - Property/stateful invariants: idempotence; add-then-remove from an
   initially absent edge restores the original bytes apart from `Updated:`; no
@@ -988,9 +992,9 @@ edited unless it appears here. The Step 0 re-review added the
 
 | Old id | New id | Change | Reason |
 |---|---|---|---|
-| `tests/test_cli_relate.py::test_relate_unknown_verb_refuses` | `tests/test_cli_relate.py::test_relate_verb_outside_the_free_form_grammar_refuses` | renamed; refuses an out-of-grammar verb instead of `pairs-with`, with Phase 1's message | `pairs-with` becomes a valid free-form verb (D4, D6) |
-| `tests/test_cli_relate.py::test_relate_quiet_suppresses_success_but_never_a_refusal` | unchanged | its refused verb changes from `pairs-with` to an out-of-grammar verb | same |
-| `tests/test_cli_relate.py::test_relate_case_variant_verb_refuses` | unchanged | still refuses at exit 2 with zero bytes; its expected message follows Phase 1's catalogue | D6 |
+| `tests/test_cli_relate.py::test_relate_unknown_verb_refuses` | `tests/test_cli_relate.py::test_relate_verb_outside_the_free_form_grammar_refuses` | renamed; refuses the out-of-grammar verb `see also` instead of `pairs-with`, asserting the full R1 message | `pairs-with` becomes a valid free-form verb (D4, D6) |
+| `tests/test_cli_relate.py::test_relate_quiet_suppresses_success_but_never_a_refusal` | unchanged | its refused verb changes from `pairs-with` to the out-of-grammar `Pairs-With` | same |
+| `tests/test_cli_relate.py::test_relate_case_variant_verb_refuses` | unchanged | still refuses at exit 2 with zero bytes; its assertion is unchanged because R1 keeps the `unknown verb` stem (Phase 1 resolution OQ-4), and only its docstring's "free-form verb" becomes "outside the grammar" | D6 |
 | `tests/test_cli_archive.py::test_archive_renders_the_witness_in_the_trees_date_format` | unchanged | its fixture's input `Updated:` is written in the tree's `%d-%m-%Y`; expected exit 0; the two INDEX-refresh assertions are dropped and the three witness assertions kept; the malformed-date behaviour moves to the new `test_walking_verbs_report_bad_date_on_a_mis_spelled_non_default_tree` | D10 fixes the defect it pinned, as its docstring foresees (E11) |
 | `tests/test_cli_mv.py::test_mv_refuses_a_cross_dated_relocation_on_a_non_default_archive_tree` | unchanged | through the shared `_attic_tree` builder: `Updated:` lines move from ISO to `%d-%m-%Y`, and the builder's docstring drops its defect sentence | D10 reads `Updated:` in the tree's format (E11) |
 | `tests/test_cli_mv.py::test_mv_does_not_refuse_inside_an_ordinary_archive_named_subdirectory` | unchanged | the same `_attic_tree` correction | same |
@@ -1002,8 +1006,15 @@ edited unless it appears here. The Step 0 re-review added the
 
 ### Non-product checks
 
-None new. `docs check` from the docs root and the existing live-INDEX
-snapshot test (`tests/test_cli_index.py`) remain the documentation gates.
+Run deliberately as explicit workflow gates, never in default test discovery
+(the test matrix's *Check classification* lists them): `docs check .` from
+the docs root; the live-INDEX snapshot comparison; the Phase 4 / Phase 8
+mechanical proof (the `comm` of collected test ids against the pre-Phase-1
+commit plus an AST function-body diff of every pre-existing test function —
+scratchpad scripts, results in the implementation log); a naming lint over
+the new test names; and the Phase 8 hand-applied mutation smoke. The
+reference byte-identity and stale-wording checks are product tests, because
+the skill and the `--help` text ship.
 
 ### Hidden/generalization categories
 
@@ -1166,9 +1177,13 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 
 - Objective: express every clause of the frozen contract as a failing test
   before implementation, including the locks that must stay GREEN at
-  baseline (recognized-verb `relate`, the archive candidate set and strand
-  refusal, the `--body-from` route, and the suite probes' current failure).
-- Files: `tests/test_cli_lifecycle.py` (new), `tests/test_cli_relate.py`,
+  baseline (recognized-verb `relate` byte-for-byte, the `--body-from` route,
+  a bare `parse()` keeping the built-in defaults, and `docs stamp`'s
+  unrelated-failure path). The archive invariance tests and both suite-probe
+  replicas need free-form `relate` to build or pass their trees, so they are
+  RED at baseline, not locks (Phase 1 resolution OQ-9).
+- Files: `tests/test_cli_lifecycle.py` (new), `tests/test_lifecycle_plan.py`
+  (new — the pure planner, Phase 1 resolution OQ-12), `tests/test_cli_relate.py`,
   `tests/test_relate_plan.py`, `tests/test_cli_archive.py`,
   `tests/test_body_from.py`, `tests/test_skill.py`, `tests/test_packaging.py`,
   and, for D10, `tests/test_cli_index.py`, `tests/test_cli_list.py`,
@@ -1246,9 +1261,13 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   `relate` refuses to edit them" sentence; the sidecar row naming both routes);
   `references/adoption-playbook.md`'s stale heuristic description; both
   skill sidecar examples rewritten from the inline `Related: artifact-of:`
-  form to the group form or `docs relate add <sidecar> artifact-of
-  <binary>`; `cli.md`'s `docs stamp` idempotence paragraph and exit codes
-  for the new refusal; both
+  form to the frozen text in *Decisions (Phase 1 — BINDING)* › P1.3;
+  `references/quality-artifacts.md` *Linking reports* and `SKILL.md`'s
+  *Quality artifacts* paragraph, which today hedge on whether a
+  non-Markdown `Related:` target is accepted and now name `docs relate add
+  <companion> references <report>` (Phase 1 resolution OQ-14); `cli.md`'s
+  `docs stamp` idempotence paragraph and exit codes (written in Phase 1);
+  both
   byte-identical mirrors; the README verb list; `pyproject.toml` and the
   packaging pin at 2.1.0; the `## 2.1.0 — UNRELEASED` CHANGELOG section with
   its upgrade note (all three behaviour changes, D9); and dated notes on
@@ -1257,7 +1276,8 @@ an agent running a suite workflow — first the Agent Playbook Suite's
   their closure by D10 — as M28 and M28a closed issue #1.
 - Files: `src/docs_cli/cli.py` (help strings only), `docs/cli.md`,
   `docs/convention.md`, `src/docs_cli/skill/` (`SKILL.md`,
-  `references/use-cases.md`, `references/adoption-playbook.md`, both mirrors),
+  `references/use-cases.md`, `references/adoption-playbook.md`,
+  `references/quality-artifacts.md`, both mirrors),
   `README.md`, `CHANGELOG.md`, `pyproject.toml`, `tests/test_packaging.py`,
   `docs/feedback-log.md`.
 - Exit: subprocess, reference byte-identity and skill-parity tests GREEN;
@@ -1316,7 +1336,7 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 
 ## Phase checklist
 
-- [ ] Phase 1 — Define Contract
+- [x] Phase 1 — Define Contract
 - [ ] Phase 2 — Write Tests (RED)
 - [ ] Phase 3 — Create Data/Fixtures
 - [ ] Phase 4 — Run Tests (RED Baseline)
@@ -1418,6 +1438,460 @@ with no test behind it. The Step 0 review then found that both examples spell
 works. The current-state statement is therefore narrowed to *on an existing
 document*, and the observation is resolved as D8: supported in its group form,
 locked, stated in `cli.md`, and with both skill examples corrected in Phase 7.
+
+## Decisions (Phase 1 — BINDING)
+
+Frozen 2026-10-27. The authoritative surface lives in `cli.md` — *Invocation*
+› *The tree's configured vocabulary and date format*; `docs new` ›
+`--body-from`; `docs index`; the new `docs lifecycle` section; `docs relate`;
+`docs stamp`; *Exit codes (summary)* — and in `convention.md` — *Required
+fields*; *Lifecycle* › *Changing lifecycle*; *Extending vocabularies*;
+*Relationship verbs* › *Writing an edge*; *Reciprocal relationship verbs*;
+*Archive subtree*. This section records what Phase 1 decided, why, and the
+Phase-5 signatures; where it and the specs disagree, the specs win. Nothing
+here re-opens D1–D10, Q1–Q9, operator Packet A or the Step 0 resolutions.
+The fifteen Phase-1 questions and their conductor resolutions close the
+section.
+
+### P1.1 — `docs lifecycle` (D1–D3)
+
+**Argparse.** A top-level subparser with `parents=[common]` (`--root`,
+`--quiet`, `--dry-run`), one positional `"args", nargs="+", metavar="file ...
+state"` and a local `--json`, registered after `stamp` and before `project`,
+and dispatched in `_dispatch`. A single `nargs="+"` run split as
+`*files, state` inside the command — `docs project set`'s shape, because
+argparse cannot split a variadic run from a trailing positional.
+
+**Paths (OQ-1, OQ-13).** A relative `<file>` resolves against the resolved
+docs root; an absolute one is used as given (`_cmd_project_set`'s rule). The
+root-relative path `rel` is computed from the resolved location, and the
+document is read, parsed and written through `root / rel` (`relate`'s
+precedent), so a named symlink inside the tree edits the file it points at
+and every message after resolution names `rel`.
+
+**Refusal order** — `_cmd_project_set`'s, with D2's two archive guards:
+
+| Step | Check | Exit |
+|---|---|---|
+| L1 | fewer than two positional tokens | 2 |
+| L2 / L3 | strict root: `_resolve_managed_root(args, Path.cwd(), verb="lifecycle")` | 2 |
+| L4 | `.docs.toml` does not parse | 2 |
+| L5 | `state == "archived"` — tested explicitly **before** membership, because `archived` is in `config.lifecycles` | 2 |
+| L6 | `state` not in `config.lifecycles - {"archived"}` — exact, case-sensitive, so `Archived` is an unknown state | 2 |
+| L7 | archive-subtree pre-pass over **every** named document, independent of argument order (`_is_archived_rel` on the resolved path; a path outside the root is skipped here and refused at L8) | 2 |
+| L8–L10 | per document, in argument order: outside the root, missing, fails `parse(..., config=config)` | 1 |
+| L11 | any parsed document whose current `Lifecycle:` is `archived` — refused naming the first in argument order | 2 |
+
+Then: deduplicate on `rel` keeping the first occurrence (OQ-3); plan; a
+whole-batch no-op or `--dry-run` returns 0 after printing; otherwise write
+each changed document, print the lines, reindex once, emit the record.
+
+**Message catalogue** (stderr; every refusal prints even under `--quiet`):
+
+| Id | Exit | Message |
+|---|---|---|
+| L1 | 2 | `docs: lifecycle: need at least one <file> and a <state>` |
+| L2 | 2 | `docs: lifecycle: <cwd> is not under a docs root with .docs.toml; refusing` |
+| L3 | 2 | `docs: lifecycle: --root <dir> does not contain .docs.toml; refusing` |
+| L4 | 2 | `docs: malformed .docs.toml: <detail>` |
+| L5 | 2 | `docs: lifecycle: 'archived' is not a lifecycle target — docs archive <file> moves lifecycle and location together; refusing` |
+| L6 | 2 | `docs: lifecycle: unknown state '<state>'; expected one of: <states>` — `<state>` rendered with `!r`; `<states>` the configured vocabulary minus `archived`, sorted, `", "`-joined |
+| L7 | 2 | `docs: lifecycle: <rel> is under the archive subtree (read-only); refusing` |
+| L8 | 1 | `docs: lifecycle: <path> is outside the resolved docs root (<root>)` |
+| L9 | 1 | `docs: lifecycle: file not found: <path>` |
+| L10 | 1 | `docs: <path>: <parser detail>` — the parser's self-locating message |
+| L11 | 2 | `docs: lifecycle: <rel> reads 'Lifecycle: archived' outside the archive subtree (status-drift); refusing — only docs archive sets archived` |
+| L12 | 2 | `docs: INDEX refresh failed: <detail>` — after the documents were written |
+
+`<path>` in L8–L9 is the path as resolved for the check (`root / <given>`,
+or the absolute path given); `<root>` is the resolved root.
+
+**Success lines** (stderr, suppressed by `--quiet`; one per distinct named
+document in first-seen order; printed after the writes and before the
+reindex — `relate`'s order, so a reindex failure follows the record of what
+landed):
+
+- `docs: lifecycle: set <rel> from <before> to <state>`
+- `docs: lifecycle: would set <rel> from <before> to <state>` (under `--dry-run`)
+- `docs: lifecycle: no change — <rel> is already <state>`
+
+**`--json` record.** One object, the same shape for preview and apply,
+emitted whenever validation passed (never on a refusal):
+
+```
+{"state", "date", "dry_run", "applied", "index_refreshed",
+ "edits": [{"path", "before", "change"}]}
+```
+
+`change` is `"set"` or `"unchanged"`; `edits` follow first-seen argument
+order, deduplicated; `date` is the value written to each changed document;
+`applied` is false for a dry run and for a whole-batch no-op; on an
+INDEX-refresh failure the record is still emitted, with `"applied": true,
+"index_refreshed": false`. The redundant `updated_bumped` (it equals
+`change == "set"`) and `after` (it equals `state`) keys are deliberately not
+in the record — no consumer needs them.
+
+**Edits.** Only documents whose state differs are edited:
+`set_metadata_field(text, "Lifecycle", state)`, then
+`set_metadata_field(…, "Updated", date_str)` — `_archive_one`'s order — with
+`date_str = date.today().strftime(config.date_format)` computed once.
+
+**Writes (OQ-2).** Sequential `atomic_write` per changed document, in
+first-seen order — `_cmd_project_set`'s precedent; no staged publish and no
+new failure-injection mock. One reindex:
+`_refresh_index(root, config, predicate=compile_exclude_predicate(config, []))`.
+
+**Also frozen.** An excluded document may be named and is written; the
+reindex still honours the exclusion. No `--date` flag; no coupling to
+`Related:`; `docs lifecycle` never calls another verb's command function.
+
+### P1.2 — free-form `docs relate` (D4–D6)
+
+**Grammar.** `relate_verb_in_grammar(verb)` is
+`_RELATE_VERB_RE.fullmatch(verb) is not None` with
+`_RELATE_VERB_RE = re.compile(r"[a-z][a-z0-9-]*")`. `fullmatch`, never
+`match` with `$` (which accepts a trailing newline); `[0-9]`, never `\d`
+(which accepts non-ASCII digits). The six recognized verbs are inside the
+grammar.
+
+**Order in `_cmd_relate`** — every step before planning writes nothing:
+
+1. root (`_resolve_managed_root`), 2. config, 3. **grammar** → R1, exit 2;
+4. resolve `SOURCE`, parsed with the config → exit 1;
+5. resolve `TARGET` — parsed only for a recognized verb → exit 1;
+6. self-edge → exit 2, unchanged message;
+7. **free-form only:** an archived `SOURCE` → R2, exit 2 — in the slot where
+   today's archived-endpoint `--reason` rule sits and before planning, so a
+   no-op refuses too;
+8. `--reason` shape, when the flag is present (unchanged messages);
+9. **recognized only:** an archived endpoint without `--reason` (unchanged);
+10. `--date`; 11. plan, apply, print, reindex, emit.
+
+For a recognized verb the sequence is exactly today's: R1 replaces the old
+`unknown verb` refusal, which a recognized verb never reaches.
+
+**Messages.**
+
+| Id | Exit | Message |
+|---|---|---|
+| R1 | 2 | `docs: relate: unknown verb '<verb>'; expected a reciprocal verb (blocked-by, blocks, depends-on, follows, precedes, required-by) or a free-form verb matching [a-z][a-z0-9-]*` — `<verb>` rendered with `!r`, so a verb carrying a newline stays on one line |
+| R2 | 2 | `docs: relate: <rel> is under the archive subtree; a free-form edge is never written to an archived document` |
+| R3 | 2 | a verb starting with `-` is consumed by argparse as an option: an argparse usage error (measured on Python 3.12: `docs relate add a.md -x b.md` → *the following arguments are required: TARGET*; `-1x` the same), nothing written. After `--`, or as a bare `-`, the verb reaches the command and refuses with R1. The usage text is argparse's and is not frozen beyond "exit 2, usage error, zero bytes". |
+
+**TARGET rules.** For a free-form verb `TARGET` is resolved exactly as
+today — root-relative first, then cwd — and must be `candidate.is_file()`
+with its resolved path contained in the root; it is **never read**. A binary
+or non-Markdown file is fine; a directory, a missing file, or a path outside
+the root (including through an escaping symlink) keeps today's exit-1
+messages. `SOURCE` always parses (with the config); for a recognized verb
+both endpoints parse.
+
+**Archived endpoints.** An archived free-form `TARGET` needs no `--reason`
+and never gets a `Revision:` bullet; `--reason` is still shape-checked when
+given and echoed in the record. M25 — D4's exception stays recognized-only.
+
+**Record.** The same eleven keys as today, with `"inverse": null` and
+`edits` holding exactly one entry, the source's. `_print_relate_lines` is
+unchanged (it prints one line per edit, so a free-form run prints one).
+The recognized-verb record is unchanged byte for byte.
+
+**Byte stability (OQ-6).** Recognized verbs are byte-for-byte unchanged on
+every tree `docs check` passes. Two D10 qualifications, both stated in D4 and
+C7: on a tree with vocabulary extensions or a non-default date format, an
+endpoint 2.0.0 refused at exit 1 now resolves; on the E11 shape — a tree that
+already fails `docs check` with `bad-date` — an endpoint 2.0.0 accepted now
+refuses at exit 1 with that same diagnosis.
+
+### P1.3 — the `--body-from` route and the skill's sidecar examples (D8, OQ-7)
+
+**`cli.md`** (written): a body whose first block is `Related:` alone on its
+line, immediately followed by `- <verb>: <target>` bullets, becomes part of
+the metadata block; an inline `Related: verb: target` line stays body text; a
+recognized reciprocal verb written this way is one-sided until
+`docs relate add` completes the pair; the C4 refusal heuristic is unchanged.
+
+**The skill's two examples — frozen text for Phase 7.** In
+`references/use-cases.md` the *Sidecar a non-md artifact* row becomes:
+
+````markdown
+| Sidecar a non-md artifact | `docs new <role> <slug> --body-from -`, then `docs relate add <sidecar> artifact-of <binary>` | When an HTML / XLSX / ODT is referenced from prose and warrants tracking, author a `.md` sidecar; the original binary stays where it is. `docs relate add <sidecar> artifact-of <binary>` writes the one-sided free-form edge on the sidecar alone — the binary is never read or written. To write the edge at creation time instead, open the `--body-from` body with a `Related:` group (`adoption-playbook.md` shows it); an inline `Related: artifact-of: <binary>` line is body text, not an edge. |
+````
+
+In `references/adoption-playbook.md` the *Sidecars for non-md binaries*
+bullet becomes (its stale `^[A-Z][A-Za-z-]+:\s` heuristic line replaced by
+the M15 — C4 description):
+
+````markdown
+- **Sidecars for non-md binaries (M8 F7 + F9).** When a non-md
+  file (a slide deck, a spreadsheet) is referenced from prose,
+  author a Markdown sidecar that carries the convention's
+  metadata and links the binary. Write the edge at creation
+  time by opening the `--body-from` body with a `Related:`
+  group — the label alone on its line, then the bullet:
+
+  ```sh
+  docs new <role> <slug> --body-from - <<'EOF'
+  Related:
+  - artifact-of: <binary>
+
+  ## Summary
+
+  What the artifact is and why it is tracked.
+  EOF
+  ```
+
+  On a sidecar that already exists, run
+  `docs relate add <sidecar> artifact-of <binary>` instead. An
+  inline `Related: artifact-of: <binary>` line is body text, not
+  an edge. `docs new` refuses a body only when it carries a real
+  metadata block — a leading `---` fence, or two or more of
+  `Lifecycle:` / `Role:` / `Updated:` on adjacent lines — so pass
+  body content only; `docs new` owns the frontmatter.
+````
+
+**Extraction contract** (`tests/test_body_from.py`, one id per form). The
+relate form: the `use-cases.md` line beginning `| Sidecar a non-md artifact
+|` carries the inline code span `` `docs relate add <sidecar> artifact-of
+<binary>` ``; the test takes that span, substitutes `<sidecar>` → `deck.md`
+and `<binary>` → `deck.html`, and runs it against a tree holding a scaffolded
+`deck.md` and a `deck.html`. The group form: after the playbook line
+beginning `- **Sidecars for non-md binaries`, the first fenced `sh` block,
+dedented, opens with `docs new <role> <slug> --body-from - <<'EOF'`; its body
+is every following line up to the line `EOF`; the test substitutes `<role>`
+→ `notes`, `<slug>` → `deck`, `<binary>` → `deck.html` and runs the command
+with that body on stdin. Both must leave `deck.md` carrying
+`artifact-of: deck.html` in `docs list --json` and `docs check` exiting 0.
+The wording around the two extracted spans is Phase 7's to polish; the two
+spans and the row and bullet they sit in are frozen.
+
+### P1.4 — `parse()` honours the tree's config: signature and call sites (D10)
+
+`parse(text, path, root, *, config: Config | None = None) -> Doc` —
+keyword-only, following `parse_date`'s `label` precedent, so no positional
+caller can be silently re-bound. With `None` it keeps the built-in
+vocabulary and the ISO format (every bare call and existing unit test is
+unaffected); with a config it validates against `config.lifecycles` and
+`config.roles` and parses `Updated:` in `config.date_format`. `archived`
+stays `False` inside `parse()` (callers set it). Error messages are
+unchanged, so a vocabulary or date failure stays byte-identical to
+`check_doc`'s `bad-vocab` / `bad-date` text (OQ-6).
+
+| Site | Where its config comes from |
+|---|---|
+| `walk` (`index`, `touch`, `archive`, `mv`, `project rename`, every end-of-run reindex) | its existing `config` parameter — every caller already passes one |
+| `query_docs` (`list`) | its existing parameter |
+| `_cmd_archive` (the primary) | already loaded |
+| `_known_projects` (`project set`'s typo guard) | its existing parameter |
+| `_cmd_project_set` | already loaded |
+| `_cmd_stamp` | already loaded |
+| `_resolve_relate_endpoint` | a **new** `config` parameter, passed by `_cmd_relate` |
+| `_cmd_lifecycle`, `plan_lifecycle` | loaded / passed in |
+
+No new `load_config` call is needed anywhere.
+
+### P1.5 — `docs stamp` refuses a complete block that fails the tree's config (D10, Packet A)
+
+Classification, per named file, inside the existing validate-all-first loop:
+
+1. `parse(text, fp, root, config=config)` succeeds → **already stamped**:
+   refresh `Updated:` only (an extension-state document lands here).
+2. Otherwise `_stamp_config_failure(text, config)`: when the block is
+   **complete** — `parse_metadata_block` succeeds and `Lifecycle`, `Role`
+   and `Updated` are each present as a single non-empty string (`Project` is
+   not required, matching `parse()`) — it validates them in `parse()`'s
+   order (`Lifecycle`, `Role`, `Updated`) against the config and returns the
+   first failure's message; otherwise `None`.
+3. A message → refuse: exit 1, before any write of the batch, `--dry-run`
+   included. `None` → today's fresh stamping (no block, a block missing a
+   field, or a complete block failing `parse()` for an unrelated reason such
+   as a malformed `Related:` bullet).
+
+Message: `docs: stamp: <path>: <failure>; the file already carries a
+complete metadata block — refusing to re-stamp it (run docs check, correct
+the field, then docs touch)`, `<path>` as `stamp`'s other messages print it.
+`cli.md`'s pre-existing "four required fields" is corrected to three plus
+`Project:` (OQ-10), and its exit rows gain the refusal (and the INDEX-refresh
+exit 2 the code already had).
+
+### P1.6 — `render_index` (D10, frozen at Step 0)
+
+Per project: iterate `role_order + sorted(set(role_groups) - set(role_order))`,
+headings `role.title()`, no new `Config` field. Invariant: the rendered
+entries equal the active count in the summary line.
+
+### P1.7 — the upgrade note (D9) — Phase 7's CHANGELOG draft
+
+Under `## 2.1.0 — UNRELEASED`:
+
+- **Added:** `docs lifecycle <file>... <state>` — sets a top-level lifecycle
+  state, bumps `Updated:` where it changed, reindexes once; never `archived`.
+- **Changed:** `docs relate add|remove` writes a free-form verb within
+  `[a-z][a-z0-9-]*` one-sided, on `SOURCE` alone, where 2.0.0 refused every
+  verb outside the six reciprocal ones; case variants and other out-of-grammar
+  verbs still refuse at exit 2, now by grammar; a free-form `TARGET` may be any
+  existing file.
+- **Changed:** on a non-default `date_format` tree whose documents still carry
+  dates in another spelling — a tree `docs check` already fails with
+  `bad-date` — every verb that reads metadata reports the same `bad-date`
+  diagnosis instead of disagreeing with the gate.
+- **Changed:** `docs stamp` refuses (exit 1, zero bytes) a file whose complete
+  metadata block fails the tree's configured vocabulary or date format, where
+  2.0.0 re-stamped it and discarded its lifecycle, role and `Related:` edges.
+- **Fixed:** vocabulary extensions and non-default date formats work in every
+  verb, and extension-role documents appear in `INDEX.md`.
+
+`docs check`, every existing record, and every other refusal are unchanged.
+
+### P1.8 — the full surface list
+
+Phase 1 writes the two specs (above) and their byte-identical mirrors; the
+rest lands in Phase 7 (`architecture.md` and `test-strategy.md` in Phase 10):
+
+- **argparse:** the new `lifecycle` parser and help; the `relate` namespace
+  description ("free-form verbs stay hand-edited"); `_add_relate_subverb`'s
+  description ("Only the six recognized verbs are accepted") and `VERB` help;
+  the `stamp` description (the refusal); optionally the `--body-from` help;
+  the `main()` docstring's verb list.
+- **`cli.md` / `convention.md`:** written in Phase 1 — the sections listed at
+  the top of this section, including the two pre-existing inaccuracies fixed
+  here (OQ-10: `docs index`'s "Exits 0 always"; `docs stamp`'s "four required
+  fields").
+- **`SKILL.md`:** the description gains `lifecycle` (743 of the 1024
+  characters the frontmatter test allows are used today); verb-table rows for `docs lifecycle` and free-form
+  `docs relate`; *Three things never to hand-edit* names both verbs as the
+  route for lifecycle and free-form `Related:` edits; the *Quality artifacts*
+  paragraph names `docs relate add` for linking a report (OQ-14).
+- **`references/use-cases.md`:** a lifecycle row and a free-form-edge row;
+  the "`relate` refuses to edit them" sentence; the sidecar row (P1.3).
+- **`references/adoption-playbook.md`:** the sidecar bullet and its stale
+  heuristic description (P1.3).
+- **`references/quality-artifacts.md`:** *Linking reports* names
+  `docs relate add <companion> references <report>` instead of hedging on
+  whether a non-Markdown target is accepted (OQ-14).
+- README verb list; CHANGELOG (P1.7); `pyproject.toml` and the packaging pins
+  at 2.1.0; `feedback-log.md` (the three owned entries, and follow-ups 2, 3,
+  7, 8 — OQ-11).
+
+### P1.9 — frozen Phase-5 signatures (contract only — no code lands in Phase 1)
+
+```python
+_RELATE_VERB_RE: re.Pattern[str]          # re.compile(r"[a-z][a-z0-9-]*")
+def relate_verb_in_grammar(verb: str) -> bool
+
+def parse(text: str, path: Path, root: Path, *, config: Config | None = None) -> Doc
+
+class RelatePlan:  inverse: str | None    # None <=> free-form; then edits == (source,)
+def plan_relate(...)                      # signature unchanged; the free-form branch stages
+                                          # the source only and never reads TARGET; ValueError
+                                          # on an out-of-grammar verb or an archived free-form
+                                          # source (programming errors — the CLI refuses first)
+def _resolve_relate_endpoint(raw: str, root: Path, root_resolved: Path, config: Config,
+                             *, parse_endpoint: bool = True) -> str | int
+
+@dataclass(frozen=True)
+class LifecycleEdit:  path: Path; rel: str; before: str; new_text: str; change: str
+@dataclass(frozen=True)
+class LifecyclePlan:  state: str; date_str: str; edits: tuple[LifecycleEdit, ...]
+
+def plan_lifecycle(root: Path, config: Config, *, files: Sequence[Path], state: str,
+                   date_str: str) -> LifecyclePlan
+    # reads and parses root / rel with the config; dedupes on rel (first occurrence);
+    # an unchanged edit carries new_text equal to the text read; ValueError on an
+    # archived or unknown state, a source under the archive subtree, or a source
+    # already reading `Lifecycle: archived` (programming errors — the CLI refuses first)
+def apply_lifecycle_plan(plan: LifecyclePlan) -> None      # writes only change == "set"
+def lifecycle_plan_to_json(plan: LifecyclePlan, *, dry_run: bool, applied: bool,
+                           index_refreshed: bool) -> dict[str, object]
+def _print_lifecycle_lines(plan: LifecyclePlan, *, dry_run: bool) -> None
+def _cmd_lifecycle(args: argparse.Namespace) -> int
+
+def _stamp_config_failure(text: str, config: Config) -> str | None
+def render_index(...)                     # signature unchanged
+```
+
+**Pull-style interface map** — every output names its consumer:
+
+| Output | Consumer |
+|---|---|
+| `parse(config=)` | the seven existing call sites, `_cmd_lifecycle`, `plan_lifecycle`; clauses C20–C22 |
+| `relate_verb_in_grammar` | R1, the `plan_relate` guard, the grammar fuzz |
+| `RelatePlan.inverse = None` | the record's `"inverse": null` (C15) |
+| `parse_endpoint` | D5's never-read `TARGET` rule (C10) |
+| `LifecycleEdit.path` / `.new_text` | `apply_lifecycle_plan` |
+| `LifecycleEdit.rel` / `.before` / `.change` | the success lines and the record |
+| `LifecyclePlan.state` / `.date_str` | the record's `state` and `date` |
+| `_stamp_config_failure` | C24 |
+
+No speculative output: nothing above lacks a consumer in a clause or a
+planned test.
+
+### Resolved Phase-1 questions (OQ-1 … OQ-15)
+
+Raised by the Step 1 planning pass, all conductor-resolved under the
+operator's earlier binding decisions; none re-opens D10 or an operator
+decision.
+
+1. **OQ-1 — relative paths for `docs lifecycle`.** RESOLVED → P1.1: relative
+   to the resolved root, absolute as given — `_cmd_project_set`'s rule.
+2. **OQ-2 — multi-file writes.** RESOLVED → P1.1: sequential `atomic_write`
+   per changed document (the `project set` precedent); no staged publish, no
+   new mocks.
+3. **OQ-3 — a path named twice.** RESOLVED → P1.1: deduplicated on the
+   root-relative path, first occurrence kept; written once, listed once.
+4. **OQ-4 — the grammar refusal's stem.** RESOLVED → R1 keeps
+   `docs: relate: unknown verb '<v>'`, so `test_relate_case_variant_verb_refuses`
+   keeps its assertion and existing prefix matchers keep working; naming the
+   six recognized verbs lets `Precedes` self-correct.
+5. **OQ-5 — no repair route for an out-of-vocabulary current value.**
+   RESOLVED: `docs lifecycle` keeps exit 1 for a source failing `parse()`; the
+   skill sanctions no new hand-edit; *Follow-ups* items 7 and 8 record the
+   demand (no verb repairs an out-of-vocabulary `Lifecycle:` / `Role:`;
+   `[vocabulary]` entries unvalidated at config load).
+6. **OQ-6 — wording that disagreed with D10.** RESOLVED: D4 and C7 state the
+   E11 direction; the error table says "the same message `docs check` gives";
+   the D9 upgrade note says "every verb that reads metadata". Messages stay
+   unchanged.
+7. **OQ-7 — what "the skill's literal sidecar example" means for C14.**
+   RESOLVED → P1.3: the frozen row and bullet text, and the extraction
+   contract.
+8. **OQ-8 — a committed `vocab-extension/` tree or inline builders.**
+   RESOLVED: one committed `tests/fixtures/trees/vocab-extension/` for the
+   vocabulary half (it joins the three directory-derived sweeps in
+   `tests/test_check.py` as new ids; no existing id moves), excluded from the
+   parse-agreement sweep by a module-local helper named for its behaviour —
+   `_trees_without_vocabulary_extensions()` — not for its provenance; every
+   non-default `date_format` case stays an inline builder.
+9. **OQ-9 — mislabelled locks in the Phase 2 objective.** RESOLVED: the
+   relate-written archive-invariance tests and both suite-probe replicas are
+   RED at baseline; the objective is corrected.
+10. **OQ-10 — two pre-existing `cli.md` inaccuracies.** RESOLVED: both fixed
+    in Phase 1 (`docs index` exits; `docs stamp`'s three required fields).
+11. **OQ-11 — ledger homes.** RESOLVED: follow-ups 2, 3, 7 and 8 are
+    registered in `feedback-log.md` at Phase 7; item 6 is decided at Phase 10.
+12. **OQ-12 — a separate `tests/test_lifecycle_plan.py`.** RESOLVED: yes, the
+    `test_relate_plan.py` / `test_archive_plan.py` precedent; logged below as
+    a deviation from the plan's "one new module".
+13. **OQ-13 — symlinked named documents.** RESOLVED → P1.1: `docs lifecycle`
+    writes `root / rel`, so a symlink inside the tree edits its real file
+    (`relate`'s behaviour), never replaces the link with a regular file.
+14. **OQ-14 — missing surface.** RESOLVED → P1.8: `references/quality-artifacts.md`
+    *Linking reports* and `SKILL.md`'s *Quality artifacts* paragraph join
+    Phase 7's list.
+15. **OQ-15 — the renamed packaging ids.** RESOLVED: `test_a3_…` and
+    `test_c2_…` keep the a/b/c check-number scheme every neighbour in
+    `tests/test_packaging.py` uses, as on the authoritative list.
+
+### Deviations from the plan's file lists (deliberate, logged)
+
+- **Phase 1 makes zero `cli.py` edits** (the M25–M28a precedent): stubs would
+  change the Phase-4 subprocess RED reasons. The signatures are frozen in
+  P1.9 and land as code in Phase 5.
+- **Two new test modules, not one** (OQ-12): `tests/test_cli_lifecycle.py`
+  for the CLI and `tests/test_lifecycle_plan.py` for the pure planner.
+- **One committed fixture tree** (OQ-8), where *Phase 3* allowed one "if a
+  walk-level assertion needs it": about eight modules assert walk-level
+  vocabulary behaviour, and `project set` / `project rename` already copy
+  committed trees.
 
 ## Setup questions (Q1–Q9)
 
@@ -1692,11 +2166,13 @@ Raised during setup, judged out of this milestone's scope, and deliberately
 | # | Follow-up | Home |
 |---|---|---|
 | 1 | **`--body-from` admits any leading bare-label group as metadata**, not only `Related:` — measured with a `Revision:` group landing on an active document, which the convention says the tool never writes (E6). Whether to narrow the C4 heuristic is a behaviour change nobody has asked for. | Later (registered in `feedback-log.md` at Phase 7) |
-| 2 | **Removing a dangling free-form edge** whose TARGET no longer exists. `relate` still requires TARGET to resolve, so a `broken-ref` repair stays move-driven or manual. | Later |
-| 3 | **Widening the free-form verb grammar** beyond `[a-z][a-z0-9-]*`, if a real tree needs an exotic verb `relate` should write. Additive — no caller breaks (D6, Q3). | Later |
+| 2 | **Removing a dangling free-form edge** whose TARGET no longer exists. `relate` still requires TARGET to resolve, so a `broken-ref` repair stays move-driven or manual. | Later (registered in `feedback-log.md` at Phase 7 — Phase 1 resolution OQ-11) |
+| 3 | **Widening the free-form verb grammar** beyond `[a-z][a-z0-9-]*`, if a real tree needs an exotic verb `relate` should write. Additive — no caller breaks (D6, Q3). | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
 | 4 | **Registering the publish milestone** that ships 2.1.0, refreshes host skills, and carries the stopgap hand-off. Not registered in this run (operator, 2026-10-27); the hand-off note names it. | Operator (tracker) |
 | 5 | **The suite pin-bump PR** that retires the verbless-metadata stopgap (*Success criteria*). | Agent Playbook Suite |
-| 6 | **A `parent-of` back-edge on `milestone-plan.md`** pointing at this milestone (Step 0 review claude-N11, waived): a free-form hand-edit to a document outside the operator-approved set, and not required by the tracker contract, since this milestone's `child-of: milestone-plan.md` already gives navigation. The waiver lifts once free-form `docs relate` exists. | Later |
+| 6 | **A `parent-of` back-edge on `milestone-plan.md`** pointing at this milestone (Step 0 review claude-N11, waived): a free-form hand-edit to a document outside the operator-approved set, and not required by the tracker contract, since this milestone's `child-of: milestone-plan.md` already gives navigation. The waiver lifts once free-form `docs relate` exists. | Later (decided at Phase 10 — OQ-11) |
+| 7 | **No verb repairs an out-of-vocabulary `Lifecycle:` or `Role:`.** `docs lifecycle` exits 1 on a source that fails `parse()` (`Lifecycle: activ`, or `shipped` after its extension was removed from `.docs.toml`), and `docs stamp`'s refusal points at "correct the field, then `docs touch`" — while the bundled skill forbids hand-editing a metadata block. Raised at Phase 1 (OQ-5); the skill sanctions no new hand-edit. | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
+| 8 | **`[vocabulary]` entries are not validated at config load.** `load_config` merges `add_lifecycles` / `add_roles` with an unchecked `frozenset()`: an empty or padded entry is accepted silently, and a bare string (`add_lifecycles = "shipped"`) becomes its single letters. D10 makes every verb honour the configured vocabulary, so such an entry now reaches every walk, not only `docs check`. Raised at Phase 1 (OQ-5). | Later (registered in `feedback-log.md` at Phase 7 — OQ-11) |
 
 ## Testing and quality gate
 
