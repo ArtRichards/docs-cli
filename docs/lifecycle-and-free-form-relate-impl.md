@@ -35,8 +35,8 @@ checklist and the test matrix synchronized.
   restatements). Details: the phase sections below, *Step 1 same-instance
   audit*, and *Step 1 review-pass-001*.
 - Step 2 (Phases 5–10): **in progress** on
-  `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`; Phase 5
-  complete (see the phase sections below).
+  `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`; Phases
+  5–6 complete (see the phase sections below).
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -112,7 +112,7 @@ checklist and the test matrix synchronized.
 | 3. Create Data/Fixtures | Complete | 2026-10-27 | Inline `tmp_path` builders for every write-then-compare case; archive invariance by copying `archive-neighborhood` / `movelink-strand` and re-linking through `relate`; for D10, one `vocab-extension/` tree with the sweep registration updated, inline builders for every non-default `date_format` case, and the `tests/test_cli_mv.py` `_attic_tree` correction. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-10-27 | Classified failure set against the 1504-test baseline; every GREEN-at-baseline lock named; every pre-existing id accounted for through the plan's explicit old → new mapping. No operator checkpoint (Standard). |
 | 5. Update Base Interfaces | Complete | 2026-10-27 | `relate_verb_in_grammar` / `_RELATE_VERB_RE`; `parse(..., *, config=None)`; `RelatePlan.inverse: str \| None` and `plan_relate`'s one-sided branch; `LifecycleEdit`, `LifecyclePlan`, `plan_lifecycle`, `apply_lifecycle_plan`, `lifecycle_plan_to_json` — wired nowhere. 126 failed / 1530 passed: exactly the 24 Phase-5 ids flipped. |
-| 6. Implement Offline/Core Path | Pending | — | Register `docs lifecycle`; route free-form verbs in `_cmd_relate` with D5's endpoint rules and D6's grammar; pass the tree's config at the seven `parse()` call sites and the new verbs' sites (D10). |
+| 6. Implement Offline/Core Path | Complete | 2026-10-27 | `docs lifecycle` registered (final help) over the planner; free-form `relate` with R1, R2, R4 and the never-parsed TARGET; the config at the seven `parse()` sites; `render_index`'s extension groups; the stamp refusal. 9 failed / 1647 passed: the 8 Phase-7 ids plus the expected transient skill-completeness guard. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Argparse help; `cli.md` / `convention.md`; the skill body, *Three things never to hand-edit*, `use-cases.md`, the adoption playbook's stale heuristic line; both mirrors; README verb list; 2.1.0 pin and `## 2.1.0 — UNRELEASED` with both behaviour changes in the upgrade note; dated notes on the 2026-10-26 promotion entry and on the two config-blindness entries D10 closes. |
 | 8. Run Tests (GREEN) | Pending | — | Full gate with exact counts; mechanical no-regression proof against the 1504 pre-existing ids; property checks, grammar fuzz, hand-applied mutation smoke; mock audit. |
 | 9. Integrate / Accept / Dogfood | Pending | — | The primary use case on a throwaway copy of this tree with zero hand-edits; both suite probes against the editable build and a local wheel; closeout-plan identity for a `relate`-linked trio; the extension-vocabulary and non-default-`date_format` trees (D10); this tree reindexing byte-identically; runtime recorded. |
@@ -1510,6 +1510,114 @@ All in `src/docs_cli/cli.py`; no test or fixture changed
   `_cmd_relate` or `_build_parser` (`lifecycle` is not a subcommand). Diff:
   `cli.py` +235 / −55 so far.
 - `docs check .` exit 0; mirrors and the INDEX snapshot byte-identical.
+
+## Phase 6 — Implement Offline/Core Path — 2026-10-27
+
+### Objective
+
+Wire both verbs and D10: register `docs lifecycle` over the Phase-5
+planner; route `_cmd_relate`'s free-form verbs to the one-sided path with
+D5's endpoint rules, D6's grammar and R4; pass the tree's config at the seven
+existing `parse()` sites; render extension-role groups; and make `docs
+stamp` refuse a complete block that fails the config.
+
+### Actions taken
+
+All in `src/docs_cli/cli.py`; no test or fixture changed.
+
+1. **D10 at the seven sites.** `config=config` at `walk`, `query_docs`,
+   `_cmd_archive`'s primary, `_known_projects` and `_cmd_project_set`;
+   `_resolve_relate_endpoint(raw, root, root_resolved, config, *,
+   parse_endpoint=True)` parses with the config unless told not to (the
+   missing / directory / outside-root checks are unchanged); `_cmd_stamp`
+   (item 3). Docstrings of `walk`, `query_docs` and `_known_projects` say
+   so, and `archive_dir_date`'s note that `parse()` hardcoded the ISO date
+   now says D10 ended that.
+2. **`render_index`** iterates `role_order + sorted(set(role_groups) -
+   set(role_order))` — the built-in order untouched, extension groups after
+   it, alphabetically; *Format details* updated. No `Config` field.
+3. **Stamp refusal.** `_stamp_config_failure(text, config)` beside
+   `_cmd_stamp`: `None` unless `parse_metadata_block` succeeds and
+   `Lifecycle`, `Role`, `Updated` are each one non-empty value (`Project`
+   not required); then `validate_lifecycle`, `validate_role`, `parse_date`
+   in `parse()`'s order, returning the first failure's message. `_cmd_stamp`
+   parses with the config and, on a failure, refuses with the P1.5 message
+   inside the validate-all-first loop — before `--dry-run` and before any
+   write of the batch. Its classification comment now names the three
+   outcomes.
+4. **Free-form `relate`.** R1 replaces the recognized-only check with
+   `relate_verb_in_grammar` (the recognized verbs are inside the grammar, so
+   a recognized verb never reaches it) and sets `free_form = inverse_verb(…)
+   is None`; SOURCE resolves with the config, TARGET with
+   `parse_endpoint=not free_form`; R4 (free-form only) runs after TARGET
+   resolves and before the self-edge check; R2 (free-form only) runs after
+   the self-edge check and before the `--reason` shape check; the
+   archived-endpoint `--reason` rule became `elif not free_form:`. Date,
+   plan, apply, print, reindex and record are unchanged — they already
+   iterate `plan.edits`. Recognized-verb paths and messages are untouched,
+   and *Follow-ups* item 9 stays unfixed.
+5. **`docs lifecycle`.** A `lifecycle` subparser (after `stamp`, before
+   `project`; `parents=[common]`, `args` `nargs="+"` with metavar `file ...
+   state`, a local `--json` with relate's wording) carrying its **final**
+   description — `archived` is never a target and `docs archive` owns that
+   move — so `test_lifecycle_help_documents_the_grammar_and_flags` flipped
+   here, as the Phase-4 log allowed. `_dispatch` routes it.
+   `_print_lifecycle_lines` prints P1.1's three lines. `_cmd_lifecycle`
+   follows `_cmd_project_set` and `_cmd_relate`'s tail in P1.1's order:
+   L1 → strict root (L2/L3) → config (L4) → L5 before L6 → the L7
+   archive-subtree pre-pass over every target → L8–L10 in argument order,
+   parsing `root / rel` with the config → L11 → plan → dry-run or
+   all-unchanged returns 0 after the lines and the `applied: false` record →
+   otherwise sequential writes, the lines, one reindex with the exclusion
+   predicate (L12 on failure, record still emitted).
+
+### Decisions / issues
+
+- **Transient RED, expected and named** (pressure-test item 2): registering
+  `lifecycle` turns the pre-existing
+  `tests/test_skill.py::test_every_named_verb_is_a_real_subcommand` RED
+  ("skill body fails to name every real docs verb — missing
+  ['lifecycle']") until Phase 7 adds the skill row — the surface-parity gate
+  enforcing itself.
+- **Two parses per named lifecycle document — accepted** (pressure-test
+  item 4). `_cmd_lifecycle` parses every named document for L10 before it
+  can judge L11, and the frozen `plan_lifecycle` signature reads and parses
+  again. The constraint's intent — no whole-tree pre-flight, cost bounded by
+  the named files — holds.
+- **Uncaught `OSError`** on a lifecycle read or write raises a traceback,
+  as in `project set` and `touch` (pressure-test item 11; OQ-2's sequential
+  writes add no new surface). An accepted limitation.
+- **A wrap-sensitive help assertion, recorded.**
+  `test_lifecycle_help_documents_the_grammar_and_flags` asserts the phrase
+  `docs archive` in `docs lifecycle --help`, which argparse wraps to the
+  terminal width. Probed at widths 50–200: the phrase stays on one line at
+  the pipe default (78) and every width tried except 140. Not edited — it
+  passes in this environment and in CI's pipe default, and no width-pinning
+  workaround was added to the help text; noted for the reviewers.
+- Help text cites its provenance (`(M30 — D1–D3)`), as `stamp`, `project
+  set` and `relate` cite theirs.
+
+### Verification
+
+- ruff, ruff format, mypy clean.
+- `.venv/bin/python -m pytest -q` — **1656 collected, 9 failed, 1647
+  passed** (the exit criterion), verified by name: the eight Phase-7 ids —
+  `tests/test_body_from.py::test_skill_sidecar_example_yields_its_edge[relate-add-on-an-existing-sidecar]`
+  and `[body-from-group-at-creation]`,
+  `tests/test_skill.py::test_skill_routes_lifecycle_and_free_form_edges_through_verbs`,
+  `::test_shipped_surface_no_longer_says_free_form_verbs_are_hand_edited`,
+  and the four packaging pins (`test_a3_project_version_is_2_1_0`,
+  `test_b1_wheel_builds`, `test_b2_sdist_builds`,
+  `test_c2_docs_version_is_2_1_0`) — plus the transient guard above. No
+  other id outside the baseline's failing set fails.
+- `test_relate_recognized_pair_still_writes_both_halves_unchanged`, every
+  pre-existing relate id, and the archive invariance locks
+  (`test_cascade_candidates_match_when_edges_were_written_by_relate`,
+  `test_strand_refusal_fires_on_a_child_of_written_by_relate`) — GREEN.
+- `git diff 3e2c3ca -- tests/` empty; `cli.py` +568 / −84 against
+  `3e2c3ca`.
+- `docs check .` exit 0 on this tree; mirrors and the INDEX snapshot
+  byte-identical.
 
 ## Milestone completion summary
 

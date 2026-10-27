@@ -1343,6 +1343,11 @@ def walk(
     filters out every root-relative POSIX path for which
     ``predicate(rel)`` is True. Defaults to ``None`` (no filtering) so
     pre-M8 callers stay backward-compatible.
+
+    M30 (D10): each doc is parsed with ``config``, so the tree's configured
+    vocabulary and `date_format` decide what parses — exactly as
+    `docs check` judges it — for every verb that walks (index, touch,
+    archive, mv, project rename, and every end-of-run reindex).
     """
     yielded: list[Doc] = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -1359,7 +1364,7 @@ def walk(
             if predicate is not None and predicate(rel):
                 continue
             text = file_path.read_text()
-            doc = parse(text, file_path, root)
+            doc = parse(text, file_path, root, config=config)
             if _is_archived_rel(rel, config):
                 doc = replace(doc, archived=True)
             yielded.append(doc)
@@ -1389,7 +1394,10 @@ def render_index(
           trails, flat (not project-grouped).
         - Projects: the docs-root project first, then the rest in
           ascending order. Within a project, role groups follow
-          CANONICAL_ROLE_ORDER, with `status` pinned to the top.
+          CANONICAL_ROLE_ORDER, with `status` pinned to the top; any
+          extension role (`[vocabulary] add_roles`) renders after every
+          built-in group, alphabetically (M30 — D10), so every active doc
+          the summary counts is rendered.
         - Within each group: Updated descending, then path ascending.
         - Entry format: `- [path](path) — _role_ — <desc>. Updated YYYY-MM-DD.`
           where `path` is the doc's `root`-relative POSIX path, so docs in
@@ -1423,7 +1431,7 @@ def render_index(
         lines.append(f"## Project — {project}")
         lines.append("")
         role_groups = by_project[project]
-        for role in role_order:
+        for role in role_order + sorted(set(role_groups) - set(role_order)):
             group = role_groups.get(role)
             if not group:
                 continue
@@ -3483,8 +3491,9 @@ def archive_dir_date(rel: str, config: Config) -> date | None:
        `archive/<date>/sub/x.md` corroborates `<date>` — parses through
        `parse_date` with `config.date_format`. Deliberately NOT
        `detect_archive_layout`'s hardcoded `strptime(parts[1], "%Y-%m-%d")`,
-       which ignores `Config` entirely (E7), and never `parse()`'s hardcoded
-       default (defect E8, *Follow-ups* item 1).
+       which ignores `Config` entirely (E7), nor any other hardcoded
+       default (defect E8, *Follow-ups* item 1 — which `parse()` shared
+       until M30 — D10 gave it the tree's config).
     """
     if not _is_archived_rel(rel, config):
         return None
@@ -4005,11 +4014,16 @@ def query_docs(
 
     M8 (F3): the optional ``predicate`` keyword filters out excluded
     files before the parse / match pipeline.
+
+    M30 (D10): each doc is parsed with ``config``, so a doc in a configured
+    extension lifecycle or role, or dated in a non-default `date_format`,
+    is listed; one `docs check` reports as `bad-vocab` / `bad-date` is
+    omitted.
     """
     docs: list[Doc] = []
     for path, text in _iter_doc_texts(root, config, predicate=predicate):
         try:
-            doc = parse(text, path, root)
+            doc = parse(text, path, root, config=config)
         except (MetadataError, VocabularyError):
             # A doc `parse()` rejects surfaces under `docs check`, not here —
             # `list` stays lenient so it can still exit 0 on a messy tree.
@@ -5830,6 +5844,43 @@ def _build_parser() -> argparse.ArgumentParser:
     stamp_p.add_argument("--project", help="Project slug (overrides the configured default).")
     stamp_p.add_argument("--title", help="H1 title (overrides the file's H1 / synthesised title).")
 
+    # M30 (D1–D3): `docs lifecycle <file>... <state>` — a flat verb with
+    # `docs project set`'s grammar: one nargs="+" run split as `*files, state`
+    # inside the command (argparse cannot split a variadic run from a
+    # trailing positional).
+    lifecycle_p = subparsers.add_parser(
+        "lifecycle",
+        parents=[common],
+        help="Set one or more docs' Lifecycle: to a top-level state.",
+        description=(
+            "Set the `Lifecycle:` of one or more named docs to a top-level "
+            "state (M30 — D1–D3): draft, active, blocked, done, superseded, "
+            "or any `[vocabulary] add_lifecycles` state. A single positional "
+            "run is split as `*files, <state>`: the last token is the target "
+            "state, the earlier tokens are doc paths (a relative path "
+            "resolves against the docs root). Each doc whose lifecycle "
+            "changes gets its `Updated:` bumped, and INDEX.md is refreshed "
+            "once. Idempotent — a doc already in the state is not written, "
+            "and an all-current batch writes nothing and does not reindex. "
+            "`archived` is never a target, and a doc under the archive "
+            "subtree or already reading `Lifecycle: archived` is never a "
+            "source: `docs archive` alone moves lifecycle and location "
+            "together. Validate-all-first atomic semantics; `--dry-run` "
+            "previews."
+        ),
+    )
+    lifecycle_p.add_argument(
+        "args",
+        nargs="+",
+        metavar="file ... state",
+        help="One or more doc paths followed by the target state.",
+    )
+    lifecycle_p.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the operation-plan record as JSON on stdout.",
+    )
+
     # M12: `docs project` verb namespace. Today the only nested verb is
     # `rename`; the namespace is reserved for future per-project verbs
     # (`show`, `validate`, ...).
@@ -7179,7 +7230,7 @@ def _cmd_archive(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        doc = parse(primary.read_text(), primary, root)
+        doc = parse(primary.read_text(), primary, root, config=config)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
@@ -7985,7 +8036,8 @@ def _known_projects(root: Path, config: Config) -> set[str]:
     `[project] name` (M15 — B2; resolved Q1). The walk **tolerates** parse
     errors — an unparseable doc is skipped, never aborting the guard — and
     always seeds `config.project`, so a tree of all-malformed docs still has
-    its root project in the known set.
+    its root project in the known set. Each doc is parsed with `config`
+    (M30 — D10), so a doc in a configured extension state counts.
     """
     known: set[str] = {config.project}
     for dirpath, dirnames, filenames in os.walk(root):
@@ -8000,7 +8052,7 @@ def _known_projects(root: Path, config: Config) -> set[str]:
             if _is_archived_rel(rel, config):
                 continue
             try:
-                doc = parse(file_path.read_text(), file_path, root)
+                doc = parse(file_path.read_text(), file_path, root, config=config)
             except (MetadataError, VocabularyError):
                 continue
             known.add(_resolved_project(doc, config))
@@ -8124,7 +8176,7 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
         # Malformed (parse raises) → exit 1.
         text = target.read_text()
         try:
-            doc = parse(text, target, root)
+            doc = parse(text, target, root, config=config)
         except (MetadataError, VocabularyError) as exc:
             print(f"docs: {exc}", file=sys.stderr)
             return 1
@@ -8169,7 +8221,14 @@ def _cmd_project_set(args: argparse.Namespace) -> int:
     return 0
 
 
-def _resolve_relate_endpoint(raw: str, root: Path, root_resolved: Path) -> str | int:
+def _resolve_relate_endpoint(
+    raw: str,
+    root: Path,
+    root_resolved: Path,
+    config: Config,
+    *,
+    parse_endpoint: bool = True,
+) -> str | int:
     """Resolve one `relate` endpoint, or print a refusal and return its exit code.
 
     M25 (OQ-A): an absolute path is used as given; a relative one resolves
@@ -8177,10 +8236,16 @@ def _resolve_relate_endpoint(raw: str, root: Path, root_resolved: Path) -> str |
     root-relative form is not a file. Root-relative-first is what lets an
     agent paste a path straight out of a `missing-inverse` finding.
 
+    The endpoint is parsed with the tree's `config` (M30 — D10) — unless
+    `parse_endpoint` is False, which `_cmd_relate` passes for a free-form
+    TARGET: that file is never written, so it is never read either, and any
+    existing file under the root qualifies (M30 — D5).
+
     Returns the endpoint's root-relative POSIX form — the spelling every
     message and JSON field uses — or 1 when it is missing, outside the
-    resolved root, or unparseable (the cross-verb explicit-path-error
-    convention; nothing is written in any of the three cases).
+    resolved root, or (when parsed) unparseable (the cross-verb
+    explicit-path-error convention; nothing is written in any of the three
+    cases).
     """
     given = Path(raw)
     if given.is_absolute():
@@ -8207,11 +8272,14 @@ def _resolve_relate_endpoint(raw: str, root: Path, root_resolved: Path) -> str |
         )
         return 1
 
+    if not parse_endpoint:
+        return rel
+
     # Parse through `root / rel`, not the resolved path, so the parser's own
     # self-locating message names the file the way the tree does.
     endpoint = root / rel
     try:
-        parse(endpoint.read_text(), endpoint, root)
+        parse(endpoint.read_text(), endpoint, root, config=config)
     except (MetadataError, VocabularyError) as exc:
         print(f"docs: {exc}", file=sys.stderr)
         return 1
@@ -8254,9 +8322,10 @@ def _print_relate_lines(plan: RelatePlan, *, dry_run: bool) -> None:
 
 
 def _cmd_relate(args: argparse.Namespace) -> int:
-    # M25 (D3/D4/D5) — add or remove ONE reciprocal relationship pair across
-    # exactly two documents. Validate-all-first: stage 1 below writes
-    # nothing, so every refusal leaves the tree byte-identical.
+    # M25 (D3/D4/D5) — add or remove ONE relationship edge: a recognized
+    # reciprocal pair across exactly two documents, or (M30 — D4–D6) a
+    # free-form edge on SOURCE alone. Validate-all-first: stage 1 below
+    # writes nothing, so every refusal leaves the tree byte-identical.
     root_or_exit = _resolve_managed_root(args, Path.cwd(), verb="relate")
     if isinstance(root_or_exit, int):
         return root_or_exit
@@ -8269,25 +8338,56 @@ def _cmd_relate(args: argparse.Namespace) -> int:
         return 2
 
     # The verb is validated here rather than by argparse `choices=`: the
-    # frozen refusal names the six recognized verbs in `relate`'s own voice.
-    if inverse_verb(args.verb) is None:
+    # frozen refusal (R1) names the six recognized verbs and the free-form
+    # grammar in `relate`'s own voice. The recognized verbs are inside the
+    # grammar, so this one test refuses exactly the unwritable verbs.
+    if not relate_verb_in_grammar(args.verb):
         print(
-            f"docs: relate: unknown verb {args.verb!r}; "
-            f"expected one of: {', '.join(sorted(RECIPROCAL_VERBS))}",
+            f"docs: relate: unknown verb {args.verb!r}; expected a reciprocal verb "
+            f"({', '.join(sorted(RECIPROCAL_VERBS))}) or a free-form verb matching "
+            f"{_RELATE_VERB_RE.pattern}",
+            file=sys.stderr,
+        )
+        return 2
+    free_form = inverse_verb(args.verb) is None
+
+    root_resolved = root.resolve()
+    source_rel = _resolve_relate_endpoint(args.source, root, root_resolved, config)
+    if isinstance(source_rel, int):
+        return source_rel
+    # A free-form TARGET is never written, so it is never parsed (D5).
+    target_rel = _resolve_relate_endpoint(
+        args.target, root, root_resolved, config, parse_endpoint=not free_form
+    )
+    if isinstance(target_rel, int):
+        return target_rel
+
+    # R4: a free-form TARGET's path is written verbatim into SOURCE's bullet,
+    # so a line break would end the metadata block and padding would read
+    # back as a different target. Recognized verbs are unchanged (D4).
+    if free_form and (
+        len((target_rel + "x").splitlines()) != 1 or target_rel != target_rel.strip()
+    ):
+        print(
+            f"docs: relate: TARGET {target_rel!r} cannot be written into a Related: bullet "
+            "— it contains a line break or leading or trailing whitespace; refusing",
             file=sys.stderr,
         )
         return 2
 
-    root_resolved = root.resolve()
-    source_rel = _resolve_relate_endpoint(args.source, root, root_resolved)
-    if isinstance(source_rel, int):
-        return source_rel
-    target_rel = _resolve_relate_endpoint(args.target, root, root_resolved)
-    if isinstance(target_rel, int):
-        return target_rel
-
     if source_rel == target_rel:
         print("docs: relate: SOURCE and TARGET must be different documents", file=sys.stderr)
+        return 2
+
+    # R2: a free-form edge is never written to an archived document — no
+    # exception to archive immutability covers it (D5). Checked before
+    # planning, so even a no-op refuses.
+    if free_form and _is_archived_rel(source_rel, config):
+        print(
+            f"docs: relate: {source_rel} is under the archive subtree; "
+            "a free-form edge is never written to an archived document",
+            file=sys.stderr,
+        )
         return 2
 
     reason: str | None = args.reason
@@ -8301,9 +8401,10 @@ def _cmd_relate(args: argparse.Namespace) -> int:
         if not reason.strip():
             print("docs: relate: --reason must not be empty", file=sys.stderr)
             return 2
-    else:
-        # OQ-C: required whenever EITHER endpoint is archived, checked
-        # before planning — so an idempotent no-op still refuses.
+    elif not free_form:
+        # OQ-C: required whenever EITHER endpoint of a recognized pair is
+        # archived, checked before planning — so an idempotent no-op still
+        # refuses. A free-form TARGET is never written, so needs none (D5).
         for rel in (source_rel, target_rel):
             if _is_archived_rel(rel, config):
                 print(
@@ -8380,6 +8481,162 @@ def _cmd_relate(args: argparse.Namespace) -> int:
     return 0 if index_refreshed else 2
 
 
+def _print_lifecycle_lines(plan: LifecyclePlan, *, dry_run: bool) -> None:
+    """Print `docs lifecycle`'s human summary to stderr (M30 — P1.1).
+
+    One line per distinct named document, in first-seen order. Gated by the
+    caller on `not --quiet` alone — stderr, so `--json` stdout stays clean.
+    """
+    verb = "would set" if dry_run else "set"
+    for edit in plan.edits:
+        if edit.change == "unchanged":
+            print(
+                f"docs: lifecycle: no change — {edit.rel} is already {plan.state}",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"docs: lifecycle: {verb} {edit.rel} from {edit.before} to {plan.state}",
+                file=sys.stderr,
+            )
+
+
+def _cmd_lifecycle(args: argparse.Namespace) -> int:
+    # M30 (D1–D3) — set the `Lifecycle:` of one or more named docs to a
+    # top-level state. `_cmd_project_set`'s shape: a `*files, <state>` split,
+    # validate-all-first (nothing is written until every check passed, so
+    # every refusal leaves the tree byte-identical), an all-current batch is
+    # a no-op, and one reindex. `archived` is never a target and an archived
+    # doc is never a source: `docs archive` alone moves lifecycle and
+    # location together (D2).
+    *raw_files, state = args.args
+    if not raw_files:
+        print("docs: lifecycle: need at least one <file> and a <state>", file=sys.stderr)
+        return 2
+
+    root_or_exit = _resolve_managed_root(args, Path.cwd(), verb="lifecycle")
+    if isinstance(root_or_exit, int):
+        return root_or_exit
+    root = root_or_exit
+
+    try:
+        config = load_config(root)
+    except tomllib.TOMLDecodeError as exc:
+        print(f"docs: malformed .docs.toml: {exc}", file=sys.stderr)
+        return 2
+
+    # The target state is judged before any document. `archived` is tested
+    # first and explicitly, because it IS in the configured vocabulary.
+    if state == "archived":
+        print(
+            "docs: lifecycle: 'archived' is not a lifecycle target — docs archive <file> "
+            "moves lifecycle and location together; refusing",
+            file=sys.stderr,
+        )
+        return 2
+    allowed = config.lifecycles - {"archived"}
+    if state not in allowed:
+        print(
+            f"docs: lifecycle: unknown state {state!r}; expected one of: "
+            f"{', '.join(sorted(allowed))}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # A relative path resolves against the docs root, an absolute one is used
+    # as given — `project set`'s rule.
+    root_resolved = root.resolve()
+    targets = [Path(raw) if Path(raw).is_absolute() else root / raw for raw in raw_files]
+
+    # Archive-subtree pre-pass over EVERY named doc, independent of argument
+    # order, so it outranks a missing / outside / malformed sibling (the
+    # `project set` precedent). A path outside the root is refused below.
+    for target in targets:
+        try:
+            rel = target.resolve().relative_to(root_resolved).as_posix()
+        except ValueError:
+            continue
+        if _is_archived_rel(rel, config):
+            print(
+                f"docs: lifecycle: {rel} is under the archive subtree (read-only); refusing",
+                file=sys.stderr,
+            )
+            return 2
+
+    # Outside-root / missing / unparseable, in argument order (exit 1). Each
+    # doc is read and parsed through `root / rel`, so a symlink inside the
+    # tree is judged — and later written — as the file it points at.
+    current: list[tuple[str, str]] = []  # (rel, its Lifecycle: now)
+    for target in targets:
+        try:
+            rel = target.resolve().relative_to(root_resolved).as_posix()
+        except ValueError:
+            print(
+                f"docs: lifecycle: {target} is outside the resolved docs root ({root_resolved})",
+                file=sys.stderr,
+            )
+            return 1
+        if not target.is_file():
+            print(f"docs: lifecycle: file not found: {target}", file=sys.stderr)
+            return 1
+        path = root / rel
+        try:
+            doc = parse(path.read_text(), path, root, config=config)
+        except (MetadataError, VocabularyError) as exc:
+            print(f"docs: {exc}", file=sys.stderr)
+            return 1
+        current.append((rel, doc.lifecycle))
+
+    # A doc outside the archive subtree that already reads `archived` is in
+    # status-drift; flipping it would unarchive it by hand. Judged only once
+    # every doc resolved and parsed, naming the first in argument order.
+    for rel, lifecycle in current:
+        if lifecycle == "archived":
+            print(
+                f"docs: lifecycle: {rel} reads 'Lifecycle: archived' outside the archive "
+                "subtree (status-drift); refusing — only docs archive sets archived",
+                file=sys.stderr,
+            )
+            return 2
+
+    plan = plan_lifecycle(
+        root,
+        config,
+        files=[root / rel for rel, _lifecycle in current],
+        state=state,
+        date_str=date.today().strftime(config.date_format),
+    )
+
+    def _emit_json(*, applied: bool, index_refreshed: bool) -> None:
+        if args.json:
+            record = lifecycle_plan_to_json(
+                plan, dry_run=args.dry_run, applied=applied, index_refreshed=index_refreshed
+            )
+            print(json.dumps(record, indent=2))
+
+    # `--dry-run` writes nothing at all — no document, no INDEX. An
+    # all-unchanged plan is the same story with a different cause.
+    if args.dry_run or all(edit.change == "unchanged" for edit in plan.edits):
+        if not args.quiet:
+            _print_lifecycle_lines(plan, dry_run=args.dry_run)
+        _emit_json(applied=False, index_refreshed=False)
+        return 0
+
+    apply_lifecycle_plan(plan)
+    if not args.quiet:
+        _print_lifecycle_lines(plan, dry_run=False)
+
+    index_refreshed = True
+    try:
+        _refresh_index(root, config, predicate=compile_exclude_predicate(config, []))
+    except (MetadataError, VocabularyError) as exc:
+        print(f"docs: INDEX refresh failed: {exc}", file=sys.stderr)
+        index_refreshed = False
+
+    _emit_json(applied=True, index_refreshed=index_refreshed)
+    return 0 if index_refreshed else 2
+
+
 def _replace_or_prepend_h1(text: str, title: str) -> str:
     """Return `text` with its leading H1 replaced by `# {title}` (or one prepended).
 
@@ -8402,6 +8659,39 @@ def _replace_or_prepend_h1(text: str, title: str) -> str:
     # No leading H1 — prepend one. `insert_metadata_block` will keep it.
     prefix = f"# {title}\n\n"
     return prefix + text
+
+
+def _stamp_config_failure(text: str, config: Config) -> str | None:
+    """Why a COMPLETE metadata block fails the tree's config, or None (M30 — P1.5).
+
+    `docs stamp` calls this only after `parse(..., config=config)` refused
+    `text`. A block is complete when it parses structurally and carries
+    `Lifecycle:`, `Role:` and `Updated:` each as one non-empty value —
+    `Project:` is not required, exactly as for `parse()`. A complete block's
+    three fields are then judged in `parse()`'s order against the config;
+    the first failure's message is returned, and the caller refuses rather
+    than re-stamp the file (operator Packet A). None — no block, an
+    incomplete one, or a failure unrelated to the vocabulary or the date
+    format (a malformed `Related:` bullet, say) — keeps today's stamping.
+    """
+    try:
+        _title, metadata, _body = parse_metadata_block(text)
+    except MetadataError:
+        return None
+    # A missing label, an empty value and a multi-valued group all read as "".
+    lifecycle, role, updated_raw = (
+        value if isinstance(value, str) else ""
+        for value in (metadata.get(label) for label in ("Lifecycle", "Role", "Updated"))
+    )
+    if not (lifecycle and role and updated_raw):
+        return None
+    try:
+        validate_lifecycle(lifecycle, config.lifecycles)
+        validate_role(role, config.roles)
+        parse_date(updated_raw, config.date_format)
+    except (VocabularyError, MetadataError) as exc:
+        return str(exc)
+    return None
 
 
 def _cmd_stamp(args: argparse.Namespace) -> int:
@@ -8468,18 +8758,30 @@ def _cmd_stamp(args: argparse.Namespace) -> int:
     today = date.today()
     project = args.project or config.project
 
-    # Build every stamp in memory (validate-all-first). A file that parses
-    # cleanly is ALREADY STAMPED → refresh only Updated:; otherwise it is a
+    # Build every stamp in memory (validate-all-first), classifying each file
+    # three ways (M30 — P1.5). A file that parses cleanly under the tree's
+    # config is ALREADY STAMPED → refresh only Updated:. A complete block
+    # that fails the configured vocabulary or date format is REFUSED → exit 1
+    # before any write of the batch, `--dry-run` included. Anything else is a
     # FRESH file → insert the block.
     stamps: list[tuple[Path, str, bool]] = []  # (path, new_text, already_stamped)
     for fp in file_paths:
         text = fp.read_text()
         try:
-            parse(text, fp, root)
+            parse(text, fp, root, config=config)
             # Clean parse → already stamped. Bump Updated: only.
             new_text = set_metadata_field(text, "Updated", today.strftime(config.date_format))
             stamps.append((fp, new_text, True))
         except (MetadataError, VocabularyError):
+            failure = _stamp_config_failure(text, config)
+            if failure is not None:
+                print(
+                    f"docs: stamp: {fp}: {failure}; the file already carries a complete "
+                    "metadata block — refusing to re-stamp it (run docs check, correct the "
+                    "field, then docs touch)",
+                    file=sys.stderr,
+                )
+                return 1
             # Fresh file — insert the metadata block. Title: --title overrides
             # the leading H1 (via a local helper, BEFORE insert); else the
             # file's H1 / a synthesised title from the filename.
@@ -9112,6 +9414,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return _cmd_touch(args)
     if args.command == "stamp":
         return _cmd_stamp(args)
+    if args.command == "lifecycle":
+        return _cmd_lifecycle(args)
     if args.command == "check":
         return _cmd_check(args)
     if args.command == "list":
