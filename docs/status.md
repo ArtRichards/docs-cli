@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-10-26
+Updated: 2026-10-27
 
 Related:
 - pairs-with: milestone-plan.md
@@ -47,6 +47,24 @@ Related:
 **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in the canonical tracker, [Milestone Plan](milestone-plan.md); this file links to it and never restates it.**
 
 ## Current milestone
+
+**M30 milestone setup complete (2026-10-27).**
+[`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) — a
+`docs lifecycle` verb and one-sided free-form `docs relate` — now has a full
+ten-phase task plan, an
+[implementation log](lifecycle-and-free-form-relate-impl.md) and a
+[test matrix](lifecycle-and-free-form-relate-test-matrix.md), all three
+`active`. Setup's eleven measurements found that a vocabulary extension or a
+non-default `date_format` already breaks every verb except `docs check`,
+because `parse()` ignores the tree's config; the operator brought that fix
+into the milestone, so both new verbs — and every existing one — will work
+on any configured tree, and the two feedback-log entries for the defect are
+now owned here. Free-form verbs `relate` writes are a strict lowercase kebab
+token, and the `--body-from` route for `Related:` edges, documented in the
+bundled skill since M8, gets the test it never had. All nine setup questions
+are resolved and the risk level is Standard; the milestone is at its Step 0
+review before Phase 1. Order, state and dependencies stay in the
+[Milestone Plan](milestone-plan.md).
 
 **Milestone tracker adopted (2026-10-26).** The project moved to the Agent
 Playbook Suite milestone-tracker methodology: `plan.md` became

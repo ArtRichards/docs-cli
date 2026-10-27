@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-10-26. 14 docs active, 61 archived._
+_Generated 2026-10-27. 16 docs active, 61 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in…. Updated 2026-10-26.
+- [status.md](status.md) — _status_ — **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in…. Updated 2026-10-27.
 
 ### Active — Charter
 
@@ -23,16 +23,18 @@ _Generated 2026-10-26. 14 docs active, 61 archived._
 
 ### Active — Spec
 
+- [lifecycle-and-free-form-relate-test-matrix.md](lifecycle-and-free-form-relate-test-matrix.md) — _spec_ — Standard. Updated 2026-10-27.
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-08-16.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-08-16.
 
 ### Active — Milestone
 
-- [lifecycle-and-free-form-relate.md](lifecycle-and-free-form-relate.md) — _milestone_ — - Milestone: M30 (first post-2.0 milestone; first under the canonical tracker) - Slug: `lifecycle-and-free-form-relate`…. Updated 2026-10-26.
+- [lifecycle-and-free-form-relate.md](lifecycle-and-free-form-relate.md) — _milestone_ — - Milestone: M30 (first post-2.0 milestone; first under the canonical tracker) - Slug: `lifecycle-and-free-form-relate`…. Updated 2026-10-27.
 
 ### Active — Log
 
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-26.
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-27.
+- [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md) — _log_ — Chronological implementation log for M30 — Lifecycle verb and free-form `docs relate` (semantic slug…. Updated 2026-10-27.
 
 ### Active — Decision
 

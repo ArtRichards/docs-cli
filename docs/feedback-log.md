@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: log
 Project: docs
-Updated: 2026-10-26
+Updated: 2026-10-27
 
 ## Purpose
 
@@ -14,6 +14,15 @@ without starting implementation. When feedback is promoted, its entry remains
 as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
+
+### 2026-10-26 — `[vocabulary] add_lifecycles` / `add_roles` break every verb except `docs check`
+
+- Source: found **internally, during M30 (`lifecycle-and-free-form-relate`) milestone setup** (2026-10-26), while measuring whether `docs lifecycle` can write an `add_lifecycles` state as its registered scope promises. Not downstream feedback — recorded here because no milestone owns it yet, the route M28a's setup used for the `date_format` defect below.
+- Reproduction, on a throwaway tree at docs-cli 2.0.0 (`2ad941e`). Sidecar: `[vocabulary] add_lifecycles = ["shipped"]`. Two `docs new spec` documents, one hand-set to `Lifecycle: shipped`. Then `docs index` exits 2 (`Lifecycle: 'shipped' not in vocabulary`); `docs touch` of the **other** document writes and then exits 2 (`INDEX refresh failed`); `docs list` and `docs list --json` drop the document, printing the error on stderr, at exit 0; `docs relate` refuses it as an endpoint (exit 1); `docs archive --dry-run` exits 1; `docs mv --dry-run` exits 2 — and `docs check` reports **no violations**, exit 0. With `add_roles = ["adr"]`, `docs new adr x` succeeds and the next `docs index` exits 2.
+- Diagnosis: `parse()` validates `Lifecycle:` and `Role:` against the built-in `BUILTIN_STATUSES` / `BUILTIN_ROLES` instead of the tree's merged vocabulary, and every walking verb reaches it — `walk()`, `query_docs`, `_cmd_archive`, `_known_projects`, `_cmd_project_set`, `_resolve_relate_endpoint`, `_cmd_stamp`. `check_doc` honours the config, so the gate stays clean while the tree is unusable. It is the same config-blindness as the 2026-08-15 `date_format` entry below, in the vocabulary half.
+- Blast radius: any tree with a non-empty `add_lifecycles` or `add_roles`. The feature is advertised — in a comment in this repository's own `.docs.toml` and in the bundled `docs-toml-template.toml` — and no committed fixture exercises a non-empty extension through a walk, which is why the suite never saw it.
+- Ownership: docs-cli. **On M30's path**: the registered scope promises that `docs lifecycle` writes extension states and reindexes once, which cannot both hold today. Whether M30 fixes it was M30 setup question **Q7** — fix both halves of `parse()`'s config-blindness (recommended, closing this entry and the 2026-08-15 one), fix the vocabulary half only, or descope extension states; the operator chose the first (see *Status*).
+- Status: **open — owned by M30, `lifecycle-and-free-form-relate`** ([milestone doc](lifecycle-and-free-form-relate.md), D10), by operator decision on its setup question Q7 (2026-10-27): M30 fixes both halves of `parse()`'s config-blindness — vocabulary extensions and `date_format` honoured at every call site, with no tree that `docs check` passes today allowed to start failing. Closes at M30 Phase 7.
 
 ### 2026-10-26 — No verb for draft→active or free-form `Related:` edges; suite and bundled skill disagree on the hand-edit fallback
 
@@ -64,7 +73,8 @@ as the discovery and decision audit source and records the owning milestones.
 - Diagnosis: two date parsers disagree inside one verb. `docs archive`'s `--date` is validated against the tree's `config.date_format`, and `check_doc` honours it too — but `parse()` parses `Updated:` with the hardcoded default format, and the end-of-batch INDEX refresh goes through `parse()`. So the write succeeds, the reindex raises, and the operator gets a non-zero exit for a document that is actually correct.
 - Blast radius: **only** trees that configure a non-default `[archive] date_format`. The default `%Y-%m-%d` is unaffected, which is why this has never been seen: this repository's own tree, every committed fixture tree, and the migrate sidecar `docs migrate --apply` writes all use the default. Not a 2.0.0 blocker.
 - Ownership: docs-cli. **Explicitly not fixed by M28a**, which found it — recorded as that milestone's *Follow-ups* item 1. M28a's own logic is written so it cannot inherit the bug: its `archive-date-drift` rule parses **both** sides of the comparison with `config.date_format`, via the same path `check_doc` already uses, and never through `parse()`'s hardcoded default (M28a — D3).
-- Status: **open, unowned** (2026-08-15). Candidate for a post-2.0.0 correctness milestone. The likely fix is to thread `config.date_format` into `parse()` at every call site rather than to widen the parser's tolerance, since a second accepted spelling would reintroduce exactly the ambiguity M25 refused when it wrote `Revision:`.
+- Status: **open, owned by M30, `lifecycle-and-free-form-relate`** from 2026-10-27 ([milestone doc](lifecycle-and-free-form-relate.md), D10) — by operator decision on M30's setup question Q7, M30 threads the tree's config into `parse()` at every call site, the fix recommended in this bullet; closes at M30 Phase 7. Recorded **open, unowned** on 2026-08-15 as a candidate for a post-2.0.0 correctness milestone. The likely fix is to thread `config.date_format` into `parse()` at every call site rather than to widen the parser's tolerance, since a second accepted spelling would reintroduce exactly the ambiguity M25 refused when it wrote `Revision:`.
+- Blast radius re-measured (2026-10-26, M30 setup): **wider than recorded above on verbs**, unchanged on population. On a throwaway tree with `[archive] date_format = "%d-%m-%Y"` at docs-cli 2.0.0, `docs new spec a` writes `Updated: 26-10-2026` and the next `docs index` and `docs touch a.md` both exit 2 with the same `malformed date … (expected %Y-%m-%d)` message, while `docs check` exits 0 — every reindexing verb fails on such a tree, not only `docs archive`. The same `parse()` config-blindness also breaks vocabulary extensions (2026-10-26 entry above); M30 setup question Q7 asked whether M30 fixes both halves; the operator answered yes on 2026-10-27 (see *Status*).
 
 ### 2026-08-09 — Useful relationship graphs, strict reciprocity, and upgrade repair
 
