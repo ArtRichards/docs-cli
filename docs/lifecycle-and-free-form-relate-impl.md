@@ -1143,6 +1143,69 @@ operator decision.
   four listed pins failing, and the next full run was the clean restated
   baseline above. No product code is involved; noted in case it recurs.
 
+## Step 1 review-pass-001
+
+- Pass id: `Step 1 review-pass-001`.
+- Ledger location: `lifecycle-and-free-form-relate-impl.md#step-1-review-pass-001`
+  (docs root `/home/user/opt/docs-cli/docs`; repository path
+  `docs/lifecycle-and-free-form-relate-impl.md#step-1-review-pass-001`).
+- Predecessor: `Step 0 review-pass-001`
+  (`lifecycle-and-free-form-relate-impl.md#step-0-review-pass-001`), closed,
+  with `final-sync: ready` in `e48adb9f9bddaf6169e2387280907e66d531c71b`. No
+  `contract-rework` entry exists between them.
+- Status: `open` — written by the implementation agent at the review-ready
+  handoff; both provider slots are `pending` and no finding exists yet.
+- Packet inputs (the conductor freezes the packet at the review-ready `HEAD`
+  reported in the handoff): slug `lifecycle-and-free-form-relate`; step 1,
+  Phases 1–4; branch `lifecycle-and-free-form-relate/phases-1-4`; base
+  `e48adb9f9bddaf6169e2387280907e66d531c71b`; content `HEAD`
+  `c9e913e8f3b252bad7e249f7ecfc10fb012da614` (the audit commit) — the
+  review-ready commit on top of it adds only this entry (`docs/INDEX.md` and
+  its snapshot are unchanged by it). Phase commits: Phase 1 `d3c216ce36d6272a6cdb955707b06ed5c2f91931`,
+  Phase 2 `03e0cdbeefd3d2da9d54a7fa66a5efe7eca29b36`, Phase 3
+  `0e8c756c388e8b6c51a7bde6db7492183a4b5bee`, Phase 4
+  `90cea8efcdff0b27c2ab3b8ed850f0388162c248`, audit
+  `c9e913e8f3b252bad7e249f7ecfc10fb012da614`. Risk Standard (Q8); no
+  Phase-4 operator checkpoint.
+- Tracker: `milestone-plan.md` in the docs root; owning project `docs`;
+  project path empty (dedicated docs root); artifact stem
+  `lifecycle-and-free-form-relate`; row `100 | lifecycle-and-free-form-relate
+  | active | — |`, Notes unchanged; claim checkpoint
+  `2ad941e269339f5a125856f5bcda9339cd9f5b15`; semantic branch root
+  `lifecycle-and-free-form-relate/`; artifacts
+  `lifecycle-and-free-form-relate.md`, `-impl.md`, `-test-matrix.md`.
+- Context for reviewers: the contract is the task plan's *Decisions (Phase 1
+  — BINDING)* (P1.1–P1.9, OQ-1 … OQ-15) and the specs it names
+  (`cli.md`, `convention.md`); the RED baseline and lock classification are
+  *Phase 4* above; the audit is *Step 1 same-instance audit* above,
+  including the patch-bloat note (tests +2,723 / −96 against a planned
+  +900 to +1,300 for the whole milestone). Changed paths since the base: the
+  two specs and their mirrors, the milestone trio, `docs/INDEX.md` and its
+  snapshot, `tests/fixtures/stamp/raw-invalid-block.md`, the new
+  `tests/fixtures/trees/vocab-extension/` (4 files), the new
+  `tests/test_cli_lifecycle.py` and `tests/test_lifecycle_plan.py`, and 16
+  existing test modules. `src/docs_cli/cli.py` is unchanged.
+- Checks at the content `HEAD` (selected commands and results):
+  `.venv/bin/ruff check .` — clean; `.venv/bin/ruff format --check .` — 50
+  files formatted; `.venv/bin/mypy src/ tests/` — no issues in 51 files;
+  `.venv/bin/python -m pytest -q` — **191 failed, 1505 passed** (the
+  intended RED baseline: 183 authored ids and the 8 pre-existing ids on the
+  authoritative list RED; 0 collection errors, tracebacks, xfails or errors);
+  `docs check .` from the docs root — exit 0; both mirrors and the INDEX
+  snapshot — byte-identical; the mechanical `comm` / AST-diff proof — exactly
+  the authoritative list.
+- Claude slot: `pending`.
+- GPT slot: `pending`.
+
+**Findings and dispositions.** None yet — recorded here when the reviews
+return.
+
+**Taste triage.** Pending.
+
+**Re-review.** Pending — decided after reconciliation.
+
+- final-sync: `pending`.
+
 ## Milestone completion summary
 
 _Not complete._
