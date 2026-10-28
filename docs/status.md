@@ -59,10 +59,16 @@ docs-cli 2.1.0. It now has three documents:
 
 Setup measured the release read-only. The 2.1.0 slots are free on PyPI and
 under the TestPyPI rehearsal name, the credentials are present, and the suite
-is GREEN at 1671. Because M30 already bumped the version, the CHANGELOG needs
-only its date and the README three synopsis fixes. The operator chose to
-upload automatically once Step 1's reviews close and the TestPyPI rehearsal
-passes.
+is GREEN at 1671. Because M30 already bumped the version, the release inputs
+need little:
+- the CHANGELOG needs only its date and the removal of one sentence;
+- the README needs three synopsis fixes.
+
+The operator chose to upload automatically once Step 1's reviews close and
+the TestPyPI rehearsal passes. The Step 0 review found four blockers in the
+first draft — a wrong dependency oracle, an editable-versus-wheel probe
+contradiction, the tag and release ordered before served verification, and
+restated decisions — and all are fixed.
 
 The operator also answered both setup questions:
 - The `v2.1.0` tag and the GitHub release follow the upload in the same step.
