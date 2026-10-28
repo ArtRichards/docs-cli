@@ -48,8 +48,8 @@ Related:
 
 ## Current milestone
 
-**M31 Step 1 phases complete (2026-10-28): Phases 1–4 are done, and the
-TestPyPI rehearsal is GO.**
+**M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI
+rehearsal is GO, and Step 1's review pass is closed.**
 [`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to PyPI as
 docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the scratch
 layout and every command line through the tag, including Step 2's, so the
@@ -74,8 +74,11 @@ five fixes and found three remaining defects in the frozen procedure:
 - the upload stop rules still overlapped;
 - the credential-shape command could echo a malformed line.
 
-A second checkpoint fixes all three, each proven on synthetic inputs. The
-PyPI upload waits for the pass to close. The milestone has three
+A second checkpoint fixes all three, each proven on synthetic inputs, and
+the conductor re-verified them before closing the pass. The RED-baseline
+checkpoint passed under Standard, so Step 2 — the PyPI upload, served
+verification, the tag and release, and the host refresh — may proceed under
+the operator's automatic-release authorization. The milestone has three
 documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;

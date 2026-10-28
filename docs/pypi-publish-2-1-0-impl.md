@@ -26,13 +26,18 @@ the test matrix stay synchronized with it. The phases are the
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
-- Progress: **Step 1's phases are complete on
-  `pypi-publish-2-1-0/phases-1-4` (Phases 1–4, 2026-10-28), with the
-  TestPyPI rehearsal recorded GO.** In Step 1 review-pass-001 both
-  providers returned, and the targeted GPT re-review returned. Every finding
-  is resolved across two review-resolution checkpoints. The conductor
-  re-checks the synthetic controls before the pass closes, and Step 2
-  starts only after that (D2).
+- Progress: **Step 1 is complete (2026-10-28) on
+  `pypi-publish-2-1-0/phases-1-4`.**
+  - Phases 1–4 are done, and the TestPyPI rehearsal is recorded GO.
+  - Step 1 review-pass-001 is closed with `final-sync` `ready`. Both
+    providers and the targeted re-review returned, and every finding is
+    fixed in `e6ac159` or `7867a42`, or waived with a reason.
+  - The RED-baseline checkpoint passed under Standard: no unresolved
+    contract or test-adequacy blocker, and every accepted should-fix is
+    resolved.
+  - **Step 2 (Phases 5–10, on `pypi-publish-2-1-0/phases-5-10`) is
+    authorized under D2**, subject to every *Error cases* precondition at the
+    moment of each action.
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
@@ -67,6 +72,10 @@ the test matrix stay synchronized with it. The phases are the
   gating anchor violation, and Claude's subjective finding on documentation
   fit and minimality are both fixed by the dedupe. GPT had no other
   subjective findings. See the pass entry below.
+- Taste triage, Step 1: review-pass-001's T1–T3 are fixed. T4 (G6/G9 mirror
+  product-test goldens) is waived and carried to Step 3's `/simplify`, as is
+  the scripts' patch bloat (1033 lines against the 300–500 anchor). See that
+  pass's *Taste triage*.
 
 ## TDD phase progress
 
@@ -1085,14 +1094,16 @@ src pyproject.toml README.md LICENSE .gitignore` holds.
   `docs/pypi-publish-2-1-0-impl.md#step-1-review-pass-001`).
 - Predecessor: `Step 0 review-pass-001` — closed, `final-sync` `ready`,
   synced in `8515f1c`. That entry and its frozen packet are unchanged.
-- Status: both provider slots are terminal, and both returned. Every
-  finding is dispositioned: first in the review-resolution checkpoint
-  `e6ac159` (`pypi-publish-2-1-0(phase 1-4): resolve Step 1 review-pass-001
-  findings`); then, after the targeted GPT re-review, in a second checkpoint
-  (`pypi-publish-2-1-0(phase 1-4): resolve the Step 1 re-review findings`,
-  named in the return report). There is no second re-review round. The
-  conductor re-runs the synthetic controls against the committed text
-  before closing the pass, and `final-sync` is `pending`.
+- Status: **`closed`** (2026-10-28).
+  - Both provider slots are terminal, and both returned.
+  - Every finding is dispositioned **fixed**, in two correcting checkpoints:
+    `e6ac15930019bafff9c5cf42899558f43f461aa2` (`pypi-publish-2-1-0(phase 1-4): resolve Step 1 review-pass-001
+    findings`) and `7867a428621786c949b133ce01b844f7c455a1ca` (`pypi-publish-2-1-0(phase 1-4): resolve the Step 1
+    re-review findings`). The one exception is claude-T4, waived with a
+    reason.
+  - The required targeted re-review is complete, and its three remaining
+    blockers were closed by the conductor's objective verification.
+  - `final-sync` is `ready`.
 - Frozen packet (recorded by the conductor):
   - slug `pypi-publish-2-1-0`, step 1, branch
     `pypi-publish-2-1-0/phases-1-4`;
@@ -1160,8 +1171,10 @@ src pyproject.toml README.md LICENSE .gitignore` holds.
 ### Findings and dispositions
 
 Line references are to `b1f31b4`. "Plan" is `pypi-publish-2-1-0.md`. Every
-disposition is **fixed** in the review-resolution checkpoint, except where a
-waiver is stated under *Taste triage*.
+disposition below is **fixed** in the correcting checkpoint
+**`e6ac15930019bafff9c5cf42899558f43f461aa2`**, except where a waiver is stated under *Taste triage*. Rows 1 and
+2 were completed in **`7867a428621786c949b133ce01b844f7c455a1ca`**, after the re-review found that the first fix
+was insufficient (see *Re-review*).
 
 | # | Source ids | Severity | Finding | Fix and evidence |
 |---|---|---|---|---|
@@ -1247,7 +1260,7 @@ decision was block until fixed.
 - **gpt-S1, gpt-S2, gpt-S3, gpt-S4 and gpt-S5: resolved**, each confirmed by
   the reviewer's own in-memory counterexamples.
 - **gpt-B1 and gpt-B2: not resolved**, and one new blocker, **gpt-RR-B1**.
-  All three are fixed below.
+  All three are **fixed** in the correcting checkpoint **`7867a428621786c949b133ce01b844f7c455a1ca`**, below.
 
 The conductor decided on **no second re-review round**, since the protocol
 forbids an automatic loop. Instead, the conductor re-runs the synthetic
@@ -1309,12 +1322,129 @@ blobs stay `cb542802…` and `2d6a0c31…`, and `X` stands. D9 is not triggered.
 - Readiness **25/25**.
 - The new token search: clean on the staged diff.
 - `$S/tools/rereview-controls.sh`: `ALL CONTROLS PASS` (19 of 19) against
-  the working-tree text staged for this checkpoint. The return report
-  records the re-run against the committed `HEAD`.
+  the working-tree text staged for this checkpoint, and again against the
+  committed `HEAD` `7867a42`, run by the writer and then by the conductor.
 - The script blobs are unchanged (`cb542802…`, `2d6a0c31…`); the release
   inputs are unchanged since `X`.
 
-- final-sync: `pending`.
+### Conductor closing evidence (2026-10-28)
+
+The protocol forbids an automatic review loop, so the conductor closed the
+re-review's three remaining blockers by independent objective verification
+of `7867a428621786c949b133ce01b844f7c455a1ca`, not by a second re-review round:
+- It ran `bash "$S/tools/rereview-controls.sh" <repo> HEAD` at `7867a42`:
+  **ALL CONTROLS PASS, 19/19**. The synthetic value appeared 0 times in the
+  output of every control. Both commands were extracted verbatim from the
+  committed plan, with gate sha256 `e8ab40bbbd164cca…` and shape sha256
+  `938bf270134cb597…`. **gpt-B1 → fixed** in `7867a428621786c949b133ce01b844f7c455a1ca`; **gpt-RR-B1 → fixed**
+  in `7867a428621786c949b133ce01b844f7c455a1ca`.
+- It read the plan's stop table at `7867a42` (lines 593–594). The general
+  row states that it never governs the upload's own outcome. The
+  PyPI-upload row applies "the first case that applies decides" over cases
+  (1)–(4), with an explicit success and failure for the re-send and "a
+  published file is never re-sent". **gpt-B2 → fixed** in `7867a428621786c949b133ce01b844f7c455a1ca`.
+- It verified `git diff --quiet a25cb5d 7867a42 -- src pyproject.toml
+  README.md LICENSE .gitignore` (the release inputs are unchanged since
+  `X`) and a clean tree.
+
+### Closure check
+
+- **The predecessor chain is unbroken.** The predecessor is
+  `Step 0 review-pass-001` (closed, `ready` in `8515f1c`), byte-identical to
+  its `8515f1c` text with its frozen packet. No other sequence entry
+  exists, and no `contract-rework` entry was needed.
+- **One frozen packet for the original pass.** Base `8515f1c…`, review HEAD
+  `b1f31b4…`. The targeted re-review's packet (`b1f31b4..e6ac159`) is
+  nested in this pass.
+- **Both provider slots are terminal.** Both returned, from different
+  families, with their effective identities recorded above.
+- **Every reviewer-labeled blocker is dispositioned with evidence.**
+  gpt-B1, gpt-B2 and gpt-RR-B1 are fixed in `7867a428621786c949b133ce01b844f7c455a1ca`, with the parts of
+  gpt-B1 and gpt-B2 that `e6ac159` already carried fixed in `e6ac15930019bafff9c5cf42899558f43f461aa2`.
+  claude-DP-1 was an operator-shaped choice that the conductor decided
+  under Standard authority (option A) and applied in `e6ac15930019bafff9c5cf42899558f43f461aa2`, then completed
+  in `7867a428621786c949b133ce01b844f7c455a1ca`.
+- **Every accepted should-fix and nit is fixed** in `e6ac15930019bafff9c5cf42899558f43f461aa2`.
+- **Every taste finding is fixed or waived with a reason.** T1–T3 are fixed
+  in `e6ac15930019bafff9c5cf42899558f43f461aa2`. T4 is waived to Step 3's `/simplify`, with its reason; the
+  patch bloat is logged and carried to Step 3.
+- **The required re-review is complete.** Its packet, reviewer and result
+  are recorded above, and the conductor's closing evidence covers the three
+  findings it left.
+- **The tracker row is unchanged and still `active`:**
+  `200 | [pypi-publish-2-1-0](pypi-publish-2-1-0.md) | active |
+  lifecycle-and-free-form-relate | M31 — …`. `milestone-plan.md` has no
+  diff since `8515f1c`.
+- **The RED-baseline checkpoint (Standard) holds.** No returned review
+  leaves an unresolved contract or test-adequacy blocker. Every accepted
+  should-fix is resolved. Phase 4's GO stands, with the release inputs
+  unchanged since `X` and D9 re-runs recorded for every script change.
+
+### Verification report (sync-and-commit, ship-milestone Step 1)
+
+- Risk level: Standard (accepted at setup).
+- Fast gate commands run: `ruff check .`; `ruff format --check .`;
+  `mypy src/ tests/`; `pytest -q` and `--collect-only`; from the docs root,
+  `docs index .`, `docs check .` and `docs check . --stale 14`; `cmp` of
+  `INDEX.md` with its snapshot and of both bundled references with `docs/`;
+  readiness (P1.4's arguments); the non-disclosing token search (P1.4) on
+  the staged diff.
+- Deep gate commands run: Phase 4's builds, schema, probes, TestPyPI
+  rehearsal and comparators (recorded in Phase 4); the D9 re-runs (the
+  audit's, and this pass's); `$S/tools/rereview-controls.sh` (19/19).
+- Deferred or not configured: coverage, the hidden suite and mutation
+  tooling are not configured. The served-wheel checks are Step 2's.
+- Visible test result: 1671 passed, 1671 collected.
+- Expected visible-test state: an adequate GREEN baseline under D3 — a
+  publish ships no new behaviour. The RED evidence is Phase 2's: readiness
+  failed exactly the contract reasons, and the 2.0.0 control failed exactly
+  the 13 release-bound checks.
+- Hidden/generalization result: one result set across wheel (a) and the
+  TestPyPI-served rehearsal (W1 aside); the 2.0.0 control behaved as
+  frozen.
+- Coverage: not configured.
+- Mutation: 17/17 hand-applied mutants and negative controls detected, each
+  by its intended check.
+- Property/stateful: N2 and W3 are write-sensitive and pass; (a) = (b) by
+  sha; the rehearsal payloads equal (a)'s.
+- Fuzz: not applicable.
+- Benchmark/security/schema/migration: schema and security pass (Phase 4,
+  and this pass's synthetic controls); benchmark and migration not
+  applicable.
+- Mock audit: no mocks; the negative controls are scratch wrapper
+  executables, never committed.
+- Taste triage: complete — T1–T3 fixed, T4 waived with a reason, patch
+  bloat carried to Step 3; none untriaged.
+- Ship-milestone Step 1 review ledger: this pass is closed, and
+  `final-sync` is `ready`.
+- Semantic tracker row and branch identity: row
+  `200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate`;
+  project `docs`, project path empty, artifact stem `pypi-publish-2-1-0`;
+  branch `pypi-publish-2-1-0/phases-1-4` under root `pypi-publish-2-1-0/`;
+  `status.md` links the tracker without copying rows or naming next work.
+- Contract/test matrix status: current — C1–C19, P1 ids, results through
+  Phase 4 and this pass.
+- Docs check: `docs check .` exit 0. `--stale 14` exits 1, with only the
+  pre-existing `stale` warnings on long-unchanged reference documents (as
+  at Step 0), reviewed.
+- Diff scope: `8515f1c..HEAD` touches only D1's allowed paths —
+  `CHANGELOG.md`, `README.md`, the two `tests/manual/` scripts, and
+  `docs/`. `src/`, `pyproject.toml`, `LICENSE` and `.gitignore` are
+  unchanged since `X`.
+- Operator approvals: D2, D3, D10 and D13 (setup). No new operator question;
+  DP-1 was the conductor's decision under Standard authority.
+- High-risk RED-baseline approval: not applicable (Standard).
+- Remaining risks: the PyPI token is validated only by use (Phase 6);
+  backend drift is guarded by D4 and the recorded build environment; Step
+  2 will almost certainly re-date the CHANGELOG under D7.
+- Ship-milestone Step 3 evidence: not applicable (Step 1).
+- Commit: the sync commit that records this report; the return report gives
+  its sha.
+- Push: `git push -u origin pypi-publish-2-1-0/phases-1-4` (the milestone
+  branch's first push; never `main`, no tags); the return report gives the
+  result.
+
+- final-sync: `ready`.
 
 ## Milestone completion summary
 

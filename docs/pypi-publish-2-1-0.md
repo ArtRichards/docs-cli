@@ -39,10 +39,9 @@ Related:
   [pypi-publish-2-1-0-test-matrix.md](pypi-publish-2-1-0-test-matrix.md)
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
-- Progress: **Step 1's phases are complete (Phases 1–4, 2026-10-28) and
-  the TestPyPI rehearsal is recorded GO.** Step 1 review-pass-001's
-  findings, and its targeted re-review's, are resolved; the PyPI upload
-  waits for the pass to close (D2).
+- Progress: **Step 1 is complete (2026-10-28), and Step 2 is authorized
+  under D2.** The log's *Implementation metadata* › *Progress* and its *Step
+  1 review-pass-001* (closed, `final-sync` `ready`) carry the record.
   - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
     same day; the log's Phase 1 section has the evidence and the five
     conductor-resolved planning questions.
