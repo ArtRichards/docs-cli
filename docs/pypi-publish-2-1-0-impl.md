@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 Related:
 - pairs-with: pypi-publish-2-1-0.md
@@ -85,7 +85,7 @@ the test matrix stay synchronized with it. The phases are the
 | 2. Write Tests (RED) | Complete | 2026-10-28 | Both scripts written (blobs `b1f739e3…`, `55d5e33a…`). Readiness RED for exactly the reasons in the task plan's *Acceptance examples* › *Readiness*; its green control passes. Mutants 1–6, 1b and 5b each killed by exactly the intended check. The probe passes 21/21 on the editable build; the 2.0.0 control fails exactly the 13 release-bound checks. 1671 collected. |
 | 3. Create Data/Fixtures | Complete | 2026-10-28 | The CHANGELOG dated `2.1.0 — 2026-10-28` with its sentence removed (D7); the four lagging README synopses reconciled (D8); the diff equals the Phase 2 green control's. Probe trees confirmed scratch-only. Readiness GREEN, 23/23. 1671 passed. This commit is `X`. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-10-28 | GREEN baseline at `X` (`a25cb5d`): the gate (1671), readiness 23/23, the stale-wording grep 0. Build (a) `2c5fa0b3…`/`1d327a97…`, hatchling 1.33.0, `twine check` and the dependency oracle pass. (a) probe 25/25; the guard step reads True / True. The TestPyPI rehearsal served = local = JSON, payloads equal, probe 24 + W1 SKIP. (b) = (a). Mutants 8, 8b, 8c behave. **GO.** |
-| 5. Update Base Interfaces | Pending | — | The stop-table preconditions; a re-date per D7 if needed; build (c) per D4; `twine check`; (c) = (a); the sdist members against the Phase 4 manifest; `dist/` holding exactly two files. |
+| 5. Update Base Interfaces | Complete | 2026-10-28 – 2026-10-29 | G2 calibrated (OQ-S2-1) with its D9 script re-run (`f7f8f62`); CHANGELOG re-dated 2026-10-29 under D7 (`33c936f`, the tag target); P1.5's Phase 5 block all as expected, 1671 passed; build (c): wheel = (a), manifest = (a)'s, `twine check` passed, `dist/` exactly two files. Nothing uploaded. |
 | 6. Implement Offline/Core Path | Pending | — | The upload under D2, naming both files explicitly. The per-version JSON's digests equal (c)'s. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Served verification first: the shas against (c), both probe groups, and the suite's capability probes. Only then the tag and the release (D13), with the peeled-tag check. |
 | 8. Run Tests (GREEN) | Pending | — | The GREEN record: readiness and the full fast gate at the tag-target commit; the three-wheel probe results in the matrix; the suite full guard's expected failure. |
@@ -932,7 +932,10 @@ replaces this section's values and says so.
 | Anchor | Value |
 |---|---|
 | `X`, the build commit | `a25cb5d07b24f00a81834ed6f7f8aa46d5e49a45` |
-| CHANGELOG release date `D` | `2026-10-28` |
+| CHANGELOG release date `D` | `2026-10-29` — *re-dated 2026-10-29 under D7 by `33c936f` (Phase 5), the day having rolled; `X` carries `2026-10-28`* |
+| Tag-target commit (Step 2) | `33c936f447dfb31078dc0c07c9e4fd2297ed747d` — the commit build (c) came from (Phase 5) |
+| Wheel (c) | `docs_cli-2.1.0-py3-none-any.whl` `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` — equal to (a) |
+| Sdist (c) | `docs_cli-2.1.0.tar.gz` `c120fc1db71db08306ec1e002dedb1adcd95dc08bd5a8c1f775cda772696404d` — the sdist's anchor (D4); its manifest equals (a)'s |
 | Wheel (a) = (b) | `docs_cli-2.1.0-py3-none-any.whl` `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` |
 | Sdist (a) = (b) | `docs_cli-2.1.0.tar.gz` `1d327a97912ab70ac53829e2af2d568c119d8ce555e9032264e744ba1d6d07d4` |
 | Build backend (D4) | `Generator: hatchling 1.33.0` |
@@ -1560,6 +1563,56 @@ a fresh venv and scratch XDG; the host check was unchanged across the block.
 | 5 | Probe on P1.6's scratch 2.0.0 (downloaded wheel sha `bcd8aa45…` = E1, checked before running) | exit 1, 12 passed, 13 failed; statuses identical to Phase 2's control column |
 | 6 | Cross-day control: the re-dated clone above, old blob vs new | old: FAIL G2 only (20 passed); new: 21 passed; the two outputs differ in the G2 line alone |
 | 7 | Mutant: a same-day clone with one `INDEX.md` entry line edited (` (edited)` appended to the `milestone-plan.md` entry) | FAIL G2 only, under both the old and the new blob — the normalisation masks nothing but the date stamp |
+
+Then the fast gate: ruff clean, 52 files formatted, mypy no issues in 53
+files, **1671 passed**, 1671 collected, readiness 25/25 (`--release-date
+2026-10-28`), `docs check .` exit 0, the snapshot and both mirrors
+identical. Committed as `f7f8f62`.
+
+### 5.3 Date gate (D7)
+
+`f7f8f62` landed at 23:33 CET, after the plan's 23:30 midnight guard, so
+5.4 waited for the local date to roll rather than race it. At 00:00 CET on
+2026-10-29, `date +%F` no longer equalled the heading, so `33c936f` re-dated
+`CHANGELOG.md` line 8 from `## 2.1.0 — 2026-10-28` to `## 2.1.0 —
+2026-10-29` — one line, no other file, no `docs touch` (the runbook's M11
+lesson). The token search and the D1 scope check were clean.
+
+### 5.4 P1.5's Phase 5 block, at `33c936f` (00:00–00:02 CET)
+
+| Command | Result |
+|---|---|
+| The 404 probe | `404` |
+| `git diff --quiet "$X"..HEAD -- src pyproject.toml README.md LICENSE .gitignore` | exit 0: the release inputs are unchanged since `X` |
+| `git hash-object` of both scripts | `cb542802…` and `763b7dd7…`, the anchors |
+| `origin/main` against GitHub's `main` | both `193fc71…`; no fetch ran |
+| `READY --repo . --release-date 2026-10-29` | exit 0, 25 passed |
+| `pytest -q` | **1671 passed** in 82 s, first run (OQ-S2-2's re-run was not needed); 1671 collected |
+| `git ls-remote origin refs/heads/main && gh auth status` | both exit 0 (the tunnel noise on stderr) |
+| P1.5's `~/.pypirc` shape command | exactly the anchors' four lines |
+| Toolchain | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 — Phase 4's |
+| `git status --porcelain` | empty |
+
+The host check was unchanged across the block (update cache `39739c29…`,
+recorded destination absent).
+
+### 5.5 Build (c), at `33c936f`
+
+| Check | Result |
+|---|---|
+| `rm -rf dist/ && .venv/bin/python -m build`, `SOURCE_DATE_EPOCH` unset, clean tree | exit 0; `ls -A dist/` shows exactly `docs_cli-2.1.0-py3-none-any.whl` and `docs_cli-2.1.0.tar.gz` |
+| Wheel (c) | `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` — **equal to (a)**; D4's remedy was not needed |
+| Sdist (c) | `c120fc1db71db08306ec1e002dedb1adcd95dc08bd5a8c1f775cda772696404d` — it moved from (a)'s with `docs/` and `tests/manual/`, as D4 expects |
+| `Generator:` | `hatchling 1.33.0` |
+| The (c) manifest against (a)'s 15-line block, extracted mechanically from this log | identical |
+| `twine check` on both files by name | PASSED, PASSED |
+| Schema | `Metadata-Version: 2.5`, `Requires-Python: >=3.11`, `Provides-Extra: dev`, five `Requires-Dist … extra == 'dev'`; `CHANGELOG` in neither artifact |
+
+**`TAG_TARGET` = `33c936f447dfb31078dc0c07c9e4fd2297ed747d`**, recorded in
+*Release anchors (current)* with (c)'s shas. This checkpoint commit is a
+child of the tag target and changes documents only, so the release inputs
+still diff empty against `X`. Every Phase 5 exit criterion holds; nothing
+has been uploaded.
 
 ## Milestone completion summary
 

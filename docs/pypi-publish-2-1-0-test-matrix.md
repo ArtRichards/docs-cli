@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 Related:
 - pairs-with: pypi-publish-2-1-0.md
@@ -243,7 +243,12 @@ mutation and hidden-suite tooling are not configured in this project.
 ## Results summary
 
 - Visible tests: **1671 passed, 1671 collected** at Phase 1 (`8515f1c`),
-  Phase 3 and the Phase 4 baseline (`X` = `a25cb5d`).
+  Phase 3, the Phase 4 baseline (`X` = `a25cb5d`) and the tag-target
+  commit (`33c936f`, Phase 5).
+- Upload gate (C9): at Phase 5 every pre-upload precondition held at the
+  tag target, and build (c)'s wheel equals (a) with (a)'s sdist manifest
+  (the log's *Phase 5*). Phase 6 re-checks them immediately before the
+  upload.
 - Release checks: **Phase 2 RED recorded.** Readiness fails exactly the
   lines *Acceptance examples* › *Readiness* names (as R2, R3 and R6), and
   its green control passes every line. The probe passes 21/21 on the

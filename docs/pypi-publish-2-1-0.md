@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 Related:
 - child-of: milestone-plan.md
@@ -1084,7 +1084,7 @@ Branch `pypi-publish-2-1-0/simplify`.
 - [x] Phase 2 — Write Tests (RED) — release checks; controls; mutation smoke
 - [x] Phase 3 — Create Data/Fixtures — CHANGELOG dated; README reconciled
 - [x] Phase 4 — Run Tests (RED Baseline) — pre-publish GREEN baseline: gate, build, smoke, TestPyPI rehearsal
-- [ ] Phase 5 — Update Base Interfaces — pre-upload gate; tag-target build
+- [x] Phase 5 — Update Base Interfaces — pre-upload gate; tag-target build
 - [ ] Phase 6 — Implement Offline/Core Path — real PyPI upload
 - [ ] Phase 7 — Update Tool/Wrapper Layer — served verification; then tag and release
 - [ ] Phase 8 — Run Tests (GREEN) — GREEN record at the tag-target commit
