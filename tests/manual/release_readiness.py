@@ -218,7 +218,7 @@ def check_changelog(report: Report, args: argparse.Namespace, repo: Path) -> Non
     claim: str | None
     if body is None:
         claim = f"no `## {args.version}` section"
-    elif args.drop_sentence in body:
+    elif args.drop_sentence and args.drop_sentence in body:
         claim = f"still says {args.drop_sentence!r}"
     else:
         claim = f"publish-state wording: {claims[0]!r}" if claims else None
@@ -229,8 +229,10 @@ def check_changelog(report: Report, args: argparse.Namespace, repo: Path) -> Non
     if body is None or base_body is None:
         drift: str | None = f"section missing here or at {args.changelog_base}"
     else:
-        ours = body.replace(" " + args.drop_sentence, "")
-        theirs = base_body.replace(" " + args.drop_sentence, "")
+        # An empty --drop-sentence means the release removes nothing.
+        drop = " " + args.drop_sentence if args.drop_sentence else None
+        ours = body.replace(drop, "") if drop else body
+        theirs = base_body.replace(drop, "") if drop else base_body
         diff = difflib.unified_diff(theirs.splitlines(), ours.splitlines(), n=0, lineterm="")
         changed = [d for d in list(diff)[2:] if not d.startswith("@@")]
         drift = "; ".join(changed[:4]) if changed else None
@@ -329,7 +331,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--release-date", required=True, type=_iso_date)
     parser.add_argument("--changelog-base", required=True, help="commit holding reviewed text")
-    parser.add_argument("--drop-sentence", required=True)
+    parser.add_argument(
+        "--drop-sentence",
+        required=True,
+        help='the publish-state sentence the release removes; "" when it removes none',
+    )
     args = parser.parse_args(argv)
     repo = args.repo.resolve()
     docs = str(Path(args.docs).absolute())

@@ -17,8 +17,9 @@ Related:
 The operator-driven checklist for shipping `docs-cli` to PyPI.
 This runbook drove **M9 — `docs-cli==1.3.0`** (shipped
 2026-05-25), **M11 — `docs-cli==1.4.0`** (shipped 2026-05-27),
-and **M13 — `docs-cli==1.5.0`** (shipped 2026-05-29); it stays
-the operative reference for future releases (v1.6+). Every
+and **M13 — `docs-cli==1.5.0`** (shipped 2026-05-29), and every
+release since — most recently **M31 — `docs-cli==2.1.0`** (shipped
+2026-10-29); it stays the operative reference for future releases. Every
 "operator runs X" bullet below is the walked-top-to-bottom
 procedure. The bullets are scoped tight enough to copy-paste;
 the prose framing for each release lives in its milestone doc
@@ -28,8 +29,8 @@ the prose framing for each release lives in its milestone doc
 
 **Before driving a new release, read the
 [Cumulative lessons + deviations](#cumulative-lessons--deviations)
-section at the bottom of this file.** It captures the
-M9 + M11 + M13 walkthrough surprises (CHANGELOG amend timing,
+section at the bottom of this file.** It captures every
+publish's walkthrough surprises since M9 (CHANGELOG amend timing,
 JSON metadata cache lag, what-to-skip-after-first-publish, and
 the M13 findings — the rehearsal-wheel `0.0.0+local` artifact
 under the rename detour and `CHANGELOG.md` not shipping inside
@@ -158,15 +159,38 @@ the network-mutating phases:
       only**, with a command that prints fixed text and
       booleans and fails closed on any read, parse or field
       error: a parser's error message quotes the offending
-      line, which may hold a token (M31; the command is P1.5's
-      shape command). Never print a value into a log.
+      line, which may hold a token (M31). Never print a value
+      into a log. The command, verbatim as M31 froze it (sha256
+      of its text `938bf270134cb5976a8e6bc07bb44dde8be857b062d654b76893aec9f370864a`):
+      ```sh
+      python3 -I -c 'import configparser, os, stat, sys
+      try:
+          p = os.path.expanduser("~/.pypirc")
+          lines = ["mode " + oct(stat.S_IMODE(os.stat(p).st_mode))]
+          c = configparser.ConfigParser(interpolation=None)
+          c.read(p, encoding="utf-8")
+          lines.append("sections-are-distutils,pypi,testpypi %s" % (c.sections() == ["distutils", "pypi", "testpypi"]))
+          for s in ("pypi", "testpypi"):
+              pw = c[s]["password"]
+              lines.append("%s username==__token__ %s password-starts-pypi- %s password-len>100 %s"
+                           % (s, c[s]["username"] == "__token__", pw.startswith("pypi-"), len(pw) > 100))
+      except BaseException:
+          print("pypirc shape check failed: unreadable, malformed or incomplete (details suppressed)")
+          sys.exit(1)
+      print("\n".join(lines))'
+      ```
+      It prints `mode 0o600`, `sections-are-distutils,pypi,testpypi
+      True` and one `<index> username==__token__ True
+      password-starts-pypi- True password-len>100 True` line per
+      index, or only its fixed failure line.
 - [ ] The release toolchain: the installed `twine` is PyPI's
       newest and at least 7.0.0 (a read-only check; see
       *Artifact build*); record `build`, `pip` and Python.
 - [ ] PyPI registry HTTP status for `docs-cli`:
-      `curl -sI https://pypi.org/simple/docs-cli/` → 200; JSON
-      `releases` array does **not** contain the about-to-publish
-      version. (M9 + M11 both verified the slot was free
+      `curl -sI https://pypi.org/simple/docs-cli/` → 200, and the
+      about-to-publish version's per-version JSON
+      (`https://pypi.org/pypi/docs-cli/<VERSION>/json`) returns
+      **404**; the aggregate JSON's `releases` array can lag. (M9 + M11 both verified the slot was free
       pre-upload; PyPI rejects re-uploads even after yank.)
 - [ ] TestPyPI registry: `docs-cli-rehearsal` slot for the
       about-to-publish version is free; bare `docs-cli`
@@ -212,8 +236,22 @@ unset SOURCE_DATE_EPOCH   # it moves hatchling's fixed mtimes, and with them eve
   names the files only, and a failing search stops the commit
   like a match. Never pipe a diff into `grep -q` — it exits at
   the first match, the producer dies of SIGPIPE, and under
-  `pipefail` the pipeline reads as "no match" (M31; the gate is
-  P1.4's).
+  `pipefail` the pipeline reads as "no match" (M31). The gate,
+  verbatim (sha256 of its text
+  `e8ab40bbbd164ccaf24380cae64fc578aec011634b19229f0e511a5ea9813cce`):
+  ```sh
+  TOKEN_RE='pypi-[A-Za-z0-9_-]{50,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}'
+  names=$(git diff --cached --text --name-only -G"$TOKEN_RE") \
+    || { echo "STOP: the token search itself failed; do not commit"; exit 1; }
+  [ -z "$names" ] \
+    || { printf 'STOP: a token-shaped string is staged (contents not shown) in:\n%s\n' "$names"; exit 1; }
+  echo "token search: clean"
+  ```
+- **Any `install-skill` other than the host step** — a scratch
+  smoke, or vendoring the skill into another repository — runs
+  with `XDG_STATE_HOME` and `XDG_CACHE_HOME` in scratch and
+  `DOCS_CLI_NO_UPDATE_CHECK=1`, and the host's recorded-destination
+  file is unchanged afterwards (compare it before and after).
 
 ### Version + CHANGELOG verification
 
@@ -426,8 +464,8 @@ checks. M11's `docs migrate --apply --quiet` probe and M29's nine
 re-verification, above) showed the squatter unchanged:**
 temporarily rename `pyproject.toml` `[project] name` to
 `docs-cli-rehearsal`, rebuild `dist/`, then upload. Revert the
-rename and rebuild *cleanly* before Phase 4 — the real PyPI
-build must go out under `docs-cli`.
+rename and rebuild *cleanly* before the real PyPI build — it
+must go out under `docs-cli`.
 
 - [ ] Upload to TestPyPI, once the rehearsal version's
       per-version JSON returns 404 and `ls -A dist/` shows
@@ -474,13 +512,13 @@ build must go out under `docs-cli`.
       all --no-version-check …`: its result lines equal the local
       wheel's, except the version check, which is skipped.
 
-**JSON metadata cache lag.** Immediately post-upload, the
-TestPyPI JSON metadata API (`/pypi/<pkg>/json`) lags the simple
-index by ~60-120s. `pip install` reads the simple index and
-works first try; `curl … /json` may still show the
-previous-version `releases` array for a minute or two. Don't
-gate verification on JSON refresh — `pip install` is the
-authoritative signal. (M9 + M11 both hit this.)
+**Index lag.** Immediately post-upload, every index endpoint can
+lag: the aggregate JSON (`/pypi/<pkg>/json`), the per-version JSON
+(`/pypi/<pkg>/<VERSION>/json`) and the PEP 691 simple index
+(`/simple/<pkg>/`). Poll whichever endpoint a step gates on — at
+most 10 × 30 s — and trust none of them to be first. (M9 + M11 saw
+the aggregate JSON lag the simple index by ~60–120 s; M31 saw the
+simple index lag the per-version JSON — see *From M31*.)
 
 **A rehearsal failure is a stop, not a re-run** (M31). The old
 remedy — fix, bump the patch version, rerun — changes what the
@@ -520,8 +558,15 @@ canonical wheel's sha must equal the first build's.
       per-version JSON (`https://pypi.org/pypi/docs-cli/<VERSION>/json`)
       returns 404; the release inputs are unchanged since the
       rehearsed build (`git diff --quiet <build commit>..HEAD --
-      src pyproject.toml README.md LICENSE .gitignore`);
-      readiness passes with today's date; the full suite passes;
+      src pyproject.toml README.md LICENSE .gitignore`); each
+      release-check script's `git hash-object` equals the blob of
+      its last recorded run or re-run; the local `origin/main`
+      equals GitHub's `main`, because readiness checks the
+      README's links against it — `[ "$(git rev-parse
+      origin/main)" = "$(gh api repos/ArtRichards/docs-cli/branches/main
+      --jq .commit.sha)" ] || git fetch origin main`, recording
+      whether a fetch ran; then readiness passes with today's
+      date; the full suite passes;
       `git ls-remote origin refs/heads/main` and `gh auth status`
       exit 0; the `~/.pypirc` shape is unchanged.
 - [ ] Fresh rebuild under canonical `[project] name = "docs-cli"`:
@@ -544,13 +589,29 @@ canonical wheel's sha must equal the first build's.
           .venv/bin/twine upload --repository pypi --non-interactive \
           dist/docs_cli-<VERSION>-py3-none-any.whl dist/docs_cli-<VERSION>.tar.gz
       ```
-      Never a glob, never `--skip-existing`. **The outcome
-      precedence** (M31): poll the per-version JSON (at most
-      10 × 30 s) and record exactly which files PyPI publishes;
-      then any 4xx stops; one file confirmed and the other
-      failed transiently gets one by-name re-send of the missing
-      file; anything else stops for the operator. A published
-      file is never re-sent.
+      Never a glob, never `--skip-existing`. If the date
+      re-check fails, the day rolled after the build: re-date the
+      heading in a one-line commit, which becomes the tag target,
+      and rebuild — no sha moves, because CHANGELOG ships in
+      neither artifact (M31).
+
+      **The outcome precedence** (M31). Unless twine exits 0 and
+      the per-version JSON lists both files after polling (at
+      most 10 × 30 s), record exactly which files PyPI publishes
+      and apply the first case that fits:
+      1. a hard refusal — a 4xx from the upload itself, as twine
+         reports it (400 metadata, 401/403, 409 or a reused
+         filename), never a 404 from a lagging JSON — stops;
+      2. one file confirmed published and the other failed
+         transiently (connection error, timeout, 5xx) gets one
+         re-send of the missing file by name; it succeeds only
+         if it exits 0 and the JSON then lists both, else stop;
+      3. any other error, including a transient fault with no
+         file confirmed, stops for the operator with no retry;
+      4. twine exiting 0 while the JSON still lists fewer than
+         both files stops.
+
+      A published file is never re-sent.
 - [ ] Artifact visible at
       `https://pypi.org/project/docs-cli/<VERSION>/`; the
       per-version JSON's two digests equal the local shas.
@@ -607,7 +668,8 @@ canonical wheel's sha must equal the first build's.
       interactive confirmation is the documented path.)
 - [ ] **Tag the tag-target commit** — the commit the uploaded
       build came from — only after the served bytes pass the
-      chain-of-custody check and the standing probe. Annotated,
+      chain-of-custody check, the standing probe and any
+      downstream consumer's probe. Annotated,
       then check the **peeled** remote ref: the plain tag ref
       returns the tag object, not the commit (M31; `v2.0.0` is
       tag object `af3bdb5`, commit `408ef6c`):
@@ -671,7 +733,13 @@ canonical wheel's sha must equal the first build's.
          docs-cli prescriptions the release supersedes, in the
          installed plugin and its source repository. Freeze the
          patterns first, and require them to hit the known sites.
-         The findings go to the feedback-log hand-off; the suite
+         Scan paragraph-joined text, not single lines: prose
+         wraps, and a phrase broken across a line escapes a line
+         grep (M31's line-based census missed nine of seventeen
+         prescriptions). Known sites measure recall only on
+         themselves, so also seed a wrapped prescription into a
+         scratch copy and require the scan to find it. The
+         findings go to the feedback-log hand-off; the suite
          rides its own release cycle.
 - [ ] **Re-scope the PyPI API token** to project `docs-cli`.
       Account settings → API tokens → add a project-scoped
@@ -693,10 +761,12 @@ canonical wheel's sha must equal the first build's.
       - Anything that must outlive the archive lives in a live
         document: the hand-off in `feedback-log.md`, the
         narrative in `status.md`, the procedure here.
-- [ ] **Archive the trio together**:
-      `docs archive <stem>.md --cascade-only '<stem>-*'`, after a
-      `--cascade-dry-run` preview that selects exactly the two
-      companions. The impl log no longer stays at root: the
+- [ ] **Archive the trio together**, from the docs root:
+      ```sh
+      (cd docs && docs archive <stem>.md --cascade-dry-run --cascade-only '<stem>-*')   # exactly the two companions
+      (cd docs && docs archive <stem>.md --cascade-only '<stem>-*' --reason "<reason>")
+      (cd docs && docs check .)
+      ``` The impl log no longer stays at root: the
       2026-10-26 migration archived M17's, M20's, M24's and M29's.
       **Referring edges and body links are rebased by the
       archive verb itself** as of M18 (`Related:`) and M28
@@ -716,8 +786,8 @@ canonical wheel's sha must equal the first build's.
   package-data globs, bad classifier values, and README
   rendering errors caught there cost nothing; caught on PyPI
   they burn the version number.
-- **Manual twine vs Trusted Publishing.** The 1.3.0 + 1.4.0
-  releases ship via manual twine (continuing the M6 stance).
+- **Manual twine vs Trusted Publishing.** Every release through
+  2.1.0 shipped via manual twine (continuing the M6 stance).
   For a future iteration, GitHub Actions Trusted Publishing
   (OIDC) would replace the API tokens entirely: configure the
   PyPI Trusted Publisher binding once, then a tag-triggered
@@ -1065,11 +1135,28 @@ release closeout; do **not** rewrite past entries.
   only the `_Generated` stamp, as the product test does, and the script's
   re-run proved the cross-day case passes and an edited entry still fails.
   Any release check that compares generated output should be read for the
-  calendar.
+  calendar. The check's display name still says it "reproduces its
+  INDEX.md", kept so its result line stays identical across the three
+  builds; append "apart from the generated date" at the next release.
 - **A build backend shipped the same day.** hatchling 1.33.0 was released
   the morning of M31's first build. The resolved build environment was
   recorded, and the tag-target build reproduced the first wheel's sha
   without the constraints remedy — `[build-system]` stays unpinned.
+- **The simple index lagged the per-version JSON.** After twine exited 0
+  at 00:04:04 CET, the per-version JSON answered 404 at +8 s, +15 s and
+  +45 s and listed both files at +75 s; the PEP 691 simple index still
+  listed neither at +127 s and both at +133 s; the aggregate JSON read
+  2.1.0 at its first check, +7 min. The rehearsal's per-version JSON took
+  about a minute too. The old advice — trust `pip install` and the simple
+  index, don't gate on the JSON — would have installed nothing at +75 s;
+  every gate now polls the endpoint it reads.
+- **A line-based census misses wrapped prose.** The post-release sweep's
+  four line-oriented patterns found 8 of the 17 hand-edit prescriptions in
+  the suite's 0.8.3 skills; the other nine broke the phrase across a line
+  ("promote … ⏎ to `Lifecycle: active`"). The Step 2 review found them; a
+  paragraph-joined re-scan found all 17 and a seeded wrapped control the
+  line scan missed. The oracle of four known sites passed both scans, so
+  it measured nothing about the rest.
 - **The midnight crossing.** The tag-target build waited for the local date
   to roll, so the CHANGELOG was re-dated once (a one-line commit) rather
   than racing the clock; the upload ran at 00:04 CET, which PyPI records as

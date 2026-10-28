@@ -67,7 +67,7 @@ task plan's *Decisions (Phase 1 — BINDING)* (P1.1–P1.5).
 | C16 | A 2.0.0 install prints `docs: update available 2.0.0 -> 2.1.0 — run: pip install -U docs-cli` once on stderr, with its exit code unchanged | Goal; M21 contract |
 | C17 | The sweep table is recorded, the suite and the plugin cache are untouched, and the hand-off is updated and left open | D10, D12; E11 |
 | C18 | The runbook carries the lessons and corrections, the archive selects exactly the trio, and the tracker row is `complete` | D11 |
-| C19 | Every release-check run records its script's git blob sha. A script that changed after its Phase 4 run is re-run before Step 1 closes | D5, D9 |
+| C19 | Every release-check run records its script's git blob sha, and a script changed after its Phase 4 run is re-run as D9 requires | D5, D9 |
 
 ### Decision ↔ clause crosswalk
 
@@ -287,14 +287,17 @@ mutation and hidden-suite tooling are not configured in this project.
   byte-identical to the served wheel's, recorded as the destination, the
   backup symlink untouched (C15); the read-only sweep's census hit every
   known site, and the suite and plugin cache are untouched (C17; the log's
-  *Phase 9*).
+  *Phase 9*). Its first, line-based pass missed nine wrapped prescriptions;
+  the review's paragraph-joined re-scan found all seventeen, and a seeded
+  wrapped control (3/3, against 0/3 line-based).
 - Property/stateful: N2 and W3 (idempotent re-runs) pass on every
   executable that has the verb, and both are write-sensitive (bytes and
   mtimes; N2 also reads the `--json` no-op record); the wheel sha is one
   value across (a), (b), (c) and the served bytes; the rehearsal's and the
   served `docs_cli/` payloads equal (a)'s, downloaded and installed; no
   throwaway run changed the repository or host state, and Phase 9 moved the
-  host only as D10 lists.
+  host only through D10's three items, plus pipx's shared-libs marker that
+  the authorized `pipx upgrade` touched (no package changed).
 - Mutation: the G2 calibration's controls (Step 2) — a cross-day INDEX
   fails the old check and passes the new one, and an edited INDEX entry
   fails both. Readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
@@ -309,7 +312,10 @@ mutation and hidden-suite tooling are not configured in this project.
   probe changes after Phase 4 — the audit's docstrings, the review's
   strengthened checks and Step 2's G2 calibration — were re-run under D9
   against wheel (a) and a fresh install of the served rehearsal, with
-  identical result lines; the log's anchors carry the current blobs.
+  identical result lines. Readiness's Step 2 review change (an empty
+  `--drop-sentence`) was re-run at HEAD, at the tag target and with the
+  served wheel's `--help`, 25/25 each, with its controls. The log's anchors
+  carry the current blobs.
 - Fuzz: not applicable.
 - Benchmark/security/schema: schema — `twine check` passed on both builds,
   `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in
@@ -338,11 +344,17 @@ mutation and hidden-suite tooling are not configured in this project.
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
 - changed-files branch coverage: not configured
-- mutation score on touched modules: 19/19 hand-applied mutants and
-  controls detected, each by its intended check — Step 2's G2 cross-day
-  control and edited-entry mutant, and Step 1's 17 (readiness 1–6, 1b, 5b,
-  9a–9c; comparators 8, 8b, 8c; probe negative controls for W1, N6 and N2); the 2.0.0
-  control (mutant 7) fails exactly the 13 release-bound checks
+- mutation score on touched modules: 21/21 negative mutants and controls
+  detected, each by its intended check — Step 1's 17 (readiness 1–6, 1b,
+  5b, 9a–9c; comparators 8, 8b, 8c; probe negative controls for W1, N6 and
+  N2), Step 2's edited-INDEX-entry mutant (G2), and the review's two
+  readiness controls (one word and one space edited, each failing R4 with
+  an empty `--drop-sentence`), plus the seeded wrapped census control
+  (found 3/3). The 2.0.0 control (mutant 7) fails exactly the 13
+  release-bound checks. Reported apart, as passing controls rather than
+  kills: the G2 cross-day INDEX (fails the old check, passes the new) and
+  the unchanged section with an empty `--drop-sentence` (fails the old
+  readiness, passes the new)
 - property/stateful result: pass (Phases 4–9)
 - fuzz result: not applicable
 - benchmark delta: not applicable; elapsed times recorded

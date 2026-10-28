@@ -1145,7 +1145,10 @@ release_readiness.py --repo DIR --docs PATH --version 2.1.0 --release-date YYYY-
 `--repo` is the tree under test and defaults to the script's repository;
 `--help` output always comes from `--docs`. The references are the
 arguments (D1, D7), `git show <base>:CHANGELOG.md` (M30's reviewed text)
-and that `--help`; nothing under test is its own reference.
+and that `--help`; nothing under test is its own reference. *Amended
+2026-10-29 (Step 2 review, gpt-S3): an empty `--drop-sentence` means the
+release drops nothing — R3 then checks only the publish-state patterns, and
+R4 compares the two bodies unchanged.*
 
 | Id | Check | Rule |
 |---|---|---|

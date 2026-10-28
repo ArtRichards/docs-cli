@@ -71,9 +71,10 @@ the test matrix stay synchronized with it. The phases are the
   the scripts' patch bloat (1033 lines against the 300–500 anchor). See that
   pass's *Taste triage*.
 - Taste triage, Step 2: the G2 calibration follows its anchor; the
-  runbook's footprint is flagged for the Step 2 reviewers; T4 and the
-  scripts' size stay carried to Step 3. See *Phase 10* › *Taste triage
-  (Step 2)*.
+  footprint was re-triaged after the Step 2 review (anchors under-set, the
+  growth demanded); gpt-T1 and claude-S2-T1 are fixed, claude-S2-T2 and T3
+  waived; T4 and the scripts' size stay carried to Step 3. See *Phase 10* ›
+  *Taste triage (Step 2)* and *Step 2 review-pass-001*.
 
 ## TDD phase progress
 
@@ -943,9 +944,9 @@ replaces this section's values and says so.
 | Rehearsal wheel, served = local = JSON | `docs_cli_rehearsal-2.1.0-py3-none-any.whl` `fd2f787c85d95d3ace8944f0f00846f0644ebca4f69e3feb422dbff910b7b318` |
 | Rehearsal sdist, served = local = JSON | `docs_cli_rehearsal-2.1.0.tar.gz` `0241b9eb0ad906f3136b886f4ef08b83ef37ee723d3ec51db4036c4b1ecc3d1a` |
 | The next rehearsal version under D9 | `2.1.0.post1` (404 at Phase 1) |
-| `release_readiness.py` blob | `cb542802bba447d4fb7ee72eaf1b454b2773653f` — 25 lines (R8 split into R8a–R8c). Earlier: Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`; the audit's D9 re-run `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` |
+| `release_readiness.py` blob | `9cf861cb6feb6c21fd96c9af2eab5918cf077174` — *replaced 2026-10-29 by the Step 2 review's gpt-S3 fix (an empty `--drop-sentence` drops nothing)*; 25 lines. Earlier: Step 1's review `cb542802bba447d4fb7ee72eaf1b454b2773653f` (R8 split into R8a–R8c); Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`; the audit's D9 re-run `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` |
 | `release_probe.py` blob | `763b7dd7c22c7305f8215b1415b1ff67eb2d3fb1` — *replaced 2026-10-28 by Step 2's G2 calibration (Phase 5 › D9 re-run for the G2 calibration)*. Earlier: Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`; the audit's D9 re-run `88043c87b4eff5c8dcc164b06e4160c6d1ea444d`; Step 1's review `2d6a0c31b1cac8ee25ef858671002e3b7f9d7830` |
-| D9 re-runs | Three, all 2026-10-28: after the audit's docstring change (*Step 1 audit*), after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*), and after Step 2's G2 calibration (*Phase 5* › *D9 re-run for the G2 calibration*). Every probe result line equals the Phase 4 record below |
+| D9 re-runs | Three, all 2026-10-28: after the audit's docstring change (*Step 1 audit*), after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*), after Step 2's G2 calibration (*Phase 5* › *D9 re-run for the G2 calibration*), and — 2026-10-29 — after the Step 2 review's readiness fix (*Step 2 review-pass-001*, item 5). Every probe result line equals the Phase 4 record below; readiness passes 25/25 |
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
 | Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` — the Phase 1 record. Since Phase 9.3 the recorded destination is `~/.claude/skills/docs` (D10); host checks compare pairwise (OQ-S2-3) |
@@ -1571,7 +1572,8 @@ identical. Committed as `f7f8f62`.
 
 ### 5.3 Date gate (D7)
 
-`f7f8f62` landed at 23:33 CET, after the plan's 23:30 midnight guard, so
+`f7f8f62` landed at 23:33 CET, after the 23:30 midnight guard set by Step 2's
+planning (its §5.3, a planning decision, not a committed rule), so
 5.4 waited for the local date to roll rather than race it. At 00:00 CET on
 2026-10-29, `date +%F` no longer equalled the heading, so `33c936f` re-dated
 `CHANGELOG.md` line 8 from `## 2.1.0 — 2026-10-28` to `## 2.1.0 —
@@ -1907,6 +1909,21 @@ prescription 2.1.0 supersedes, "ok" a statement still true under 2.1.0.
 | `_shared/references/verbless-metadata-edits.md` | — (absent) | C `:4`; D `:16`, `:17` | the stopgap policy itself |
 | `docs/references/cli.md`, `convention.md`, `use-cases.md` (the vendored skill; the cache target excludes it) | 8 D lines on `main` — 2.0.0's "six recognized verbs" and `unknown verb` text | the same 8 | superseded by the 2.1.0 re-vendor |
 
+*Corrected 2026-10-29 (Step 2 review, claude-S2-B1).* The census above is
+line-based, and prose wraps: it missed nine prescriptions whose phrase broke
+across a line, and the `project-foundation/SKILL.md` row is wrong — its
+0.8.3 lines 78–80 ("only two metadata fields are touched in place:
+`Lifecycle:` … and free-form `Related:`") are a prescription, so the class
+is "rx" on both targets (`a997954` lines 82–84 and 86), not "ok at 0.8.3".
+The paragraph-joined re-scan (the review entry, item 2) found 23 matches at
+0.8.3 (= `main` = the cache) and 32 at `a997954`, among them all seventeen
+0.8.3 prescriptions — the eight above plus `project-foundation/SKILL.md:78–80`,
+`role-mapping.md:5–6`, `foundation-playbook.md:647–648` and `:845–846`,
+`milestone-tracker.md:206–207` and `:271–272`, `manage-milestone-tracker/SKILL.md:110–111`
+and `:122–123`, and `use-cases-playbook.md:105–106`. A seeded wrapped control
+was found 3/3 by the re-scan and 0/3 by the patterns above. The per-file
+checklist with both targets' lines lives in the feedback-log hand-off.
+
 The C hits on `a997954` name exactly the policy file and the seven files
 the full guard lists (Phase 8). Under 2.1.0 every "rx" line becomes `docs
 lifecycle <files> active` or `docs relate add <src> pairs-with|child-of
@@ -2006,15 +2023,28 @@ operator for `CLAUDE.md`; it stays open pending that decision.
 - **The G2 calibration** (+11/−1 in the probe) follows its taste anchor —
   `tests/test_cli_index.py`'s normaliser, stdlib, display name unchanged.
   Fixed in Phase 5 and proven by the cross-day control.
-- **Footprint against the anchors.** The runbook is +416/−172 against an
-  80–150-line anchor: the correction list (about twenty items from P1.6, the
-  Phase 10 objective and the five adopted OQ-S2 rules) rewrites most body
-  sections, and *From M31* adds eleven lessons. D11 requires the procedure
-  to outlive the archive, so it lives there rather than only in this plan.
-  **Flagged for the Step 2 reviewers** as the largest taste risk of this
-  step. The hand-off is about twenty long bullet lines, inside its 35–50
-  anchor once wrapped; it repeats the sweep's sites because the trio is
-  archived (D11). `status.md` carries narrative only.
+- **Footprint against the anchors** — *re-triaged 2026-10-29 after the
+  Step 2 review (claude-S2-S3), which found this bullet misquoting them.*
+  The plan's *Expected diff footprint* sets about 50–100 lines of runbook
+  lessons and corrections and about 15–30 lines of hand-off update. At the
+  review HEAD the runbook diff was 588 changed lines (+244 net) and the
+  hand-off about 76 wrapped lines; after the review's fixes, `d5a23ef..` the
+  runbook is +523/−192 (715 changed, +331 net) and the hand-off block 38
+  source lines, about 115 at 80 columns. **Conductor decision (Standard
+  authority):** the growth is demanded — the runbook carries P1.6's and the
+  Phase 10 objective's correction list, the five OQ-S2 rules, the review's
+  corrections and two inlined frozen commands, because D11 makes it the
+  procedure that outlives the archive; the hand-off must stand alone for
+  the suite PR (D11, D12). The anchors were under-set for a first
+  ship-milestone publish; this is recorded as such, not as a waiver of
+  bloat.
+- **Waived by the conductor:** claude-S2-T2 (several *From M31* lessons echo
+  body corrections, and the twine bullet retells M29) — the M29 precedent;
+  a trim opportunity for the next publish milestone. claude-S2-T3 (G2's
+  display name still says "reproduces its INDEX.md") — kept for line
+  identity across the three-build comparison; the runbook's *From M31*
+  G2 lesson records "append 'apart from the generated date' at the next
+  release".
 - **Carried to Step 3's `/simplify`, unchanged:** claude-T4 (G6 and G9 mirror
   product-test golden strings) and the scripts' size (1043 lines against the
   300–500 anchor).
@@ -2050,9 +2080,10 @@ with the same isolation exports, so no `docs` run touches host state.
   snapshot; nothing under `src/`, and no product test.
 - **Release inputs:** unchanged since `X` at every Step 2 commit.
 - **Pushes:** exactly one, `git push origin v2.1.0`; no branch was pushed.
-- **Host:** only D10's three items changed (the pipx venv with pipx's own
-  shared-libs marker, `~/.claude/skills/docs`, the recorded destination);
-  the update cache is still `39739c29…`.
+- **Host:** only D10's three items changed (the pipx venv,
+  `~/.claude/skills/docs`, the recorded destination), plus pipx's
+  shared-libs marker that the authorized `pipx upgrade` touched (no package
+  changed); the update cache is still `39739c29…`.
 - **The suite and the plugin cache:** untouched (`a997954`, clean; no cache
   file newer than this session's start).
 - **Outputs → consumers:** 9.6's walk; nothing unconsumed.
@@ -2151,7 +2182,11 @@ a decision, a check's behaviour or anything shipped.
   `docs/pypi-publish-2-1-0-impl.md#step-2-review-pass-001`).
 - Predecessor: `Step 1 review-pass-001` — closed, `final-sync` `ready`,
   synced in `d5a23ef`. That entry and its frozen packet are unchanged.
-- Status: **`open`** — awaiting both reviewers.
+- Status: **dispositioned** (2026-10-29). Both provider slots are terminal
+  and returned; every finding is **fixed** in the review-resolution
+  checkpoint that records this table (the return report gives its sha), or
+  waived by the conductor with a reason; re-review is **not required**.
+  The pass awaits the conductor's spot-check; `final-sync` stays `pending`.
 - **This review runs after the irreversible actions.** `docs-cli==2.1.0` is
   on PyPI, `v2.1.0` is pushed and the GitHub release is published, so D2's
   post-upload triage applies: a finding against the shipped bytes — the
@@ -2159,7 +2194,7 @@ a decision, a check's behaviour or anything shipped.
   `33c936f` — goes to the operator as a yank-or-patch decision; a finding
   against documents is fixed normally on the branch, including documents
   whose tag-target copy shipped inside the immutable sdist.
-- Review packet, proposed for the conductor to freeze:
+- Frozen packet (recorded by the conductor):
   - slug `pypi-publish-2-1-0`, step 2, branch
     `pypi-publish-2-1-0/phases-5-10`;
   - base `d5a23ef411fe010f3f7a6318e03b4fa26900799f` (the closed Step 1
@@ -2185,6 +2220,13 @@ a decision, a check's behaviour or anything shipped.
     <https://github.com/ArtRichards/docs-cli/releases/tag/v2.1.0>
     (*Latest*), the host pipx venv at 2.1.0, `~/.claude/skills/docs` and
     the recorded destination.
+  At `ba37ee2` the conductor verified a clean tree; PyPI's per-version JSON
+  listing both files with digests `2c5fa0b3…` / `c120fc1d…`; the remote
+  `v2.1.0` peeling to `33c936f`; `gh release list` showing docs-cli 2.1.0
+  *Latest*; the host's `docs 2.1.0` and its recorded destination
+  `~/.claude/skills/docs`; `pytest` 1671 passed; `docs check .` exit 0; the
+  release inputs at `33c936f` equal to `X`. Both reviewers received the
+  identical provider-neutral prompt and packet, isolated from each other.
 - Tracker: `milestone-plan.md` in the docs root; owning project `docs`;
   project path empty; artifact stem `pypi-publish-2-1-0`; active semantic
   slug `pypi-publish-2-1-0`; row
@@ -2200,8 +2242,108 @@ a decision, a check's behaviour or anything shipped.
   `33c936f…`; the host check unchanged. Phase 7's served-wheel probe
   (25/25) and guard step (True / True), and Phase 8's tag-target gate, are
   the deep results.
-- Claude slot: `pending`.
-- GPT slot: `pending`.
+- Claude slot: `returned`.
+  - Identity: Anthropic Claude family, Claude Opus 5.5 (`claude-opus-5-5`),
+    host-reported; a fresh `milestone-reviewer` sub-agent at xhigh effort.
+  - What it re-ran independently: the served downloads' shas against the
+    packet; a scratch rebuild of `33c936f` that reproduced **both** served
+    shas; the served sdist's members, apart from `PKG-INFO`, against `git
+    archive 33c936f`; the wheel payload against `33c936f:src/docs_cli`; the
+    remote tag's peel; the release body against the tag target's CHANGELOG
+    section; the probe 25/25 and readiness 25/25 on the served wheel; the old
+    G2 blob failing G2 alone today (the calibration was needed and works);
+    the gate, 1671 passed; the host skill and pipx payload against the
+    served wheel.
+  - Shipped bytes: no finding. Risk-gate decision: block until claude-S2-B1
+    is fixed, then continue automatically.
+- GPT slot: `returned`.
+  - Identity: OpenAI GPT family; Codex CLI 0.164.0, run as `codex exec -m
+    gpt-6-astra -c model_reasoning_effort=xhigh -s read-only`. Both
+    identities are recorded: the session log reports `model: gpt-6-astra`,
+    while the reviewer self-described as "GPT, Codex, based on GPT-5; no
+    finer model identifier".
+  - What it re-ran: lint, the formatter and mypy; `docs check .`; the
+    snapshot and mirrors; the 1671-test collection; the script blobs and the
+    guard digest; the local tag's peel; the release inputs. Its sandbox was
+    read-only and could not resolve PyPI or GitHub, so the live state is the
+    conductor's record above.
+  - No shipped-bytes defect. Risk-gate decision: block until fixed.
+
+### Findings and dispositions
+
+Line references are to `ba37ee2`. Every finding is document-class, so D2's
+"fixed normally" applies; none touches the wheel, the sdist, the tag or the
+release. Every disposition is **fixed** in the review-resolution checkpoint.
+
+| # | Source ids | Severity | Finding | Fix and evidence |
+|---|---|---|---|---|
+| 1 | gpt-B1 | blocker (host-state safety) | The hand-off's vendoring command `docs install-skill --dest plugins/agent-playbook-suite/skills/docs --force` (feedback-log :147) had no XDG isolation; every successful `install-skill` records its destination, so following it would overwrite this host's recorded `~/.claude/skills/docs` | The hand-off now runs it under `env XDG_STATE_HOME="$T/state" XDG_CACHE_HOME="$T/cache" DOCS_CLI_NO_UPDATE_CHECK=1`, hashing the real record (`${XDG_STATE_HOME:-$HOME/.local/state}/docs-cli/install-skill.json`) before and after and requiring `cmp` to print nothing. The runbook's *Isolation and hygiene* gains the same rule for any `install-skill` other than the host step. **Proof:** the snippet, extracted verbatim from the edited log with `--dest` pointed at scratch and the host's 2.1.0 binary, exited 0 with the host record unchanged (`{"dest": "/home/user/.claude/skills/docs"}`; host check unchanged); **control:** the bare command under a scratch `HOME` recorded `{"dest": "<scratch>/bare"}` — the hazard is real |
+| 2 | claude-S2-B1 | blocker | The line-based sweep missed about nine wrapped hand-edit prescriptions and misclassified `project-foundation/SKILL.md` | A read-only **paragraph-joined** re-census (`git archive` exports of `554ebf2` and `a997954`, and the installed cache; the suite untouched, clean at `a997954`; nothing in the cache newer than the session) with the extra stems `promot`, `flip`, `touched in place`, `editing the`: 23 matches at 0.8.3 (the cache's skills equal `main`'s byte for byte, and their hits are identical) and 32 at `a997954`. Classified: **17 prescriptions at 0.8.3**; the rest archive-lifecycle text or prohibitions. **All nine reviewer sites confirmed**, no others found: `project-foundation/SKILL.md:78–80`, `role-mapping.md:5–6`, `foundation-playbook.md:647–648` and `:845–846`, `milestone-tracker.md:206–207` and `:271–272`, `manage-milestone-tracker/SKILL.md:110–111` and `:122–123`, `use-cases-playbook.md:105–106`. The multi-word C/D phrases do not wrap anywhere (joined counts equal line counts). **Seeded negative control:** three prescriptions wrapped across lines in a scratch copy — the paragraph scan found 3/3, the original line patterns 0/3; on the real sites the line patterns found 8 of 17. The hand-off now carries a per-file checklist with both targets' lines (gpt-T1); 9.4 carries a dated correction; runbook step 4 now says to scan paragraph-joined text and seed a wrapped control, because an oracle of known sites measures recall only on those sites |
+| 3 | gpt-S1, claude-S2-S1 | should-fix | The runbook's condensed upload rule (:547–553) omitted success, case (4) and the re-send's success condition, and left "4xx" ambiguous against a lagging JSON 404 | Rewritten: "Unless twine exits 0 and the per-version JSON lists both files after polling", then the four cases in order — a hard refusal is an upload-origin 4xx reported by twine, never a JSON 404; the one by-name re-send succeeds only if it exits 0 and the JSON then lists both; any other error stops; twine 0 with fewer than both listed stops |
+| 4 | gpt-S2 | should-fix | The runbook's pre-upload gate (:519) dropped P1.5's `origin/main` freshness comparison before readiness | Carried into the gate, with the exact `[ … ] \|\| git fetch origin main` command and "record whether a fetch ran", before readiness |
+| 5 | gpt-S3 | should-fix | `--drop-sentence ""` failed a valid section (`release_readiness.py:221`: `"" in body` is always true) and stripped every space from both bodies | Empty now means "drop nothing": both the containment check and the replacement are guarded, and `--help` says so; P1.1 records it with a dated note. New blob **`9cf861cb6feb6c21fd96c9af2eab5918cf077174`** (+10/−4; ruff, format, mypy clean). **Controls** (scratch clones, old blob → new): an unchanged section with base `HEAD` and `--drop-sentence ""` — FAIL R3 → 25 passed; one word changed — FAIL R4 under the new blob; one space added — the old blob's R4 masked it, the new fails R4; the real sentence restored against `bf09748` — FAIL R3 under both. **Re-runs:** readiness 25/25 at HEAD, 25/25 at the tag target `33c936f` (`--release-date 2026-10-29`, in a worktree, removed after), and 25/25 at HEAD with the PyPI-served wheel's `--help`. Not a release input; nothing is re-published |
+| 6 | gpt-S4 | should-fix | The runbook's archive step (:696) assumed the docs root while the walkthrough starts at the repository root | Preview, archive and `docs check` are each scoped `(cd docs && …)` |
+| 7 | claude-S2-S2 | should-fix | M31's own index-lag evidence contradicted the runbook (:477–483: "`pip install` works first try … don't gate on JSON refresh") | The body paragraph now says every endpoint — aggregate JSON, per-version JSON, PEP 691 simple index — can lag, so poll whichever a step gates on (at most 10 × 30 s); *From M31* records the order and timings (per-version JSON both files at +75 s; simple index none at +127 s, both at +133 s; aggregate 2.1.0 at its first check, +7 min) |
+| 8 | claude-S2-S3 | should-fix | The Step 2 taste triage misquoted the footprint anchors | Re-triaged on the plan's anchors (runbook about 50–100 lines, hand-off about 15–30) and the measured ratios, with the conductor's decision recorded: anchors under-set, growth demanded by the correction list and D11/D12 — not a waiver of bloat (*Phase 10* › *Taste triage (Step 2)*) |
+| 9 | gpt-N1 | nit | The matrix (:341) counted the passing cross-day control as a killed mutant | Negative mutants and controls (21/21) are reported apart from the two passing calibration controls |
+| 10 | claude-S2-N1 | nit | "the plan's 23:30 midnight guard" (log :1574) pointed at nothing committed | Now "set by Step 2's planning (its §5.3, a planning decision, not a committed rule)" |
+| 11 | claude-S2-N2 | nit | Matrix C19 (:70) restated D9's old "before Step 1 closes" | C19 points at D9 ("re-run as D9 requires") |
+| 12 | claude-S2-N3 | nit | Runbook :429–430 said "before Phase 4" | "before the real PyPI build" |
+| 13 | claude-S2-N4 | nit | The runbook's introduction and *Notes* were still framed as M9/M11/M13, "v1.6+" and "1.3.0 + 1.4.0 ship via manual twine" | Refreshed: "every release since — most recently M31"; "every release through 2.1.0 shipped via manual twine" |
+| 14 | claude-S2-N5 | nit | Runbook :166–170 read the aggregate JSON's `releases` array for slot freedom | The per-version JSON's 404, with the aggregate's lag noted |
+| 15 | claude-S2-N6 | nit | Runbook :539–541 gave no remedy for a failing date re-check | A one-line re-date commit becomes the tag target, then rebuild; no sha moves, because CHANGELOG ships in neither artifact |
+| 16 | claude-S2-N7 | nit | The runbook's pre-upload gate (:519–526) omitted the scripts' blob check | Each release-check script's `git hash-object` must equal the blob of its last recorded run or re-run |
+| 17 | claude-S2-N8 | nit | Matrix :296–297 and the log's boundary sweep folded pipx's shared-libs marker into "the pipx venv" | Both now read "D10's three items, plus pipx's shared-libs marker that the authorized `pipx upgrade` touched (no package changed)" |
+| 18 | claude-S2-N9 | nit | The runbook's tag gate (:608–613) omitted the downstream consumer's probe D13 requires | "the chain-of-custody check, the standing probe and any downstream consumer's probe" |
+
+### Taste triage
+
+These are conductor decisions, binding under Standard authority:
+- **gpt-B1** (gating, host-state safety): **fixed** (item 1).
+- **gpt-T1** (the hand-off packed many files and line mappings into one
+  paragraph): **fixed** — a per-file checklist table (file, 0.8.3 / `main`
+  lines, `a997954` lines, required change), which also carries item 2's
+  additions.
+- **claude-S2-T1** (the runbook deferred the token search and the
+  `~/.pypirc` shape command to the plan, which Step 3 archives): **fixed** —
+  both are inlined verbatim. Re-extracted from the plan with Step 1's
+  method, they hash to the recorded `e8ab40bbbd164ccaf24380cae64fc578aec011634b19229f0e511a5ea9813cce`
+  (gate) and `938bf270134cb5976a8e6bc07bb44dde8be857b062d654b76893aec9f370864a`
+  (shape); the runbook states those shas, and its two blocks, dedented,
+  are byte-identical to the extractions.
+- **claude-S2-T2** (lessons echo body corrections; the twine bullet retells
+  M29): **waived** — the M29 precedent; a trim opportunity for the next
+  publish milestone.
+- **claude-S2-T3** (G2's display name overstates after the date
+  exclusion): **waived** — the name keeps line identity with the anchored
+  result block across the three-build comparison; the runbook's *From M31*
+  G2 lesson records "append 'apart from the generated date' at the next
+  release".
+- **Patch bloat:** per item 8 — anchors under-set; the growth is demanded.
+- **GPT:** no other subjective findings.
+
+### Re-review
+
+**Not required** (conductor decision). Every correction is document,
+runbook or script-calibration text, checkable objectively: gpt-B1 by the
+explicit environment and the recorded-destination verification step;
+claude-S2-B1 by the re-run paragraph-joined census, its seeded negative
+control and the listed sites; gpt-S3 by its controls. Nothing touches the
+shipped artifacts, the tag or an operator decision. The conductor
+spot-checks the census and the hand-off block before finalization.
+
+### Verification at the review-resolution checkpoint
+
+- ruff clean; 52 files formatted; mypy no issues in 53 files.
+- `pytest -q` **1671 passed**; 1671 collected.
+- `docs check .` exit 0; the INDEX snapshot and both mirrors identical.
+- Readiness **25/25** at HEAD (blob `9cf861cb…`).
+- The release inputs unchanged since `X`; the probe blob `763b7dd7…`
+  unchanged.
+- The frozen non-disclosing token search: clean; the D1 scope check: clean.
+- The host check unchanged across every block (update cache `39739c29…`;
+  recorded destination `~/.claude/skills/docs`).
+
 - final-sync: `pending`.
 
 ## Milestone completion summary
