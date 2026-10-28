@@ -88,7 +88,7 @@ the test matrix stay synchronized with it. The phases are the
 | 5. Update Base Interfaces | Complete | 2026-10-28 – 2026-10-29 | G2 calibrated (OQ-S2-1) with its D9 script re-run (`f7f8f62`); CHANGELOG re-dated 2026-10-29 under D7 (`33c936f`, the tag target); P1.5's Phase 5 block all as expected, 1671 passed; build (c): wheel = (a), manifest = (a)'s, `twine check` passed, `dist/` exactly two files. Nothing uploaded. |
 | 6. Implement Offline/Core Path | Complete | 2026-10-29 | The re-checks passed at 00:03:59 CET; one `twine upload` naming both files, exit 0 at 00:04:04 CET (23:04 UTC on 2026-10-28). The per-version JSON listed both files after about a minute, with digests equal to (c)'s. Nothing re-sent. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-10-29 | Chain of custody bit-perfect for wheel and sdist; the served install's payload = (c); the probe 25/25 on the served wheel, lines identical to (a)'s; the guard step True / True. Then `v2.1.0` annotated at `33c936f`, pushed, peeled remote = the tag target; the GitHub release created with `--verify-tag`, *Latest*. |
-| 8. Run Tests (GREEN) | Pending | — | The GREEN record: readiness and the full fast gate at the tag-target commit; the three-wheel probe results in the matrix; the suite full guard's expected failure. |
+| 8. Run Tests (GREEN) | Complete | 2026-10-29 | At the tag target `33c936f`: ruff, the formatter and mypy clean; 1671 passed and collected; both replicas pass; `docs check .` 0; snapshot and mirrors identical; INDEX idempotent (stamp normalised); readiness 25/25. One result set across the three wheel installs. The suite's full guard fails with exactly the ten lines frozen before the run. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Host integration per D10, with the task plan's Phase 9 commands: the update notice from the 2.0.0 binary, then the binary, the skill, the sweep, a dogfood `docs check`, and the liveness walk. |
 | 10. Quality, Docs, Refactor | Pending | — | The runbook's *From M31* lessons and its corrections (D11). The feedback-log hand-off update (D12). The status narrative. The final matrix results. Taste triage and the boundary sweep. Scratch cleanup. The completion summaries. |
 
@@ -1722,6 +1722,67 @@ upload (OQ-S2-1).
 GitHub reports the release's `targetCommitish` as `main`, its default for a
 release made from an existing tag; the tag itself pins the commit, as the
 peeled check shows. Nothing else was pushed: no branch, no other tag.
+
+## Phase 8 — Run Tests (GREEN)
+
+Date: 2026-10-29, 00:08–00:12 CET.
+
+### 8.1 The fast gate at the tag target
+
+In a detached worktree `$S/t8` at `33c936f`, with the main `.venv`'s
+binaries by absolute path. The editable install resolves `docs_cli` from the
+main tree's `src/`, which is byte-identical to the tag target's (`git diff
+--quiet 33c936f HEAD -- src`), so the suite tests the tag target's code.
+
+| Check | Result |
+|---|---|
+| `ruff check .`; `ruff format --check .`; `mypy src/ tests/` | clean; 52 files formatted; no issues in 53 files |
+| `pytest -q` | **1671 passed** (84 s); `--collect-only`: 1671 |
+| The two suite-probe replicas, by node id | 2 passed |
+| `docs check .` from `docs/` | exit 0 |
+| `INDEX.md` against the snapshot; both bundled references against `docs/` | identical |
+| `docs index . --dry-run` against `INDEX.md`, the `_Generated` stamp normalised on both sides | identical (the tree's stamp reads 2026-10-28; a raw compare is calendar-sensitive at a past commit) |
+| `READY --repo "$S/t8" --release-date 2026-10-29` (`D`, the tag target's CHANGELOG date) | exit 0, 25 passed |
+| The host check across the block; the worktree's status, then `git worktree remove` | unchanged; clean; removed, one worktree left |
+
+### 8.2 One probe, three wheel installs
+
+The matrix's *Results summary* carries the table: every wheel install gave
+the same result set, with only W1 skipped on the rehearsal.
+
+### 8.3 The suite's full guard — expected to fail
+
+**Frozen before the run** (2026-10-29 00:10 CET). Against 2.1.0, the full
+guard step run inside the suite's tree at `a997954` must exit 1 with
+exactly these ten lines on stderr, because the suite still carries the
+stopgap that 2.1.0 retires (E11). A different signature — for example a
+"cannot perform" line — would contradict Phase 7 and stop the milestone.
+
+```
+pinned docs-cli performs non-archived Lifecycle: transitions (docs lifecycle); retire that half of plugins/agent-playbook-suite/skills/_shared/references/verbless-metadata-edits.md and prescribe the verb instead
+pinned docs-cli performs free-form Related: edits (free-form docs relate); retire that half of plugins/agent-playbook-suite/skills/_shared/references/verbless-metadata-edits.md and prescribe the verb instead
+both verbs are available; delete plugins/agent-playbook-suite/skills/_shared/references/verbless-metadata-edits.md
+plugins/agent-playbook-suite/skills/_shared/references/milestone-tracker.md: still references the retired stopgap
+plugins/agent-playbook-suite/skills/create-milestones/SKILL.md: still references the retired stopgap
+plugins/agent-playbook-suite/skills/create-milestones/references/milestone-playbook.md: still references the retired stopgap
+plugins/agent-playbook-suite/skills/manage-milestone-tracker/SKILL.md: still references the retired stopgap
+plugins/agent-playbook-suite/skills/project-foundation/SKILL.md: still references the retired stopgap
+plugins/agent-playbook-suite/skills/project-foundation/references/foundation-playbook.md: still references the retired stopgap
+plugins/agent-playbook-suite/skills/ship-milestone/SKILL.md: still references the retired stopgap
+```
+
+**Result** (00:10:47 CET). Run in a read-only export (`git -C
+~/opt/agent-playbook-suite archive a997954 | tar -x -C "$S/suite-a997954"`),
+not in the live checkout, with `PATH` on the served venv: **exit 1**, stdout
+empty, and stderr **equal, line for line, to the frozen block**. The guard is
+working: the served 2.1.0 performs both edits, so the suite's stopgap must
+retire in its pin-bump PR, and these ten lines are that PR's checklist (the
+feedback-log hand-off). The suite checkout's `status --porcelain` stayed
+empty and its HEAD `a997954`; the host check was unchanged.
+
+M30's probe assumption is validated against the served wheel: the replicas
+pass at the tag target (8.1), S1 and S2 pass on the served executable, and
+the extracted guard step reads True / True (Phase 7).
 
 ## Milestone completion summary
 

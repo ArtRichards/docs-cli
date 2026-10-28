@@ -1087,7 +1087,7 @@ Branch `pypi-publish-2-1-0/simplify`.
 - [x] Phase 5 — Update Base Interfaces — pre-upload gate; tag-target build
 - [x] Phase 6 — Implement Offline/Core Path — real PyPI upload
 - [x] Phase 7 — Update Tool/Wrapper Layer — served verification; then tag and release
-- [ ] Phase 8 — Run Tests (GREEN) — GREEN record at the tag-target commit
+- [x] Phase 8 — Run Tests (GREEN) — GREEN record at the tag-target commit
 - [ ] Phase 9 — Integrate / Accept / Dogfood — update notice; host binary and skill; sweep
 - [ ] Phase 10 — Quality, Docs, Refactor — runbook lessons; hand-off; summaries
 

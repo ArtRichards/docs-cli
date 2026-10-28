@@ -269,7 +269,17 @@ mutation and hidden-suite tooling are not configured in this project.
 - Hidden/generalization: the 2.0.0 control fails exactly N1–N9, S1, S2, W1
   and W2 and passes G1–G10, W3 and W4, as frozen. The three-wheel replay:
   (a), the TestPyPI-served rehearsal and the PyPI-served wheel give one
-  result set (W1 skipped on the rehearsal only).
+  result set (W1 skipped on the rehearsal only):
+
+  | Wheel install | Run (probe blob) | Result |
+  |---|---|---|
+  | (a), local | Phase 4 (`55d5e33a…`); D9 re-runs (`88043c87…`, `2d6a0c31…`, `763b7dd7…`) | 25 PASS each, lines identical |
+  | TestPyPI-served `docs-cli-rehearsal` | Phase 4 (`55d5e33a…`); D9 re-runs (`88043c87…`, `2d6a0c31…`, `763b7dd7…`) | 24 PASS + W1 SKIP each, lines otherwise identical |
+  | PyPI-served `docs-cli` | Phase 7 (`763b7dd7…`), from a worktree at the tag target | 25 PASS, lines identical to (a)'s |
+
+  The suite's full guard against the served wheel fails with exactly the
+  ten lines frozen before the run (C12; the log's *Phase 8*): the guard
+  working, not a regression.
 - Property/stateful: N2 and W3 (idempotent re-runs) pass on every
   executable that has the verb, and both are write-sensitive (bytes and
   mtimes; N2 also reads the `--json` no-op record); wheel (a) = (b) by sha; the rehearsal's
