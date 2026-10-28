@@ -40,8 +40,9 @@ Related:
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 1's phases are complete (Phases 1–4, 2026-10-28) and
-  the TestPyPI rehearsal is recorded GO.** Step 1 review-pass-001 is open;
-  the PyPI upload waits for it to close (D2).
+  the TestPyPI rehearsal is recorded GO.** Step 1 review-pass-001's
+  findings are resolved, and a targeted GPT re-review is pending; the PyPI
+  upload waits for the pass to close (D2).
   - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
     same day; the log's Phase 1 section has the evidence and the five
     conductor-resolved planning questions.
@@ -352,8 +353,8 @@ neither artifact (M13, M20), so re-dating moves no sha.
 
 The README is the PyPI long description (M29 lesson). Phase 3 corrects the
 synopses that readiness finds lagging the CLI (*Acceptance examples* ›
-*Readiness*), and changes nothing else unless readiness finds drift. The `blob/main/` links are re-verified after the Step 3
-archive.
+*Readiness*), and changes nothing else unless readiness finds drift. The
+`blob/main/` links are re-verified after the Step 3 archive.
 
 ### D9 — Re-rehearsal and re-runs
 
@@ -457,9 +458,11 @@ example, was merged by the conductor as `bf09748` on the operator's
 instruction.
 
 The merge must be a history-preserving merge commit. A squash or rebase
-would leave the tagged commit off `main`. The milestone's final report says
-so explicitly: *merge with a merge commit, not squash or rebase; `v2.1.0` is
-at `<sha>`*.
+would leave the tagged commit off `main`. It should also follow promptly: the
+PyPI page's README links `blob/main/CHANGELOG.md`, which reads `UNRELEASED`
+until the stack reaches `main`. The milestone's final report says so
+explicitly: *merge promptly, with a merge commit, not squash or rebase — the
+PyPI page links `main`'s CHANGELOG; `v2.1.0` is at `<sha>`*.
 
 ## Contract
 
@@ -506,7 +509,7 @@ under *Non-functional constraints*:
 ### Assumptions
 
 - **The copied PyPI token is valid.** Owner: Phase 6. It is validated by use
-  (M11): a 401 or 403 stops with nothing uploaded.
+  (M11): a 401 or 403 stops under *Error cases*' PyPI-upload row.
 - **Build (c) reproduces wheel (a)**, or can be pinned to (D4). Owner:
   Phase 5.
 - **The suite's probes are as measured** (E11). Owner: Phase 7, against the
@@ -576,22 +579,22 @@ These are the stop conditions. Each one voids D2 until the operator decides.
 
 | Condition | Expected behaviour | Observability |
 |---|---|---|
-| The 2.1.0 slot is taken on PyPI at Phase 5 | Stop; nothing uploaded | The per-version JSON returns 200 |
+| The 2.1.0 slot is taken on PyPI at Phase 5, or at the re-check just before the Phase 6 upload | Stop; nothing uploaded | The per-version JSON returns 200 |
 | The Step 1 review pass is not closed, or a blocker is undispositioned | Step 2 does not start | The review ledger |
-| The rehearsal is not GO, or failed (D9) | Stop; Step 1 does not close. A failure is any 4xx rejection, any sha or payload mismatch, or any probe FAIL. A transient fault is not one: a connection error, timeout or 5xx with no file accepted gets one retry of the same command, and a version not yet on the simple index is polled (at most 10 × 30 s) | Implementation log, Phase 4; twine's output; the per-version JSON |
+| The rehearsal is not GO, or failed (D9) | Stop; Step 1 does not close. On TestPyPI only (OQ-2), in this order: any 4xx rejection, any sha or payload mismatch, or any probe FAIL is a failure and stops, whichever file it hits; a connection error, timeout or 5xx with no file accepted gets one retry of the same command; with one file accepted and the other failed transiently, the missing file is re-sent once by name; a version not yet on the simple index is polled (at most 10 × 30 s) | Implementation log, Phase 4; twine's output; the per-version JSON |
 | The served rehearsal wheel ≠ the uploaded rehearsal build, or its payload ≠ (a)'s (D4) | Stop; Step 1 does not close | The rehearsal sha and payload comparison |
-| A release input changed after the rehearsal, or a D5 script changed after its Phase 4 run, with no re-run (D9) | Stop; nothing uploaded | `git diff <rehearsal-commit>..HEAD -- src pyproject.toml README.md LICENSE .gitignore tests/manual` |
+| A release input changed after the rehearsal, or a D5 script changed after its Phase 4 run, with no re-run (D9) | Stop; nothing uploaded | `git diff --quiet "$X"..HEAD -- src pyproject.toml README.md LICENSE .gitignore`; each script's `git hash-object` against its blob in *Release anchors (current)* |
 | `twine check` fails | Stop before upload | twine's output |
 | Wheel (b) or (c) ≠ (a) and the backend pin does not cure it, or an sdist member outside `docs/`/`tests/` differs from (a)'s recorded manifest (D4) | Stop; nothing uploaded | The sha table; the member manifest |
 | `dist/` does not hold exactly the two canonical files with build (c)'s shas (D4) | Stop; nothing uploaded | `ls dist/`; `sha256sum` |
 | The tree is dirty at a build, beyond D4's rehearsal exception | Stop | `git status --porcelain` |
-| `~/.pypirc` is missing, or its shape changed | Stop | The shape check (D6) |
-| The upload is refused for authentication (401/403) | Stop; nothing uploaded | twine's exit and message |
+| `~/.pypirc` is missing, or its shape changed | Stop | P1.5's shape command (D6) |
 | The remote or `gh` is unusable at Phase 5: `git ls-remote origin refs/heads/main` or `gh auth status` exits non-zero | Stop; nothing uploaded. Stderr noise from a command that exits 0 is not a failure | Both commands' exit status |
-| A partial upload on either index (PyPI, or TestPyPI for the rehearsal): one file accepted, the other refused | Retry only the missing file, by name, once; a second failure stops. Never re-send an accepted file | The per-version JSON file list |
+| A P1.5 Phase 5–7 command's result differs from the expectation P1.5 states for it — readiness failing on anything but D7's date, `pytest` other than 1671 passed, the 404 probe answering 200, the per-version JSON not listing both files after polling, the guard step's sha differing from the anchor, empty release notes, or a toolchain difference beyond a patch level | Stop; nothing further is published | The command's output, recorded in the log |
+| The PyPI upload (Phase 6) does not end with twine exit 0 and both files in the per-version JSON | First poll the per-version JSON (at most 10 × 30 s) and record exactly which files PyPI publishes. Then, in this order: (1) any hard refusal — a 4xx, including a 400 metadata error, 401/403 authentication, and 409 or a reused filename — stops, with the publication recorded as it stands (none, or one file); (2) one file confirmed published and the other failed transiently (connection error, timeout, 5xx) gets one re-send of the missing file by explicit name, and a second failure stops; (3) any other error, including a transient fault with no file confirmed published, stops for the operator with no automatic retry; (4) publication still uncertain after polling stops. A published file is never re-sent, and "nothing uploaded" is recorded only when the poll lists no file | twine's exit and message; the per-version JSON file list |
 | A served sha ≠ the local sha | Stop before the tag; the operator decides (yank or not) | The chain-of-custody table |
 | The served-wheel probe or the suite capability probes fail | Stop before the tag and release; the operator decides (yank, or a patch milestone). The suite probes pass only when the extracted guard step (P1.5) exits 0 and prints `lifecycle verb: True, free-form relate: True`; the CI step's exit inside the suite checkout is not the criterion | The probe output; the guard step's output |
-| A throwaway run changed host state: the recorded-destination file appeared, or the update cache's sha moved | Stop; the operator decides | The host before/after check (P1.3) |
+| A run changed host state D10 does not authorize: the recorded-destination file differs from what the last authorized step left (absent until Phase 9's skill step, then naming `~/.claude/skills/docs`), or the update cache's sha moved | Stop; the operator decides | The host before/after check (P1.3) |
 | The peeled remote tag ≠ the build commit, or `gh release create` fails | Stop; record; the PyPI release stands | `git ls-remote`; gh's exit |
 | `pipx upgrade` fails, or the host binary does not report `docs 2.1.0` | Stop the host step before the skill refresh | pipx's output; `docs --version` |
 | `install-skill --force` at the host destination fails | Stop the host step; the release stands | The command's exit and stderr |
@@ -624,8 +627,8 @@ These are the stop conditions. Each one voids D2 until the operator decides.
   - the publish-state sentence;
   - the `touch`, `stamp`, `project rename` and `project set` synopses.
 
-  After Phase 3, it passes. This is the one statement of the count; other
-  sections point here.
+  After Phase 3, it passes. The trio and `status.md` point here rather than
+  restating the reasons; the log records measured results.
 - **The rehearsal.** Given the TestPyPI-served rehearsal wheel:
   - its sha equals the uploaded rehearsal build;
   - its `docs_cli/` payload equals (a)'s;
@@ -930,35 +933,14 @@ irreversible.
 
 ### Phase 4 — Run Tests (RED Baseline) — pre-publish GREEN baseline: gate, build, smoke, rehearsal
 
-- Objective: produce the evidence Step 1's reviewers judge and D2 requires.
-  1. **The gate.** The runbook's *Quality gate* and *Surface parity*, with
-     M30's stale-wording grep returning 0. Also readiness, the INDEX snapshot
-     and the reference identity.
-  2. **Build (a)** per D4. Record:
-     - the backend version and both shas;
-     - (a)'s per-member sdist sha256 manifest, for every member outside
-       `docs/` and `tests/`.
-  3. **`twine check`**, and the manifests: the schema items under *Test
-     Strategy*.
-  4. **The local wheel.** Install (a) in a throwaway venv (D6) and run both
-     probe groups. Record each script's blob sha.
-  5. **The rehearsal under `docs-cli-rehearsal`:**
-     1. make the temporary `pyproject.toml` edit (D9);
-     2. `rm -rf dist/`, then build;
-     3. run `twine check`;
-     4. `twine upload --repository testpypi --non-interactive
-        dist/docs_cli_rehearsal-<version>-py3-none-any.whl
-        dist/docs_cli_rehearsal-<version>.tar.gz`;
-     5. install per D6;
-     6. run D4's rehearsal byte checks;
-     7. run both probe groups, with the version check skipped;
-     8. revert the edit, and confirm `git diff pyproject.toml` is empty;
-     9. build (b), and confirm it equals (a).
-  6. **Record GO or NO-GO.**
+- Objective: produce the evidence Step 1's reviewers judge and D2 requires,
+  by P1.4's Phase 4.0–4.8: the gate, build (a), `twine check` and the
+  schema, the local wheel, the rehearsal under `docs-cli-rehearsal`, build
+  (b), the comparators, and GO or NO-GO.
 - Files: the log and the matrix (results). `dist/` is git-ignored.
 - Exit:
-  - every item above is GREEN, with exact counts and shas recorded;
-  - GO is recorded.
+  - every P1.4 Phase 4 item is GREEN, with exact counts and shas recorded;
+  - GO is recorded with the log's *Release anchors (current)*.
 
   Standard risk: there is no operator checkpoint here. A later change to a
   release input or a script triggers the D9 re-runs.
@@ -969,43 +951,24 @@ closes with `final-sync: ready`.
 
 ### Phase 5 — Update Base Interfaces — pre-upload gate and tag-target build
 
-- Objective:
-  - Check every D2 precondition in the stop table, except those that need
-    build (c).
-  - Re-date per D7 if the day has rolled.
-  - Build (c) at the clean `HEAD`, which is the tag-target commit, per D4.
-  - Run `twine check`.
-  - Confirm three things:
-    - (c) = (a);
-    - the sdist members match the Phase 4 manifest;
-    - `dist/` holds exactly the two canonical files.
+- Objective: P1.5's Phase 5 block — the stop table's pre-upload
+  preconditions, a D7 re-date if the day has rolled, and build (c) at the
+  clean `HEAD`, the tag-target commit.
 - Files: the log, and `CHANGELOG.md` only if re-dated.
 - Exit: every precondition is true and recorded. Otherwise, stop with nothing
   uploaded.
 
 ### Phase 6 — Implement Offline/Core Path — the real PyPI upload
 
-- Objective:
-  - Under D2, run P1.5's upload command, which names both canonical files
-    and the `pypi` repository explicitly.
-  - Confirm that the per-version JSON lists both files, with sha256 digests
-    equal to (c)'s.
+- Objective: under D2, P1.5's Phase 6 block — the pre-upload re-checks, the
+  upload, and the per-version JSON's digests against (c)'s.
 - Files: the log.
 - Exit: both files are live with matching digests, or a stop is recorded.
 
 ### Phase 7 — Update Tool/Wrapper Layer — served verification, then tag and release
 
-- Objective:
-  1. **Install** `docs-cli==2.1.0` from PyPI into a fresh venv, with
-     `--no-deps` (D6).
-  2. **Download** the served wheel and sdist into fresh empty directories, and
-     confirm both equal (c) (D4).
-  3. **Run `release_probe.py`**, both groups, with the version check on.
-  4. **Run the suite's capability probes** per P1.5: the guard step's script,
-     extracted verbatim, from a fresh empty directory with `PATH` set to the
-     served venv; the replicas pass in the full suite at the tag-target
-     commit, and the probe's S1 and S2 pass in item 3.
-  5. **Only then,** tag and release per D13, and verify the peeled tag.
+- Objective: P1.5's Phase 7 block — served verification (D4, D5, OQ-4),
+  and only then the tag and the release (D13).
 - Files: the log.
 - Exit:
   - the chain-of-custody table is bit-perfect;
@@ -1031,16 +994,22 @@ closes with `final-sync: ready`.
 - Objective:
   1. **The update notice.** Before the upgrade, run the host's 2.0.0 binary
      with a scratch `XDG_CACHE_HOME`, with the update check enabled, once the
-     aggregate JSON reports 2.1.0. Expect one notice line on stderr and an
-     unchanged exit code.
+     aggregate JSON reports 2.1.0. P1.3's `env.sh` exports
+     `DOCS_CLI_NO_UPDATE_CHECK=1`, so this one run is prefixed `env -u
+     DOCS_CLI_NO_UPDATE_CHECK -u CI -u DO_NOT_TRACK`. Expect one notice line
+     on stderr and an unchanged exit code.
   2. **The binary.** Run `pipx upgrade docs-cli`. Verify that
      `~/.local/bin/docs --version` prints `docs 2.1.0`, installed from the
      PyPI index.
-  3. **The skill.** Run `DOCS_CLI_NO_UPDATE_CHECK=1 ~/.local/bin/docs
+  3. **The skill.** This step leaves P1.3's scratch state on purpose, so the
+     destination is recorded where D10 wants it: run `env -u XDG_STATE_HOME
+     -u XDG_CACHE_HOME DOCS_CLI_NO_UPDATE_CHECK=1 ~/.local/bin/docs
      install-skill --force --dest ~/.claude/skills/docs`. Then verify all
      three:
      - `diff -r` against the served wheel's `docs_cli/skill/` is empty;
-     - the recorded-destination file names `~/.claude/skills/docs`;
+     - the host's `~/.local/state/docs-cli/install-skill.json` names the
+       expanded `~/.claude/skills/docs`, and no `install-skill.json` appeared
+       under `$S/xdg/state`;
      - the backup symlink is unchanged.
   4. **The sweep.** Run the read-only census of prescriptions 2.1.0
      supersedes, in the installed suite and its source repository:
@@ -1153,7 +1122,8 @@ log's Phase 1 section records them with their evidence.
   sdist.
 - Every `docs` subprocess gets an environment the script builds: `HOME`,
   `XDG_STATE_HOME` and `XDG_CACHE_HOME` under a fresh temporary directory,
-  `DOCS_CLI_NO_UPDATE_CHECK=1`, `PYTHONDONTWRITEBYTECODE=1`, stdin from
+  `PYTHONPATH` and `PYTHONHOME` removed, `DOCS_CLI_NO_UPDATE_CHECK=1`,
+  `PYTHONDONTWRITEBYTECODE=1`, stdin from
   `/dev/null`, and a 120 s timeout. The script enforces D6 even when its
   caller forgets (E10).
 - Output: a header naming the script's git blob sha (`git hash-object`'s
@@ -1185,7 +1155,9 @@ and that `--help`; nothing under test is its own reference.
 | R5 | README.md lists every docs verb and sub-verb | The first `\{([a-z0-9,\-]+)\}` group of `docs --help`, plus the bare `{…}` group of each verb that has one (`project`, `relate`), is a subset of the verbs and sub-verbs on the README's synopsis lines |
 | R6 ×14 | README.md synopsis for `docs <verb>` matches `docs <verb> --help` | One line per README synopsis line, by the rule below. `relate add\|remove` passes only if both sub-verbs' usages match |
 | R7 | README.md does not mention Claude Code | Zero occurrences |
-| R8 | Every README.md blob/main link names a file tracked at HEAD | `git cat-file -e HEAD:<path>` for each distinct link (8 today) |
+| R8a | Every README.md GitHub file link points at the pyproject Repository on main | Each `https://github.com/<owner>/<repo>/(blob\|tree)/<ref>/<path>` link has the `<owner>/<repo>` of `pyproject.toml`'s `[project.urls] Repository` (today `ArtRichards/docs-cli`) and `<ref>` `main` |
+| R8b | Every README.md GitHub file link names a file tracked at HEAD | `git cat-file -e HEAD:<path>` for each distinct path (8 today) |
+| R8c | Every README.md GitHub file link names a file on origin/main | `git cat-file -e origin/main:<path>`, against the local `origin/main` ref; P1.5 confirms that ref equals GitHub's `main` first |
 | R9 ×2 | Bundled references/cli.md (and convention.md) is byte-identical to docs/ | Byte comparison |
 
 **Synopsis rule.** It compares positional shape and flag names, never
@@ -1210,11 +1182,9 @@ positional names (*Check calibration*).
   subset of the usage's flags.
 
 **Expected on the base tree** (`--release-date` = Phase 2's local date):
-exit 1, with FAIL lines exactly as *Acceptance examples* › *Readiness*
-lists them — R2, R3, and R6 for `touch` ([S] against [V]), `stamp` ([S]
-against [V]), `project rename` ([S, S] against [S]) and `project set`
-([S, S] against [V, S]). Every other line passes. After Phase 3, every
-line passes.
+exit 1, failing exactly the reasons *Acceptance examples* › *Readiness*
+names, as R2, R3 and R6 lines; every other line passes. After Phase 3,
+every line passes.
 
 ### P1.2 — `release_probe.py`
 
@@ -1244,11 +1214,11 @@ Together they cover every bullet of the CHANGELOG's 2.1.0 section.
 | Id | Check | Tree and assertion | Source |
 |---|---|---|---|
 | N1 | A milestone trio scaffolded with docs new is linked with free-form edges and promoted to active in one call, and docs check passes | Inline tree. From its directory: `new milestone m`, `new log m-impl`, `new spec m-test-matrix`; `relate add m.md pairs-with` each companion; `lifecycle m.md m-impl.md m-test-matrix.md active`; `check .`. Every call exits 0; all three read `Lifecycle: active`; `m.md` carries both bullets | *Primary use-case acceptance*; CHANGELOG *Added*, *Changed* |
-| N2 | Re-running the same promotion changes no file | N1's tree: the same `lifecycle` call exits 0 and the snapshot is unchanged | CHANGELOG *Added* ("Idempotent") |
+| N2 | Re-running the same promotion changes no file | N1's tree: the same `lifecycle` call, with `--json`, exits 0; its record reads `applied: false`, `index_refreshed: false` and `change: unchanged` for every document; every file's bytes **and mtime** are unchanged, so an identical-content rewrite fails | CHANGELOG *Added* ("Idempotent"); `cli.md` › `docs lifecycle` (*Idempotency*, `--json`) |
 | N3 | A free-form edge to an archived document needs no --reason and rewrites only its source | Inline tree with an archived `archive/2026-08-16/old.md`. `relate add m.md references archive/2026-08-16/old.md` exits 0; `m.md` gains the bullet; nothing but `m.md` and `INDEX.md` changes | CHANGELOG *Changed* ("never read or written") |
 | N4 | docs lifecycle refuses archived as a target, points at docs archive, and changes nothing | Exit 2; stderr contains `docs archive <file> moves lifecycle and location together`; snapshot unchanged | `cli.md` › `docs lifecycle` |
 | N5 | An out-of-grammar relate verb is refused with the grammar named, and nothing changes | `relate add a.md Pairs-With b.md`: exit 2; stderr contains `a free-form verb matching [a-z][a-z0-9-]*`; snapshot unchanged | `cli.md` › `docs relate`; CHANGELOG *Changed* |
-| N6 | An extension lifecycle state set by docs lifecycle is read back by docs list and docs index | Copy of `vocab-extension`: `lifecycle draft-note.md shipped` exits 0; `list --json` reports `draft-note.md` as `shipped`; `index` exits 0 | CHANGELOG *Added*, *Fixed*; `tests/test_cli_list.py` |
+| N6 | An extension lifecycle state set by docs lifecycle is read back by docs list and docs index | Copy of `vocab-extension`: `lifecycle draft-note.md shipped` exits 0; `list --json` reports `draft-note.md` as `shipped`; `index` exits 0 and `INDEX.md` contains the entry `- [draft-note.md](draft-note.md)` | CHANGELOG *Added*, *Fixed*; `tests/test_cli_list.py`; the entry fragment `tests/test_cli_touch.py` pins on this fixture |
 | N7 | An extension-role document appears in INDEX.md | A fresh copy of `vocab-extension`: `index` exits 0, and `INDEX.md` lists `decision-record.md` under `### Active — Adr` | CHANGELOG *Fixed*; `tests/test_cli_index.py` |
 | N8 | On a tree with a non-default date_format, relate links documents dated in that format | Inline `%d-%m-%Y` tree: `relate add a.md precedes b.md` exits 0, writing `precedes: b.md` on `a.md` and `follows: a.md` on `b.md`; `check .` exits 0 | CHANGELOG *Fixed* |
 | N9 | docs stamp refuses a file whose complete block fails the configured vocabulary, writing nothing | A complete block reading `Lifecycle: activ`: exit 1; stderr contains `refusing to re-stamp it`; bytes unchanged | `cli.md` › `docs stamp`; CHANGELOG *Changed* |
@@ -1284,7 +1254,7 @@ contracts plus the runbook's index smoke.
 
 | Id | Check | Assertion | Source | 2.0.0 control |
 |---|---|---|---|---|
-| W1 | docs --version names the expected release | stdout is exactly `docs <expect-version>`; SKIP under `--no-version-check` | M12; runbook smoke | FAIL |
+| W1 | docs --version names the expected release | exit 0 and stdout exactly `docs <expect-version>`; SKIP under `--no-version-check` | M12; runbook smoke | FAIL |
 | W2 | install-skill materialises a skill byte-identical to the repository's bundled skill | `install-skill --dest <tmp>/skill` exits 0; its file set and every byte equal `<repo>/src/docs_cli/skill` (seven files) | runbook smoke; `cli.md` › `install-skill` | FAIL — its bundle differs in six files, which also shows the comparison rejects a wrong bundle |
 | W3 | Re-running install-skill on an identical destination is a no-op | The same `--dest`: exit 0; stderr contains `no-op`; bytes and mtimes unchanged | `cli.md` › `install-skill` (*Idempotency*) | PASS |
 | W4 | install-skill --symlink is refused from a wheel install, leaving the destination absent | A new `--dest` with `--symlink`: exit 2; stderr contains `wheel install`; the destination is not created | `cli.md` › `install-skill` (*Refusals*) | PASS |
@@ -1307,6 +1277,7 @@ $S/env.sh     sourced before every manual command:
               export XDG_STATE_HOME=$S/xdg/state XDG_CACHE_HOME=$S/xdg/cache
               export DOCS_CLI_NO_UPDATE_CHECK=1 PYTHONDONTWRITEBYTECODE=1 PIP_CONFIG_FILE=/dev/null
               unset PIP_INDEX_URL PIP_EXTRA_INDEX_URL TWINE_REPOSITORY TWINE_REPOSITORY_URL TWINE_USERNAME TWINE_PASSWORD
+              unset SOURCE_DATE_EPOCH     (it would move hatchling's fixed mtimes, and with them every sha)
               HOME stays: twine reads ~/.pypirc. The probe redirects HOME for its own subprocesses.
 $S/notes/     captured outputs, copied into the log after build (b)
 $S/a/  $S/r/  copies of (a)'s and the rehearsal's artifacts (dist/ is wiped between builds)
@@ -1318,10 +1289,11 @@ $S/guard-step.sh  the suite guard step extracted per P1.5
 ```
 
 **The host check**, before and after every block that runs a `docs`
-executable: `test ! -e ~/.local/state/docs-cli/install-skill.json` (the
-recorded destination stays absent), and `sha256sum
-~/.cache/docs-cli/update-check.json` equals the Phase 1 baseline recorded in
-the log.
+executable: `sha256sum ~/.cache/docs-cli/update-check.json` equals the Phase
+1 baseline recorded in the log, and the recorded destination
+`~/.local/state/docs-cli/install-skill.json` is as the last authorized step
+left it — absent (`test ! -e`) until Phase 9's skill step (D10), naming the
+expanded `~/.claude/skills/docs` from then on.
 
 **Recording discipline.** Builds (a), the rehearsal and (b) all run on the
 Phase 3 commit `X` with a clean tree, except for the rehearsal's own
@@ -1338,7 +1310,11 @@ tests/manual/release_probe.py --repo . --scratch "$S/probe"`.
 
 **Every commit** (D1, D6):
 ```
-git diff --cached -U0 | grep -nE 'pypi-[A-Za-z0-9_-]{50,}|gh[pousr]_[A-Za-z0-9]{30,}'      # prints nothing
+TOKEN_RE='pypi-[A-Za-z0-9_-]{50,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}'
+if git diff --cached -U0 | grep -qE "$TOKEN_RE"; then         # -q: the match itself is never printed
+  echo "STOP: a token-shaped string is staged (contents not shown) in:"
+  git diff --cached --name-only -G"$TOKEN_RE"; exit 1           # file names only; do not commit
+fi
 git diff --name-only 8515f1c..HEAD | grep -vE \
   '^(docs/|CHANGELOG\.md$|README\.md$|tests/manual/release_(readiness|probe)\.py$|tests/fixtures/expected/docs-INDEX\.md$)'   # prints nothing
 ```
@@ -1425,7 +1401,7 @@ wheel's `docs_cli/skill/` entries must equal the seven files under
 ```
 python3 -m venv "$S/venv-a"
 "$S/venv-a/bin/pip" install --no-deps --no-index "$S/a/docs_cli-2.1.0-py3-none-any.whl"
-diff -r -x __pycache__ "$S/x/a-wheel/docs_cli" "$S/venv-a/lib/python3.12/site-packages/docs_cli"   # empty
+diff -r -x __pycache__ "$S/x/a-wheel/docs_cli" "$S"/venv-a/lib/python3.*/site-packages/docs_cli   # empty
 $PROBE --docs "$S/venv-a/bin/docs" --group all --expect-version 2.1.0    # 25 PASS
 ```
 Then rehearse P1.5's suite guard-step run against `$S/venv-a`.
@@ -1456,7 +1432,7 @@ Then rehearse P1.5's suite guard-step run against `$S/venv-a`.
    python3 -m venv "$S/venv-rehearsal"
    "$S/venv-rehearsal/bin/pip" install --no-cache-dir --no-deps \
        --index-url https://test.pypi.org/simple/ docs-cli-rehearsal==2.1.0
-   diff -r -x __pycache__ "$S/x/a-wheel/docs_cli" "$S/venv-rehearsal/lib/python3.12/site-packages/docs_cli"
+   diff -r -x __pycache__ "$S/x/a-wheel/docs_cli" "$S"/venv-rehearsal/lib/python3.*/site-packages/docs_cli
    ```
 7. `$PROBE --docs "$S/venv-rehearsal/bin/docs" --group all
    --no-version-check`: the result lines equal (a)'s, except W1 is SKIP.
@@ -1488,42 +1464,62 @@ curl -s -o /dev/null -w '%{http_code}' https://pypi.org/pypi/docs-cli/2.1.0/json
 git diff --quiet "$X"..HEAD -- src pyproject.toml README.md LICENSE .gitignore   # release inputs unchanged
 git hash-object tests/manual/release_readiness.py tests/manual/release_probe.py
     # each equals its blob in Release anchors (current), whose D9 re-run covers any change since X
+[ "$(git rev-parse origin/main)" = "$(gh api repos/ArtRichards/docs-cli/branches/main --jq .commit.sha)" ] \
+    || git fetch origin main                      # R8c reads origin/main; record whether a fetch ran
 $READY --repo . --release-date "$(date +%F)"     # exit 0; if R2 alone fails on the date: D7's re-date commit, re-run
 .venv/bin/python -m pytest -q                     # 1671 passed, the two suite-probe replicas included
 git ls-remote origin refs/heads/main && gh auth status    # both exit 0
+python3 -I -c 'import configparser, os, stat
+p = os.path.expanduser("~/.pypirc"); print("mode", oct(stat.S_IMODE(os.stat(p).st_mode)))
+c = configparser.ConfigParser(interpolation=None); c.read(p); print("sections", c.sections())
+for s in ("pypi", "testpypi"):
+    pw = c[s].get("password", "")
+    print(s, "username==__token__", c[s].get("username") == "__token__",
+          "password-starts-pypi-", pw.startswith("pypi-"), "password-len>100", len(pw) > 100)'
+                                                  # the shape command: never prints a value; output = the log's record
 git status --porcelain                            # empty
 ```
-The toolchain versions equal Phase 4's, and `~/.pypirc`'s shape equals Phase
-1's. Then build (c) with Phase 4.2's commands into `$S/c/` and `$S/x/c-wheel`,
+The toolchain versions are recorded with P1.4's Phase 4.0 commands; a
+patch-level difference from Phase 4's is recorded only, because (c) = (a)
+by sha is the byte guard. Then build (c) with Phase 4.2's commands into `$S/c/` and `$S/x/c-wheel`,
 `twine check` both files by name, and confirm: the (c) wheel sha equals (a)'s
 (else D4's remedy); the (c) manifest equals (a)'s recorded manifest; `ls -A
 dist/` shows exactly the two canonical files. `HEAD` is the tag-target
 commit: `TAG_TARGET=$(git rev-parse HEAD)`, recorded in the log.
 
-**Phase 6 — the upload:**
+**Phase 6 — the upload**, immediately after these re-checks:
 ```
+[ "$(date +%F)" = "$(sed -n 's/^## 2\.1\.0 — //p' CHANGELOG.md)" ]   # else back to Phase 5: D7's re-date, then (c) again
+curl -s -o /dev/null -w '%{http_code}' https://pypi.org/pypi/docs-cli/2.1.0/json   # still 404
+ls -A dist/                                       # exactly the two canonical files
+sha256sum dist/docs_cli-2.1.0-py3-none-any.whl dist/docs_cli-2.1.0.tar.gz   # = (c)'s; the wheel = the anchor's (a)
 env -u TWINE_REPOSITORY -u TWINE_REPOSITORY_URL -u TWINE_USERNAME -u TWINE_PASSWORD \
     .venv/bin/twine upload --repository pypi --non-interactive \
     dist/docs_cli-2.1.0-py3-none-any.whl dist/docs_cli-2.1.0.tar.gz
 ```
-Then the per-version JSON's two digests equal (c)'s (polled, at most 10 ×
-30 s).
+Any outcome but exit 0 follows *Error cases*' PyPI-upload row. On exit 0,
+the per-version JSON's two digests equal (c)'s (polled, at most 10 × 30 s).
 
 **Phase 7 — served verification, then the tag and the release:**
 ```
+git worktree add --detach "$S/tag-tree" "$TAG_TARGET"      # immutable fixtures, docs and skill for the probe
 mkdir "$S/dl-served"       # fresh and empty; curl -sSf -o each per-version JSON url into it
 sha256sum "$S"/dl-served/*                                  # = (c) and = the JSON digests
 python3 -m venv "$S/venv-served"
 "$S/venv-served/bin/pip" install --no-cache-dir --no-deps --index-url https://pypi.org/simple/ docs-cli==2.1.0
-diff -r -x __pycache__ "$S/x/c-wheel/docs_cli" "$S/venv-served/lib/python3.12/site-packages/docs_cli"   # empty
-$PROBE --docs "$S/venv-served/bin/docs" --group all --expect-version 2.1.0   # result lines = (a)'s
+diff -r -x __pycache__ "$S/x/c-wheel/docs_cli" "$S"/venv-served/lib/python3.*/site-packages/docs_cli   # empty
+.venv/bin/python "$S/tag-tree/tests/manual/release_probe.py" --docs "$S/venv-served/bin/docs" \
+    --group all --expect-version 2.1.0 --repo "$S/tag-tree" --scratch "$S/probe"   # result lines = (a)'s
+git worktree remove "$S/tag-tree"
 git -C ~/opt/agent-playbook-suite show a997954:.github/workflows/validate.yml \
     | sed -n '1210,1293p' | sed 's/^          //' > "$S/guard-step.sh"   # sha256 = the recorded value
 G=$(mktemp -d -p "$S") && (cd "$G" && PATH="$S/venv-served/bin:$PATH" bash -e "$S/guard-step.sh")
     # exit 0, printing "lifecycle verb: True, free-form relate: True"
 ```
-The guard step's lines 1210–1293 are the step's `run:` block, dedented by
-its ten-space indent. From an empty directory the suite's policy file and
+The probe reads its fixture trees, the docs copy (G1, G2) and the bundled
+skill (W2) from the worktree, so they are the tag target's bytes, whatever
+the working tree holds. The guard step's lines 1210–1293 are the step's
+`run:` block, dedented by its ten-space indent. From an empty directory the suite's policy file and
 skills tree are absent, so it exits 0 exactly when both capabilities read
 True (OQ-4). Only then:
 ```
@@ -1542,18 +1538,26 @@ gh release view v2.1.0
   at least 7.0.0, at Phase 1 and Phase 4. An upgrade would be a toolchain
   change, allowed only before build (a) and only if the check fails; Step 2
   never upgrades.
-- **The 2.0.0 control** is the host's pipx binary, run by the probe with its
-  redirected `HOME` and XDG, so it writes nothing to the pipx venv or host
-  state. W2 is expected FAIL, as P1.2 records.
+- **The 2.0.0 control.** Phase 2 used the host's pipx binary, run by the
+  probe with its redirected `HOME` and XDG, so it wrote nothing to the pipx
+  venv or host state. A D9 re-run uses a scratch install instead: `pip
+  download --no-deps --only-binary :all: --index-url https://pypi.org/simple/
+  docs-cli==2.0.0` into a fresh directory, its sha checked against M29's
+  served digest (E1) before anything runs, then `pip install --no-deps
+  --no-index` of that file into a fresh venv. W2 is expected FAIL, as P1.2
+  records. Phase 9's update notice still runs the host binary, by design.
 - **M29's tree-dependent values** come from committed fixture trees (P1.2,
   OQ-5).
 - **The sdist download** uses the per-version JSON `url` with `curl` and a
   digest check, not `pip download --no-binary :all:`, which runs the build
   backend on downloaded code on a host holding tokens.
-- **The backend pin.** (a)'s `Generator: hatchling X.Y.Z` is recorded. D4's
-  remedy is `.venv/bin/python -m build --dependency-constraints-txt
-  "$S/backend-pin.txt"`, the file holding `hatchling==X.Y.Z`. Nothing pins
-  the backend in `pyproject.toml`.
+- **The backend pin.** (a)'s `Generator:` line and a build environment that
+  reproduces (a) byte for byte — hatchling and each of its resolved
+  dependencies — are recorded in *Release anchors (current)*. D4's remedy is
+  `.venv/bin/python -m build --dependency-constraints-txt
+  "$S/backend-pin.txt"`, the file pinning that whole environment, one
+  `name==version` per line. `pyproject.toml` stays unpinned (*Taste anchors*
+  › *Dependency policy*).
 - **The runbook correction list for Phase 10** (Step 1 does not edit the
   runbook): the items in Phase 10's objective, plus — `twine check` with
   explicit filenames; the twine newest-version check; the sdist download via
@@ -1561,7 +1565,9 @@ gh release view v2.1.0
   D9 superseding the rehearsal's "fix, bump patch, rerun"; the stale *Notes*
   line "version is hardcoded in two places" (obsolete since M12); the stale
   *Quality gate* counts (271/369/401); README synopsis arity, now checked by
-  readiness (M29 lesson 4); and the verbatim guard-step run.
+  readiness (M29 lesson 4); the verbatim guard-step run; the non-disclosing
+  token search; the upload-outcome precedence; and `unset SOURCE_DATE_EPOCH`
+  with the recorded build environment.
 
 ## Setup questions (Q1–Q2)
 

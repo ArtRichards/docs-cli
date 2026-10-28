@@ -15,12 +15,15 @@ Reads the tree under `--repo` (default: this script's repository) and the
     `--changelog-base`;
   - README.md lists every verb and sub-verb, each synopsis matches its
     `--help` usage in positional shape and flags (never in names), it does
-    not mention Claude Code, and every `blob/main/` link names a tracked file;
+    not mention Claude Code, and every GitHub file link points at the
+    `pyproject.toml` Repository on `main` and names a file present both at
+    HEAD and on `origin/main`;
   - the bundled `references/cli.md` and `references/convention.md` are
     byte-identical to `docs/`.
 
-The references are the arguments, the reviewed CHANGELOG text and the
-`--help` of `--docs`; nothing under test is its own reference. Lives under
+The references are the arguments, the reviewed CHANGELOG text, the `--help`
+of `--docs`, `pyproject.toml`'s Repository URL and the local `origin/main`
+ref; nothing under test is its own reference. Lives under
 `tests/manual/` so pytest does NOT collect it; it is a pre-publish release
 check. Stdlib-only and black-box: every `docs` call is a subprocess with
 HOME and XDG state redirected to a temporary directory and the update check
@@ -51,7 +54,9 @@ _VERB_GROUP = re.compile(r"\{([a-z0-9,\-]+)\}")  # the Agent Playbook Suite guar
 _TOKEN = re.compile(r"\[[^\]]*\]|<[^>]+>(?:\.\.\.)?|\S+")
 _SYNOPSIS_TOKEN = re.compile(r"^\[.*\]$|^<[^>]+>(\.\.\.)?$|^[A-Z][A-Z0-9_-]*$|^\.\.\.$")
 _FLAG = re.compile(r"--[a-z][a-z0-9-]*")
-_BLOB_LINK = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/blob/main/([^)\s#]+)")
+_GITHUB_FILE_LINK = re.compile(
+    r"https://github\.com/([^/\s]+/[^/\s]+)/(?:blob|tree)/([^/\s]+)/([^)\s#]+)"
+)
 
 
 def git_blob_sha(path: Path) -> str:
@@ -60,8 +65,12 @@ def git_blob_sha(path: Path) -> str:
 
 
 def isolated_env(tmp: Path) -> dict[str, str]:
-    """The caller's environment with HOME and XDG state under `tmp`, update check off."""
-    env = dict(os.environ)
+    """The caller's environment with HOME and XDG state under `tmp`, update check off.
+
+    PYTHONPATH and PYTHONHOME are dropped, so the executable under test loads only
+    its own installation.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
     for key, sub in (("HOME", "home"), ("XDG_STATE_HOME", "state"), ("XDG_CACHE_HOME", "cache")):
         (tmp / sub).mkdir(parents=True, exist_ok=True)
         env[key] = str(tmp / sub)
@@ -232,7 +241,7 @@ def check_changelog(report: Report, args: argparse.Namespace, repo: Path) -> Non
     )
 
 
-def check_readme(report: Report, docs_help: Help, repo: Path) -> None:
+def check_readme(report: Report, docs_help: Help, repo: Path, repository: str) -> None:
     readme = (repo / "README.md").read_text(encoding="utf-8")
     top = docs_help.usage() or []
     group = next((m for m in map(_VERB_GROUP.fullmatch, top) if m), None)
@@ -283,12 +292,24 @@ def check_readme(report: Report, docs_help: Help, repo: Path) -> None:
         "README.md does not mention Claude Code",
         f"{mentions} mention(s)" if mentions else None,
     )
-    links = sorted(set(_BLOB_LINK.findall(readme)))
-    dead = [p for p in links if git(repo, "cat-file", "-e", f"HEAD:{p}").returncode != 0]
+    links = sorted(set(_GITHUB_FILE_LINK.findall(readme)))
+    home = repository.removesuffix("/").removesuffix(".git")
+    slug = home.removeprefix("https://github.com/")
+    if slug == home:
+        stray = [f"pyproject.toml's Repository URL {repository!r} is not on github.com"]
+    else:
+        stray = sorted({f"{s}/{ref}" for s, ref, _ in links if (s, ref) != (slug, "main")})
     report.check(
-        "Every README.md blob/main link names a file tracked at HEAD",
-        f"not tracked at HEAD: {dead}" if dead else None,
+        "Every README.md GitHub file link points at the pyproject Repository on main",
+        f"links elsewhere: {stray}" if stray else None,
     )
+    paths = sorted({path for _, _, path in links})
+    for ref, where in (("HEAD", "tracked at HEAD"), ("origin/main", "on origin/main")):
+        dead = [p for p in paths if git(repo, "cat-file", "-e", f"{ref}:{p}").returncode != 0]
+        report.check(
+            f"Every README.md GitHub file link names a file {where}",
+            f"missing at {ref}: {dead}" if dead else None,
+        )
 
 
 def _iso_date(text: str) -> str:
@@ -329,7 +350,8 @@ def main(argv: list[str]) -> int:
     )
     check_changelog(report, args, repo)
     with tempfile.TemporaryDirectory() as tmp:
-        check_readme(report, Help(docs, isolated_env(Path(tmp))), repo)
+        repository = project.get("urls", {}).get("Repository", "")
+        check_readme(report, Help(docs, isolated_env(Path(tmp))), repo, repository)
     for name in ("cli.md", "convention.md"):
         bundled = repo / "src" / "docs_cli" / "skill" / "references" / name
         same = bundled.read_bytes() == (repo / "docs" / name).read_bytes()

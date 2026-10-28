@@ -57,14 +57,19 @@ Step 1 reviewers see the irreversible commands before they run. It
 re-verified the registries, the credentials' shape and the toolchain with
 no drift, and found a fourth README synopsis that lags the CLI. Phase 2
 wrote the two release checks under `tests/manual/`: readiness fails for
-exactly the expected six reasons, and the probe passes on the development
+exactly the expected reasons, and the probe passes on the development
 build while the host's 2.0.0 binary fails every 2.1-only check. Phase 3
 dated the CHANGELOG and fixed the four README synopses, and readiness now
 passes. Phase 4 built the 2.1.0 wheel and sdist, passed all 25 probe checks
 on the wheel, and rehearsed the upload on TestPyPI under
 `docs-cli-rehearsal`: the served bytes matched the local build, the
 installed payload matched the wheel, and a rebuild reproduced both shas.
-The PyPI upload waits for Step 1's reviews. The milestone has three
+Both Step 1 reviews returned. GPT blocked on two defects in the frozen
+procedure: a token search that would print any token it caught, and
+conflicting stop rules for a partial upload. Both are fixed, with the
+reviewers' other findings, and the strengthened release checks were re-run
+against the wheel and the rehearsal. A targeted GPT re-review follows, and
+the PyPI upload waits for the pass to close. The milestone has three
 documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
@@ -72,12 +77,13 @@ documents:
   readiness record;
 - a [test matrix](pypi-publish-2-1-0-test-matrix.md).
 
-Setup measured the release read-only. The 2.1.0 slots are free on PyPI and
-under the TestPyPI rehearsal name, the credentials are present, and the suite
-is GREEN at 1671. Because M30 already bumped the version, the release inputs
-need little:
-- the CHANGELOG needs only its date and the removal of one sentence;
-- the README needs four synopsis fixes.
+Setup measured the release read-only. The 2.1.0 slots were free on PyPI
+and under the TestPyPI rehearsal name, the credentials were present, and
+the suite was GREEN at 1671. Because M30 had already bumped the version,
+the release inputs needed little:
+- the CHANGELOG needed only its date and the removal of one sentence;
+- the README needed its lagging synopses fixed. Setup found three and
+  Phase 1 a fourth; Phase 3 fixed all four.
 
 The operator chose to upload automatically once Step 1's reviews close and
 the TestPyPI rehearsal passes. The Step 0 review found four blockers in the

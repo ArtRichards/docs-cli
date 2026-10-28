@@ -28,8 +28,10 @@ the test matrix stay synchronized with it. The phases are the
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
 - Progress: **Step 1's phases are complete on
   `pypi-publish-2-1-0/phases-1-4` (Phases 1–4, 2026-10-28), with the
-  TestPyPI rehearsal recorded GO.** Step 1 review-pass-001 is open, with
-  both provider slots pending; Step 2 starts only after it closes (D2).
+  TestPyPI rehearsal recorded GO.** Step 1 review-pass-001 has both
+  providers returned and every finding resolved in the review-resolution
+  checkpoint; a targeted GPT re-review is pending, and Step 2 starts only
+  after the pass closes (D2).
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
@@ -923,19 +925,21 @@ replaces this section's values and says so.
 | CHANGELOG release date `D` | `2026-10-28` |
 | Wheel (a) = (b) | `docs_cli-2.1.0-py3-none-any.whl` `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` |
 | Sdist (a) = (b) | `docs_cli-2.1.0.tar.gz` `1d327a97912ab70ac53829e2af2d568c119d8ce555e9032264e744ba1d6d07d4` |
-| Build backend (D4) | `Generator: hatchling 1.33.0`; the remedy's pin file would hold `hatchling==1.33.0` |
+| Build backend (D4) | `Generator: hatchling 1.33.0` |
+| Build environment reproducing (a) | `hatchling==1.33.0`, `packaging==26.3`, `pathspec==1.1.1`, `pluggy==1.7.0`, `tomlkit==0.15.2`, `trove-classifiers==2026.9.21.13` — resolved by a verbose scratch rebuild from `X` (2026-10-28, `SOURCE_DATE_EPOCH` unset) that reproduced both (a) shas; (a)'s own log did not print them. D4's remedy pins exactly these |
 | `Metadata-Version` | `2.5` |
 | Rehearsal (TestPyPI) | `docs-cli-rehearsal` `2.1.0`, uploaded 2026-10-28T20:52:26Z (wheel) and 20:52:27Z (sdist) |
 | Rehearsal wheel, served = local = JSON | `docs_cli_rehearsal-2.1.0-py3-none-any.whl` `fd2f787c85d95d3ace8944f0f00846f0644ebca4f69e3feb422dbff910b7b318` |
 | Rehearsal sdist, served = local = JSON | `docs_cli_rehearsal-2.1.0.tar.gz` `0241b9eb0ad906f3136b886f4ef08b83ef37ee723d3ec51db4036c4b1ecc3d1a` |
 | The next rehearsal version under D9 | `2.1.0.post1` (404 at Phase 1) |
-| `release_readiness.py` blob | `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` (D9 re-run; Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`) |
-| `release_probe.py` blob | `88043c87b4eff5c8dcc164b06e4160c6d1ea444d` (D9 re-run; Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`) |
-| D9 re-run | 2026-10-28, after the Step 1 audit changed both scripts' docstrings only: see *Step 1 audit* below. Every result equals the Phase 4 record |
+| `release_readiness.py` blob | `cb542802bba447d4fb7ee72eaf1b454b2773653f` — 25 lines (R8 split into R8a–R8c). Earlier: Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`; the audit's D9 re-run `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` |
+| `release_probe.py` blob | `2d6a0c31b1cac8ee25ef858671002e3b7f9d7830`. Earlier: Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`; the audit's D9 re-run `88043c87b4eff5c8dcc164b06e4160c6d1ea444d` |
+| D9 re-runs | Two, both 2026-10-28: after the audit's docstring change (*Step 1 audit*), and after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*). Every probe result line equals the Phase 4 record below |
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
 | Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` |
-| `~/.pypirc` shape | as Phase 1's re-verification records it |
+| `~/.pypirc` shape (P1.5's command) | `mode 0o600`; `sections ['distutils', 'pypi', 'testpypi']`; `pypi username==__token__ True password-starts-pypi- True password-len>100 True`; the same line for `testpypi` |
+| `origin/main` (R8c's reference) | `193fc718439c39facfa7b3b60066c61d925314f7`, equal to GitHub's `main` via `gh api`; no fetch was needed |
 
 **(a)'s sdist manifest** — every member outside `docs/` and `tests/`, from
 the top directory `docs_cli-2.1.0/`, 15 lines:
@@ -1080,52 +1084,170 @@ src pyproject.toml README.md LICENSE .gitignore` holds.
   `docs/pypi-publish-2-1-0-impl.md#step-1-review-pass-001`).
 - Predecessor: `Step 0 review-pass-001` — closed, `final-sync` `ready`,
   synced in `8515f1c`. That entry and its frozen packet are unchanged.
-- Status: `open`, awaiting both provider slots.
-- Frozen packet:
+- Status: both provider slots are terminal, and both returned. Every
+  finding is dispositioned in the review-resolution checkpoint
+  (`pypi-publish-2-1-0(phase 1-4): resolve Step 1 review-pass-001
+  findings`, named in the return report). The targeted re-review is
+  **required and pending**, and `final-sync` is `pending`.
+- Frozen packet (recorded by the conductor):
   - slug `pypi-publish-2-1-0`, step 1, branch
     `pypi-publish-2-1-0/phases-1-4`;
   - base `8515f1c09b89811073d68c85c241869b3fdcbdaf` (the closed Step 0
     sync);
-  - review HEAD: the review-ready commit that adds this entry. An entry
-    cannot carry its own commit's sha, so the implementation agent's
-    return report names it, and the conductor records it here when it
-    freezes the packet;
-  - Step 1 commits: `ef9ae84` (Phase 1), `d6f62f4` (Phase 2), `a25cb5d`
-    (Phase 3, which is `X`), `f03cb31` (Phase 4), `eec64ff` (the audit
-    fixes), then the review-ready commit;
+  - review HEAD **`b1f31b40bc16526ae4275c7c6753503e8bc96251`**, the
+    review-ready commit; Step 1 commits `ef9ae84` (Phase 1), `d6f62f4`
+    (Phase 2), `a25cb5d` (Phase 3, `X`), `f03cb31` (Phase 4), `eec64ff` (the
+    audit fixes) and `b1f31b4`;
   - changed paths: `CHANGELOG.md`, `README.md`,
     `docs/pypi-publish-2-1-0.md`, `docs/pypi-publish-2-1-0-impl.md`,
     `docs/pypi-publish-2-1-0-test-matrix.md`, `docs/status.md`,
     `tests/manual/release_readiness.py`, `tests/manual/release_probe.py`;
   - project `docs`, project path `""`, artifact stem `pypi-publish-2-1-0`;
-  - risk Standard. Before anything irreversible (D2), this pass judges the
-    frozen contract — *Decisions (Phase 1 — BINDING)* P1.1–P1.6, including
-    P1.5's Step 2 upload, tag and release commands, and the edited stop
-    table — the release checks' adequacy, the release-input edits, and
-    Phase 4's GO evidence and *Release anchors (current)*.
+    tracker row 200 `active`, claim `be7f809`, branch root
+    `pypi-publish-2-1-0/`; risk Standard, under the Step 1 test-quality
+    clause;
+  - both reviewers received the identical provider-neutral prompt and
+    packet, isolated from each other.
+
+  At `b1f31b4` the conductor re-ran: ruff, the formatter and mypy clean (53
+  files); `pytest -q` 1671 passed; `docs check .` exit 0; the INDEX snapshot
+  identical; the TestPyPI rehearsal's digests equal the anchors; PyPI's
+  `docs-cli/2.1.0` per-version JSON returns 404.
 - Tracker: `milestone-plan.md` in the docs root; owning project `docs`;
   project path empty; artifact stem `pypi-publish-2-1-0`; active semantic
   slug `pypi-publish-2-1-0`; row
   `200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate`;
   claim checkpoint `be7f809`; semantic branch root `pypi-publish-2-1-0/`.
-- Latest results at the review-ready state:
-  - ruff clean; 52 files formatted; mypy no issues in 53 files;
-  - `pytest -q` **1671 passed**; 1671 collected;
-  - `docs check .` exit 0; the INDEX dry-run, the snapshot and both mirrors
-    identical;
-  - readiness 23/23 (`--release-date 2026-10-28`);
-  - the probe: 25/25 on wheel (a), 24 + W1 SKIP on the TestPyPI-served
-    rehearsal, 21/21 on the editable build, and the 2.0.0 control failing
-    exactly the 13 release-bound checks;
-  - TestPyPI rehearsal **GO**; wheel (a) = (b) = `2c5fa0b3…`.
-- Safe to re-run in review: the fast gate; readiness; the probe's contract
-  group on `.venv/bin/docs` with `--scratch` outside the repository. Not to
-  be re-run: any upload — `docs-cli-rehearsal` 2.1.0 is spent on TestPyPI,
-  and D9 names `2.1.0.post1` for a re-rehearsal.
-- Claude slot: `pending`.
-- GPT slot: `pending`.
-- Findings and dispositions: pending.
-- Re-review: pending.
+- Results at the review-ready state `b1f31b4`, as submitted: ruff clean; 52
+  files formatted; mypy no issues in 53 files; 1671 passed and collected;
+  `docs check .` exit 0 with the INDEX, snapshot and mirrors identical;
+  readiness 23/23; the probe 25/25 on wheel (a), 24 + W1 SKIP on the
+  rehearsal, 21/21 on the editable build, and the 2.0.0 control failing
+  exactly the 13 release-bound checks; the rehearsal GO.
+- Claude slot: `returned`.
+  - Identity: Anthropic Claude family, Claude Opus 5.5 (`claude-opus-5-5`),
+    host-reported; a fresh `milestone-reviewer` sub-agent at xhigh effort.
+  - What it re-ran independently: `pytest` 1671 passed; readiness 23/23 at
+    `b1f31b4` and the six frozen failures at `8515f1c`; a fresh-clone build
+    with hatchling 1.33.0 that reproduced wheel (a)'s sha `2c5fa0b3…` and
+    the 15-line sdist manifest; the rehearsal wheel through `pip download`,
+    sha `fd2f787c…`, its `docs_cli/` byte-equal; the probe 25/25 on its own
+    wheel; a scratch 2.0.0 control at 12 PASS / 13 FAIL; an extra 1.8.0
+    control failing G3–G10; the guard-step sha `2e2fc83d…` equal to the
+    anchor; host state unchanged.
+  - Disclosed: it briefly wrote a scratch copy of this log into the shared
+    review directory, then moved it into its own subdirectory; it read no
+    other reviewer's files.
+  - Risk-gate decision: continue automatically, strongly recommending
+    claude-S1–S4 before the pass closes.
+- GPT slot: `returned`.
+  - Identity: OpenAI GPT family; Codex CLI 0.164.0, run as `codex exec -m
+    gpt-6-astra -c model_reasoning_effort=xhigh -s read-only`. Both
+    identities are recorded: the session log reports `model: gpt-6-astra`,
+    while the reviewer self-described as "GPT-5 … Codex; no finer
+    identifier".
+  - What it re-ran: ruff, the formatter and mypy; the 1671-test collection;
+    `docs check .` and the INDEX parity; readiness's functions, 23 PASS; the
+    blob anchors; the 14 source-backed sdist entries against `X`. Its
+    filesystem was read-only, so it could not repeat the suite, the builds
+    or the installs, and TestPyPI did not resolve from its sandbox.
+  - Risk-gate decision: block until fixed.
+
+### Findings and dispositions
+
+Line references are to `b1f31b4`. "Plan" is `pypi-publish-2-1-0.md`. Every
+disposition is **fixed** in the review-resolution checkpoint, except where a
+waiver is stated under *Taste triage*.
+
+| # | Source ids | Severity | Finding | Fix and evidence |
+|---|---|---|---|---|
+| 1 | gpt-B1, claude-N2 | blocker (gating hygiene) | The token search (plan :1341) was `grep -nE`, which prints the matched line — a caught token would be copied into the session log (D6). Its pattern also missed `github_pat_` tokens | P1.4's gate is now `grep -qE` (no output); on a match it prints `STOP …` and `git diff --cached --name-only -G"$TOKEN_RE"` — file names only — and exits 1. The pattern adds `github_pat_[A-Za-z0-9_]{20,}`. **Proof:** in a scratch repository, synthetic `pypi-`, `gho_` and `github_pat_` strings each made the gate exit 1 naming only `secret.txt`; the synthetic value appeared in its output **0** times, and the gate's text extracted verbatim from the plan behaved the same. A clean stage exits 0. Every earlier run of the old search printed nothing, so nothing leaked |
+| 2 | gpt-B2, claude-DP-1 | blocker | The stop table (plan :581, :589–591) gave conflicting rules for a mixed accept/refuse upload and for transient faults, and could say "nothing uploaded" when one file was published | **Conductor decision (DP-1, option A, Standard authority; narrows D2 in the safe direction, does not reopen it).** The authentication and partial-upload rows are replaced by one *PyPI upload (Phase 6)* row, stated once: poll the per-version JSON (at most 10 × 30 s) and record exactly what is published; then (1) any hard refusal — any 4xx, including 400 metadata, 401/403 and 409 or a reused filename — stops; (2) one file confirmed published and the other failed transiently → one by-name re-send of the missing file; (3) any other error, including a transient fault with nothing confirmed, stops for the operator with no automatic retry; (4) publication still uncertain stops. "Nothing uploaded" is recorded only when the poll lists no file. The rehearsal row keeps OQ-2 for TestPyPI only, with its own order explicit (a 4xx stops whichever file it hits). P1.5 Phase 6 and *Assumptions* reference the row |
+| 3 | claude-S1 | should-fix | The stop table's D9 row (plan :583) and matrix :100 still described the pre-audit `tests/manual` diff | Both now read `git diff --quiet "$X"..HEAD -- src pyproject.toml README.md LICENSE .gitignore` plus each script's `git hash-object` against *Release anchors (current)* |
+| 4 | claude-S2 | should-fix | Stop-table coverage gaps against P1.5 | P1.5 Phase 6 re-checks, immediately before `twine upload`: the date (item 16), the 404, `ls -A dist/` (exactly the two files), and both shas against (c) and the anchor. A new stop row covers any P1.5 Phase 5–7 result that differs from its stated expectation (readiness failing on anything but D7's date, `pytest` not 1671, the 404 probe answering 200, the JSON never listing both files, a guard-step sha mismatch, empty release notes). A patch-level toolchain difference is record-only, because (c) = (a) by sha is the byte guard; anything larger stops. The 404 row also covers the Phase 6 re-check |
+| 5 | claude-S3 | should-fix | The credential-shape command was never frozen | P1.5 Phase 5 freezes a `python3 -I -c` configparser command that prints only the mode, the section names and three booleans per index. Run verbatim from the plan: `mode 0o600`, `sections ['distutils', 'pypi', 'testpypi']`, and `True True True` for both `pypi` and `testpypi` — recorded in the anchors as the comparison record |
+| 6 | claude-S4 | should-fix | Phase 7's served-wheel probe read the mutable working tree (`--repo .`: G1/G2's docs copy, W2's skill reference) | P1.5 Phase 7 runs the probe from `git worktree add --detach "$S/tag-tree" "$TAG_TARGET"` with `--repo "$S/tag-tree"`, then removes the worktree. Mechanism checked: a worktree at `b1f31b4` ran the probe 25/25 on wheel (a), and its removal left `git worktree list` with one entry |
+| 7 | gpt-S1 | should-fix | Phase 9 would inherit `env.sh`'s scratch `XDG_STATE_HOME`, recording the host refresh under scratch; the universal "destination absent" check had no Phase 9 exception | Phase 9's skill step runs `env -u XDG_STATE_HOME -u XDG_CACHE_HOME …` and verifies the host's `~/.local/state/docs-cli/install-skill.json` names the expanded `~/.claude/skills/docs`, with no record under `$S/xdg/state`. The notice step unsets `DOCS_CLI_NO_UPDATE_CHECK`, `CI` and `DO_NOT_TRACK`, which `env.sh` would otherwise leave suppressing it. P1.3's host check and the host-state stop row are phase-specific: absent until Phase 9's skill step, then naming `~/.claude/skills/docs` |
+| 8 | gpt-S2 | should-fix | `version_is()` (probe :450) ignored the exit code | W1 now requires exit 0 and the expected stdout. **Negative control:** a wrapper printing `docs 2.1.0` and exiting 3 fails exactly W1 ("exit 3, printed 'docs 2.1.0'"); the pre-review probe passed it 25/25 |
+| 9 | gpt-S3 | should-fix | N6 (probe :228) required only `docs index` exit 0 | N6 now requires `INDEX.md` to contain `- [draft-note.md](draft-note.md)`, the entry fragment `tests/test_cli_touch.py` pins on this fixture — not a whole-file golden. **Negative control:** an `index` that drops that entry fails exactly N6; the pre-review probe passed it |
+| 10 | gpt-S4 | should-fix | N2 (probe :181) compared contents only, so an identical-byte rewrite passed | N2 re-runs the promotion with `--json` and requires `applied: false`, `index_refreshed: false` and `change: unchanged` for every document (`cli.md` › `docs lifecycle`), plus unchanged bytes **and mtimes** for every file. **Negative control:** a `lifecycle` that rewrites every `.md` with identical bytes fails exactly N2 ("rewrote ['INDEX.md', 'm-impl.md', 'm-test-matrix.md', 'm.md']"); the pre-review probe passed it |
+| 11 | gpt-S5, claude-N6 | should-fix | R8 (readiness :286) dropped the link's owner/repository and checked only local `HEAD` | R8 is now three lines. R8a: every GitHub file link's `<owner>/<repo>` equals `pyproject.toml`'s `[project.urls] Repository` (`ArtRichards/docs-cli`), and its ref is `main`. R8b: each path is tracked at HEAD. R8c: each path exists at `origin/main`. The local ref is used without a fetch: `origin/main` = `193fc71…` = GitHub's `main` per `gh api`, so no fetch was needed; P1.5 Phase 5 compares the two and fetches only if they differ, recording which. **Negative controls** on scratch clones: a foreign owner (9a) and a `dev` ref (9b) fail exactly R8a; a path tracked at HEAD but absent from `origin/main` (9c) fails exactly R8c. Readiness has 25 lines |
+| 12 | claude-N1 | nit | (a)'s resolved build environment was not recorded; `SOURCE_DATE_EPOCH` was not guarded | A verbose scratch rebuild from `X` reproduced both (a) shas and resolved hatchling 1.33.0, packaging 26.3, pathspec 1.1.1, pluggy 1.7.0, tomlkit 0.15.2 and trove-classifiers 2026.9.21.13. That set is in the anchors, and D4's remedy pins all of it (P1.6). `env.sh` now unsets `SOURCE_DATE_EPOCH` |
+| 13 | claude-N3 | nit | `lib/python3.12/site-packages` was hard-coded (plan :1428, :1459, :1518) | All three use `lib/python3.*/site-packages`, globbed by the shell; nothing imports the package to find it |
+| 14 | claude-N4 | nit | `status.md` :75–80 had the wrong tense, and the synopsis count was misattributed | Rewritten in the past tense: setup found three, Phase 1 a fourth, and Phase 3 fixed all four |
+| 15 | claude-N5 | nit | The PyPI page links `blob/main/CHANGELOG.md`, which reads `UNRELEASED` until the stack is merged | D13 says the merge should follow promptly, for that reason, and the final-report wording says so |
+| 16 | claude-N7 | nit | The CHANGELOG is dated at Phase 5, but the upload could fall after midnight | Phase 6 re-checks `date +%F` against the CHANGELOG heading immediately before the upload; a mismatch returns to Phase 5 for D7's re-date and a new build (c) |
+| 17 | claude-N8 | nit | The D9 re-run control used the host pipx binary | P1.6: D9 re-runs use a scratch 2.0.0 — `pip download --only-binary :all: --no-deps`, the sha checked against M29's served `bcd8aa45…` before anything runs, then a `--no-index` install. This pass's D9 re-run used it |
+| 18 | claude-N9 | nit | Plan :355 was not wrapped | Rewrapped |
+| 19 | claude (hidden-test note) | nit | The probe's `isolated_env` passed `PYTHONPATH` and `PYTHONHOME` through | Both are dropped in both scripts' `isolated_env`, so the executable under test loads only its own installation |
+
+### D9 re-run for the strengthened checks
+
+Items 8–11 and 19 changed both scripts after Phase 4 — readiness now at
+blob `cb542802bba447d4fb7ee72eaf1b454b2773653f` (25 lines), the probe at
+`2d6a0c31b1cac8ee25ef858671002e3b7f9d7830`. No release input changed, so `X`
+stands and there is no re-rehearsal.
+
+| Run | Result |
+|---|---|
+| Rebuild from `X` in a scratch clone (verbose, `SOURCE_DATE_EPOCH` unset) | wheel `2c5fa0b3…` and sdist `1d327a97…` — equal to (a); `Generator: hatchling 1.33.0`; its extraction equals (a)'s |
+| Probe on a fresh venv of that wheel, `--group all --expect-version 2.1.0` | exit 0, 25 passed; result lines **identical** to the Phase 4 record |
+| Probe on a fresh `--index-url https://test.pypi.org/simple/ --no-deps` install of `docs-cli-rehearsal==2.1.0` (its `docs_cli/` equal to (a)'s before running) | exit 0, 24 passed, 1 skipped; lines **identical** to the Phase 4 record |
+| Probe on the scratch 2.0.0 control (wheel sha `bcd8aa45…` = E1, checked before running) | exit 1, 12 passed, 13 failed; statuses identical to Phase 2's |
+| Probe on the editable build, contract group | exit 0, 21 passed |
+| Readiness on the tree, `--docs` the editable build, wheel (a) and the fresh rehearsal | exit 0, 25 passed, each |
+| Readiness on a clone of the base `8515f1c` | exit 1, 19 passed, 6 failed — exactly the reasons *Acceptance examples* › *Readiness* names |
+| Readiness mutants 1–6, 1b, 5b, 9a, 9b, 9c on clones of `b1f31b4` | each killed by exactly its intended check; every other line PASS |
+| The host check, after every block | unchanged; no pipx-venv file newer than this session's `env.sh` |
+
+### Taste triage
+
+These are conductor decisions, binding under Standard authority:
+- **gpt-B1** (gating hygiene): **fixed** (item 1).
+- **claude-T1** (state-once: the readiness reason count was restated in
+  P1.1, the matrix and `status.md`, despite the acceptance example's "one
+  statement" claim): **fixed**. P1.1 and the matrix point at the acceptance
+  example, `status.md` no longer gives the number, and the claim now reads
+  "the trio and `status.md` point here; the log records measured results".
+  **Trial data point for Phase 10:** a second drift of the same count, after
+  Phase 1's sweep of nine sites. Restated counts drift even under the
+  convention, and the review caught them.
+- **claude-T2** (Phase 4–7 objectives re-listed P1.4/P1.5's sequences):
+  **fixed**. Each objective now points at its P1 block and keeps only its
+  exit criteria.
+- **claude-T3** (P1.6 restated the dependency policy): **fixed**. It refers
+  to *Taste anchors* › *Dependency policy*.
+- **claude-T4** (G6 and G9 mirror product-test golden strings, which is
+  brittle for the next release): **waived for Step 1**. The strings are
+  frozen by product tests and held across 2.0 → 2.1, as the 2.0.0 control's
+  G passes show. Carried to Step 3's `/simplify` as an unresolved taste
+  finding.
+- **Patch bloat** (the scripts at about 997 lines against the 300–500
+  anchor; now 1033): logged and carried to Step 3's `/simplify`; no
+  action now.
+- **GPT:** no other subjective findings.
+
+### Re-review
+
+**Required — targeted** (conductor decision). Trigger: item 2 changes the
+frozen stop logic at the irreversible step, and items 8–11 change the
+release checks. The conductor freezes a new packet at the
+review-resolution checkpoint and sends it to the GPT reviewer only, scoped
+to the resolutions of gpt-B1, gpt-B2 and gpt-S1–S5. Its result is recorded
+here at finalization.
+
+### Verification at the review-resolution checkpoint
+
+- ruff clean; 52 files formatted; mypy no issues in 53 files.
+- `pytest -q` **1671 passed**; 1671 collected.
+- `docs check .` exit 0; the INDEX dry-run, the snapshot and both mirrors
+  identical.
+- Readiness **25/25** (`--release-date 2026-10-28`).
+- The non-disclosing token search: clean on the staged diff.
+- The D1 scope check prints nothing; `git diff --quiet a25cb5d -- src
+  pyproject.toml README.md LICENSE .gitignore` holds; both scripts run
+  under `python3 -I`, import no `docs_cli`, and hold no host path.
+
 - final-sync: `pending`.
 
 ## Milestone completion summary

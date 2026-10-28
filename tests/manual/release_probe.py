@@ -41,7 +41,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 _VERB_GROUP = re.compile(r"\{([a-z0-9,\-]+)\}")  # the Agent Playbook Suite guard's regex
@@ -54,8 +54,12 @@ def git_blob_sha(path: Path) -> str:
 
 
 def isolated_env(tmp: Path) -> dict[str, str]:
-    """The caller's environment with HOME and XDG state under `tmp`, update check off."""
-    env = dict(os.environ)
+    """The caller's environment with HOME and XDG state under `tmp`, update check off.
+
+    PYTHONPATH and PYTHONHOME are dropped, so the executable under test loads only
+    its own installation.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
     for key, sub in (("HOME", "home"), ("XDG_STATE_HOME", "state"), ("XDG_CACHE_HOME", "cache")):
         (tmp / sub).mkdir(parents=True, exist_ok=True)
         env[key] = str(tmp / sub)
@@ -72,7 +76,16 @@ def snapshot(root: Path) -> Snapshot:
     }
 
 
-def changed(before: Snapshot, after: Snapshot) -> list[str]:
+def files_under(root: Path) -> dict[str, tuple[bytes, int]]:
+    """Every file's bytes and mtime, so a rewrite of identical bytes still shows."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns)
+        for p in sorted(root.rglob("*"))
+        if p.is_file() and "__pycache__" not in p.parts
+    }
+
+
+def changed(before: Mapping[str, object], after: Mapping[str, object]) -> list[str]:
     return sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k))
 
 
@@ -181,9 +194,16 @@ def trio_promoted(p: Probe) -> str | None:
 def promotion_rerun_is_noop(p: Probe) -> str | None:
     if p.trio is None:
         return "the promoted trio was not built"
-    before = snapshot(p.trio)
-    run = p("lifecycle", "m.md", "m-impl.md", "m-test-matrix.md", "active", cwd=p.trio)
-    return run.brief() if run.code != 0 else p.unchanged(p.trio, before)
+    before = files_under(p.trio)
+    run = p("lifecycle", "m.md", "m-impl.md", "m-test-matrix.md", "active", "--json", cwd=p.trio)
+    if run.code != 0:
+        return run.brief()
+    record = json.loads(run.out)
+    changes = {e["path"]: e["change"] for e in record["edits"]}
+    if record["applied"] or record["index_refreshed"] or set(changes.values()) != {"unchanged"}:
+        return f"the --json record reports a write: {record}"
+    moved = changed(before, files_under(p.trio))
+    return f"rewrote {moved} (bytes or mtime)" if moved else None
 
 
 def freeform_edge_to_archived_target(p: Probe) -> str | None:
@@ -237,7 +257,10 @@ def extension_state_read_back(p: Probe) -> str | None:
     if states.get("draft-note.md") != "shipped":
         return f"docs list reports draft-note.md as {states.get('draft-note.md')!r}"
     index = p("index", cwd=root)
-    return f"`docs index`: {index.brief()}" if index.code != 0 else None
+    if index.code != 0:
+        return f"`docs index`: {index.brief()}"
+    entry = "- [draft-note.md](draft-note.md)"
+    return None if entry in (root / "INDEX.md").read_text() else f"INDEX.md lacks {entry!r}"
 
 
 def extension_role_in_index(p: Probe) -> str | None:
@@ -449,22 +472,13 @@ def relocated_archive_is_date_drift(p: Probe) -> str | None:
 
 def version_is(expected: str) -> Check:
     def check(p: Probe) -> str | None:
-        printed = p("--version", cwd=p.run_dir).out.rstrip("\n")
-        return (
-            None
-            if printed == f"docs {expected}"
-            else f"printed {printed!r}, expected 'docs {expected}'"
-        )
+        run = p("--version", cwd=p.run_dir)
+        printed = run.out.rstrip("\n")
+        if run.code != 0 or printed != f"docs {expected}":
+            return f"{run.brief()}, printed {printed!r}; expected exit 0 and 'docs {expected}'"
+        return None
 
     return check
-
-
-def files_under(root: Path) -> dict[str, tuple[bytes, int]]:
-    return {
-        p.relative_to(root).as_posix(): (p.read_bytes(), p.stat().st_mtime_ns)
-        for p in sorted(root.rglob("*"))
-        if p.is_file() and "__pycache__" not in p.parts
-    }
 
 
 def skill_materialised_identically(p: Probe) -> str | None:

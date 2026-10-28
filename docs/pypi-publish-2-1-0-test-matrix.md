@@ -35,7 +35,7 @@ explicit workflow gate:
 - the two `tests/manual/` scripts (D5), outside discovery;
 - `twine check`;
 - the D4 comparisons;
-- the D9 diff;
+- the D9 checks (the release-input diff and the script blobs);
 - the D6 token search;
 - `docs check .`, the INDEX snapshot and the reference byte identity.
 
@@ -51,7 +51,7 @@ task plan's *Decisions (Phase 1 — BINDING)* (P1.1–P1.5).
 |---|---|---|
 | C1 | `pyproject.toml`, the packaging pins, both artifact filenames and `docs --version` (canonical builds) all read 2.1.0. No version literal moves | D1; E6 |
 | C2 | The CHANGELOG section is dated and has no publish-state sentence. A diff against M30's section at `bf09748` shows only those two lines changed. It is re-dated before build (c) if the day rolled | D7; E6 |
-| C3 | The README lists every `docs --help` verb and sub-verb. Every synopsis line matches its verb's `--help` usage in positional shape and flags. There is no "Claude Code", and every `blob/main/` link resolves, including after the Step 3 archive | D5, D8; E7 |
+| C3 | The README lists every `docs --help` verb and sub-verb. Every synopsis line matches its verb's `--help` usage in positional shape and flags. There is no "Claude Code", and every GitHub file link points at the `pyproject.toml` Repository on `main` and resolves at HEAD and on `origin/main`, including after the Step 3 archive | D5, D8; E7 |
 | C4 | Surface parity: `--help` agrees with the CHANGELOG surface, the references are byte-identical, and M30's stale-wording grep returns 0 | runbook *Surface parity*; E5 |
 | C5 | The tree-wide gate is GREEN at the Phase 4 baseline, at the tag-target commit and at closeout: 1671 passed; ruff, the formatter and mypy are clean; `docs check .` exits 0; the INDEX is idempotent and in lockstep | runbook *Quality gate*; E5 |
 | C6 | Every build passes `twine check`, with `Metadata-Version` and the backend version recorded. The dependency oracle holds: every `Requires-Dist` carries an `extra ==` marker, with `Provides-Extra: dev` and `Requires-Python: >=3.11`. CHANGELOG is in neither artifact, and the wheel carries the seven skill files | D4; plan *Non-functional constraints*; E4 |
@@ -94,10 +94,10 @@ each id's display name and assertion are frozen.
 
 | Contract clause | Visible test / explicit check | Hidden/generalization check | Property/stateful check | Mutation target | Fuzz/benchmark/security/schema note |
 |---|---|---|---|---|---|
-| Success path — release inputs (C1–C4) | `release_readiness.py`: R1 (C1); R2–R4 (C2); R5–R8 (C3); R9 (C4). `tests/test_packaging.py` A3/B1/B2/C2 (existing). The stale-wording grep and surface parity (C4, P1.4) | — | — | P1.4 mutants 1–6, 1b and 5b, each killed by exactly one R id | — |
+| Success path — release inputs (C1–C4) | `release_readiness.py`: R1 (C1); R2–R4 (C2); R5–R8c (C3); R9 (C4). `tests/test_packaging.py` A3/B1/B2/C2 (existing). The stale-wording grep and surface parity (C4, P1.4) | — | — | P1.4 mutants 1–6, 1b and 5b, and the link mutants 9a–9c, each killed by exactly one R id | — |
 | Success path — wheel (a) (C6, C7) | `twine check`; the manifest checks; `release_probe.py`, both groups: N1–N9, S1–S2, G1–G10, W1–W4 | a fresh venv per run; an editable build runs the contract group only | W3 and N2: the `install-skill` and `docs lifecycle` re-runs are idempotent | mutant 7: the 2.0.0 control fails N1–N9, S1, S2, W1, W2 and passes the rest | schema: the dependency oracle; `Metadata-Version` recorded |
 | Success path — served artifacts (C8, C11, C12) | `release_probe.py` on the TestPyPI-served wheel (W1 skipped) and the PyPI-served wheel; the suite's capability probes: S1, S2, the replicas and the extracted guard step (P1.5) | index-served artifacts; the rehearsal-name build | identical probe results across the three wheel installs, apart from the rehearsal's W1 | — | security: single-index `--no-deps` installs |
-| Error path — upload gate (C9, C19) | the Phase 5 checklist, against the stop table; `dist/` contents; the D9 diff, including `tests/manual` and `.gitignore` | — | — | — | security: explicit filenames, `--non-interactive` |
+| Error path — upload gate (C9, C19) | the Phase 5 checklist, against the stop table; `dist/` contents; the D9 checks: the release-input diff (`.gitignore` included) and each script's blob against *Release anchors (current)*; the non-disclosing token search | — | — | — | security: explicit filenames, `--non-interactive` |
 | Boundary — chain of custody (C10) | the sha table (a), (b), (c) and served; the rehearsal sha and payload; the sdist member manifest; the per-version JSON digests | backend drift between Step 1 and Step 2 (D4 remedy) | sha equality is transitive across the four wheels | mutants 8, 8b and 8c (P1.4): the sha, payload and manifest comparators each report a planted difference | security: served-versus-local is the tamper check |
 | Idempotency/retry/state (C8, C14) | D9's `.postN` re-rehearsal; the one-file partial-upload retry; XDG redirection | — | the host recorded-destination file is unchanged before Phase 9 | — | — |
 | Public release surfaces (C13, C18) | `git ls-remote origin 'refs/tags/v2.1.0^{}'`; `gh release view v2.1.0`; the archive dry-run and apply; `docs check .` after the archive; the README link re-check | — | — | — | — |
@@ -111,7 +111,8 @@ task plan's P1.1 and P1.2; their display names state behaviour without
 milestone or decision ids.
 
 **`tests/manual/release_readiness.py`** — **new.** Covers C1–C4 with R1–R9
-(23 lines on this tree). In Phase 2 it is RED for exactly the reasons in the
+(25 lines on this tree since the Step 1 review split R8 into R8a–R8c). In
+Phase 2 it is RED for exactly the reasons in the
 task plan's *Acceptance examples* › *Readiness*.
 
 **`tests/manual/release_probe.py`** — **new.** Covers C7, C8, C11, C12 and
@@ -244,9 +245,11 @@ mutation and hidden-suite tooling are not configured in this project.
 - Visible tests: **1671 passed, 1671 collected** at Phase 1 (`8515f1c`),
   Phase 3 and the Phase 4 baseline (`X` = `a25cb5d`).
 - Release checks: **Phase 2 RED recorded.** Readiness fails exactly the
-  six frozen lines (R2, R3, R6 ×4) and its green control passes 23/23. The
-  probe passes 21/21 on the editable build. **Phase 4 GREEN:** readiness
-  23/23 at `X`; the probe 25/25 on wheel (a) and 24 + W1 SKIP on the
+  lines *Acceptance examples* › *Readiness* names (as R2, R3 and R6), and
+  its green control passes every line. The probe passes 21/21 on the
+  editable build. **Phase 4 GREEN:** readiness passes every line (23 at
+  Phase 4; 25 after the review split R8); the probe 25/25 on wheel (a) and
+  24 + W1 SKIP on the
   TestPyPI-served rehearsal; the extracted suite guard step reads True /
   True against (a) and fails against 2.0.0. Phases 7 and 8 record the
   served wheel.
@@ -255,21 +258,29 @@ mutation and hidden-suite tooling are not configured in this project.
   (a) and the TestPyPI-served rehearsal give one result set (W1 aside); the
   PyPI-served wheel is Step 2's.
 - Property/stateful: N2 and W3 (idempotent re-runs) pass on every
-  executable that has the verb; wheel (a) = (b) by sha; the rehearsal's
+  executable that has the verb, and both are write-sensitive (bytes and
+  mtimes; N2 also reads the `--json` no-op record); wheel (a) = (b) by sha; the rehearsal's
   `docs_cli/` payload equals (a)'s, downloaded and installed; no run changed
   the repository or host state.
 - Mutation: readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
-  exactly its intended check; mutant 7 is the control above; the
-  comparator mutants 8, 8b and 8c each report their planted difference.
-- Script provenance (C19): every run printed its blob sha. The Step 1
-  audit's docstring-only change was re-run under D9 against wheel (a) and
-  a fresh install of the served rehearsal, with identical results; the
-  log's anchors carry the current blobs.
+  exactly its intended check, and the review's link mutants 9a–9c are 3/3;
+  mutant 7 is the control above; the comparator mutants 8, 8b and 8c each
+  report their planted difference. The review's three probe negative
+  controls — `--version` printing the right text with exit 3, an `index`
+  that drops the promoted entry, and a `lifecycle` re-run that rewrites
+  identical bytes — each fail exactly W1, N6 or N2, and each passed the
+  probe as it stood before the review.
+- Script provenance (C19): every run printed its blob sha. Both script
+  changes after Phase 4 — the audit's docstrings and the review's
+  strengthened checks — were re-run under D9 against wheel (a) and a fresh
+  install of the served rehearsal, with identical result lines; the log's
+  anchors carry the current blobs.
 - Fuzz: not applicable.
 - Benchmark/security/schema: schema — `twine check` passed on both builds,
   `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in
   neither artifact, and the wheel carries the seven skill files. Security —
-  shape-only credential checks, explicit-filename `--non-interactive`
+  shape-only credential checks, a token search that never prints what it
+  matches (proven on synthetic tokens), explicit-filename `--non-interactive`
   upload, a single-index `--no-deps` install with the payload compared
   before execution, served = local = JSON digests. Benchmark is not
   applicable; the Phase 4 run took about seven minutes.
@@ -287,10 +298,10 @@ mutation and hidden-suite tooling are not configured in this project.
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
 - changed-files branch coverage: not configured
-- mutation score on touched modules: 11/11 hand-applied mutants detected
-  (readiness 1–6, 1b, 5b; comparators 8, 8b, 8c), each by its intended
-  check; the 2.0.0 control (mutant 7) fails exactly the 13 release-bound
-  checks
+- mutation score on touched modules: 17/17 hand-applied mutants detected
+  (readiness 1–6, 1b, 5b, 9a–9c; comparators 8, 8b, 8c; probe negative
+  controls for W1, N6 and N2), each by its intended check; the 2.0.0
+  control (mutant 7) fails exactly the 13 release-bound checks
 - property/stateful result: pass (Phase 4)
 - fuzz result: not applicable
 - benchmark delta: not applicable; elapsed times recorded
