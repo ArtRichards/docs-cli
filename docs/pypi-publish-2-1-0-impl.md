@@ -86,7 +86,7 @@ the test matrix stay synchronized with it. The phases are the
 | 3. Create Data/Fixtures | Complete | 2026-10-28 | The CHANGELOG dated `2.1.0 — 2026-10-28` with its sentence removed (D7); the four lagging README synopses reconciled (D8); the diff equals the Phase 2 green control's. Probe trees confirmed scratch-only. Readiness GREEN, 23/23. 1671 passed. This commit is `X`. |
 | 4. Run Tests (RED Baseline) | Complete | 2026-10-28 | GREEN baseline at `X` (`a25cb5d`): the gate (1671), readiness 23/23, the stale-wording grep 0. Build (a) `2c5fa0b3…`/`1d327a97…`, hatchling 1.33.0, `twine check` and the dependency oracle pass. (a) probe 25/25; the guard step reads True / True. The TestPyPI rehearsal served = local = JSON, payloads equal, probe 24 + W1 SKIP. (b) = (a). Mutants 8, 8b, 8c behave. **GO.** |
 | 5. Update Base Interfaces | Complete | 2026-10-28 – 2026-10-29 | G2 calibrated (OQ-S2-1) with its D9 script re-run (`f7f8f62`); CHANGELOG re-dated 2026-10-29 under D7 (`33c936f`, the tag target); P1.5's Phase 5 block all as expected, 1671 passed; build (c): wheel = (a), manifest = (a)'s, `twine check` passed, `dist/` exactly two files. Nothing uploaded. |
-| 6. Implement Offline/Core Path | Pending | — | The upload under D2, naming both files explicitly. The per-version JSON's digests equal (c)'s. |
+| 6. Implement Offline/Core Path | Complete | 2026-10-29 | The re-checks passed at 00:03:59 CET; one `twine upload` naming both files, exit 0 at 00:04:04 CET (23:04 UTC on 2026-10-28). The per-version JSON listed both files after about a minute, with digests equal to (c)'s. Nothing re-sent. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Served verification first: the shas against (c), both probe groups, and the suite's capability probes. Only then the tag and the release (D13), with the peeled-tag check. |
 | 8. Run Tests (GREEN) | Pending | — | The GREEN record: readiness and the full fast gate at the tag-target commit; the three-wheel probe results in the matrix; the suite full guard's expected failure. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Host integration per D10, with the task plan's Phase 9 commands: the update notice from the 2.0.0 binary, then the binary, the skill, the sweep, a dogfood `docs check`, and the liveness walk. |
@@ -1613,6 +1613,50 @@ recorded destination absent).
 child of the tag target and changes documents only, so the release inputs
 still diff empty against `X`. Every Phase 5 exit criterion holds; nothing
 has been uploaded.
+
+## Phase 6 — Implement Offline/Core Path
+
+Date: 2026-10-29, 00:03–00:05 CET. The PyPI upload under D2, after the
+pre-upload checkpoint `2e04d43` made `TAG_TARGET` and (c)'s shas durable.
+
+**6.0 Resume check.** HEAD `2e04d43`; the per-version JSON 404; no local
+or remote `v2.1.0`; `TAG_TARGET` in scratch equal to the committed anchor.
+A fresh upload, not a resume.
+
+**6.1 P1.5's re-checks**, run by one script that reaches `twine` only if
+every one passes, at 00:03:59 CET (23:03:59 UTC):
+- `date +%F` = `2026-10-29` = the CHANGELOG heading;
+- the per-version JSON: `404`;
+- `ls -A dist/`: exactly `docs_cli-2.1.0-py3-none-any.whl` and
+  `docs_cli-2.1.0.tar.gz`;
+- `sha256sum`: `2c5fa0b3…` and `c120fc1d…` — (c)'s, the wheel equal to the
+  anchor (a).
+
+**6.2 The upload.** `env -u TWINE_REPOSITORY -u TWINE_REPOSITORY_URL -u
+TWINE_USERNAME -u TWINE_PASSWORD .venv/bin/twine upload --repository pypi
+--non-interactive dist/docs_cli-2.1.0-py3-none-any.whl
+dist/docs_cli-2.1.0.tar.gz` — **exit 0** at 00:04:04 CET (23:04:04 UTC),
+after uploading both files to `https://upload.pypi.org/legacy/` and printing
+`View at: https://pypi.org/project/docs-cli/2.1.0/`. Its captured output
+was searched for token-shaped strings by count before anyone read it: 0.
+The `~/.pypirc` token is therefore valid (*Assumptions*, validated by use).
+
+**6.3 The outcome.** Twine exited 0, so the PyPI-upload stop row did not
+apply. The per-version JSON returned 404 at 00:04:12, 00:04:19 and 00:04:49
+(about a minute of lag, as in Phase 4) and listed both files at 00:05:19:
+
+| File | JSON sha256 | = (c) | `upload_time` (UTC) | Size | Yanked |
+|---|---|---|---|---|---|
+| `docs_cli-2.1.0-py3-none-any.whl` | `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` | yes | 2026-10-28T23:04:01Z | 231029 | no |
+| `docs_cli-2.1.0.tar.gz` | `c120fc1db71db08306ec1e002dedb1adcd95dc08bd5a8c1f775cda772696404d` | yes | 2026-10-28T23:04:03Z | 1901359 | no |
+
+**D7 and the two calendars.** The upload ran at 00:04 CET on 2026-10-29,
+which is 23:04 UTC on 2026-10-28, so PyPI's `upload_time` carries the
+previous UTC day. D7 dates the heading by the local calendar date of the
+upload, so `## 2.1.0 — 2026-10-29` is correct; both are recorded here.
+
+Exactly one upload ran; no file was re-sent. `docs-cli==2.1.0` is live on
+PyPI at <https://pypi.org/project/docs-cli/2.1.0/>.
 
 ## Milestone completion summary
 

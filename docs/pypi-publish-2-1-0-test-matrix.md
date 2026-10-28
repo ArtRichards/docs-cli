@@ -247,8 +247,11 @@ mutation and hidden-suite tooling are not configured in this project.
   commit (`33c936f`, Phase 5).
 - Upload gate (C9): at Phase 5 every pre-upload precondition held at the
   tag target, and build (c)'s wheel equals (a) with (a)'s sdist manifest
-  (the log's *Phase 5*). Phase 6 re-checks them immediately before the
-  upload.
+  (the log's *Phase 5*). Phase 6 re-checked them immediately before the
+  upload, which ran once and exited 0.
+- Chain of custody (C10, partial): the wheel sha is one value across (a),
+  (b) and (c), and PyPI's per-version JSON digests equal (c)'s for both
+  files (the log's *Phase 6*). Phase 7 compares the downloaded bytes.
 - Release checks: **Phase 2 RED recorded.** Readiness fails exactly the
   lines *Acceptance examples* › *Readiness* names (as R2, R3 and R6), and
   its green control passes every line. The probe passes 21/21 on the

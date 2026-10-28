@@ -11,7 +11,7 @@ _Generated 2026-10-29. 16 docs active, 64 archived._
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in…. Updated 2026-10-28.
+- [status.md](status.md) — _status_ — **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in…. Updated 2026-10-29.
 
 ### Active — Charter
 

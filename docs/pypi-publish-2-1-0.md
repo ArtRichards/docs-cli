@@ -854,7 +854,7 @@ running `pip install -U docs-cli`, and the suite release that pins 2.1.0.
 - [x] **The pre-publish evidence:** the gate, build (a) and its manifest,
       `twine check`, the local probe, the rehearsal with its byte checks, (b),
       and GO. Consumer: the Step 1 reviewers, and D2.
-- [ ] **`docs-cli==2.1.0` on PyPI**, with a bit-perfect chain of custody (D4).
+- [x] **`docs-cli==2.1.0` on PyPI**, with a bit-perfect chain of custody (D4).
       Consumer: users and agents, 2.0.0 installs through the update notice,
       and the suite pin bump.
 - [ ] **Served verification, then the tag and the release** (D13). Consumer:
@@ -1085,7 +1085,7 @@ Branch `pypi-publish-2-1-0/simplify`.
 - [x] Phase 3 — Create Data/Fixtures — CHANGELOG dated; README reconciled
 - [x] Phase 4 — Run Tests (RED Baseline) — pre-publish GREEN baseline: gate, build, smoke, TestPyPI rehearsal
 - [x] Phase 5 — Update Base Interfaces — pre-upload gate; tag-target build
-- [ ] Phase 6 — Implement Offline/Core Path — real PyPI upload
+- [x] Phase 6 — Implement Offline/Core Path — real PyPI upload
 - [ ] Phase 7 — Update Tool/Wrapper Layer — served verification; then tag and release
 - [ ] Phase 8 — Run Tests (GREEN) — GREEN record at the tag-target commit
 - [ ] Phase 9 — Integrate / Accept / Dogfood — update notice; host binary and skill; sweep

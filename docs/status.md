@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 Related:
 - pairs-with: milestone-plan.md
@@ -47,6 +47,12 @@ Related:
 **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in the canonical tracker, [Milestone Plan](milestone-plan.md); this file links to it and never restates it.**
 
 ## Current milestone
+
+**M31 Step 2 in progress (2026-10-29): docs-cli 2.1.0 is on PyPI.** The
+upload ran once, under the operator's automatic-release authorization, and
+PyPI's digests match the tag-target build. Served verification, the tag and
+release, and the host refresh follow; the
+[implementation log](pypi-publish-2-1-0-impl.md) carries the record.
 
 **M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI
 rehearsal is GO, and Step 1's review pass is closed.**
