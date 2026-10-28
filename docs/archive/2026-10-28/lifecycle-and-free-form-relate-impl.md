@@ -1,13 +1,14 @@
 # M30 — Lifecycle verb and free-form `docs relate` — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-10-28
+Archived: 2026-10-28
 
 Related:
-- pairs-with: lifecycle-and-free-form-relate.md
-- pairs-with: lifecycle-and-free-form-relate-test-matrix.md
+- pairs-with: archive/2026-10-28/lifecycle-and-free-form-relate.md
+- pairs-with: archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md
 
 ## Overview
 
@@ -22,7 +23,7 @@ checklist and the test matrix synchronized.
 - Milestone: `lifecycle-and-free-form-relate` — M30, Lifecycle verb and
   free-form `docs relate`
 - Tracker: order 100, `active` since the claim commit `2ad941e`, no
-  dependencies ([milestone-plan.md](milestone-plan.md))
+  dependencies ([milestone-plan.md](../../milestone-plan.md))
 - Started: 2026-10-26 (milestone setup); Step 1 (Phases 1–4) started
   2026-10-27 on `lifecycle-and-free-form-relate/phases-1-4`
 - Step 1: **complete (2026-10-27)** — Phases 1–4 done, the same-instance
@@ -173,12 +174,12 @@ observation as Q5.
 - Read the inputs end to end: `CLAUDE.md` (skill update channels), the
   `create-milestones` skill with its playbook and phase reference, the shared
   quality model, tracker contract and operator-interaction policy;
-  [milestone-plan.md](milestone-plan.md)'s canonical tracker and *Ongoing
-  conventions*; [charter.md](charter.md); the pinned specs
-  ([cli.md](cli.md), [convention.md](convention.md),
-  [architecture.md](architecture.md), [test-strategy.md](test-strategy.md));
-  [status.md](status.md); and the 2026-10-26, 2026-08-15 and 2026-08-09
-  entries of [feedback-log.md](feedback-log.md). Read the closest precedents
+  [milestone-plan.md](../../milestone-plan.md)'s canonical tracker and *Ongoing
+  conventions*; [charter.md](../../charter.md); the pinned specs
+  ([cli.md](../../cli.md), [convention.md](../../convention.md),
+  [architecture.md](../../architecture.md), [test-strategy.md](../../test-strategy.md));
+  [status.md](../../status.md); and the 2026-10-26, 2026-08-15 and 2026-08-09
+  entries of [feedback-log.md](../../feedback-log.md). Read the closest precedents
   at their setup commits — M28a's plan and log as committed in `7f7853b`, and
   M16's test matrix, the project's only earlier one.
 - Read the code the milestone extends: `RECIPROCAL_INVERSES` /

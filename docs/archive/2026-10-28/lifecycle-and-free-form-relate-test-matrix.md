@@ -1,13 +1,14 @@
 # M30 — Lifecycle verb and free-form `docs relate` — Test Matrix
 
-Lifecycle: active
+Lifecycle: archived
 Role: spec
 Project: docs
 Updated: 2026-10-28
+Archived: 2026-10-28
 
 Related:
-- pairs-with: lifecycle-and-free-form-relate.md
-- pairs-with: lifecycle-and-free-form-relate-impl.md
+- pairs-with: archive/2026-10-28/lifecycle-and-free-form-relate.md
+- pairs-with: archive/2026-10-28/lifecycle-and-free-form-relate-impl.md
 
 ## Risk level
 

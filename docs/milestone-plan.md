@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: plan
 Project: docs
-Updated: 2026-10-26
+Updated: 2026-10-28
 
 Related:
 - implements: charter.md
@@ -47,7 +47,7 @@ M-number survives only as a prose label.
 
 | Order | Milestone | State | Depends on | Notes |
 |---:|---|---|---|---|
-| 100 | [lifecycle-and-free-form-relate](lifecycle-and-free-form-relate.md) | active | — | M30 — `docs lifecycle` verb + one-sided free-form `docs relate`; from feedback-log 2026-10-26 |
+| 100 | [lifecycle-and-free-form-relate](archive/2026-10-28/lifecycle-and-free-form-relate.md) | complete | — | M30 — `docs lifecycle` verb + one-sided free-form `docs relate`; from feedback-log 2026-10-26 |
 
 ## Sequencing
 

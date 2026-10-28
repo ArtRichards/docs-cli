@@ -48,31 +48,36 @@ Related:
 
 ## Current milestone
 
-**M30 implementation complete and reviewed (2026-10-28).**
-[`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) has
-finished all ten phases:
-- The contract (Step 1) is reviewed and frozen.
+**M30 complete and archived (2026-10-28).**
+[`lifecycle-and-free-form-relate`](archive/2026-10-28/lifecycle-and-free-form-relate.md)
+is complete: all ten phases, the Step 0–2 reviews, and Step 3's second
+`/simplify` pass and closeout. The task plan, its
+[implementation log](archive/2026-10-28/lifecycle-and-free-form-relate-impl.md)
+and its [test matrix](archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md)
+moved together to `archive/2026-10-28/`. The archive used an explicit
+`--cascade-only` scope that selected exactly the two companions.
 - `docs lifecycle` and one-sided free-form `docs relate` are wired.
 - `parse()` honours the tree's config at every call site.
 - The bundled skill, the specs and the README describe the new surface.
-- The version is bumped to 2.1.0, **unreleased**. A separate publish
-  milestone ships it; the hand-off is recorded in
+- It is implemented but **unreleased**, pending the 2.1.0 publish
+  milestone. The version is 2.1.0, under a `## 2.1.0 — UNRELEASED`
+  CHANGELOG section, and the publish hand-off is recorded in
   [`feedback-log.md`](feedback-log.md).
 
-The full suite of 1670 tests is GREEN. A hand-applied mutation smoke killed
-all 47 mutants. A dogfood run on throwaway copies of this tree completed the
-primary use case — scaffold, link and promote a milestone trio — with zero
-hand-edits. Both Agent Playbook Suite probes pass against a locally built
-2.1.0 wheel. The Step 2 review is closed, and the milestone awaits its
-Step 3 closeout. Per-phase evidence is in the
-[implementation log](lifecycle-and-free-form-relate-impl.md).
+The full suite of 1671 tests is GREEN. A hand-applied mutation smoke killed
+all 47 mutants. Step 3's simplify pass made the free-form TARGET check read
+plainly, proved that its refusals are unchanged, and added one test to pin
+them. A dogfood run on throwaway copies of this tree completed the primary use
+case — scaffold, link and promote a milestone trio — with zero hand-edits.
+Both Agent Playbook Suite probes pass against a locally built 2.1.0 wheel.
+Milestone state lives in the [Milestone Plan](milestone-plan.md).
 
 **M30 milestone setup complete (2026-10-27).**
-[`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) — a
+[`lifecycle-and-free-form-relate`](archive/2026-10-28/lifecycle-and-free-form-relate.md) — a
 `docs lifecycle` verb and one-sided free-form `docs relate` — now has a full
 ten-phase task plan, an
-[implementation log](lifecycle-and-free-form-relate-impl.md) and a
-[test matrix](lifecycle-and-free-form-relate-test-matrix.md), all three
+[implementation log](archive/2026-10-28/lifecycle-and-free-form-relate-impl.md) and a
+[test matrix](archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md), all three
 `active`. Setup's eleven measurements found that a vocabulary extension or a
 non-default `date_format` already breaks every verb except `docs check`,
 because `parse()` ignores the tree's config; the operator brought that fix
@@ -94,7 +99,7 @@ Playbook Suite milestone-tracker methodology: `plan.md` became
 owns order, state and next work; new milestones take semantic slugs; and the
 four release impl logs that had stayed at the root (M17, M20, M24, M29) were
 archived to `archive/2026-10-26/`. The first post-2.0 milestone,
-[`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) (M30), is
+[`lifecycle-and-free-form-relate`](archive/2026-10-28/lifecycle-and-free-form-relate.md) (M30), is
 registered there from the 2026-10-26 feedback-log entry.
 
 **docs-cli 2.0.0 shipped to PyPI on 2026-08-16.** M29 — PyPI publish 2.0.0 is

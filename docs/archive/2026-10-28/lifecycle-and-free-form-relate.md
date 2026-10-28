@@ -1,15 +1,17 @@
 # M30 — Lifecycle verb and free-form `docs relate`
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-10-28
+Archived: 2026-10-28
+Archived-reason: Milestone M30 complete; docs-cli 2.1.0 implemented and unreleased, pending its publish milestone
 
 Related:
 - child-of: milestone-plan.md
 - implements: charter.md
-- pairs-with: lifecycle-and-free-form-relate-impl.md
-- pairs-with: lifecycle-and-free-form-relate-test-matrix.md
+- pairs-with: archive/2026-10-28/lifecycle-and-free-form-relate-impl.md
+- pairs-with: archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md
 - pairs-with: cli.md
 - pairs-with: convention.md
 - pairs-with: test-strategy.md

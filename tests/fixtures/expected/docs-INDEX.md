@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-10-28. 16 docs active, 61 archived._
+_Generated 2026-10-28. 13 docs active, 64 archived._
 
 ## Project — docs
 
@@ -19,22 +19,16 @@ _Generated 2026-10-28. 16 docs active, 61 archived._
 
 ### Active — Plan
 
-- [milestone-plan.md](milestone-plan.md) — _plan_ — This table is the canonical tracker under the Agent Playbook Suite milestone contract: it alone owns milestone…. Updated 2026-10-26.
+- [milestone-plan.md](milestone-plan.md) — _plan_ — This table is the canonical tracker under the Agent Playbook Suite milestone contract: it alone owns milestone…. Updated 2026-10-28.
 
 ### Active — Spec
 
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-10-28.
-- [lifecycle-and-free-form-relate-test-matrix.md](lifecycle-and-free-form-relate-test-matrix.md) — _spec_ — Standard. Updated 2026-10-28.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-10-27.
-
-### Active — Milestone
-
-- [lifecycle-and-free-form-relate.md](lifecycle-and-free-form-relate.md) — _milestone_ — - Milestone: M30 (first post-2.0 milestone; first under the canonical tracker) - Slug: `lifecycle-and-free-form-relate`…. Updated 2026-10-28.
 
 ### Active — Log
 
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-28.
-- [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md) — _log_ — Chronological implementation log for M30 — Lifecycle verb and free-form `docs relate` (semantic slug…. Updated 2026-10-28.
 
 ### Active — Decision
 
@@ -59,6 +53,9 @@ _Generated 2026-10-28. 16 docs active, 61 archived._
 
 ## Archived
 
+- [archive/2026-10-28/lifecycle-and-free-form-relate-impl.md](archive/2026-10-28/lifecycle-and-free-form-relate-impl.md) — _log_ — Chronological implementation log for M30 — Lifecycle verb and free-form `docs relate` (semantic slug…. Updated 2026-10-28.
+- [archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md](archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md) — _spec_ — Standard. Updated 2026-10-28.
+- [archive/2026-10-28/lifecycle-and-free-form-relate.md](archive/2026-10-28/lifecycle-and-free-form-relate.md) — _milestone_ — - Milestone: M30 (first post-2.0 milestone; first under the canonical tracker) - Slug: `lifecycle-and-free-form-relate`…. Updated 2026-10-28.
 - [archive/2026-10-26/m17-pypi-publish-impl.md](archive/2026-10-26/m17-pypi-publish-impl.md) — _log_ — Chronological log of work on M17 — PyPI publish 1.6.0. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-10-26.
 - [archive/2026-10-26/m20-pypi-publish-impl.md](archive/2026-10-26/m20-pypi-publish-impl.md) — _log_ — Chronological log of work on M20 — PyPI publish 1.6.5. Append a section per runbook phase (operator prep → pre-publish…. Updated 2026-10-26.
 - [archive/2026-10-26/m24-pypi-publish-impl.md](archive/2026-10-26/m24-pypi-publish-impl.md) — _log_ — Chronological log of work on **M24 — PyPI publish 1.8.0**. Append a section per runbook phase (operator prep →…. Updated 2026-10-26.
