@@ -280,6 +280,14 @@ mutation and hidden-suite tooling are not configured in this project.
   The suite's full guard against the served wheel fails with exactly the
   ten lines frozen before the run (C12; the log's *Phase 8*): the guard
   working, not a regression.
+- Host integration (C15–C17): the host's 2.0.0 binary printed the update
+  notice once, last on stderr, with its exit code unchanged (C16); `pipx
+  upgrade` brought the host binary to 2.1.0 from the index, its payload equal
+  to the served wheel's, and the skill at `~/.claude/skills/docs` is
+  byte-identical to the served wheel's, recorded as the destination, the
+  backup symlink untouched (C15); the read-only sweep's census hit every
+  known site, and the suite and plugin cache are untouched (C17; the log's
+  *Phase 9*).
 - Property/stateful: N2 and W3 (idempotent re-runs) pass on every
   executable that has the verb, and both are write-sensitive (bytes and
   mtimes; N2 also reads the `--json` no-op record); wheel (a) = (b) by sha; the rehearsal's

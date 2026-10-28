@@ -89,7 +89,7 @@ the test matrix stay synchronized with it. The phases are the
 | 6. Implement Offline/Core Path | Complete | 2026-10-29 | The re-checks passed at 00:03:59 CET; one `twine upload` naming both files, exit 0 at 00:04:04 CET (23:04 UTC on 2026-10-28). The per-version JSON listed both files after about a minute, with digests equal to (c)'s. Nothing re-sent. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-10-29 | Chain of custody bit-perfect for wheel and sdist; the served install's payload = (c); the probe 25/25 on the served wheel, lines identical to (a)'s; the guard step True / True. Then `v2.1.0` annotated at `33c936f`, pushed, peeled remote = the tag target; the GitHub release created with `--verify-tag`, *Latest*. |
 | 8. Run Tests (GREEN) | Complete | 2026-10-29 | At the tag target `33c936f`: ruff, the formatter and mypy clean; 1671 passed and collected; both replicas pass; `docs check .` 0; snapshot and mirrors identical; INDEX idempotent (stamp normalised); readiness 25/25. One result set across the three wheel installs. The suite's full guard fails with exactly the ten lines frozen before the run. |
-| 9. Integrate / Accept / Dogfood | Pending | — | Host integration per D10, with the task plan's Phase 9 commands: the update notice from the 2.0.0 binary, then the binary, the skill, the sweep, a dogfood `docs check`, and the liveness walk. |
+| 9. Integrate / Accept / Dogfood | Complete | 2026-10-29 | The 2.0.0 notice observed on the first attempt; `pipx upgrade` to 2.1.0 (served payload; pipx also touched its shared-libs pip marker, recorded); the skill refreshed byte-identical at `~/.claude/skills/docs`, now the recorded destination; the sweep census hit every oracle site, suite and cache untouched; dogfood `docs check` 0; liveness walked. |
 | 10. Quality, Docs, Refactor | Pending | — | The runbook's *From M31* lessons and its corrections (D11). The feedback-log hand-off update (D12). The status narrative. The final matrix results. Taste triage and the boundary sweep. Scratch cleanup. The completion summaries. |
 
 ## Setup record — 2026-10-28
@@ -1783,6 +1783,163 @@ empty and its HEAD `a997954`; the host check was unchanged.
 M30's probe assumption is validated against the served wheel: the replicas
 pass at the tag target (8.1), S1 and S2 pass on the served executable, and
 the extracted guard step reads True / True (Phase 7).
+
+## Phase 9 — Integrate / Accept / Dogfood
+
+Date: 2026-10-29, from 00:11 CET. Host work per D10, in its order.
+
+### 9.1 The update notice (OQ-S2-5)
+
+The aggregate JSON (`https://pypi.org/pypi/docs-cli/json`) already read
+`info.version` 2.1.0 at 00:11:22. In a fresh scratch tree with an empty
+`.docs.toml`, the host's pipx 2.0.0 binary ran `~/.local/bin/docs check .`
+twice:
+
+| Run | Environment | Exit | stdout | stderr |
+|---|---|---|---|---|
+| Control | `env.sh` as is (`DOCS_CLI_NO_UPDATE_CHECK=1`) | 0 | `docs: no violations found` | empty |
+| Notice, attempt 1 | `env -u DOCS_CLI_NO_UPDATE_CHECK -u CI -u DO_NOT_TRACK XDG_CACHE_HOME="$S/xdg/notice-1"` | 0 | identical | exactly `docs: update available 2.0.0 -> 2.1.0 — run: pip install -U docs-cli` |
+
+**C16 is met on the first attempt**: one notice line, last on stderr, with
+the exit code and stdout unchanged. The scratch `XDG_STATE_HOME` holds no
+recorded destination, so no skill-hint line could follow. The cache the run
+wrote is under `$S/xdg/notice-1`; the host's update cache sha and the
+absent recorded destination were unchanged across the block. No retry or
+fallback was needed.
+
+### 9.2 The binary
+
+At 00:11:54 the PEP 691 simple JSON listed both 2.1.0 files with (c)'s
+sha256 (OQ-S2-4). Then, under `env.sh` (`PIP_CONFIG_FILE=/dev/null`; pipx's
+log and cache and pip's cache land under the scratch XDG directories; pipx's
+home stays `~/.local/share/pipx`), `pipx upgrade docs-cli` at 00:12:05:
+exit 0, "upgraded package docs-cli from 2.0.0 to 2.1.0".
+
+| Check | Result |
+|---|---|
+| `~/.local/bin/docs --version` | `docs 2.1.0`, exit 0 |
+| `docs_cli-2.1.0.dist-info` in the pipx venv | no `direct_url.json`; `INSTALLER` reads `pip` — an index install |
+| `pipx_metadata.json` | `package_or_url` `docs-cli`, `package_version` `2.1.0`, `pip_args` `[]` |
+| `diff -r -x __pycache__ "$S/x/served-wheel/docs_cli"` against the pipx venv's `docs_cli` | empty: the host runs the served bytes |
+| `ls --time-style=full-iso -la ~/.local/share/pipx/shared` | unchanged |
+| The host check across the block | update cache unchanged; recorded destination still absent |
+
+**A correction to the plan's assumption.** Step 2's planning expected pipx
+not to touch its shared libraries, because they were updated on 2026-10-26
+and pipx's 30-day rule had not expired. pipx printed "upgrading shared
+libraries…": its `upgrade` command always runs `pip install -q --upgrade
+"pip >= 23.1"` in `~/.local/share/pipx/shared` and then touches
+`shared/bin/pip` (`pipx/shared_libs.py`, `upgrade`); the 30-day rule gates
+other commands only. A deeper look than the frozen listing check: the only
+path under `shared/` newer than this session's start is `bin/pip`, its mtime
+now 00:12:05; pip stays 26.2.2 with its `dist-info` dated 2026-10-26, so no
+package changed. That marker touch is part of the authorized `pipx upgrade`
+(D10), not a separate host write, and neither stop-row observable moved. The
+runbook records the behaviour.
+
+### 9.3 The skill
+
+Recorded first: the sha256 of the seven files under `~/.claude/skills/docs`
+(M29's refresh, directory mtime 2026-08-16), the backup symlink's `stat`
+(`→ /home/user/opt/docs-cli/src/docs_cli/skill`, 2026-10-28 11:55:37), and a
+full-time listing of `~/.claude/skills`. Then, at 00:13:12, with the
+published binary and the host's real XDG state, so the destination is
+recorded where D10 wants it:
+
+```
+env -u XDG_STATE_HOME -u XDG_CACHE_HOME DOCS_CLI_NO_UPDATE_CHECK=1 ~/.local/bin/docs install-skill --force --dest ~/.claude/skills/docs
+```
+
+Exit 0, `docs: install-skill: copied bundled skill to
+/home/user/.claude/skills/docs`.
+
+| Check | Result |
+|---|---|
+| `diff -r "$S/x/served-wheel/docs_cli/skill" ~/.claude/skills/docs` | empty — seven files, byte-identical to the served wheel |
+| `~/.local/state/docs-cli/install-skill.json` | exactly `{"dest": "/home/user/.claude/skills/docs"}` |
+| `test ! -e "$S/xdg/state/docs-cli/install-skill.json"` | holds |
+| The backup symlink's `stat` | unchanged |
+| The `~/.claude/skills` listing | only `docs` changed, and the directory's own mtime, which replacing an entry moves; `synced`, `.trash` and the other entries untouched |
+| The host check | the update cache sha unchanged; the recorded destination moved from absent to `~/.claude/skills/docs` — D10's one authorized transition. From here on the host check expects it present |
+
+### 9.4 The sweep — a read-only census
+
+**Frozen before the run** (2026-10-29 00:14 CET), as `grep -E` patterns:
+
+| | Pattern | Looks for |
+|---|---|---|
+| A | ``(Edit\|edit\|Flip\|flip\|Promote\|promote\|Change\|change\|Set\|set)[^\|]{0,40}`?Lifecycle: ?`?(draft\|active\|done)`` | a hand-edited `Lifecycle:` |
+| B | ``careful Edit on the metadata block\|Related:`? typed edges\|Related:[^\|]{0,60}(by hand\|hand-edit\|directly)\|direct \*\*metadata\*\* edits`` | a hand-edited `Related:` |
+| C | `verbless-metadata\|stopgap` | stopgap references |
+| D | `free-form verbs stay hand-edited\|refuses to edit them\|six recognized\|recognized (reciprocal )?verbs only\|only the (six\|three) recognized\|unknown verb` | an assumption that `relate` refuses free-form verbs |
+
+Targets: the installed plugin cache
+(`~/.claude/plugins/cache/agent-playbook-suite/agent-playbook-suite/0.8.3/skills`,
+`skills/docs` excluded) with `grep -rnE`; and `git -C
+~/opt/agent-playbook-suite grep -nE <pattern> <rev> -- plugins/` at `554ebf2`
+(`main`, v0.8.3) and at `a997954` (the stopgap branch). **Oracle:** the
+census must hit E11's known sites — `create-milestones/SKILL.md:117` (rule
+3), `milestone-playbook.md:513` (§2d) and `:600` (§2f), and
+`foundation-playbook.md:180` — or the patterns are rejected.
+
+**Result** (00:14 CET). 60 matched lines: 10 in the installed cache, 18 on
+`main`, 32 on `a997954`. **The oracle holds**: all four E11 sites are hit in
+the cache and on `main`; on `a997954`, §2d (`:513`) and the foundation
+playbook (`:180`) are hit, while rule 3 and §2f were rewritten by the
+stopgap and now match C instead. `main` matches the cache line for line, as
+v0.8.3 should. The suite's `status --porcelain` stayed empty with HEAD
+`a997954`, and nothing under the plugin cache is newer than this session's
+`env.sh`, before and after.
+
+Paths are under `plugins/agent-playbook-suite/skills/`; "rx" is a
+prescription 2.1.0 supersedes, "ok" a statement still true under 2.1.0.
+
+| File | Cache = `main` (0.8.3) | `a997954` (stopgap) | Class |
+|---|---|---|---|
+| `create-milestones/SKILL.md` | B `:117` rule 3 — direct metadata edits limited to `Lifecycle:` and free-form `Related:` | C `:55`, `:125` (rule 3 now cites the stopgap) | rx |
+| `create-milestones/references/milestone-playbook.md` | B `:513` §2d (`Related:` by careful Edit); A `:600` §2f, `:953` (flip `Lifecycle:`) | B `:513`; A `:602`, `:956`; C `:601` | rx |
+| `project-foundation/references/foundation-playbook.md` | B `:180` (careful Edit to add edges) | B `:180`; C `:650` | rx |
+| `project-foundation/SKILL.md` | D `:81` — recognized verbs through `docs relate` | B `:84` (free-form `Related:` as hand-edits); C `:58`, `:86`; D `:87` | ok at 0.8.3; rx at `a997954` (`:84`, `:86`) |
+| `_shared/references/milestone-tracker.md` | A `:212` (promote the status doc to `Lifecycle: active`); D `:192` | A `:215`; C `:210`; D `:192` | A rx; D ok (recognized-verb operands) |
+| `manage-milestone-tracker/SKILL.md` | A `:114` (same promotion) | A `:119`; C `:21`, `:115` | rx |
+| `use-cases/references/use-cases-playbook.md` | A `:109` (flip `Lifecycle: draft` to `active`) | A `:109` | rx |
+| `ship-milestone/SKILL.md` | — | C `:55`, `:214` (Step 0's up-front approval) | rx (stopgap only) |
+| `_shared/references/verbless-metadata-edits.md` | — (absent) | C `:4`; D `:16`, `:17` | the stopgap policy itself |
+| `docs/references/cli.md`, `convention.md`, `use-cases.md` (the vendored skill; the cache target excludes it) | 8 D lines on `main` — 2.0.0's "six recognized verbs" and `unknown verb` text | the same 8 | superseded by the 2.1.0 re-vendor |
+
+The C hits on `a997954` name exactly the policy file and the seven files
+the full guard lists (Phase 8). Under 2.1.0 every "rx" line becomes `docs
+lifecycle <files> active` or `docs relate add <src> pairs-with|child-of
+<dst>`; the feedback-log hand-off carries the list for the suite PR.
+
+### 9.5 Dogfood
+
+From `docs/`, `DOCS_CLI_NO_UPDATE_CHECK=1 ~/.local/bin/docs check .` — the
+host's pipx binary, now `docs 2.1.0` — exit 0, "no violations found". The
+host check was unchanged across it, the recorded destination present as
+9.3 left it.
+
+### 9.6 Liveness walk
+
+Each output Step 2 produced, walked back from its consumer (the plan's
+pull-style table):
+
+| Output | Consumed by | State |
+|---|---|---|
+| The G2 calibration and its D9 record | Phase 7's served probe (G2 passed on 2026-10-29 against a 2026-10-28 INDEX); the runbook's standing probe; the Step 2 review | consumed; runbook in Phase 10 |
+| `TAG_TARGET` in `2e04d43` | the Phase 7 worktree and tag, the release notes, the Phase 8 worktree; the D13 merge sentence | consumed; the merge sentence goes to the final report |
+| (c)'s shas, manifest and `dist/` listing | the Phase 6 re-checks; the Phase 7 custody table; matrix C10 | consumed |
+| The upload record | Phase 7; hand-off item 1; the completion summary | consumed; Phase 10 |
+| `$S/x/served-wheel` | the 9.2 payload diff and the 9.3 skill diff | consumed |
+| The served probe lines; the guard step True / True | matrix C11, C12 and the three-build table; hand-off item 2 | consumed; Phase 10 |
+| The full guard's ten lines | the suite PR's checklist in the hand-off | Phase 10 |
+| The tag's peeled sha; the release URL | matrix C13; `status.md`; the final report | consumed |
+| The notice evidence; the host state record | matrix C15, C16; hand-off item 3 | Phase 10 |
+| The sweep table | the hand-off; matrix C17 | Phase 10 |
+
+Nothing is produced without a consumer. `git worktree prune` left one
+worktree (the repository's own); the scratch venvs and `dist/` are removed
+at Phase 10's cleanup.
 
 ## Milestone completion summary
 

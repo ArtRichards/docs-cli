@@ -53,7 +53,10 @@ and released.** The upload ran once, under the operator's automatic-release
 authorization, and the served bytes match the tag-target build exactly. The
 release probe and the Agent Playbook Suite's guard step passed against the
 PyPI-served wheel before `v2.1.0` was tagged and the GitHub release created.
-The host refresh follows; the
+This host now runs the published 2.1.0 binary, and its `docs` skill is
+refreshed from it at `~/.claude/skills/docs`; a read-only sweep of the Agent
+Playbook Suite recorded the hand-edit prescriptions its pin bump must
+replace. The runbook lessons and the suite hand-off follow; the
 [implementation log](pypi-publish-2-1-0-impl.md) carries the record.
 
 **M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI
