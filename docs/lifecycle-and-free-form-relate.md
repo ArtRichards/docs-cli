@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: milestone
 Project: docs
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 Related:
 - child-of: milestone-plan.md
@@ -33,7 +33,7 @@ Related:
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
-  in progress — Phases 5–7 complete. The narrative, evidence headline and
+  in progress — Phases 5–8 complete. The narrative, evidence headline and
   per-phase results live in the implementation log.
 
 ### Identity note
@@ -1094,10 +1094,12 @@ over-accepting grammar from a correct one.
 
 ### Mock policy
 
-- New or expanded mocks: none planned. If Phase 1 adopts staged publish with
-  rollback for a multi-file `docs lifecycle`, failure injection reuses the
-  existing `atomic_write` monkeypatch pattern from the relate suite.
-- Justification: write-failure paths cannot be produced reliably otherwise.
+- New or expanded mocks: none. Phase 1 (OQ-2) made the multi-file
+  `docs lifecycle` write sequential, as `project set` does, with no staged
+  publish or rollback, so no write-failure injection was needed. The Phase 8
+  audit found 0 new or expanded mocks.
+- Justification: not applicable. L12's INDEX-refresh failure uses a real
+  malformed sibling.
 - Real-path test covering the same behavior: every success and refusal path is
   covered by subprocess tests on real trees.
 
@@ -1353,7 +1355,7 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - [x] Phase 5 — Update Base Interfaces
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
-- [ ] Phase 8 — Run Tests (GREEN)
+- [x] Phase 8 — Run Tests (GREEN)
 - [ ] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 

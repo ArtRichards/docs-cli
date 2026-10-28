@@ -105,8 +105,10 @@ def test_plan_lifecycle_refuses_an_unknown_state(tmp_path):
 
 
 def test_plan_lifecycle_refuses_a_source_under_the_archive_subtree(tmp_path):
-    """The guard behind L7: an archived document is never a source."""
-    root = _root(tmp_path, {"archive/2026-01-01/old.md": _doc("Old", "archived")})
+    """The guard behind L7: an archived document is never a source. The
+    document reads `done`, not `archived`, so its location alone must refuse
+    it — the guard on its current `Lifecycle:` cannot."""
+    root = _root(tmp_path, {"archive/2026-01-01/old.md": _doc("Old", "done")})
     with pytest.raises(ValueError):
         _plan(root, ["archive/2026-01-01/old.md"], "active")
 

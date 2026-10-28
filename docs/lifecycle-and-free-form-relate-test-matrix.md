@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 Related:
 - pairs-with: lifecycle-and-free-form-relate.md
@@ -262,11 +262,11 @@ Tests map to the use-case catalog shipped in the bundled skill
 
 ## Mock policy
 
-- New mocks: none planned.
-- Justification: not applicable. If Phase 1 adopts staged publish with rollback
-  for a multi-file `docs lifecycle`, write-failure injection reuses the existing
-  `atomic_write` monkeypatch pattern from the relate suite and is recorded
-  here.
+- New mocks: none. The Phase 8 audit found 0 new or expanded mocks.
+- Justification: not applicable. Phase 1 (OQ-2) made the multi-file
+  `docs lifecycle` write sequential, as `project set` does, with no staged
+  publish or rollback, so no write-failure injection was needed. L12's
+  INDEX-refresh failure uses a real malformed sibling.
 - Real-path test covering same behavior: every success and refusal path is a
   subprocess test over a real tree.
 
@@ -307,15 +307,35 @@ Agent Playbook Suite probes against a locally built wheel
   failed, 1506 passed: 142 authored ids and the 8 pre-existing ids on the
   task plan's authoritative list RED for missing behaviour; 7 authored locks
   and 3 swept ids GREEN (classified in the implementation log's Phase 4).
-  GREEN pending Phase 8.
-- Hidden/generalization: pending — categories only.
-- Property/stateful: pending.
-- Mutation: pending — hand-applied smoke, eleven targets.
-- Fuzz: written (Phase 2) — RED at baseline; results at Phase 8.
-- Benchmark/security/schema: pending; benchmark not applicable.
+- Visible tests, GREEN (Phase 8, 2026-10-28): **1656 passed**, 0 failed,
+  skipped, xfailed or errored.
+  - Every pre-existing id is present and GREEN under the authoritative old →
+    new mapping (the `comm` / AST proof against `e48adb9`).
+  - Two authored tests were corrected under Check calibration: DEF-1, a help
+    assertion that depended on terminal width, and DEF-2, a planner-guard
+    fixture that a second guard masked. Both are in the implementation log's
+    Phase 8.
+- Hidden/generalization: categories only (the repository is fully visible).
+  Phase 9 exercises them on throwaway trees.
+- Property/stateful (Phase 8): **16 passed**, covering idempotence, the
+  add-then-remove round trip, no `status-drift`, and write footprint.
+- Mutation (Phase 8): hand-applied smoke **45/45 killed**, covering all
+  eleven targets.
+  - 43 planned mutants plus 2 message-preserving variants of the grammar
+    mutants.
+  - M05 survived at first; correcting the authored fixture (DEF-2) killed it.
+- Fuzz (Phase 8): **24 passed**, seed `20261027`.
+  - The pure predicate: 300 valid, 300 invalid and `""`.
+  - The CLI: 30 valid verbs plus 11 invalid categories.
+  - The 22-case boundary table.
+- Benchmark/security/schema (Phase 8): the schema locks (both records closed;
+  the recognized record value for value) and the security locks (verb
+  injection, R4, TARGET containment) passed. Benchmark not applicable;
+  runtime is recorded at Phase 9.
 - Coverage: not configured.
-- Mock audit: no mocks added in Phases 1–4 (sentinel INDEX, a real malformed
-  sibling, inode checks and in-process `cli.main` instead); audited at Phase 8.
+- Mock audit (Phase 8): **0 new or expanded mocks**. Instead the tests use a
+  sentinel INDEX, a real malformed sibling, inode checks and in-process
+  `cli.main`.
 - Open risks: none outstanding at setup — Q3, Q7 and Q8 answered by the
   operator on 2026-10-27; the Step 0 review's blockers are fixed, the
   targeted re-review confirmed B1 and B2, and the one blocker it raised
@@ -323,15 +343,18 @@ Agent Playbook Suite probes against a locally built wheel
 
 ## Adequacy results
 
-- visible_pass_rate: pending
+- visible_pass_rate: 1656/1656 (Phase 8)
 - hidden_pass_rate: not applicable (no hidden suite)
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
 - changed-files branch coverage: not configured
-- mutation score on touched modules: pending (hand-applied smoke)
-- property/stateful result: pending
-- fuzz result: pending
+- mutation score on touched modules: 45/45 killed by the hand-applied smoke
+  on `src/docs_cli/cli.py` (43 planned plus 2 message-preserving variants),
+  after one authored-fixture correction (DEF-2)
+- property/stateful result: 16 passed
+- fuzz result: 24 passed (seed `20261027`)
 - benchmark delta: not applicable; runtime recorded in Phase 9
-- security/schema/migration result: pending
+- security/schema/migration result: security and schema locks passed;
+  migration not applicable
 - skipped deep gates and follow-up: none skipped; coverage and mutation tooling
   are not configured in this project

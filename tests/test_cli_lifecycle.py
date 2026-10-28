@@ -109,9 +109,12 @@ def _promoted(text: str, *, to: str, updated: str | None = None) -> str:
 def test_lifecycle_help_documents_the_grammar_and_flags(docs_script):
     proc = _run(docs_script, "lifecycle", "--help")
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    # argparse wraps the description to the terminal width, so a phrase may
+    # break across lines; compare against whitespace-normalised text.
+    help_text = " ".join(proc.stdout.split())
     for token in ("state", "--json", "--dry-run", "--quiet", "--root"):
-        assert token in proc.stdout, f"`docs lifecycle --help` must document {token}"
-    assert "docs archive" in proc.stdout, (
+        assert token in help_text, f"`docs lifecycle --help` must document {token}"
+    assert "docs archive" in help_text, (
         "the help must say archiving belongs to `docs archive`, not to this verb"
     )
 

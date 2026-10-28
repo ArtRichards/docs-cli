@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 Related:
 - pairs-with: milestone-plan.md
@@ -47,6 +47,19 @@ Related:
 **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in the canonical tracker, [Milestone Plan](milestone-plan.md); this file links to it and never restates it.**
 
 ## Current milestone
+
+**M30 implementation in progress (2026-10-28).**
+[`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) is
+moving through Step 2:
+- The contract (Step 1) is reviewed and frozen.
+- `docs lifecycle` and one-sided free-form `docs relate` are wired.
+- `parse()` honours the tree's config at every call site.
+- The bundled skill, the specs and the README describe the new surface.
+- The version is bumped to 2.1.0, **unreleased**.
+
+The full suite of 1656 tests is GREEN. A hand-applied mutation smoke killed
+all 45 mutants. Per-phase evidence is in the
+[implementation log](lifecycle-and-free-form-relate-impl.md).
 
 **M30 milestone setup complete (2026-10-27).**
 [`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) — a

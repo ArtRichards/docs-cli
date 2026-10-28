@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: log
 Project: docs
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 Related:
 - pairs-with: lifecycle-and-free-form-relate.md
@@ -35,8 +35,9 @@ checklist and the test matrix synchronized.
   restatements). Details: the phase sections below, *Step 1 same-instance
   audit*, and *Step 1 review-pass-001*.
 - Step 2 (Phases 5–10): **in progress** on
-  `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`; Phases
-  5–7 complete (see the phase sections below).
+  `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`.
+  Phases 5–7 are complete. Step 2 was interrupted after Phase 7 and resumed
+  on 2026-10-28; Phase 8 is complete. See the phase sections below.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -94,8 +95,15 @@ checklist and the test matrix synchronized.
   operator checkpoint.
 - Hidden/generalization handling: categories only (repository fully visible);
   exercised by property checks and the Phase-9 dogfood.
-- Mock audit: no mocks planned.
-- Adequacy results: pending.
+- Mock audit: **complete (Phase 8)**, 0 new or expanded mocks.
+- Adequacy results (Phase 8):
+  - `visible_pass_rate` 1656/1656;
+  - hand-applied mutation smoke 45/45 killed (43 planned plus 2
+    message-preserving variants), after one authored-test fixture correction
+    (DEF-2);
+  - property / stateful 16 passed and fuzz 24 passed (seed `20261027`);
+  - schema and security locks passed;
+  - hidden suite and coverage not configured.
 - Taste triage: Step 0 review-pass-001 triaged — GPT: sound, no subjective
   findings; claude-T1 partially fixed and the remainder waived with reason;
   claude-T2 and claude-T3 fixed; patch bloat in line with precedent (see the
@@ -114,7 +122,7 @@ checklist and the test matrix synchronized.
 | 5. Update Base Interfaces | Complete | 2026-10-27 | `relate_verb_in_grammar` / `_RELATE_VERB_RE`; `parse(..., *, config=None)`; `RelatePlan.inverse: str \| None` and `plan_relate`'s one-sided branch; `LifecycleEdit`, `LifecyclePlan`, `plan_lifecycle`, `apply_lifecycle_plan`, `lifecycle_plan_to_json` — wired nowhere. 126 failed / 1530 passed: exactly the 24 Phase-5 ids flipped. |
 | 6. Implement Offline/Core Path | Complete | 2026-10-27 | `docs lifecycle` registered (final help) over the planner; free-form `relate` with R1, R2, R4 and the never-parsed TARGET; the config at the seven `parse()` sites; `render_index`'s extension groups; the stamp refusal. 9 failed / 1647 passed: the 8 Phase-7 ids plus the expected transient skill-completeness guard. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-10-27 | Help text for `relate`, `stamp`, `--body-from` and `main()`; specs reconciled (no change needed); the skill body, *Three things never to hand-edit*, *Quality artifacts*, `use-cases.md` (frozen P1.3 row + two new rows), the adoption playbook (frozen P1.3 bullet), *Linking reports*; README; 2.1.0 and `## 2.1.0 — UNRELEASED`; feedback-log closures, the promotion note, follow-ups 1, 2, 3, 7, 8, 9 registered. 1656 passed; stale-wording grep empty. |
-| 8. Run Tests (GREEN) | Pending | — | Full gate with exact counts; mechanical no-regression proof against the 1504 pre-existing ids; property checks, grammar fuzz, hand-applied mutation smoke; mock audit. |
+| 8. Run Tests (GREEN) | Complete | 2026-10-28 | 1656 passed; ruff, format, mypy, `docs check`, mirrors and snapshot clean. Id/AST proof against `e48adb9` is exactly the authoritative mapping (1504 → 1656, the 4 renamed ids removed, 156 added). Property 16, fuzz 24, schema and security passed. Mutation smoke 45/45 killed: 43 planned plus 2 message-preserving variants, after correcting DEF-2's fixture (M05). 0 mocks. DEF-1 (a help assertion that depended on terminal width) fixed. |
 | 9. Integrate / Accept / Dogfood | Pending | — | The primary use case on a throwaway copy of this tree with zero hand-edits; both suite probes against the editable build and a local wheel; closeout-plan identity for a `relate`-linked trio; the extension-vocabulary and non-default-`date_format` trees (D10); this tree reindexing byte-identically; runtime recorded. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`; close `architecture.md` and `test-strategy.md`; hand-off note to a live home; taste triage and boundary sweep; completion summaries. |
 
@@ -1590,10 +1598,12 @@ All in `src/docs_cli/cli.py`; no test or fixture changed.
 - **A wrap-sensitive help assertion, recorded.**
   `test_lifecycle_help_documents_the_grammar_and_flags` asserts the phrase
   `docs archive` in `docs lifecycle --help`, which argparse wraps to the
-  terminal width. Probed at widths 50–200: the phrase stays on one line at
-  the pipe default (78) and every width tried except 140. Not edited — it
-  passes in this environment and in CI's pipe default, and no width-pinning
-  workaround was added to the help text; noted for the reviewers.
+  terminal width. Not edited here — it passes at the pipe default (78),
+  and no width-pinning workaround was added to the help text; noted for
+  the reviewers. *(Corrected at Phase 8: this note first said the phrase
+  stays whole "at every width tried except 140". Re-measured, it splits at
+  50, 119, 120 and 145 and stays whole at 60–100, 140, 160 and 200, so the
+  test failed in a wide terminal. Phase 8 fixed the assertion — DEF-1.)*
 - Help text cites its provenance (`(M30 — D1–D3)`), as `stamp`, `project
   set` and `relate` cite theirs.
 
@@ -1721,6 +1731,316 @@ and record the milestone's outcomes and follow-ups in `feedback-log.md`.
   `docs check .` exit 0.
 - `docs lifecycle --help`, `docs relate --help`, `docs relate add|remove
   --help`, `docs stamp --help` and `cli.md` agree (read side by side).
+
+## Phase 8 — Run Tests (GREEN) — 2026-10-28
+
+Step 2 was interrupted after Phase 7 and resumed here from `1683116`. A
+fresh planner re-verified Phases 5–7 first: 1656 passed; ruff, format and
+mypy clean; `docs check` exit 0; mirrors and the INDEX snapshot
+byte-identical; `git diff 3e2c3ca HEAD -- tests/` empty. Every P1.9 symbol
+exists, and every `parse()` call site passes `config`.
+
+### Objective
+
+Run every product and quality gate with exact counts. Prove mechanically,
+against `e48adb9`, that every pre-existing test id is present and GREEN.
+Record the property, fuzz, schema and security results, the hand-applied
+mutation smoke and the mock audit.
+
+### Working contract, restated at the resume (Phases 8–10)
+
+- **Invariants.** These are unchanged from Phase 5:
+  - `docs lifecycle` never writes `Lifecycle: archived` and never takes a
+    source under the archive subtree or one already reading `archived`;
+  - a free-form `relate` writes only SOURCE, never TARGET, and never a bullet
+    `docs check` would re-read differently (D6, R4);
+  - recognized-verb `relate` and the archive candidate set are byte-for-byte
+    unchanged;
+  - a no-op or `--dry-run` writes nothing, INDEX included, and a real change
+    reindexes once;
+  - refusals are zero-byte and print under `--quiet`;
+  - a bare `parse()` keeps the built-ins, and no verb starts refusing a
+    document `docs check` accepts;
+  - `docs stamp` never rewrites a complete block that fails the config;
+  - `docs check` itself does not change.
+- **Forbidden shortcuts.**
+  - Special-casing `pairs-with`, a test literal or a fixture name.
+  - Test-only branches, or weakening a test or a selected check to reach
+    GREEN; erroneous expectations are corrected under Check calibration
+    instead.
+  - Re-entering another verb's command function.
+  - Writing TARGET, relaxing `docs check`, or adding a dependency.
+  - Fixing *Follow-ups* item 9 (D4).
+  - Simplification that silently reduces adequacy (QUALITY PLAN).
+- **Visible product drivers.** The full suite of 1656 ids. Its behavioural
+  core is `tests/test_cli_lifecycle.py`, `tests/test_lifecycle_plan.py`,
+  `tests/test_cli_relate.py`, `tests/test_relate_plan.py`,
+  `tests/test_cli_stamp.py`, `tests/test_index.py`,
+  `tests/test_cli_index.py`, `tests/test_model.py`, `tests/test_walker.py`,
+  the D10 locks in the other walking-verb modules, `tests/test_body_from.py`,
+  `tests/test_skill.py`, `tests/test_skill_refs.py` and
+  `tests/test_packaging.py`.
+- **Explicit non-product gates.**
+  - `docs check .` from the docs root, and the INDEX snapshot `cmp`.
+  - The id `comm` and AST proof against `e48adb9`, the naming lint and the
+    43-mutant hand-applied smoke.
+  - The docs-wide stale-wording grep.
+  - The Phase-9 flows F1–F10: the wheel build and probe replay, the closeout
+    comparison, the D10 trees, the reindex identity and the runtime table.
+  - The Phase-10 surface-parity reconciliation, placeholder grep and
+    archive-readiness preview (on a copy).
+- **Risk and gates.** Standard, operator-confirmed (Q8). Selected gates:
+  - ruff, ruff format, mypy and the full suite;
+  - `docs check`, and `cmp` of both mirrors and the INDEX snapshot;
+  - property and fuzz smoke, the mutation smoke and the mock audit.
+  - Coverage, a hidden suite and mutation tooling are **not configured**.
+- **Mock policy.** No new or expanded mock. Failure paths use a real
+  malformed sibling, a sentinel INDEX and inode checks. Mutation runs use
+  extracted copies, not mocks.
+- **Taste anchors.** Unchanged:
+  - `_cmd_project_set` for `docs lifecycle`;
+  - the relate plan/apply family for the free-form path;
+  - `check_doc` for D10;
+  - `render_index` extended, not replaced;
+  - `_cmd_stamp`'s validate-all-first loop;
+  - reuse of the in-project editors and validators, and stdlib only.
+
+### Resume decisions (conductor-resolved, Step 2 resume planning)
+
+The resume planner raised six questions. The conductor resolved all six under
+Standard-risk authority; each is binding for Phases 8–10.
+
+| Id | Question | Decision |
+|---|---|---|
+| S2R-OQ-1 | *Follow-ups* item 6: write a `parent-of` back-edge on `milestone-plan.md`? | **(b) Decline and close.** Nothing consumes the edge: it is free-form, not a cascade verb, and unvalidated. The tracker cell plus `child-of: milestone-plan.md` already give two-way navigation, and the `parent-of` list is a superseded convention. *Home* cell updated at Phase 10. |
+| S2R-OQ-2 | *Follow-ups* item 10 ("state a binding decision once"): where does it live? | **(c)** An open, unowned candidate-convention entry in `feedback-log.md`, offered as a taste anchor at the next milestone's setup. `CLAUDE.md` is not edited. *Home* cell updated at Phase 10. |
+| S2R-OQ-3 | A non-equivalent mutation survivor in an authored test | **(a)** Correct the authored test's fixture so it exercises the guard its docstring claims, keep the same id, and re-prove the kill. A survivor that only a contract change could kill would be a STOP condition. |
+| S2R-OQ-4 | DEF-1, the help assertion that depends on terminal width | **(a)** Normalise whitespace in the assertion (precedent: `tests/test_skill.py`'s stale-wording test), keep the behaviour asserted, and correct the Phase 6 note. |
+| S2R-OQ-5 | Phase 9 oracles | Use a same-interpreter v2.0.0 extraction for reindex identity and for runtime (`git diff v2.0.0 e48adb9 -- src/ pyproject.toml` is empty). Build the hand-linked twin with `--body-from` `Related:` groups, plus a verb-only rewrite of the real trio. No metadata hand-edits. |
+| S2R-OQ-6 | Phase 10 doc accuracy beyond the two named items | **(a)** Fix every listed stale item in `architecture.md` and `test-strategy.md`. Record the M25-era `relate` module-map omission as an in-passing correction. Add no `stamp` or `project set` module-map line and no D10 critical path. |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `git status --porcelain` at `1683116` | empty |
+| `.venv/bin/ruff check .` | All checks passed |
+| `.venv/bin/ruff format --check .` | 50 files already formatted |
+| `.venv/bin/mypy src/ tests/` | no issues in 51 source files |
+| `.venv/bin/python -m pytest -q --tb=line -rfxXEs` at `1683116` | **1656 passed**, 0 failed / skipped / xfailed / xpassed / errors, 82.7 s |
+| the same after the two test corrections below | **1656 passed**, 0 otherwise, 82.6 s; ruff, format and mypy clean again |
+| `docs check .` from the docs root | no violations, exit 0 |
+| `cmp` of both mirrors and of the INDEX snapshot | byte-identical |
+
+The known `test_d4_install_skill_is_idempotent` flake did not recur.
+
+### Mechanical no-regression proof against `e48adb9`
+
+The ids were collected from a `git archive e48adb9` extraction instead of a
+worktree, so `.git/worktrees` was not touched (M28a nit F8). Conftest puts the
+extracted `src/` ahead of the editable path, so this is equivalent. The
+pytest runs used `-p no:cacheprovider`.
+
+| Measure | Result |
+|---|---|
+| ids at `e48adb9` / at HEAD | **1504** / **1656** |
+| removed (`comm -23`) | exactly the four renamed ids: `test_relate_unknown_verb_refuses`, `test_stamp_supersedes_invalid_existing_block`, `test_a3_project_version_is_2_0_0`, `test_c2_docs_version_is_2_0_0` |
+| their new ids | all four collected |
+| added (`comm -13`) | **156** |
+| pre-existing ids failing | **0**, because the suite has no failures |
+| AST diff of the 1345 pre-existing `tests/*.py` functions, nested ones included | CHANGED: exactly the authoritative list — `test_archive_renders_the_witness_in_the_trees_date_format`, `_attic_tree` and its nested `_attic_tree._doc`, the quiet and case-variant relate tests, `test_b1_wheel_builds`, `test_b2_sdist_builds`. REMOVED: the four renamed ids. |
+| `git diff --numstat e48adb9 -- tests/fixtures` | the INDEX snapshot, `stamp/raw-invalid-block.md`, and the four `vocab-extension/` files only |
+
+With 0 failures, every pre-existing id is GREEN, under its own id or its new
+one. The two Phase-8 corrections below change authored tests only, so they
+do not appear in the AST diff.
+
+### Naming lint
+
+The lint splits each of the 156 added ids into tokens and flags milestone,
+decision, clause, phase, step and review tokens. It flags three ids, and all
+three were already accounted for:
+
+- `c2` in `test_c2_docs_version_is_2_1_0`: `tests/test_packaging.py`'s own
+  check-number scheme (OQ-15).
+- `m27` and `m28a` in the `[vocab-extension]` ids of two pre-existing sweeps
+  (`test_check_tree_pre_m27_…`, `test_check_tree_pre_m28a_…`). These tokens
+  come from the pre-existing function names, not from a name written here.
+  Step 1 judged them harmless (claude-N9) and did not rename them.
+
+`milestone` in `test_milestone_setup_needs_no_hand_edit` is a domain word.
+
+### Property, fuzz, schema and security results
+
+All of these are tests already in the suite; nothing was added.
+
+- **Property / stateful — 16 passed.**
+  - *Idempotence:* the five-state round trip (applying twice equals applying
+    once), `test_lifecycle_already_in_state_writes_zero_bytes_and_skips_reindex`
+    (a sentinel INDEX stays byte-identical) and
+    `test_relate_free_form_is_idempotent`.
+  - *Round trip:*
+    `test_relate_free_form_add_then_remove_restores_the_original_bytes`,
+    both with and without an existing `Related:` group.
+  - *No `status-drift`:*
+    `test_lifecycle_round_trips_every_top_level_state_without_status_drift`
+    for draft, active, blocked, done and superseded.
+  - *Write footprint:*
+    - a free-form operation writes one managed document;
+    - a mixed lifecycle batch writes only the changed documents (checked by
+      inode);
+    - the two lifecycle and relate dry-run tests write nothing;
+    - a stamp refusal in a batch writes no file;
+    - a recognized pair still writes both halves.
+- **Fuzz — 24 passed, seed `20261027`.**
+  - The pure predicate: 300 generated valid verbs, 300 generated invalid
+    verbs and `""`.
+  - The in-process CLI fuzz: 30 generated valid verbs plus one invalid verb
+    for each of 11 refused categories.
+  - The 22-case boundary table.
+- **Schema — passed.** Both lifecycle key-set locks (CLI and planner) are
+  closed. Both free-form records have `inverse: null` and one edit. The
+  recognized-pair record is locked value for value.
+- **Security — passed.**
+  - The verb-injection refusals `[a-colon | a-newline | a-carriage-return]`.
+  - R4 `[a-line-break | a-carriage-return | a-leading-space |
+    a-trailing-space]`.
+  - TARGET outside the root, and a TARGET symlink escaping the root.
+
+### Hand-applied mutation smoke — 45 / 45 killed (43 planned, plus 2 variants)
+
+Mutation tooling is not configured, so this follows the M28a precedent:
+- Each of 6 workers had its own `git archive HEAD` extraction. The runner is
+  `p8/mutate.py` in the session scratchpad, run with `-I`.
+- For each mutant it asserted the old text on the addressed line of pristine
+  `1683116`, rewrote that one line, and ran the subset without `-x` and with
+  `DOCS_CLI_NO_UPDATE_CHECK=1`. It then restored the file.
+- A control run of every unmutated subset passed first:
+  - LC 46 and RL 128;
+  - IX 28 and ST 27;
+  - D10 514.
+- `tests/test_packaging.py` is in no subset, because its symlink test cannot
+  pass from a copy.
+- The D10 subset also includes `tests/test_lifecycle_plan.py`, where M34's
+  expected killer lives; the plan's subset left that file out.
+- The repository was never mutated.
+
+| Id | Target | Mutation (line at `1683116`) | Killed by (first killers; count) |
+|---|---|---|---|
+| M01 | 1 | `if state == "archived":` → `if False:` (8557) | `test_lifecycle_refuses_archived_as_a_target_state`, the refusal-order test, the quiet test (3) |
+| M02 | 1 | `allowed = config.lifecycles - {"archived"}` → `config.lifecycles` (8564) | `test_lifecycle_treats_a_capitalised_archived_as_an_unknown_state`, `test_lifecycle_unknown_state_names_the_allowed_states` (2) |
+| M03 | 1 | planner state guard drops `state == "archived" or` (5463) | `test_plan_lifecycle_refuses_archived_as_a_state` (1) |
+| M04 | 2 | CLI L7 pre-pass `_is_archived_rel` → `False` (8586) | `test_lifecycle_refuses_a_document_under_the_archive_subtree`, `test_lifecycle_batch_with_one_archived_document_writes_nothing` (2) |
+| M05 | 2 | planner archive-subtree guard → `False` (5474) | **survived at `1683116` (DEF-2)**; after the fixture correction: `test_plan_lifecycle_refuses_a_source_under_the_archive_subtree` (1) |
+| M06 | 3 | CLI L11 `lifecycle == "archived"` → `False` (8621) | `test_lifecycle_refuses_an_active_tree_document_already_marked_archived` (1) |
+| M07 | 3 | planner current-`archived` guard → `False` (5479) | `test_plan_lifecycle_refuses_a_source_already_marked_archived` (1) |
+| M08 | 4 | `free_form = …` → `False` (8379) | the archived-SOURCE, archived-TARGET, non-Markdown and malformed-Markdown TARGET tests, … (9) |
+| M09 | 4 | `free_form = …` → `True` (8379) | `test_relate_malformed_endpoint_exits_1`, `test_relate_archived_endpoint_without_reason_refuses`, `test_relate_archived_no_op_still_requires_reason`, the E11-direction test (4) |
+| M10 | 4 | planner `if inverse is not None:` → `True` (5193) | `test_relate_free_form_add_writes_only_the_source_bullet`, `…_is_idempotent`, `…_write_rewrites_exactly_one_managed_document`, … (15) |
+| M11 | 5 | planner `doc.lifecycle == state` → `False` (5481) | the mixed batch (inode), the sentinel no-op, the dry-run, the closed-key record, … (9) |
+| M12 | 5 | `if changed:` → `True` (5254) | `test_relate_add_twice_is_a_no_op`, `test_relate_remove_twice_is_a_no_op`, `test_relate_add_completes_only_the_missing_half`, … (14) |
+| M13 | 6 | lifecycle no-op guard → `if args.dry_run:` (8646) | `test_lifecycle_already_in_state_writes_zero_bytes_and_skips_reindex` (1) |
+| M14 | 6 | relate no-op guard → `if args.dry_run:` (8480) | `test_relate_no_op_does_not_reindex`, `test_relate_add_is_a_no_op_against_a_non_canonical_bullet`, `test_relate_free_form_matches_a_non_canonical_existing_bullet`, … (5) |
+| M15 | 7 | `fullmatch` → `re.match(r"[a-z][a-z0-9-]*$", …)` (1032) | boundary `[refuses-a-trailing-newline]`, both fuzzers, the planner guard `[a-trailing-newline]` (4) |
+| M16 | 8 | `[a-z0-9-]` → `[a-z\d-]` in `_RELATE_VERB_RE` (1021) | 24 — mostly through the message: R1 prints `_RELATE_VERB_RE.pattern`, so every full-message assertion fails. See M16b. |
+| M16b | 8 | message-preserving variant: the matcher (1032) → `re.fullmatch(r"[a-z][a-z\d-]*", verb)` | boundary `[refuses-an-arabic-indic-digit]` and `[refuses-a-fullwidth-digit]`, both fuzzers (4) — the semantic kill |
+| M17 | 7 | first class `[a-z]` → `[a-z0-9]` in `_RELATE_VERB_RE` (1021) | 24, through the message as for M16. See M17b. |
+| M17b | 7 | message-preserving variant: the matcher (1032) → `re.fullmatch(r"[a-z0-9][a-z0-9-]*", verb)` | boundary `[refuses-a-leading-digit]`, both fuzzers (3) — the semantic kill |
+| M18 | 7 | R1 guard → `False` (8371) | `test_relate_verb_outside_the_free_form_grammar_refuses`, the case-variant and quiet tests, the boundary, … (25) |
+| M19 | 2 | CLI R2 → `False` (8412) | `test_relate_free_form_refuses_an_archived_source_even_when_nothing_would_change`, the refusal-order test (2) |
+| M20 | 2 | planner free-form archived-SOURCE guard → `False` (5178) | `test_plan_relate_free_form_refuses_an_archived_source` (1) |
+| M21 | R4 anchors | R4 predicate → `"\n" in target_rel` (8396) | R4 `[a-carriage-return]`, `[a-leading-space]`, `[a-trailing-space]` (3) |
+| M22 | `parse_endpoint` | `parse_endpoint=not free_form` → `True` (8387) | the non-Markdown and malformed-Markdown TARGET tests, R4 cases (6) |
+| M23 | `--reason` branch | `elif not free_form:` → `else:` (8431) | `test_relate_free_form_archived_target_needs_no_reason_and_is_untouched` (1) |
+| M24 | dedupe | `if rel in seen:` → `False` (5471) | both duplicate-path tests (2) |
+| M25 | 9 | `parse()` config vocabulary → built-ins (1273) | the `test_model` config tests, the walker, index, list and touch locks, … (15) |
+| M26 | 9 | `parse()` config date format → ISO (1273) | `test_parse_with_a_config_rejects_the_iso_spelling_on_a_non_default_tree`, the date-format index lock, … (12) |
+| M27 | 9 | `walk` drops `config=` (1367) | the walker, index and touch locks, … (18) |
+| M28 | 9 | `query_docs` drops `config=` (4026) | `test_list_includes_a_doc_in_an_extension_lifecycle`, … (2) |
+| M29 | 9 | `_cmd_archive` primary drops `config=` (7260) | `test_archive_accepts_a_primary_in_an_extension_state`, the witness and walking-verb `bad-date` tests (3) |
+| M30 | 9 | `_known_projects` drops `config=` (8082) | `test_project_set_knows_a_project_carried_only_by_an_extension_vocabulary_doc` (1) |
+| M31 | 9 | `_cmd_project_set` drops `config=` (8206) | `test_project_set_rewrites_a_doc_in_an_extension_state` (1) |
+| M32 | 9 | `_resolve_relate_endpoint` drops `config=` (8309) | `test_relate_accepts_an_endpoint_in_an_extension_lifecycle`, `test_relate_refuses_an_endpoint_dated_outside_the_trees_date_format`, … (3) |
+| M33 | 9 | `_cmd_lifecycle` drops `config=` (8611) | `test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree` (1) |
+| M34 | 9 | `plan_lifecycle` drops `config=` (5478) | the same CLI test, `test_plan_lifecycle_accepts_a_configured_extension_state` (2) |
+| M35 | 9 | `_cmd_stamp` drops `config=` (8798) | `test_stamp_keeps_a_document_in_a_configured_extension_state`, both date-format stamp tests (3) |
+| M36 | 9 | lifecycle `Updated:` → `date.today().isoformat()` (8634) | `test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree` (1) |
+| M37 | 10 | role loop → `role_order` only (1434) | `test_render_index_orders_extension_roles_alphabetically_after_built_ins`, `test_index_renders_an_extension_role_group_after_the_built_in_roles` (2) |
+| M38 | 10 | extension groups before the built-ins (1434) | the same two (2) |
+| M39 | 10 | extension groups in first-seen order (1434) | `test_render_index_orders_extension_roles_alphabetically_after_built_ins` (1) |
+| M40 | 11 | completeness test → `if True:` (8713) | every stamp refusal test (6) |
+| M41 | 11 | completeness test → `if False:` (8713) | `test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` and the pre-existing fresh-stamp tests (12) |
+| M42 | 11 | completeness also requires `Project:` (8713) | `test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes` (1) |
+| M43 | 11 | final `return None` → `return "complete block"` (8721) | `test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed` (1) |
+
+All eleven matrix targets are covered, as are the four extra points the
+QUALITY PLAN named: the R4 anchors, `parse_endpoint`, the recognized-only
+`--reason` branch, and dedupe. No mutant is equivalent.
+
+**Why M16b and M17b were added.** M16 and M17 had identical 24-test killer
+sets, including cases neither mutation changes in meaning, such as
+`[refuses-an-empty-verb]`. The cause is that the R1 refusal interpolates
+`_RELATE_VERB_RE.pattern`, so any edit to the pattern changes the message.
+For M16 and M17, then, only the pure-predicate fuzz was clean evidence. The
+two variants change only the matcher and leave the message alone. Each is
+killed by exactly the semantic boundary cases and both fuzzers, so the
+grammar's character classes are guarded independently of the message text.
+
+### Mock audit
+
+- `git diff e48adb9 -- tests/ | grep '^+'` for `monkeypatch`, `mock`,
+  `patch(`, `setattr` or `setenv` matched two docstrings only. Both say "no
+  mock": `tests/test_cli_lifecycle.py`'s L12 test and the in-process CLI
+  fuzz.
+- `capsys` in the fuzz is output capture on the real `cli.main` path.
+- **0 new or expanded mocks.**
+- Failure paths use a real malformed sibling (L12), a sentinel INDEX and
+  inode checks.
+
+### Defects found and corrected (Check calibration)
+
+Two authored Phase-2 tests were wrong in how they checked, not in what they
+expected. Each fix keeps the behaviour asserted and the id. No pre-existing
+test was edited, and `src/` did not change.
+
+- **DEF-1 — a help assertion that depended on terminal width.**
+  - **Where:** `tests/test_cli_lifecycle.py::test_lifecycle_help_documents_the_grammar_and_flags`
+    asserted the two-word phrase `docs archive` against raw `docs lifecycle
+    --help` output, which argparse wraps to `COLUMNS`.
+  - **Measured:**
+    - it failed at widths 50, 119, 120 and 145, and passed at 60–100, 140,
+      160, 200 and the 78-column pipe default (shown on an unedited HEAD
+      extraction: `COLUMNS=120` fails, `COLUMNS=78` passes);
+    - so it pinned incidental layout.
+  - **Fix (S2R-OQ-4):**
+    - assert against `" ".join(proc.stdout.split())`, the precedent in
+      `tests/test_skill.py`'s stale-wording test;
+    - a comment explains why;
+    - it now passes at 50, 78, 119, 120 and 145, and still fails if the
+      phrase is missing.
+  - The Phase 6 note's width claim is corrected in place.
+- **DEF-2 — a planner guard masked by another.**
+  - **Where:** `tests/test_lifecycle_plan.py::test_plan_lifecycle_refuses_a_source_under_the_archive_subtree`
+    built its archive-subtree source with `Lifecycle: archived`.
+  - **Problem:** with the subtree guard removed (M05), the current-`archived`
+    guard still raised `ValueError`, so the test passed. Its docstring
+    claimed "the guard behind L7".
+  - **Fix (S2R-OQ-3 (a)):**
+    - the fixture now reads `done`: a status-drifted document under
+      `archive/`, which only the location guard can refuse;
+    - the docstring says so;
+    - M05 was re-run on an extraction carrying the corrected test and is
+      **KILLED** by exactly this test (1 failed / 45 passed). Both runs are in
+      the table above.
+  - No contract change was needed.
+
+### Verification
+
+- The full gate is re-run at the commit: ruff, format, mypy, **1656
+  passed**, `docs check .` exit 0, both mirrors and the INDEX snapshot
+  byte-identical.
+- `git diff 1683116 -- src/` is empty. The only test changes are the two
+  corrections above.
 
 ## Milestone completion summary
 
