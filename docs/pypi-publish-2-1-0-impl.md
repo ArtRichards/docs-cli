@@ -2143,6 +2143,67 @@ a decision, a check's behaviour or anything shipped.
 - **The merge** stays the operator's (D13), with *Frozen values for Step 3*'s
   sentence.
 
+## Step 2 review-pass-001
+
+- Pass id: `Step 2 review-pass-001`.
+- Ledger location: `pypi-publish-2-1-0-impl.md#step-2-review-pass-001`
+  (docs root `docs/`; repository path
+  `docs/pypi-publish-2-1-0-impl.md#step-2-review-pass-001`).
+- Predecessor: `Step 1 review-pass-001` — closed, `final-sync` `ready`,
+  synced in `d5a23ef`. That entry and its frozen packet are unchanged.
+- Status: **`open`** — awaiting both reviewers.
+- **This review runs after the irreversible actions.** `docs-cli==2.1.0` is
+  on PyPI, `v2.1.0` is pushed and the GitHub release is published, so D2's
+  post-upload triage applies: a finding against the shipped bytes — the
+  wheel `2c5fa0b3…` and the sdist `c120fc1d…`, built from the tag target
+  `33c936f` — goes to the operator as a yank-or-patch decision; a finding
+  against documents is fixed normally on the branch, including documents
+  whose tag-target copy shipped inside the immutable sdist.
+- Review packet, proposed for the conductor to freeze:
+  - slug `pypi-publish-2-1-0`, step 2, branch
+    `pypi-publish-2-1-0/phases-5-10`;
+  - base `d5a23ef411fe010f3f7a6318e03b4fa26900799f` (the closed Step 1
+    sync);
+  - review HEAD: the commit that records this entry (the return report
+    gives its sha). Step 2 commits: `f7f8f62` (Phase 5, G2), `33c936f`
+    (Phase 5, the re-date — **the tag target**), `2e04d43` (Phase 5, the
+    pre-upload checkpoint), `396698f` (Phase 6), `dfaf413` (Phase 7),
+    `f5aacf8` (Phase 8), `63e7565` (Phase 9), `fb57981` (Phase 10),
+    `fa030f4` (the audit fixes) and the review-ready commit;
+  - changed paths: `CHANGELOG.md`, `docs/INDEX.md`, `docs/feedback-log.md`,
+    `docs/pypi-publish-2-1-0.md`, `docs/pypi-publish-2-1-0-impl.md`,
+    `docs/pypi-publish-2-1-0-test-matrix.md`, `docs/release-runbook.md`,
+    `docs/status.md`, `tests/fixtures/expected/docs-INDEX.md`,
+    `tests/manual/release_probe.py`;
+  - project `docs`, project path `""`, artifact stem `pypi-publish-2-1-0`;
+    tracker row 200 `active`, claim `be7f809`, branch root
+    `pypi-publish-2-1-0/`; risk Standard, under the Step 2 test-quality
+    clause;
+  - outside the repository, the public and host state this step created:
+    PyPI `docs-cli` 2.1.0 (both files, not yanked), the tag `v2.1.0`
+    (object `c2ce8fe…`, peeled `33c936f…`), the release
+    <https://github.com/ArtRichards/docs-cli/releases/tag/v2.1.0>
+    (*Latest*), the host pipx venv at 2.1.0, `~/.claude/skills/docs` and
+    the recorded destination.
+- Tracker: `milestone-plan.md` in the docs root; owning project `docs`;
+  project path empty; artifact stem `pypi-publish-2-1-0`; active semantic
+  slug `pypi-publish-2-1-0`; row
+  `200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate`;
+  claim checkpoint `be7f809`; semantic branch root `pypi-publish-2-1-0/`.
+- Selected commands and results at the review-ready state: `ruff check .`
+  clean; `ruff format --check .` 52 files formatted; `mypy src/ tests/` no
+  issues in 53 files; `pytest -q` **1671 passed**, 1671 collected; `docs
+  check .` exit 0; the INDEX snapshot and both mirrors identical; `READY
+  --repo . --release-date 2026-10-29` 25/25; the release inputs unchanged
+  since `X`; the blobs `cb542802…` and `763b7dd7…`; PyPI's per-version JSON
+  lists both files with (c)'s digests, not yanked; the remote peeled tag
+  `33c936f…`; the host check unchanged. Phase 7's served-wheel probe
+  (25/25) and guard step (True / True), and Phase 8's tag-target gate, are
+  the deep results.
+- Claude slot: `pending`.
+- GPT slot: `pending`.
+- final-sync: `pending`.
+
 ## Milestone completion summary
 
 **Step 2 complete (2026-10-29): `docs-cli==2.1.0` is published, tagged,
