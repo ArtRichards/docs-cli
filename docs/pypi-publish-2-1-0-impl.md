@@ -26,8 +26,8 @@ the test matrix stay synchronized with it. The phases are the
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
-- Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`. Phase 1
-  is complete (2026-10-28); Phase 2 is next.**
+- Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`. Phases
+  1 and 2 are complete (2026-10-28); Phase 3 is next.**
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
@@ -66,7 +66,7 @@ the test matrix stay synchronized with it. The phases are the
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-10-28 | *Decisions (Phase 1 — BINDING)* P1.1–P1.6 frozen: 23 readiness lines, 25 probe checks with the 2.0.0 control column, the scratch layout, Step 1 and Step 2 command lines, the settled items and the runbook correction list. The stop table gained the transport, host-state and suite-criterion rows. E1–E4 re-verified with no drift; E7 corrected (four synopses lag). OQ-1–OQ-5 conductor-resolved. 1671 passed. |
-| 2. Write Tests (RED) | Pending | — | `tests/manual/release_readiness.py` and `tests/manual/release_probe.py`. Readiness is RED for exactly the reasons in the task plan's *Acceptance examples* › *Readiness*. The probe's contract group is GREEN on the editable build. The host 2.0.0 control behaves as P1.2 froze it. The hand-applied mutation smoke runs P1.4's mutants. |
+| 2. Write Tests (RED) | Complete | 2026-10-28 | Both scripts written (blobs `b1f739e3…`, `55d5e33a…`). Readiness RED for exactly the reasons in the task plan's *Acceptance examples* › *Readiness*; its green control passes. Mutants 1–6, 1b and 5b each killed by exactly the intended check. The probe passes 21/21 on the editable build; the 2.0.0 control fails exactly the 13 release-bound checks. 1671 collected. |
 | 3. Create Data/Fixtures | Pending | — | The CHANGELOG is dated and its sentence removed (D7). The lagging README synopses are reconciled (D8). Probe trees are built inline or copied to scratch. Readiness turns GREEN. |
 | 4. Run Tests (RED Baseline) | Pending | — | A pre-publish GREEN baseline (D3). The gate; then build (a) per D4, with its sdist member manifest recorded; then `twine check` and the manifests. Both probe groups run on (a). The rehearsal follows, with D4's byte checks and both probe groups, and ends with (b) = (a). GO recorded. |
 | 5. Update Base Interfaces | Pending | — | The stop-table preconditions; a re-date per D7 if needed; build (c) per D4; `twine check`; (c) = (a); the sdist members against the Phase 4 manifest; `dist/` holding exactly two files. |
@@ -635,6 +635,121 @@ a grep of the trio and `status.md` for "five reasons", "three synopses" and
 "three synopsis" finding only this section and the Step 0 audit trail.
 `git diff --name-only 8515f1c..HEAD` names only `docs/` files and the
 snapshot, and the token search of the staged diff is empty.
+
+## Phase 2 — Write Tests (RED)
+
+Date: 2026-10-28. Both release checks written to P1.1 and P1.2, and every
+Phase 2 run in P1.4 executed. The repository was never mutated: the green
+control and the mutants ran on scratch clones.
+
+### The two scripts
+
+| Script | Blob sha (`git hash-object`; the header prints the same) | Lines (SLOC) |
+|---|---|---|
+| `tests/manual/release_readiness.py` | `b1f739e3dd352f63b9286d77feae175da56c9fb5` | 345 (262) |
+| `tests/manual/release_probe.py` | `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024` | 651 (509) |
+
+- **Shape** follows `tests/manual/m7_success_criteria.py`: a module
+  docstring saying what runs, why it lives outside discovery and what the
+  exit codes mean; `main()` returning 0 or 1; `sys.exit(main(...))`.
+- **Stdlib only**: both print `--help` under `python3 -I` with the system
+  interpreter; neither imports `docs_cli`; neither holds a `/home/` or
+  `/tmp/` path.
+- **One decision logged:** each script carries its own `git_blob_sha` and
+  `isolated_env` (about 15 lines together). A shared module would need a
+  `sys.path` edit or a package under `tests/manual/`, and each script must
+  run standalone, `python3 -I`, from a checkout or an unpacked sdist.
+- **Failure messages mask the probe's run directory** as `<run>`, so result
+  lines copied into this log, which ships in the sdist, carry no host path.
+- **Footprint:** 996 lines (771 SLOC) against the anchor's "roughly
+  300–500". The bulk is the probe's 25 checks with their frozen strings,
+  and ruff's one-argument-per-line layout of the name table. Recorded for
+  the reviewers and for Step 3's `/simplify`; nothing outside the P1
+  catalogue was built.
+
+### Readiness RED on the base tree
+
+`READY --repo . --release-date 2026-10-28` at `ef9ae84`: **exit 1, 17
+passed, 6 failed** — exactly *Acceptance examples* › *Readiness*:
+
+```
+FAIL  The newest CHANGELOG section is the release, dated 2026-10-28 — first heading '## 2.1.0 — UNRELEASED', expected '## 2.1.0 — 2026-10-28'
+FAIL  The release's CHANGELOG section makes no publish-state claim — still says 'A separate publish milestone ships it.'
+FAIL  README.md synopsis for `docs touch` matches `docs touch --help` — README ['S'] vs `docs touch` usage ['V']
+FAIL  README.md synopsis for `docs stamp` matches `docs stamp --help` — README ['S'] vs `docs stamp` usage ['V']
+FAIL  README.md synopsis for `docs project rename` matches `docs project rename --help` — README ['S', 'S'] vs `docs project rename` usage ['S']
+FAIL  README.md synopsis for `docs project set` matches `docs project set --help` — README ['S', 'S'] vs `docs project set` usage ['V', 'S']
+```
+
+R1, R4, R5, R7, R8, both R9 lines and the other ten R6 lines passed.
+
+### Readiness GREEN control and mutation smoke
+
+A `git clone --no-hardlinks` of `ef9ae84` in scratch took exactly Phase 3's
+edits, applied by one scratch edit script that Phase 3 reuses: **exit 0,
+23 passed**. Each mutant then ran on its own `cp -a` copy of that clone.
+
+| Mutant | Applied | Result | Killed by |
+|---|---|---|---|
+| 1 | Heading back to `## 2.1.0 — UNRELEASED` | 22 passed, 1 failed | R2 only |
+| 2 | The dated heading kept, the sentence restored | 22 passed, 1 failed | R3 only |
+| 3 | `validate-all-first` → `validate-everything-first` in the section | 22 passed, 1 failed | R4 only, quoting both lines |
+| 4 | The `docs mv` synopsis line deleted | 21 passed, 1 failed | R5 only ("no synopsis for: mv"); the R6 line for `mv` is gone, not failed |
+| 5 | The `touch` synopsis back to `<file>` | 22 passed, 1 failed | R6 for `touch` only |
+| 6 | One byte appended to the bundled `references/cli.md` | 22 passed, 1 failed | R9 for `cli.md` only |
+| 1b | `pyproject.toml` name `docs-cli-rehearsal` | 22 passed, 1 failed | R1 only |
+| 5b | `[--json]` → `[--force]` in the `docs mv` synopsis | 22 passed, 1 failed | R6 for `mv` only ("flags not in usage: ['--force']") |
+
+All eight are killed, each by exactly its intended check.
+
+### Probe sanity on the editable build
+
+`PROBE --docs .venv/bin/docs --group contract`: **exit 0, 21 passed**.
+
+### Mutant 7 — the 2.0.0 control
+
+`PROBE --docs ~/.local/bin/docs --group all --expect-version 2.1.0` (pipx
+2.0.0): **exit 1, 12 passed, 13 failed**, matching P1.2's control column
+line for line.
+
+| Id | Result | Observed |
+|---|---|---|
+| N1 | FAIL | `relate add m.md pairs-with m-impl.md`: exit 2, `unknown verb 'pairs-with'` |
+| N2 | FAIL | exit 2, argparse `invalid choice: 'lifecycle'` |
+| N3 | FAIL | exit 2, `unknown verb 'references'` |
+| N4 | FAIL | exit 2 from argparse, without the frozen message — the case the message assertion exists for |
+| N5 | FAIL | exit 2, `unknown verb 'Pairs-With'` without the grammar |
+| N6 | FAIL | `docs lifecycle`: exit 2, `invalid choice` |
+| N7 | FAIL | `docs index`: exit 2, `Role: 'adr' not in vocabulary` |
+| N8 | FAIL | exit 1, `Updated: malformed date '20-05-2026' (expected %Y-%m-%d)` |
+| N9 | FAIL | exit 0, `docs: stamped f.md` — it re-stamped the block |
+| S1 | FAIL | the verb list lacks `lifecycle` |
+| S2 | FAIL | exit 2, `unknown verb 'pairs-with'` |
+| G1–G10 | PASS | all ten 2.0 contracts hold on 2.0.0 |
+| W1 | FAIL | printed `docs 2.0.0` |
+| W2 | FAIL | six of the seven files differ from this tree's bundled skill — the comparison rejects a wrong bundle |
+| W3, W4 | PASS | the no-op re-run and the wheel `--symlink` refusal |
+
+### Cleanliness and isolation
+
+After every run, `git status --porcelain --untracked-files=all` listed only
+the two new scripts, so no probe tree touched the repository. The host
+check was unchanged each time (recorded destination absent; update cache
+`39739c29…`), and no file in the pipx venv was newer than the session's
+`env.sh`.
+
+### Verification
+
+- `ruff check .` clean; `ruff format --check .` — 52 files formatted;
+  `mypy src/ tests/` — no issues in 53 source files.
+- `pytest --collect-only -q` — **1671 tests collected**: neither script is
+  discovered.
+- The D1 scope check prints nothing; the token search of the staged diff is
+  empty.
+
+### Deferred to Phase 4
+
+Mutants 8, 8b and 8c need Phase 4's artifacts (P1.4).
 
 ## Milestone completion summary
 

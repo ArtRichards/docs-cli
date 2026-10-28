@@ -242,12 +242,16 @@ mutation and hidden-suite tooling are not configured in this project.
 ## Results summary
 
 - Visible tests: pending (setup baseline: **1671 passed** at `be7f809`).
-- Release checks: pending. Phase 2 records the RED results and the controls;
-  Phases 4, 7 and 8 record GREEN.
-- Hidden/generalization: pending — the three-wheel replay and the 2.0.0
-  control.
+- Release checks: **Phase 2 RED recorded.** Readiness fails exactly the
+  six frozen lines (R2, R3, R6 ×4) and its green control passes 23/23. The
+  probe passes 21/21 on the editable build. Phases 4, 7 and 8 record GREEN.
+- Hidden/generalization: the 2.0.0 control fails exactly N1–N9, S1, S2, W1
+  and W2 and passes G1–G10, W3 and W4, as frozen. The three-wheel replay is
+  pending.
 - Property/stateful: pending.
-- Mutation: pending — a hand-applied smoke over eight targets.
+- Mutation: readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
+  exactly its intended check; mutant 7 is the control above. Mutants 8, 8b
+  and 8c run in Phase 4.
 - Fuzz: not applicable.
 - Benchmark/security/schema: pending. Benchmark is not applicable.
 - Coverage: not configured.

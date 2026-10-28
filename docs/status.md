@@ -48,13 +48,16 @@ Related:
 
 ## Current milestone
 
-**M31 Step 1 in progress (2026-10-28): Phase 1 — Define Contract is
-complete.** [`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to
-PyPI as docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the
-scratch layout and every command line through the tag, including Step 2's,
-so the Step 1 reviewers see the irreversible commands before they run. It
+**M31 Step 1 in progress (2026-10-28): Phases 1 and 2 are complete.**
+[`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to PyPI as
+docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the scratch
+layout and every command line through the tag, including Step 2's, so the
+Step 1 reviewers see the irreversible commands before they run. It
 re-verified the registries, the credentials' shape and the toolchain with
-no drift, and found a fourth README synopsis that lags the CLI. The
+no drift, and found a fourth README synopsis that lags the CLI. Phase 2
+wrote the two release checks under `tests/manual/`: readiness fails for
+exactly the expected six reasons, and the probe passes on the development
+build while the host's 2.0.0 binary fails every 2.1-only check. The
 milestone has three documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;

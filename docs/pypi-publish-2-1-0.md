@@ -40,10 +40,12 @@ Related:
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`.
-  Phase 1 — Define Contract is complete (2026-10-28); Phase 2 is next.**
+  Phases 1 and 2 are complete (2026-10-28); Phase 3 is next.**
   - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
     same day; the log's Phase 1 section has the evidence and the five
     conductor-resolved planning questions.
+  - Phase 2 wrote both release checks; readiness is RED for exactly the
+    frozen reasons, and the probe's controls behave as frozen.
   - Step 0 is complete: both setup questions are resolved by the operator
     (*Setup questions*), and review-pass-001 is closed.
   - Nothing has been uploaded or published.
@@ -833,9 +835,9 @@ Its crosswalk maps each D-id to clauses.
 Each deliverable names its consumer. The end consumers are users and agents
 running `pip install -U docs-cli`, and the suite release that pins 2.1.0.
 
-- [ ] **The release contract, frozen in Phase 1.** Consumer: Phases 2–10 and
+- [x] **The release contract, frozen in Phase 1.** Consumer: Phases 2–10 and
       the Step reviewers.
-- [ ] **The two D5 scripts**, with their RED evidence, control and mutation
+- [x] **The two D5 scripts**, with their RED evidence, control and mutation
       smoke. Consumer: Phases 2, 4, 5 and 7, and the next publish, through
       the runbook.
 - [ ] **The release inputs** (D7, D8). Consumer: readers of the PyPI long
@@ -1095,8 +1097,8 @@ Branch `pypi-publish-2-1-0/simplify`.
 
 ## Phase checklist
 
-- [ ] Phase 1 — Define Contract — release contract; per-release re-verification
-- [ ] Phase 2 — Write Tests (RED) — release checks; controls; mutation smoke
+- [x] Phase 1 — Define Contract — release contract; per-release re-verification
+- [x] Phase 2 — Write Tests (RED) — release checks; controls; mutation smoke
 - [ ] Phase 3 — Create Data/Fixtures — CHANGELOG dated; README reconciled
 - [ ] Phase 4 — Run Tests (RED Baseline) — pre-publish GREEN baseline: gate, build, smoke, TestPyPI rehearsal
 - [ ] Phase 5 — Update Base Interfaces — pre-upload gate; tag-target build
