@@ -87,7 +87,7 @@ the test matrix stay synchronized with it. The phases are the
 | 4. Run Tests (RED Baseline) | Complete | 2026-10-28 | GREEN baseline at `X` (`a25cb5d`): the gate (1671), readiness 23/23, the stale-wording grep 0. Build (a) `2c5fa0b3…`/`1d327a97…`, hatchling 1.33.0, `twine check` and the dependency oracle pass. (a) probe 25/25; the guard step reads True / True. The TestPyPI rehearsal served = local = JSON, payloads equal, probe 24 + W1 SKIP. (b) = (a). Mutants 8, 8b, 8c behave. **GO.** |
 | 5. Update Base Interfaces | Complete | 2026-10-28 – 2026-10-29 | G2 calibrated (OQ-S2-1) with its D9 script re-run (`f7f8f62`); CHANGELOG re-dated 2026-10-29 under D7 (`33c936f`, the tag target); P1.5's Phase 5 block all as expected, 1671 passed; build (c): wheel = (a), manifest = (a)'s, `twine check` passed, `dist/` exactly two files. Nothing uploaded. |
 | 6. Implement Offline/Core Path | Complete | 2026-10-29 | The re-checks passed at 00:03:59 CET; one `twine upload` naming both files, exit 0 at 00:04:04 CET (23:04 UTC on 2026-10-28). The per-version JSON listed both files after about a minute, with digests equal to (c)'s. Nothing re-sent. |
-| 7. Update Tool/Wrapper Layer | Pending | — | Served verification first: the shas against (c), both probe groups, and the suite's capability probes. Only then the tag and the release (D13), with the peeled-tag check. |
+| 7. Update Tool/Wrapper Layer | Complete | 2026-10-29 | Chain of custody bit-perfect for wheel and sdist; the served install's payload = (c); the probe 25/25 on the served wheel, lines identical to (a)'s; the guard step True / True. Then `v2.1.0` annotated at `33c936f`, pushed, peeled remote = the tag target; the GitHub release created with `--verify-tag`, *Latest*. |
 | 8. Run Tests (GREEN) | Pending | — | The GREEN record: readiness and the full fast gate at the tag-target commit; the three-wheel probe results in the matrix; the suite full guard's expected failure. |
 | 9. Integrate / Accept / Dogfood | Pending | — | Host integration per D10, with the task plan's Phase 9 commands: the update notice from the 2.0.0 binary, then the binary, the skill, the sweep, a dogfood `docs check`, and the liveness walk. |
 | 10. Quality, Docs, Refactor | Pending | — | The runbook's *From M31* lessons and its corrections (D11). The feedback-log hand-off update (D12). The status narrative. The final matrix results. Taste triage and the boundary sweep. Scratch cleanup. The completion summaries. |
@@ -1657,6 +1657,71 @@ upload, so `## 2.1.0 — 2026-10-29` is correct; both are recorded here.
 
 Exactly one upload ran; no file was re-sent. `docs-cli==2.1.0` is live on
 PyPI at <https://pypi.org/project/docs-cli/2.1.0/>.
+
+## Phase 7 — Update Tool/Wrapper Layer
+
+Date: 2026-10-29, 00:06–00:08 CET. Served verification first, then the tag
+and the release (D13). Every command is P1.5's Phase 7 block, with the plan's
+two additions: the simple-index poll (OQ-S2-4) and the served wheel's
+extraction kept for Phase 9.
+
+**7.0 Resume check.** No local or remote `v2.1.0`; `gh release view
+v2.1.0` → "release not found". Nothing to skip.
+
+**7.1 Simple-index poll (OQ-S2-4).** The PEP 691 JSON at
+`https://pypi.org/simple/docs-cli/` listed no 2.1.0 file at 00:06:11 and
+both at 00:06:17, each with sha256 equal to (c)'s.
+
+### 7.2 Served verification
+
+**The chain of custody**, wheel and sdist:
+
+| Build | Wheel sha256 | Sdist sha256 |
+|---|---|---|
+| (a) Phase 4, at `X` | `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` | `1d327a97912ab70ac53829e2af2d568c119d8ce555e9032264e744ba1d6d07d4` |
+| (b) post-rehearsal rebuild, at `X` | `2c5fa0b3…` (= a) | `1d327a97…` (= a) |
+| (c) Phase 5, at the tag target `33c936f` | `2c5fa0b3…` (= a) | `c120fc1db71db08306ec1e002dedb1adcd95dc08bd5a8c1f775cda772696404d` (moved with `docs/`; manifest = (a)'s) |
+| PyPI per-version JSON digest | `2c5fa0b3…` (= c) | `c120fc1d…` (= c) |
+| PyPI-served bytes, downloaded | `2c5fa0b3…` (= c) | `c120fc1d…` (= c) |
+
+**Bit-perfect for both artifacts.** The wheel sha is one value across (a),
+(b), (c), the JSON and the served bytes; the sdist is anchored at (c) and
+equal to both served forms.
+
+| Step | Result |
+|---|---|
+| `git worktree add --detach "$S/tag-tree" "$TAG_TARGET"` | at `33c936f` |
+| Each per-version JSON `url` fetched with `curl -sSf` into a fresh empty `$S/dl-served/` | both files; each sha equals (c)'s and the JSON digest |
+| The served wheel extracted to `$S/x/served-wheel` | `diff -r` against (c)'s extraction: empty — Phase 9's reference |
+| `pip install --no-cache-dir --no-deps --index-url https://pypi.org/simple/ docs-cli==2.1.0` into a fresh venv | exit 0; the installed `docs_cli/` equals (c)'s extraction before anything ran; `INSTALLER` reads `pip` |
+| The probe from the worktree (`--repo "$S/tag-tree"`, blob `763b7dd7…`), `--group all --expect-version 2.1.0` | **exit 0, 25 passed**; result lines **identical** to the anchors' block |
+| `git worktree remove "$S/tag-tree"` | its status was clean; removed without `--force`; one worktree left |
+| The guard step: `validate.yml@a997954` lines 1210–1293, dedented | 84 lines, sha256 `2e2fc83d…` = the anchor |
+| The guard step from a fresh empty directory, `PATH` on the served venv (`docs` and `python3` both resolved there) | **exit 0**, printing `verbless-metadata stopgap consistent with docs-cli pin (lifecycle verb: True, free-form relate: True)` |
+| The host check, across the install, the probe and the guard step | unchanged |
+| The suite checkout | `status --porcelain` empty, HEAD `a997954` |
+
+**G2 on the calendar it was fixed for.** The probe ran on 2026-10-29
+against the tag target's `INDEX.md`, generated `_Generated 2026-10-28.`, and
+passed — the run that the byte-exact form would have failed after the
+upload (OQ-S2-1).
+
+### 7.3 Tag and release
+
+| Step | Result |
+|---|---|
+| `TAG_TARGET` against `2e04d43`'s committed anchor | equal: `33c936f447dfb31078dc0c07c9e4fd2297ed747d` |
+| `git merge-base --is-ancestor "$TAG_TARGET" HEAD` | yes |
+| `git tag -a v2.1.0 -m "docs-cli 2.1.0 — docs lifecycle and free-form docs relate" "$TAG_TARGET"` | tag object `c2ce8fe615dd00d6394e2e816428766cc79f2dd8`, unsigned (`tag.gpgSign` unset) |
+| `git push origin v2.1.0` — Step 2's only push (D2) | exit 0, `[new tag] v2.1.0 -> v2.1.0` |
+| `git ls-remote origin 'refs/tags/v2.1.0^{}'` | **`33c936f447dfb31078dc0c07c9e4fd2297ed747d` = the tag target**; the plain ref is the tag object `c2ce8fe…` |
+| The notes: the tag target's `CHANGELOG.md` through P1.5's `awk` | 2668 bytes, non-empty; equal to the working tree's extraction; `git diff --quiet "$TAG_TARGET" -- CHANGELOG.md` holds |
+| `gh release create v2.1.0 --verify-tag --title "docs-cli 2.1.0" --notes "$NOTES"` | exit 0 |
+| `gh release view v2.1.0` | <https://github.com/ArtRichards/docs-cli/releases/tag/v2.1.0>, "docs-cli 2.1.0", not a draft or prerelease, published 2026-10-28T23:07:28Z, **Latest** (`gh release list`) |
+
+GitHub reports the release's `targetCommitish` as `main`, its default for a
+release made from an existing tag; the tag itself pins the commit, as the
+peeled check shows. Nothing else was pushed: no branch, no other tag.
 
 ## Milestone completion summary
 

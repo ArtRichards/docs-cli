@@ -249,9 +249,13 @@ mutation and hidden-suite tooling are not configured in this project.
   tag target, and build (c)'s wheel equals (a) with (a)'s sdist manifest
   (the log's *Phase 5*). Phase 6 re-checked them immediately before the
   upload, which ran once and exited 0.
-- Chain of custody (C10, partial): the wheel sha is one value across (a),
-  (b) and (c), and PyPI's per-version JSON digests equal (c)'s for both
-  files (the log's *Phase 6*). Phase 7 compares the downloaded bytes.
+- Chain of custody (C10): bit-perfect. The wheel sha is one value across
+  (a), (b), (c), the per-version JSON and the downloaded served bytes; the
+  sdist (c) equals both served forms, and its manifest equals (a)'s (the
+  log's *Phase 7* table).
+- Tag and release (C13): `refs/tags/v2.1.0^{}` on the remote equals the tag
+  target; the release was created with `--verify-tag` and `--title`, after
+  C11 and C12.
 - Release checks: **Phase 2 RED recorded.** Readiness fails exactly the
   lines *Acceptance examples* › *Readiness* names (as R2, R3 and R6), and
   its green control passes every line. The probe passes 21/21 on the
@@ -259,12 +263,13 @@ mutation and hidden-suite tooling are not configured in this project.
   Phase 4; 25 after the review split R8); the probe 25/25 on wheel (a) and
   24 + W1 SKIP on the
   TestPyPI-served rehearsal; the extracted suite guard step reads True /
-  True against (a) and fails against 2.0.0. Phases 7 and 8 record the
-  served wheel.
+  True against (a) and fails against 2.0.0. **Phase 7, the PyPI-served
+  wheel (C11, C12):** the probe 25/25 before the tag, lines identical to
+  (a)'s; the extracted guard step reads True / True.
 - Hidden/generalization: the 2.0.0 control fails exactly N1–N9, S1, S2, W1
   and W2 and passes G1–G10, W3 and W4, as frozen. The three-wheel replay:
-  (a) and the TestPyPI-served rehearsal give one result set (W1 aside); the
-  PyPI-served wheel is Step 2's.
+  (a), the TestPyPI-served rehearsal and the PyPI-served wheel give one
+  result set (W1 skipped on the rehearsal only).
 - Property/stateful: N2 and W3 (idempotent re-runs) pass on every
   executable that has the verb, and both are write-sensitive (bytes and
   mtimes; N2 also reads the `--json` no-op record); wheel (a) = (b) by sha; the rehearsal's

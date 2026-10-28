@@ -48,10 +48,12 @@ Related:
 
 ## Current milestone
 
-**M31 Step 2 in progress (2026-10-29): docs-cli 2.1.0 is on PyPI.** The
-upload ran once, under the operator's automatic-release authorization, and
-PyPI's digests match the tag-target build. Served verification, the tag and
-release, and the host refresh follow; the
+**M31 Step 2 in progress (2026-10-29): docs-cli 2.1.0 is on PyPI, tagged
+and released.** The upload ran once, under the operator's automatic-release
+authorization, and the served bytes match the tag-target build exactly. The
+release probe and the Agent Playbook Suite's guard step passed against the
+PyPI-served wheel before `v2.1.0` was tagged and the GitHub release created.
+The host refresh follows; the
 [implementation log](pypi-publish-2-1-0-impl.md) carries the record.
 
 **M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI
