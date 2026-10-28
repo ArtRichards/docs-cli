@@ -42,9 +42,9 @@ Related:
 - Progress: **Milestone setup complete (2026-10-28), and Phase 1 — Define
   Contract is next.**
   - Both setup questions are resolved by the operator (*Setup questions*).
-  - Step 0 review-pass-001 returned four blockers. All are fixed in this
-    revision, along with every should-fix and nit. The pass closes at final
-    sync.
+  - Step 0 review-pass-001 returned four blockers. All are fixed in
+    `b127fd1`, along with every should-fix and nit, and the pass is closed:
+    Step 0 is complete.
   - Setup measured the publish surface read-only (E1–E13, in the
     implementation log); *Current state and evidence* lists the three
     findings that reshape the runbook. Nothing was built, uploaded, installed

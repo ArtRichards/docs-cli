@@ -68,7 +68,8 @@ The operator chose to upload automatically once Step 1's reviews close and
 the TestPyPI rehearsal passes. The Step 0 review found four blockers in the
 first draft — a wrong dependency oracle, an editable-versus-wheel probe
 contradiction, the tag and release ordered before served verification, and
-restated decisions — and all are fixed.
+restated decisions — and all are fixed. The review pass is closed, so
+Step 0 is complete.
 
 The operator also answered both setup questions:
 - The `v2.1.0` tag and the GitHub release follow the upload in the same step.

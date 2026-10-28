@@ -26,10 +26,14 @@ the test matrix stay synchronized with it. The phases are the
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup; no TDD phase started)
-- Progress: **Milestone setup complete (2026-10-28). Q1 and Q2 are RESOLVED
-  by the operator. The four blockers of Step 0 review-pass-001 and all of its
-  other findings are fixed; the pass closes at final sync. Phase 1 — Define
-  Contract is next.**
+- Progress: **Step 0 complete (2026-10-28). Setup is done, Q1 and Q2 are
+  RESOLVED by the operator, and Step 0 review-pass-001 is closed:**
+  - both providers returned;
+  - the four blockers and every other finding are fixed in `b127fd1`;
+  - re-review was not required;
+  - `final-sync` is `ready`.
+
+  **Phase 1 — Define Contract is next, on `pypi-publish-2-1-0/phases-1-4`.**
   - Setup measured the publish surface read-only, recording thirteen pieces of
     evidence (**E1–E13**, below). It built, uploaded, installed and published
     nothing, and touched neither `~/.claude/skills` nor `~/.pypirc`.
@@ -57,8 +61,10 @@ the test matrix stay synchronized with it. The phases are the
   2.0.0 control.
 - Mock audit: no mocks planned. Every check is real-path.
 - Adequacy results: pending.
-- Taste triage: pending. Each review finding is fixed, or waived with a logged
-  reason.
+- Taste triage: Step 0 review-pass-001 is triaged. gpt-B4 / claude-B1, a
+  gating anchor violation, and Claude's subjective finding on documentation
+  fit and minimality are both fixed by the dedupe. GPT had no other
+  subjective findings. See the pass entry below.
 
 ## TDD phase progress
 
@@ -275,14 +281,12 @@ Verification after finalization, at the review-ready checkpoint `caa8f1b`:
   (docs root `/home/user/opt/docs-cli/docs`; repository path
   `docs/pypi-publish-2-1-0-impl.md#step-0-review-pass-001`).
 - Predecessor: none — the first entry in this milestone's review sequence.
-- Status: `open`.
-  - Both provider attempts are terminal.
-  - Every finding is dispositioned **fixed**, in the review-resolution
-    checkpoint commit that introduces this record. A commit cannot carry its
-    own SHA, so that commit's SHA is returned in the hand-off and written here
-    at finalization.
-  - Re-review is not required (see *Re-review*).
-  - The pass closes at final sync.
+- Status: `closed`.
+  - Both provider attempts are terminal, and both returned.
+  - Every finding is dispositioned **fixed** in the correcting checkpoint
+    `b127fd1bbfbfaaa1ac3ce0b5726098911d48668a`, with evidence.
+  - Re-review was recorded `not required`, with its reason.
+  - `final-sync` is `ready`.
 - Frozen packet:
   - slug `pypi-publish-2-1-0`, step 0, branch
     `pypi-publish-2-1-0/milestone-setup`;
@@ -328,15 +332,17 @@ Verification after finalization, at the review-ready checkpoint `caa8f1b`:
 
 ### Findings and dispositions
 
-Line references are to `caa8f1b`, and every disposition is **fixed**. "Plan"
-is `pypi-publish-2-1-0.md`; "matrix" is the test matrix.
+Line references are to `caa8f1b`, and every disposition is **fixed**. The
+**correcting commit** for every row is `b127fd1bbfbfaaa1ac3ce0b5726098911d48668a`
+(`pypi-publish-2-1-0(setup): resolve Step 0 review-pass-001 findings`).
+"Plan" is `pypi-publish-2-1-0.md`; "matrix" is the test matrix.
 
 | # | Source ids | Severity | Finding | Fix and evidence |
 |---|---|---|---|---|
-| 1 | gpt-B1, claude-S2 | blocker | The "no `Requires-Dist`" oracle is wrong (plan :579-581, :816, :972; matrix :58, :98, :180). The served 2.0.0 METADATA carries `Provides-Extra: dev` and five `Requires-Dist: …; extra == 'dev'`. | Plan *Facts* records the served 2.0.0 metadata, re-fetched read-only from PyPI's `.metadata` file. *Non-functional constraints* › *Compatibility* holds the dependency oracle: every `Requires-Dist` carries `extra ==`, plus `Provides-Extra: dev` and `Requires-Python: >=3.11`. Matrix C6 and *Benchmark/security/schema* use it. No "no `Requires-Dist`" text remains (grep: 0). |
-| 2 | gpt-B2, claude-S3 | blocker | The probe cannot pass on the editable build: the `--symlink` refusal is wheel-only (`cli.md` :2978; `src/docs_cli/cli.py` :9364). | D5 splits `release_probe.py` into a **contract group** (any executable) and a **distribution group** (wheel installs only). The editable build runs the contract group only (Phase 2). The three wheel installs run both groups identically. The matrix's *Visible tests* and Matrix rows agree. |
-| 3 | gpt-B3, claude-S5 | blocker | The tag and the release preceded served-wheel verification (D13 :423-425; Phase 7 :1044-1046 against the probe at :1055-1060; runbook :426-429). | In D13 and Phase 7, served verification comes first: the shas, both probe groups, and the suite's capability probes. Only then the tag and the release. The stop table's probe-failure row says "stop before the tag and release". Matrix C11 and C12 read "before the tag", and C13 follows them. Phase 8 is now the GREEN record. |
-| 4 | gpt-B4, claude-B1 | blocker, gating taste | The plan broke its own "state each binding decision once" anchor (:644-646), while `feedback-log.md` :50 claimed it held. D10 was restated about 10 times, plus C15; D13's merge rule about 5 times, plus C13; and the E4/E9/E10 → D mapping twice. | **Option A, dedupe** (a conductor decision). Each operative statement now lives only in its D-id. Other sections reference the id and keep only phase-specific duties. Phase 9 keeps its command lines, and the Q1/Q2 packets stay as the audit trail. Also collapsed: the Overview progress against *Current state*, *Also settled* (now ids only), the Q resolutions (now pointers), and this log's progress, phase notes, decisions, questions table and *Finalization*. `feedback-log.md` :50 now describes the dedupe accurately. Grep counts below. |
+| 1 | gpt-B1, claude-S2 | blocker — **fixed** in `b127fd1` | The "no `Requires-Dist`" oracle is wrong (plan :579-581, :816, :972; matrix :58, :98, :180). The served 2.0.0 METADATA carries `Provides-Extra: dev` and five `Requires-Dist: …; extra == 'dev'`. | Plan *Facts* records the served 2.0.0 metadata, re-fetched read-only from PyPI's `.metadata` file. *Non-functional constraints* › *Compatibility* holds the dependency oracle: every `Requires-Dist` carries `extra ==`, plus `Provides-Extra: dev` and `Requires-Python: >=3.11`. Matrix C6 and *Benchmark/security/schema* use it. No "no `Requires-Dist`" text remains (grep: 0). |
+| 2 | gpt-B2, claude-S3 | blocker — **fixed** in `b127fd1` | The probe cannot pass on the editable build: the `--symlink` refusal is wheel-only (`cli.md` :2978; `src/docs_cli/cli.py` :9364). | D5 splits `release_probe.py` into a **contract group** (any executable) and a **distribution group** (wheel installs only). The editable build runs the contract group only (Phase 2). The three wheel installs run both groups identically. The matrix's *Visible tests* and Matrix rows agree. |
+| 3 | gpt-B3, claude-S5 | blocker — **fixed** in `b127fd1` | The tag and the release preceded served-wheel verification (D13 :423-425; Phase 7 :1044-1046 against the probe at :1055-1060; runbook :426-429). | In D13 and Phase 7, served verification comes first: the shas, both probe groups, and the suite's capability probes. Only then the tag and the release. The stop table's probe-failure row says "stop before the tag and release". Matrix C11 and C12 read "before the tag", and C13 follows them. Phase 8 is now the GREEN record. |
+| 4 | gpt-B4, claude-B1 | blocker, gating taste — **fixed** in `b127fd1` | The plan broke its own "state each binding decision once" anchor (:644-646), while `feedback-log.md` :50 claimed it held. D10 was restated about 10 times, plus C15; D13's merge rule about 5 times, plus C13; and the E4/E9/E10 → D mapping twice. | **Option A, dedupe** (a conductor decision). Each operative statement now lives only in its D-id. Other sections reference the id and keep only phase-specific duties. Phase 9 keeps its command lines, and the Q1/Q2 packets stay as the audit trail. Also collapsed: the Overview progress against *Current state*, *Also settled* (now ids only), the Q resolutions (now pointers), and this log's progress, phase notes, decisions, questions table and *Finalization*. `feedback-log.md` :50 now describes the dedupe accurately. Grep counts below. |
 | 5 | claude-S1 | should-fix, high priority | A `dist/*` upload glob, and no `dist/` wipe between builds: a leftover rehearsal artifact could reach real PyPI. | D4: `rm -rf dist/` before every build; explicit filenames in every upload; `dist/` must hold exactly the two files. The stop table gains a row for `dist/` contents not holding the two canonical files with (c)'s shas. Phases 4 and 6 name both files; Forbidden shortcuts forbids globs. |
 | 6 | gpt-S1, claude-N4 | should-fix | The rehearsal artifact sat outside the byte chain, and `--extra-index-url https://pypi.org/simple/` could execute a claimed `docs-cli-rehearsal`. | D6: single-index installs, `--index-url https://test.pypi.org/simple/ --no-deps`. D4: the served rehearsal wheel must equal the uploaded build by sha, and its `docs_cli/` payload must equal (a)'s. Added to the stop table, to matrix C8, and to Phase 10's correction list. |
 | 7 | gpt-S2, claude-N2 | should-fix | The remote-tag check compared the annotated tag object, not the commit (`v2.0.0`: `af3bdb5` against peeled `408ef6c`). | D13 compares `git ls-remote origin 'refs/tags/v2.1.0^{}'` with the tag-target commit, and runs `gh release create v2.1.0 --verify-tag --title "docs-cli 2.1.0"`. Matrix C13 and the Public release surfaces row agree. |
@@ -407,11 +413,86 @@ objectively against the cited lines:
 None changes an operator decision or the milestone's scope. Step 1's own dual
 review judges the frozen Phase-1 contract before anything irreversible.
 
-### Open items
+Confirmed at finalization: **no re-review was run.** The conductor
+spot-checked `b127fd1`, and this writer re-verified each point
+independently:
+- the tree is clean;
+- `git grep robbie` is empty;
+- no `dist/*` upload glob exists outside the finding text;
+- `gh release create v2.1.0 --verify-tag --title "docs-cli 2.1.0"` is present
+  in D13;
+- `docs check .` exits 0.
 
-- Correcting commit: the review-resolution checkpoint that introduces this
-  record. Its SHA is written here at finalization.
-- final-sync: `pending`.
+### Closure check
+
+- **The predecessor chain is unbroken.** This is the first entry in the
+  sequence, with predecessor none, and there is no earlier entry or frozen
+  packet to alter.
+- **One frozen packet.** Base `be7f809…`, review HEAD `caa8f1b…`.
+- **Both provider slots are terminal**, and both returned from different
+  families, with the effective identities recorded above.
+- **Every reviewer-labeled blocker has a completed disposition with
+  evidence:** gpt-B1, gpt-B2, gpt-B3, gpt-B4 and claude-B1 are all fixed in
+  `b127fd1bbfbfaaa1ac3ce0b5726098911d48668a`.
+- **Every taste finding is fixed.**
+- **Re-review is recorded `not required`**, with an evidence-based reason.
+- **The tracker row is unchanged and still `active`**:
+  `200 | [pypi-publish-2-1-0](pypi-publish-2-1-0.md) | active |
+  lifecycle-and-free-form-relate | M31 — …`.
+
+### Verification report (sync-and-commit, ship-milestone Step 0)
+
+- Risk level: Standard (accepted by the conductor's triage).
+- Fast gate commands run:
+  - `.venv/bin/ruff check .`;
+  - `.venv/bin/ruff format --check .`;
+  - `.venv/bin/mypy src/ tests/`;
+  - `.venv/bin/python -m pytest -q`;
+  - from the docs root: `docs index .`, `docs check .` and
+    `docs check . --stale 14`;
+  - `cmp` of `docs/INDEX.md` with its snapshot, and of both bundled
+    references with `docs/`;
+  - the D6 token search of the staged diff.
+- Deep gate commands run: none. Step 0 changes documentation only.
+- Deferred or not configured:
+  - coverage, the hidden suite and mutation tooling are not configured in
+    this project;
+  - the release checks, the property checks and the hand-applied mutation
+    smoke are planned for Phases 2–8, and have nothing to run against at
+    Step 0.
+- Visible test result: GREEN — 1671 passed, the expected state for a
+  documentation-only step.
+- Hidden/generalization, coverage, mutation, property/stateful, fuzz, and
+  benchmark/security/schema/migration: not applicable at Step 0, since no
+  product code changed.
+- Mock audit: no mocks added.
+- Taste triage: complete. Everything was fixed, and nothing is untriaged.
+- Ship-milestone Step 0 review ledger: this pass is closed, and `final-sync`
+  is `ready`.
+- Semantic tracker row and branch identity:
+  - row `200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate`,
+    with its Notes unchanged;
+  - project `docs`, project path empty, artifact stem `pypi-publish-2-1-0`;
+  - the task plan, log and matrix at the three derived paths;
+  - branch `pypi-publish-2-1-0/milestone-setup`, under root
+    `pypi-publish-2-1-0/`;
+  - both recognized pairs with
+    `archive/2026-10-28/lifecycle-and-free-form-relate.md` present;
+  - `status.md` links the tracker without copying rows or naming next work.
+- Contract/test matrix status: current, with C1–C19 and the decision ↔
+  clause crosswalk.
+- Docs check: exit 0. `--stale 14` exits 1 with the five pre-existing
+  stale warnings on long-unchanged reference docs, reviewed.
+- Diff scope: the milestone trio, `status.md` and `feedback-log.md`, plus the
+  INDEX and its snapshot if they change — documentation only.
+- Operator approvals: D2, D3, Q1 → (A) and Q2 → refresh-and-upgrade, all
+  2026-10-28.
+- High-risk RED-baseline approval: not applicable (Standard).
+- Remaining risks: none open at Step 0. The Phase 6 assumption that the
+  token is validated by use, and the D4 drift guard, are carried in the
+  contract.
+
+- final-sync: `ready`.
 
 ## Phase 1 — Define Contract
 
