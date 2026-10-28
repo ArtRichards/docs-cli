@@ -33,8 +33,8 @@ Related:
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
-  complete, with implementation done and the Step 2 review's findings
-  resolved (`final-sync` pending).
+  complete — implementation done, reviewed and synced (*Step 2
+  review-pass-001* closed); Step 3 remains.
   The narrative, evidence headline and per-phase results live in the
   implementation log (its *Milestone completion summary* first).
 
