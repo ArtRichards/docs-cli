@@ -338,6 +338,16 @@ def check_passes_on_docs_copy(p: Probe) -> str | None:
     return run.brief() if run.code != 0 else None
 
 
+def without_generated_date(index: bytes) -> bytes:
+    """Blank the wall-clock date in the INDEX `_Generated …_` summary line.
+
+    `render_index` (src/docs_cli/cli.py) stamps `date.today()` into the summary,
+    so a tree indexed on one day never byte-matches a dry run on another; as in
+    tests/test_cli_index.py, only that stamp is normalised.
+    """
+    return re.sub(rb"_Generated \d{4}-\d{2}-\d{2}\.", b"_Generated <date>.", index, count=1)
+
+
 def index_dry_run_reproduces_docs_copy(p: Probe) -> str | None:
     if p.docs_copy is None:
         return "the docs-tree copy was not made"
@@ -345,7 +355,7 @@ def index_dry_run_reproduces_docs_copy(p: Probe) -> str | None:
     run = p("index", ".", "--dry-run", cwd=p.docs_copy)
     if run.code != 0:
         return run.brief()
-    if run.raw_out != before["INDEX.md"]:
+    if without_generated_date(run.raw_out) != without_generated_date(before["INDEX.md"]):
         return "stdout differs from the copy's INDEX.md"
     return p.unchanged(p.docs_copy, before)
 

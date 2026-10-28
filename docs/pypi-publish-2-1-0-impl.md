@@ -943,8 +943,8 @@ replaces this section's values and says so.
 | Rehearsal sdist, served = local = JSON | `docs_cli_rehearsal-2.1.0.tar.gz` `0241b9eb0ad906f3136b886f4ef08b83ef37ee723d3ec51db4036c4b1ecc3d1a` |
 | The next rehearsal version under D9 | `2.1.0.post1` (404 at Phase 1) |
 | `release_readiness.py` blob | `cb542802bba447d4fb7ee72eaf1b454b2773653f` — 25 lines (R8 split into R8a–R8c). Earlier: Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`; the audit's D9 re-run `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` |
-| `release_probe.py` blob | `2d6a0c31b1cac8ee25ef858671002e3b7f9d7830`. Earlier: Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`; the audit's D9 re-run `88043c87b4eff5c8dcc164b06e4160c6d1ea444d` |
-| D9 re-runs | Two, both 2026-10-28: after the audit's docstring change (*Step 1 audit*), and after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*). Every probe result line equals the Phase 4 record below |
+| `release_probe.py` blob | `763b7dd7c22c7305f8215b1415b1ff67eb2d3fb1` — *replaced 2026-10-28 by Step 2's G2 calibration (Phase 5 › D9 re-run for the G2 calibration)*. Earlier: Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`; the audit's D9 re-run `88043c87b4eff5c8dcc164b06e4160c6d1ea444d`; Step 1's review `2d6a0c31b1cac8ee25ef858671002e3b7f9d7830` |
+| D9 re-runs | Three, all 2026-10-28: after the audit's docstring change (*Step 1 audit*), after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*), and after Step 2's G2 calibration (*Phase 5* › *D9 re-run for the G2 calibration*). Every probe result line equals the Phase 4 record below |
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
 | Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` |
@@ -1008,8 +1008,8 @@ PASS  install-skill --symlink is refused from a wheel install, leaving the desti
 **D9 freshness.** This section was written after build (b), in a commit
 that changed only `docs/`. The Step 1 audit later changed both scripts'
 docstrings; the release inputs (`src pyproject.toml README.md LICENSE
-.gitignore`) are unchanged since `X`, and the scripts' D9 re-run is recorded
-under *Step 1 audit*, with the blob shas above.
+.gitignore`) are unchanged since `X`, and each later script change's D9
+re-run is listed in the *D9 re-runs* row above, with the blob shas.
 
 ## Step 1 audit — consistency, completeness and accuracy
 
@@ -1445,6 +1445,121 @@ of `7867a428621786c949b133ce01b844f7c455a1ca`, not by a second re-review round:
   result.
 
 - final-sync: `ready`.
+
+## Phase 5 — Update Base Interfaces
+
+Date: 2026-10-28 (23:24 CET) onward. Branch
+`pypi-publish-2-1-0/phases-5-10`, from the closed Step 1 sync `d5a23ef`.
+Step 2 runs in a new session with its own `$S`; every value it needs is read
+from this log. Shell state does not persist between tool calls, so `$S/env.sh`
+carries P1.3's environment plus `X`, `TAG_TARGET` (once recorded) and
+`READY`/`PROBE` as shell functions, and every command sources it first.
+
+### Restatement before work
+
+- **Contract invariants.** D1's boundary: nothing under `src/`, no product
+  test, only the INDEX snapshot among fixtures. D4's chain of custody: wheel
+  (c) = (a) by sha or nothing is uploaded; explicit filenames; `dist/` holds
+  exactly the two files. D2 holds only while every *Error cases*
+  precondition is true at the moment of each action; any stop row voids it.
+  At most one upload, and no file is ever re-sent once published. The tag is
+  annotated at the tag-target commit, and only after served verification
+  (D13). Host state moves only as D10 lists, and only in Phase 9. No
+  credential value is printed, logged or committed (D6).
+- **Forbidden shortcuts.** No expected value from a build's own output; no
+  artifact compared with itself; no glob or `--skip-existing`; no re-dating,
+  renaming or re-versioning past a stop; no weakened or skipped check to reach
+  GREEN (the G2 change below is a *Check calibration* correction that keeps
+  every INDEX byte pinned except the generated date stamp, as the product test
+  does); no special-casing of visible examples; no unisolated host run outside
+  Phase 9.
+- **Visible drivers vs explicit workflow gates.** Visible: the 1671-test
+  product suite, regression evidence only. Explicit gates, none in default
+  discovery: readiness, the probe, `twine check`, the D4 comparisons, the D9
+  diff and blobs, the token search, the D1 scope check, `docs check .` with
+  the snapshot and mirrors, the paired host checks, the guard step, the
+  peeled-tag check and `gh release view`.
+- **Risk and gates.** Standard (carried). Lite gates plus the
+  hidden/generalization smoke (the served wheel as the third wheel install),
+  the property/stateful smoke (the sha chain, N2/W3), the mock audit and the
+  Step 2 dual review, which runs after the irreversible actions (D2's
+  post-upload triage).
+- **Mock policy.** No mocks. Negative controls are scratch clones and the
+  old probe blob, never committed.
+- **Taste anchors.** M29's phase narrative and sha tables; the runbook's
+  append-only lessons; M30's trio shape; `tests/test_cli_index.py`'s
+  `_normalize_generated_date` for the G2 fix (stdlib, a few lines, display
+  name unchanged). **State-once:** each new decision lands once — in its
+  D-id, P1 row or stop-table row, amended in place with a dated note — and
+  measured values live only in this log; `status.md` carries no counts.
+
+### Planning questions — conductor-resolved, Step 2
+
+Step 2's planning found one defect in the frozen commands and four
+false-stop risks. The conductor resolved all five under Standard authority
+(2026-10-28). Each operative rule lives only where the last column says.
+
+| # | Question | Resolution | Where it lands |
+|---|---|---|---|
+| OQ-S2-1 | G2 compares `docs index --dry-run` with the copy's `INDEX.md` byte for byte, but `render_index` stamps today's date; on any day after `d5a23ef`'s `_Generated 2026-10-28.`, Phase 7's probe would fail G2 after the upload | **(A)**: calibrate G2 before build (c) — normalise only the `_Generated YYYY-MM-DD.` stamp on both sides with the product test's regex; reproduce first; run D9's script re-run set plus a cross-day control and an edited-entry mutant. Not a release input, so no `.postN` | P1.2 (G2 row); *Release anchors (current)*; the record below |
+| OQ-S2-2 | The known intermittent `test_d4_install_skill_is_idempotent` segfault (M30's log) would trip "pytest other than 1671 passed" at the upload gate | **(B)**: one full re-run, only when that test crashing is the sole non-pass; the re-run must report 1671 passed; both runs recorded; anything else stops | *Error cases*, the general P1.5 expectation row |
+| OQ-S2-3 | The update cache's 24-hour throttle lets any unisolated host `docs` run move its sha against the Phase 1 baseline | **(B)**: pairwise — each block's after-sha against its before-sha; a change between blocks is recorded with its mtime, not attributed to the milestone | P1.3 (*The host check*); the host-state stop row points there |
+| OQ-S2-4 | Phase 7's `pip install` and Phase 9's `pipx upgrade` had no index-lag poll; a lagging index would hit a stop row after the upload | **(A)**: poll the PEP 691 simple JSON (at most 10 × 30 s) until both 2.1.0 files are listed with sha256 = (c)'s | P1.5 Phase 7; the Phase 9 objective points there |
+| OQ-S2-5 | The notice step named no command; 2.0.0's hook runs only after dispatch and fetches with a 1 s timeout | **(A)**: `~/.local/bin/docs check .` in a fresh scratch tree, up to three attempts with a fresh scratch cache each; then the same on P1.6's sha-checked scratch 2.0.0; else C16 unmet and Phase 9 continues | The Phase 9 objective, item 1 |
+
+### 5.1 Read-only preflight (before any edit)
+
+At 23:24–23:26 CET, at `d5a23ef` with a clean tree:
+- **Resume state:** no Step 2 commit; per-version JSON
+  `docs-cli/2.1.0` **404**; the PEP 691 simple JSON lists versions `1.3.0 …
+  2.0.0` and no 2.1.0 file; no local or remote `v2.1.0`; `gh release view
+  v2.1.0` → "release not found"; one worktree. A fresh start.
+- **D9:** `git diff --quiet "$X"..HEAD -- src pyproject.toml README.md
+  LICENSE .gitignore` holds; the blobs were `cb542802…` and `2d6a0c31…`, the
+  anchors.
+- **Transport:** `git ls-remote origin refs/heads/main` → `193fc71…`, exit 0
+  (the tunnel noise on stderr again); `gh auth status` exit 0, `ArtRichards`.
+  Local `origin/main` = GitHub's `main` = `193fc71…`; no fetch was needed.
+- **`~/.pypirc`:** P1.5's shape command printed exactly the anchors' four
+  lines.
+- **Toolchain:** twine 7.0.0 (PyPI's newest), build 1.5.0, pip 24.0, Python
+  3.12.3 — Phase 4's. PyPI's newest hatchling and its dependencies still
+  equal the anchors' build environment.
+- **Host:** recorded destination absent; update cache `39739c29…` (mtime
+  2026-10-28 08:29), the baseline.
+
+### 5.2 G2 calibration (OQ-S2-1)
+
+**Reproduced first.** A scratch clone of `d5a23ef` with its `INDEX.md`
+summary re-dated to `_Generated 2026-10-27.` — the shape of a tree indexed
+the day before — made the anchored probe (`2d6a0c31…`, `--group contract`,
+the editable build, `--repo` the clone) report exactly one failure: `FAIL
+docs index --dry-run on a copy of this docs tree reproduces its INDEX.md and
+writes nothing — stdout differs from the copy's INDEX.md`.
+
+**The change.** `release_probe.py` gains `without_generated_date()`, which
+blanks the first `_Generated \d{4}-\d{2}-\d{2}\.` match — the regex and
+rationale of `tests/test_cli_index.py`'s `_normalize_generated_date` — and
+G2 compares both sides through it. Every other INDEX byte is still pinned,
+the write check (`p.unchanged`) stays, and the display name is unchanged.
++11/−1 lines; stdlib only; ruff, the formatter and mypy clean. The new blob is
+`763b7dd7c22c7305f8215b1415b1ff67eb2d3fb1`.
+
+### D9 re-run for the G2 calibration
+
+The probe changed after its Phase 4 run, so D9's script re-run applies. No
+release input changed, so `X` stands and there is no `.postN`. Every run used
+a fresh venv and scratch XDG; the host check was unchanged across the block.
+
+| # | Run | Result |
+|---|---|---|
+| 1 | Rebuild from `X` in a scratch clone, `--outdir` in scratch, `SOURCE_DATE_EPOCH` unset | wheel `2c5fa0b3…`, sdist `1d327a97…` — equal to (a); `Generator: hatchling 1.33.0`; the isolated build env resolved `hatchling-1.33.0 packaging-26.3 pathspec-1.1.1 …`, the anchors' set |
+| 2 | Probe, new blob, on a fresh venv of that wheel, `--group all --expect-version 2.1.0` | exit 0, 25 passed; result lines **identical** to the anchors' block |
+| 3 | Probe on a fresh `--index-url https://test.pypi.org/simple/ --no-deps` install of `docs-cli-rehearsal==2.1.0` (its `docs_cli/` equal to (a)'s extraction before running), `--no-version-check` | exit 0, 24 passed, 1 skipped; lines **identical** to the anchors' block with W1 SKIP |
+| 4 | Probe on the editable build, contract group | exit 0, 21 passed; lines equal the anchors' first 21 |
+| 5 | Probe on P1.6's scratch 2.0.0 (downloaded wheel sha `bcd8aa45…` = E1, checked before running) | exit 1, 12 passed, 13 failed; statuses identical to Phase 2's control column |
+| 6 | Cross-day control: the re-dated clone above, old blob vs new | old: FAIL G2 only (20 passed); new: 21 passed; the two outputs differ in the G2 line alone |
+| 7 | Mutant: a same-day clone with one `INDEX.md` entry line edited (` (edited)` appended to the `milestone-plan.md` entry) | FAIL G2 only, under both the old and the new blob — the normalisation masks nothing but the date stamp |
 
 ## Milestone completion summary
 

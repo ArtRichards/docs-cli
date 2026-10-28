@@ -589,11 +589,11 @@ These are the stop conditions. Each one voids D2 until the operator decides.
 | The tree is dirty at a build, beyond D4's rehearsal exception | Stop | `git status --porcelain` |
 | `~/.pypirc` is missing, or its shape changed | Stop | P1.5's shape command (D6) |
 | The remote or `gh` is unusable at Phase 5: `git ls-remote origin refs/heads/main` or `gh auth status` exits non-zero | Stop; nothing uploaded. Stderr noise from a command that exits 0 is not a failure | Both commands' exit status |
-| A P1.5 Phase 5–7 command's result differs from the expectation P1.5 states for it — readiness failing on anything but D7's date, `pytest` other than 1671 passed, the 404 probe answering 200, the guard step's sha differing from the anchor, empty release notes, or a toolchain difference beyond a patch level. This row never governs the upload's own outcome: from `twine upload` until the per-version JSON lists both files, only the PyPI-upload row below decides | Stop; nothing further is published | The command's output, recorded in the log |
+| A P1.5 Phase 5–7 command's result differs from the expectation P1.5 states for it — readiness failing on anything but D7's date, `pytest` other than 1671 passed (*amended 2026-10-28, Step 2, OQ-S2-2:* when the sole non-pass is `tests/test_packaging.py::test_d4_install_skill_is_idempotent` crashing with a negative return code, one full re-run is allowed; it must report 1671 passed, both runs are recorded, and anything else stops), the 404 probe answering 200, the guard step's sha differing from the anchor, empty release notes, or a toolchain difference beyond a patch level. This row never governs the upload's own outcome: from `twine upload` until the per-version JSON lists both files, only the PyPI-upload row below decides | Stop; nothing further is published | The command's output, recorded in the log |
 | The PyPI upload (Phase 6) does not end with twine exit 0 and both files in the per-version JSON | First poll the per-version JSON (at most 10 × 30 s) and record exactly which files PyPI publishes. Then the first case that applies decides: (1) any hard refusal — a 4xx, including a 400 metadata error, 401/403 authentication, and 409 or a reused filename — stops, with the publication recorded as it stands (none, or one file); (2) one file confirmed published and the other failed transiently (connection error, timeout, 5xx) gets one re-send of the missing file by explicit name — if the re-send exits 0 and the JSON then lists both files, the upload has succeeded; otherwise stop; (3) any other error, including a transient fault with no file confirmed published, stops for the operator with no automatic retry; (4) anything else — publication still uncertain after polling, or twine exiting 0 while the JSON lists fewer than both files — stops. A published file is never re-sent, and "nothing uploaded" is recorded only when the poll lists no file | twine's exit and message; the per-version JSON file list |
 | A served sha ≠ the local sha | Stop before the tag; the operator decides (yank or not) | The chain-of-custody table |
 | The served-wheel probe or the suite capability probes fail | Stop before the tag and release; the operator decides (yank, or a patch milestone). The suite probes pass only when the extracted guard step (P1.5) exits 0 and prints `lifecycle verb: True, free-form relate: True`; the CI step's exit inside the suite checkout is not the criterion | The probe output; the guard step's output |
-| A run changed host state D10 does not authorize: the recorded-destination file differs from what the last authorized step left (absent until Phase 9's skill step, then naming `~/.claude/skills/docs`), or the update cache's sha moved | Stop; the operator decides | The host before/after check (P1.3) |
+| A run changed host state D10 does not authorize: the recorded-destination file differs from what the last authorized step left (absent until Phase 9's skill step, then naming `~/.claude/skills/docs`), or the update cache's sha moved across that run (P1.3's host check) | Stop; the operator decides | The host before/after check (P1.3) |
 | The peeled remote tag ≠ the build commit, or `gh release create` fails | Stop; record; the PyPI release stands | `git ls-remote`; gh's exit |
 | `pipx upgrade` fails, or the host binary does not report `docs 2.1.0` | Stop the host step before the skill refresh | pipx's output; `docs --version` |
 | `install-skill --force` at the host destination fails | Stop the host step; the release stands | The command's exit and stderr |
@@ -996,8 +996,16 @@ closes with `final-sync: ready`.
      aggregate JSON reports 2.1.0. P1.3's `env.sh` exports
      `DOCS_CLI_NO_UPDATE_CHECK=1`, so this one run is prefixed `env -u
      DOCS_CLI_NO_UPDATE_CHECK -u CI -u DO_NOT_TRACK`. Expect one notice line
-     on stderr and an unchanged exit code.
-  2. **The binary.** Run `pipx upgrade docs-cli`. Verify that
+     on stderr and an unchanged exit code. *Amended 2026-10-28 (Step 2,
+     OQ-S2-5):* the command is `~/.local/bin/docs check .` in a fresh scratch
+     tree with an empty `.docs.toml`, against a control run with the check
+     suppressed, because 2.0.0's hook runs only after dispatch (not for
+     `--version` or `-h`). Up to three attempts, each with a fresh scratch
+     cache; if none prints the line, the same retries on P1.6's sha-checked
+     scratch 2.0.0 install; if the line is still not observed, C16 is
+     recorded unmet and Phase 9 continues — the release stands.
+  2. **The binary.** After P1.5 Phase 7's simple-index poll, run `pipx
+     upgrade docs-cli`. Verify that
      `~/.local/bin/docs --version` prints `docs 2.1.0`, installed from the
      PyPI index.
   3. **The skill.** This step leaves P1.3's scratch state on purpose, so the
@@ -1239,7 +1247,7 @@ contracts plus the runbook's index smoke.
 | Id | Check | Tree and expected value | Source |
 |---|---|---|---|
 | G1 | docs check passes on a throwaway copy of this repository's docs tree | Copy of `<repo>/docs`: `check .` exits 0 | runbook *Quality gate* |
-| G2 | docs index --dry-run on a copy of this docs tree reproduces its INDEX.md and writes nothing | The same copy: stdout equals its `INDEX.md` byte for byte; snapshot unchanged | runbook *Quality gate* |
+| G2 | docs index --dry-run on a copy of this docs tree reproduces its INDEX.md and writes nothing | The same copy: stdout equals its `INDEX.md` byte for byte, apart from the `_Generated YYYY-MM-DD.` summary date, which is normalised on both sides as `tests/test_cli_index.py` does; snapshot unchanged. *Calibrated 2026-10-28 (Step 2, OQ-S2-1): `render_index` stamps today's date, so the byte-exact form failed on any day after the tree was indexed — a check defect, not a contract change* | runbook *Quality gate*; `tests/test_cli_index.py` |
 | G3 | A one-sided recognized edge is reported as missing-inverse | `reciprocal-missing`: `check --json` exits 2, with exactly one `missing-inverse` record, on `a.md`, carrying the frozen message | `tests/test_check.py` (frozen message; exit code) |
 | G4 | Bare --cascade is refused and nothing changes | `archive-pair`: `archive feature.md --cascade` exits 2; stderr contains `--cascade is retired in docs 2.0 and writes nothing`; snapshot unchanged | `cli.md` › `docs archive` |
 | G5 | A dead prose link is reported as broken-body-link | `bodylink-broken`: `check --json` exits 2 with exactly one record, `broken-body-link` on `doc.md`, naming `plan.md` | `tests/test_check.py` |
@@ -1288,11 +1296,16 @@ $S/guard-step.sh  the suite guard step extracted per P1.5
 ```
 
 **The host check**, before and after every block that runs a `docs`
-executable: `sha256sum ~/.cache/docs-cli/update-check.json` equals the Phase
-1 baseline recorded in the log, and the recorded destination
+executable: `sha256sum ~/.cache/docs-cli/update-check.json` is unchanged
+across the block, and the recorded destination
 `~/.local/state/docs-cli/install-skill.json` is as the last authorized step
 left it — absent (`test ! -e`) until Phase 9's skill step (D10), naming the
-expanded `~/.claude/skills/docs` from then on.
+expanded `~/.claude/skills/docs` from then on. *Amended 2026-10-28 (Step 2,
+OQ-S2-3): the cache comparison is pairwise — each block's after-sha against
+that block's before-sha — rather than against the Phase 1 baseline, which
+the log keeps as the record. The cache's 24-hour throttle lets any
+unisolated `docs` run on this host rewrite it; a change between blocks is
+recorded with its mtime and is not attributed to the milestone.*
 
 **Recording discipline.** Builds (a), the rehearsal and (b) all run on the
 Phase 3 commit `X` with a clean tree, except for the rehearsal's own
@@ -1540,7 +1553,11 @@ skill (W2) from the worktree, so they are the tag target's bytes, whatever
 the working tree holds. The guard step's lines 1210–1293 are the step's
 `run:` block, dedented by its ten-space indent. From an empty directory the suite's policy file and
 skills tree are absent, so it exits 0 exactly when both capabilities read
-True (OQ-4). Only then:
+True (OQ-4). *Amended 2026-10-28 (Step 2, OQ-S2-4):* before the `pip
+install` above, and before Phase 9's `pipx upgrade`, poll PyPI's PEP 691
+simple JSON (`https://pypi.org/simple/docs-cli/`, at most 10 × 30 s) until
+both 2.1.0 files are listed with sha256 equal to (c)'s; the poll is
+read-only and absorbs index lag. Only then:
 ```
 git tag -a v2.1.0 -m "docs-cli 2.1.0 — docs lifecycle and free-form docs relate" "$TAG_TARGET"
 git push origin v2.1.0
