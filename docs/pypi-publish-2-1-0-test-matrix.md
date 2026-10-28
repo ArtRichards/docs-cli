@@ -261,6 +261,10 @@ mutation and hidden-suite tooling are not configured in this project.
 - Mutation: readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
   exactly its intended check; mutant 7 is the control above; the
   comparator mutants 8, 8b and 8c each report their planted difference.
+- Script provenance (C19): every run printed its blob sha. The Step 1
+  audit's docstring-only change was re-run under D9 against wheel (a) and
+  a fresh install of the served rehearsal, with identical results; the
+  log's anchors carry the current blobs.
 - Fuzz: not applicable.
 - Benchmark/security/schema: schema — `twine check` passed on both builds,
   `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in

@@ -1162,7 +1162,7 @@ log's Phase 1 section records them with their evidence.
   `SKIP  <name> — <reason>` — and a summary line. Exit 0 when nothing
   failed, 1 otherwise, 2 on a usage error.
 - Display names state the behaviour. The ids below (R…, N…, S…, G…, W…)
-  live only here and in the matrix.
+  live only in the milestone's documents, never in a display name.
 
 ### P1.1 — `release_readiness.py`
 
@@ -1172,9 +1172,9 @@ release_readiness.py --repo DIR --docs PATH --version 2.1.0 --release-date YYYY-
 ```
 
 `--repo` is the tree under test and defaults to the script's repository;
-`--help` output always comes from `--docs`. Expected values come from the
-arguments (D1, D7) and from `git show <base>:CHANGELOG.md`, M30's reviewed
-text — never from the tree's own output.
+`--help` output always comes from `--docs`. The references are the
+arguments (D1, D7), `git show <base>:CHANGELOG.md` (M30's reviewed text)
+and that `--help`; nothing under test is its own reference.
 
 | Id | Check | Rule |
 |---|---|---|
@@ -1223,6 +1223,7 @@ release_probe.py --docs PATH --group {contract,all} --repo DIR --scratch DIR \
     [--expect-version 2.1.0 | --no-version-check]
 ```
 
+- `--repo` defaults to the script's repository, as in P1.1.
 - `--group all` requires exactly one of `--expect-version` and
   `--no-version-check`; the latter skips W1 with "rehearsal-name install
   reports 0.0.0+local" (M13).
@@ -1312,6 +1313,8 @@ $S/a/  $S/r/  copies of (a)'s and the rehearsal's artifacts (dist/ is wiped betw
 $S/x/<name>/  extractions (python3 -I -m zipfile -e …; tar -xzf … -C …); nothing runs from inside them
 $S/dl-<name>/ fresh, empty download directories
 $S/venv-<name>/  $S/probe/  $S/mut/  $S/backend-pin.txt (only if D4's remedy runs)
+$S/tools/     the Phase 3 edit script and the readiness mutant script (Step 1 only)
+$S/guard-step.sh  the suite guard step extracted per P1.5
 ```
 
 **The host check**, before and after every block that runs a `docs`
@@ -1482,7 +1485,9 @@ guard-step sha come from the log's *Release anchors (current)*.
 **Phase 5 — preconditions, then build (c)** at the clean `HEAD`:
 ```
 curl -s -o /dev/null -w '%{http_code}' https://pypi.org/pypi/docs-cli/2.1.0/json   # 404
-git diff --quiet "$X"..HEAD -- src pyproject.toml README.md LICENSE .gitignore tests/manual
+git diff --quiet "$X"..HEAD -- src pyproject.toml README.md LICENSE .gitignore   # release inputs unchanged
+git hash-object tests/manual/release_readiness.py tests/manual/release_probe.py
+    # each equals its blob in Release anchors (current), whose D9 re-run covers any change since X
 $READY --repo . --release-date "$(date +%F)"     # exit 0; if R2 alone fails on the date: D7's re-date commit, re-run
 .venv/bin/python -m pytest -q                     # 1671 passed, the two suite-probe replicas included
 git ls-remote origin refs/heads/main && gh auth status    # both exit 0
@@ -1493,7 +1498,7 @@ The toolchain versions equal Phase 4's, and `~/.pypirc`'s shape equals Phase
 `twine check` both files by name, and confirm: the (c) wheel sha equals (a)'s
 (else D4's remedy); the (c) manifest equals (a)'s recorded manifest; `ls -A
 dist/` shows exactly the two canonical files. `HEAD` is the tag-target
-commit.
+commit: `TAG_TARGET=$(git rev-parse HEAD)`, recorded in the log.
 
 **Phase 6 — the upload:**
 ```

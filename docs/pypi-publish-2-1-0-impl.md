@@ -637,8 +637,9 @@ the edits: `docs touch` on each edited document, `docs index .`, the
 snapshot refreshed, `docs check .` exit 0, the index dry-run identical, and
 a grep of the trio and `status.md` for "five reasons", "three synopses" and
 "three synopsis" finding only this section and the Step 0 audit trail.
-`git diff --name-only 8515f1c..HEAD` names only `docs/` files and the
-snapshot, and the token search of the staged diff is empty.
+`git diff --name-only 8515f1c..HEAD` names only `docs/` files (the INDEX
+and its snapshot did not change), and the token search of the staged diff
+is empty.
 
 ## Phase 2 — Write Tests (RED)
 
@@ -928,8 +929,9 @@ replaces this section's values and says so.
 | Rehearsal wheel, served = local = JSON | `docs_cli_rehearsal-2.1.0-py3-none-any.whl` `fd2f787c85d95d3ace8944f0f00846f0644ebca4f69e3feb422dbff910b7b318` |
 | Rehearsal sdist, served = local = JSON | `docs_cli_rehearsal-2.1.0.tar.gz` `0241b9eb0ad906f3136b886f4ef08b83ef37ee723d3ec51db4036c4b1ecc3d1a` |
 | The next rehearsal version under D9 | `2.1.0.post1` (404 at Phase 1) |
-| `release_readiness.py` blob | `b1f739e3dd352f63b9286d77feae175da56c9fb5` |
-| `release_probe.py` blob | `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024` |
+| `release_readiness.py` blob | `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` (D9 re-run; Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`) |
+| `release_probe.py` blob | `88043c87b4eff5c8dcc164b06e4160c6d1ea444d` (D9 re-run; Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`) |
+| D9 re-run | 2026-10-28, after the Step 1 audit changed both scripts' docstrings only: see *Step 1 audit* below. Every result equals the Phase 4 record |
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
 | Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` |
@@ -989,9 +991,86 @@ PASS  Re-running install-skill on an identical destination is a no-op
 PASS  install-skill --symlink is refused from a wheel install, leaving the destination absent
 ```
 
-**D9 freshness.** This section is written after build (b), in a commit that
-changes only `docs/` and the INDEX snapshot, so `git diff --quiet X..HEAD --
-src pyproject.toml README.md LICENSE .gitignore tests/manual` holds.
+**D9 freshness.** This section was written after build (b), in a commit
+that changed only `docs/`. The Step 1 audit later changed both scripts'
+docstrings; the release inputs (`src pyproject.toml README.md LICENSE
+.gitignore`) are unchanged since `X`, and the scripts' D9 re-run is recorded
+under *Step 1 audit*, with the blob shas above.
+
+## Step 1 audit — consistency, completeness and accuracy
+
+Date: 2026-10-28. The same-instance audit of Phases 1–4, run item by item
+against ship-milestone's consistency check, after the Phase 4 commit
+`f03cb31`.
+
+### Findings and fixes
+
+| # | Finding | Fix |
+|---|---|---|
+| A1 | `release_readiness.py`'s docstring said README "names no particular agent", while R7 checks only for "Claude Code"; it also omitted `--help` as a reference | Reworded to what R7 checks, and to "the references are the arguments, the reviewed CHANGELOG text and the `--help` of `--docs`" |
+| A2 | Both scripts' docstrings said the release runbook runs them; the runbook names neither until Phase 10 (P1.6), and both scripts ship in the sdist | Reworded to the scripts' role, with no claim about the runbook |
+| A3 | A1 and A2 changed both scripts after their Phase 4 runs, which D9 makes a re-run trigger | The D9 re-run below; the anchors table carries the new blobs |
+| A4 | P1.5's Phase 5 diff required `tests/manual` unchanged since `X`, leaving no route for a recorded D9 re-run, which the plan intended to admit | Split: the release inputs must be unchanged, and each script's `git hash-object` must equal its blob in *Release anchors (current)* |
+| A5 | P1.5's tag command used `$TAG_TARGET`, which nothing assigned | Phase 5 now records `TAG_TARGET=$(git rev-parse HEAD)` |
+| A6 | P1.2 did not state the probe's `--repo` default | Stated, as in P1.1 |
+| A7 | P1's preamble said the check ids live "only here and in the matrix" (this log uses them too) | "only in the milestone's documents, never in a display name"; P1.1's references sentence matches the docstring |
+| A8 | This log's Phase 1 verification said the scope check named "the snapshot", and Phase 4's D9 paragraph said its commit changed "the INDEX snapshot"; neither changed | Corrected |
+| A9 | P1.3's layout omitted `$S/tools/` and `$S/guard-step.sh` | Added |
+
+None changes scope, a decision or a check's behaviour, so nothing needs
+the operator.
+
+### D9 re-run for the script change
+
+Both scripts' docstrings changed; no code did. Re-run at blobs
+`a90ab8c6…` (readiness) and `88043c87…` (probe):
+
+| Run | Result | Against the Phase 4 record |
+|---|---|---|
+| Readiness, `--docs .venv/bin/docs` | exit 0, 23 passed | equal |
+| Readiness, `--docs $S/venv-a/bin/docs` (wheel (a)) | exit 0, 23 passed | — |
+| Readiness, `--docs` a fresh install of the served rehearsal | exit 0, 23 passed | — |
+| Probe on wheel (a), `--group all --expect-version 2.1.0` | exit 0, 25 passed | result lines identical |
+| Probe on a fresh TestPyPI install of `docs-cli-rehearsal==2.1.0` (single index, `--no-deps`; its `docs_cli/` equal to (a)'s before running) | exit 0, 24 passed, 1 skipped | result lines identical |
+| Probe on the editable build, contract group | exit 0, 21 passed | equal |
+| Probe on the 2.0.0 control | exit 1, 12 passed, 13 failed | statuses identical |
+
+The host check was unchanged, and `git status` showed only the two edited
+scripts.
+
+### Checked and clean
+
+- **Completeness.** The four Step 1 deliverables are ticked with evidence;
+  Phases 1–4 have log sections, dated progress rows and ticked checklist
+  items. No TODO, placeholder or commented-out code.
+- **Code against spec.** Every R, N, S, G and W check implements its P1.1
+  or P1.2 row, with the frozen fragments and fixtures; the outputs, exit
+  codes and isolation match P1's common rules.
+- **Documents.** The tracker row is unchanged and `active`
+  (`milestone-plan.md` has no diff since `8515f1c`); `status.md` narrates
+  without restating rows; the trio agree on progress, counts, dates and
+  the OQ resolutions; edited documents were touched; the INDEX equals its
+  dry-run and the snapshot; `docs check .` exits 0.
+- **Codebase.** No new dependency; stdlib only; no `docs_cli` import; no
+  host path. Every produced output has a consumer in P1 or the log.
+- **Tests and adequacy.** Every check was shown to reject a wrong answer:
+  the six RED lines, mutants 1–6, 1b, 5b and 8–8c, and the 2.0.0 control.
+  Exact-string assertions quote messages that `cli.md` or the product tests
+  freeze, and the 2.0.0 control passes the G checks, so those strings held
+  across 2.0 → 2.1. Display names carry no provenance. No mocks. Nothing
+  was weakened.
+- **Footprint, for the reviewers.** The scripts are 996 lines (771 SLOC)
+  against the anchor's "roughly 300–500"; the README and CHANGELOG diffs
+  are within it. Phase 2 records why; Step 3's `/simplify` owns any
+  reduction.
+
+### Verification
+
+After the fixes: ruff clean; 52 files formatted; mypy no issues in 53
+files; **1671 passed**, 1671 collected; `docs check .` exit 0; the INDEX
+dry-run, the snapshot and both mirrors identical; readiness 23/23; the D1
+scope check and the token search clean; `git diff --quiet a25cb5d..HEAD --
+src pyproject.toml README.md LICENSE .gitignore` holds.
 
 ## Milestone completion summary
 

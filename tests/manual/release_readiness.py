@@ -14,16 +14,17 @@ Reads the tree under `--repo` (default: this script's repository) and the
     wording, and otherwise identical to its reviewed text at
     `--changelog-base`;
   - README.md lists every verb and sub-verb, each synopsis matches its
-    `--help` usage in positional shape and flags (never in names), it names
-    no particular agent, and every `blob/main/` link names a tracked file;
+    `--help` usage in positional shape and flags (never in names), it does
+    not mention Claude Code, and every `blob/main/` link names a tracked file;
   - the bundled `references/cli.md` and `references/convention.md` are
     byte-identical to `docs/`.
 
-Expected values come from the arguments and the reviewed CHANGELOG text,
-never from the tree's own output. Lives under `tests/manual/` so pytest does
-NOT collect it; the release runbook runs it before every publish. Stdlib-only
-and black-box: every `docs` call is a subprocess with HOME and XDG state
-redirected to a temporary directory and the update check disabled.
+The references are the arguments, the reviewed CHANGELOG text and the
+`--help` of `--docs`; nothing under test is its own reference. Lives under
+`tests/manual/` so pytest does NOT collect it; it is a pre-publish release
+check. Stdlib-only and black-box: every `docs` call is a subprocess with
+HOME and XDG state redirected to a temporary directory and the update check
+disabled.
 
 Prints one PASS/FAIL line per check; exits 0 when all pass, 1 otherwise,
 2 on a usage error.

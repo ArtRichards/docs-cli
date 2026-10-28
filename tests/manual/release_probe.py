@@ -21,8 +21,8 @@ product tests that pin each fixture, never from an executable's output.
 Every 2.1-only exit-2 refusal also asserts its message, because older
 releases exit 2 for an unknown verb or flag too.
 
-Lives under `tests/manual/` so pytest does NOT collect it; the release
-runbook runs it against every wheel it ships or rehearses. Stdlib-only;
+Lives under `tests/manual/` so pytest does NOT collect it; it runs against
+every wheel a release builds, rehearses or ships. Stdlib-only;
 every `docs` call runs with HOME and XDG state redirected under `--scratch`
 and the update check disabled, so no run writes host state.
 
