@@ -2712,3 +2712,95 @@ audit*. Every checklist item was worked:
 - **The host skill symlink** (Phase 7 observation) still shows the 2.1
   bundled skill to agents on this host, beside the 2.0.0 host binary. It was
   not touched. The publish milestone's hand-off carries the refresh.
+
+## Step 2 review-pass-001
+
+- **Pass id:** `Step 2 review-pass-001`.
+- **Ledger location:** `lifecycle-and-free-form-relate-impl.md#step-2-review-pass-001`
+  (docs root `/home/user/opt/docs-cli/docs`; repository path
+  `docs/lifecycle-and-free-form-relate-impl.md#step-2-review-pass-001`).
+- **Predecessor:** `Step 1 review-pass-001`
+  (`lifecycle-and-free-form-relate-impl.md#step-1-review-pass-001`). It is
+  closed, with `final-sync: ready` in
+  `3e2c3caad4e2d2e48a5894f0d8ef888dcb4d2226`. No `contract-rework` entry
+  exists between them, and the predecessor's text and frozen packet are
+  unchanged since `3e2c3ca`.
+- **Status:** `open`. Both provider slots are pending, and the conductor
+  freezes the packet and records each attempt.
+- **Packet inputs as handed off:**
+  - slug `lifecycle-and-free-form-relate`; Step 2, Phases 5–10; branch
+    `lifecycle-and-free-form-relate/phases-5-10`;
+  - base `3e2c3caad4e2d2e48a5894f0d8ef888dcb4d2226` (the closed Step 1 sync
+    commit);
+  - content `HEAD` `338c976d1f2666529929fe40394e814c82644484` (the audit
+    commit). The review-ready commit adds only this entry and the docs
+    lifecycle refresh; a commit never carries its own hash, so the conductor
+    records the review `HEAD` when it freezes the packet.
+  - project `docs`, path `""`, stem `lifecycle-and-free-form-relate`; risk
+    Standard (operator, Q8).
+  - Step 2 was interrupted after Phase 7 and resumed on 2026-10-28. A fresh
+    planner re-verified Phases 5–7 before Phase 8, and its six questions
+    (S2R-OQ-1 … 6) were conductor-resolved (*Phase 8* › *Resume
+    decisions*).
+- **Phase commits:**
+
+  | Phase | Commit |
+  |---|---|
+  | 5 | `9ad9fa6f440b21a734de1c1fd4fefedf38a5bc07` |
+  | 6 | `0176fca2293bff85edb05432708df561b615c712` |
+  | 7 | `16831160f1b2b6076df021a431aa7f91a89de455` |
+  | 8 | `42f9eae8fe626db67d28a9e28ebfec34601cf3ed` |
+  | 9 | `53bd069935be5f5d9b15fcd05fa84b709b0ddd64` |
+  | 10 | `5c52d7559aaba52e9fa229adc498cc9a97fcef88` |
+  | audit | `338c976d1f2666529929fe40394e814c82644484` |
+
+- **Tracker:**
+  - `milestone-plan.md` in the docs root; owning project `docs`; project
+    path empty (a dedicated docs root); artifact stem
+    `lifecycle-and-free-form-relate`.
+  - Row `100 | lifecycle-and-free-form-relate | active | — |`, with Notes
+    unchanged.
+  - Claim checkpoint `2ad941e269339f5a125856f5bcda9339cd9f5b15`; semantic
+    branch root `lifecycle-and-free-form-relate/`.
+- **Changed artifact paths** (`git diff --name-only 3e2c3ca`):
+  - `src/docs_cli/cli.py`;
+  - `src/docs_cli/skill/SKILL.md` and
+    `src/docs_cli/skill/references/{adoption-playbook,quality-artifacts,use-cases}.md`;
+  - `README.md`, `CHANGELOG.md` and `pyproject.toml`;
+  - `tests/test_cli_lifecycle.py` and `tests/test_lifecycle_plan.py` (the
+    DEF-1 and DEF-2 corrections), and `tests/fixtures/expected/docs-INDEX.md`;
+  - `docs/{architecture,test-strategy,feedback-log,status,INDEX}.md` and the
+    milestone trio.
+  - Totals: 19 files, +2,393 / −239 including the documents. `cli.py` is
+    +629 / −116 against `3e2c3ca`.
+- **Gate commands and latest results** at the content `HEAD`:
+
+  | Command | Result |
+  |---|---|
+  | `.venv/bin/ruff check .` | clean |
+  | `.venv/bin/ruff format --check .` | 50 files formatted |
+  | `.venv/bin/mypy src/ tests/` | no issues in 51 files |
+  | `.venv/bin/python -m pytest -q --tb=line -rfxXEs` | **1656 passed**, 0 failed / skipped / xfailed / errors |
+  | `cd docs && ../.venv/bin/docs check .` | exit 0 |
+  | `cmp` of both mirrors and of the INDEX snapshot | byte-identical |
+
+  The milestone-local deep checks are recorded in *Phase 8*:
+  - the id and AST proof against `e48adb9`;
+  - the naming lint;
+  - the mutation smoke, 45/45 killed;
+  - property 16 and fuzz 24.
+
+  The dogfood, wheel probe replay, closeout invariance, reindex identity
+  and runtime are recorded in *Phase 9*.
+- **Claude slot:** `pending`.
+- **GPT slot:** `pending`.
+
+**Findings and dispositions.** None yet; they are recorded when the slots
+return.
+
+**Taste triage.** Pending the reviews. The Step 2 self-triage is in *Phase
+10* › *Taste triage*.
+
+**Re-review.** Not yet decided.
+
+- final-sync: `pending`.
