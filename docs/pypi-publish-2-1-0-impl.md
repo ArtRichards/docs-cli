@@ -25,21 +25,16 @@ the test matrix stay synchronized with it. The phases are the
 - Tracker: order 200, `active` since the claim commit `be7f809`. It depends on
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
-- Started: 2026-10-28 (milestone setup; no TDD phase started)
-- Progress: **Step 0 complete (2026-10-28). Setup is done, Q1 and Q2 are
-  RESOLVED by the operator, and Step 0 review-pass-001 is closed:**
-  - both providers returned;
-  - the four blockers and every other finding are fixed in `b127fd1`;
-  - re-review was not required;
-  - `final-sync` is `ready`.
-
-  **Phase 1 — Define Contract is next, on `pypi-publish-2-1-0/phases-1-4`.**
-  - Setup measured the publish surface read-only, recording thirteen pieces of
-    evidence (**E1–E13**, below). It built, uploaded, installed and published
-    nothing, and touched neither `~/.claude/skills` nor `~/.pypirc`.
-  - The task plan holds the operator decisions (D2, D3, D10 and D13), and its
-    *Current state and evidence* names the three findings that reshape the
-    runbook.
+- Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
+- Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`. Phase 1
+  is complete (2026-10-28); Phase 2 is next.**
+  - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
+    review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
+  - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
+    re-verified E1–E4 and froze *Decisions (Phase 1 — BINDING)* in the task
+    plan.
+  - Nothing has been uploaded or published, and neither `~/.claude/skills`
+    nor `~/.pypirc` has been touched.
 - Source: the canonical tracker row (`193fc71`), and M30's hand-off in
   [feedback-log.md](feedback-log.md) (2026-10-26 entry, *Hand-off*).
 - Branch: `pypi-publish-2-1-0/milestone-setup` for setup. Implementation
@@ -70,9 +65,9 @@ the test matrix stay synchronized with it. The phases are the
 
 | Phase | Progress | Date | Notes |
 |---|---|---|---|
-| 1. Define Contract | Pending | — | Release contract frozen against D1–D13, which carry the answers to Q1 and Q2: each script's check list and expected values (from `cli.md`, the CHANGELOG, M30's and M29's contracts); the scratch layout; the command lines; the stop table; the sdist download method; the backend-pin mechanism; the runbook correction list. The per-release re-verification of E1–E4 is re-run the same day. |
-| 2. Write Tests (RED) | Pending | — | `tests/manual/release_readiness.py` and `tests/manual/release_probe.py`. Readiness is RED for exactly five reasons: the `UNRELEASED` heading, the publish-state sentence, and the `touch`, `stamp` and `project set` synopses. The probe's contract group is GREEN on the editable build. The host 2.0.0 control behaves as Phase 1 froze it. A hand-applied mutation smoke covers eight targets. |
-| 3. Create Data/Fixtures | Pending | — | The CHANGELOG is dated and its sentence removed (D7). The three README synopses are reconciled (D8). Probe trees are built inline or copied to scratch. Readiness turns GREEN. |
+| 1. Define Contract | Complete | 2026-10-28 | *Decisions (Phase 1 — BINDING)* P1.1–P1.6 frozen: 23 readiness lines, 25 probe checks with the 2.0.0 control column, the scratch layout, Step 1 and Step 2 command lines, the settled items and the runbook correction list. The stop table gained the transport, host-state and suite-criterion rows. E1–E4 re-verified with no drift; E7 corrected (four synopses lag). OQ-1–OQ-5 conductor-resolved. 1671 passed. |
+| 2. Write Tests (RED) | Pending | — | `tests/manual/release_readiness.py` and `tests/manual/release_probe.py`. Readiness is RED for exactly the reasons in the task plan's *Acceptance examples* › *Readiness*. The probe's contract group is GREEN on the editable build. The host 2.0.0 control behaves as P1.2 froze it. The hand-applied mutation smoke runs P1.4's mutants. |
+| 3. Create Data/Fixtures | Pending | — | The CHANGELOG is dated and its sentence removed (D7). The lagging README synopses are reconciled (D8). Probe trees are built inline or copied to scratch. Readiness turns GREEN. |
 | 4. Run Tests (RED Baseline) | Pending | — | A pre-publish GREEN baseline (D3). The gate; then build (a) per D4, with its sdist member manifest recorded; then `twine check` and the manifests. Both probe groups run on (a). The rehearsal follows, with D4's byte checks and both probe groups, and ends with (b) = (a). GO recorded. |
 | 5. Update Base Interfaces | Pending | — | The stop-table preconditions; a re-date per D7 if needed; build (c) per D4; `twine check`; (c) = (a); the sdist members against the Phase 4 manifest; `dist/` holding exactly two files. |
 | 6. Implement Offline/Core Path | Pending | — | The upload under D2, naming both files explicitly. The per-version JSON's digests equal (c)'s. |
@@ -496,7 +491,150 @@ independently:
 
 ## Phase 1 — Define Contract
 
-_Not started._
+Date: 2026-10-28. Branch `pypi-publish-2-1-0/phases-1-4`, from the closed
+Step 0 sync `8515f1c`. Phase 1 changed documents only.
+
+### Restatement before work
+
+- **Contract invariants.**
+  - D1's change boundary: nothing under `src/`, no product test, only the
+    INDEX snapshot among the fixtures.
+  - D4's build and custody rules; D5's rule that no expected value comes
+    from a build's own output; D6's isolation and secrets.
+  - In Step 1, the TestPyPI rehearsal under `docs-cli-rehearsal` is the
+    only upload; real PyPI, the tag, the release, pipx and host skills
+    belong to Step 2 (D2, D3, D10).
+  - The tracker row stays `active`.
+- **Forbidden shortcuts.** From the quality model: no special-casing of
+  visible examples, literals or fixture names; no weakening, skipping or
+  deleting a valid check; visible GREEN is not sufficient where deeper
+  gates are selected; no silent loss of adequacy. From the task plan's
+  *Forbidden shortcuts*: no expected value from a build's output, no
+  artifact compared with itself, no skipped rehearsal, no upload glob or
+  `--skip-existing`, no unisolated host state, and no re-dating, renaming
+  or re-versioning to get past a stop.
+- **Visible drivers:** the two release-check scripts (RED in Phase 2, GREEN
+  from Phase 3) and the 1671-test product suite as regression evidence.
+- **Explicit workflow gates**, none in default discovery: `twine check`;
+  the D4 comparisons; the D9 diff; the D6 token search; the D1 scope check;
+  `docs check .`, the INDEX dry-run, the snapshot and the mirrors; the
+  stale-wording grep; the collected count; the host check; the twine
+  newest-version check; the transport check.
+- **Risk and gates:** Standard. Lite gates, plus the hidden/generalization
+  smoke (the three-wheel replay and the 2.0.0 control), the
+  property/stateful smoke, the mock audit and the Step 1 dual review.
+  Coverage is not configured.
+- **Mock policy:** no mocks; every check runs real executables.
+- **Taste anchors:** M29's voice and sha tables; the runbook's append-only
+  lessons; M30's trio shape; `tests/manual/m7_success_criteria.py` and the
+  replicas' probe code; the standard library and committed fixture trees
+  only. Under the state-once trial, each decision's operative wording lives
+  only in its D-id, and P1 holds commands and catalogues.
+
+### Re-verification of E1–E4, the transport and the host (read-only)
+
+| Item | 2026-10-28, Phase 1 | Against setup |
+|---|---|---|
+| E1 | `pypi.org/simple/docs-cli/` 200; latest 2.0.0, releases `1.3.0 … 2.0.0`; `/pypi/docs-cli/2.1.0/json` **404**. Served 2.0.0: wheel `bcd8aa453415dfe66868f22830fce318c7149d6642935d6167d4de9b2cdaab23`, sdist `c62f22d35067cb42a8c241e1d36e161f60ac533b33658ab41f804a2a2c862b66`, uploaded 2026-08-16T09:21Z | unchanged |
+| E2 | TestPyPI bare `docs-cli`: `0.1.0` only, author `None`, the same Portuguese summary. `docs-cli-rehearsal` releases `1.3.0 … 2.0.0`; its `2.1.0` and `2.1.0.post1` per-version endpoints **404** | unchanged; `.post1` newly measured |
+| New | `https://pypi.org/pypi/docs-cli-rehearsal/json` **404**: the rehearsal name is unclaimed on real PyPI, so D6's single-index install guards a real hazard | new |
+| E3 | `~/.pypirc` mode `600`, mtime 2026-10-28 16:57. Sections `distutils` (`index-servers` = `pypi`, `testpypi`), `pypi` and `testpypi`; both index sections `username = __token__`, `password` prefixed `pypi-` and longer than 100 characters; `testpypi` `repository = https://test.pypi.org/legacy/`. No value printed. `gh auth status`: `ArtRichards`, protocol SSH, scopes include `repo`. No `TWINE_*` or `PIP_*` variable and no pip config file on the host | unchanged |
+| E4 | `.venv`: twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3. Newest on PyPI: twine **7.0.0** (2026-07-27), hatchling **1.33.0** (2026-10-28T02:27Z), build 1.6.1. The twine check (P1.6) passes | unchanged |
+| Transport | `git ls-remote origin refs/heads/main` → `193fc718439c39facfa7b3b60066c61d925314f7`, **exit 0**, with `Tunnel device open failed.` / `Could not request tunnel forwarding.` on stderr — noise under the stop table's transport row | new (OQ-3) |
+| E8 | `gh api …/branches/main` → `193fc71…`; `matching-refs/tags/v2` → only `refs/tags/v2.0.0` (tag object `af3bdb5…`); `gh release view v2.1.0` → "release not found"; latest release "docs-cli 2.0.0" | unchanged |
+| Host | Recorded destination `~/.local/state/docs-cli/install-skill.json` **absent**. Update cache `~/.cache/docs-cli/update-check.json` sha256 **`39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d`**, mtime 2026-10-28 08:29 — the baseline for every later host check | unchanged |
+| Gate | ruff clean; 50 files formatted; mypy no issues in 51 files; **1671 passed**, 1671 collected; `docs check .` exit 0; the index dry-run, snapshot and both mirrors identical | unchanged |
+
+One host-binary call ran without isolation during this table:
+`~/.local/bin/docs --version`, after the cache sha was taken. Re-measured
+at once, the cache sha and mtime were unchanged and the recorded
+destination was still absent. Every later host-binary call ran under P1.3's
+environment and the probe's own.
+
+**Control pre-check.** Before freezing P1.2's control column, two
+classifications were probed cheaply against the host 2.0.0 binary in a
+scratch tree with `HOME` and XDG redirected: on a `%d-%m-%Y` tree, `relate
+add a.md precedes b.md` exits 1 with `malformed date '20-05-2026'` (N8
+FAIL); `stamp` on a complete block reading `Lifecycle: activ` exits 0 and
+rewrites it to `draft` (N9 FAIL). The host check was unchanged afterwards.
+Phase 2's control run is the authoritative record.
+
+### E7 correction
+
+Setup's E7 found three lagging synopses; there are four. README line 56
+reads `docs project rename <old> <new>`, while `docs project rename --help`
+ends `[--dry-run] new-name`, `cli.md` titles the section `docs project
+rename <new-name>`, and the parser declares `metavar="new-name"`. A reader
+who copies the PyPI page's synopsis gets an argparse usage error. E7 stays
+as setup measured it; the correction lives here and in *Acceptance
+examples* › *Readiness*.
+
+**Trial data point (state-once convention).** Setup restated E7's count in
+nine places outside E7: in the task plan, D8, *Facts*, the acceptance
+example, *Test Strategy* and the Phase 2 objective; the matrix's *Visible
+tests*; this log's progress rows 2 and 3; and `status.md`. Phase 1 changed
+each one: the acceptance example now states the count once, the other
+trio sites point at it, and `status.md`'s narrative reads "four". Phase 10
+consumes this for the trial's outcome.
+
+### Planning questions — conductor-resolved, Step 1 planning
+
+| # | Question | Resolution | Where it lands |
+|---|---|---|---|
+| OQ-1 | Is readiness RED for six reasons, with a fourth synopsis fix? | **(A)**: every README synopsis line is checked against `--help`; RED has six reasons; Phase 3 fixes four synopses under D8's drift clause; the counts are corrected by reference | P1.1; *Acceptance examples*; D8; footprint 4–8 lines |
+| OQ-2 | What counts as a rehearsal failure when TestPyPI fails transiently? | **(B)**: classify by cause — one retry of the same command for a connection error, timeout or 5xx with nothing accepted; one by-name re-send of a missing file; polling (at most 10 × 30 s) for index lag; any 4xx, sha or payload mismatch, or probe FAIL stops | *Error cases* (the rehearsal and partial-upload rows) |
+| OQ-3 | Should the transport be checked before the upload? | **(A)**: `git ls-remote origin refs/heads/main` and `gh auth status` must both exit 0 at Phase 5, else stop with nothing uploaded; stderr noise on exit 0 is not a failure; today's result is recorded above | *Error cases*; P1.5 |
+| OQ-4 | How does Step 2 discharge the suite-probe obligation? | **(A)**: three pieces — the replicas in the full suite at the tag-target commit; S1 and S2 against the served executable; the guard step's `run:` script extracted byte for byte from `validate.yml` at `a997954` and run from a fresh empty directory, passing on exit 0 with `lifecycle verb: True, free-form relate: True`. Phase 4 rehearses the third piece against (a). The suite repository is read only | P1.5; *Error cases* (the suite-probe row) |
+| OQ-5 | Where do M29's tree-dependent expected values come from? | **(A)**: committed fixture trees copied to scratch, quoting the product tests that pin them; the docs-tree copy carries only tree-independent assertions | P1.2 (G1–G10); *Ambiguities* |
+
+### Phase 1 calibrations of the planning catalogue
+
+These refine the planning agent's draft while freezing it; none changes a
+decision or the milestone's scope.
+- **W1–W4.** The draft named the distribution checks D1–D4, which collides
+  with the binding-decision ids.
+- **G3** asserts exactly one `missing-inverse` record with its frozen
+  message, as `tests/test_check.py` pins it (filtered by rule), rather than
+  exactly one record of any rule.
+- **G6** asserts all five stderr lines `tests/test_cli_mv.py` freezes; the
+  draft said four.
+- **G7** uses `movelink-closeout` with `--date 2026-08-15`, where the strand
+  test pins N = 5.
+- **G8** uses `archive-trio` with `--date 2026-03-04`, the fixture and date
+  of the test that pins "every member carries the date"; the draft named
+  `archive-pair`.
+- **N7** takes a fresh copy of `vocab-extension`, so it does not depend on
+  N6's edit.
+- **W3 and W4** assert the fragments `cli.md` states (`no-op`, `wheel
+  install`), not longer source literals.
+- **The stale-wording grep** covers 19 surfaces: M30 recorded 17, but named
+  only three of its five `--help` outputs, so P1.4 reads all seven that M30's
+  surface-parity reconciliation read. This is a strict superset.
+- **P1.5** compares served payloads with (c)'s extraction, because Step 2
+  cannot read Step 1's scratch and (c) equals (a) by sha; and it runs the
+  full suite at Phase 5, so OQ-4's first piece holds before the upload.
+
+### Edits
+
+- Task plan: *Decisions (Phase 1 — BINDING)* P1.1–P1.6 added; in-place
+  corrections to the Overview progress, D8, *Contract*'s intro, *Facts* E7,
+  *Ambiguities*, the stop table (four rows), the readiness acceptance
+  example, the footprint, *Test Strategy*, the Phase 2, 6 and 7 objectives,
+  and the gate block's arguments.
+- Matrix: clauses and rows point at P1 ids; C3 covers every synopsis line;
+  the planned-names caveat and the restated count are gone.
+- This log: metadata, progress rows 1–3, this section.
+- `status.md`: "four synopsis fixes", and the Step 1 narrative.
+
+### Verification
+
+Recorded under *Re-verification* above for the gate before the edits. After
+the edits: `docs touch` on each edited document, `docs index .`, the
+snapshot refreshed, `docs check .` exit 0, the index dry-run identical, and
+a grep of the trio and `status.md` for "five reasons", "three synopses" and
+"three synopsis" finding only this section and the Step 0 audit trail.
+`git diff --name-only 8515f1c..HEAD` names only `docs/` files and the
+snapshot, and the token search of the staged diff is empty.
 
 ## Milestone completion summary
 

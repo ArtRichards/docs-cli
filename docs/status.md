@@ -48,9 +48,14 @@ Related:
 
 ## Current milestone
 
-**M31 milestone setup complete (2026-10-28).**
-[`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to PyPI as
-docs-cli 2.1.0. It now has three documents:
+**M31 Step 1 in progress (2026-10-28): Phase 1 — Define Contract is
+complete.** [`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to
+PyPI as docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the
+scratch layout and every command line through the tag, including Step 2's,
+so the Step 1 reviewers see the irreversible commands before they run. It
+re-verified the registries, the credentials' shape and the toolchain with
+no drift, and found a fourth README synopsis that lags the CLI. The
+milestone has three documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
 - an [implementation log](pypi-publish-2-1-0-impl.md) carrying the setup
@@ -62,7 +67,7 @@ under the TestPyPI rehearsal name, the credentials are present, and the suite
 is GREEN at 1671. Because M30 already bumped the version, the release inputs
 need little:
 - the CHANGELOG needs only its date and the removal of one sentence;
-- the README needs three synopsis fixes.
+- the README needs four synopsis fixes.
 
 The operator chose to upload automatically once Step 1's reviews close and
 the TestPyPI rehearsal passes. The Step 0 review found four blockers in the

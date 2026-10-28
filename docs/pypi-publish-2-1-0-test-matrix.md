@@ -44,13 +44,14 @@ explicit workflow gate:
 Clause ids are local to this matrix. Each one cites the task plan's binding
 decision (D1–D13) and evidence ids. The decisions' operative wording lives
 only in the task plan, so the clauses below state what is **checked**, not
-the decision again. Phase 1 freezes the exact check lists and command lines.
+the decision again. The exact check ids and command lines are frozen in the
+task plan's *Decisions (Phase 1 — BINDING)* (P1.1–P1.5).
 
 | Id | Clause (what is checked) | Source |
 |---|---|---|
 | C1 | `pyproject.toml`, the packaging pins, both artifact filenames and `docs --version` (canonical builds) all read 2.1.0. No version literal moves | D1; E6 |
 | C2 | The CHANGELOG section is dated and has no publish-state sentence. A diff against M30's section at `bf09748` shows only those two lines changed. It is re-dated before build (c) if the day rolled | D7; E6 |
-| C3 | The README lists every `docs --help` verb. Each synopsis matches its verb's `--help` usage — at least `touch`, `stamp`, `project set`, `lifecycle` and `relate`. There is no "Claude Code", and every `blob/main/` link resolves, including after the Step 3 archive | D8; E7 |
+| C3 | The README lists every `docs --help` verb and sub-verb. Every synopsis line matches its verb's `--help` usage in positional shape and flags. There is no "Claude Code", and every `blob/main/` link resolves, including after the Step 3 archive | D5, D8; E7 |
 | C4 | Surface parity: `--help` agrees with the CHANGELOG surface, the references are byte-identical, and M30's stale-wording grep returns 0 | runbook *Surface parity*; E5 |
 | C5 | The tree-wide gate is GREEN at the Phase 4 baseline, at the tag-target commit and at closeout: 1671 passed; ruff, the formatter and mypy are clean; `docs check .` exits 0; the INDEX is idempotent and in lockstep | runbook *Quality gate*; E5 |
 | C6 | Every build passes `twine check`, with `Metadata-Version` and the backend version recorded. The dependency oracle holds: every `Requires-Dist` carries an `extra ==` marker, with `Provides-Extra: dev` and `Requires-Python: >=3.11`. CHANGELOG is in neither artifact, and the wheel carries the seven skill files | D4; plan *Non-functional constraints*; E4 |
@@ -88,16 +89,16 @@ the decision again. Phase 1 freezes the exact check lists and command lines.
 
 ## Matrix
 
-The check names are **planned** at setup. Phase 2 writes the scripts, and this
-table is updated with the final names.
+Check ids refer to the task plan's P1.1 (R…) and P1.2 (N…, S…, G…, W…), where
+each id's display name and assertion are frozen.
 
 | Contract clause | Visible test / explicit check | Hidden/generalization check | Property/stateful check | Mutation target | Fuzz/benchmark/security/schema note |
 |---|---|---|---|---|---|
-| Success path — release inputs (C1–C4) | `release_readiness.py`: the version, the dated section and its diff against `bf09748`, the README verbs, synopses and links, the mirrors. `tests/test_packaging.py` A3/B1/B2/C2 (existing) | — | — | an `UNRELEASED` heading; the sentence kept; another line edited; a missing verb; a lagging synopsis; a mirror one byte off | — |
-| Success path — wheel (a) (C6, C7) | `twine check`; the manifest checks; `release_probe.py`, both groups | a fresh venv per run; an editable build runs the contract group only | the `install-skill` and `docs lifecycle` re-runs are idempotent | the 2.0.0 control fails every 2.1-only check | schema: the dependency oracle; `Metadata-Version` recorded |
-| Success path — served artifacts (C8, C11, C12) | `release_probe.py` on the TestPyPI-served wheel (version skipped) and the PyPI-served wheel; the suite's capability probes, verbatim | index-served artifacts; the rehearsal-name build | identical probe results across the three wheel installs, apart from the rehearsal's version line | — | security: single-index `--no-deps` installs |
+| Success path — release inputs (C1–C4) | `release_readiness.py`: R1 (C1); R2–R4 (C2); R5–R8 (C3); R9 (C4). `tests/test_packaging.py` A3/B1/B2/C2 (existing). The stale-wording grep and surface parity (C4, P1.4) | — | — | P1.4 mutants 1–6, 1b and 5b, each killed by exactly one R id | — |
+| Success path — wheel (a) (C6, C7) | `twine check`; the manifest checks; `release_probe.py`, both groups: N1–N9, S1–S2, G1–G10, W1–W4 | a fresh venv per run; an editable build runs the contract group only | W3 and N2: the `install-skill` and `docs lifecycle` re-runs are idempotent | mutant 7: the 2.0.0 control fails N1–N9, S1, S2, W1, W2 and passes the rest | schema: the dependency oracle; `Metadata-Version` recorded |
+| Success path — served artifacts (C8, C11, C12) | `release_probe.py` on the TestPyPI-served wheel (W1 skipped) and the PyPI-served wheel; the suite's capability probes: S1, S2, the replicas and the extracted guard step (P1.5) | index-served artifacts; the rehearsal-name build | identical probe results across the three wheel installs, apart from the rehearsal's W1 | — | security: single-index `--no-deps` installs |
 | Error path — upload gate (C9, C19) | the Phase 5 checklist, against the stop table; `dist/` contents; the D9 diff, including `tests/manual` and `.gitignore` | — | — | — | security: explicit filenames, `--non-interactive` |
-| Boundary — chain of custody (C10) | the sha table (a), (b), (c) and served; the rehearsal sha and payload; the sdist member manifest; the per-version JSON digests | backend drift between Step 1 and Step 2 (D4 remedy) | sha equality is transitive across the four wheels | the comparator, fed the rehearsal wheel against (a), must report a mismatch | security: served-versus-local is the tamper check |
+| Boundary — chain of custody (C10) | the sha table (a), (b), (c) and served; the rehearsal sha and payload; the sdist member manifest; the per-version JSON digests | backend drift between Step 1 and Step 2 (D4 remedy) | sha equality is transitive across the four wheels | mutants 8, 8b and 8c (P1.4): the sha, payload and manifest comparators each report a planted difference | security: served-versus-local is the tamper check |
 | Idempotency/retry/state (C8, C14) | D9's `.postN` re-rehearsal; the one-file partial-upload retry; XDG redirection | — | the host recorded-destination file is unchanged before Phase 9 | — | — |
 | Public release surfaces (C13, C18) | `git ls-remote origin 'refs/tags/v2.1.0^{}'`; `gh release view v2.1.0`; the archive dry-run and apply; `docs check .` after the archive; the README link re-check | — | — | — | — |
 | Host integration (C15, C16, C17) | the Phase 9 checks: version and source; `diff -r`; the recorded destination; the symlink; the notice; the sweep census | a real 2.0.0 install; the pipx install path | — | — | — |
@@ -105,27 +106,22 @@ table is updated with the final names.
 
 ## Visible tests
 
-No product test is added or changed. These are the planned explicit checks;
-Phase 2 finalizes their names, and names state behaviour without milestone or
-decision ids.
+No product test is added or changed. The explicit checks are frozen in the
+task plan's P1.1 and P1.2; their display names state behaviour without
+milestone or decision ids.
 
-**`tests/manual/release_readiness.py`** — **new.** Covers C1–C4. In Phase 2 it
-is RED for five reasons:
-- the `UNRELEASED` heading;
-- the publish-state sentence;
-- the `touch`, `stamp` and `project set` synopses.
+**`tests/manual/release_readiness.py`** — **new.** Covers C1–C4 with R1–R9
+(23 lines on this tree). In Phase 2 it is RED for exactly the reasons in the
+task plan's *Acceptance examples* › *Readiness*.
 
 **`tests/manual/release_probe.py`** — **new.** Covers C7, C8, C11, C12 and
 C19. It has two groups:
-- **The contract group** runs against any executable:
-  - M30's headline contracts;
-  - the two suite probes;
-  - M29's nine 2.0 contracts.
-- **The distribution group** runs against wheel installs only:
-  - `docs --version`;
-  - `install-skill` byte identity;
-  - the no-op re-run;
-  - the `--symlink` refusal.
+- **The contract group** (21) runs against any executable: M30's headline
+  contracts (N1–N9), the two suite probes (S1, S2), and M29's contracts plus
+  the index smoke (G1–G10).
+- **The distribution group** (4) runs against wheel installs only:
+  `docs --version` (W1), `install-skill` byte identity (W2), the no-op re-run
+  (W3) and the `--symlink` refusal (W4).
 
 **Reused, unchanged:**
 - `tests/test_packaging.py`;
@@ -160,7 +156,9 @@ generalization targets are:
 ## Mutation targets
 
 Mutation tooling is not configured. Phase 2 runs a hand-applied smoke, as
-M28a and M30 did, and records which check kills each mutant:
+M28a and M30 did, and records which check kills each mutant. The task plan's
+P1.4 freezes each mutant and its intended killer, adding the cheap 1b, 5b, 8b
+and 8c:
 1. a CHANGELOG copy still headed `UNRELEASED`;
 2. a dated heading that keeps the publish-state sentence;
 3. a 2.1.0 section with one other line edited;
@@ -227,7 +225,7 @@ Tests map to the use-case catalog in the bundled skill,
 .venv/bin/mypy src/ tests/
 .venv/bin/python -m pytest -q
 (cd docs && ../.venv/bin/docs check .)
-.venv/bin/python tests/manual/release_readiness.py   # arguments frozen at Phase 1
+.venv/bin/python tests/manual/release_readiness.py …   # arguments: task plan P1.4
 ```
 
 ### Deep/nightly/release gate
@@ -238,8 +236,8 @@ The task plan's Phases 4–7 carry the exact sequences:
 - single-index `--no-deps` installs;
 - `release_probe.py --docs <venv>/bin/docs` on every wheel install.
 
-Phase 1 freezes the flags and the scratch paths. Coverage, mutation and
-hidden-suite tooling are not configured in this project.
+The task plan's P1.3–P1.5 freeze the flags and the scratch paths. Coverage,
+mutation and hidden-suite tooling are not configured in this project.
 
 ## Results summary
 
