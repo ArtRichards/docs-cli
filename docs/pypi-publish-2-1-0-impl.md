@@ -27,7 +27,7 @@ the test matrix stay synchronized with it. The phases are the
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
 - Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`. Phases
-  1 and 2 are complete (2026-10-28); Phase 3 is next.**
+  1–3 are complete (2026-10-28); Phase 4 is next.**
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
@@ -67,7 +67,7 @@ the test matrix stay synchronized with it. The phases are the
 |---|---|---|---|
 | 1. Define Contract | Complete | 2026-10-28 | *Decisions (Phase 1 — BINDING)* P1.1–P1.6 frozen: 23 readiness lines, 25 probe checks with the 2.0.0 control column, the scratch layout, Step 1 and Step 2 command lines, the settled items and the runbook correction list. The stop table gained the transport, host-state and suite-criterion rows. E1–E4 re-verified with no drift; E7 corrected (four synopses lag). OQ-1–OQ-5 conductor-resolved. 1671 passed. |
 | 2. Write Tests (RED) | Complete | 2026-10-28 | Both scripts written (blobs `b1f739e3…`, `55d5e33a…`). Readiness RED for exactly the reasons in the task plan's *Acceptance examples* › *Readiness*; its green control passes. Mutants 1–6, 1b and 5b each killed by exactly the intended check. The probe passes 21/21 on the editable build; the 2.0.0 control fails exactly the 13 release-bound checks. 1671 collected. |
-| 3. Create Data/Fixtures | Pending | — | The CHANGELOG is dated and its sentence removed (D7). The lagging README synopses are reconciled (D8). Probe trees are built inline or copied to scratch. Readiness turns GREEN. |
+| 3. Create Data/Fixtures | Complete | 2026-10-28 | The CHANGELOG dated `2.1.0 — 2026-10-28` with its sentence removed (D7); the four lagging README synopses reconciled (D8); the diff equals the Phase 2 green control's. Probe trees confirmed scratch-only. Readiness GREEN, 23/23. 1671 passed. This commit is `X`. |
 | 4. Run Tests (RED Baseline) | Pending | — | A pre-publish GREEN baseline (D3). The gate; then build (a) per D4, with its sdist member manifest recorded; then `twine check` and the manifests. Both probe groups run on (a). The rehearsal follows, with D4's byte checks and both probe groups, and ends with (b) = (a). GO recorded. |
 | 5. Update Base Interfaces | Pending | — | The stop-table preconditions; a re-date per D7 if needed; build (c) per D4; `twine check`; (c) = (a); the sdist members against the Phase 4 manifest; `dist/` holding exactly two files. |
 | 6. Implement Offline/Core Path | Pending | — | The upload under D2, naming both files explicitly. The per-version JSON's digests equal (c)'s. |
@@ -750,6 +750,46 @@ check was unchanged each time (recorded destination absent; update cache
 ### Deferred to Phase 4
 
 Mutants 8, 8b and 8c need Phase 4's artifacts (P1.4).
+
+## Phase 3 — Create Data/Fixtures
+
+Date: 2026-10-28 (21:46 CET). The release inputs took exactly D7's and
+D8's edits, applied by the scratch edit script the Phase 2 green control
+used; `git diff -- CHANGELOG.md README.md` is byte-identical to that
+control's diff.
+
+| File | Line | Before | After |
+|---|---|---|---|
+| `CHANGELOG.md` | 8 | `## 2.1.0 — UNRELEASED` | `## 2.1.0 — 2026-10-28` |
+| `CHANGELOG.md` | 13 | `release. A separate publish milestone ships it._` | `release._` |
+| `README.md` | 53 | `docs touch <file> [--check]` | `docs touch <file>... [--check]` |
+| `README.md` | 54 | `docs stamp <file>` | `docs stamp <file>...` |
+| `README.md` | 56 | `docs project rename <old> <new>` | `docs project rename <new-name>` |
+| `README.md` | 57 | `docs project set <file> <name>`, "Reassign a single doc to another project." | `docs project set <file>... <name>`, "Reassign one or more docs to another project." |
+
+The README keeps its 42-column description alignment. Only `project set`'s
+description changed, because "a single doc" is false for a verb that takes
+several (`cli.md` › `docs project set`); every other description was
+already accurate. The footprint is 2 CHANGELOG lines and 4 README lines.
+
+**The release date `D` is 2026-10-28**, the local date when the heading was
+written. Phase 4's readiness runs use `--release-date 2026-10-28`. Step 2
+re-dates under D7 if its upload falls on a later day.
+
+**Probe trees.** Every tree is built inline or copied under `--scratch`
+(P1.2). A contract-group run on the editable build after the edits (21
+passed) left `git status` showing only the two edited release inputs; the
+host check was unchanged.
+
+### Verification
+
+- `READY --repo . --release-date 2026-10-28` (readiness blob `b1f739e3…`):
+  **exit 0, 23 passed, 0 failed**.
+- `.venv/bin/python -m pytest -q` — **1671 passed**; `docs check .` exit 0.
+- The D1 scope check prints nothing; the token search of the staged diff is
+  empty.
+- This commit is **`X`**, the commit Phase 4 builds (a), the rehearsal and
+  (b) from. Its full sha is in Phase 4's *Release anchors (current)*.
 
 ## Milestone completion summary
 

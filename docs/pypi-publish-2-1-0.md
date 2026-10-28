@@ -40,12 +40,14 @@ Related:
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`.
-  Phases 1 and 2 are complete (2026-10-28); Phase 3 is next.**
+  Phases 1–3 are complete (2026-10-28); Phase 4 is next.**
   - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
     same day; the log's Phase 1 section has the evidence and the five
     conductor-resolved planning questions.
   - Phase 2 wrote both release checks; readiness is RED for exactly the
     frozen reasons, and the probe's controls behave as frozen.
+  - Phase 3 dated the CHANGELOG 2026-10-28 and fixed the four README
+    synopses; readiness passes.
   - Step 0 is complete: both setup questions are resolved by the operator
     (*Setup questions*), and review-pass-001 is closed.
   - Nothing has been uploaded or published.
@@ -840,7 +842,7 @@ running `pip install -U docs-cli`, and the suite release that pins 2.1.0.
 - [x] **The two D5 scripts**, with their RED evidence, control and mutation
       smoke. Consumer: Phases 2, 4, 5 and 7, and the next publish, through
       the runbook.
-- [ ] **The release inputs** (D7, D8). Consumer: readers of the PyPI long
+- [x] **The release inputs** (D7, D8). Consumer: readers of the PyPI long
       description, the GitHub release and the repository.
 - [ ] **The pre-publish evidence:** the gate, build (a) and its manifest,
       `twine check`, the local probe, the rehearsal with its byte checks, (b),
@@ -1099,7 +1101,7 @@ Branch `pypi-publish-2-1-0/simplify`.
 
 - [x] Phase 1 — Define Contract — release contract; per-release re-verification
 - [x] Phase 2 — Write Tests (RED) — release checks; controls; mutation smoke
-- [ ] Phase 3 — Create Data/Fixtures — CHANGELOG dated; README reconciled
+- [x] Phase 3 — Create Data/Fixtures — CHANGELOG dated; README reconciled
 - [ ] Phase 4 — Run Tests (RED Baseline) — pre-publish GREEN baseline: gate, build, smoke, TestPyPI rehearsal
 - [ ] Phase 5 — Update Base Interfaces — pre-upload gate; tag-target build
 - [ ] Phase 6 — Implement Offline/Core Path — real PyPI upload

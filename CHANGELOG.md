@@ -5,12 +5,12 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 2.1.0 — UNRELEASED
+## 2.1.0 — 2026-10-28
 
 _Lifecycle verb and free-form `docs relate` (M30): every metadata edit a suite
 workflow prescribes now has a verb, and `parse()` honours the tree's
 configured vocabulary and date format in every verb. Additive — a minor
-release. A separate publish milestone ships it._
+release._
 
 ### Added
 

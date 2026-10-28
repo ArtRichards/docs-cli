@@ -50,11 +50,11 @@ docs list [filters] [--json] [--exclude PATTERN]
                                           Query view of the tree.
 docs check [DIR] [--exclude PATTERN]      Validate metadata, refs, status/location drift, reciprocal edges,
                                           body links, and archive-date drift.
-docs touch <file> [--check]               Bump Updated: to today; --check re-validates the tree afterwards.
-docs stamp <file>                         Stamp a metadata block onto a file that was written by hand.
+docs touch <file>... [--check]            Bump Updated: to today; --check re-validates the tree afterwards.
+docs stamp <file>...                      Stamp a metadata block onto a file that was written by hand.
 docs lifecycle <file>... <state>          Set a top-level Lifecycle: (draft, active, …); never archived.
-docs project rename <old> <new>           Rename a project across the tree.
-docs project set <file> <name>            Reassign a single doc to another project.
+docs project rename <new-name>            Rename a project across the tree.
+docs project set <file>... <name>         Reassign one or more docs to another project.
 docs migrate <dir> [--apply] [--summary] [--only ambiguous] [--exclude PATTERN]
                                           Adopt a foreign Markdown directory into the convention (dry-run by default).
 docs install-skill [--dest DIR]           Materialise the bundled agent skill onto this host.
