@@ -15,6 +15,13 @@ as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
 
+### 2026-10-28 — "Validate-all-first atomic semantics" overstates a batch that has no rollback
+
+- Source: found internally during the M30 (`lifecycle-and-free-form-relate`) Step 2 audit.
+- Observation: `docs project set --help` and, following it verbatim, `docs lifecycle --help` describe their multi-file write as "validate-all-first atomic semantics". Validation is all-or-nothing, so every refusal writes zero bytes. The writes, though, are sequential `atomic_write` calls with no staged publish or rollback, so an uncaught mid-batch `OSError` leaves the earlier documents written. `cli.md` states the exact contract for both verbs.
+- Why not fixed in M30: the wording is the `project set` anchor's, and changing it touches a pre-existing verb's help text, which is outside M30's surface. No caller depends on the phrase.
+- Ownership: docs-cli (help-text wording, both verbs). Status: **open, unowned.**
+
 ### 2026-10-28 — Candidate project convention: state a binding decision once
 
 - Source: M30 Step 1 review (claude-T4), waived for M30 and recorded as its *Follow-ups* item 10. The Step 2 resume planning (S2R-OQ-2, conductor-resolved) registered it here.

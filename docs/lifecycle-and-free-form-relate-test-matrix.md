@@ -37,9 +37,11 @@ selected as explicit workflow gates, never in default discovery:
 
 - `docs check .` from the docs root;
 - the live-INDEX snapshot: `cmp docs/INDEX.md tests/fixtures/expected/docs-INDEX.md`;
-- the Phase 4 / Phase 8 mechanical proof — test ids collected in a throwaway
-  `git worktree` at the pre-Phase-1 commit `e48adb9` and at HEAD, compared
-  with `comm`, plus an AST function-body diff of every pre-existing
+- the Phase 4 / Phase 8 mechanical proof — test ids collected at the
+  pre-Phase-1 commit `e48adb9` and at HEAD, compared with `comm`. Phase 4
+  collected from a throwaway `git worktree`; Phase 8 used a `git archive`
+  extraction, which is equivalent and leaves `.git/worktrees` untouched.
+  The proof adds an AST function-body diff of every pre-existing
   `tests/*.py` function (only the authoritative list's tests, `_attic_tree`
   and the stamp fixture's prose may differ); scratchpad scripts, results in
   the implementation log;

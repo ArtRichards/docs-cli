@@ -2586,7 +2586,9 @@ publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
   - the 2026-10-26 promotion entry, open until the suite pin moves, which
     carries the hand-off;
   - six 2026-10-27 entries (*Follow-ups* items 1, 2, 3, 7, 8, 9);
-  - the 2026-10-28 candidate convention (item 10).
+  - the 2026-10-28 candidate convention (item 10);
+  - the 2026-10-28 help-wording entry ("validate-all-first atomic
+    semantics"), raised by the Step 2 audit.
 - **Remaining risks:**
   - the intermittent `test_d4_install_skill_is_idempotent` segfault (not
     seen in Step 2; no product code involved);
@@ -2594,3 +2596,119 @@ publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
     → this repository's skill, which shows the 2.1 skill beside the 2.0.0
     host binary until the publish milestone refreshes the host (Phase 7
     observation, in the hand-off).
+
+## Step 2 same-instance audit — 2026-10-28
+
+This audit covers Phases 5–10. It ran after the last phase and before the
+return, following ship-milestone's *consistency / completeness / accuracy
+audit*. Every checklist item was worked:
+- the two issues found are fixed in the audit commit, and one observation
+  is registered as a `feedback-log.md` entry;
+- nothing found changes milestone scope or behaviour intent, so no operator
+  decision is needed;
+- two observations are recorded below.
+
+### Issues found and fixed
+
+1. **The matrix's *Check classification* misdescribed the Phase 8 proof.**
+   It said the ids were collected from a throwaway `git worktree`. Phase 4
+   did that, but Phase 8 used a `git archive` extraction (equivalent, and
+   it leaves `.git/worktrees` untouched). The entry now names both.
+2. **`architecture.md` over-claimed `parse()`'s config reach.** The Phase 10
+   sentence said "every verb that walks or names documents passes" the
+   config, but `docs migrate` walks foreign trees and never calls `parse()`.
+   It now lists the production call sites — the walk, `list`, `archive`,
+   `project set`, `relate`, `lifecycle` and `stamp` — and states that
+   `migrate` adopts against the built-in sets. (The same over-claim, that
+   the bare default "serves `migrate`", was caught in the Phase 10 boundary
+   sweep before that commit.)
+
+### Checked clean
+
+- **Completeness.**
+  - Every Deliverable and every success criterion that falls in Steps 1–2 is
+    met and ticked with an evidence pointer in the task plan's
+    *Deliverables*. The suite-side retirement of the stopgap belongs to the
+    suite release, and the hand-off names it.
+  - Every phase in range has a log section and a dated row in *TDD phase
+    progress*.
+  - The added code has no placeholder, `NotImplementedError`, TODO or
+    commented-out code. The only `pairs-with` literals added to `cli.py` are
+    help-text examples.
+- **Accuracy — code against spec.** Each message in the `docs lifecycle`
+  catalogue (L1, L5–L9, L11, L12) was compared with `cli.md`. So were R1, R2
+  and R4, the P1.5 stamp refusal and the `--json` key sets. All match
+  verbatim.
+  - `cli.md`'s "complete block" definition (each field "a single non-empty
+    value") matches S1's `isinstance(…, str)` exactly, because
+    `parse_metadata_block` never stores an empty string.
+  - `check_doc`, `check_tree` and `_cmd_check` have no hunk against
+    `e48adb9`, so `docs check` is unchanged.
+  - The `render_index` and `walk` signatures in `architecture.md` match the
+    code.
+- **Tracker and identity.**
+  - `milestone-plan.md` is unchanged since the Step 2 base (`git diff
+    3e2c3ca HEAD -- docs/milestone-plan.md` is empty).
+  - Row `100 | lifecycle-and-free-form-relate | active | — |`, with Notes
+    unchanged. Slug, stem `lifecycle-and-free-form-relate` and branch root
+    `lifecycle-and-free-form-relate/` agree, and the three artifacts sit at
+    their derived paths.
+  - `status.md` links the tracker as narrative only and names no next work.
+  - No adjacent-order or dependency relationship applies (one row).
+- **Documentation consistency.**
+  - The task plan's *Overview* › Progress, *Phase checklist* and
+    *Deliverables* agree with this log's *Implementation metadata*, *TDD
+    phase progress* and *Milestone completion summary*.
+  - So do the matrix's *Results summary* and *Adequacy results*, and
+    `status.md`'s *Current milestone*: 1656 passed, mutation 45/45, Phases
+    1–10 complete, the Step 2 review pending, 2.1.0 unreleased.
+  - The per-module id counts in the matrix reconcile with collection. Its
+    "new ids" exclude the two renamed ids that `comm` lists as added in
+    `test_cli_relate.py` and `test_cli_stamp.py`.
+  - Every follow-up lives in `feedback-log.md`, and the task plan's
+    *Follow-ups* rows point at the entries. Item 6 is closed with a reason.
+  - Every document edited in Step 2 had `Updated:` bumped through `docs
+    touch`. `cli.md` and `convention.md` did not change in Step 2.
+- **Generated artifacts.** `docs index .` is current, the INDEX snapshot is
+  byte-identical, and `docs check .` exits 0.
+- **Codebase.**
+  - The new code reads like its anchors (`_cmd_project_set`, the relate
+    plan/apply family, `check_doc`, `render_index`, `_cmd_stamp`).
+  - It reuses the in-project editors and validators, and adds no dependency
+    or hand-rolled equivalent.
+  - The boundary sweep (Phase 10) finds no unconsumed output.
+  - The diff holds only milestone files (19 files since `3e2c3ca`), and the
+    footprint is explained in the taste triage.
+- **Tests and quality.**
+  - The suite is fully GREEN from Phase 8 onward, and lint, format and types
+    are clean.
+  - The two corrected authored tests keep behaviour-first names and carry no
+    provenance in their names or comments.
+  - No test or selected check was weakened: DEF-1 and DEF-2 were corrected
+    under Check calibration, with the reasons and mutation evidence in
+    *Phase 8*.
+- **Adequacy, mocks and metrics.**
+  - The clauses are mapped in the matrix, and the generalization categories
+    were exercised in Phase 9.
+  - Property, fuzz, mutation, schema and security results are recorded, and
+    0 mocks were added.
+  - `visible_pass_rate` and the other metrics are recorded. `hidden_pass_rate`
+    is not applicable.
+- **Commits.** One commit per phase (`9ad9fa6`, `0176fca`, `1683116`,
+  `42f9eae`, `53bd069`, `5c52d75`), then this audit commit and the
+  review-ready commit. No hooks were bypassed.
+
+### Observations (no decision required)
+
+- **`docs lifecycle --help` says "validate-all-first atomic semantics".**
+  The phrase is verbatim from `docs project set --help`. Read literally,
+  "atomic" overstates a sequential batch with no rollback, because an
+  uncaught mid-batch `OSError` (the accepted limitation in the taste triage)
+  would leave the earlier documents written. `cli.md` states the exact
+  contract: validate everything first, then one atomic write per document in
+  argument order. The phrase is kept for anchor parity, and any rewording
+  would touch both verbs' help. It is registered as an open, unowned
+  2026-10-28 `feedback-log.md` entry, so it does not live only here.
+- **The host skill symlink** (Phase 7 observation) still shows the 2.1
+  bundled skill to agents on this host, beside the 2.0.0 host binary. It was
+  not touched. The publish milestone's hand-off carries the refresh.
