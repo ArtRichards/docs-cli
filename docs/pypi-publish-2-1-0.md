@@ -41,8 +41,8 @@ Related:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 1's phases are complete (Phases 1–4, 2026-10-28) and
   the TestPyPI rehearsal is recorded GO.** Step 1 review-pass-001's
-  findings are resolved, and a targeted GPT re-review is pending; the PyPI
-  upload waits for the pass to close (D2).
+  findings, and its targeted re-review's, are resolved; the PyPI upload
+  waits for the pass to close (D2).
   - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
     same day; the log's Phase 1 section has the evidence and the five
     conductor-resolved planning questions.
@@ -590,8 +590,8 @@ These are the stop conditions. Each one voids D2 until the operator decides.
 | The tree is dirty at a build, beyond D4's rehearsal exception | Stop | `git status --porcelain` |
 | `~/.pypirc` is missing, or its shape changed | Stop | P1.5's shape command (D6) |
 | The remote or `gh` is unusable at Phase 5: `git ls-remote origin refs/heads/main` or `gh auth status` exits non-zero | Stop; nothing uploaded. Stderr noise from a command that exits 0 is not a failure | Both commands' exit status |
-| A P1.5 Phase 5–7 command's result differs from the expectation P1.5 states for it — readiness failing on anything but D7's date, `pytest` other than 1671 passed, the 404 probe answering 200, the per-version JSON not listing both files after polling, the guard step's sha differing from the anchor, empty release notes, or a toolchain difference beyond a patch level | Stop; nothing further is published | The command's output, recorded in the log |
-| The PyPI upload (Phase 6) does not end with twine exit 0 and both files in the per-version JSON | First poll the per-version JSON (at most 10 × 30 s) and record exactly which files PyPI publishes. Then, in this order: (1) any hard refusal — a 4xx, including a 400 metadata error, 401/403 authentication, and 409 or a reused filename — stops, with the publication recorded as it stands (none, or one file); (2) one file confirmed published and the other failed transiently (connection error, timeout, 5xx) gets one re-send of the missing file by explicit name, and a second failure stops; (3) any other error, including a transient fault with no file confirmed published, stops for the operator with no automatic retry; (4) publication still uncertain after polling stops. A published file is never re-sent, and "nothing uploaded" is recorded only when the poll lists no file | twine's exit and message; the per-version JSON file list |
+| A P1.5 Phase 5–7 command's result differs from the expectation P1.5 states for it — readiness failing on anything but D7's date, `pytest` other than 1671 passed, the 404 probe answering 200, the guard step's sha differing from the anchor, empty release notes, or a toolchain difference beyond a patch level. This row never governs the upload's own outcome: from `twine upload` until the per-version JSON lists both files, only the PyPI-upload row below decides | Stop; nothing further is published | The command's output, recorded in the log |
+| The PyPI upload (Phase 6) does not end with twine exit 0 and both files in the per-version JSON | First poll the per-version JSON (at most 10 × 30 s) and record exactly which files PyPI publishes. Then the first case that applies decides: (1) any hard refusal — a 4xx, including a 400 metadata error, 401/403 authentication, and 409 or a reused filename — stops, with the publication recorded as it stands (none, or one file); (2) one file confirmed published and the other failed transiently (connection error, timeout, 5xx) gets one re-send of the missing file by explicit name — if the re-send exits 0 and the JSON then lists both files, the upload has succeeded; otherwise stop; (3) any other error, including a transient fault with no file confirmed published, stops for the operator with no automatic retry; (4) anything else — publication still uncertain after polling, or twine exiting 0 while the JSON lists fewer than both files — stops. A published file is never re-sent, and "nothing uploaded" is recorded only when the poll lists no file | twine's exit and message; the per-version JSON file list |
 | A served sha ≠ the local sha | Stop before the tag; the operator decides (yank or not) | The chain-of-custody table |
 | The served-wheel probe or the suite capability probes fail | Stop before the tag and release; the operator decides (yank, or a patch milestone). The suite probes pass only when the extracted guard step (P1.5) exits 0 and prints `lifecycle verb: True, free-form relate: True`; the CI step's exit inside the suite checkout is not the criterion | The probe output; the guard step's output |
 | A run changed host state D10 does not authorize: the recorded-destination file differs from what the last authorized step left (absent until Phase 9's skill step, then naming `~/.claude/skills/docs`), or the update cache's sha moved | Stop; the operator decides | The host before/after check (P1.3) |
@@ -1311,17 +1311,25 @@ tests/manual/release_probe.py --repo . --scratch "$S/probe"`.
 **Every commit** (D1, D6):
 ```
 TOKEN_RE='pypi-[A-Za-z0-9_-]{50,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}'
-if git diff --cached -U0 | grep -qE "$TOKEN_RE"; then         # -q: the match itself is never printed
-  echo "STOP: a token-shaped string is staged (contents not shown) in:"
-  git diff --cached --name-only -G"$TOKEN_RE"; exit 1           # file names only; do not commit
-fi
+names=$(git diff --cached --text --name-only -G"$TOKEN_RE") \
+  || { echo "STOP: the token search itself failed; do not commit"; exit 1; }
+[ -z "$names" ] \
+  || { printf 'STOP: a token-shaped string is staged (contents not shown) in:\n%s\n' "$names"; exit 1; }
+echo "token search: clean"
 git diff --name-only 8515f1c..HEAD | grep -vE \
   '^(docs/|CHANGELOG\.md$|README\.md$|tests/manual/release_(readiness|probe)\.py$|tests/fixtures/expected/docs-INDEX\.md$)'   # prints nothing
 ```
 
+The token search runs as a script. It asks git's own pickaxe (`-G`, with
+`--text` so binary files count) for the names of staged files whose diff
+matches, so no matched text is ever printed. It never pipes a diff into
+`grep -q`: that exits at the first match, the producer then dies of
+SIGPIPE, and under `pipefail` the pipeline reads as "no match". A failing
+search stops the commit exactly as a match does.
+
 **Phase 2:**
 ```
-$READY --repo . --release-date "$(date +%F)"              # exit 1, the six RED lines
+$READY --repo . --release-date "$(date +%F)"              # exit 1, the acceptance example's RED lines
 git clone --quiet --no-hardlinks . "$S/mut/green"           # apply Phase 3's edits there, uncommitted
 $READY --repo "$S/mut/green" --release-date "$(date +%F)"   # exit 0: the GREEN control
 cp -a "$S/mut/green" "$S/mut/<mutant>"                      # one fresh copy per mutant below
@@ -1469,17 +1477,29 @@ git hash-object tests/manual/release_readiness.py tests/manual/release_probe.py
 $READY --repo . --release-date "$(date +%F)"     # exit 0; if R2 alone fails on the date: D7's re-date commit, re-run
 .venv/bin/python -m pytest -q                     # 1671 passed, the two suite-probe replicas included
 git ls-remote origin refs/heads/main && gh auth status    # both exit 0
-python3 -I -c 'import configparser, os, stat
-p = os.path.expanduser("~/.pypirc"); print("mode", oct(stat.S_IMODE(os.stat(p).st_mode)))
-c = configparser.ConfigParser(interpolation=None); c.read(p); print("sections", c.sections())
-for s in ("pypi", "testpypi"):
-    pw = c[s].get("password", "")
-    print(s, "username==__token__", c[s].get("username") == "__token__",
-          "password-starts-pypi-", pw.startswith("pypi-"), "password-len>100", len(pw) > 100)'
-                                                  # the shape command: never prints a value; output = the log's record
+python3 -I -c 'import configparser, os, stat, sys
+try:
+    p = os.path.expanduser("~/.pypirc")
+    lines = ["mode " + oct(stat.S_IMODE(os.stat(p).st_mode))]
+    c = configparser.ConfigParser(interpolation=None)
+    c.read(p, encoding="utf-8")
+    lines.append("sections-are-distutils,pypi,testpypi %s" % (c.sections() == ["distutils", "pypi", "testpypi"]))
+    for s in ("pypi", "testpypi"):
+        pw = c[s]["password"]
+        lines.append("%s username==__token__ %s password-starts-pypi- %s password-len>100 %s"
+                     % (s, c[s]["username"] == "__token__", pw.startswith("pypi-"), len(pw) > 100))
+except BaseException:
+    print("pypirc shape check failed: unreadable, malformed or incomplete (details suppressed)")
+    sys.exit(1)
+print("\n".join(lines))'
+                                                  # the shape command: prints only fixed text and booleans; output = the log's record
 git status --porcelain                            # empty
 ```
-The toolchain versions are recorded with P1.4's Phase 4.0 commands; a
+The shape command catches every error from reading, parsing or field
+access and prints only its fixed failure line: a parser's error message
+would quote the offending line, which may hold a token. It never prints a
+section name or a field value. The toolchain versions are recorded with
+P1.4's Phase 4.0 commands; a
 patch-level difference from Phase 4's is recorded only, because (c) = (a)
 by sha is the byte guard. Then build (c) with Phase 4.2's commands into `$S/c/` and `$S/x/c-wheel`,
 `twine check` both files by name, and confirm: the (c) wheel sha equals (a)'s

@@ -279,8 +279,10 @@ mutation and hidden-suite tooling are not configured in this project.
 - Benchmark/security/schema: schema — `twine check` passed on both builds,
   `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in
   neither artifact, and the wheel carries the seven skill files. Security —
-  shape-only credential checks, a token search that never prints what it
-  matches (proven on synthetic tokens), explicit-filename `--non-interactive`
+  shape-only credential checks that fail closed on malformed input, a
+  token search that never prints what it matches and stops when the search
+  itself fails (proven on synthetic tokens and files),
+  explicit-filename `--non-interactive`
   upload, a single-index `--no-deps` install with the payload compared
   before execution, served = local = JSON digests. Benchmark is not
   applicable; the Phase 4 run took about seven minutes.

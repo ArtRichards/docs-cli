@@ -28,10 +28,11 @@ the test matrix stay synchronized with it. The phases are the
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
 - Progress: **Step 1's phases are complete on
   `pypi-publish-2-1-0/phases-1-4` (Phases 1–4, 2026-10-28), with the
-  TestPyPI rehearsal recorded GO.** Step 1 review-pass-001 has both
-  providers returned and every finding resolved in the review-resolution
-  checkpoint; a targeted GPT re-review is pending, and Step 2 starts only
-  after the pass closes (D2).
+  TestPyPI rehearsal recorded GO.** In Step 1 review-pass-001 both
+  providers returned, and the targeted GPT re-review returned. Every finding
+  is resolved across two review-resolution checkpoints. The conductor
+  re-checks the synthetic controls before the pass closes, and Step 2
+  starts only after that (D2).
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
@@ -938,7 +939,7 @@ replaces this section's values and says so.
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
 | Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` |
-| `~/.pypirc` shape (P1.5's command) | `mode 0o600`; `sections ['distutils', 'pypi', 'testpypi']`; `pypi username==__token__ True password-starts-pypi- True password-len>100 True`; the same line for `testpypi` |
+| `~/.pypirc` shape (P1.5's command, as fixed by the re-review) | `mode 0o600`; `sections-are-distutils,pypi,testpypi True`; `pypi username==__token__ True password-starts-pypi- True password-len>100 True`; the same line for `testpypi` |
 | `origin/main` (R8c's reference) | `193fc718439c39facfa7b3b60066c61d925314f7`, equal to GitHub's `main` via `gh api`; no fetch was needed |
 
 **(a)'s sdist manifest** — every member outside `docs/` and `tests/`, from
@@ -1085,10 +1086,13 @@ src pyproject.toml README.md LICENSE .gitignore` holds.
 - Predecessor: `Step 0 review-pass-001` — closed, `final-sync` `ready`,
   synced in `8515f1c`. That entry and its frozen packet are unchanged.
 - Status: both provider slots are terminal, and both returned. Every
-  finding is dispositioned in the review-resolution checkpoint
-  (`pypi-publish-2-1-0(phase 1-4): resolve Step 1 review-pass-001
-  findings`, named in the return report). The targeted re-review is
-  **required and pending**, and `final-sync` is `pending`.
+  finding is dispositioned: first in the review-resolution checkpoint
+  `e6ac159` (`pypi-publish-2-1-0(phase 1-4): resolve Step 1 review-pass-001
+  findings`); then, after the targeted GPT re-review, in a second checkpoint
+  (`pypi-publish-2-1-0(phase 1-4): resolve the Step 1 re-review findings`,
+  named in the return report). There is no second re-review round. The
+  conductor re-runs the synthetic controls against the committed text
+  before closing the pass, and `final-sync` is `pending`.
 - Frozen packet (recorded by the conductor):
   - slug `pypi-publish-2-1-0`, step 1, branch
     `pypi-publish-2-1-0/phases-1-4`;
@@ -1233,8 +1237,56 @@ These are conductor decisions, binding under Standard authority:
 frozen stop logic at the irreversible step, and items 8–11 change the
 release checks. The conductor freezes a new packet at the
 review-resolution checkpoint and sends it to the GPT reviewer only, scoped
-to the resolutions of gpt-B1, gpt-B2 and gpt-S1–S5. Its result is recorded
-here at finalization.
+to the resolutions of gpt-B1, gpt-B2 and gpt-S1–S5.
+
+**Result — returned.** The reviewer was Codex CLI 0.164.0, run as `codex
+exec -m gpt-6-astra -c model_reasoning_effort=xhigh -s read-only`; its
+session log reports `model: gpt-6-astra`, and it self-described as "GPT,
+Codex, based on GPT-5". Its packet was `b1f31b4..e6ac159`, and its risk-gate
+decision was block until fixed.
+- **gpt-S1, gpt-S2, gpt-S3, gpt-S4 and gpt-S5: resolved**, each confirmed by
+  the reviewer's own in-memory counterexamples.
+- **gpt-B1 and gpt-B2: not resolved**, and one new blocker, **gpt-RR-B1**.
+  All three are fixed below.
+
+The conductor decided on **no second re-review round**, since the protocol
+forbids an automatic loop. Instead, the conductor re-runs the synthetic
+controls below, verbatim, against the committed text before closing the
+pass.
+
+| # | Source ids | Severity | Finding | Fix and evidence |
+|---|---|---|---|---|
+| 1 (re-opened) | gpt-B1 | blocker | `e6ac159`'s gate piped `git diff` into `grep -qE`. `grep` exits at its first match, `git` then dies of SIGPIPE, and under `set -euo pipefail` the `if` reads the failed pipeline as "no match" — a fail-open. **Reproduced at `e6ac159`:** on a 6.2 MB staged diff with a synthetic token on line 1, the frozen gate printed `token search: clean` and exited 0 in 5 of 5 trials | P1.4's gate pipes nothing into `grep -q`. `names=$(git diff --cached --text --name-only -G"$TOKEN_RE")` uses git's own pickaxe, with `--text` so binary files count. If the search fails, the gate stops with "the token search itself failed"; if `$names` is non-empty, it prints only the file names and exits 1. **Controls (all PASS):** the 6 MB diff with the token on line 1, run 5 times under `set -euo pipefail`, gave exit 1 each time, naming `big.txt`; `pypi-`, `gho_` and `github_pat_` tokens in a small file each gave exit 1; a token inside a staged binary file gave exit 1; a clean stage gave exit 0 (`token search: clean`); with no repository (`GIT_DIR` missing) the search failed and the gate stopped, exit 1. The synthetic value appeared **0** times in stdout+stderr in every run |
+| 2 (re-opened) | gpt-B2 | blocker | `e6ac159`'s general "P1.5 expectation" stop row listed "the per-version JSON not listing both files", which collided with the upload row's re-send for one confirmed file plus a transient failure | The general row no longer lists that item. It states once that it never governs the upload's own outcome: from `twine upload` until the JSON lists both files, only the PyPI-upload row decides. That row now says "the first case that applies decides", gives case (2) an explicit success and failure, and gives case (4) the exit-0-but-incomplete shape. The walk below shows each shape has exactly one outcome |
+| 20 | gpt-RR-B1 | blocker (new) | `e6ac159`'s frozen shape command had no exception handling. A malformed `~/.pypirc` line raised `configparser.ParsingError`, whose traceback quotes the whole line. **Reproduced at `e6ac159`** on a synthetic file with a password line missing its `=`: exit 1, a traceback, and the synthetic value in the output once | The command now wraps all reading, parsing and field access in `try … except BaseException`, prints only `pypirc shape check failed: unreadable, malformed or incomplete (details suppressed)`, and exits 1. It reads the file as UTF-8, requires `password` and `username` to be present, and prints no section name: section membership is reported as one boolean. **Controls** (synthetic files only, `HOME` pointed at scratch, all PASS): a malformed password line, a missing `[testpypi]`, a missing password key, binary garbage, a duplicate password key and a missing file each gave exit 1 with only the fixed message; a token used as a section name gave exit 0 with `sections-are-distutils,pypi,testpypi False`; a well-formed synthetic file printed only the four shape lines. The synthetic value appeared **0** times in every output. One run on the real file printed the four shape lines now recorded in *Release anchors (current)* |
+
+**Every upload shape has exactly one outcome.** The general row excludes
+the upload, and the upload row's cases are tried in order:
+
+| Shape after polling | First applicable rule | Outcome |
+|---|---|---|
+| twine exit 0; the JSON lists both files | none: the upload row's condition is false | proceed to the digest check; a digest that differs from (c)'s falls to the served-sha row |
+| both files refused with a 4xx | case (1) | stop; nothing published |
+| one accepted, the other refused with a 4xx | case (1) | stop; one file published, recorded as such |
+| one accepted, the other failed transiently | case (2) | one re-send of the missing file, by name |
+| — the re-send exits 0 and the JSON lists both | case (2), success | proceed |
+| — the re-send fails, or the JSON still lacks the file | case (2), otherwise | stop; one file published |
+| nothing accepted, transient failure | case (3) — (1) needs a 4xx, (2) a confirmed file | stop for the operator; no retry |
+| any non-4xx error, publication uncertain after polling | case (3) | stop for the operator |
+| twine exit 0, yet the JSON lists fewer than both after polling | case (4) | stop |
+
+**Re-running the controls.** The controls are one scratch script,
+`$S/tools/rereview-controls.sh`; the return report gives its full path.
+`bash "$S/tools/rereview-controls.sh" <repo> HEAD` extracts both frozen
+commands verbatim from the committed plan, prints their sha256, and runs
+the 19 controls above in a fresh temporary directory. Synthetic values are
+generated inside the script and never printed; it reads no real credential
+file. It prints `ALL CONTROLS PASS` and exits 0 only if every control
+passes. The defect reproductions at `e6ac159` used the same synthetic
+inputs against that revision's text.
+
+No release input or release-check script changed for these fixes: the
+blobs stay `cb542802…` and `2d6a0c31…`, and `X` stands. D9 is not triggered.
 
 ### Verification at the review-resolution checkpoint
 
@@ -1247,6 +1299,20 @@ here at finalization.
 - The D1 scope check prints nothing; `git diff --quiet a25cb5d -- src
   pyproject.toml README.md LICENSE .gitignore` holds; both scripts run
   under `python3 -I`, import no `docs_cli`, and hold no host path.
+
+### Verification at the second review-resolution checkpoint
+
+- ruff clean; 52 files formatted; mypy no issues in 53 files.
+- `pytest -q` **1671 passed**; 1671 collected.
+- `docs check .` exit 0; the INDEX dry-run, the snapshot and both mirrors
+  identical.
+- Readiness **25/25**.
+- The new token search: clean on the staged diff.
+- `$S/tools/rereview-controls.sh`: `ALL CONTROLS PASS` (19 of 19) against
+  the working-tree text staged for this checkpoint. The return report
+  records the re-run against the committed `HEAD`.
+- The script blobs are unchanged (`cb542802…`, `2d6a0c31…`); the release
+  inputs are unchanged since `X`.
 
 - final-sync: `pending`.
 

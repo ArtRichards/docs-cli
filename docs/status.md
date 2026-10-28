@@ -68,8 +68,14 @@ Both Step 1 reviews returned. GPT blocked on two defects in the frozen
 procedure: a token search that would print any token it caught, and
 conflicting stop rules for a partial upload. Both are fixed, with the
 reviewers' other findings, and the strengthened release checks were re-run
-against the wheel and the rehearsal. A targeted GPT re-review follows, and
-the PyPI upload waits for the pass to close. The milestone has three
+against the wheel and the rehearsal. A targeted GPT re-review confirmed
+five fixes and found three remaining defects in the frozen procedure:
+- the new token search could fail open;
+- the upload stop rules still overlapped;
+- the credential-shape command could echo a malformed line.
+
+A second checkpoint fixes all three, each proven on synthetic inputs. The
+PyPI upload waits for the pass to close. The milestone has three
 documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
