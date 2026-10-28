@@ -244,7 +244,7 @@ mutation and hidden-suite tooling are not configured in this project.
 
 - Visible tests: **1671 passed, 1671 collected** at Phase 1 (`8515f1c`),
   Phase 3, the Phase 4 baseline (`X` = `a25cb5d`) and the tag-target
-  commit (`33c936f`, Phase 5).
+  commit (`33c936f`, Phases 5 and 8, with both replicas named).
 - Upload gate (C9): at Phase 5 every pre-upload precondition held at the
   tag target, and build (c)'s wheel equals (a) with (a)'s sdist manifest
   (the log's *Phase 5*). Phase 6 re-checked them immediately before the
@@ -290,10 +290,14 @@ mutation and hidden-suite tooling are not configured in this project.
   *Phase 9*).
 - Property/stateful: N2 and W3 (idempotent re-runs) pass on every
   executable that has the verb, and both are write-sensitive (bytes and
-  mtimes; N2 also reads the `--json` no-op record); wheel (a) = (b) by sha; the rehearsal's
-  `docs_cli/` payload equals (a)'s, downloaded and installed; no run changed
-  the repository or host state.
-- Mutation: readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
+  mtimes; N2 also reads the `--json` no-op record); the wheel sha is one
+  value across (a), (b), (c) and the served bytes; the rehearsal's and the
+  served `docs_cli/` payloads equal (a)'s, downloaded and installed; no
+  throwaway run changed the repository or host state, and Phase 9 moved the
+  host only as D10 lists.
+- Mutation: the G2 calibration's controls (Step 2) — a cross-day INDEX
+  fails the old check and passes the new one, and an edited INDEX entry
+  fails both. Readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
   exactly its intended check, and the review's link mutants 9a–9c are 3/3;
   mutant 7 is the control above; the comparator mutants 8, 8b and 8c each
   report their planted difference. The review's three probe negative
@@ -301,11 +305,11 @@ mutation and hidden-suite tooling are not configured in this project.
   that drops the promoted entry, and a `lifecycle` re-run that rewrites
   identical bytes — each fail exactly W1, N6 or N2, and each passed the
   probe as it stood before the review.
-- Script provenance (C19): every run printed its blob sha. Both script
-  changes after Phase 4 — the audit's docstrings and the review's
-  strengthened checks — were re-run under D9 against wheel (a) and a fresh
-  install of the served rehearsal, with identical result lines; the log's
-  anchors carry the current blobs.
+- Script provenance (C19): every run printed its blob sha. All three
+  probe changes after Phase 4 — the audit's docstrings, the review's
+  strengthened checks and Step 2's G2 calibration — were re-run under D9
+  against wheel (a) and a fresh install of the served rehearsal, with
+  identical result lines; the log's anchors carry the current blobs.
 - Fuzz: not applicable.
 - Benchmark/security/schema: schema — `twine check` passed on both builds,
   `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in
@@ -315,30 +319,34 @@ mutation and hidden-suite tooling are not configured in this project.
   itself fails (proven on synthetic tokens and files),
   explicit-filename `--non-interactive`
   upload, a single-index `--no-deps` install with the payload compared
-  before execution, served = local = JSON digests. Benchmark is not
-  applicable; the Phase 4 run took about seven minutes.
+  before execution, served = local = JSON digests, and one upload with no
+  file re-sent. Benchmark is not applicable; Phase 4 took about seven
+  minutes, and Step 2's upload-to-release about four.
 - Coverage: not configured.
 - Mock audit: no mocks planned.
-- Open risks:
-  - the PyPI token's validity is proven only by use, at Phase 6;
-  - backend drift is guarded by D4.
+- Open risks: none for the release. The PyPI token was validated by use
+  at Phase 6, and (c) reproduced (a) without the backend remedy. Open
+  elsewhere: the suite pin-bump PR (the feedback-log hand-off) and the
+  operator's merge (D13).
 
 ## Adequacy results
 
 - visible_pass_rate: 1.0 (1671/1671)
-- hidden_pass_rate: not applicable (no hidden suite; the three-wheel replay
-  stands in)
+- hidden_pass_rate: not applicable (no hidden suite); the three-wheel
+  replay stands in — 25/25 on (a) and on the PyPI-served wheel, 24/24 plus
+  the skipped W1 on the rehearsal
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
 - changed-files branch coverage: not configured
-- mutation score on touched modules: 17/17 hand-applied mutants detected
-  (readiness 1–6, 1b, 5b, 9a–9c; comparators 8, 8b, 8c; probe negative
-  controls for W1, N6 and N2), each by its intended check; the 2.0.0
+- mutation score on touched modules: 19/19 hand-applied mutants and
+  controls detected, each by its intended check — Step 2's G2 cross-day
+  control and edited-entry mutant, and Step 1's 17 (readiness 1–6, 1b, 5b,
+  9a–9c; comparators 8, 8b, 8c; probe negative controls for W1, N6 and N2); the 2.0.0
   control (mutant 7) fails exactly the 13 release-bound checks
-- property/stateful result: pass (Phase 4)
+- property/stateful result: pass (Phases 4–9)
 - fuzz result: not applicable
 - benchmark delta: not applicable; elapsed times recorded
-- security/schema/migration result: pass (Phase 4); migration not
+- security/schema/migration result: pass (Phases 4–7); migration not
   applicable
 - skipped deep gates and follow-up: none skipped. Coverage and mutation
   tooling are not configured.

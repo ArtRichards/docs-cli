@@ -39,23 +39,12 @@ Related:
   [pypi-publish-2-1-0-test-matrix.md](pypi-publish-2-1-0-test-matrix.md)
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
-- Progress: **Step 1 is complete (2026-10-28), and Step 2 is authorized
-  under D2.** The log's *Implementation metadata* › *Progress* and its *Step
-  1 review-pass-001* (closed, `final-sync` `ready`) carry the record.
-  - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
-    same day; the log's Phase 1 section has the evidence and the five
-    conductor-resolved planning questions.
-  - Phase 2 wrote both release checks; readiness is RED for exactly the
-    frozen reasons, and the probe's controls behave as frozen.
-  - Phase 3 dated the CHANGELOG 2026-10-28 and fixed the four README
-    synopses; readiness passes.
-  - Phase 4 built (a), rehearsed it on TestPyPI under `docs-cli-rehearsal`
-    with byte-identical served payloads, rebuilt (b) = (a), and recorded GO
-    with the log's *Release anchors (current)*.
-  - Step 0 is complete: both setup questions are resolved by the operator
-    (*Setup questions*), and review-pass-001 is closed.
-  - Nothing has been uploaded to PyPI or published; the only upload is the
-    TestPyPI rehearsal.
+- Progress: **Step 2 is complete (2026-10-29): `docs-cli==2.1.0` is on
+  PyPI, tagged `v2.1.0` and released, and this host runs it.** Step 3
+  remains. The log's *Milestone completion summary* carries the record, and
+  its *Step 2 review-pass-001* awaits both reviewers.
+  - Step 1 (Phases 1–4) is complete (2026-10-28), its review pass closed with
+    `final-sync` `ready`; Step 0 likewise.
 
 ### Identity note
 
@@ -862,11 +851,11 @@ running `pip install -U docs-cli`, and the suite release that pins 2.1.0.
       release*.
 - [x] **Host integration** (D10): the notice observed, and the sweep table.
       Consumer: agents on this host, and the suite PR.
-- [ ] **The runbook's *From M31* lessons and corrections** (D11). Consumer:
+- [x] **The runbook's *From M31* lessons and corrections** (D11). Consumer:
       the next publish.
-- [ ] **The feedback-log hand-off update** (D12). Consumer: the suite PR, and
+- [x] **The feedback-log hand-off update** (D12). Consumer: the suite PR, and
       the operator.
-- [ ] **The test matrix with adequacy results, the completion summaries and
+- [x] **The test matrix with adequacy results, the completion summaries and
       the status narrative.** Consumer: closeout review, and Step 3.
 
 ## TDD implementation plan
@@ -1089,7 +1078,7 @@ Branch `pypi-publish-2-1-0/simplify`.
 - [x] Phase 7 — Update Tool/Wrapper Layer — served verification; then tag and release
 - [x] Phase 8 — Run Tests (GREEN) — GREEN record at the tag-target commit
 - [x] Phase 9 — Integrate / Accept / Dogfood — update notice; host binary and skill; sweep
-- [ ] Phase 10 — Quality, Docs, Refactor — runbook lessons; hand-off; summaries
+- [x] Phase 10 — Quality, Docs, Refactor — runbook lessons; hand-off; summaries
 
 ## Decisions carried from discovery
 
@@ -1726,3 +1715,15 @@ Additional gates:
 - **The closeout.** The archive selects exactly the trio, `docs check .` exits
   0, the tracker row is `complete`, the README's links resolve, and the final
   report states D13's merge instruction.
+
+## Completion summary (Step 2)
+
+Step 2 ran 2026-10-28 to 2026-10-29 under D2 with no stop row firing:
+`docs-cli==2.1.0` was uploaded once from the tag-target build `33c936f`,
+proven bit-perfect against PyPI's bytes, verified by the release probe and
+the suite's guard step, then tagged and released (D13). The host binary and
+skill follow it (D10), the runbook carries the lessons, and the suite
+hand-off stays open (D12). The record, with every sha, time and deviation,
+is the [implementation log](pypi-publish-2-1-0-impl.md)'s *Milestone
+completion summary*. Step 3 — `/simplify` and the explicit-scope archive —
+remains, as does the operator's merge (D13).

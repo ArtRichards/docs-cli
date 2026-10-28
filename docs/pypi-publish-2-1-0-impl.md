@@ -26,26 +26,20 @@ the test matrix stay synchronized with it. The phases are the
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
-- Progress: **Step 1 is complete (2026-10-28) on
-  `pypi-publish-2-1-0/phases-1-4`.**
-  - Phases 1–4 are done, and the TestPyPI rehearsal is recorded GO.
-  - Step 1 review-pass-001 is closed with `final-sync` `ready`. Both
-    providers and the targeted re-review returned, and every finding is
-    fixed in `e6ac159` or `7867a42`, or waived with a reason.
-  - The RED-baseline checkpoint passed under Standard: no unresolved
-    contract or test-adequacy blocker, and every accepted should-fix is
-    resolved.
-  - **Step 2 (Phases 5–10, on `pypi-publish-2-1-0/phases-5-10`) is
-    authorized under D2**, subject to every *Error cases* precondition at the
-    moment of each action.
+- Progress: **Step 2 is complete (2026-10-29) on
+  `pypi-publish-2-1-0/phases-5-10`: `docs-cli==2.1.0` is on PyPI, tagged
+  `v2.1.0` at `33c936f`, released, and installed on this host.** Phases 5–10
+  are done; *Milestone completion summary* has the record, and *Step 2
+  review-pass-001* awaits both reviewers. The review runs after the
+  irreversible actions, so D2's post-upload triage applies to it.
+  - Step 1 is complete (2026-10-28) on `pypi-publish-2-1-0/phases-1-4`:
+    Phases 1–4 are done, the TestPyPI rehearsal is GO, and Step 1
+    review-pass-001 is closed with `final-sync` `ready` (`d5a23ef`).
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
     re-verified E1–E4 and froze *Decisions (Phase 1 — BINDING)* in the task
     plan.
-  - The only upload is Phase 4's TestPyPI rehearsal under
-    `docs-cli-rehearsal`; nothing has reached PyPI, and neither
-    `~/.claude/skills` nor `~/.pypirc` has been touched.
 - Source: the canonical tracker row (`193fc71`), and M30's hand-off in
   [feedback-log.md](feedback-log.md) (2026-10-26 entry, *Hand-off*).
 - Branch: `pypi-publish-2-1-0/milestone-setup` for setup. Implementation
@@ -66,8 +60,8 @@ the test matrix stay synchronized with it. The phases are the
   fully visible. They are exercised by the three-build probe replay and the
   2.0.0 control.
 - Mock audit: no mocks planned. Every check is real-path.
-- Adequacy results: recorded in the matrix's *Adequacy results* through
-  Phase 4; the served-wheel results are Step 2's.
+- Adequacy results: recorded in the matrix's *Adequacy results*, through
+  the served wheel (Step 2).
 - Taste triage: Step 0 review-pass-001 is triaged. gpt-B4 / claude-B1, a
   gating anchor violation, and Claude's subjective finding on documentation
   fit and minimality are both fixed by the dedupe. GPT had no other
@@ -76,6 +70,10 @@ the test matrix stay synchronized with it. The phases are the
   product-test goldens) is waived and carried to Step 3's `/simplify`, as is
   the scripts' patch bloat (1033 lines against the 300–500 anchor). See that
   pass's *Taste triage*.
+- Taste triage, Step 2: the G2 calibration follows its anchor; the
+  runbook's footprint is flagged for the Step 2 reviewers; T4 and the
+  scripts' size stay carried to Step 3. See *Phase 10* › *Taste triage
+  (Step 2)*.
 
 ## TDD phase progress
 
@@ -90,7 +88,7 @@ the test matrix stay synchronized with it. The phases are the
 | 7. Update Tool/Wrapper Layer | Complete | 2026-10-29 | Chain of custody bit-perfect for wheel and sdist; the served install's payload = (c); the probe 25/25 on the served wheel, lines identical to (a)'s; the guard step True / True. Then `v2.1.0` annotated at `33c936f`, pushed, peeled remote = the tag target; the GitHub release created with `--verify-tag`, *Latest*. |
 | 8. Run Tests (GREEN) | Complete | 2026-10-29 | At the tag target `33c936f`: ruff, the formatter and mypy clean; 1671 passed and collected; both replicas pass; `docs check .` 0; snapshot and mirrors identical; INDEX idempotent (stamp normalised); readiness 25/25. One result set across the three wheel installs. The suite's full guard fails with exactly the ten lines frozen before the run. |
 | 9. Integrate / Accept / Dogfood | Complete | 2026-10-29 | The 2.0.0 notice observed on the first attempt; `pipx upgrade` to 2.1.0 (served payload; pipx also touched its shared-libs pip marker, recorded); the skill refreshed byte-identical at `~/.claude/skills/docs`, now the recorded destination; the sweep census hit every oracle site, suite and cache untouched; dogfood `docs check` 0; liveness walked. |
-| 10. Quality, Docs, Refactor | Pending | — | The runbook's *From M31* lessons and its corrections (D11). The feedback-log hand-off update (D12). The status narrative. The final matrix results. Taste triage and the boundary sweep. Scratch cleanup. The completion summaries. |
+| 10. Quality, Docs, Refactor | Complete | 2026-10-29 | The runbook's body corrected and *From M31* appended; hand-off items 1–3 closed with a self-contained pin-bump block left open; the state-once trial's verdict recorded; taste triage, the boundary sweep and the archive-readiness preview (exactly the two companions); Step 3's values frozen; scratch, worktrees and `dist/` cleaned; the gate GREEN. |
 
 ## Setup record — 2026-10-28
 
@@ -1941,6 +1939,175 @@ Nothing is produced without a consumer. `git worktree prune` left one
 worktree (the repository's own); the scratch venvs and `dist/` are removed
 at Phase 10's cleanup.
 
+## Phase 10 — Quality, Docs, Refactor
+
+Date: 2026-10-29, from 00:16 CET. Documents only; no code changed in this
+phase.
+
+### 10.1 The runbook
+
+[release-runbook.md](release-runbook.md)'s body is corrected in place by
+P1.6's list and the Phase 10 objective, and *From M31* is appended; no past
+lesson is rewritten.
+- **New:** a ship-milestone note in the introduction, pointing at this
+  plan's P1 catalogue as the worked reference; *Isolation and hygiene
+  (every step)* — the scratch environment with `PIP_CONFIG_FILE=/dev/null`,
+  the `TWINE_*` and `SOURCE_DATE_EPOCH` unsets, the pairwise host check
+  (OQ-S2-3), single-index `--no-deps` installs, and the non-disclosing token
+  search.
+- **Pre-publish prep:** the shape-only, fail-closed `~/.pypirc` check; the
+  twine newest-version check replaces "upgrade"; the stale `__version__`
+  literal bullet is replaced by `docs --version` (single source since M12);
+  the CHANGELOG is dated by the upload's local date with a one-line re-date
+  and an immediate pre-upload date check (D7); readiness, with its
+  arguments, now checks the README's synopses; *Tree state* names the
+  canonical tracker and the `status.md` narrative instead of `plan.md` and
+  M6–M9; the *Quality gate* drops the 271/369/401 counts and compares the
+  INDEX dry-run with the `_Generated` stamp normalised (OQ-S2-1).
+- **Build:** `rm -rf dist/` and `ls -A dist/` at every build; the backend
+  and its resolved environment recorded, with D4's constraints remedy; the
+  sdist member manifest; `twine check` by explicit filename; the dependency
+  oracle. The local smoke becomes the standing probe, `release_probe.py`,
+  with its arguments.
+- **Rehearsal:** explicit filenames and `--non-interactive`; the served-byte
+  and payload checks before anything runs; `--index-url
+  https://test.pypi.org/simple/ --no-deps` replaces `--extra-index-url`;
+  D9's re-run rules replace "fix, bump patch, rerun"; the revert is proven
+  and (b) must equal (a).
+- **Real publish:** commit on the publish branch (the tag target), the
+  pre-upload gate, the `env -u TWINE_*` upload by explicit filename with the
+  upload-outcome precedence, the sdist downloaded by JSON `url` and digest
+  (not `pip download --no-binary`), the simple-index poll (OQ-S2-4), and the
+  probe from a worktree at the tag target, plus a downstream consumer's
+  probe when one exists.
+- **Post-release:** tag the tag-target commit after served verification,
+  with the peeled check; `gh release create --verify-tag --title`; the merge
+  as an operator-directed merge commit (D13) instead of "merge `--ff-only`,
+  push `main`"; a host step — the notice (OQ-S2-5), the binary, the skill,
+  the sweep — with the XDG handling; the trio archived together with
+  `--cascade-only '<stem>-*'` instead of "the impl log stays at root" (D11);
+  cleanup of `$S`, worktrees and `dist/`. *Notes* drops "version is
+  hardcoded in two places".
+
+### 10.2 The hand-off and the trial
+
+[feedback-log.md](feedback-log.md)'s 2026-10-26 entry closes hand-off items
+1–3 with evidence and gains a self-contained *For the suite pin-bump PR
+(open)* block — the pin, the re-vendor, the sweep's sites, the deletion, the
+Step 0 approval, the branch choice and the CI expectations — and stays open
+(D12). The 2026-10-28 candidate-convention entry records the trial's
+outcome: recurring and useful, with a refined rule recommended to the
+operator for `CLAUDE.md`; it stays open pending that decision.
+
+### Taste triage (Step 2)
+
+- **The G2 calibration** (+11/−1 in the probe) follows its taste anchor —
+  `tests/test_cli_index.py`'s normaliser, stdlib, display name unchanged.
+  Fixed in Phase 5 and proven by the cross-day control.
+- **Footprint against the anchors.** The runbook is +416/−172 against an
+  80–150-line anchor: the correction list (about twenty items from P1.6, the
+  Phase 10 objective and the five adopted OQ-S2 rules) rewrites most body
+  sections, and *From M31* adds eleven lessons. D11 requires the procedure
+  to outlive the archive, so it lives there rather than only in this plan.
+  **Flagged for the Step 2 reviewers** as the largest taste risk of this
+  step. The hand-off is about twenty long bullet lines, inside its 35–50
+  anchor once wrapped; it repeats the sweep's sites because the trio is
+  archived (D11). `status.md` carries narrative only.
+- **Carried to Step 3's `/simplify`, unchanged:** claude-T4 (G6 and G9 mirror
+  product-test golden strings) and the scripts' size (1043 lines against the
+  300–500 anchor).
+- **State-once, measured this step:** the five OQ-S2 decisions touched seven
+  task-plan sites, five operative and two pointers, and no matrix or
+  `status.md` text (10.2).
+
+### 10.6–10.7 Cleanup and the gate
+
+**Cleanup** (00:19 CET): `rm -rf "$S"` (186 MB of scratch venvs, builds,
+extractions and probe trees), `git worktree prune` (one worktree left) and
+`rm -rf dist/`. Later commands use a fresh, stateless scratch environment
+with the same isolation exports, so no `docs` run touches host state.
+
+**The gate**, on the Phase 10 tree:
+
+| Check | Result |
+|---|---|
+| `ruff check .`; `ruff format --check .`; `mypy src/ tests/` | clean; 52 files formatted; no issues in 53 files |
+| `pytest -q`; `--collect-only` | **1671 passed**; 1671 collected |
+| `docs check .` | exit 0 |
+| `docs check . --stale 14` (information only) | exit 1 with four `stale` warnings on evergreen documents (`charter.md`, `definition-of-ready.md`, `dual-status-adr.md`, `vocab-adr.md`) — one fewer than at Step 1, because the runbook was updated |
+| The INDEX snapshot and both mirrors; the INDEX dry-run | identical |
+| `READY --repo . --release-date 2026-10-29` | exit 0, 25 passed |
+| The release inputs against `X`; the D1 scope check; the token search | unchanged; clean; clean |
+| The host check across the gate | unchanged (update cache `39739c29…`; the recorded destination `~/.claude/skills/docs`) |
+
+### Boundary sweep
+
+- **D1:** `git diff --name-only 8515f1c..HEAD` names only `docs/`,
+  `CHANGELOG.md`, `README.md`, the two `tests/manual/` scripts and the INDEX
+  snapshot; nothing under `src/`, and no product test.
+- **Release inputs:** unchanged since `X` at every Step 2 commit.
+- **Pushes:** exactly one, `git push origin v2.1.0`; no branch was pushed.
+- **Host:** only D10's three items changed (the pipx venv with pipx's own
+  shared-libs marker, `~/.claude/skills/docs`, the recorded destination);
+  the update cache is still `39739c29…`.
+- **The suite and the plugin cache:** untouched (`a997954`, clean; no cache
+  file newer than this session's start).
+- **Outputs → consumers:** 9.6's walk; nothing unconsumed.
+
+### Archive-readiness preview
+
+On a scratch copy of the final `docs/`, `docs archive pypi-publish-2-1-0.md
+--cascade-dry-run --cascade-only 'pypi-publish-2-1-0-*' --json` exited 0 and
+wrote nothing.
+- **Selected:** exactly the two companions, `pypi-publish-2-1-0-impl.md` and
+  `pypi-publish-2-1-0-test-matrix.md`.
+- **Not selected:** `milestone-plan.md` (`child-of`), `release-runbook.md`
+  and `status.md` (`pairs-with`).
+- **No leg-1 refusal**, and no live `child-of` edge points into the trio.
+- **Leg-2 strands:** body links only — `feedback-log.md` 4, `status.md` 4,
+  `milestone-plan.md` 1 (the tracker cell) and `release-runbook.md` 1; the
+  archive verb rebases each of them.
+
+Step 3's own preview remains the authoritative one.
+
+### Frozen values for Step 3
+
+- **Scope:** `docs archive pypi-publish-2-1-0.md --cascade-only
+  'pypi-publish-2-1-0-*'` (D11), after the preview above selects exactly the
+  two companions again.
+- **Reason:** `--reason "Milestone M31 complete; docs-cli==2.1.0 shipped to
+  PyPI 2026-10-29"`.
+- **The D13 merge sentence for the final report:** *merge promptly, with a
+  merge commit, not squash or rebase — the PyPI page links `main`'s
+  CHANGELOG; `v2.1.0` is at `33c936f447dfb31078dc0c07c9e4fd2297ed747d`*.
+
 ## Milestone completion summary
 
-_Not complete._
+**Step 2 complete (2026-10-29): `docs-cli==2.1.0` is published, tagged,
+released, and on this host.** Step 3 (`/simplify` and the explicit-scope
+archive) remains.
+- **Phase 5** calibrated G2 against the calendar (OQ-S2-1) with its D9
+  re-run, re-dated the CHANGELOG to the upload day (D7), passed P1.5's
+  pre-upload block and built (c) with the wheel equal to (a); the tag target
+  is `33c936f`.
+- **Phase 6** uploaded once, at 00:04 CET on 2026-10-29 (23:04 UTC on
+  2026-10-28): wheel `2c5fa0b3…`, sdist `c120fc1d…`, both equal to PyPI's
+  digests.
+- **Phase 7** proved the chain of custody bit-perfect for both artifacts,
+  passed the probe 25/25 and the suite's guard step True / True on the
+  served wheel, then tagged `v2.1.0` (peeled = `33c936f`) and released it
+  (*Latest*).
+- **Phase 8** recorded GREEN at the tag target (1671 passed, readiness
+  25/25), one result set across three wheel installs, and the suite's full
+  guard failing with exactly its frozen ten lines.
+- **Phase 9** observed the 2.0.0 update notice, upgraded the host binary
+  with pipx, refreshed the host skill at `~/.claude/skills/docs` (now the
+  recorded destination) and recorded the read-only suite sweep.
+- **Phase 10** corrected the runbook and added its *From M31* lessons,
+  closed hand-off items 1–3 with a self-contained pin-bump block left open,
+  and recorded the state-once trial's verdict.
+
+**Deviations:** the G2 calibration (a check defect found by planning); the
+midnight wait and one-line re-date; pipx touching its shared-libs pip
+marker during the authorized upgrade. No stop row fired, and D2 held at
+every action.

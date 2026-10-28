@@ -48,15 +48,21 @@ Related:
 
 ## Current milestone
 
-**M31 Step 2 in progress (2026-10-29): docs-cli 2.1.0 is on PyPI, tagged
-and released.** The upload ran once, under the operator's automatic-release
-authorization, and the served bytes match the tag-target build exactly. The
-release probe and the Agent Playbook Suite's guard step passed against the
-PyPI-served wheel before `v2.1.0` was tagged and the GitHub release created.
-This host now runs the published 2.1.0 binary, and its `docs` skill is
-refreshed from it at `~/.claude/skills/docs`; a read-only sweep of the Agent
-Playbook Suite recorded the hand-edit prescriptions its pin bump must
-replace. The runbook lessons and the suite hand-off follow; the
+**M31 Step 2 complete (2026-10-29): docs-cli 2.1.0 is live on PyPI, tagged
+and released, and this host runs it.**
+[`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) uploaded the release once,
+under the operator's automatic-release authorization, after Step 2's
+planning fixed a release check that would have failed on any day after the
+tree was indexed. The bytes PyPI serves are exactly the build the tag points at;
+the release probe and the Agent Playbook Suite's guard step passed against
+the served wheel before `v2.1.0` was tagged and the GitHub release published.
+The host's pipx binary and its `docs` skill at `~/.claude/skills/docs` now
+come from the published release, and a 2.0.0 install was seen announcing it.
+The release runbook carries this publish's corrections and lessons. The
+suite's pin-bump hand-off stays open in [`feedback-log.md`](feedback-log.md),
+with a read-only sweep of the prescriptions it must replace. Two things
+remain: Step 3's simplify pass and archive, and the operator's merge of the
+stack into `main`, as the task plan's D13 describes. The
 [implementation log](pypi-publish-2-1-0-impl.md) carries the record.
 
 **M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI

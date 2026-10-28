@@ -33,8 +33,8 @@ _Generated 2026-10-29. 16 docs active, 64 archived._
 
 ### Active — Log
 
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-29.
 - [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md) — _log_ — This is the chronological implementation log for M31 — Publish docs-cli 2.1.0 to PyPI (semantic slug…. Updated 2026-10-29.
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-28.
 
 ### Active — Decision
 
@@ -43,7 +43,7 @@ _Generated 2026-10-29. 16 docs active, 64 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-08-16.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-10-29.
 
 ### Active — Reference
 
