@@ -241,19 +241,34 @@ mutation and hidden-suite tooling are not configured in this project.
 
 ## Results summary
 
-- Visible tests: pending (setup baseline: **1671 passed** at `be7f809`).
+- Visible tests: **1671 passed, 1671 collected** at Phase 1 (`8515f1c`),
+  Phase 3 and the Phase 4 baseline (`X` = `a25cb5d`).
 - Release checks: **Phase 2 RED recorded.** Readiness fails exactly the
   six frozen lines (R2, R3, R6 ×4) and its green control passes 23/23. The
-  probe passes 21/21 on the editable build. Phases 4, 7 and 8 record GREEN.
+  probe passes 21/21 on the editable build. **Phase 4 GREEN:** readiness
+  23/23 at `X`; the probe 25/25 on wheel (a) and 24 + W1 SKIP on the
+  TestPyPI-served rehearsal; the extracted suite guard step reads True /
+  True against (a) and fails against 2.0.0. Phases 7 and 8 record the
+  served wheel.
 - Hidden/generalization: the 2.0.0 control fails exactly N1–N9, S1, S2, W1
-  and W2 and passes G1–G10, W3 and W4, as frozen. The three-wheel replay is
-  pending.
-- Property/stateful: pending.
+  and W2 and passes G1–G10, W3 and W4, as frozen. The three-wheel replay:
+  (a) and the TestPyPI-served rehearsal give one result set (W1 aside); the
+  PyPI-served wheel is Step 2's.
+- Property/stateful: N2 and W3 (idempotent re-runs) pass on every
+  executable that has the verb; wheel (a) = (b) by sha; the rehearsal's
+  `docs_cli/` payload equals (a)'s, downloaded and installed; no run changed
+  the repository or host state.
 - Mutation: readiness mutants 1–6, 1b and 5b are 8/8 killed, each by
-  exactly its intended check; mutant 7 is the control above. Mutants 8, 8b
-  and 8c run in Phase 4.
+  exactly its intended check; mutant 7 is the control above; the
+  comparator mutants 8, 8b and 8c each report their planted difference.
 - Fuzz: not applicable.
-- Benchmark/security/schema: pending. Benchmark is not applicable.
+- Benchmark/security/schema: schema — `twine check` passed on both builds,
+  `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in
+  neither artifact, and the wheel carries the seven skill files. Security —
+  shape-only credential checks, explicit-filename `--non-interactive`
+  upload, a single-index `--no-deps` install with the payload compared
+  before execution, served = local = JSON digests. Benchmark is not
+  applicable; the Phase 4 run took about seven minutes.
 - Coverage: not configured.
 - Mock audit: no mocks planned.
 - Open risks:
@@ -262,17 +277,20 @@ mutation and hidden-suite tooling are not configured in this project.
 
 ## Adequacy results
 
-- visible_pass_rate: pending
+- visible_pass_rate: 1.0 (1671/1671)
 - hidden_pass_rate: not applicable (no hidden suite; the three-wheel replay
   stands in)
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
 - changed-files branch coverage: not configured
-- mutation score on touched modules: pending (hand-applied smoke over the
-  release checks)
-- property/stateful result: pending
+- mutation score on touched modules: 11/11 hand-applied mutants detected
+  (readiness 1–6, 1b, 5b; comparators 8, 8b, 8c), each by its intended
+  check; the 2.0.0 control (mutant 7) fails exactly the 13 release-bound
+  checks
+- property/stateful result: pass (Phase 4)
 - fuzz result: not applicable
 - benchmark delta: not applicable; elapsed times recorded
-- security/schema/migration result: pending
+- security/schema/migration result: pass (Phase 4); migration not
+  applicable
 - skipped deep gates and follow-up: none skipped. Coverage and mutation
   tooling are not configured.

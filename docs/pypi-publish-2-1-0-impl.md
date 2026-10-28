@@ -26,15 +26,18 @@ the test matrix stay synchronized with it. The phases are the
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
-- Progress: **Step 1 in progress on `pypi-publish-2-1-0/phases-1-4`. Phases
-  1–3 are complete (2026-10-28); Phase 4 is next.**
+- Progress: **Step 1's phases are complete on
+  `pypi-publish-2-1-0/phases-1-4` (Phases 1–4, 2026-10-28), with the
+  TestPyPI rehearsal recorded GO.** Step 1 review-pass-001 is next; Step 2
+  starts only after it closes (D2).
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
     re-verified E1–E4 and froze *Decisions (Phase 1 — BINDING)* in the task
     plan.
-  - Nothing has been uploaded or published, and neither `~/.claude/skills`
-    nor `~/.pypirc` has been touched.
+  - The only upload is Phase 4's TestPyPI rehearsal under
+    `docs-cli-rehearsal`; nothing has reached PyPI, and neither
+    `~/.claude/skills` nor `~/.pypirc` has been touched.
 - Source: the canonical tracker row (`193fc71`), and M30's hand-off in
   [feedback-log.md](feedback-log.md) (2026-10-26 entry, *Hand-off*).
 - Branch: `pypi-publish-2-1-0/milestone-setup` for setup. Implementation
@@ -55,7 +58,8 @@ the test matrix stay synchronized with it. The phases are the
   fully visible. They are exercised by the three-build probe replay and the
   2.0.0 control.
 - Mock audit: no mocks planned. Every check is real-path.
-- Adequacy results: pending.
+- Adequacy results: recorded in the matrix's *Adequacy results* through
+  Phase 4; the served-wheel results are Step 2's.
 - Taste triage: Step 0 review-pass-001 is triaged. gpt-B4 / claude-B1, a
   gating anchor violation, and Claude's subjective finding on documentation
   fit and minimality are both fixed by the dedupe. GPT had no other
@@ -68,7 +72,7 @@ the test matrix stay synchronized with it. The phases are the
 | 1. Define Contract | Complete | 2026-10-28 | *Decisions (Phase 1 — BINDING)* P1.1–P1.6 frozen: 23 readiness lines, 25 probe checks with the 2.0.0 control column, the scratch layout, Step 1 and Step 2 command lines, the settled items and the runbook correction list. The stop table gained the transport, host-state and suite-criterion rows. E1–E4 re-verified with no drift; E7 corrected (four synopses lag). OQ-1–OQ-5 conductor-resolved. 1671 passed. |
 | 2. Write Tests (RED) | Complete | 2026-10-28 | Both scripts written (blobs `b1f739e3…`, `55d5e33a…`). Readiness RED for exactly the reasons in the task plan's *Acceptance examples* › *Readiness*; its green control passes. Mutants 1–6, 1b and 5b each killed by exactly the intended check. The probe passes 21/21 on the editable build; the 2.0.0 control fails exactly the 13 release-bound checks. 1671 collected. |
 | 3. Create Data/Fixtures | Complete | 2026-10-28 | The CHANGELOG dated `2.1.0 — 2026-10-28` with its sentence removed (D7); the four lagging README synopses reconciled (D8); the diff equals the Phase 2 green control's. Probe trees confirmed scratch-only. Readiness GREEN, 23/23. 1671 passed. This commit is `X`. |
-| 4. Run Tests (RED Baseline) | Pending | — | A pre-publish GREEN baseline (D3). The gate; then build (a) per D4, with its sdist member manifest recorded; then `twine check` and the manifests. Both probe groups run on (a). The rehearsal follows, with D4's byte checks and both probe groups, and ends with (b) = (a). GO recorded. |
+| 4. Run Tests (RED Baseline) | Complete | 2026-10-28 | GREEN baseline at `X` (`a25cb5d`): the gate (1671), readiness 23/23, the stale-wording grep 0. Build (a) `2c5fa0b3…`/`1d327a97…`, hatchling 1.33.0, `twine check` and the dependency oracle pass. (a) probe 25/25; the guard step reads True / True. The TestPyPI rehearsal served = local = JSON, payloads equal, probe 24 + W1 SKIP. (b) = (a). Mutants 8, 8b, 8c behave. **GO.** |
 | 5. Update Base Interfaces | Pending | — | The stop-table preconditions; a re-date per D7 if needed; build (c) per D4; `twine check`; (c) = (a); the sdist members against the Phase 4 manifest; `dist/` holding exactly two files. |
 | 6. Implement Offline/Core Path | Pending | — | The upload under D2, naming both files explicitly. The per-version JSON's digests equal (c)'s. |
 | 7. Update Tool/Wrapper Layer | Pending | — | Served verification first: the shas against (c), both probe groups, and the suite's capability probes. Only then the tag and the release (D13), with the peeled-tag check. |
@@ -790,6 +794,204 @@ host check was unchanged.
   empty.
 - This commit is **`X`**, the commit Phase 4 builds (a), the rehearsal and
   (b) from. Its full sha is in Phase 4's *Release anchors (current)*.
+
+## Phase 4 — Run Tests (RED Baseline)
+
+Date: 2026-10-28, 21:48–21:55 CET. A pre-publish **GREEN** baseline (D3):
+the gate, build (a), the schema, the local wheel, the TestPyPI rehearsal and
+build (b), all at `X` = `a25cb5d07b24f00a81834ed6f7f8aa46d5e49a45` with a
+clean tree, except the rehearsal's own `pyproject.toml` edit (D4). Evidence
+collected in `$S/notes/` and was written here only after build (b). Every
+command is P1.4's.
+
+### 4.0–4.1 Preconditions and the gate
+
+- `git status --porcelain` empty; `HEAD` = `X`; the host check unchanged.
+- Toolchain: twine **7.0.0**, build **1.5.0**, pip **24.0**, Python
+  **3.12.3** (`.venv`; the throwaway venvs use the system `python3` 3.12.3).
+  The twine check passes: 7.0.0 is PyPI's newest and at least 7.0.0. PyPI's
+  newest hatchling was 1.33.0.
+- ruff clean; 52 files formatted; mypy no issues in 53 files; **1671
+  passed**; **1671 collected**; `docs check .` exit 0; the index dry-run,
+  the snapshot and both mirrors identical.
+- Readiness `--release-date 2026-10-28`: **exit 0, 23 passed**.
+- The stale-wording grep over P1.4's 19 surfaces (12 files, 7 `--help`
+  outputs): **0**.
+- The D1 scope check prints nothing.
+
+**Surface parity.** Each bullet of the CHANGELOG's 2.1.0 section, against
+the `--help` text that states it:
+
+| CHANGELOG bullet | `--help` statement |
+|---|---|
+| *Added* — `docs lifecycle <file>... <state>` | `docs --help` lists `lifecycle`; `docs lifecycle --help` states the states (any `add_lifecycles` extension included), the `*files, <state>` split, the one `Updated:` bump and one reindex, idempotence, `archived` never a target, the archive-subtree source refusal, validate-all-first, and `--dry-run`, `--json`, `--quiet`, `--root` |
+| *Changed* — free-form `docs relate add\|remove` | `docs relate --help` and `docs relate add --help`: a verb matching `[a-z][a-z0-9-]*` writes SOURCE's bullet alone; TARGET is never read or written and may be any existing file; never written to an archived SOURCE; an archived TARGET needs no `--reason` |
+| *Changed* — non-default `date_format` trees judge dates as `docs check` does | No flag: a parse fix. Its home is `cli.md` › *Invocation*; no `--help` text contradicts it |
+| *Changed* — `docs stamp` refuses a block failing the configured vocabulary or date format | `docs stamp --help`: "is refused (exit 1, nothing written) rather than re-stamped" |
+| *Fixed* — extensions and date formats in every verb; extension roles in `INDEX.md` | No flag: a parse fix. `docs lifecycle --help` names `add_lifecycles`; the rest lives in `cli.md` |
+
+### 4.2–4.3 Build (a), `twine check` and the schema
+
+- `rm -rf dist/ && .venv/bin/python -m build`: `dist/` held exactly
+  `docs_cli-2.1.0-py3-none-any.whl` and `docs_cli-2.1.0.tar.gz`.
+- `WHEEL`: `Generator: hatchling 1.33.0`.
+- `twine check` on both files by name: **PASSED**, PASSED.
+- METADATA: `Metadata-Version: 2.5`, `Requires-Python: >=3.11`,
+  `Provides-Extra: dev`, and five `Requires-Dist` lines (build, mypy,
+  pytest, ruff, twine), each `; extra == 'dev'`. **The dependency oracle
+  holds.**
+- `CHANGELOG` entries: 0 in the wheel, 0 in the sdist. The wheel's
+  `docs_cli/skill/` entries equal the seven files of `src/docs_cli/skill`,
+  and it has no entry outside `docs_cli/` and `docs_cli-2.1.0.dist-info/`.
+
+### 4.4 The local wheel
+
+- Installed into a fresh venv with `--no-deps --no-index`. Before anything
+  ran, `diff -r -x __pycache__` against (a)'s extraction was empty.
+- `PROBE --docs $S/venv-a/bin/docs --group all --expect-version 2.1.0`:
+  **exit 0, 25 passed** (the lines are in the anchors below).
+- **The guard-step rehearsal (OQ-4, piece 3).** P1.5's extraction of
+  `validate.yml@a997954` lines 1210–1293 (84 lines, sha256 in the anchors),
+  run with `bash -e` from a fresh empty directory with `PATH` on the venv
+  (`docs` and `python3` both resolved there): **exit 0**, printing
+  `verbless-metadata stopgap consistent with docs-cli pin (lifecycle verb:
+  True, free-form relate: True)`.
+- **A negative control** of that pass rule: the same script with the host's
+  2.0.0 `docs` first on `PATH` exits **1**, reporting that the pinned
+  docs-cli can perform neither edit. The suite checkout was not touched
+  (`git status` empty).
+
+### 4.5 The rehearsal under `docs-cli-rehearsal`
+
+| Step | Result |
+|---|---|
+| 1. The temporary edit | `pyproject.toml` line 6 → `name = "docs-cli-rehearsal"`; `git diff --stat` named only `pyproject.toml` |
+| 2. Build | `dist/` held exactly the two rehearsal files; wheel `fd2f787c…`, sdist `0241b9eb…`; `Generator: hatchling 1.33.0`, equal to (a)'s |
+| 3. `twine check` | both PASSED |
+| 4. Upload | the `2.1.0` per-version JSON returned 404 and `dist/` held exactly the two files; then `twine upload --repository testpypi --non-interactive` with both filenames: **exit 0** at 21:52:25–29 CET. TestPyPI shows `https://test.pypi.org/project/docs-cli-rehearsal/2.1.0/` |
+| 5. Served bytes | The per-version JSON listed 0 files at the first two polls and both at the third (about a minute of index lag: polling, not a failure, under the stop table). Each JSON `url` was fetched into a fresh empty directory; both served shas equal the local build and the JSON digests. The served wheel's `docs_cli/` equals (a)'s byte for byte, and its only other entries are `docs_cli_rehearsal-2.1.0.dist-info/` |
+| 6. Install | `pip install --no-cache-dir --no-deps --index-url https://test.pypi.org/simple/ docs-cli-rehearsal==2.1.0` succeeded at the first attempt; the installed `docs_cli/` equals (a)'s extraction before anything ran. `docs --version` prints `docs 0.0.0+local` (M13) |
+| 7. Probe | `--group all --no-version-check`: **exit 0, 24 passed, 1 skipped**. Its result lines equal (a)'s except W1, now `SKIP … rehearsal-name install reports 0.0.0+local` |
+| 8. Revert | `git restore pyproject.toml`; `git diff --exit-code pyproject.toml` exit 0; `git status --porcelain` empty; `HEAD` = `X` |
+| 9. Build (b) | wheel and sdist shas **equal (a)'s**, `Generator: hatchling 1.33.0`; D4's remedy was not needed |
+
+No retry was needed, and no OQ-2 transient-fault rule fired.
+
+### 4.6 The comparators
+
+| Mutant | Planted difference | The comparator reported |
+|---|---|---|
+| 8 | (a)'s wheel against the rehearsal wheel | `cmp` exit 1; the shas differ |
+| 8b | One byte appended to `cli.py` in a scratch copy of (a)'s payload | `diff -rq`: `docs_cli/cli.py` differs, and nothing else |
+| 8c | (a)'s sdist manifest against the rehearsal sdist's | exactly `./PKG-INFO` and `./pyproject.toml` differ, as constructed |
+
+### 4.7 Host isolation
+
+Unchanged after every block: the recorded destination absent, the update
+cache sha `39739c29…`, no file in the pipx venv newer than this session's
+`env.sh`. `~/.claude/skills/docs` keeps its 2026-08-16 mtime, and the backup
+symlink is untouched. Nothing was installed with pipx, and nothing touched
+real PyPI.
+
+### 4.8 GO record
+
+**GO, 2026-10-28 21:55 CET.** Each item of P1.4's GO list holds:
+- [x] the gate, with 1671 passed and collected;
+- [x] readiness, 23 passed;
+- [x] (a) built clean, with its shas, `Generator`, manifest and schema
+      items recorded, and `twine check` passed;
+- [x] the (a) probe, 25 passed;
+- [x] the rehearsal uploaded by explicit filename;
+- [x] the served shas equal the local build and the JSON digests;
+- [x] the payloads identical, both downloaded and installed;
+- [x] the rehearsal's result set equal to (a)'s apart from W1;
+- [x] the revert proven;
+- [x] (b) equal to (a);
+- [x] mutants 8, 8b and 8c behave as stated;
+- [x] host state unchanged;
+- [x] the anchors table below complete.
+
+### Release anchors (current)
+
+Step 2 reads only this table and the two blocks under it. A D9 re-run
+replaces this section's values and says so.
+
+| Anchor | Value |
+|---|---|
+| `X`, the build commit | `a25cb5d07b24f00a81834ed6f7f8aa46d5e49a45` |
+| CHANGELOG release date `D` | `2026-10-28` |
+| Wheel (a) = (b) | `docs_cli-2.1.0-py3-none-any.whl` `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185` |
+| Sdist (a) = (b) | `docs_cli-2.1.0.tar.gz` `1d327a97912ab70ac53829e2af2d568c119d8ce555e9032264e744ba1d6d07d4` |
+| Build backend (D4) | `Generator: hatchling 1.33.0`; the remedy's pin file would hold `hatchling==1.33.0` |
+| `Metadata-Version` | `2.5` |
+| Rehearsal (TestPyPI) | `docs-cli-rehearsal` `2.1.0`, uploaded 2026-10-28T20:52:26Z (wheel) and 20:52:27Z (sdist) |
+| Rehearsal wheel, served = local = JSON | `docs_cli_rehearsal-2.1.0-py3-none-any.whl` `fd2f787c85d95d3ace8944f0f00846f0644ebca4f69e3feb422dbff910b7b318` |
+| Rehearsal sdist, served = local = JSON | `docs_cli_rehearsal-2.1.0.tar.gz` `0241b9eb0ad906f3136b886f4ef08b83ef37ee723d3ec51db4036c4b1ecc3d1a` |
+| The next rehearsal version under D9 | `2.1.0.post1` (404 at Phase 1) |
+| `release_readiness.py` blob | `b1f739e3dd352f63b9286d77feae175da56c9fb5` |
+| `release_probe.py` blob | `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024` |
+| Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
+| Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
+| Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` |
+| `~/.pypirc` shape | as Phase 1's re-verification records it |
+
+**(a)'s sdist manifest** — every member outside `docs/` and `tests/`, from
+the top directory `docs_cli-2.1.0/`, 15 lines:
+
+```
+70956ac96bc5029ca8d7243e4aabb10708442050d59d4255f84b64e714110f37  ./.gitignore
+47382a3bb2a61d731fdaecb56630e15b51ddb77233340ee005d9208015fa82bd  ./LICENSE
+3f2d9f3c2dc7645b806cbfe09b97af5be6fbcd06824a19de29c386081decde91  ./PKG-INFO
+0d44c82d63fc09ca96e6b35b7bc3f44aa4136c1c3c213b3e1d039e5eb542ae84  ./README.md
+06437edb1be3b5bf2133bb2d9b9bde951107def7024fc07781f73f958a53280a  ./pyproject.toml
+72262e5c30d632bee9ea8dcb8ea75335fc3672f49b2da825d83e242f41f534cc  ./src/docs_cli/__init__.py
+a1097ee33a232efa4d26186ca57178d75768692c7a71561c92efc2743054bce1  ./src/docs_cli/cli.py
+b88aadf3787f1655a2581d6ea0f5b389bbda6e72efe15e04d3a43d29747e42c5  ./src/docs_cli/skill/SKILL.md
+f2ac0b7fb243bd034c29241a0a9e8e3d740acb7f6787c2f5608f80585c5b42cf  ./src/docs_cli/skill/references/adoption-playbook.md
+44e7c81aa46430f98108ae7a9784e20809629297a12fc0f7ae3d256cff4af644  ./src/docs_cli/skill/references/cli.md
+9e07a6d34a7c6835d783be54bcdb1da86576d763fdb7ea77d92014ebc2fc1b00  ./src/docs_cli/skill/references/convention.md
+f9bc06a9f1ef164b202f8a85dc7f69e8907d1f0519058848a1d7dc289fe733a0  ./src/docs_cli/skill/references/docs-toml-template.toml
+9170c1d08d7f1076baa6e81ac4402df7d06317182f0867f7a282d94751af2d6d  ./src/docs_cli/skill/references/quality-artifacts.md
+a3d1c257ed198c1df10492a65906547d819d703a58ee72a48d2eca0bafb8e14f  ./src/docs_cli/skill/references/use-cases.md
+5b659f914bd13d81ec5f8a87b4e4fc3c9a37b06de4c29ed82f10e745a7704e74  ./src/docs_cli/update_check.py
+```
+
+**(a)'s probe result lines** (`--group all --expect-version 2.1.0`; exit 0,
+25 passed). The rehearsal's are identical except line 22, which reads `SKIP
+docs --version names the expected release — rehearsal-name install reports
+0.0.0+local`. The served wheel's must equal these.
+
+```
+PASS  A milestone trio scaffolded with docs new is linked with free-form edges and promoted to active in one call, and docs check passes
+PASS  Re-running the same promotion changes no file
+PASS  A free-form edge to an archived document needs no --reason and rewrites only its source
+PASS  docs lifecycle refuses archived as a target, points at docs archive, and changes nothing
+PASS  An out-of-grammar relate verb is refused with the grammar named, and nothing changes
+PASS  An extension lifecycle state set by docs lifecycle is read back by docs list and docs index
+PASS  An extension-role document appears in INDEX.md
+PASS  On a tree with a non-default date_format, relate links documents dated in that format
+PASS  docs stamp refuses a file whose complete block fails the configured vocabulary, writing nothing
+PASS  The docs --help verb list names lifecycle, as the Agent Playbook Suite guard parses it
+PASS  A free-form dry-run relate on a fresh tree exits 0 and writes nothing, as the Agent Playbook Suite guard probes it
+PASS  docs check passes on a throwaway copy of this repository's docs tree
+PASS  docs index --dry-run on a copy of this docs tree reproduces its INDEX.md and writes nothing
+PASS  A one-sided recognized edge is reported as missing-inverse
+PASS  Bare --cascade is refused and nothing changes
+PASS  A dead prose link is reported as broken-body-link
+PASS  mv --dry-run names every planned reference rewrite and writes nothing
+PASS  Archiving reports the still-active inbound references into the archived set
+PASS  docs archive records the Archived: date on every moved member
+PASS  docs mv refuses a move between two dated archive directories and changes nothing
+PASS  A hand-relocated archived document is reported as archive-date-drift
+PASS  docs --version names the expected release
+PASS  install-skill materialises a skill byte-identical to the repository's bundled skill
+PASS  Re-running install-skill on an identical destination is a no-op
+PASS  install-skill --symlink is refused from a wheel install, leaving the destination absent
+```
+
+**D9 freshness.** This section is written after build (b), in a commit that
+changes only `docs/` and the INDEX snapshot, so `git diff --quiet X..HEAD --
+src pyproject.toml README.md LICENSE .gitignore tests/manual` holds.
 
 ## Milestone completion summary
 

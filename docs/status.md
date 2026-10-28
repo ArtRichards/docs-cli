@@ -48,7 +48,8 @@ Related:
 
 ## Current milestone
 
-**M31 Step 1 in progress (2026-10-28): Phases 1–3 are complete.**
+**M31 Step 1 phases complete (2026-10-28): Phases 1–4 are done, and the
+TestPyPI rehearsal is GO.**
 [`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to PyPI as
 docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the scratch
 layout and every command line through the tag, including Step 2's, so the
@@ -59,7 +60,12 @@ wrote the two release checks under `tests/manual/`: readiness fails for
 exactly the expected six reasons, and the probe passes on the development
 build while the host's 2.0.0 binary fails every 2.1-only check. Phase 3
 dated the CHANGELOG and fixed the four README synopses, and readiness now
-passes. The milestone has three documents:
+passes. Phase 4 built the 2.1.0 wheel and sdist, passed all 25 probe checks
+on the wheel, and rehearsed the upload on TestPyPI under
+`docs-cli-rehearsal`: the served bytes matched the local build, the
+installed payload matched the wheel, and a rebuild reproduced both shas.
+The PyPI upload waits for Step 1's reviews. The milestone has three
+documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
 - an [implementation log](pypi-publish-2-1-0-impl.md) carrying the setup
