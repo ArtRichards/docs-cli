@@ -6,7 +6,7 @@ Project: docs
 Updated: 2026-06-01
 
 Related:
-- child-of: plan.md
+- child-of: milestone-plan.md
 - parent-of: archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md
 - pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality-impl.md
 - pairs-with: archive/2026-06-01/m16-bundled-docs-skill-quality-test-matrix.md

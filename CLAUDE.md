@@ -6,7 +6,7 @@ Two different update channels — do not mix them up:
 
 - **Bundled skill, every CLI update.** `src/docs_cli/skill/` (SKILL.md +
   references/) is updated in the SAME change as every CLI surface update.
-  This is the surface-parity gate in docs/plan.md "Ongoing conventions":
+  This is the surface-parity gate in docs/milestone-plan.md "Ongoing conventions":
   argparse `--help` strings and the bundled skill land together, with
   `references/cli.md` and `references/convention.md` byte-identical to
   `docs/cli.md` and `docs/convention.md` (tests/test_skill_refs.py

@@ -5,6 +5,58 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.1.0 — UNRELEASED
+
+_Lifecycle verb and free-form `docs relate` (M30): every metadata edit a suite
+workflow prescribes now has a verb, and `parse()` honours the tree's
+configured vocabulary and date format in every verb. Additive — a minor
+release. A separate publish milestone ships it._
+
+### Added
+
+- **`docs lifecycle <file>... <state>`** (M30 — D1–D3). Sets a top-level
+  lifecycle state — `draft`, `active`, `blocked`, `done`, `superseded`, or any
+  `[vocabulary] add_lifecycles` extension — on one or more documents (the last
+  token is the state), bumps `Updated:` where it changed, and reindexes once;
+  never `archived`. Idempotent, validate-all-first, `--dry-run`, `--json`,
+  `--quiet`, `--root`; a document under the archive subtree, or one already
+  reading `Lifecycle: archived`, refuses the whole batch — `docs archive`
+  alone moves lifecycle and location together.
+
+### Changed
+
+- **`docs relate add|remove` writes a free-form verb** within
+  `[a-z][a-z0-9-]*` one-sided, on `SOURCE` alone, where 2.0.0 refused every
+  verb outside the six reciprocal ones (M30 — D4–D6). Case variants and other
+  out-of-grammar verbs still refuse at exit 2, now by grammar, and the
+  `unknown verb` refusal's tail names the grammar; a free-form `TARGET` may be
+  any existing file whose path a bullet can carry, and is never read or
+  written; an archived free-form `SOURCE` refuses. Recognized verbs are
+  byte-for-byte unchanged.
+- **Non-default `date_format` trees judge dates as `docs check` does**
+  (M30 — D10). On a tree whose documents still carry dates in another
+  spelling — a tree `docs check` already fails with `bad-date` — every verb
+  that reads metadata refuses those documents with the same `bad-date`
+  diagnosis (`docs list` silently omits them) instead of disagreeing with the
+  gate; a recognized-verb endpoint 2.0.0 accepted is among them.
+- **`docs stamp` refuses** (exit 1, zero bytes) a file whose complete metadata
+  block fails the tree's configured vocabulary or date format, where 2.0.0
+  re-stamped it and discarded its lifecycle, role and `Related:` edges
+  (M30 — D10).
+
+### Fixed
+
+- **Vocabulary extensions and non-default date formats work in every verb**
+  (M30 — D10) — on `Lifecycle:`, `Role:` and `Updated:` every verb now judges
+  a document exactly as `docs check` does — and extension-role documents
+  appear in `INDEX.md`, after the built-in role groups, alphabetically.
+  Structural faults `docs check` tolerates (a malformed `Related:` bullet, a
+  multi-valued `Project:`) still fail the verbs that parse the document, as
+  before.
+
+`docs check`, every existing record, and every pre-existing refusal other than
+the `unknown verb` tail are unchanged.
+
 ## 2.0.0 — 2026-08-16
 
 _The v2.0 safety train — M25 reciprocal relationship integrity, M26 safe

@@ -1,6 +1,6 @@
 ---
 name: docs
-description: Use whenever the user asks to create a spec, archive or rename a doc, list docs, regenerate INDEX.md, stamp a metadata block onto a file already written, reassign a doc's project, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / stamp / check / migrate / relate add / relate remove / project rename / project set / install-skill) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
+description: Use whenever the user asks to create a spec, archive or rename a doc, change a doc's lifecycle, link docs with a Related edge, list docs, regenerate INDEX.md, stamp a metadata block onto a file already written, reassign a doc's project, or check a docs tree (a directory with a .docs.toml file at its root), or to adopt a foreign Markdown directory into the convention (e.g. "adopt this directory", "migrate this folder", "bring this into docs convention", "import existing markdown specs"). Always run the docs CLI verb (docs new / index / archive / mv / list / touch / stamp / lifecycle / check / migrate / relate add / relate remove / project rename / project set / install-skill) — never hand-edit INDEX.md, metadata blocks, or files into archive/. Not for ordinary Markdown outside a .docs.toml-marked tree.
 ---
 
 # docs — run the verb, never hand-edit
@@ -58,13 +58,14 @@ separate bodies of work by `Project:` metadata, not by folder. See
 |---|---|---|
 | Create a doc | `docs new <role> <slug>` | `--project`, `--title`, `--body-from`; scaffolds metadata |
 | Stamp a metadata block onto a file you already wrote | `docs stamp <file>...` | `--role` (default `notes`), `--project`, `--title`; write-then-stamp, idempotent re-stamp refreshes `Updated:` |
+| Change a doc's lifecycle (e.g. promote a draft) | `docs lifecycle <file>... <state>` | the last token is the state: any top-level state (`draft`, `active`, `blocked`, `done`, `superseded`, or an `add_lifecycles` extension); several files in one call; bumps `Updated:` only where the lifecycle changed; idempotent; one reindex; never `archived` and never a doc under `archive/` — that is `docs archive`'s move; `--dry-run`, `--json` |
 | Regenerate the index | `docs index` | idempotent; rewrites only the marker block |
 | Archive a finished doc | `docs archive <file>` | `--reason`, `--date`, `--json`; archives that ONE doc. To include related docs: preview the whole one-hop neighbourhood with `--cascade-dry-run`, then write exactly the set you meant with `--cascade-only GLOB`. From 2.0 it also rebases every stale local Markdown **body link**, and **refuses (exit 2, zero bytes)** when a still-active doc outside the plan declares itself `child-of` a doc the plan would archive — archive the child first, or widen the scope to include it. Every other still-active inbound reference is reported (`strand` lines + the record's `strands` array), never refused. From 2.0 it also records the archive date as an `Archived:` metadata line on **every** doc the operation moves — the primary and each cascade member — while `Archived-reason:` stays on the primary alone |
 | Rename or move a doc | `docs mv <old> <new>` | `--dry-run`, `--json`, `--quiet`; rewrites `Related:` tree-wide and, from 2.0, rebases every local Markdown **body link** the move makes stale — both the ones pointing AT `<old>` and the ones INSIDE it, in other people's docs too. `--dry-run` names every planned rewrite before you commit to it; `--json` emits the same plan as a record. From 2.0 it **refuses (exit 2, zero bytes, in every mode)** a move between two different dated **archive** directories — that would falsify the archive-date record; to correct a genuinely mis-dated archive, move the file by hand, correct its `Archived:` line, and re-run `docs check` — the **one sanctioned exception** to the never-hand-edit rules below. Every other archive-subtree move still completes |
 | List or query docs | `docs list` | `--lifecycle`, `--role`, `--project`, `--stale`, `--json` |
 | Bump a doc's `Updated:` | `docs touch <file> [--check [--stale N]]` | reindexes; `--check` folds in `docs check` (touch-then-validate in one invocation; `--stale N` is the check's stale window) |
 | Validate the tree | `docs check` | exit `0` clean / `1` warnings / `2` errors; a one-sided reciprocal edge is a hard `missing-inverse` error (`docs relate` repairs it), a repeated metadata label is a hard `duplicate-field` error (hand-merge the bullets under one label), and from 2.0 a local Markdown **body** link is checked too — `broken-body-link` when the destination names no existing path (rebase the destination; it resolves from the linking doc's own directory) and `outside-root-body-link` when it leaves the tree root (replace it with a URL). From 2.0 an archived doc whose recorded `Archived:` date its location does not corroborate is a hard `archive-date-drift` error — present-only, so a doc without the field never fires it |
-| Repair a reciprocal relationship pair | `docs relate add` / `docs relate remove` | `SOURCE VERB TARGET`; writes both halves as one operation; idempotent; `--reason` required for an archived endpoint; `--dry-run`, `--json` |
+| Link docs, or repair a reciprocal pair | `docs relate add` / `docs relate remove` | `SOURCE VERB TARGET`, one edge per call. A recognized reciprocal verb writes both halves as one operation (`--reason` required for an archived endpoint). A **free-form** verb (`pairs-with`, `child-of`, `implements`, `references`, … — must match `[a-z][a-z0-9-]*`) writes SOURCE's bullet only: one-sided, TARGET may be any existing file under the docs root and is never read or written, and an archived SOURCE refuses. Idempotent; `--dry-run`, `--json` |
 | Adopt a foreign tree | `docs migrate <dir>` | dry-run by default; `--apply` to write |
 | Rename the project | `docs project rename <new-name>` | rewrites `.docs.toml` + every `Project:` line; `--dry-run` |
 | Reassign one or more docs' project | `docs project set <doc>... <new-project>` | rewrites only the named docs' `Project:` line; `--new-project` to create a new group; `--dry-run` |
@@ -99,8 +100,9 @@ then `docs touch`, `docs index`, and `docs check` as usual.
 
 Generated reports such as `coverage.xml`, `mutation.json`, and
 `benchmark.json` remain canonical tool output. Link them from the companion
-doc with `Related:` when the local convention accepts non-Markdown artifact
-targets; otherwise link their paths in the body.
+doc with `docs relate add <companion> references <report>` — a free-form
+edge written on the companion alone; the report may be any existing file
+under the docs root and is never read or written.
 
 Read [`references/quality-artifacts.md`](references/quality-artifacts.md)
 before creating a quality log or report companion.
@@ -129,8 +131,12 @@ the check entirely. See [`references/cli.md`](references/cli.md) "Update check".
   and location move together.
 - **A metadata block** — `Lifecycle:` / `Role:` / `Project:` /
   `Updated:` / `Archived:` / `Related:`. Use `docs new` to scaffold a
-  new block; `docs touch` to bump the date. Never hand-write or
-  hand-edit.
+  new block; `docs touch` to bump the date; `docs lifecycle` to change
+  `Lifecycle:` between top-level states (into `archived` is
+  `docs archive`'s alone, and `docs lifecycle` never sets an archived
+  doc back to a top-level state); `docs relate add` /
+  `docs relate remove` for a `Related:` edge — a reciprocal pair or a
+  free-form one. Never hand-write or hand-edit.
 
 **The one sanctioned exception**, and it is the escape `docs mv` prints
 when it refuses a cross-dated archived relocation: correcting a

@@ -7,7 +7,7 @@ Updated: 2026-05-22
 
 Related:
 - pairs-with: charter.md
-- pairs-with: plan.md
+- pairs-with: milestone-plan.md
 - pairs-with: status.md
 
 Gate-check before implementation begins. Implementation does not start until every item is green.
@@ -18,7 +18,7 @@ Gate-check before implementation begins. Implementation does not start until eve
 - [x] **Scope, assumptions, constraints captured.** Folded into charter's Non-goals + Audience + the convention's "What `docs` does not promise." → [charter.md](charter.md), [convention.md](convention.md)
 - [x] **Stakeholders/interfaces noted with owners.** N/A — solo project, no external interfaces. Documented absence.
 - [x] **Architecture option chosen; decision log updated.** Single-file Python, stdlib-only. → [architecture.md](architecture.md), [vocab-adr.md](vocab-adr.md), [dual-status-adr.md](dual-status-adr.md)
-- [x] **Milestones and dependencies mapped; timeline feasible.** Five-milestone roadmap, M4 depends on M3, others sequential. → [plan.md](plan.md)
+- [x] **Milestones and dependencies mapped; timeline feasible.** Five-milestone roadmap, M4 depends on M3, others sequential. → [plan.md](milestone-plan.md)
 - [x] **Environment/tooling validated; access unblocked.** Python 3.11+ confirmed; no third-party deps; commands listed. → [architecture.md](architecture.md)
 - [x] **Data plan set; compliance/privacy constraints clear.** Synthetic fixtures only; this repo's own `docs/` as real-world dogfood; no privacy considerations. → [test-strategy.md](test-strategy.md)
 - [x] **Test strategy outline covers critical paths and fixtures.** Layers, fixture sources, critical paths, quality gates. → [test-strategy.md](test-strategy.md)

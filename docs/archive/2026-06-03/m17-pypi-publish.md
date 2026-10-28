@@ -7,8 +7,8 @@ Updated: 2026-08-14
 Archived-reason: Milestone M17 complete; docs-cli==1.6.0 shipped to PyPI 2026-06-03
 
 Related:
-- parent-of: m17-pypi-publish-impl.md
-- child-of: plan.md
+- parent-of: archive/2026-10-26/m17-pypi-publish-impl.md
+- child-of: milestone-plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - pairs-with: archive/2026-06-03/m14-robustness-agent-native.md
@@ -421,7 +421,7 @@ batching **M14 + M15** into one public release (as M9 batched
 M6+M7+M8). Driven end-to-end as a fully-autonomous run walking
 [release-runbook.md](../../release-runbook.md) directly (no TDD code
 phases). The full per-phase record + deviation prose lives in
-[m17-pypi-publish-impl.md](../../m17-pypi-publish-impl.md)'s
+[m17-pypi-publish-impl.md](../2026-10-26/m17-pypi-publish-impl.md)'s
 milestone-completion summary.
 
 - **PyPI:** https://pypi.org/project/docs-cli/1.6.0/ ·

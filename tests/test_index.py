@@ -272,3 +272,41 @@ def test_render_project_less_doc_falls_back_to_config_project():
     body = out.split(MARKER_START, 1)[1].split(MARKER_END, 1)[0]
     assert "## Project — test" in body
     assert "orphan.md" in body
+
+
+def test_render_index_orders_extension_roles_alphabetically_after_built_ins():
+    """Configured extension roles render AFTER every built-in role group, the
+    extension groups sorted alphabetically, and every active document the
+    summary counts is rendered (milestone `lifecycle-and-free-form-relate` —
+    D10's `render_index` placement). `adr` sorts before `charter`, so a renderer
+    that merged extensions alphabetically into the built-in order would fail."""
+    config = Config(
+        project="test",
+        archive_dir="archive",
+        date_format="%Y-%m-%d",
+        lifecycles=BUILTIN_STATUSES,
+        roles=BUILTIN_ROLES | {"adr", "rfc"},
+    )
+    docs = [
+        _doc("rfc-one.md", role="rfc"),
+        _doc("decision-a.md", role="adr"),
+        _doc("notes-a.md", role="notes"),
+        _doc("charter-a.md", role="charter"),
+        _doc("status-a.md", role="status"),
+    ]
+
+    out = render_index(docs, config, existing=None, root=_ROOT)
+
+    headings = [line for line in out.splitlines() if line.startswith("### Active — ")]
+    assert headings == [
+        "### Active — Status",
+        "### Active — Charter",
+        "### Active — Notes",
+        "### Active — Adr",
+        "### Active — Rfc",
+    ]
+    entries = [line for line in out.splitlines() if line.startswith("- [")]
+    assert len(entries) == len(docs), "every counted document is rendered"
+    assert "5 docs active" in out
+    for doc in docs:
+        assert f"- [{doc.path.name}]({doc.path.name})" in out

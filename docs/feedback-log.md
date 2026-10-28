@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: log
 Project: docs
-Updated: 2026-08-16
+Updated: 2026-10-28
 
 ## Purpose
 
@@ -14,6 +14,123 @@ without starting implementation. When feedback is promoted, its entry remains
 as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
+
+### 2026-10-28 — Every editing verb normalises CRLF or mixed line endings to LF
+
+- Source: the M30 (`lifecycle-and-free-form-relate`) Step 2 review (gpt-B2, claude-N4). It is M30 *Follow-ups* item 11, conductor-resolved as pre-existing and not an M30 defect.
+- Observation: every verb that edits a document reads it with `Path.read_text()`, which translates `\r\n` to `\n`, and writes it back through `atomic_write`. So a one-field edit rewrites every line ending of a CRLF or mixed-ending document. Probe (2026-10-28, throwaway trees, ten CRLF line endings per document):
+  - v2.0.0's `docs touch`, `docs project set`, `docs archive` and `docs stamp` each leave 0 CRs;
+  - 2.1.0's `docs lifecycle` and free-form `docs relate add` behave the same.
+- Desired behaviour: preserve each document's line endings repo-wide. One candidate is to read with `newline=""` and keep the surgical editors' line-ending handling. The change belongs in all of the editing verbs at once, not in one, because they share one text model.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-28 — A duplicated metadata label is written first and read last
+
+- Source: the M30 Step 2 review (claude-N3). It is M30 *Follow-ups* item 12; the conductor decided to defer it with no M30 contract change.
+- Observation: `set_metadata_field` rewrites the first occurrence of a label, while `parse_metadata_block` keeps the last. Probe (2026-10-28):
+  - on a document carrying `Lifecycle: draft` and then `Lifecycle: done`, `docs lifecycle r.md active` exits 0 and reports `set` from `done`. It writes the first line, so the effective value stays `done`;
+  - v2.0.0's `docs touch` does the same to a duplicated `Updated:`.
+  `docs check` already reports both documents as `duplicate-field` errors, so the tree fails the gate. The mismatch concerns every `set_metadata_field` verb.
+- Desired behaviour, to be decided: refuse to edit a document with a duplicated label, or edit the occurrence that is read.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-28 — "Validate-all-first atomic semantics" overstates a batch that has no rollback
+
+- Source: found internally during the M30 (`lifecycle-and-free-form-relate`) Step 2 audit.
+- Observation: `docs project set --help` and, following it verbatim, `docs lifecycle --help` describe their multi-file write as "validate-all-first atomic semantics". Validation is all-or-nothing, so every refusal writes zero bytes. The writes, though, are sequential `atomic_write` calls with no staged publish or rollback, so an uncaught mid-batch `OSError` leaves the earlier documents written. `cli.md` states the exact contract for both verbs.
+- Why not fixed in M30: the wording is the `project set` anchor's, and changing it touches a pre-existing verb's help text, which is outside M30's surface. No caller depends on the phrase.
+- Ownership: docs-cli (help-text wording, both verbs). Status: **open, unowned.**
+
+### 2026-10-28 — Candidate project convention: state a binding decision once
+
+- Source: M30 Step 1 review (claude-T4), waived for M30 and recorded as its *Follow-ups* item 10. The Step 2 resume planning (S2R-OQ-2, conductor-resolved) registered it here.
+- Observation: M30's task plan restates its binding decision D10 in six or more places — the Contract, the Deliverables, the success criteria, the upgrade note, the matrix and the decision itself. So the Step 1 review's wording correction (gpt-S3 / claude-S1) had to touch every copy. A milestone doc that states each binding decision once, and points to it everywhere else, would make that drift impossible.
+- Why a candidate, not a rule: it rests on one waived finding. The compounding rule promotes a convention into agent context only once it is proven and recurring, so this is offered as a taste anchor at the next milestone's setup rather than written into `CLAUDE.md`.
+- Ownership: the next milestone's setup (offer it as a taste anchor). Status: **open, unowned.**
+
+### 2026-10-27 — `docs new --body-from` admits any leading bare-label group as metadata, not only `Related:`
+
+- Source: found **internally, during M30 (`lifecycle-and-free-form-relate`) setup** (evidence E6); recorded as that milestone's *Follow-ups* item 1 and registered here at its Phase 7 because no milestone owns it.
+- Observation: a `--body-from` body whose first block is a bare-label group becomes part of the metadata block — the convention's block grammar, not `docs new`'s code. M30 made the `Related:` group a supported, locked creation-time route (D8), but the behaviour is generic: setup measured a leading `Revision:` group landing as metadata on an **active** document, which the convention says the tool never writes.
+- Why not fixed in M30: narrowing M15 — C4's refusal heuristic is a behaviour change nobody has asked for, and M30 kept the heuristic unchanged on purpose.
+- Constraint any fix must respect: the leading `Related:` group stays supported (`tests/test_body_from.py::test_body_opening_with_a_related_group_becomes_metadata`; the bundled skill's sidecar example).
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-27 — `docs relate` cannot remove a dangling free-form edge
+
+- Source: M30 *Follow-ups* item 2, judged out of scope at setup; registered here at M30 Phase 7.
+- Observation: `docs relate remove SOURCE VERB TARGET` still resolves TARGET first, so a free-form edge whose target file no longer exists — a `broken-ref` — refuses at exit 1 (`file not found`). Repairing it stays move-driven (`docs mv` rewrites references) or manual, and the bundled skill forbids hand-editing a metadata block.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-27 — Widening the free-form verb grammar beyond `[a-z][a-z0-9-]*`
+
+- Source: M30 *Follow-ups* item 3 (D6; operator decision on setup question Q3); registered here at M30 Phase 7.
+- Observation: `docs relate` writes a free-form verb only when it matches `[a-z][a-z0-9-]*` in full. Every verb measured in this tree, the fixtures, the bundled skill and the suite's prescriptions fits, while `docs check` accepts any verb text, so a hand-written exotic verb stays valid but `relate` will not write or remove it.
+- Compatibility: widening is additive — no caller breaks — whereas narrowing would break automation; that is why the grammar started strict. Revisit only when a real tree needs a verb `relate` should write.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-27 — No verb repairs an out-of-vocabulary `Lifecycle:` or `Role:`
+
+- Source: M30 Phase 1 (OQ-5), *Follow-ups* item 7; registered here at M30 Phase 7.
+- Observation: `docs lifecycle` exits 1 on a named document that fails `parse()` — `Lifecycle: activ`, or `shipped` after its extension was removed from `.docs.toml` — and `docs stamp`'s refusal of such a complete block points at "correct the field, then `docs touch`". Both are honest refusals, but the correction itself is a hand-edit of a metadata block, which the bundled skill forbids.
+- Ownership: docs-cli (a repair route, or a sanctioned exception in the skill). Status: **open, unowned.**
+
+### 2026-10-27 — `[vocabulary]` entries are not validated at config load
+
+- Source: M30 Phase 1 (OQ-5), *Follow-ups* item 8; registered here at M30 Phase 7.
+- Observation: `load_config` merges `add_lifecycles` / `add_roles` with an unchecked `frozenset(...)`: an empty or padded entry is accepted silently, and a bare string (`add_lifecycles = "shipped"`) becomes its single letters. Since M30 — D10 every verb honours the configured vocabulary, so such an entry now reaches every walk, not only `docs check`.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-27 — A recognized-verb `docs relate` TARGET path can inject metadata
+
+- Source: M30 Step 1 review (claude-S2; conductor decision JC1), *Follow-ups* item 9; registered here at M30 Phase 7.
+- Reproduction: on a tree where a file named `b<newline>Lifecycle: archived<newline>x.md` exists and parses, `docs relate add a.md precedes $'b\nLifecycle: archived\nx.md'` exits 0 and writes a bullet that ends `a.md`'s `Related:` group and adds a `Lifecycle: archived` line. Re-measured at M30 Phase 7 against the 2.1.0 development build: the recognized verb still plans it (`--dry-run` exit 0), while the same TARGET through a free-form verb refuses at exit 2 (M30 — R4).
+- Why not fixed in M30: recognized verbs are bound byte-for-byte unchanged (M30 — D4); the fix — a refusal, or path validation shared by both kinds of verb — is a deliberate behaviour change for a later milestone. No lock freezes today's behaviour.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-26 — `[vocabulary] add_lifecycles` / `add_roles` break every verb except `docs check`
+
+- Source: found **internally, during M30 (`lifecycle-and-free-form-relate`) milestone setup** (2026-10-26), while measuring whether `docs lifecycle` can write an `add_lifecycles` state as its registered scope promises. Not downstream feedback — recorded here because no milestone owns it yet, the route M28a's setup used for the `date_format` defect below.
+- Reproduction, on a throwaway tree at docs-cli 2.0.0 (`2ad941e`). Sidecar: `[vocabulary] add_lifecycles = ["shipped"]`. Two `docs new spec` documents, one hand-set to `Lifecycle: shipped`. Then `docs index` exits 2 (`Lifecycle: 'shipped' not in vocabulary`); `docs touch` of the **other** document writes and then exits 2 (`INDEX refresh failed`); `docs list` and `docs list --json` drop the document, printing the error on stderr, at exit 0; `docs relate` refuses it as an endpoint (exit 1); `docs archive --dry-run` exits 1; `docs mv --dry-run` exits 2 — and `docs check` reports **no violations**, exit 0. With `add_roles = ["adr"]`, `docs new adr x` succeeds and the next `docs index` exits 2.
+- Diagnosis: `parse()` validates `Lifecycle:` and `Role:` against the built-in `BUILTIN_STATUSES` / `BUILTIN_ROLES` instead of the tree's merged vocabulary, and every walking verb reaches it — `walk()`, `query_docs`, `_cmd_archive`, `_known_projects`, `_cmd_project_set`, `_resolve_relate_endpoint`, `_cmd_stamp`. `check_doc` honours the config, so the gate stays clean while the tree is unusable. It is the same config-blindness as the 2026-08-15 `date_format` entry below, in the vocabulary half.
+- Blast radius: any tree with a non-empty `add_lifecycles` or `add_roles`. The feature is advertised — in a comment in this repository's own `.docs.toml` and in the bundled `docs-toml-template.toml` — and no committed fixture exercises a non-empty extension through a walk, which is why the suite never saw it.
+- Ownership: docs-cli. **On M30's path**: the registered scope promises that `docs lifecycle` writes extension states and reindexes once, which cannot both hold today. Whether M30 fixes it was M30 setup question **Q7** — fix both halves of `parse()`'s config-blindness (recommended, closing this entry and the 2026-08-15 one), fix the vocabulary half only, or descope extension states; the operator chose the first (see *Status*).
+- `docs stamp` data loss, measured 2026-10-27 (M30 Step 0 review, claude-B2; reproduced by the conductor and in M30's log, E12): on a tree with `add_lifecycles = ["shipped"]`, `docs stamp` on a `docs check`-clean document at `Lifecycle: shipped` exits 0 and rewrites it to `Lifecycle: draft`, `Role: notes`, moving its `Related:` group into a `## Migrated metadata` body section — because `_cmd_stamp` reads "a clean `parse()`" as "already stamped". With a free-form edge `docs check` stays at exit 0 afterwards; with a recognized pair the partner's inverse is left dangling (`missing-inverse`, exit 2). A typo'd lifecycle on a default tree is re-stamped the same way. M30 — D10 fixes the extension case through the config-aware `parse()` and, by operator decision, makes `docs stamp` refuse any full block that fails the tree's configured vocabulary or date format, with zero bytes written (exit 1).
+- Status: owned by M30, `lifecycle-and-free-form-relate` ([milestone doc](archive/2026-10-28/lifecycle-and-free-form-relate.md), D10), by operator decision on its setup question Q7 (2026-10-27): M30 fixes both halves of `parse()`'s config-blindness — vocabulary extensions and `date_format` honoured at every call site, with no tree that `docs check` passes today allowed to start failing. **CLOSED 2026-10-27 at M30 Phase 7 — implemented, unreleased, pending the 2.1.0 publish.**
+- Closure (2026-10-27, M30 Phase 7): `parse()` takes the tree's config (`parse(text, path, root, *, config=None)`) and every call site passes it — `walk()`, `query_docs`, `_cmd_archive`, `_known_projects`, `_cmd_project_set`, `_resolve_relate_endpoint`, `_cmd_stamp`, and both new `docs lifecycle` sites — so an extension lifecycle or role now parses in `index`, `touch`, `list`, `relate`, `lifecycle`, `archive`, `mv`, `project set`, `project rename` and `stamp`. `render_index` renders extension-role groups after the built-in ones, alphabetically, so a document that now parses is no longer counted and left out of the body; `docs stamp` refuses (exit 1, zero bytes) a complete block that fails the configured vocabulary or date format instead of re-stamping it, and treats an extension-state document as already stamped. A bare `parse()` keeps the built-ins. Locked across the walking verbs by M30's test-matrix clauses C20–C22, C24 and C25. **Correction to the reproduction above:** M30's Step 1 review re-measured `docs list` on this shape and it prints **nothing** on stderr — it drops the document silently at exit 0, as `query_docs`' leniency intends; "printing the error on stderr" was wrong.
+
+### 2026-10-26 — No verb for draft→active or free-form `Related:` edges; suite and bundled skill disagree on the hand-edit fallback
+
+- Source: operator-relayed excerpt from a downstream agent session running `agent-playbook-suite:create-milestones` (0.8.3) against released docs-cli 2.0.0 (PyPI). The agent halted at milestone activation, reported that 2.0 has no draft-to-active verb and that the project forbids a manual fallback, and resumed only on an operator approval it scoped to the lifecycle field. It then found that the workflow's required `pairs-with` / `child-of` edges have no verb either, held that the approval did not cover them, and left them unwritten.
+- Verification method: re-run 2026-10-26 against the installed `docs 2.0.0` (`--help` of every verb) and the suite skill text in the host plugin cache. Findings below record measured surface, not inference.
+- Finding 1, no verb writes a non-archived `Lifecycle:` — **confirmed**. `docs new` and `docs stamp` always write `Lifecycle: draft`; `docs touch` writes `Updated:` only; `docs archive` writes `archived` only. Moving between `draft`, `active`, `blocked`, `done` and `superseded` has no supported path.
+- Finding 2, no verb writes `pairs-with`, `child-of` / `parent-of`, or any other free-form verb — **confirmed**. `docs relate add` accepts only the six recognized reciprocal verbs (`precedes`/`follows`, `depends-on`/`required-by`, `blocks`/`blocked-by`); every other verb is free-form and unvalidated by design (`convention.md`, *Related*), and `docs new` has no `--related` option.
+- Finding 3, the two skills contradict each other — **confirmed, and the real cause of the halt**. `create-milestones` SKILL.md rule 3 sanctions exactly two direct metadata edits after `docs new`: `Lifecycle:` when a draft artifact becomes active, and free-form `Related:` links such as companion `pairs-with` edges. The bundled `docs` skill's *Three things never to hand-edit* forbids hand-editing any metadata block — `Lifecycle:` and `Related:` named explicitly — and grants one exception only, the mis-dated archive correction. An agent holding both skills cannot complete the suite's activation step without breaking one of them; this one obeyed the stricter rule, so every milestone activation in a downstream tree now costs an operator round-trip.
+- Agent behaviour worth preserving: the exception was scoped to what the operator actually approved, and not widened to adjacent edits on the grounds that they belong to the same workflow. Minor: the agent browsed the GitHub repository to establish the CLI surface where `docs --help` and `docs relate add --help` answer it locally.
+- Desired behaviour: a workflow the suite prescribes is completable without an operator exception, and the two skills state the same rule.
+- Candidate, finding 1: a narrow verb — working name `docs lifecycle FILE STATE` — over the top-level states only, refusing any transition to or from `archived` (owned by `docs archive`, which moves lifecycle and location together), bumping `Updated:` and reindexing once, with the usual `--dry-run` / `--json` / `--quiet`. Preferred over a second sanctioned hand-edit exception: the charter's *run the verb* principle weakens with every carve-out, and a verb lets `docs check` stay the only arbiter.
+- Open design question, finding 2: (a) let `docs relate add|remove` write a free-form verb one-sided, with no inverse obligation; (b) promote `pairs-with` to a recognized **symmetric** pair (its own inverse); (c) leave free-form edges to guidance as a sanctioned exception. Constraints any choice must respect: `child-of` / `parent-of` were deliberately kept out of reciprocal validation (`convention.md`), and `pairs-with` / `child-of` are the edges that feed the archive candidate set (M26 — D1) and M28's leg-1 `child-of` strand refusal, so (b) changes what `missing-inverse` reports on every existing tree and needs an upgrade measurement first.
+- Ownership: docs-cli for the verb(s) and the bundled skill wording — through a test-first milestone, since both touch the convention and the surface-parity gate. Agent Playbook Suite for aligning `create-milestones` rule 3, best folded into the post-2.0 suite sweep M29 already scoped out (nine bare `--cascade` prescriptions).
+- Stopgap until a verb ships: reconcile the two skills' wording so a downstream agent has one rule — either the bundled skill names the suite's two carve-outs as sanctioned, or the suite drops them in favour of an operator ask. Leaving the contradiction in place is the worst of the three.
+- Status: **promoted 2026-10-26** — owned by **M30, `lifecycle-and-free-form-relate`** ([milestone doc](archive/2026-10-28/lifecycle-and-free-form-relate.md)), registered `planned` at order 100 in the canonical tracker of [`milestone-plan.md`](milestone-plan.md). Stopgap applied the same day in the Agent Playbook Suite.
+- Promotion (2026-10-26, operator decisions):
+  - **Finding 1 → a verb.** `docs lifecycle FILE STATE` over top-level states, refusing to or from `archived`. The guidance-only alternative (a second sanctioned hand-edit exception) was declined.
+  - **Finding 2 → one-sided free-form `docs relate`.** `relate add|remove` accepts free-form verbs and writes SOURCE's bullet only. Promoting `pairs-with` to a symmetric pair was declined, so `missing-inverse` reports nothing new on any existing tree; guidance-only was declined too.
+  - **Finding 3 stopgap → the suite drops its carve-outs.** `create-milestones` and its siblings stop sanctioning hand-edits of `Lifecycle:` and free-form `Related:` and ask the operator instead, until M30 ships and the suite prescribes the verbs. The alternative — the bundled skill sanctioning the carve-outs — was declined, keeping *run the verb* unweakened.
+- Observation from the promotion itself: `docs new --body-from` accepts a body whose first block is a `Related:` group and the result parses as metadata (`docs list --json` shows the edges; `docs check` clean). So free-form edges **can** be written through the CLI at creation time today — the gap is editing them on an existing document. M30 Phase 1 should decide whether that is a supported path to document or an accident to pin.
+- M30 answers and status (2026-10-27, Phase 7): setup questions Q1–Q9 are answered as M30's binding decisions D1–D10 — **finding 1** → `docs lifecycle <file>... <state>`, a flat verb with `docs project set`'s grammar over the top-level states, never `archived` as a target and never an archived document as a source, `Updated:` bumped only where the lifecycle moved, one reindex (D1–D3; Q1); **finding 2** → `docs relate add|remove` writes a free-form verb one-sided, on SOURCE alone, within the operator-chosen grammar `[a-z][a-z0-9-]*` (D4, D6; Q3), an archived SOURCE refused and any existing file accepted as TARGET (D5; Q2, Q6), recognized verbs byte-for-byte unchanged, and the archive candidate set and strand refusal locked unchanged (D7); **the observation above** → the `--body-from` leading-`Related:` group is a supported creation-time route, locked by test and stated in `cli.md`, with the bundled skill's two sidecar examples rewritten to forms that work (D8; Q5); **release** → 2.1.0 through a separate publish milestone, with the hand-off recorded here at M30's closeout (D9; Q4, Q9); and, by operator decision on Q7, `parse()` honours the tree's configured vocabulary and date format in every verb (D10), closing the two config-blindness entries in this log. Risk Standard (Q8, operator). Implemented and GREEN on `lifecycle-and-free-form-relate/phases-5-10` — **unreleased**, pending the 2.1.0 publish. This entry stays **open**: the stopgap retires only in the Agent Playbook Suite release that pins the docs-cli version carrying M30.
+- Hand-off (2026-10-28, M30 Phase 10), for the publish milestone that ships 2.1.0. No such milestone is registered yet (M30 *Follow-ups* item 4, operator); it follows the M19 → M20 pattern. Its closeout must:
+  1. **Publish 2.1.0** per [`release-runbook.md`](release-runbook.md): date the `## 2.1.0 — UNRELEASED` CHANGELOG header at publish and strip its "A separate publish milestone ships it." sentence.
+  2. **Re-run both Agent Playbook Suite probes against the PyPI-served wheel** — the replicas `tests/test_cli_lifecycle.py::test_help_verb_list_names_lifecycle_for_the_playbook_guard` and `tests/test_cli_relate.py::test_playbook_guard_free_form_dry_run_probe_exits_0`, plus the raw probes. This validates M30's assumption that the suite guard's probes stay as measured on 2026-10-26; M30 Phase 9 already passed them on a locally built wheel.
+  3. **Refresh the host skills**, per `CLAUDE.md`: `docs install-skill --force` from the published version, then sweep the workflow skills' docs-cli prescriptions for the new surface. Note that `~/.claude/skills/docs-local-source-backup-20260525-134621` is a pre-existing symlink to this repository's `src/docs_cli/skill`, so it already shows the 2.1 skill while the host binary is 2.0.0 (M30 Phase 7 observation).
+
+  The Agent Playbook Suite pin-bump PR that follows must:
+  - bump `DOCS_CLI_VERSION`;
+  - replace every operator-approved `Lifecycle:` and free-form `Related:` hand-edit prescription with `docs lifecycle` / `docs relate add|remove`;
+  - delete `_shared/references/verbless-metadata-edits.md`;
+  - drop ship-milestone Step 0's up-front approval.
+
+  After that, its CI guard *Validate verbless-metadata stopgap matches the pinned docs-cli* must read `lifecycle verb: True` and `free-form relate: True`. This entry stays **open** until that suite release ships.
 
 ### 2026-08-15 — Issue #1: cascade parent-archiving, archived re-dating, and post-move validation gaps
 
@@ -44,7 +161,9 @@ as the discovery and decision audit source and records the owning milestones.
 - Diagnosis: two date parsers disagree inside one verb. `docs archive`'s `--date` is validated against the tree's `config.date_format`, and `check_doc` honours it too — but `parse()` parses `Updated:` with the hardcoded default format, and the end-of-batch INDEX refresh goes through `parse()`. So the write succeeds, the reindex raises, and the operator gets a non-zero exit for a document that is actually correct.
 - Blast radius: **only** trees that configure a non-default `[archive] date_format`. The default `%Y-%m-%d` is unaffected, which is why this has never been seen: this repository's own tree, every committed fixture tree, and the migrate sidecar `docs migrate --apply` writes all use the default. Not a 2.0.0 blocker.
 - Ownership: docs-cli. **Explicitly not fixed by M28a**, which found it — recorded as that milestone's *Follow-ups* item 1. M28a's own logic is written so it cannot inherit the bug: its `archive-date-drift` rule parses **both** sides of the comparison with `config.date_format`, via the same path `check_doc` already uses, and never through `parse()`'s hardcoded default (M28a — D3).
-- Status: **open, unowned** (2026-08-15). Candidate for a post-2.0.0 correctness milestone. The likely fix is to thread `config.date_format` into `parse()` at every call site rather than to widen the parser's tolerance, since a second accepted spelling would reintroduce exactly the ambiguity M25 refused when it wrote `Revision:`.
+- Blast radius re-measured (2026-10-26, M30 setup): **wider than recorded above on verbs**, unchanged on population. On a throwaway tree with `[archive] date_format = "%d-%m-%Y"` at docs-cli 2.0.0, `docs new spec a` writes `Updated: 26-10-2026` and the next `docs index` and `docs touch a.md` both exit 2 with the same `malformed date … (expected %Y-%m-%d)` message, while `docs check` exits 0 — every reindexing verb fails on such a tree, not only `docs archive`. The same `parse()` config-blindness also breaks vocabulary extensions (2026-10-26 entry above); M30 setup question Q7 asked whether M30 fixes both halves; the operator answered yes on 2026-10-27 (see *Status*).
+- Status: owned by M30, `lifecycle-and-free-form-relate` from 2026-10-27 ([milestone doc](archive/2026-10-28/lifecycle-and-free-form-relate.md), D10) — by operator decision on M30's setup question Q7, M30 threads the tree's config into `parse()` at every call site, the fix recommended in this bullet. Recorded **open, unowned** on 2026-08-15 as a candidate for a post-2.0.0 correctness milestone. The likely fix is to thread `config.date_format` into `parse()` at every call site rather than to widen the parser's tolerance, since a second accepted spelling would reintroduce exactly the ambiguity M25 refused when it wrote `Revision:`. **CLOSED 2026-10-27 at M30 Phase 7 — implemented, unreleased, pending the 2.1.0 publish.**
+- Closure (2026-10-27, M30 Phase 7): the fix recommended above, as recommended — `parse()` reads `Updated:` in the tree's `[archive] date_format` at every call site, one spelling and never two. The reproduced `docs archive` tail, `docs index` and `docs touch` now exit 0 on a correctly dated `%d-%m-%Y` tree (`test_archive_renders_the_witness_in_the_trees_date_format`, rewritten as its docstring foresaw, and M30's C21 locks). The one outcome that changes on an existing tree is the shape `docs check` already rejects: a non-default-format tree whose documents still carry another spelling now fails its walking verbs with the same `bad-date` diagnosis instead of disagreeing with the gate (M30 — E11; the 2.1.0 upgrade note).
 
 ### 2026-08-09 — Useful relationship graphs, strict reciprocity, and upgrade repair
 

@@ -653,3 +653,53 @@ def test_touch_on_an_archived_document_leaves_the_witness_byte_identical(docs_sc
     assert _run(docs_script, "check", str(root)).returncode == 0, (
         "and the witness still corroborates its directory afterwards"
     )
+
+
+def _vocab_extension_tree(fixtures_dir: Path, tmp_path: Path) -> Path:
+    source = fixtures_dir / "trees" / "vocab-extension"
+    assert source.is_dir(), "the committed `vocab-extension` fixture tree must exist"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+    return root
+
+
+def test_touch_reindexes_a_tree_with_extension_vocabulary(docs_script, fixtures_dir, tmp_path):
+    """Touching an ordinary document on a tree with `add_lifecycles` /
+    `add_roles` documents reindexes cleanly and lists all of them (2.0.0 wrote
+    the date, then exited 2 with `INDEX refresh failed`) — milestone
+    `lifecycle-and-free-form-relate` — D10."""
+    root = _vocab_extension_tree(fixtures_dir, tmp_path)
+
+    proc = _run(docs_script, "touch", "draft-note.md", cwd=root)
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert f"Updated: {date.today().isoformat()}" in (root / "draft-note.md").read_text()
+    index = (root / "INDEX.md").read_text()
+    for name in ("shipped-spec.md", "decision-record.md", "draft-note.md"):
+        assert f"- [{name}]({name})" in index, name
+    assert "### Active — Adr" in index
+
+
+def test_touch_reindexes_a_non_default_date_format_tree(docs_script, tmp_path):
+    """On a `%d-%m-%Y` tree `touch` writes today in the tree's format and the
+    reindex reads every `Updated:` in that same format (milestone
+    `lifecycle-and-free-form-relate` — D10, E8)."""
+    root = tmp_path / "dmy"
+    root.mkdir()
+    (root / ".docs.toml").write_text(
+        '[project]\nname = "dmy"\n\n[archive]\ndate_format = "%d-%m-%Y"\n'
+    )
+    for name, updated in (("a.md", "20-05-2026"), ("b.md", "21-05-2026")):
+        (root / name).write_text(
+            f"# {name}\n\nLifecycle: active\nRole: notes\nProject: dmy\nUpdated: {updated}\n\n"
+            "## Body\n\nProse.\n"
+        )
+
+    proc = _run(docs_script, "touch", "a.md", cwd=root)
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    today = date.today().strftime("%d-%m-%Y")
+    assert f"Updated: {today}" in (root / "a.md").read_text()
+    index = (root / "INDEX.md").read_text()
+    assert f"Updated {today}." in index
+    assert "Updated 21-05-2026." in index

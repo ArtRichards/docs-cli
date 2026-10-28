@@ -8,7 +8,7 @@ Archived: 2026-08-16
 Archived-reason: Milestone complete; docs-cli==2.0.0 shipped to PyPI 2026-08-16
 
 Related:
-- child-of: plan.md
+- child-of: milestone-plan.md
 - parent-of: archive/2026-08-16/m26-safe-archive-selection-impl.md
 - implements: charter.md
 - pairs-with: archive/2026-08-16/m26-safe-archive-selection-impl.md

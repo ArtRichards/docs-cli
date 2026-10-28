@@ -6,11 +6,12 @@ Project: tree
 Updated: 2026-01-01
 
 BODYMARKER — this file already carries a metadata-block-shaped header, but
-its `Role:` is NOT in the vocabulary, so strict `parse()` rejects it.
+its `Role:` is NOT in the vocabulary, so the tree's configuration rejects it.
 
 ## Section
 
-`docs stamp` must treat this as a FRESH file: the four required fields are
-superseded with valid values (the bogus `Role:` is replaced, never parked),
-yielding exactly ONE valid metadata block — no orphaned or doubled block —
-and a tree that passes `docs check`.
+The block is complete — `Lifecycle:`, `Role:` and `Updated:` are each
+present — so `docs stamp` must REFUSE it: exit 1, the failing `Role:` named,
+and zero bytes written. Re-stamping would replace the document's lifecycle,
+role and project, so the refusal points at `docs check` and `docs touch`
+instead.

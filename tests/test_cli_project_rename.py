@@ -409,3 +409,25 @@ def test_project_rename_with_malformed_excluded_file_succeeds(docs_script, tmp_p
     # The conformant doc IS indexed — pins a FULL walk (excluding only
     # vendor/), not a fix that swallows the walk error and drops docs.
     assert "spec.md" in index, "the conformant doc must still be indexed"
+
+
+def test_project_rename_walks_a_tree_with_extension_vocabulary(docs_script, fixtures_dir, tmp_path):
+    """`project rename` walks every document with the tree's configuration, so
+    documents in configured extension states and roles neither abort the walk
+    nor escape the rename — milestone `lifecycle-and-free-form-relate` — D10."""
+    source = fixtures_dir / "trees" / "vocab-extension"
+    assert source.is_dir(), "the committed `vocab-extension` fixture tree must exist"
+    root = tmp_path / "tree"
+    shutil.copytree(source, root)
+
+    proc = _run(docs_script, "project", "rename", "renamed", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert 'name = "renamed"' in (root / ".docs.toml").read_text()
+    for name in ("shipped-spec.md", "draft-note.md"):
+        assert "Project: renamed" in (root / name).read_text(), name
+    assert "Project: beta" in (root / "decision-record.md").read_text(), (
+        "a document in another project is not renamed"
+    )
+    index = (root / "INDEX.md").read_text()
+    assert "- [shipped-spec.md](shipped-spec.md)" in index

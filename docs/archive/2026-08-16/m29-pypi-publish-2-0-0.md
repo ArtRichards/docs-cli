@@ -8,9 +8,9 @@ Archived: 2026-08-16
 Archived-reason: Milestone M29 complete; docs-cli==2.0.0 shipped to PyPI 2026-08-16
 
 Related:
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
-- pairs-with: m29-pypi-publish-2-0-0-impl.md
+- pairs-with: archive/2026-10-26/m29-pypi-publish-2-0-0-impl.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - references: feedback-log.md
@@ -29,7 +29,7 @@ Related:
 > [release-runbook.md](../../release-runbook.md); this milestone doc gives the
 > publish work a named home, exit criteria, and the decisions setup froze. The
 > per-phase record lives in
-> [m29-pypi-publish-2-0-0-impl.md](../../m29-pypi-publish-2-0-0-impl.md).
+> [m29-pypi-publish-2-0-0-impl.md](../2026-10-26/m29-pypi-publish-2-0-0-impl.md).
 
 ## Overview
 

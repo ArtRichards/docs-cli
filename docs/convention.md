@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-08-16
+Updated: 2026-10-27
 
 Related:
 - pairs-with: cli.md
@@ -79,7 +79,7 @@ merge the entries under one label by hand.
 |---|---|---|
 | `Lifecycle` | controlled vocab | doc's lifecycle state |
 | `Role` | controlled vocab | what kind of doc this is |
-| `Updated` | `YYYY-MM-DD` | last meaningful update |
+| `Updated` | date, in the tree's `[archive] date_format` (default `YYYY-MM-DD`) | last meaningful update |
 
 > **Lifecycle (M7 — F0) — breaking change since 1.1.**
 > Before 1.2 the lifecycle field was named `Status:`. M7 renamed
@@ -122,6 +122,17 @@ Any additional `Label:` fields are harvested and exposed under `docs list --json
 | `done` | Complete; intentionally kept in the active tree (evergreen reference). |
 | `archived` | Complete and moved to the archive subtree. |
 | `superseded` | Replaced by another doc. Pair with `Related: superseded-by: …`. |
+
+**Changing lifecycle (M30 — D1–D3).** Move a document between the
+top-level states — every state above except `archived`, plus any
+`add_lifecycles` extension — with `docs lifecycle <file>... <state>`, not by
+hand-editing `Lifecycle:`. It bumps `Updated:` on each document whose
+lifecycle actually changed and refreshes `INDEX.md` once; a document already
+in the state is left untouched. `archived` is never its target and an
+archived document is never its source: entry into the archive belongs to
+`docs archive`, which moves lifecycle and location together, and nothing
+moves a document back out. The verb couples nothing to `Related:` — the
+`blocked` and `superseded` advice above stays advice.
 
 ### Role (built-in)
 
@@ -166,6 +177,16 @@ add_lifecycles = ["shipped"]            # M7: renamed from `add_statuses` (no al
 add_roles      = ["adr", "rfc"]
 add_fields     = ["Owner", "Tags"]      # M10: opt-in extra-field allowlist
 ```
+
+**Every verb honours the additions (M30 — D10).** An added lifecycle or
+role is valid in every verb that reads metadata — `docs index`, `list`,
+`touch`, `archive`, `mv`, `project rename`, `project set`, `relate`,
+`lifecycle` and `stamp` — exactly as `docs check` accepts it. An added
+lifecycle is an active-tree state: `docs lifecycle` can set it, and
+`status-drift` accepts it outside the archive subtree. An added role renders
+in `INDEX.md` after the built-in role groups, extension groups sorted
+alphabetically. `docs migrate`'s inference alone still adopts a foreign tree
+against the built-in sets.
 
 `add_fields` (M10) widens the `docs check` `unknown-field` rule's
 allowlist. Matching is **case-sensitive exact match** — `add_fields =
@@ -272,6 +293,21 @@ stale_days = 30                          # M19: default --stale window for this 
 
 `docs check` does not validate verbs (free-form), but it does validate that every `Related:` path resolves to a file under the docs root. The target file does **not** need to be a `.md` doc — it may be any file (YAML data, HTML report, spreadsheet, generated artifact). The tool checks existence, not file type. This lets specs cross-reference canonical data files, reviewer worksheets, or other artifacts that live in the same tree without forcing them through `docs`'s Markdown convention.
 
+**Writing an edge (M30 — D4 / D6).** Add or remove one edge with
+`docs relate add|remove SOURCE VERB TARGET`, not by hand-editing the block.
+For a free-form verb — any verb other than the six reciprocal ones below —
+`relate` writes `SOURCE`'s bullet alone: a free-form edge carries no inverse
+obligation, so it is one-sided by design, and `TARGET`, which may be any
+existing file under the root whose path a bullet can carry (no line break,
+no leading or trailing whitespace), is never written (and never read). `relate`
+writes a free-form verb only in the lowercase kebab form `[a-z][a-z0-9-]*` —
+every conventional verb above is one. That grammar binds what `relate`
+writes, not the convention: `docs check` still accepts any verb text before
+the first colon, so a hand-written verb outside it stays valid in a tree; it
+is simply not one `relate` will write or remove. At creation time, a
+`docs new --body-from` body that opens with a `Related:` group writes the
+same edges (see `cli.md` › `docs new`).
+
 ### Reciprocal relationship verbs (M25)
 
 Six of those verbs — and **only** these six — form three recognized
@@ -319,10 +355,11 @@ chosen because an agent reading one milestone needs sequence, prerequisite,
 and blocker context in both directions.
 
 **Repair with `docs relate`, not by hand.** `docs relate add|remove SOURCE
-VERB TARGET` writes or unwrites both halves of a pair as one coordinated,
-idempotent operation, including — with an explicit `--reason` and a dated
-`Revision:` audit bullet — when an endpoint is archived. See `cli.md` ›
-`docs relate`.
+VERB TARGET` writes or unwrites both halves of a recognized pair as one
+coordinated, idempotent operation, including — with an explicit `--reason`
+and a dated `Revision:` audit bullet — when an endpoint is archived. The same
+verb writes a free-form edge one-sided (see *Relationship verbs* above),
+never into an archived document. See `cli.md` › `docs relate`.
 
 **Upgrading from a pre-M25 tree.** Trees carrying one-sided recognized
 edges begin failing `docs check` after the upgrade. There is **no**
@@ -416,9 +453,11 @@ completed. That report is the operation's consequence, not a defect list.
 
 Completed work moves to an archive subtree. Default subdir name: `archive/`. Convention: `archive/YYYY-MM-DD/` per archive event. Configurable via `[archive] dir` in `.docs.toml`. `[archive] dir` must be a **single path segment**, and `[archive] date_format` must render as one too — a format containing `/` would make the dated directory two segments deep, which every archive-subtree rule in this convention reads as one.
 
+`[archive] date_format` governs more than the archive: it is the one spelling of every date field in the tree — `Updated:` in every document, the dated directories, and the `Archived:` witness — and every verb reads `Updated:` in it, exactly as `docs check` does (M30 — D10). A tree accepts one spelling, never two: on a `%d-%m-%Y` tree an ISO `Updated: 2026-10-27` is a `bad-date` error for `docs check`, and every verb that reads the document refuses it with the same message (`docs list` silently omits it).
+
 Lifecycle/location consistency rules:
 
-- A doc at the top level (active tree) MUST have `Lifecycle:` in `{draft, active, blocked, done, superseded}`.
+- A doc at the top level (active tree) MUST have `Lifecycle:` in `{draft, active, blocked, done, superseded}` or in the tree's `add_lifecycles` extensions — every configured state except `archived`.
 - A doc under the archive subtree MUST have `Lifecycle: archived`.
 - `docs check` reports any mismatch with nonzero exit (rule `status-drift`).
 
@@ -436,7 +475,7 @@ Lifecycle/location consistency rules:
 
 M28 **widens this one exception along its own axis** rather than granting a new one: the trigger is unchanged (a reference pointing at a doc moving in *this* operation), the operation is the same, the write is the same single atomic write, and the blast radius grows by exactly the destination token beside the bullet. In particular the widened exception carries **no audit metadata**: an archived referrer whose destination is repointed gets no `Updated:` bump and no `Revision:` bullet, because it still points at the same target in a different spelling and asserts nothing new — and because an `Updated:` value that recorded some *other* doc's move would be a lie about the doc that carries it. An active referrer is treated the same way, as it always has been.
 
-**Audited relationship repair (M25 — D4).** A **second** narrow exception, beside M18's. Because archived docs are walked, they are reciprocity-checked too, so a one-sided recognized edge with an archived endpoint would otherwise be an unfixable `docs check` error. `docs relate add|remove` may therefore touch an archived endpoint — but only when the operator asks explicitly and says why: `--reason TEXT` (a single non-empty line) is **required** whenever either named endpoint is under the archive subtree, and an invocation that would change nothing still requires it. Exactly three things may change in an archived doc: **(1)** the one recognized `Related:` bullet added or removed, **(2)** the `Updated:` value, **(3)** the `Revision:` group — created, or one dated bullet appended recording that document's own change and the reason. `Lifecycle: archived`, the original `Archived:` and `Archived-reason:` (which record entry into the archive, never a later repair), `Role:`, `Project:`, every other `Related:` bullet, every other metadata field, the H1, the prose, the file's location, and its trailing-newline state stay byte-identical. `Revision:` is written to archived endpoints only; an active endpoint gets the edge and the `Updated:` bump and nothing more. This is not general archived-document editing — no other verb and no other field is in scope.
+**Audited relationship repair (M25 — D4).** A **second** narrow exception, beside M18's. Because archived docs are walked, they are reciprocity-checked too, so a one-sided recognized edge with an archived endpoint would otherwise be an unfixable `docs check` error. `docs relate add|remove` may therefore touch an archived endpoint — but only when the operator asks explicitly and says why: `--reason TEXT` (a single non-empty line) is **required** whenever either named endpoint is under the archive subtree, and an invocation that would change nothing still requires it. Exactly three things may change in an archived doc: **(1)** the one recognized `Related:` bullet added or removed, **(2)** the `Updated:` value, **(3)** the `Revision:` group — created, or one dated bullet appended recording that document's own change and the reason. `Lifecycle: archived`, the original `Archived:` and `Archived-reason:` (which record entry into the archive, never a later repair), `Role:`, `Project:`, every other `Related:` bullet, every other metadata field, the H1, the prose, the file's location, and its trailing-newline state stay byte-identical. `Revision:` is written to archived endpoints only; an active endpoint gets the edge and the `Updated:` bump and nothing more. This is not general archived-document editing — no other verb and no other field is in scope. In particular it covers **recognized** edges only: a free-form edge never writes an archived document — `docs relate` refuses an archived free-form `SOURCE`, and a free-form `TARGET` is never written at all — so free-form writing widens nothing here (M30 — D5). `docs lifecycle` likewise refuses every document under the archive subtree.
 
 **One-time body-link migration (M27 — D6).** A **third** narrow exception, beside M18's and M25 — D4's, and the last one this convention grants — a count M28 leaves at three, because M28 — D5 widens M18's move-driven exception along its own axis instead of adding a fourth. Because body links are validated uniformly — in archived documents exactly as in active ones, the same reach `broken-ref` and `missing-inverse` already have — a document that an older `docs` moved into `archive/YYYY-MM-DD/` without rebasing its prose links carries damage that is now a hard `docs check` error and would otherwise be unrepairable. This repository's own archive was repaired once, on **2026-08-14**, with a **stated blast radius**: only **destination tokens**, the `Updated:` value, and one dated `Revision:` bullet may change, in **29** named archived documents; `Lifecycle:`, `Archived:`, `Archived-reason:`, `Role:`, `Project:`, every `Related:` bullet, the H1, and all other prose stay byte-identical. `Revision:` is written to archived documents only — an active document repaired in the same pass gets the destination change and its `Updated:` bump and nothing more (M25 — D4). This is **not** a general licence to edit archived prose, and **no CLI verb performs it**: there is no `docs fix-links`. An adopter upgrading to 2.0 gets the recipe (`cli.md` › *Upgrading from 1.x*), not the migration.
 
@@ -559,5 +598,5 @@ Names are free-form. The metadata block carries the load; the filename is for hu
 ## What `docs` does not promise
 
 - No automatic `Updated:` bumping on every write. Use `docs touch` or hand-edit.
-- No link-graph traversal. `Related:` is metadata, not a query target. From M25 the tool validates **one-hop reciprocity** of the six recognized verbs (and repairs a single pair via `docs relate`) — that is the whole of its graph awareness. There is still no graph query, no multi-hop traversal, no cycle or conflict detection, and no rendering.
+- No link-graph traversal. `Related:` is metadata, not a query target. From M25 the tool validates **one-hop reciprocity** of the six recognized verbs (and `docs relate` writes a single edge — one recognized pair, or one free-form bullet — per invocation) — that is the whole of its graph awareness. There is still no graph query, no multi-hop traversal, no cycle or conflict detection, and no rendering.
 - No content validation beyond metadata **and local body-link destinations** (M27). The tool reads a document's body for exactly one purpose — resolving the local Markdown links in it (see "Body links") — and is otherwise indifferent to it: no rendering, no heading or anchor validation, no style, spelling, structure, or well-formedness rules, and no link-graph traversal built out of body links.

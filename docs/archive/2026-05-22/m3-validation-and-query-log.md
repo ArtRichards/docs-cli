@@ -295,7 +295,7 @@ no implementation; the RED baseline (55 failed / 109 passed) is unchanged:
   named "unknown extra fields", but the convention defines no known-field
   registry, so M3 leaves extra fields unflagged. A possible future change — an
   opt-in `[vocabulary] add_fields` allowlist driving an `unknown-field`
-  warning — is recorded in [plan.md](../../plan.md)'s Open questions and
+  warning — is recorded in [plan.md](../../milestone-plan.md)'s Open questions and
   cross-referenced from this milestone's Decisions.
 - **Consistency sweep.** Audited the phase 1–4 artifacts: corrected this log's
   M1+M2 test-file count (10, not 11); recorded the single-file-vs-package
@@ -437,7 +437,7 @@ Close out M3.
 - [status.md](../../status.md): M3 → Complete, M4 flagged next, progress table and
   "Resuming this work" section updated, the M3 RED-baseline gotcha removed and
   the `malformed`-rule gotcha added.
-- [plan.md](../../plan.md): the INDEX-grouping open question moved to Resolved
+- [plan.md](../../milestone-plan.md): the INDEX-grouping open question moved to Resolved
   questions (resolved by `Project`); the extra-field allowlist question stays
   parked.
 - Appended the Milestone-completion summary to

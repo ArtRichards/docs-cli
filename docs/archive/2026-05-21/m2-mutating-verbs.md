@@ -7,7 +7,7 @@ Updated: 2026-08-14
 
 Related:
 - parent-of: archive/2026-05-21/m2-mutating-verbs-log.md
-- child-of: plan.md
+- child-of: milestone-plan.md
 - implements: charter.md
 - pairs-with: convention.md
 - pairs-with: cli.md
@@ -215,7 +215,7 @@ implementation**; phases 5–10 implement and ship.
   - Refactor any code grown past the readable budget; revisit the single-file
     decision if warranted (defer the split to M3 unless it becomes unworkable).
   - Update [status.md](../../status.md): M2 → Complete, M3 → ACTIVE.
-  - Update [plan.md](../../plan.md): record the `--cascade` default decision and the
+  - Update [plan.md](../../milestone-plan.md): record the `--cascade` default decision and the
     INDEX directory/`Project` grouping deferral to M3.
   - Append milestone-completion summaries to this file and the log.
 - **Exit:** Quality gate green; docs updated; ready to start M3.
@@ -263,10 +263,10 @@ and `dual-status-adr.md`):
 - **INDEX grouping by directory / `Project` is deferred to M3.** The real
   large-tree human-navigation improvement is grouping the INDEX by something
   other than `Role`. That is a view concern, not a mutating-verb concern; it is
-  recorded as a [plan.md](../../plan.md) open question for M3 (`docs list --project`,
+  recorded as a [plan.md](../../milestone-plan.md) open question for M3 (`docs list --project`,
   directory-grouped INDEX). M2 keeps the INDEX Role-grouped; the renderer fix
   above ensures nested docs at least link correctly and show their path.
-- **`--cascade` default deferred.** [plan.md](../../plan.md) asks whether
+- **`--cascade` default deferred.** [plan.md](../../milestone-plan.md) asks whether
   `docs archive --cascade` should be the default with `--no-cascade` to opt
   out. Currently opt-in. Phase 1 declares `--cascade` as a plain `store_true`
   so the polarity is a one-line change if Phase 6 flips it. Decision recorded
@@ -329,7 +329,7 @@ mv` relocates a doc while rewriting every `Related:` reference to it.
   files, all green; tree-wide `ruff` and `mypy` clean.
 - **Dogfood:** all four verbs exercised against a copy of this repo's `docs/`
   — correct, drift-free, idempotent (see the Phase 9 log).
-- **Decisions recorded** in [plan.md](../../plan.md): `--cascade` stays opt-in;
+- **Decisions recorded** in [plan.md](../../milestone-plan.md): `--cascade` stays opt-in;
   directory- / `Project`-grouped INDEX deferred to M3. `bin/docs` is ~1.3k
   lines and still single-file — the split stays deferred to M3 per this
   milestone's Decisions; the code is sectioned and passes every gate, so it is

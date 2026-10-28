@@ -8,7 +8,7 @@ Updated: 2026-08-14
 Related:
 - pairs-with: convention.md
 - pairs-with: cli.md
-- pairs-with: plan.md
+- pairs-with: milestone-plan.md
 
 ## What we're building
 

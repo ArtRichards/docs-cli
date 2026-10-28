@@ -6,7 +6,7 @@ Project: docs
 Updated: 2026-08-14
 
 Related:
-- child-of: plan.md
+- child-of: milestone-plan.md
 - parent-of: archive/2026-06-03/m14-robustness-agent-native-impl.md
 - pairs-with: archive/2026-06-03/m15-agent-native-authoring.md
 - pairs-with: agent-native-invocation.md

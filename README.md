@@ -44,13 +44,15 @@ docs archive <file> [--reason "…"] [--cascade-only GLOB] [--cascade-dry-run] [
                                           Archive: edit Lifecycle, record Archived:, move to archive/<date>/,
                                           rebase stale body links, refresh index. Related docs need an explicit scope.
 docs mv <old> <new> [--dry-run] [--json]  Move + rewrite Related: references AND stale body links across the tree.
-docs relate add|remove SOURCE VERB TARGET Add or remove a reciprocal relationship pair across both endpoints.
+docs relate add|remove SOURCE VERB TARGET Add or remove one edge: a reciprocal pair across both endpoints,
+                                          or a one-sided free-form edge (pairs-with, references, …) on SOURCE.
 docs list [filters] [--json] [--exclude PATTERN]
                                           Query view of the tree.
 docs check [DIR] [--exclude PATTERN]      Validate metadata, refs, status/location drift, reciprocal edges,
                                           body links, and archive-date drift.
 docs touch <file> [--check]               Bump Updated: to today; --check re-validates the tree afterwards.
 docs stamp <file>                         Stamp a metadata block onto a file that was written by hand.
+docs lifecycle <file>... <state>          Set a top-level Lifecycle: (draft, active, …); never archived.
 docs project rename <old> <new>           Rename a project across the tree.
 docs project set <file> <name>            Reassign a single doc to another project.
 docs migrate <dir> [--apply] [--summary] [--only ambiguous] [--exclude PATTERN]
@@ -120,7 +122,7 @@ For current state, see the canonical sources — kept in sync by the tooling rat
 
 - [CHANGELOG](https://github.com/ArtRichards/docs-cli/blob/main/CHANGELOG.md) — the current version and full release history.
 - [`docs/status.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/status.md) — development progress.
-- [`docs/plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/plan.md) — the roadmap.
+- [`docs/milestone-plan.md`](https://github.com/ArtRichards/docs-cli/blob/main/docs/milestone-plan.md) — the roadmap.
 
 ## License
 

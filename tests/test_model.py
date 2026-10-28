@@ -5,8 +5,11 @@ Targets: `parse()`, `Doc`, `MetadataError`, `VocabularyError`.
 
 from __future__ import annotations
 
+import inspect
 import textwrap
 from datetime import date
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -19,6 +22,7 @@ from docs import (
     load_config,
     parse,
 )
+from docs_cli import cli
 
 WELL_FORMED = """\
 # Title
@@ -224,3 +228,131 @@ def test_doc_to_json_surfaces_archived_under_extra_fields(tmp_path):
         "extra_fields",
     }
     assert record["extra_fields"]["Archived"] == "2026-01-01"
+
+
+# --- `parse()` honours a tree's configuration when given one ----------------
+#
+# Milestone `lifecycle-and-free-form-relate` — D10 (*Decisions (Phase 1 —
+# BINDING)* › P1.4): `parse(text, path, root, *, config=None)`. A bare call
+# keeps the built-in vocabulary and the ISO date; a config-aware one judges
+# exactly as `docs check` does. The keyword is checked first, so a missing
+# parameter is an assertion, not a `TypeError`.
+
+_REPO = Path(__file__).resolve().parents[1]
+_TREES = _REPO / "tests" / "fixtures" / "trees"
+
+
+def _symbol(name: str) -> Any:
+    """A `cli` attribute typed `Any`, so a call using a keyword the signature
+    does not have yet type-checks at baseline."""
+    return getattr(cli, name)
+
+
+def _config_aware_parse() -> Any:
+    assert "config" in inspect.signature(cli.parse).parameters, (
+        "parse() must accept a keyword-only `config`"
+    )
+    return _symbol("parse")
+
+
+def _extension_config(tmp_path: Path, extra: str) -> Any:
+    (tmp_path / ".docs.toml").write_text(f'[project]\nname = "probe"\n{extra}')
+    return load_config(tmp_path)
+
+
+_EXTENDED_SIDECAR = (
+    '\n[archive]\ndate_format = "%d-%m-%Y"\n\n'
+    '[vocabulary]\nadd_lifecycles = ["shipped"]\nadd_roles = ["adr"]\n'
+)
+
+
+def test_bare_parse_keeps_the_built_in_defaults(tmp_path):
+    """A bare `parse()` — every pre-existing caller and unit test — keeps the
+    built-in vocabulary and the ISO date format EVEN WHEN the root it is given
+    carries a `.docs.toml` that extends both: it never reads configuration
+    from its surroundings. The explicit-config half — the same sidecar at the
+    same kind of root, honoured when passed as `config=` — is
+    `test_parse_with_a_config_accepts_its_extensions_and_date_format`. GREEN at
+    baseline; it rejects a `parse()` whose bare call picks up ambient config."""
+    _extension_config(tmp_path, _EXTENDED_SIDECAR)
+    path = tmp_path / "doc.md"
+    with pytest.raises(VocabularyError):
+        parse(_write_text("Lifecycle: shipped\nRole: spec\nUpdated: 2026-05-20"), path, tmp_path)
+    with pytest.raises(VocabularyError):
+        parse(_write_text("Lifecycle: active\nRole: adr\nUpdated: 2026-05-20"), path, tmp_path)
+    with pytest.raises(MetadataError, match=r"expected %Y-%m-%d"):
+        parse(_write_text("Lifecycle: active\nRole: spec\nUpdated: 20-05-2026"), path, tmp_path)
+    doc = parse(_write_text("Lifecycle: active\nRole: spec\nUpdated: 2026-05-20"), path, tmp_path)
+    assert (doc.lifecycle, doc.role, doc.updated) == ("active", "spec", date(2026, 5, 20))
+
+
+def test_parse_with_a_config_accepts_its_extensions_and_date_format(tmp_path):
+    """With a config, `parse()` admits the configured extension lifecycle and
+    role and reads `Updated:` in the configured `date_format`."""
+    config = _extension_config(tmp_path, _EXTENDED_SIDECAR)
+    text = _write_text("Lifecycle: shipped\nRole: adr\nUpdated: 20-05-2026")
+
+    doc = _config_aware_parse()(text, tmp_path / "doc.md", tmp_path, config=config)
+
+    assert (doc.lifecycle, doc.role, doc.updated) == ("shipped", "adr", date(2026, 5, 20))
+    assert doc.archived is False, "parse() leaves the archived flag to its caller"
+
+
+def test_parse_with_a_config_rejects_the_iso_spelling_on_a_non_default_tree(tmp_path):
+    """One spelling, never two: on a `%d-%m-%Y` tree an ISO `Updated:` fails
+    with the same self-locating message `docs check` reports as `bad-date`."""
+    config = _extension_config(tmp_path, '\n[archive]\ndate_format = "%d-%m-%Y"\n')
+    path = tmp_path / "doc.md"
+    text = _write_text("Lifecycle: active\nRole: spec\nUpdated: 2026-05-20")
+
+    with pytest.raises(MetadataError) as excinfo:
+        _config_aware_parse()(text, path, tmp_path, config=config)
+
+    assert str(excinfo.value) == (
+        f"{path}: Updated: malformed date '2026-05-20' (expected %d-%m-%Y)"
+    )
+
+
+def _trees_with_default_vocabulary_and_date_format() -> list[str]:
+    """Every committed fixture tree whose configuration adds no vocabulary and
+    keeps the default date format — the trees on which a config-aware parse
+    must change nothing. Selected by configuration, never by name."""
+    names = []
+    for tree in sorted(d for d in _TREES.iterdir() if d.is_dir()):
+        config = load_config(tree)
+        if (config.lifecycles, config.roles, config.date_format) == (
+            BUILTIN_STATUSES,
+            BUILTIN_ROLES,
+            "%Y-%m-%d",
+        ):
+            names.append(tree.name)
+    return names
+
+
+def _parse_outcome(parser: Any, text: str, path: Path, root: Path, **kwargs: Any) -> object:
+    try:
+        return parser(text, path, root, **kwargs)
+    except (MetadataError, VocabularyError) as exc:
+        return (type(exc).__name__, str(exc))
+
+
+def test_config_aware_parse_agrees_with_bare_parse_on_every_pre_existing_tree():
+    """D10's compatibility claim, measured: on every tree whose configuration
+    is the default — every committed fixture tree but the vocabulary-extension
+    one, plus this repository's own `docs/` — a config-aware parse returns the
+    identical `Doc`, or raises the identical exception class and message, for
+    every Markdown file. One test; each disagreement is reported by file."""
+    config_aware = _config_aware_parse()
+    roots = [_TREES / name for name in _trees_with_default_vocabulary_and_date_format()]
+    roots.append(_REPO / "docs")
+    assert len(roots) > 2, "the sweep must cover the committed trees and docs/"
+    disagreements = []
+    for root in roots:
+        config = load_config(root)
+        for path in sorted(root.rglob("*.md")):
+            text = path.read_text()
+            bare = _parse_outcome(parse, text, path, root)
+            aware = _parse_outcome(config_aware, text, path, root, config=config)
+            if aware != bare:
+                disagreements.append(f"{path.relative_to(_REPO)}: {bare!r} != {aware!r}")
+    assert not disagreements, "\n".join(disagreements)

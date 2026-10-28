@@ -1,9 +1,11 @@
 # M29 — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
-Updated: 2026-08-16
+Updated: 2026-10-26
+Archived: 2026-10-26
+Archived-reason: Release complete; impl log archived at the 2026-10-26 milestone-tracker migration
 
 Related:
 - pairs-with: archive/2026-08-16/m29-pypi-publish-2-0-0.md
@@ -17,7 +19,7 @@ Chronological log of work on **M29 — PyPI publish 2.0.0**. Append a section
 per runbook phase (operator prep → pre-publish prep → TestPyPI rehearsal →
 real PyPI publish → post-release) with objective, actions, results, decisions.
 M29 has **no TDD code phases** — the sections of
-[release-runbook.md](release-runbook.md) are the phases (mirrors
+[release-runbook.md](../../release-runbook.md) are the phases (mirrors
 M9/M11/M13/M17/M20/M24).
 
 ## Implementation metadata

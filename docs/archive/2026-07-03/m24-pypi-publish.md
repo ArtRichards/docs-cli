@@ -7,8 +7,8 @@ Updated: 2026-08-14
 Archived-reason: Milestone M24 complete; docs-cli==1.8.0 shipped to PyPI 2026-07-03
 
 Related:
-- parent-of: m24-pypi-publish-impl.md
-- child-of: plan.md
+- parent-of: archive/2026-10-26/m24-pypi-publish-impl.md
+- child-of: milestone-plan.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - pairs-with: archive/2026-07-03/m21-update-check.md
@@ -44,7 +44,7 @@ Revision:
   five runbook phases done; chain-of-custody bit-perfect for both wheel
   (`29ac3ced…`) and sdist (`62a29285…`); `v1.8.0` annotated tag at `1a01f74` +
   GitHub release; host skills refreshed. See the milestone-completion summary
-  below and [m24-pypi-publish-impl.md](../../m24-pypi-publish-impl.md) for the full
+  below and [m24-pypi-publish-impl.md](../2026-10-26/m24-pypi-publish-impl.md) for the full
   per-phase record.
 
 ### Goal
@@ -344,4 +344,4 @@ entries folded into the dated `## 1.8.0` section (D2).
   no re-bump.
 
 Full per-phase record + deviations (carried to v1.9+) live in
-[m24-pypi-publish-impl.md](../../m24-pypi-publish-impl.md).
+[m24-pypi-publish-impl.md](../2026-10-26/m24-pypi-publish-impl.md).

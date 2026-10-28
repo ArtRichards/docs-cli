@@ -8,7 +8,7 @@ Updated: 2026-08-13
 Related:
 - pairs-with: cli.md
 - pairs-with: convention.md
-- pairs-with: plan.md
+- pairs-with: milestone-plan.md
 
 > **Source.** Prompted by ["I read the Claude Code source
 > code"](https://buildingbetter.tech/p/i-read-the-claude-code-source-code)
@@ -22,7 +22,7 @@ Related:
 > `ship-milestone`) running inside that very harness. The skill
 > layer **can** use every one of those features. This doc maps
 > the harness techniques onto `docs`'s invocation surface.
-> Scope: design suggestions only. Feeds into [plan.md](plan.md).
+> Scope: design suggestions only. Feeds into [plan.md](milestone-plan.md).
 
 ## The reframe: the leverage is in the invocation layer
 
