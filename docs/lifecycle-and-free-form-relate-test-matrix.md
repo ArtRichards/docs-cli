@@ -115,7 +115,7 @@ change*.
 | Duplicate paths (C5, OQ-3) | `test_cli_lifecycle.py::test_lifecycle_plans_and_reports_a_duplicated_path_once`; `test_lifecycle_plan.py::test_plan_lifecycle_lists_a_duplicated_document_once` | other spellings of one path; symlinked named documents | one edit, one line, one record entry | the dedupe on `rel` | — |
 | Success path — free-form relate (C6) | `test_cli_relate.py::test_relate_free_form_add_writes_only_the_source_bullet`; `::test_relate_free_form_remove_drops_only_the_source_bullet`; `::test_relate_free_form_matches_a_non_canonical_existing_bullet`; `test_relate_plan.py::test_plan_relate_free_form_stages_only_the_source`; `::test_apply_relate_plan_writes_only_the_source_for_a_free_form_edge` | non-canonical target spellings; a SOURCE with no `Related:` group | `::test_relate_free_form_add_then_remove_restores_the_original_bytes` (with and without an existing group); `::test_relate_free_form_write_rewrites_exactly_one_managed_document` | the recognized-versus-free-form branch | free-form `--json` record (C15): `::test_relate_free_form_json_record_has_null_inverse_and_one_edit`; `test_relate_plan.py::test_relate_plan_to_json_free_form_record_has_null_inverse_and_one_edit` |
 | Error path — archive boundary (C2, C3, C8, C23) | `test_cli_lifecycle.py::test_lifecycle_refuses_archived_as_a_target_state`; `::test_lifecycle_treats_a_capitalised_archived_as_an_unknown_state`; `::test_lifecycle_refuses_a_document_under_the_archive_subtree`; `::test_lifecycle_refuses_an_active_tree_document_already_marked_archived`; `::test_lifecycle_batch_with_one_archived_document_writes_nothing`; `test_lifecycle_plan.py::test_plan_lifecycle_refuses_archived_as_a_state`; `::test_plan_lifecycle_refuses_a_source_under_the_archive_subtree`; `::test_plan_lifecycle_refuses_a_source_already_marked_archived`; `test_cli_relate.py::test_relate_free_form_refuses_an_archived_source_even_when_nothing_would_change`; `test_relate_plan.py::test_plan_relate_free_form_refuses_an_archived_source` | `[archive] dir = "attic"` | no allowed transition ever yields `status-drift` (`::test_lifecycle_round_trips_every_top_level_state_without_status_drift`, all five states) | the `archived` target guard; the archive-subtree source guard; the current-`archived` source guard | — |
-| Error path — grammar, resolution, root (C1, C2, C10, C11) | `test_cli_lifecycle.py::test_lifecycle_single_token_is_refused_as_ambiguous`; `::test_lifecycle_unknown_state_names_the_allowed_states`; `::test_lifecycle_missing_or_outside_root_file_exits_1_unchanged`; `::test_lifecycle_malformed_document_exits_1_with_the_parser_message`; `::test_lifecycle_refuses_outside_a_docs_root`; `::test_lifecycle_malformed_sidecar_exits_2_and_writes_nothing`; `::test_lifecycle_resolves_a_relative_path_against_the_docs_root_not_the_cwd`; `test_lifecycle_plan.py::test_plan_lifecycle_refuses_an_unknown_state`; `test_cli_relate.py::test_relate_verb_that_would_corrupt_the_block_is_refused`; `::test_relate_leading_hyphen_verb_is_consumed_by_argparse_and_writes_nothing`; `::test_relate_leading_hyphen_verb_after_a_separator_is_refused_by_the_grammar`; `::test_relate_free_form_self_edge_is_refused`; `::test_relate_free_form_still_shape_checks_a_given_reason`; `::test_relate_free_form_source_must_parse_and_exits_1_when_malformed`; `::test_relate_free_form_target_outside_the_root_exits_1`; `::test_relate_free_form_target_that_is_a_directory_exits_1`; `::test_relate_free_form_missing_target_exits_1`; `::test_relate_free_form_target_symlink_escaping_the_root_exits_1`; `::test_relate_free_form_refuses_a_target_path_a_bullet_cannot_carry` (R4: line break, carriage return, leading and trailing space); `::test_relate_free_form_refusals_follow_the_frozen_order`; `test_cli_lifecycle.py::test_lifecycle_refusals_follow_the_frozen_order_and_emit_no_record` | grammar-boundary verbs; other line-boundary characters | every refusal leaves the tree byte-identical, INDEX included | the grammar's anchors | security: `:` / newline / carriage-return injection refused; TARGET containment, an escaping symlink included |
+| Error path — grammar, resolution, root (C1, C2, C10, C11) | `test_cli_lifecycle.py::test_lifecycle_single_token_is_refused_as_ambiguous`; `::test_lifecycle_unknown_state_names_the_allowed_states`; `::test_lifecycle_missing_or_outside_root_file_exits_1_unchanged`; `::test_lifecycle_malformed_document_exits_1_with_the_parser_message`; `::test_lifecycle_refuses_outside_a_docs_root`; `::test_lifecycle_malformed_sidecar_exits_2_and_writes_nothing`; `::test_lifecycle_resolves_a_relative_path_against_the_docs_root_not_the_cwd`; `test_lifecycle_plan.py::test_plan_lifecycle_refuses_an_unknown_state`; `test_cli_relate.py::test_relate_verb_that_would_corrupt_the_block_is_refused`; `::test_relate_leading_hyphen_verb_is_consumed_by_argparse_and_writes_nothing`; `::test_relate_leading_hyphen_verb_after_a_separator_is_refused_by_the_grammar`; `::test_relate_free_form_self_edge_is_refused`; `::test_relate_free_form_still_shape_checks_a_given_reason`; `::test_relate_free_form_source_must_parse_and_exits_1_when_malformed`; `::test_relate_free_form_target_outside_the_root_exits_1`; `::test_relate_free_form_target_that_is_a_directory_exits_1`; `::test_relate_free_form_missing_target_exits_1`; `::test_relate_free_form_target_symlink_escaping_the_root_exits_1`; `::test_relate_free_form_refuses_a_target_path_a_bullet_cannot_carry` (R4: line break, carriage return, leading and trailing space, and — added at Step 3 — a trailing line break); `::test_relate_free_form_refusals_follow_the_frozen_order`; `test_cli_lifecycle.py::test_lifecycle_refusals_follow_the_frozen_order_and_emit_no_record` | grammar-boundary verbs; other line-boundary characters | every refusal leaves the tree byte-identical, INDEX included | the grammar's anchors | security: `:` / newline / carriage-return injection refused; TARGET containment, an escaping symlink included |
 | Error path — post-write tail (C5, L12) | `test_cli_lifecycle.py::test_lifecycle_index_refresh_failure_exits_2_with_documents_written` | — | the documents carry the new state; the record reports `index_refreshed: false` | — | — |
 | Boundary — free-form verb grammar (C12) | `test_cli_relate.py::test_relate_free_form_verb_grammar_boundary` (22 named cases); `::test_relate_verb_outside_the_free_form_grammar_refuses`; `::test_relate_case_variant_verb_refuses`; `::test_relate_quiet_suppresses_success_but_never_a_refusal` (the last three pre-existing; see the task plan's list); `test_relate_plan.py::test_plan_relate_refuses_a_verb_outside_the_grammar` | `see-Also`, other case mixes, long verbs | valid generated verbs succeed and round-trip through `parse()`; invalid ones refuse with zero writes | `re.fullmatch` vs `re.match` + `$` (`pairs-with\n`); `[0-9]` vs `\d` (`a٣`, `a１`) | fuzz: `test_cli_relate.py::test_relate_free_form_verb_fuzz_round_trips_valid_and_refuses_invalid` (in-process `cli.main`: 30 generated valid verbs, one invalid verb per refused category); `test_relate_plan.py::test_relate_verb_grammar_accepts_and_rejects_generated_verbs` (pure predicate) |
 | Boundary — endpoints (C9, C10) | `test_cli_relate.py::test_relate_free_form_archived_target_needs_no_reason_and_is_untouched`; `::test_relate_free_form_accepts_a_non_markdown_target`; `::test_relate_free_form_accepts_a_malformed_markdown_target_without_reading_it`; `::test_relate_free_form_symlinked_target_is_written_as_the_file_it_points_at`; `test_relate_plan.py::test_plan_relate_free_form_never_reads_the_target` | excluded targets; non-Markdown targets of several types | the archived TARGET and the binary TARGET are byte-identical after the run | the archived-endpoint `--reason` rule's branch; `parse_endpoint` | — |
@@ -317,7 +317,10 @@ Agent Playbook Suite probes against a locally built wheel
   skipped, xfailed or errored. After the Step 2 review resolution: **1670
   passed**. The 14 added ids are the skill frontmatter YAML lock with its
   11-case table, and two stamp tests for the stamp check's vocabulary
-  source.
+  source. After Step 3's `/simplify` pass: **1671 passed**. The one added id
+  is the R4 row `a-trailing-line-break`. It pins the case the simplified
+  predicate now refuses through its strip test alone, and it passes on the
+  pre-simplify code too.
   - Every pre-existing id is present and GREEN under the authoritative old →
     new mapping (the `comm` / AST proof against `e48adb9`).
   - Two authored tests were corrected under Check calibration: DEF-1, a help
@@ -359,6 +362,13 @@ Agent Playbook Suite probes against a locally built wheel
   - Phase 10's `/simplify` (S1) rewrote `docs stamp`'s completeness test.
     M40–M43 were re-proven on the simplified code with the same kill counts
     (6, 12, 1, 1), so adequacy is unchanged.
+  - Step 3's `/simplify` (S7, claude-T1) rewrote the R4 predicate. M21 was
+    re-proven on the new code with the same three killers. Three
+    term-isolating variants were run before and after, and a fourth, the
+    new line-count threshold (M21t), after. Dropping either term is killed in
+    both. Weakening the strip test to spaces (M21w) survived before but is
+    killed after, by the added row. Adequacy is unchanged for the smoke and
+    stronger for R4.
 - Fuzz (Phase 8): **24 passed**, seed `20261027`.
   - The pure predicate: 300 valid, 300 invalid and `""`.
   - The CLI: 30 valid verbs plus 11 invalid categories.
@@ -378,8 +388,8 @@ Agent Playbook Suite probes against a locally built wheel
 
 ## Adequacy results
 
-- visible_pass_rate: 1670/1670 (1656/1656 at Phase 8; 14 ids added by the
-  Step 2 review resolution)
+- visible_pass_rate: 1671/1671 (1656/1656 at Phase 8; 14 ids added by the
+  Step 2 review resolution; 1 R4 row added by Step 3's `/simplify`)
 - hidden_pass_rate: not applicable (no hidden suite)
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
@@ -387,7 +397,8 @@ Agent Playbook Suite probes against a locally built wheel
 - mutation score on touched modules: 47/47 killed by the hand-applied smoke
   on `src/docs_cli/cli.py` (43 planned, 2 message-preserving variants, and
   M44/M45 from the Step 2 review),
-  after one authored-fixture correction (DEF-2)
+  after one authored-fixture correction (DEF-2); M21 re-proven after Step 3's
+  R4 rewrite, with four term-isolating R4 variants also killed (5/5)
 - property/stateful result: 16 passed
 - fuzz result: 24 passed (seed `20261027`)
 - benchmark delta: not applicable; runtime recorded in Phase 9

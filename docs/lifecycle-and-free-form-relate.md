@@ -34,7 +34,10 @@ Related:
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
   complete — implementation done, reviewed and synced (*Step 2
-  review-pass-001* closed); Step 3 remains.
+  review-pass-001* closed); Step 3 (2026-10-28) ran the second `/simplify`
+  pass (the R4 predicate made obvious; P1.2 amended) and the explicit-scope
+  archive closeout whose frozen values the implementation log's *Step 3 —
+  Simplify and closeout* names.
   The narrative, evidence headline and per-phase results live in the
   implementation log (its *Milestone completion summary* first).
 
@@ -1623,7 +1626,7 @@ For a recognized verb the sequence is exactly today's: R1 replaces the old
 | R1 | 2 | `docs: relate: unknown verb '<verb>'; expected a reciprocal verb (blocked-by, blocks, depends-on, follows, precedes, required-by) or a free-form verb matching [a-z][a-z0-9-]*` — `<verb>` rendered with `!r`, so a verb carrying a newline stays on one line |
 | R2 | 2 | `docs: relate: <rel> is under the archive subtree; a free-form edge is never written to an archived document` |
 | R3 | 2 | a verb starting with `-` is consumed by argparse as an option: an argparse usage error (measured on Python 3.12: `docs relate add a.md -x b.md` → *the following arguments are required: TARGET*; `-1x` the same), nothing written. After `--`, or as a bare `-`, the verb reaches the command and refuses with R1. The usage text is argparse's and is not frozen beyond "exit 2, usage error, zero bytes". |
-| R4 | 2 | `docs: relate: TARGET '<rel>' cannot be written into a Related: bullet — it contains a line break or leading or trailing whitespace; refusing` — `<rel>` (the free-form TARGET's root-relative path) rendered with `!r`; fires when `len((rel + "x").splitlines()) != 1` (any boundary `str.splitlines()` recognises) or `rel != rel.strip()`. Added by the Step 1 review (conductor decision JC1, below) |
+| R4 | 2 | `docs: relate: TARGET '<rel>' cannot be written into a Related: bullet — it contains a line break or leading or trailing whitespace; refusing` — `<rel>` (the free-form TARGET's root-relative path) rendered with `!r`; fires when `len(rel.splitlines()) > 1` (any boundary `str.splitlines()` recognises) or `rel != rel.strip()`. Added by the Step 1 review (conductor decision JC1, below). *Amended 2026-10-28 (Step 3 `/simplify`, Step 2 review claude-T1): the expression was `len((rel + "x").splitlines()) != 1 or rel != rel.strip()`. Every boundary is whitespace, so the strip test catches a trailing break and the two forms are proven equivalent for every string — behaviour-preserving, not a contract change (impl log, Step 3).* |
 
 **TARGET rules.** For a free-form verb `TARGET` is resolved exactly as
 today — root-relative first, then cwd — and must be `candidate.is_file()`

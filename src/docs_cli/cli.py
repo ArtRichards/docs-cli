@@ -8391,10 +8391,10 @@ def _cmd_relate(args: argparse.Namespace) -> int:
 
     # R4: a free-form TARGET's path is written verbatim into SOURCE's bullet,
     # so a line break would end the metadata block and padding would read
-    # back as a different target. Recognized verbs are unchanged (D4).
-    if free_form and (
-        len((target_rel + "x").splitlines()) != 1 or target_rel != target_rel.strip()
-    ):
+    # back as a different target. Every `str.splitlines()` boundary is
+    # whitespace, so a trailing break is padding. Recognized verbs are
+    # unchanged (D4).
+    if free_form and (len(target_rel.splitlines()) > 1 or target_rel != target_rel.strip()):
         print(
             f"docs: relate: TARGET {target_rel!r} cannot be written into a Related: bullet "
             "— it contains a line break or leading or trailing whitespace; refusing",

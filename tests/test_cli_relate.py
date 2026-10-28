@@ -1589,6 +1589,7 @@ _R4_TARGETS = [
     ("b\rc.md", "a-carriage-return"),
     (" b.md", "a-leading-space"),
     ("b.md ", "a-trailing-space"),
+    ("b.md\n", "a-trailing-line-break"),
 ]
 
 

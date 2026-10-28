@@ -52,6 +52,14 @@ checklist and the test matrix synchronized.
     archive closeout) remains.
   - Details: the phase sections below, *Step 2 same-instance audit*, *Step 2
     review-pass-001* and the *Milestone completion summary*.
+- Step 3 (simplify and closeout): **2026-10-28**, on
+  `lifecycle-and-free-form-relate/simplify` from the immutable Step 2 base
+  `6ebe73f`.
+  - The second `/simplify` pass took S7 / claude-T1: the R4 predicate was
+    made obvious, proven equivalent, and P1.2 amended. One R4 contract row
+    was added, so the suite stands at **1671 passed**.
+  - The closeout archives exactly this trio with the frozen values in *Step
+    3 — Simplify and closeout*, and completes the tracker row.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -111,12 +119,14 @@ checklist and the test matrix synchronized.
   exercised by property checks and the Phase-9 dogfood.
 - Mock audit: **complete (Phase 8)**, 0 new or expanded mocks.
 - Adequacy results (Phase 8):
-  - `visible_pass_rate` 1656/1656 at Phase 8, and **1670/1670** after the
-    Step 2 review resolution added 14 ids;
+  - `visible_pass_rate` 1656/1656 at Phase 8, **1670/1670** after the
+    Step 2 review resolution added 14 ids, and **1671/1671** after Step 3's
+    `/simplify` added one R4 row;
   - hand-applied mutation smoke 45/45 killed at Phase 8 (43 planned plus 2
     message-preserving variants), after one authored-test fixture correction
     (DEF-2). It is **47/47** after the Step 2 review added M44 and M45 (the
-    stamp check's vocabulary source) and the tests that kill them;
+    stamp check's vocabulary source) and the tests that kill them. M21 was
+    re-proven after Step 3's R4 rewrite, with four term-isolating variants;
   - property / stateful 16 passed and fuzz 24 passed (seed `20261027`);
   - schema and security locks passed;
   - hidden suite and coverage not configured.
@@ -126,9 +136,9 @@ checklist and the test matrix synchronized.
   pass entry below). Step 1 review-pass-001 triaged — GPT: sound, no
   subjective findings; claude-T1, T2 and T3 fixed; claude-T4 waived with
   reason (*Follow-ups* item 10). Step 2 self-triage (Phase 10) and Step 2
-  review-pass-001 (claude-T1 waived and carried to Step 3; GPT raised none):
-  every row is fixed, kept or waived with a reason — see *Phase 10* ›
-  *Taste triage*.
+  review-pass-001 (claude-T1 waived and carried to Step 3, then fixed there;
+  GPT raised none): every row is fixed, kept or waived with a reason — see
+  *Phase 10* › *Taste triage* and *Step 3 — Simplify and closeout*.
 
 ## TDD phase progress
 
@@ -2518,7 +2528,7 @@ Standard risk):
 
 | Source | Finding | State | Reason |
 |---|---|---|---|
-| Step 2 review | claude-T1: R4's `len((target_rel + "x").splitlines()) != 1` is redundant beside the strip check | waived for Step 2; carried to Step 3 | Behaviour-equivalent, its literal is quoted in frozen P1.2, and Phase 10's simplify pass deliberately rejected it (S7). Step 3's simplify pass may take it as a behaviour-preserving change, with a one-line amendment to P1.2's quoted expression. |
+| Step 2 review | claude-T1: R4's `len((target_rel + "x").splitlines()) != 1` is redundant beside the strip check | **fixed in Step 3** (was: waived for Step 2, carried to Step 3) | Step 3's `/simplify` took it as S7: `len(target_rel.splitlines()) > 1 or target_rel != target_rel.strip()`, proven equivalent for every string. P1.2's quoted expression is amended with a dated note, and `cli.md` is unchanged. M21 was re-proven, and one R4 row pins the trailing break. See *Step 3 — Simplify and closeout*. |
 | Step 2 review | claude: patch bloat (`cli.py` net +513 against the +310 to +510 band) | no action | explained and logged (the *patch bloat* row above) |
 | Step 2 review | GPT: approach sound; no subjective findings | — | recorded as returned |
 
@@ -2574,10 +2584,10 @@ clean. Step 3's own preview remains the authoritative one.
 
 ## Milestone completion summary
 
-**Implementation complete (2026-10-28) — Phases 1–10 done.** The tracker row
-stays `active`. Step 2 is complete: *Step 2 review-pass-001* is closed and
-synced. Step 3's second simplify pass and archive closeout remain. 2.1.0 is
-**unreleased**;
+**Implementation complete (2026-10-28) — Phases 1–10 done.** Step 2 is
+complete: *Step 2 review-pass-001* is closed and synced. Step 3 (2026-10-28)
+ran the second simplify pass (S7) and the explicit-scope archive closeout;
+see *Step 3 — Simplify and closeout*. 2.1.0 is **unreleased**;
 publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
 `feedback-log.md`).
 
@@ -2601,7 +2611,7 @@ publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
     clean. Mirrors and the INDEX snapshot are byte-identical. That is 1656
     through Phase 10, plus 14 ids added by the Step 2 review resolution: the
     YAML frontmatter lock and its 11-case non-vacuity table, and two stamp
-    tests.
+    tests. Step 3's `/simplify` added one R4 row, giving **1671 passed**.
   - Every pre-existing id is present and GREEN under the authoritative old →
     new mapping (the id and AST proof against `e48adb9`).
   - Mutation smoke **47/47 killed**. Property 16 and fuzz 24 passed. 0 mocks.
@@ -3036,3 +3046,158 @@ independently verified the correction at `0d557c9b5f15dd4f179c9ebef6943deb8dc18e
   - claude-T1, carried to Step 3.
 
 - final-sync: `ready`.
+
+## Step 3 — Simplify and closeout — 2026-10-28
+
+### Objective
+
+- Run the second `/simplify` pass over this milestone's code
+  (`git diff e48adb9 6ebe73f -- src/`, chiefly `cli.py`) and its tests.
+- Take or re-waive the carried taste findings.
+- Close out with the explicit-scope archive and complete the tracker row.
+
+Risk is **Standard** (operator, Q8). The High-risk simplify review gate does
+not apply.
+
+### Baseline
+
+- The branch `lifecycle-and-free-form-relate/simplify` was created clean at
+  the immutable Step 2 base `6ebe73f45c49fc6048349a85946e46f4a3caa1ed`.
+- Fresh gate run at `6ebe73f`:
+  - `ruff check` clean;
+  - `ruff format --check` reports 50 files formatted;
+  - `mypy src/ tests/` finds no issues in 51 files;
+  - pytest gives **1670 passed** (81.7 s);
+  - `docs check .` exits 0;
+  - both mirrors and the INDEX snapshot are `cmp`-identical.
+- Recorded and reused, because nothing they cover changed: mutation smoke
+  47/47, property 16, fuzz 24, 0 mocks.
+
+### `/simplify` — second pass
+
+**Taken — S7 / Step 2 claude-T1: the R4 predicate, from clever to obvious.**
+
+- **Before.**
+  `len((target_rel + "x").splitlines()) != 1 or target_rel != target_rel.strip()`.
+  The `+ "x"` sentinel makes a trailing break count as a second line, and a
+  reader has to work out why.
+- **After.** `len(target_rel.splitlines()) > 1 or target_rel !=
+  target_rel.strip()`, on one line. The comment gains one sentence: every
+  `str.splitlines()` boundary is whitespace, so a trailing break is padding.
+  The change is `cli.py` +4 / −4.
+- **The equivalence is proven, not argued** (Python 3.12.3, a scratch
+  script):
+  - The boundary set was discovered rather than assumed: `\n`, `\v`, `\f`,
+    `\r`, `\x1c`, `\x1d`, `\x1e`, `\x85`, ` `, ` `, plus the
+    two-character `\r\n`. Every one is whitespace to `str.strip()`, whose
+    set equals `str.isspace()`'s across all code points (29 characters).
+  - The two forms agree on every code point in 13 contexts: alone,
+    leading, trailing, internal, doubled, beside `\r\n` and inside a path.
+    That is 14,483,456 strings.
+  - They agree on every string of length 0–4 over an 18-character alphabet
+    of the boundaries, the other common whitespace and path characters:
+    111,151 strings, the empty string included (neither form refuses it).
+  - 38 named cases refuse or accept identically, including internal,
+    leading and trailing placements of every boundary.
+  - The first terms differ only on a single trailing boundary (11 cases),
+    and the strip test refuses every one of them.
+- **No surface change.** The refusal set is unchanged, and so is `cli.md`'s
+  stated meaning: a line break ("any boundary `str.splitlines()`
+  recognises") or leading or trailing whitespace. The mirrors, help text
+  and bundled skill need no edit.
+- **P1.2's R4 row** quotes the new expression, with a dated note that keeps
+  the old one.
+- **One contract row was added.** The rewrite moves the trailing-break case
+  from the line test to the strip test, and no test pinned that case. So
+  `_R4_TARGETS` gains `("b.md\n", "a-trailing-line-break")`; the test
+  function itself is unchanged. The row passes against `6ebe73f`'s `cli.py`
+  too (5 passed on an extraction), so it pins the contract, not the
+  implementation.
+- **R4 mutants re-run** with the Phase 8 runner's method, on a copy of the
+  working tree, using the RL subset:
+
+  | Mutant | Before (`6ebe73f`, 128 RL ids) | After (129 RL ids) |
+  |---|---|---|
+  | M21 — the predicate becomes `"\n" in target_rel` (Phase 8) | killed by 3: carriage return, leading space, trailing space | killed by the same 3 |
+  | M21s — drop the strip test | killed by 2: leading and trailing space | killed by 3: those, plus the trailing line break |
+  | M21l — drop the line test | killed by 2: line break, carriage return | killed by the same 2 |
+  | M21w — `strip()` becomes `strip(" ")` | **survived** | killed by 1: the trailing line break |
+  | M21t — `> 1` becomes `> 2` | — (no such term) | killed by 2: line break, carriage return |
+
+  Adequacy is not reduced. M21 keeps its Phase 8 killers, so the smoke stays
+  47/47. Each term is pinned on its own. The one survivor before the change
+  is killed after it.
+
+**Evaluated and rejected:**
+
+| Candidate | Rejected because |
+|---|---|
+| S8 — write `_cmd_lifecycle`'s `targets` as `[root / raw for raw in raw_files]`, since pathlib discards `root` for an absolute operand | The result is the same, but it swaps an explicit rule for a pathlib subtlety (clever over obvious). The explicit form is the `_cmd_project_set` anchor that the comment above it cites. |
+| S9 — merge `test_cli_relate.py`'s `_snapshot` and `_every_file` | They do different jobs. `_snapshot` (M25) covers `*.md` only and backs the pre-existing tests. `_every_file` (M30) covers every file, which the non-Markdown TARGET cases need. Widening the first rewrites pre-existing tests outside this pass; narrowing the second drops the binary-target protection. |
+| S2–S6 (Phase 10) | No new evidence; Phase 10's reasons stand. |
+
+Nothing else in the diff simplifies further. The new code mirrors its
+anchors: `_cmd_project_set`, `_cmd_relate`'s tail and `plan_relate`.
+
+### Taste-triage updates
+
+| Source | Finding | State | Reason |
+|---|---|---|---|
+| Step 2 review | claude-T1 (the R4 `splitlines` sentinel) | **fixed** | S7 above. The *Phase 10* › *Taste triage* row is updated. |
+| Step 0 review | claude-T1 remainder (the milestone story retold in about eight places in the task plan) | waived (unchanged) | Doc-only. Trimming it would churn frozen prose that the reviews cite, in a document about to be archived, with no effect on behaviour. |
+| Step 1 review | claude-T4 (D10 restated six or more times) | waived (unchanged) | Registered as *Follow-ups* item 10, the 2026-10-28 candidate convention in `feedback-log.md`. |
+
+### Gates — before and after
+
+| Gate | `6ebe73f` | Simplify candidate |
+|---|---|---|
+| `.venv/bin/ruff check .` | clean | clean |
+| `.venv/bin/ruff format --check .` | 50 files formatted | 50 files formatted |
+| `.venv/bin/mypy src/ tests/` | no issues in 51 files | no issues in 51 files |
+| `.venv/bin/python -m pytest -q` | **1670 passed** | **1671 passed** (+1 R4 row) |
+| `docs check .` (from the docs root) | exit 0 | exit 0 |
+| `cmp` of both mirrors and of the INDEX snapshot | identical | identical |
+| R4 mutants (above) | 3 of 4 killed; M21w survived | 5 of 5 killed |
+
+### Step 3 closeout — frozen values
+
+- **Risk and gate:** Standard (operator, Q8). The simplify review gate is
+  `not required`, because it applies only at High risk.
+- **Step 2 base (immutable):** `6ebe73f45c49fc6048349a85946e46f4a3caa1ed`.
+- **Code-change classification:** a code change
+  (`src/docs_cli/cli.py`, `tests/test_cli_relate.py`), proven
+  behaviour-preserving above.
+- **Identity:**
+  - project `docs`, at project path `""` (a dedicated root);
+  - artifact stem `lifecycle-and-free-form-relate`;
+  - semantic slug `lifecycle-and-free-form-relate`;
+  - branch root `lifecycle-and-free-form-relate/`;
+  - tracker `milestone-plan.md`; status `status.md`.
+- **Expected set** (root-relative, frozen):
+  - `lifecycle-and-free-form-relate.md`, the primary;
+  - `lifecycle-and-free-form-relate-impl.md`;
+  - `lifecycle-and-free-form-relate-test-matrix.md`.
+
+  These equal `{project_path}{artifact_stem}.md`, `-impl.md` and
+  `-test-matrix.md`.
+- **Archive scope:** `'lifecycle-and-free-form-relate-*'`, literally
+  `{project_path}{artifact_stem}-*`.
+- **Archive date:** `2026-10-28` (`[archive] date_format = "%Y-%m-%d"`).
+- **Archive reason:** `Milestone M30 complete; docs-cli 2.1.0 implemented
+  and unreleased, pending its publish milestone`.
+- **Planned destinations:** `archive/2026-10-28/` plus each of the three
+  basenames. No `archive/2026-10-28/` exists yet, and no other path under
+  the docs root carries these basenames.
+- **Preview command:** `docs archive lifecycle-and-free-form-relate.md
+  --cascade-dry-run --cascade-only 'lifecycle-and-free-form-relate-*'
+  --date 2026-10-28 --reason "<reason>" --json`. The apply command is the
+  same without `--cascade-dry-run`.
+
+This log moves with the archive, and none of the three documents is edited
+or touched after the move. The following are recorded in the checkpoint
+commit's trailers, the Step 3 sync commit and `status.md`:
+- the checkpoint SHA and tree;
+- the preview and apply records;
+- the tracker change (`active` → `complete`, with the archive link
+  preserved);
+- the final `docs check`.
