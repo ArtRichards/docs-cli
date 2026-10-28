@@ -546,6 +546,52 @@ def test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed(docs_
     assert "BODYMARKER" in text
 
 
+_EXTENSION_SIDECAR = '\n[vocabulary]\nadd_lifecycles = ["shipped"]\nadd_roles = ["adr"]\n'
+
+
+def test_stamp_restamps_an_extension_vocabulary_block_whose_related_bullet_is_malformed(
+    docs_script, tmp_path
+):
+    """On an extension tree, a complete block in a configured extension state
+    and role fails `parse()` only through its malformed `Related:` bullet, so
+    it keeps today's fresh stamping. Judging its vocabulary against the
+    built-ins instead of the tree's config would refuse it."""
+    root = _configured_tree(
+        tmp_path,
+        _EXTENSION_SIDECAR,
+        {"odd.md": _block("shipped", "adr", "2026-01-01", related="no-colon-here")},
+    )
+
+    proc = _run(docs_script, "stamp", "odd.md", "--root", str(root))
+
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    assert f"docs: stamped {root.resolve() / 'odd.md'}" in proc.stderr, proc.stderr
+    text = (root / "odd.md").read_text()
+    assert "Migrated-Related:" in text
+    assert "BODYMARKER" in text
+
+
+def test_stamp_refuses_an_extension_state_block_for_its_invalid_role_with_zero_bytes(
+    docs_script, tmp_path
+):
+    """A complete block in a configured extension state with a role outside the
+    configured vocabulary refuses, and the refusal names `Role:`: the
+    extension state itself is valid on this tree."""
+    root = _configured_tree(
+        tmp_path, _EXTENSION_SIDECAR, {"a.md": _block("shipped", "adrr", "2026-05-20")}
+    )
+    before = _whole_tree(root)
+
+    proc = _run(docs_script, "stamp", "a.md", "--root", str(root))
+
+    assert proc.returncode == 1, (proc.stdout, proc.stderr)
+    assert (
+        f"docs: stamp: {root.resolve() / 'a.md'}: Role: 'adrr' not in vocabulary"
+        + _STAMP_REFUSAL_TAIL
+    ) in proc.stderr, proc.stderr
+    assert _whole_tree(root) == before
+
+
 def test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes(
     docs_script, tmp_path
 ):

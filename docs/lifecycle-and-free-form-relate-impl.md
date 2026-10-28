@@ -37,8 +37,9 @@ checklist and the test matrix synchronized.
 - Step 2 (Phases 5–10): **in progress** on
   `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`.
   Phases 5–7 are complete. Step 2 was interrupted after Phase 7 and resumed
-  on 2026-10-28; Phases 8–10 are complete and implementation is done. The
-  Step 2 review is pending (*Step 2 review-pass-001*). See the phase sections
+  on 2026-10-28; Phases 8–10 are complete and implementation is done.
+  *Step 2 review-pass-001* has returned, and its findings are resolved in
+  the review-resolution checkpoint; `final-sync` is pending. See the phase sections
   below and the *Milestone completion summary*.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
@@ -99,10 +100,12 @@ checklist and the test matrix synchronized.
   exercised by property checks and the Phase-9 dogfood.
 - Mock audit: **complete (Phase 8)**, 0 new or expanded mocks.
 - Adequacy results (Phase 8):
-  - `visible_pass_rate` 1656/1656;
-  - hand-applied mutation smoke 45/45 killed (43 planned plus 2
+  - `visible_pass_rate` 1656/1656 at Phase 8, and **1670/1670** after the
+    Step 2 review resolution added 14 ids;
+  - hand-applied mutation smoke 45/45 killed at Phase 8 (43 planned plus 2
     message-preserving variants), after one authored-test fixture correction
-    (DEF-2);
+    (DEF-2). It is **47/47** after the Step 2 review added M44 and M45 (the
+    stamp check's vocabulary source) and the tests that kill them;
   - property / stateful 16 passed and fuzz 24 passed (seed `20261027`);
   - schema and security locks passed;
   - hidden suite and coverage not configured.
@@ -111,8 +114,10 @@ checklist and the test matrix synchronized.
   claude-T2 and claude-T3 fixed; patch bloat in line with precedent (see the
   pass entry below). Step 1 review-pass-001 triaged — GPT: sound, no
   subjective findings; claude-T1, T2 and T3 fixed; claude-T4 waived with
-  reason (*Follow-ups* item 10). Step 2 self-triage (Phase 10): every row is
-  fixed, kept or waived with a reason — see *Phase 10* › *Taste triage*.
+  reason (*Follow-ups* item 10). Step 2 self-triage (Phase 10) and Step 2
+  review-pass-001 (claude-T1 waived and carried to Step 3; GPT raised none):
+  every row is fixed, kept or waived with a reason — see *Phase 10* ›
+  *Taste triage*.
 
 ## TDD phase progress
 
@@ -1660,7 +1665,10 @@ and record the milestone's outcomes and follow-ups in `feedback-log.md`.
    so neither spec nor its mirror changed in this phase.
 3. **Bundled skill** (`src/docs_cli/skill/`). `SKILL.md`: the description
    gains "change a doc's lifecycle, link docs with a Related: edge" and
-   `lifecycle` in its verb list (743 → 813 of 1024 characters); a `docs
+   `lifecycle` in its verb list (743 → 813 of 1024 characters). *(The
+   Step 2 review found that the `: ` made the YAML frontmatter invalid
+   (gpt-B1); its resolution reworded it to "a Related edge", 812
+   characters.)* It also gains a `docs
    lifecycle <file>... <state>` verb-table row; the relate row now "Link
    docs, or repair a reciprocal pair", covering free-form edges and the
    grammar; *Three things never to hand-edit* routes `Lifecycle:` to `docs
@@ -1910,7 +1918,7 @@ All of these are tests already in the suite; nothing was added.
     a-trailing-space]`.
   - TARGET outside the root, and a TARGET symlink escaping the root.
 
-### Hand-applied mutation smoke — 45 / 45 killed (43 planned, plus 2 variants)
+### Hand-applied mutation smoke — 47 / 47 killed (43 planned, 2 variants, 2 added by the Step 2 review)
 
 Mutation tooling is not configured, so this follows the M28a precedent:
 - Each of 6 workers had its own `git archive HEAD` extraction. The runner is
@@ -1975,6 +1983,8 @@ Mutation tooling is not configured, so this follows the M28a precedent:
 | M41 | 11 | completeness test → `if False:` (8713) | `test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` and the pre-existing fresh-stamp tests (12) |
 | M42 | 11 | completeness also requires `Project:` (8713) | `test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes` (1) |
 | M43 | 11 | final `return None` → `return "complete block"` (8721) | `test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed` (1) |
+| M44 | 11 (vocabulary source) | `_stamp_config_failure` judges `Lifecycle:` against `BUILTIN_STATUSES` instead of `config.lifecycles` (8716) — **survived at `47125e2`** (Step 2 review claude-S1); after the review resolution: `test_stamp_restamps_an_extension_vocabulary_block_whose_related_bullet_is_malformed`, `test_stamp_refuses_an_extension_state_block_for_its_invalid_role_with_zero_bytes` (2) |
+| M45 | 11 (vocabulary source) | the same for `Role:` against `BUILTIN_ROLES` (8717) — **survived at `47125e2`**; after: `test_stamp_restamps_an_extension_vocabulary_block_whose_related_bullet_is_malformed` (1) |
 
 All eleven matrix targets are covered, as are the four extra points the
 QUALITY PLAN named: the R4 anchors, `parse_endpoint`, the recognized-only
@@ -2492,6 +2502,15 @@ obvious.**
 | Step 2 self-triage | S1, the completeness test written as a nested generator | fixed | `/simplify`, above |
 | Step 2 self-triage | patch bloat | explained | `cli.py` is +629 / −116, net **+513**, against the anchor's +310 to +510 — at the top of the range, for one verb, one widened verb, D10 at nine sites, the stamp refusal and the frozen docstrings. Tests are +3,105 / −96 against the anchor's +900 to +1,300, driven by authored-id breadth (156 ids), as both Step 1 reviewers judged. |
 
+**Step 2 review-pass-001 taste findings** (conductor decisions, binding at
+Standard risk):
+
+| Source | Finding | State | Reason |
+|---|---|---|---|
+| Step 2 review | claude-T1: R4's `len((target_rel + "x").splitlines()) != 1` is redundant beside the strip check | waived for Step 2; carried to Step 3 | Behaviour-equivalent, its literal is quoted in frozen P1.2, and Phase 10's simplify pass deliberately rejected it (S7). Step 3's simplify pass may take it as a behaviour-preserving change, with a one-line amendment to P1.2's quoted expression. |
+| Step 2 review | claude: patch bloat (`cli.py` net +513 against the +310 to +510 band) | no action | explained and logged (the *patch bloat* row above) |
+| Step 2 review | GPT: approach sound; no subjective findings | — | recorded as returned |
+
 Every taste finding is fixed, kept with a reason, or waived with a reason.
 None is untriaged.
 
@@ -2545,8 +2564,9 @@ clean. Step 3's own preview remains the authoritative one.
 ## Milestone completion summary
 
 **Implementation complete (2026-10-28) — Phases 1–10 done.** The tracker row
-stays `active`. The Step 2 review (*Step 2 review-pass-001*) and the Step 3
-second simplify pass and archive closeout remain. 2.1.0 is **unreleased**;
+stays `active`. *Step 2 review-pass-001* has returned and its findings are
+resolved; Step 2's final sync, and Step 3's second simplify pass and archive
+closeout, remain. 2.1.0 is **unreleased**;
 publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
 `feedback-log.md`).
 
@@ -2566,11 +2586,14 @@ publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
     (D9);
   - version 2.1.0, with `## 2.1.0 — UNRELEASED`.
 - **Evidence headline:**
-  - **1656 passed**, 0 failed, with ruff, format, mypy and `docs check`
-    clean. Mirrors and the INDEX snapshot are byte-identical.
+  - **1670 passed**, 0 failed, with ruff, format, mypy and `docs check`
+    clean. Mirrors and the INDEX snapshot are byte-identical. That is 1656
+    through Phase 10, plus 14 ids added by the Step 2 review resolution: the
+    YAML frontmatter lock and its 11-case non-vacuity table, and two stamp
+    tests.
   - Every pre-existing id is present and GREEN under the authoritative old →
     new mapping (the id and AST proof against `e48adb9`).
-  - Mutation smoke **45/45 killed**. Property 16 and fuzz 24 passed. 0 mocks.
+  - Mutation smoke **47/47 killed**. Property 16 and fuzz 24 passed. 0 mocks.
   - The primary use case was dogfooded with zero hand-edits, and both suite
     probes pass on a locally built wheel.
   - Closeout records are identical for `relate`-linked and hand-linked
@@ -2581,14 +2604,23 @@ publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
     Phase 8);
   - the message-preserving grammar mutants M16b and M17b (Phase 8);
   - S1 (`/simplify`, Phase 10);
-  - S2R-OQ-1 … 6 (conductor-resolved at the Step 2 resume planning, Phase 8).
+  - S2R-OQ-1 … 6 (conductor-resolved at the Step 2 resume planning, Phase 8);
+  - the *Step 2 review-pass-001* resolution:
+    - the skill frontmatter now loads as YAML, with a lock (gpt-B1);
+    - the byte-preservation wording is clarified for line endings (gpt-B2 /
+      claude-N4, disproven as an M30 defect);
+    - the stamp check's vocabulary source is pinned (claude-S1, M44/M45);
+    - the skill wording is fixed (claude-N1, N2);
+    - duplicated labels are deferred (claude-N3).
 - **Open follow-ups**, all in `feedback-log.md` and none blocking:
   - the 2026-10-26 promotion entry, open until the suite pin moves, which
     carries the hand-off;
   - six 2026-10-27 entries (*Follow-ups* items 1, 2, 3, 7, 8, 9);
   - the 2026-10-28 candidate convention (item 10);
   - the 2026-10-28 help-wording entry ("validate-all-first atomic
-    semantics"), raised by the Step 2 audit.
+    semantics"), raised by the Step 2 audit;
+  - the 2026-10-28 line-ending (item 11) and duplicated-label (item 12)
+    entries, raised by the Step 2 review.
 - **Remaining risks:**
   - the intermittent `test_d4_install_skill_is_idempotent` segfault (not
     seen in Step 2; no product code involved);
@@ -2725,8 +2757,29 @@ audit*. Every checklist item was worked:
   `3e2c3caad4e2d2e48a5894f0d8ef888dcb4d2226`. No `contract-rework` entry
   exists between them, and the predecessor's text and frozen packet are
   unchanged since `3e2c3ca`.
-- **Status:** `open`. Both provider slots are pending, and the conductor
-  freezes the packet and records each attempt.
+- **Status:** `open`.
+  - Both provider attempts are terminal; both returned.
+  - Every finding is dispositioned with evidence in the review-resolution
+    checkpoint below.
+  - The conditional re-review is recorded `not required`.
+  - `final-sync` stays `pending` until the sync.
+- **Frozen packet (conductor):**
+  - slug `lifecycle-and-free-form-relate`; Step 2, Phases 5–10; branch
+    `lifecycle-and-free-form-relate/phases-5-10`;
+  - base `3e2c3caad4e2d2e48a5894f0d8ef888dcb4d2226`; review `HEAD`
+    `47125e20f6ce80c5c110d4e91009761df50fb65a` (`…(review-ready): open
+    Step 2 review-pass-001`); content `HEAD` `338c976`;
+  - predecessor `Step 1 review-pass-001` (closed);
+  - project `docs`, path `""`, stem `lifecycle-and-free-form-relate`;
+    tracker row 100 `active`; claim `2ad941e`; branch root
+    `lifecycle-and-free-form-relate/`; risk Standard;
+  - the Step 2 test-quality clause: "Do the tests still meaningfully cover
+    the implemented behavior?"
+  - Gates the conductor re-ran at the review `HEAD`: `ruff`, `ruff format`
+    and `mypy` clean (51 files); pytest 1656 passed; `docs check` exit 0;
+    both mirrors and the INDEX snapshot `cmp`-identical.
+  - Both reviewers received the identical provider-neutral prompt, isolated
+    from each other.
 - **Packet inputs as handed off:**
   - slug `lifecycle-and-free-form-relate`; Step 2, Phases 5–10; branch
     `lifecycle-and-free-form-relate/phases-5-10`;
@@ -2792,15 +2845,72 @@ audit*. Every checklist item was worked:
 
   The dogfood, wheel probe replay, closeout invariance, reindex identity
   and runtime are recorded in *Phase 9*.
-- **Claude slot:** `pending`.
-- **GPT slot:** `pending`.
+- **Claude slot:** `returned`.
+  - Anthropic Claude family, Claude Opus 5.5 (`claude-opus-5-5`),
+    host-reported; a fresh Claude Code `milestone-reviewer` sub-agent at
+    xhigh effort.
+  - It re-ran pytest (1656 passed) and ruff, format and mypy (clean);
+    checked the mirrors (identical); ran `docs check` on a copy (exit 0); and
+    previewed the scoped closeout (exactly the two companions).
+  - Risk gate: continue automatically, on condition that S1 is applied or
+    waived.
+- **GPT slot:** `returned`.
+  - OpenAI GPT family: Codex CLI 0.164.0, `codex exec -m gpt-6-astra -c
+    model_reasoning_effort=xhigh -s read-only`.
+  - The session log reports `model: gpt-6-astra` (provider azure). The
+    reviewer described itself as "Codex, host-described as GPT-5-based; no
+    exact model variant is exposed". Both are recorded.
+  - Its read-only sandbox prevented a full suite re-run. It ran lint and
+    format, the mirror `cmp`s, 18 renderer tests, the grammar test and the
+    probes.
+  - Risk gate: block until fixed.
 
-**Findings and dispositions.** None yet; they are recorded when the slots
-return.
+**Findings and dispositions.** The source ids are the reviewers' own.
+gpt-B2 and claude-N4 are one finding, reconciled by the conductor. Every row
+is corrected or recorded in the **review-resolution checkpoint commit**
+(`lifecycle-and-free-form-relate(phase 5-10): resolve Step 2 review-pass-001
+findings`). Its hash is written at finalization, because a commit never
+carries its own hash.
 
-**Taste triage.** Pending the reviews. The Step 2 self-triage is in *Phase
-10* › *Taste triage*.
+| Id | Severity | Disposition | Evidence |
+|---|---|---|---|
+| gpt-B1 | blocker | **fixed**; re-review: not required | **The defect.** `src/docs_cli/skill/SKILL.md`'s unquoted `description:` held "link docs with a Related: edge". A `: ` inside a YAML plain scalar is a mapping indicator. PyYAML 6.0.1 `safe_load` of the frontmatter (system `python3`, evidence only, with no repo dependency): at `3e2c3ca` `OK keys=['description', 'name'] description_len=743`; at `47125e2` `FAIL ScannerError mapping values are not allowed here`.<br>**The fix.** The phrase is reworded to "link docs with a Related edge" (no quoting), and the result is `OK … description_len=812`, within 1024. `test_skill_md_documents_relate_verb` and `test_skill_routes_lifecycle_and_free_form_edges_through_verbs` still pass honestly.<br>**The lock (stdlib only).** It is added in `tests/test_skill.py`:<br>• `test_frontmatter_values_are_scalars_yaml_reads_back_verbatim` uses a new `_yaml_scalar_problem`. It rejects a plain scalar that contains `: `, ends with `:`, contains ` #`, or opens with a YAML indicator (except `-`, `?` or `:` followed by a non-space), and an unclosed quoted scalar.<br>• `test_yaml_scalar_check_rejects_exactly_what_a_yaml_loader_would_break` is an 11-case table whose expected verdicts were taken from PyYAML: it refuses colon-space, trailing colon and opening dash-and-space; it silently rewrites space-hash, an opening bracket and an opening anchor; it keeps plain text, dash-then-text, percent-inside and a quoted colon-space; it refuses an unclosed quote.<br>The lock **fails at `47125e2`'s SKILL.md** (an extraction of `47125e2` with the new test file: `AssertionError: … {'description': "a plain scalar containing ': ', which YAML reads as a nested mapping"}`) and passes now. `cli.md` and `convention.md` are unaffected by this fix. |
+| gpt-B2 + claude-N4 | blocker / nit | **disproven as an M30 defect**; wording clarified; follow-up registered (item 11); re-review: not required | **The finding.** `plan_lifecycle` reads with `Path.read_text()`, so a CRLF document comes back LF.<br>**It is pre-existing and shared.** Reproduced on throwaway trees, with 10 CRLF line endings per document. Every writer leaves 0 CRs:<br>• v2.0.0's `docs touch`, `docs project set --new-project`, `docs archive` and `docs stamp` (already stamped);<br>• 2.1.0's `docs lifecycle` and free-form `docs relate add`.<br>The conductor's probe gave the same result for `touch`, `lifecycle` and `relate`. All of these verbs share the `read_text()` / `atomic_write` text model (28 `read_text()` sites in `cli.py`). The contract binds `docs lifecycle` to "the existing surgical editors and `atomic_write`" and to its anchors (`docs touch`, `docs project set`), so a one-verb fix would diverge from them.<br>**Applied, with no product-code change:**<br>(a) the contract's *Invariants* now state that the byte guarantee holds within the shared text model, that every editing verb normalises line endings to LF, and that it is exact for an LF document. *Outputs*, the task plan's and the matrix's property bullets, and `cli.md`'s two "what gets written" paragraphs (`docs lifecycle`; `relate`'s round-trip statement) carry the same qualification, and the mirror is re-synced;<br>(b) the open, unowned 2026-10-28 `feedback-log.md` entry *Every editing verb normalises CRLF or mixed line endings to LF* names the probe;<br>(c) *Follow-ups* item 11 points at it. |
+| claude-S1 | should-fix | **fixed (test-only)** | **The gap.** `_stamp_config_failure`'s vocabulary source was unpinned: judging `Lifecycle:` / `Role:` against `BUILTIN_STATUSES` / `BUILTIN_ROLES` survived the whole suite.<br>**Added**, in `tests/test_cli_stamp.py`, on an `add_lifecycles = ["shipped"]`, `add_roles = ["adr"]` tree:<br>• `test_stamp_restamps_an_extension_vocabulary_block_whose_related_bullet_is_malformed` — a `shipped` / `adr` block with a malformed `Related:` bullet keeps the fresh stamping at exit 0;<br>• `test_stamp_refuses_an_extension_state_block_for_its_invalid_role_with_zero_bytes` — a `shipped` block with `Role: adrr` refuses at exit 1, names `Role:`, and writes zero bytes.<br>Both are GREEN on the current code.<br>**Mutation proof** (the Phase 8 runner, ST subset):<br>• with the `47125e2` tests, **M44** (line 8716, `Lifecycle:` against the built-ins) and **M45** (line 8717, `Role:`) both **SURVIVED** (27 passed);<br>• with the new tests, M44 is **KILLED** by both new tests and M45 by the first;<br>• the reviewer's combined mutant (`review/mut/x`) fails exactly the two new tests.<br>They are recorded as M44 and M45 in *Phase 8* and in the matrix. The suite grows 1656 → **1670** (12 `test_skill.py` ids plus these 2). The id `comm` against the Phase 8 HEAD list shows 0 removed and 14 added, and the naming lint finds no provenance token. |
+| claude-N1 | nit | **fixed** | `SKILL.md`'s *Three things never to hand-edit* parenthetical "(to or from `archived` is `docs archive`'s alone)" implied that `docs archive` can move a doc out. It now reads "(into `archived` is `docs archive`'s alone, and `docs lifecycle` never sets an archived doc back to a top-level state)". The suggested wording "nothing moves a doc back out" was not taken: probed, `docs mv archive/2026-01-01/old.md old.md --dry-run` exits 0 (`mv` can relocate a doc out of the archive tree, keeping `Lifecycle: archived`), while `docs lifecycle` refuses it (L7). The final wording is the accurate one. The pre-existing bullet above it is unchanged. |
+| claude-N2 | nit | **fixed** | `SKILL.md`'s relate verb-table row and *Quality artifacts* paragraph now say "any existing file under the docs root", matching `cli.md` and `references/quality-artifacts.md`. |
+| claude-N3 | nit (decision packet) | **deferred — conductor decision, option (a)**; no M30 contract change | **Probe (v2.0.0 and 2.1.0).**<br>• On a document carrying `Lifecycle: draft` and then `Lifecycle: done`, `docs lifecycle r.md active --json` exits 0 with `{"before": "done", "change": "set"}`, writes the first line, and leaves the effective (last) value `done`.<br>• v2.0.0's `docs touch` does the same to a duplicated `Updated:`.<br>• `docs check` flags both documents as `duplicate-field`.<br>**Recorded.** The open, unowned 2026-10-28 `feedback-log.md` entry *A duplicated metadata label is written first and read last* covers every `set_metadata_field` verb. *Follow-ups* item 12 points at it. |
 
-**Re-review.** Not yet decided.
+**Taste triage** (conductor decisions, binding at Standard risk). The rows
+are in *Phase 10* › *Taste triage*:
+- claude-T1 (R4's `splitlines` term is redundant beside the strip check) is
+  **waived for Step 2 and carried to Step 3's simplify pass**. It is
+  behaviour-equivalent, its literal is quoted in frozen P1.2, and Phase 10
+  rejected it as S7.
+- The claude patch-bloat note needs no action; it is explained and logged.
+- GPT: the approach is sound; no subjective findings.
+
+**Re-review — not required** (conductor decision):
+- gpt-B1's fix is objectively provable: the YAML `safe_load` result before
+  and after, plus the new lock failing at `47125e2`.
+- gpt-B2's disproof rests on an objective reproduction showing that the
+  pre-existing verbs behave identically, and its resolution changes wording
+  only.
+- claude-S1 is proven by the mutant kill.
+- None of the corrections changes behaviour, so none meets a conditional
+  re-review trigger.
+
+**Verification at the review-resolution checkpoint:**
+- `.venv/bin/ruff check .` is clean; `.venv/bin/ruff format --check .`
+  reports 50 files formatted; `.venv/bin/mypy src/ tests/` reports no issues
+  in 51 files.
+- `.venv/bin/python -m pytest -q --tb=line -rfxXEs` gives **1670 passed**,
+  with 0 failed, skipped, xfailed or errored.
+- `docs check .` from the docs root exits 0.
+- Both mirrors (`cli.md` re-synced) and the INDEX snapshot are
+  byte-identical.
+- The `SKILL.md` frontmatter loads with PyYAML `safe_load` (`OK`, 812
+  characters).
+- `src/docs_cli/cli.py` is unchanged since `47125e2`.
 
 - final-sync: `pending`.

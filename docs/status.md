@@ -48,7 +48,7 @@ Related:
 
 ## Current milestone
 
-**M30 implementation complete (2026-10-28); Step 2 review pending.**
+**M30 implementation complete (2026-10-28); Step 2 review findings resolved.**
 [`lifecycle-and-free-form-relate`](lifecycle-and-free-form-relate.md) has
 finished all ten phases:
 - The contract (Step 1) is reviewed and frozen.
@@ -59,12 +59,12 @@ finished all ten phases:
   milestone ships it; the hand-off is recorded in
   [`feedback-log.md`](feedback-log.md).
 
-The full suite of 1656 tests is GREEN. A hand-applied mutation smoke killed
-all 45 mutants. A dogfood run on throwaway copies of this tree completed the
+The full suite of 1670 tests is GREEN. A hand-applied mutation smoke killed
+all 47 mutants. A dogfood run on throwaway copies of this tree completed the
 primary use case — scaffold, link and promote a milestone trio — with zero
 hand-edits. Both Agent Playbook Suite probes pass against a locally built
-2.1.0 wheel. The milestone awaits its Step 2 review and its Step 3
-closeout. Per-phase evidence is in the
+2.1.0 wheel. The Step 2 review's findings are resolved, and the milestone
+awaits its Step 3 closeout. Per-phase evidence is in the
 [implementation log](lifecycle-and-free-form-relate-impl.md).
 
 **M30 milestone setup complete (2026-10-27).**

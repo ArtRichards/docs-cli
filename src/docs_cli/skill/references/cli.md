@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: spec
 Project: docs
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 Related:
 - pairs-with: convention.md
@@ -2299,7 +2299,10 @@ path — is planned, listed and written **once**, at its first position.
 today in the tree's `date_format` (`docs archive`'s order). Nothing else
 moves: every other metadata line, the H1, the body, and the file's
 trailing-newline state are byte-identical (the M2 surgical minimal-diff
-contract). A document already in `<state>` is not written at all — no
+contract). Like every editing verb, `docs lifecycle` reads and writes a
+document as text, so CRLF or mixed line endings come back as LF; the byte
+identity holds for a document with LF line endings. A document already in
+`<state>` is not written at all — no
 `Updated:` bump. Lifecycle is not coupled to `Related:`: `blocked` neither
 requires nor writes a `blocked-by` edge, and `superseded` writes no
 `superseded-by`. Each changed document is written with the atomic
@@ -2523,7 +2526,9 @@ becomes empty; every other byte of the metadata block, the H1, the body, and
 the file's trailing-newline state are preserved (the M2 surgical minimal-diff
 contract). So a free-form `add` followed by the matching `remove` of an edge
 that was initially absent restores `SOURCE`'s original bytes except
-`Updated:`.
+`Updated:`. As with every editing verb, a written endpoint is read and
+written as text, so CRLF or mixed line endings come back as LF; these byte
+statements hold for a document with LF line endings.
 
 An existing bullet is matched on its **canonical** target, the same
 normalisation the `missing-inverse` rule uses: a doc already carrying

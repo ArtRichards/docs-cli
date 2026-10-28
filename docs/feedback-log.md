@@ -15,6 +15,25 @@ as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
 
+### 2026-10-28 — Every editing verb normalises CRLF or mixed line endings to LF
+
+- Source: the M30 (`lifecycle-and-free-form-relate`) Step 2 review (gpt-B2, claude-N4). It is M30 *Follow-ups* item 11, conductor-resolved as pre-existing and not an M30 defect.
+- Observation: every verb that edits a document reads it with `Path.read_text()`, which translates `\r\n` to `\n`, and writes it back through `atomic_write`. So a one-field edit rewrites every line ending of a CRLF or mixed-ending document. Probe (2026-10-28, throwaway trees, ten CRLF line endings per document):
+  - v2.0.0's `docs touch`, `docs project set`, `docs archive` and `docs stamp` each leave 0 CRs;
+  - 2.1.0's `docs lifecycle` and free-form `docs relate add` behave the same.
+- Desired behaviour: preserve each document's line endings repo-wide. One candidate is to read with `newline=""` and keep the surgical editors' line-ending handling. The change belongs in all of the editing verbs at once, not in one, because they share one text model.
+- Ownership: docs-cli. Status: **open, unowned.**
+
+### 2026-10-28 — A duplicated metadata label is written first and read last
+
+- Source: the M30 Step 2 review (claude-N3). It is M30 *Follow-ups* item 12; the conductor decided to defer it with no M30 contract change.
+- Observation: `set_metadata_field` rewrites the first occurrence of a label, while `parse_metadata_block` keeps the last. Probe (2026-10-28):
+  - on a document carrying `Lifecycle: draft` and then `Lifecycle: done`, `docs lifecycle r.md active` exits 0 and reports `set` from `done`. It writes the first line, so the effective value stays `done`;
+  - v2.0.0's `docs touch` does the same to a duplicated `Updated:`.
+  `docs check` already reports both documents as `duplicate-field` errors, so the tree fails the gate. The mismatch concerns every `set_metadata_field` verb.
+- Desired behaviour, to be decided: refuse to edit a document with a duplicated label, or edit the occurrence that is read.
+- Ownership: docs-cli. Status: **open, unowned.**
+
 ### 2026-10-28 — "Validate-all-first atomic semantics" overstates a batch that has no rollback
 
 - Source: found internally during the M30 (`lifecycle-and-free-form-relate`) Step 2 audit.

@@ -121,14 +121,14 @@ change*.
 | Boundary — endpoints (C9, C10) | `test_cli_relate.py::test_relate_free_form_archived_target_needs_no_reason_and_is_untouched`; `::test_relate_free_form_accepts_a_non_markdown_target`; `::test_relate_free_form_accepts_a_malformed_markdown_target_without_reading_it`; `::test_relate_free_form_symlinked_target_is_written_as_the_file_it_points_at`; `test_relate_plan.py::test_plan_relate_free_form_never_reads_the_target` | excluded targets; non-Markdown targets of several types | the archived TARGET and the binary TARGET are byte-identical after the run | the archived-endpoint `--reason` rule's branch; `parse_endpoint` | — |
 | Boundary — extension vocabulary (C4, C20, C25) | `test_cli_lifecycle.py::test_lifecycle_writes_an_extension_state_and_the_tree_reindexes`; `test_lifecycle_plan.py::test_plan_lifecycle_accepts_a_configured_extension_state`; `test_cli_index.py::test_index_renders_an_extension_role_group_after_the_built_in_roles`; `test_index.py::test_render_index_orders_extension_roles_alphabetically_after_built_ins`; `test_cli_list.py::test_list_includes_a_doc_in_an_extension_lifecycle`; `test_cli_touch.py::test_touch_reindexes_a_tree_with_extension_vocabulary`; `test_walker.py::test_walk_yields_docs_in_extension_vocabulary_and_the_trees_date_format`; `test_cli_relate.py::test_relate_accepts_an_endpoint_in_an_extension_lifecycle`; `test_cli_archive.py::test_archive_accepts_a_primary_in_an_extension_state`; `test_cli_mv.py::test_mv_moves_a_doc_in_a_tree_with_extension_vocabulary`; `test_cli_project_set.py::test_project_set_rewrites_a_doc_in_an_extension_state`; `::test_project_set_knows_a_project_carried_only_by_an_extension_vocabulary_doc`; `test_cli_project_rename.py::test_project_rename_walks_a_tree_with_extension_vocabulary`; `test_cli_stamp.py::test_stamp_keeps_a_document_in_a_configured_extension_state`; `test_model.py::test_parse_with_a_config_accepts_its_extensions_and_date_format` | extension vocabularies of several sizes; hyphenated extension roles | the post-state tree reindexes and `docs check` stays clean | the vocabulary passed to `parse()` at each site; `render_index`'s extension-role placement | — |
 | Boundary — date format (C21, C22) | `test_cli_lifecycle.py::test_lifecycle_promotes_an_extension_state_on_a_non_default_date_format_tree`; `test_cli_index.py::test_index_reads_a_non_default_date_format_tree`; `test_cli_touch.py::test_touch_reindexes_a_non_default_date_format_tree`; `test_cli_stamp.py::test_stamp_keeps_a_correctly_dated_document_on_a_non_default_date_format_tree`; `test_cli_archive.py::test_walking_verbs_report_bad_date_on_a_mis_spelled_non_default_tree`; `test_model.py::test_parse_with_a_config_rejects_the_iso_spelling_on_a_non_default_tree`; `::test_bare_parse_keeps_the_built_in_defaults`; `test_cli_relate.py::test_relate_refuses_an_endpoint_dated_outside_the_trees_date_format` (the E11 direction, C7); the corrected `test_cli_archive.py` / `test_cli_mv.py` tests in the task plan's list | `[archive] dir = "attic"` with `%d-%m-%Y`; other formats | `test_model.py::test_config_aware_parse_agrees_with_bare_parse_on_every_pre_existing_tree` — every default-configuration fixture tree and this repository's `docs/` parse identically with and without the config | the `date_format` passed to `parse()` | — |
-| Boundary — `docs stamp` (C24) | `test_cli_stamp.py::test_stamp_keeps_a_document_in_a_configured_extension_state`; `::test_stamp_refuses_a_block_outside_the_configured_vocabulary_with_zero_bytes`; `::test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes` (pre-existing, renamed — see the task plan's list); `::test_stamp_refuses_a_typod_lifecycle_on_a_default_tree_with_zero_bytes` (`--dry-run` too); `::test_stamp_refuses_a_block_dated_outside_the_trees_date_format_with_zero_bytes`; `::test_stamp_refusal_in_a_batch_writes_no_file`; `::test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes`; `::test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` (the completeness boundary's other side); `::test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed`; `::test_stamp_keeps_a_correctly_dated_document_on_a_non_default_date_format_tree` | — | the refused file, every other file and the INDEX are byte-identical | `docs stamp`'s block classification | — |
+| Boundary — `docs stamp` (C24) | `test_cli_stamp.py::test_stamp_keeps_a_document_in_a_configured_extension_state`; `::test_stamp_refuses_a_block_outside_the_configured_vocabulary_with_zero_bytes`; `::test_stamp_refuses_a_full_block_with_an_invalid_role_with_zero_bytes` (pre-existing, renamed — see the task plan's list); `::test_stamp_refuses_a_typod_lifecycle_on_a_default_tree_with_zero_bytes` (`--dry-run` too); `::test_stamp_refuses_a_block_dated_outside_the_trees_date_format_with_zero_bytes`; `::test_stamp_refusal_in_a_batch_writes_no_file`; `::test_stamp_refuses_a_complete_block_without_a_project_line_with_zero_bytes`; `::test_stamp_freshly_stamps_an_incomplete_block_even_with_an_out_of_vocabulary_value` (the completeness boundary's other side); `::test_stamp_restamps_a_complete_block_whose_related_bullet_is_malformed`; `::test_stamp_keeps_a_correctly_dated_document_on_a_non_default_date_format_tree`; `::test_stamp_restamps_an_extension_vocabulary_block_whose_related_bullet_is_malformed` and `::test_stamp_refuses_an_extension_state_block_for_its_invalid_role_with_zero_bytes` (the vocabulary source, added by the Step 2 review) | — | the refused file, every other file and the INDEX are byte-identical | `docs stamp`'s block classification | — |
 | Idempotency/retry/state (C5, C6) | `test_cli_lifecycle.py::test_lifecycle_already_in_state_writes_zero_bytes_and_skips_reindex`; `test_cli_relate.py::test_relate_free_form_is_idempotent` | — | idempotence over every top-level state; a no-op leaves a sentinel INDEX byte-identical | the `if changed` guard; the no-reindex-on-a-no-op guard | — |
 | Preview, output, record (C5, C15) | `test_cli_lifecycle.py::test_lifecycle_dry_run_writes_nothing_and_previews_each_change`; `::test_lifecycle_json_record_has_a_closed_key_set`; `::test_lifecycle_dry_run_json_has_the_apply_shape`; `::test_lifecycle_quiet_suppresses_success_but_never_a_refusal`; `::test_lifecycle_reindex_honours_exclusion`; `test_lifecycle_plan.py::test_lifecycle_plan_to_json_has_a_closed_key_set`; `test_cli_relate.py::test_relate_free_form_dry_run_writes_nothing` | — | a preview writes nothing, INDEX included | — | schema: both records closed |
 | Regression — recognized verbs (C7) | every pre-existing `test_cli_relate.py` / `test_relate_plan.py` id, unedited except as the task plan's list says; `test_cli_relate.py::test_relate_recognized_pair_still_writes_both_halves_unchanged` | — | a recognized operation rewrites at most two managed documents plus one INDEX refresh | the recognized-versus-free-form branch | recognized `--json` record asserted value for value |
 | Regression — archive invariance (C13) | `test_cli_archive.py::test_cascade_candidates_match_when_edges_were_written_by_relate`; `::test_strand_refusal_fires_on_a_child_of_written_by_relate` | a real milestone trio from this tree (Phase 9) | — | — | — |
 | Regression — `--body-from` route (C14) | `test_body_from.py::test_body_opening_with_a_related_group_becomes_metadata`; `::test_inline_related_line_stays_body_text`; `::test_skill_sidecar_example_yields_its_edge` (both frozen forms) | a non-Markdown sidecar target | — | — | — |
 | External consumer (C16) | `test_cli_lifecycle.py::test_help_verb_list_names_lifecycle_for_the_playbook_guard`; `test_cli_relate.py::test_playbook_guard_free_form_dry_run_probe_exits_0` | the same probes against a locally built wheel (Phase 9) | — | — | — |
-| Surface parity (C17, C18) | `test_skill.py::test_every_named_verb_is_a_real_subcommand` (existing); `::test_skill_routes_lifecycle_and_free_form_edges_through_verbs`; `::test_shipped_surface_no_longer_says_free_form_verbs_are_hand_edited`; `test_cli_lifecycle.py::test_lifecycle_help_documents_the_grammar_and_flags`; `test_skill_refs.py` (existing byte identity); the 2.1.0 packaging pins in the task plan's list | — | — | — | — |
+| Surface parity (C17, C18) | `test_skill.py::test_every_named_verb_is_a_real_subcommand` (existing); `::test_skill_routes_lifecycle_and_free_form_edges_through_verbs`; `::test_shipped_surface_no_longer_says_free_form_verbs_are_hand_edited`; `test_cli_lifecycle.py::test_lifecycle_help_documents_the_grammar_and_flags`; `test_skill_refs.py` (existing byte identity); `test_skill.py::test_frontmatter_values_are_scalars_yaml_reads_back_verbatim` and `::test_yaml_scalar_check_rejects_exactly_what_a_yaml_loader_would_break` (the skill's frontmatter loads as YAML; added by the Step 2 review); the 2.1.0 packaging pins in the task plan's list | — | — | — | — |
 | Acceptance — primary use case (C19) | `test_cli_lifecycle.py::test_milestone_setup_needs_no_hand_edit` | the same flow on this repository's own tree copy (Phase 9) | no managed document changes outside a verb invocation; a repeated promotion writes nothing | — | runtime recorded in Phase 9 |
 | Security/privacy/perf | covered above: block-corruption refusals (C11), TARGET containment (C10) | — | — | — | benchmark: not applicable; runtime recorded, not budgeted |
 
@@ -157,9 +157,11 @@ list, not here.
   lock, and an extension-state primary.
 - `tests/test_body_from.py` — 4 new ids: C14.
 - `tests/test_cli_stamp.py` — 9 new ids: C24, including both sides of the
-  complete-block boundary and the date half of E12.
+  complete-block boundary and the date half of E12. The Step 2 review added
+  2 more, which pin the refusal's vocabulary source on an extension tree.
 - `tests/test_index.py`, `tests/test_cli_index.py` — 1 + 2 new ids: C25, C21.
-- `tests/test_skill.py` — 2 new ids: C17.
+- `tests/test_skill.py` — 2 new ids: C17. The Step 2 review added 12 more:
+  the frontmatter YAML lock and its 11-case non-vacuity table.
 - `tests/test_model.py` — 4 new ids: C20–C22, including one parse-agreement
   sweep over the 52 default-configuration fixture trees plus this
   repository's `docs/`, reporting each disagreement by file.
@@ -190,7 +192,9 @@ property checks and the Phase-9 dogfood rather than enumerated fixtures:
 - Round trip: free-form `relate add` then `remove` of an edge that was
   initially **absent** restores the original bytes except `Updated:` —
   whether SOURCE started with no `Related:` group (created, then dropped) or a
-  non-empty one. From an arbitrary initial state the assertion is the
+  non-empty one — for a document with LF line endings (every editing verb
+  normalises CRLF to LF; the task plan's *Contract* › *Invariants* and
+  *Follow-ups* item 11). From an arbitrary initial state the assertion is the
   contractual one: the edge set afterwards is the initial set minus the edge,
   and every unrelated byte is preserved.
 - Lifecycle safety: for every active-tree document and every allowed state,
@@ -310,7 +314,10 @@ Agent Playbook Suite probes against a locally built wheel
   task plan's authoritative list RED for missing behaviour; 7 authored locks
   and 3 swept ids GREEN (classified in the implementation log's Phase 4).
 - Visible tests, GREEN (Phase 8, 2026-10-28): **1656 passed**, 0 failed,
-  skipped, xfailed or errored.
+  skipped, xfailed or errored. After the Step 2 review resolution: **1670
+  passed**. The 14 added ids are the skill frontmatter YAML lock with its
+  11-case table, and two stamp tests for the stamp check's vocabulary
+  source.
   - Every pre-existing id is present and GREEN under the authoritative old →
     new mapping (the `comm` / AST proof against `e48adb9`).
   - Two authored tests were corrected under Check calibration: DEF-1, a help
@@ -340,11 +347,15 @@ Agent Playbook Suite probes against a locally built wheel
   `check --json` over this tree are byte-identical under 2.1.0 and v2.0.0.
 - Property/stateful (Phase 8): **16 passed**, covering idempotence, the
   add-then-remove round trip, no `status-drift`, and write footprint.
-- Mutation (Phase 8): hand-applied smoke **45/45 killed**, covering all
+- Mutation (Phase 8, extended by the Step 2 review): hand-applied smoke
+  **47/47 killed**, covering all
   eleven targets.
   - 43 planned mutants plus 2 message-preserving variants of the grammar
     mutants.
   - M05 survived at first; correcting the authored fixture (DEF-2) killed it.
+  - M44 and M45 judge the stamp refusal's vocabulary against the built-ins.
+    Both survived at the Step 2 review (claude-S1), and the two stamp tests
+    added by its resolution kill them.
   - Phase 10's `/simplify` (S1) rewrote `docs stamp`'s completeness test.
     M40–M43 were re-proven on the simplified code with the same kill counts
     (6, 12, 1, 1), so adequacy is unchanged.
@@ -367,13 +378,15 @@ Agent Playbook Suite probes against a locally built wheel
 
 ## Adequacy results
 
-- visible_pass_rate: 1656/1656 (Phase 8)
+- visible_pass_rate: 1670/1670 (1656/1656 at Phase 8; 14 ids added by the
+  Step 2 review resolution)
 - hidden_pass_rate: not applicable (no hidden suite)
 - hidden_generalization_gap: not applicable
 - changed-lines coverage: not configured
 - changed-files branch coverage: not configured
-- mutation score on touched modules: 45/45 killed by the hand-applied smoke
-  on `src/docs_cli/cli.py` (43 planned plus 2 message-preserving variants),
+- mutation score on touched modules: 47/47 killed by the hand-applied smoke
+  on `src/docs_cli/cli.py` (43 planned, 2 message-preserving variants, and
+  M44/M45 from the Step 2 review),
   after one authored-fixture correction (DEF-2)
 - property/stateful result: 16 passed
 - fuzz result: 24 passed (seed `20261027`)

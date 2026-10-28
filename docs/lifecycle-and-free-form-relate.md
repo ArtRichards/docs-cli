@@ -33,7 +33,8 @@ Related:
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
-  complete, with implementation done and the Step 2 review pending.
+  complete, with implementation done and the Step 2 review's findings
+  resolved (`final-sync` pending).
   The narrative, evidence headline and per-phase results live in the
   implementation log (its *Milestone completion summary* first).
 
@@ -572,7 +573,8 @@ section — and the specs it points at — win.
   apply.
 - Files/side effects: `docs lifecycle` rewrites `Lifecycle:` and `Updated:` in
   each changed document and nothing else; free-form `relate` rewrites one
-  `Related:` bullet and `Updated:` in SOURCE and nothing else; `INDEX.md` is
+  `Related:` bullet and `Updated:` in SOURCE and nothing else (line endings
+  aside — see *Invariants*); `INDEX.md` is
   refreshed once, only when something changed and not under `--dry-run`.
 
 ### Invariants
@@ -580,6 +582,16 @@ section — and the specs it points at — win.
 - Must always: write through the existing surgical editors and
   `atomic_write`; leave every byte outside the edited lines, the H1, the body
   and the trailing-newline state untouched; refresh INDEX at most once.
+  - This byte guarantee holds within the shared text model every editing
+    verb uses. A document is read as text, so CRLF or mixed line endings
+    come back as LF on write.
+  - `docs touch`, `docs project set`, `docs archive` and `docs stamp` have
+    always behaved this way. `docs lifecycle` and free-form `relate` follow
+    them, as their anchors require.
+  - So the guarantee is exact for a document with LF line endings. Keeping
+    other line endings is a repo-wide follow-up (*Follow-ups* item 11).
+  - This wording was clarified at the Step 2 review (gpt-B2); the behaviour
+    did not change.
 - Must never: write `Lifecycle: archived`; write any byte of a document under
   the archive subtree through `docs lifecycle` or a free-form `relate`; write
   a free-form bullet into TARGET; write a bullet `docs check` would reject or
@@ -735,7 +747,8 @@ section — and the specs it points at — win.
   listed in *Test Strategy* › *Non-product checks*.
 - Hidden/generalization categories to hold back: listed in *Test Strategy*.
 - Property/stateful invariants: idempotence; add-then-remove from an
-  initially absent edge restores the original bytes apart from `Updated:`; no
+  initially absent edge restores the original bytes apart from `Updated:`,
+  for a document with LF line endings (see *Contract* › *Invariants*); no
   transition yields `status-drift`; a free-form operation rewrites exactly
   one managed document and refreshes the INDEX once.
 - Mutation-sensitive logic: the `archived` target guard; the archive-subtree
@@ -1045,7 +1058,8 @@ lifecycle` batch is a visible test, not a held-back category.)
   applying it once, byte for byte.
 - `relate add` then `relate remove` of a free-form edge that was initially
   **absent** restores the original bytes except `Updated:` — whether SOURCE
-  started with no `Related:` group (created, then dropped) or a non-empty one.
+  started with no `Related:` group (created, then dropped) or a non-empty one
+  — for a document with LF line endings (see *Contract* › *Invariants*).
   From an arbitrary initial state the assertion is the contractual one: the
   edge set afterwards is the initial set minus the edge, and every unrelated
   byte is preserved.
@@ -2231,6 +2245,8 @@ Raised during setup, judged out of this milestone's scope, and deliberately
 | 8 | **`[vocabulary]` entries are not validated at config load.** `load_config` merges `add_lifecycles` / `add_roles` with an unchecked `frozenset()`: an empty or padded entry is accepted silently, and a bare string (`add_lifecycles = "shipped"`) becomes its single letters. D10 makes every verb honour the configured vocabulary, so such an entry now reaches every walk, not only `docs check`. Raised at Phase 1 (OQ-5). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 9 | **A recognized-verb TARGET path can inject metadata.** `docs relate add a.md precedes $'b\nLifecycle: archived\nx.md'` exits 0 and writes a bullet that ends `a.md`'s `Related:` group and adds a `Lifecycle: archived` line (measured at the Step 1 review). Free-form `relate` refuses such a TARGET (R4); recognized verbs stay byte-for-byte unchanged under D4, so the fix — a refusal, or path validation shared by both kinds — is a later, deliberate behaviour change (Step 1 review claude-S2, conductor decision JC1). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 10 | **Candidate project convention: state a binding decision once.** This task plan restates D10 in six or more places, so every wording correction must touch every copy (Step 1 review claude-T4, waived for this milestone). A convention for later milestone docs — one authoritative statement, pointers elsewhere — would make such drift impossible. | Registered 2026-10-28 (Phase 10) as an open, unowned **candidate convention** in `feedback-log.md`, to be offered as a taste anchor at the next milestone's setup. Not written into `CLAUDE.md` — a single waived finding is not yet a proven rule (S2R-OQ-2, conductor-resolved at the Step 2 resume planning). |
+| 11 | **Every editing verb normalises CRLF or mixed line endings to LF.** Documents are read with `Path.read_text()` (universal-newline translation) and written back through `atomic_write`, so one `Lifecycle:` or `Updated:` edit rewrites every line ending of a CRLF document. This is pre-existing: measured on v2.0.0's `touch`, `project set`, `archive` and `stamp`, and on 2.1.0's `lifecycle` and free-form `relate`. M30's verbs share the text model their anchors use (Step 2 review gpt-B2 / claude-N4, conductor-resolved as not an M30 defect). The contract's byte wording is clarified under *Invariants*. | Registered 2026-10-28 (Step 2 review resolution) as an open, unowned `feedback-log.md` entry |
+| 12 | **A duplicated metadata label is written first and read last.** `set_metadata_field` rewrites the first occurrence, while `parse_metadata_block` keeps the last. So on a document with two `Lifecycle:` lines, `docs lifecycle` exits 0, reports the change, and leaves the effective value unchanged. Every `set_metadata_field` verb (`touch`, `archive`, `project set`, `stamp`) does the same on 2.0.0. Such a document already fails `docs check` as `duplicate-field` (Step 2 review claude-N3; conductor decision: defer, no M30 contract change). | Registered 2026-10-28 (Step 2 review resolution) as an open, unowned `feedback-log.md` entry |
 
 ## Testing and quality gate
 

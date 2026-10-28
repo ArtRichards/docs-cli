@@ -20,7 +20,10 @@ correctness is verified by a **two-part oracle** (resolved OQ1):
 The frontmatter is parsed by hand: this repo is stdlib-only (no `pyyaml`), and
 the skill frontmatter is exactly two flat `key: value` lines, so a tiny
 splitter is enough. `_split_frontmatter` enforces the `---` fence;
-`_parse_frontmatter` splits the fenced lines into a dict.
+`_parse_frontmatter` splits the fenced lines into a dict. Because the
+splitter is more lenient than the YAML loaders that read the skill,
+`_yaml_scalar_problem` also checks that each value is a scalar YAML reads
+back verbatim (no `: ` or ` #` in a plain scalar, no indicator opening it).
 """
 
 from __future__ import annotations
@@ -251,6 +254,89 @@ def test_frontmatter_parser_rejects_extra_keys() -> None:
     assert set(parsed) != {"name", "description"}, (
         "a three-key frontmatter must not pass the exactly-name+description check"
     )
+
+
+# --- check 9: every frontmatter value is a scalar YAML reads back verbatim --
+
+# Characters that may not open a YAML plain scalar (YAML 1.2, section 7.3.3).
+_YAML_INDICATORS = frozenset("-?:,[]{}#&*!|>'\"%@`")
+
+
+def _yaml_scalar_problem(value: str) -> str | None:
+    """Why `value`, written after `key: ` on one line, is not read back verbatim by YAML.
+
+    Stdlib only: the repo has no YAML parser, but skill loaders read the
+    frontmatter as YAML, and the flat splitter above accepts lines YAML
+    rejects. A value opening with a quote is a quoted scalar and must close
+    with the same quote. Anything else is a plain scalar. YAML rejects or
+    silently rewrites a plain scalar that:
+    - opens with an indicator character (`-`, `?` and `:` are allowed when a
+      non-space follows);
+    - contains `: `, or ends with `:` (a nested mapping);
+    - contains ` #` (the rest becomes a comment).
+    Returns None when the value is safe.
+    """
+    first = value[:1]
+    if first in ("'", '"'):
+        return None if len(value) >= 2 and value.endswith(first) else "an unclosed quoted scalar"
+    opens_safely = first in ("-", "?", ":") and value[1:2] not in ("", " ")
+    if first in _YAML_INDICATORS and not opens_safely:
+        return f"a plain scalar opening with the YAML indicator {first!r}"
+    if ": " in value or value.endswith(":"):
+        return "a plain scalar containing ': ', which YAML reads as a nested mapping"
+    if " #" in value:
+        return "a plain scalar containing ' #', which YAML reads as the start of a comment"
+    return None
+
+
+def test_frontmatter_values_are_scalars_yaml_reads_back_verbatim() -> None:
+    """Skill loaders parse the frontmatter as YAML, so each value must survive
+    a YAML load unchanged. An unquoted description containing `: ` passes the
+    flat splitter but makes every YAML-based loader reject the skill."""
+    frontmatter, _ = _split_frontmatter(_read_skill())
+    problems = {
+        key: problem
+        for key, value in _parse_frontmatter(frontmatter).items()
+        if (problem := _yaml_scalar_problem(value)) is not None
+    }
+    assert not problems, f"frontmatter values a YAML loader would reject or rewrite: {problems}"
+
+
+@pytest.mark.parametrize(
+    ("value", "accepted"),
+    [
+        ("link docs with a Related edge", True),
+        ("link docs with a Related: edge", False),
+        ("ends with a colon:", False),
+        ("see the docs #later", False),
+        ("[a list]", False),
+        ("&anchor x", False),
+        ("- a dash item", False),
+        ("-x is fine", True),
+        ("50% done", True),
+        ('"a quoted: value"', True),
+        ("'unclosed", False),
+    ],
+    ids=[
+        "plain-text",
+        "colon-space",
+        "trailing-colon",
+        "space-hash",
+        "opening-bracket",
+        "opening-anchor",
+        "opening-dash-and-space",
+        "dash-then-text",
+        "percent-inside",
+        "quoted-colon-space",
+        "unclosed-quote",
+    ],
+)
+def test_yaml_scalar_check_rejects_exactly_what_a_yaml_loader_would_break(
+    value: str, accepted: bool
+) -> None:
+    """The check is not vacuous: it rejects the values a YAML loader refuses or
+    silently rewrites, and accepts ordinary prose and quoted scalars."""
+    assert (_yaml_scalar_problem(value) is None) is accepted
 
 
 # --- M25 — the bundled skill must teach `docs relate` ----------------------
