@@ -40,7 +40,7 @@ Related:
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 1's phases are complete (Phases 1–4, 2026-10-28) and
-  the TestPyPI rehearsal is recorded GO.** Step 1 review-pass-001 is next;
+  the TestPyPI rehearsal is recorded GO.** Step 1 review-pass-001 is open;
   the PyPI upload waits for it to close (D2).
   - Phase 1 froze *Decisions (Phase 1 — BINDING)* and re-verified E1–E4 the
     same day; the log's Phase 1 section has the evidence and the five

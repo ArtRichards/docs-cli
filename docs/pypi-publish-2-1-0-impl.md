@@ -28,8 +28,8 @@ the test matrix stay synchronized with it. The phases are the
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
 - Progress: **Step 1's phases are complete on
   `pypi-publish-2-1-0/phases-1-4` (Phases 1–4, 2026-10-28), with the
-  TestPyPI rehearsal recorded GO.** Step 1 review-pass-001 is next; Step 2
-  starts only after it closes (D2).
+  TestPyPI rehearsal recorded GO.** Step 1 review-pass-001 is open, with
+  both provider slots pending; Step 2 starts only after it closes (D2).
   - Step 0 is complete: Q1 and Q2 are RESOLVED by the operator, and Step 0
     review-pass-001 is closed with `final-sync` `ready` (`8515f1c`).
   - Setup measured the publish surface read-only (**E1–E13**, below); Phase 1
@@ -1071,6 +1071,62 @@ files; **1671 passed**, 1671 collected; `docs check .` exit 0; the INDEX
 dry-run, the snapshot and both mirrors identical; readiness 23/23; the D1
 scope check and the token search clean; `git diff --quiet a25cb5d..HEAD --
 src pyproject.toml README.md LICENSE .gitignore` holds.
+
+## Step 1 review-pass-001
+
+- Pass id: `Step 1 review-pass-001`.
+- Ledger location: `pypi-publish-2-1-0-impl.md#step-1-review-pass-001`
+  (docs root `docs/`; repository path
+  `docs/pypi-publish-2-1-0-impl.md#step-1-review-pass-001`).
+- Predecessor: `Step 0 review-pass-001` — closed, `final-sync` `ready`,
+  synced in `8515f1c`. That entry and its frozen packet are unchanged.
+- Status: `open`, awaiting both provider slots.
+- Frozen packet:
+  - slug `pypi-publish-2-1-0`, step 1, branch
+    `pypi-publish-2-1-0/phases-1-4`;
+  - base `8515f1c09b89811073d68c85c241869b3fdcbdaf` (the closed Step 0
+    sync);
+  - review HEAD: the review-ready commit that adds this entry. An entry
+    cannot carry its own commit's sha, so the implementation agent's
+    return report names it, and the conductor records it here when it
+    freezes the packet;
+  - Step 1 commits: `ef9ae84` (Phase 1), `d6f62f4` (Phase 2), `a25cb5d`
+    (Phase 3, which is `X`), `f03cb31` (Phase 4), `eec64ff` (the audit
+    fixes), then the review-ready commit;
+  - changed paths: `CHANGELOG.md`, `README.md`,
+    `docs/pypi-publish-2-1-0.md`, `docs/pypi-publish-2-1-0-impl.md`,
+    `docs/pypi-publish-2-1-0-test-matrix.md`, `docs/status.md`,
+    `tests/manual/release_readiness.py`, `tests/manual/release_probe.py`;
+  - project `docs`, project path `""`, artifact stem `pypi-publish-2-1-0`;
+  - risk Standard. Before anything irreversible (D2), this pass judges the
+    frozen contract — *Decisions (Phase 1 — BINDING)* P1.1–P1.6, including
+    P1.5's Step 2 upload, tag and release commands, and the edited stop
+    table — the release checks' adequacy, the release-input edits, and
+    Phase 4's GO evidence and *Release anchors (current)*.
+- Tracker: `milestone-plan.md` in the docs root; owning project `docs`;
+  project path empty; artifact stem `pypi-publish-2-1-0`; active semantic
+  slug `pypi-publish-2-1-0`; row
+  `200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate`;
+  claim checkpoint `be7f809`; semantic branch root `pypi-publish-2-1-0/`.
+- Latest results at the review-ready state:
+  - ruff clean; 52 files formatted; mypy no issues in 53 files;
+  - `pytest -q` **1671 passed**; 1671 collected;
+  - `docs check .` exit 0; the INDEX dry-run, the snapshot and both mirrors
+    identical;
+  - readiness 23/23 (`--release-date 2026-10-28`);
+  - the probe: 25/25 on wheel (a), 24 + W1 SKIP on the TestPyPI-served
+    rehearsal, 21/21 on the editable build, and the 2.0.0 control failing
+    exactly the 13 release-bound checks;
+  - TestPyPI rehearsal **GO**; wheel (a) = (b) = `2c5fa0b3…`.
+- Safe to re-run in review: the fast gate; readiness; the probe's contract
+  group on `.venv/bin/docs` with `--scratch` outside the repository. Not to
+  be re-run: any upload — `docs-cli-rehearsal` 2.1.0 is spent on TestPyPI,
+  and D9 names `2.1.0.post1` for a re-rehearsal.
+- Claude slot: `pending`.
+- GPT slot: `pending`.
+- Findings and dispositions: pending.
+- Re-review: pending.
+- final-sync: `pending`.
 
 ## Milestone completion summary
 
