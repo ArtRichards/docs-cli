@@ -8705,12 +8705,12 @@ def _stamp_config_failure(text: str, config: Config) -> str | None:
         _title, metadata, _body = parse_metadata_block(text)
     except MetadataError:
         return None
-    # A missing label, an empty value and a multi-valued group all read as "".
-    lifecycle, role, updated_raw = (
-        value if isinstance(value, str) else ""
-        for value in (metadata.get(label) for label in ("Lifecycle", "Role", "Updated"))
-    )
-    if not (lifecycle and role and updated_raw):
+    lifecycle = metadata.get("Lifecycle")
+    role = metadata.get("Role")
+    updated_raw = metadata.get("Updated")
+    # Complete means each is one inline value, a str (never empty). A missing
+    # label is None; an empty or multi-valued one is a tuple.
+    if not (isinstance(lifecycle, str) and isinstance(role, str) and isinstance(updated_raw, str)):
         return None
     try:
         validate_lifecycle(lifecycle, config.lifecycles)

@@ -33,8 +33,9 @@ Related:
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
-  in progress — Phases 5–9 complete. The narrative, evidence headline and
-  per-phase results live in the implementation log.
+  complete, with implementation done and the Step 2 review pending.
+  The narrative, evidence headline and per-phase results live in the
+  implementation log (its *Milestone completion summary* first).
 
 ### Identity note
 
@@ -1114,22 +1115,31 @@ Each deliverable names its consumer. The end consumer of the whole milestone is
 an agent running a suite workflow — first the Agent Playbook Suite's
 `create-milestones` setup, through the suite release that pins this version.
 
-- [ ] Flag/exit/message matrix for `docs lifecycle` and free-form `relate`
+- [x] Flag/exit/message matrix for `docs lifecycle` and free-form `relate`
       frozen in Phase 1 — against the answered Q1–Q9, including the verb
       grammar (Q3), the state vocabulary and D10's `parse()` signature (Q7),
       the two `--json` records and the Phase-5 signatures. Consumer: Phases 2–7.
-- [ ] `docs lifecycle` with refusal, idempotence and reindex tests. Consumer:
+      *Evidence:* *Decisions (Phase 1 — BINDING)* P1.1–P1.9.
+- [x] `docs lifecycle` with refusal, idempotence and reindex tests. Consumer:
       the agent promoting a scaffold; the suite's lifecycle probe.
-- [ ] One-sided free-form `relate add|remove` with recognized-verb
+      *Evidence:* `tests/test_cli_lifecycle.py`, `tests/test_lifecycle_plan.py`;
+      the impl log's Phase 6, Phase 8 (mutants M01–M07, M11, M13, M24) and
+      Phase 9 (F1, F4).
+- [x] One-sided free-form `relate add|remove` with recognized-verb
       regression coverage — archived SOURCE refused, archived TARGET never
       written, any existing file as TARGET. Consumer: the agent linking
-      companions; the suite's relate probe.
-- [ ] Cascade-candidate and strand-check regression locks. Consumer: every
-      later milestone closeout.
-- [ ] The `--body-from` leading-`Related:` route locked by test and stated in
+      companions; the suite's relate probe. *Evidence:* the free-form tests in
+      `tests/test_cli_relate.py` / `tests/test_relate_plan.py`; the impl log's
+      Phase 8 (M08–M10, M12, M14–M23) and Phase 9 (F1, F4, F6).
+- [x] Cascade-candidate and strand-check regression locks. Consumer: every
+      later milestone closeout. *Evidence:* the two invariance locks in
+      `tests/test_cli_archive.py`; the impl log's Phase 9 F3a–F3c.
+- [x] The `--body-from` leading-`Related:` route locked by test and stated in
       `cli.md`, and the skill's two sidecar examples rewritten to a form that
-      works. Consumer: the bundled skill's sidecar use case.
-- [ ] `parse()` honours the tree's config (D10): vocabulary extensions and
+      works. Consumer: the bundled skill's sidecar use case. *Evidence:*
+      `tests/test_body_from.py`; `cli.md`; the impl log's Phase 7 and Phase 9
+      F3a (the `--body-from` twin).
+- [x] `parse()` honours the tree's config (D10): vocabulary extensions and
       `date_format` at all seven existing call sites and in both new verbs,
       with locks across every verb that reads the tree, a bare call keeping
       the built-in defaults, and no verb starting to refuse a document
@@ -1138,22 +1148,30 @@ an agent running a suite workflow — first the Agent Playbook Suite's
       configured vocabulary or date format.
       Closes the 2026-08-15 `date_format` and 2026-10-26 vocabulary entries in
       `feedback-log.md`. Consumer: adopters with extension vocabularies or a
-      non-default date format, and both new verbs.
-- [ ] Surface parity: argparse help, `cli.md`, `convention.md`, bundled
+      non-default date format, and both new verbs. *Evidence:* the D10 locks
+      (matrix C20–C25); the impl log's Phase 8 (M25–M43) and Phase 9 (F5, F7);
+      both entries CLOSED at Phase 7.
+- [x] Surface parity: argparse help, `cli.md`, `convention.md`, bundled
       skill + byte-identical references, CHANGELOG — plus the skill's *Three
       things never to hand-edit*, `references/use-cases.md`, the adoption
       playbook's stale heuristic description, and the README verb list.
       Consumer: every agent and adopter reading the shipped surface.
-- [ ] `pyproject.toml` and the packaging version pin at **2.1.0**, and a
+      *Evidence:* `tests/test_skill.py`, `tests/test_skill_refs.py`; the impl
+      log's Phase 7 and Phase 10 › *Surface-parity reconciliation*.
+- [x] `pyproject.toml` and the packaging version pin at **2.1.0**, and a
       `## 2.1.0 — UNRELEASED` CHANGELOG section with the upgrade note.
-      Consumer: the publish milestone.
-- [ ] Dogfood the primary use case on a throwaway copy of this tree.
-      Consumer: acceptance.
-- [ ] Hand-off note for the publish milestone: its closeout sweep must
+      Consumer: the publish milestone. *Evidence:* `tests/test_packaging.py`;
+      CHANGELOG `## 2.1.0 — UNRELEASED`; the impl log's Phase 7.
+- [x] Dogfood the primary use case on a throwaway copy of this tree.
+      Consumer: acceptance. *Evidence:* the impl log's Phase 9 (F1–F10).
+- [x] Hand-off note for the publish milestone: its closeout sweep must
       retire the Agent Playbook Suite verbless-metadata stopgap (below),
       written to a live home that outlives this milestone's archive (D9).
       Consumer: the publish milestone and the suite pin-bump PR.
-- [ ] Test matrix and adequacy results. Consumer: closeout review.
+      *Evidence:* `feedback-log.md`, the 2026-10-26 promotion entry's
+      `Hand-off (2026-10-28, M30 Phase 10)` bullet (open).
+- [x] Test matrix and adequacy results. Consumer: closeout review.
+      *Evidence:* the test matrix's *Results summary* and *Adequacy results*.
 
 ## TDD implementation plan
 
@@ -1357,7 +1375,7 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
 - [x] Phase 9 — Integrate / Accept / Dogfood
-- [ ] Phase 10 — Quality, Docs, Refactor
+- [x] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery
 
@@ -2206,13 +2224,13 @@ Raised during setup, judged out of this milestone's scope, and deliberately
 | 1 | **`--body-from` admits any leading bare-label group as metadata**, not only `Related:` — measured with a `Revision:` group landing on an active document, which the convention says the tool never writes (E6). Whether to narrow the C4 heuristic is a behaviour change nobody has asked for. | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (Step 2 planning question OQ-1, conductor-resolved: register it with items 2, 3, 7, 8 and 9) |
 | 2 | **Removing a dangling free-form edge** whose TARGET no longer exists. `relate` still requires TARGET to resolve, so a `broken-ref` repair stays move-driven or manual. | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 3 | **Widening the free-form verb grammar** beyond `[a-z][a-z0-9-]*`, if a real tree needs an exotic verb `relate` should write. Additive — no caller breaks (D6, Q3). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
-| 4 | **Registering the publish milestone** that ships 2.1.0, refreshes host skills, and carries the stopgap hand-off. Not registered in this run (operator, 2026-10-27); the hand-off note names it. | Operator (tracker) |
+| 4 | **Registering the publish milestone** that ships 2.1.0, refreshes host skills, and carries the stopgap hand-off. Not registered in this run (operator, 2026-10-27); the hand-off note names it. | Operator (tracker). The hand-off note was written 2026-10-28 (Phase 10) into the open 2026-10-26 `feedback-log.md` entry. |
 | 5 | **The suite pin-bump PR** that retires the verbless-metadata stopgap (*Success criteria*). | Agent Playbook Suite |
-| 6 | **A `parent-of` back-edge on `milestone-plan.md`** pointing at this milestone (Step 0 review claude-N11, waived): a free-form hand-edit to a document outside the operator-approved set, and not required by the tracker contract, since this milestone's `child-of: milestone-plan.md` already gives navigation. The waiver lifts once free-form `docs relate` exists. | Later (decided at Phase 10 — OQ-11) |
+| 6 | **A `parent-of` back-edge on `milestone-plan.md`** pointing at this milestone (Step 0 review claude-N11, waived): a free-form hand-edit to a document outside the operator-approved set, and not required by the tracker contract, since this milestone's `child-of: milestone-plan.md` already gives navigation. The waiver lifts once free-form `docs relate` exists. | **Declined and closed** at Phase 10 (S2R-OQ-1, conductor-resolved at the Step 2 resume planning). Nothing consumes the edge: it is free-form, not a cascade verb, and unvalidated. The tracker cell plus this document's `child-of: milestone-plan.md` already give two-way navigation, and `milestone-plan.md`'s `parent-of` list predates the tracker convention. |
 | 7 | **No verb repairs an out-of-vocabulary `Lifecycle:` or `Role:`.** `docs lifecycle` exits 1 on a source that fails `parse()` (`Lifecycle: activ`, or `shipped` after its extension was removed from `.docs.toml`), and `docs stamp`'s refusal points at "correct the field, then `docs touch`" — while the bundled skill forbids hand-editing a metadata block. Raised at Phase 1 (OQ-5); the skill sanctions no new hand-edit. | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 8 | **`[vocabulary]` entries are not validated at config load.** `load_config` merges `add_lifecycles` / `add_roles` with an unchecked `frozenset()`: an empty or padded entry is accepted silently, and a bare string (`add_lifecycles = "shipped"`) becomes its single letters. D10 makes every verb honour the configured vocabulary, so such an entry now reaches every walk, not only `docs check`. Raised at Phase 1 (OQ-5). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
 | 9 | **A recognized-verb TARGET path can inject metadata.** `docs relate add a.md precedes $'b\nLifecycle: archived\nx.md'` exits 0 and writes a bullet that ends `a.md`'s `Related:` group and adds a `Lifecycle: archived` line (measured at the Step 1 review). Free-form `relate` refuses such a TARGET (R4); recognized verbs stay byte-for-byte unchanged under D4, so the fix — a refusal, or path validation shared by both kinds — is a later, deliberate behaviour change (Step 1 review claude-S2, conductor decision JC1). | Registered 2026-10-27 (Phase 7) as an open, unowned `feedback-log.md` entry (OQ-11) |
-| 10 | **Candidate project convention: state a binding decision once.** This task plan restates D10 in six or more places, so every wording correction must touch every copy (Step 1 review claude-T4, waived for this milestone). A convention for later milestone docs — one authoritative statement, pointers elsewhere — would make such drift impossible. | Phase 10 (taste triage and compounding), or the project's agent context |
+| 10 | **Candidate project convention: state a binding decision once.** This task plan restates D10 in six or more places, so every wording correction must touch every copy (Step 1 review claude-T4, waived for this milestone). A convention for later milestone docs — one authoritative statement, pointers elsewhere — would make such drift impossible. | Registered 2026-10-28 (Phase 10) as an open, unowned **candidate convention** in `feedback-log.md`, to be offered as a taste anchor at the next milestone's setup. Not written into `CLAUDE.md` — a single waived finding is not yet a proven rule (S2R-OQ-2, conductor-resolved at the Step 2 resume planning). |
 
 ## Testing and quality gate
 

@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-16
+Updated: 2026-10-28
 
 Related:
 - implements: charter.md
@@ -23,7 +23,7 @@ inside the same wheel as package data.
 ```
 src/docs_cli/                            (Python 3.11+, stdlib only)
 ├── __init__.py                          ─ lazy re-export of `main`
-├── cli.py                               ─ the CLI module (~9k lines)
+├── cli.py                               ─ the CLI module (~9.5k lines)
 │   ├── dunder version                   (__version__ = importlib.metadata.version("docs-cli"))
 │   ├── config        — TOML load, Vocab merging, archive-dir resolution,
 │   │                   `[migrate]` per-tree overrides (M7),
@@ -40,6 +40,10 @@ src/docs_cli/                            (Python 3.11+, stdlib only)
 │   │                   M28a cross-dated archive refusal)
 │   ├── new           — scaffolded doc creation (M2)
 │   ├── touch         — Updated: bump (M2; M12 outside-root refusal)
+│   ├── relate        — Related: edge add/remove (M25 reciprocal pairs;
+│   │                   M30 one-sided free-form edges)
+│   ├── lifecycle     — top-level Lifecycle: transitions, never to or
+│   │                   from `archived` (M30)
 │   ├── check         — validation rules + exit-code matrix (M3;
 │   │                   M25 reciprocity; M27 body-link scanner;
 │   │                   M28a archive-date corroboration)
@@ -85,7 +89,7 @@ version-controlled here, **ships as package data inside the
 ### `model`
 
 - `Doc` dataclass (frozen): `path`, `title`, `lifecycle` (M7-renamed from `status`), `role`, `project`, `updated`, `related: tuple[(verb, path), ...]`, `extra: Mapping[str, str | tuple[str, ...]]`, `body`, `archived`.
-- `parse(text: str, path: Path, root: Path) -> Doc` — H1 + metadata block parser, layered on `parse_metadata_block` / `_metadata_line_span`.
+- `parse(text: str, path: Path, root: Path, *, config: Config | None = None) -> Doc` — H1 + metadata block parser, layered on `parse_metadata_block` / `_metadata_line_span`. With a `config`, `Lifecycle:` and `Role:` are validated against the tree's vocabulary (built-ins plus `[vocabulary]` additions) and `Updated:` is read in its `[archive] date_format` — the judgement `check_doc` makes; every verb that walks or names documents passes it (M30 — D10). A bare call keeps the built-in sets and ISO dates.
 - `parse` is pure (no I/O). M2 writes metadata back with surgical, minimal-diff line edits (`set_metadata_field`, `rewrite_related_refs`, `scaffold_doc`) rather than a full re-serializer — see the M2 milestone Decisions. M25 adds three more editors on the same contract: `add_related_edge` / `remove_related_edge` (one typed `Related:` bullet each way, creating the group when absent and dropping it when it empties, matching targets canonically) and `append_revision_entry` (one bullet into the repeatable `Revision:` audit group at the end of the metadata block). All three share `_bare_label_run` for group location — one label-parameterised scan serving both the `Related:` and `Revision:` groups — and `_metadata_line_span` for block boundaries, so no editor has its own notion of where the block or a group is.
 
 ### `config`
@@ -117,7 +121,8 @@ version-controlled here, **ships as package data inside the
 ### `walker`
 
 - `walk(root: Path, config: Config, predicate=None) -> Iterator[Doc]`
-  — yields parsed Docs. M8 (F3) adds the optional `predicate`
+  — yields parsed Docs, each parsed with the tree's `config` (M30 — D10).
+  M8 (F3) adds the optional `predicate`
   keyword for layered exclusion (see `config.compile_exclude_predicate`).
 - Skips non-`.md`, hidden files, the root-level `INDEX.md`, and
   (when `predicate` is set) any path the predicate flags. The
@@ -141,7 +146,10 @@ order (charter, plan, spec, milestone, log, status, decision, guide, runbook,
 reference, postmortem, idea, implementation, sketch, outline, memo, brief,
 template, example, notes — M7 adds the 7 core roles between `idea` and
 `notes`), **except `status` is pinned to the top**
-— it's the "you are here" pin and the entry point for most navigation. Within
+— it's the "you are here" pin and the entry point for most navigation. Roles
+added through `[vocabulary] add_roles` follow every built-in role, sorted
+alphabetically (M30 — D10), so every active doc the summary counts is
+rendered. Within
 each Role section, entries are sorted by `Updated:` descending, then by path
 ascending as a deterministic tiebreaker.
 
@@ -178,6 +186,8 @@ The renderer's output between the markers has a fixed shape so that
   decision, guide, runbook, reference, postmortem, idea,
   implementation, sketch, outline, memo, brief, template, example,
   notes (M7 — F10 adds the 7 core roles between `idea` and `notes`).
+  Extension roles from `[vocabulary] add_roles` follow every built-in
+  role, sorted alphabetically (M30 — D10); no `Config` field orders them.
   Role groups with zero entries are omitted. `## Archived` appears last,
   after every project.
 - **Within-section sort.** Primary key: `Updated:` descending. Tiebreaker:
@@ -485,6 +495,54 @@ apply_move_plan(plan)                                one atomic_write per change
   `atomic_write` on a later failure. Best-effort staged publish + rollback,
   not a filesystem transaction — two files cannot be renamed atomically as
   a unit on POSIX, and the spec says so rather than implying otherwise.
+- **The one-sided free-form path (M30 — D4–D6).** A verb outside the six
+  recognized ones is accepted when it matches the free-form grammar
+  `[a-z][a-z0-9-]*` in full (`relate_verb_in_grammar`; refusal R1 names the
+  grammar). `plan_relate` then returns a `RelatePlan` with `inverse=None`
+  and one edit: SOURCE is staged through the same `_plan_relate_edit`, and
+  TARGET is never staged, written or read. `_cmd_relate` resolves TARGET
+  with `parse_endpoint=False`, so it only has to exist under the root, and
+  it may be any file, Markdown or not. Two refusals apply to free-form edges
+  only:
+  - **R4:** a TARGET path holding a line break or leading or trailing
+    whitespace, which could not be written into a bullet;
+  - **R2:** a SOURCE under the archive subtree, refused even when the edit
+    would be a no-op.
+  An archived TARGET needs no `--reason` and gets no `Revision:`.
+  Recognized verbs keep the two-document path above byte for byte.
+
+### `lifecycle` (M30)
+
+- `plan_lifecycle(root, config, *, files, state, date_str) ->
+  LifecyclePlan` is pure apart from reading. For each named document it
+  dedupes on the root-relative path (first occurrence kept), parses it with
+  the tree's config, and stages a `LifecycleEdit`: `"unchanged"` when the
+  document is already in `state`; otherwise `"set"`, with `Lifecycle:` then
+  `Updated:` rewritten through `set_metadata_field`. As defensive
+  programming errors it raises `ValueError` for:
+  - an `archived` or unknown state;
+  - an archive-subtree source;
+  - a source already reading `archived`.
+- `apply_lifecycle_plan(plan)` writes each `"set"` edit sequentially
+  through `atomic_write`. It has no staged publish and no rollback, which is
+  `docs project set`'s precedent for a batch of independent single-file
+  edits. `lifecycle_plan_to_json` gives the one `--json` record that preview
+  and apply share.
+- `_cmd_lifecycle` follows `_cmd_project_set`'s shape and validates
+  everything before writing, in the frozen order L1–L12:
+  1. the grammar split `*files, state`;
+  2. the strict root and the config;
+  3. the target state — `archived` first, then the configured vocabulary;
+  4. an archive-subtree pre-pass over every named document, independent of
+     argument order;
+  5. outside-root, missing and unparseable documents;
+  6. an active-tree document already reading `archived` (`status-drift`).
+  An all-unchanged batch or `--dry-run` writes nothing, INDEX included.
+  Otherwise the changed documents are written and the INDEX is refreshed
+  once; a failed refresh exits 2 with the documents already written.
+- **Never `archived`.** No transition leads into or out of `archived`.
+  `docs archive` alone moves lifecycle and location together, and the
+  planner's guards back the command's refusals.
 
 ### `archive` (M26, extended by M28 and M28a)
 

@@ -37,7 +37,9 @@ checklist and the test matrix synchronized.
 - Step 2 (Phases 5–10): **in progress** on
   `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`.
   Phases 5–7 are complete. Step 2 was interrupted after Phase 7 and resumed
-  on 2026-10-28; Phases 8–9 are complete. See the phase sections below.
+  on 2026-10-28; Phases 8–10 are complete and implementation is done. The
+  Step 2 review is pending (*Step 2 review-pass-001*). See the phase sections
+  below and the *Milestone completion summary*.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -109,7 +111,8 @@ checklist and the test matrix synchronized.
   claude-T2 and claude-T3 fixed; patch bloat in line with precedent (see the
   pass entry below). Step 1 review-pass-001 triaged — GPT: sound, no
   subjective findings; claude-T1, T2 and T3 fixed; claude-T4 waived with
-  reason (*Follow-ups* item 10).
+  reason (*Follow-ups* item 10). Step 2 self-triage (Phase 10): every row is
+  fixed, kept or waived with a reason — see *Phase 10* › *Taste triage*.
 
 ## TDD phase progress
 
@@ -124,7 +127,7 @@ checklist and the test matrix synchronized.
 | 7. Update Tool/Wrapper Layer | Complete | 2026-10-27 | Help text for `relate`, `stamp`, `--body-from` and `main()`; specs reconciled (no change needed); the skill body, *Three things never to hand-edit*, *Quality artifacts*, `use-cases.md` (frozen P1.3 row + two new rows), the adoption playbook (frozen P1.3 bullet), *Linking reports*; README; 2.1.0 and `## 2.1.0 — UNRELEASED`; feedback-log closures, the promotion note, follow-ups 1, 2, 3, 7, 8, 9 registered. 1656 passed; stale-wording grep empty. |
 | 8. Run Tests (GREEN) | Complete | 2026-10-28 | 1656 passed; ruff, format, mypy, `docs check`, mirrors and snapshot clean. Id/AST proof against `e48adb9` is exactly the authoritative mapping (1504 → 1656, the 4 renamed ids removed, 156 added). Property 16, fuzz 24, schema and security passed. Mutation smoke 45/45 killed: 43 planned plus 2 message-preserving variants, after correcting DEF-2's fixture (M05). 0 mocks. DEF-1 (a help assertion that depended on terminal width) fixed. |
 | 9. Integrate / Accept / Dogfood | Complete | 2026-10-28 | F1–F10 on throwaway trees, unattended. The primary use case needed zero hand-edits and a repeat was a zero-byte no-op. Both suite probes pass on the editable build and a local wheel and fail on 2.0.0. Closeout records are identical for the dogfood trio (with a byte-identical `--body-from` twin) and for the real M30 trio rewritten through verbs. The leg-1 refusal and the archive-boundary refusals hold. The D10 extension and date-format trees work, with the E11 and E12 contrasts. This tree reindexes identically to v2.0.0. Runtime recorded; real tree and host untouched. |
-| 10. Quality, Docs, Refactor | Pending | — | `/simplify`; close `architecture.md` and `test-strategy.md`; hand-off note to a live home; taste triage and boundary sweep; completion summaries. |
+| 10. Quality, Docs, Refactor | Complete | 2026-10-28 | Light `/simplify`: S1 taken (`_stamp_config_failure`'s completeness test made explicit; M40–M43 re-proven), S2–S7 rejected with reasons. `architecture.md`: the `lifecycle` and `relate` module map, a `### lifecycle (M30)` section and the one-sided relate path, plus accuracy fixes. `test-strategy.md`: two critical paths and `vocab-extension/`. The D9 hand-off in `feedback-log.md`. Follow-ups 6 (declined) and 10 (a candidate convention) decided. Taste triage, boundary sweep, surface parity and the archive-readiness preview done. |
 
 ## Setup record — 2026-10-26
 
@@ -2327,6 +2330,267 @@ Nothing is produced but unconsumed.
 - The closeout records are identical in F3a and F3b.
 - The runtime is recorded.
 
+## Phase 10 — Quality, Docs, Refactor — 2026-10-28
+
+### Objective
+
+- Run a light `/simplify` pass over the milestone's `cli.py` diff; Step 3
+  runs the second pass.
+- Close `architecture.md` and `test-strategy.md`.
+- Write the D9 hand-off note into its live home and decide *Follow-ups*
+  items 6 and 10.
+- Complete the taste triage and the boundary sweep, reconcile the shipped
+  surface, and write the completion summaries.
+
+### `/simplify` — light pass, scoped to `git diff 3e2c3ca -- src/docs_cli/cli.py`
+
+**Why it runs now.** At Standard risk, Step 3's code changes get no
+dual-provider review. Anything material therefore lands before the Step 2
+review, so the reviewers see the code that ships. The pass is light because
+the new code already reads like its anchors.
+
+**Baseline** at `53bd069`:
+- 1656 passed;
+- mutation smoke 45/45, property 16, fuzz 24;
+- 0 mocks;
+- Standard-risk gate set.
+
+**Taken — S1: `_stamp_config_failure`'s completeness test, from clever to
+obvious.**
+- **Before.** The three fields were unpacked from a generator over a
+  generator, which turned every non-`str` value into `""`, followed by a
+  truthiness test:
+
+  ```python
+  lifecycle, role, updated_raw = (
+      value if isinstance(value, str) else ""
+      for value in (metadata.get(label) for label in ("Lifecycle", "Role", "Updated"))
+  )
+  if not (lifecycle and role and updated_raw):
+  ```
+
+- **After.** Three named `.get`s and one explicit
+  `isinstance(…, str) and …` test.
+- **Why the truthiness test could go.** Measured first:
+  `parse_metadata_block` stores an inline value only when it is non-empty
+  (`if rest_stripped:`). A label with an empty value is parsed as a bare
+  label, `()`, exactly as a multi-valued group is a tuple. So "complete" is
+  exactly "each of the three is a `str`".
+- **Behaviour.** Identical: the same three outcomes for every block shape.
+  mypy narrows all three to `str` without a cast, and the diff is +6 / −6.
+- **Re-proof.** M40–M43 were re-applied to the simplified code on an
+  extraction:
+  - M40 (`if True:`) is killed by 6 tests;
+  - M41 (`if False:`) by 12;
+  - M42 (also requiring `Project:`) by 1;
+  - M43 (a final `return "complete block"`) by 1.
+  These are the same counts as Phase 8, so no adequacy was lost. The stamp
+  suite (27) passed before and after.
+
+**Evaluated and rejected:**
+
+| Candidate | Rejected because |
+|---|---|
+| S2 — collapse `_cmd_lifecycle`'s two `resolve().relative_to()` passes (the L7 pre-pass and the L8–L10 loop) | It is verbatim parity with the `_cmd_project_set` anchor, which has the same pre-pass and per-target resolution. The separate pre-pass is what makes L7 independent of argument order, so that it outranks a missing or malformed sibling (pinned by the refusal-order test). |
+| S3 — a shared dry-run / no-op / apply / reindex / emit tail for `relate` and `lifecycle` | There are only two sites, and their plan and printer types differ. A helper taking callables would add indirection to read two exit paths. |
+| S4 — factor the `index_refreshed` capture block | It appears twice, and the pre-existing verbs keep their own return-2 tail inline. |
+| S5 / S6 — drop `plan_lifecycle`'s second parse, or its `ValueError` guards | Both are frozen by P1.9 and pinned by the planner tests. The guards are what M03, M05 and M07 kill, and the second parse was accepted at Phase 6, with its runtime recorded in Phase 9 F8. |
+| S7 — rewrite the R4 predicate `len((rel + "x").splitlines()) != 1 or rel != rel.strip()` | Its literal text is frozen in P1.2, and its semantics ("any boundary `str.splitlines()` recognises") are stated in `cli.md`. |
+
+### Documentation closed
+
+- **`architecture.md`** — demanded by the milestone:
+  - the module map gains `relate` and `lifecycle` lines;
+  - a new **`### lifecycle (M30)`** section covers the planner, the
+    sequential apply with no rollback (the `project set` precedent), the
+    L1–L12 order and "never `archived`";
+  - **`### relate (M25)`** gains the one-sided free-form path: the grammar,
+    `inverse=None` with SOURCE staged alone, TARGET never read via
+    `parse_endpoint=False`, R4, R2, and no `--reason` or `Revision:` for an
+    archived TARGET.
+- **`architecture.md`** — accuracy fixes (S2R-OQ-6):
+  - `model` gives the real signature, `parse(text, path, root, *,
+    config=None)`, with one sentence on D10;
+  - `walker` says each document is parsed with the tree's config;
+  - *Display order* and *INDEX renderer format* › *Role group order* both
+    say extension-role groups follow the built-ins, alphabetically;
+  - the module-map size is `~9.5k` lines (9,498).
+- **In-passing correction (the M28a precedent).** The module map had lacked
+  a `relate` line since M25. The new line covers both M25 and M30. No
+  `stamp` or `project set` line was added, because nothing demands one.
+- **`test-strategy.md`:**
+  - *Critical paths* gains two entries: "no `docs lifecycle` transition
+    reaches `archived`" (target, archive-subtree source and active-tree
+    `archived` source) and "a free-form `relate` rewrites exactly one managed
+    document";
+  - *Fixture sources* gains `vocab-extension/` (OQ-8), with its contents and
+    the six walking-verb modules that copy it.
+- **D9 hand-off note.** It lives in the open 2026-10-26 `feedback-log.md`
+  entry, which is outside the archive scope.
+  - Re-checked at Phase 10 start: the tracker has one row (100,
+    `lifecycle-and-free-form-relate`, `active`), so no publish milestone is
+    registered (*Follow-ups* item 4).
+  - The dated `Hand-off (2026-10-28, M30 Phase 10)` bullet gives the
+    publish milestone three tasks:
+    1. publish per `release-runbook.md`, dating `## 2.1.0` and stripping
+       its "A separate publish milestone ships it." sentence;
+    2. re-run both probe replicas and the raw probes against the
+       PyPI-served wheel;
+    3. refresh the host skills per `CLAUDE.md`, noting the host symlink
+       `~/.claude/skills/docs-local-source-backup-20260525-134621`.
+  - It also names what the suite pin-bump PR must do: bump
+    `DOCS_CLI_VERSION`, replace the hand-edit prescriptions, delete
+    `verbless-metadata-edits.md`, and drop Step 0's up-front approval. After
+    that, the CI guard must read `lifecycle verb: True` / `free-form relate:
+    True`.
+  - The entry stays open until that suite release ships.
+- ***Follow-ups* item 6 — declined and closed** (S2R-OQ-1): no `parent-of`
+  edge is written on `milestone-plan.md`. The *Home* cell gives the reason.
+- ***Follow-ups* item 10 — registered** (S2R-OQ-2) as the open, unowned
+  2026-10-28 *Candidate project convention: state a binding decision once*
+  entry in `feedback-log.md`. It will be offered as a taste anchor at the
+  next milestone's setup; `CLAUDE.md` is untouched. Item 4's *Home* cell
+  now points at the hand-off.
+
+### Surface-parity reconciliation
+
+- **Read side by side.** These agree with the CHANGELOG `## 2.1.0 —
+  UNRELEASED` section and with `cli.md`:
+  - `docs --help` (the brace list holds `lifecycle`);
+  - `docs lifecycle --help`;
+  - `docs relate --help`, `docs relate add --help` and `docs relate remove
+    --help`;
+  - `docs stamp --help` (the refusal);
+  - `docs new --help` (the leading `Related:` group).
+- **One wording checked.** `docs lifecycle --help` says "Validate-all-first
+  atomic semantics", but the writes are sequential with no rollback. The
+  phrase matches `docs project set --help` verbatim, and `cli.md` states the
+  exact contract (validate everything, then an atomic tmpfile + fsync +
+  rename per document, in argument order). It is kept for anchor parity.
+- **Stale-wording grep — empty.** It checked 17 surfaces, whitespace-
+  normalised: every skill `.md`, `cli.md`, `convention.md`, README,
+  CHANGELOG, `architecture.md`, `test-strategy.md`, and five `--help`
+  outputs.
+- The CHANGELOG stays **UNRELEASED** (D9).
+- Neither `cli.md` nor `convention.md` changed in Phase 10, so the mirrors
+  needed no re-copy.
+
+### Taste triage
+
+| Source | Finding | State | Reason |
+|---|---|---|---|
+| Step 0 review | claude-T1 | partially fixed, remainder waived | as recorded in *Step 0 review-pass-001* |
+| Step 0 review | claude-T2, claude-T3 | fixed | *Step 0 review-pass-001* |
+| Step 1 review | claude-T1, T2, T3 | fixed | *Step 1 review-pass-001* (the agreement sweep 53 → 1 id; CLI fuzz invalid set fixed at 11; `_symbol` removed) |
+| Step 1 review | claude-T4 (D10 restated six or more times) | waived for M30 | the restated copies were all corrected; registered as a candidate convention (*Follow-ups* item 10, `feedback-log.md` 2026-10-28) |
+| Step 2 self-triage | provenance tags in help text (`(M30 — D1–D3)`) | kept (not a finding) | pattern adherence: `stamp`, `project set` and `relate` cite their milestone the same way |
+| Step 2 self-triage | two parses per named lifecycle document | waived | frozen `plan_lifecycle` signature (P1.9); cost bounded by the named files; measured in Phase 9 F8 (`lifecycle` 131 ms against `touch` 129 ms) |
+| Step 2 self-triage | uncaught `OSError` on a lifecycle read or write | waived | the `project set` / `touch` precedent; OQ-2's sequential writes add no new surface |
+| Step 2 self-triage | DEF-1, a help assertion that depended on terminal width | fixed | Phase 8 |
+| Step 2 self-triage | DEF-2, a planner-guard test masked by another guard | fixed | Phase 8 (M05 re-proven) |
+| Step 2 self-triage | the R1 message interpolates `_RELATE_VERB_RE.pattern`, so the grammar's character-class mutants are killed mostly through the message | kept, with evidence | the message is frozen to name the grammar, and deriving it from the one pattern keeps the two from drifting; the message-preserving variants M16b and M17b show the semantic cases kill independently |
+| Step 2 self-triage | S1, the completeness test written as a nested generator | fixed | `/simplify`, above |
+| Step 2 self-triage | patch bloat | explained | `cli.py` is +629 / −116, net **+513**, against the anchor's +310 to +510 — at the top of the range, for one verb, one widened verb, D10 at nine sites, the stamp refusal and the frozen docstrings. Tests are +3,105 / −96 against the anchor's +900 to +1,300, driven by authored-id breadth (156 ids), as both Step 1 reviewers judged. |
+
+Every taste finding is fixed, kept with a reason, or waived with a reason.
+None is untriaged.
+
+### Boundary sweep (liveness, P1.9 outputs → consumers)
+
+| Output | Consumer(s) |
+|---|---|
+| `parse(..., *, config=None)` | the nine call sites (`walk`, `query_docs`, `plan_lifecycle`, `_cmd_archive`, `_known_projects`, `_cmd_project_set`, `_resolve_relate_endpoint`, `_cmd_lifecycle`, `_cmd_stamp`). Every production call passes `config`. The `None` default is contractual — the D10 deliverable requires "a bare call keeping the built-in defaults" (C22), pinned by `test_bare_parse_keeps_the_built_in_defaults`, and the pre-existing parser tests call it bare. |
+| `_RELATE_VERB_RE`, `relate_verb_in_grammar` | `plan_relate`'s guard; `_cmd_relate`'s R1 test and message |
+| `RelatePlan.inverse: str \| None` | `plan_relate`'s one-sided branch; `relate_plan_to_json`'s `inverse` (C15) |
+| `_resolve_relate_endpoint(..., config, *, parse_endpoint=True)` | `_cmd_relate`: SOURCE with the default, TARGET with `not free_form` |
+| `LifecycleEdit.path` / `.new_text` | `apply_lifecycle_plan` |
+| `LifecycleEdit.rel` / `.before` / `.change` | the `--json` record and the human lines; `.change` also drives `apply`'s filter and the all-unchanged no-op |
+| `LifecyclePlan.state` / `.date_str` / `.edits` | the record (`state`, `date`, `edits`) and the lines |
+| `lifecycle_plan_to_json`, `_print_lifecycle_lines` | `_cmd_lifecycle` (C15, P1.1) |
+| `_stamp_config_failure` | `_cmd_stamp`'s P1.5 refusal |
+| `render_index`'s extension groups | `INDEX.md` (C25) |
+| doc sections written this step | the `architecture.md` and `test-strategy.md` sections are demanded by the milestone's Phase 10 or by accuracy (S2R-OQ-6); the hand-off by D9; the candidate entry by S2R-OQ-2 |
+
+No speculative output is left, so no ledger entry is needed.
+
+### Archive-readiness preview
+
+On a fresh copy of the final docs tree, `docs archive
+lifecycle-and-free-form-relate.md --cascade-dry-run --cascade-only
+'lifecycle-and-free-form-relate-*' --json` exited 0 and wrote nothing.
+- **Selected:** exactly the two companions,
+  `lifecycle-and-free-form-relate-impl.md` and
+  `lifecycle-and-free-form-relate-test-matrix.md`.
+- **Not selected:** `milestone-plan.md` (`child-of`), and `cli.md`,
+  `convention.md`, `test-strategy.md` and `status.md` (`pairs-with`).
+- **No leg-1 refusal.**
+- **Leg-2 strands:** body links only — `feedback-log.md` 3,
+  `milestone-plan.md` 1 (the tracker cell) and `status.md` 6.
+
+Phase 9 F3b applied the same scoped closeout to a copy and ended `docs check`
+clean. Step 3's own preview remains the authoritative one.
+
+### Verification
+
+| Gate | Result |
+|---|---|
+| `.venv/bin/ruff check .` / `ruff format --check .` / `mypy src/ tests/` | clean (50 files formatted; no issues in 51) |
+| `.venv/bin/python -m pytest -q --tb=line -rfxXEs` | **1656 passed**, 0 failed / skipped / xfailed / errors, both before S1 and after the Phase 10 edits |
+| `tests/test_cli_stamp.py`, and M40–M43 on the simplified code | 27 passed; 4/4 killed |
+| `docs check .` from the docs root | no violations, exit 0 |
+| `docs check . --stale 14` (information only) | exit 1, with five `stale` warnings on evergreen documents (`charter.md`, `definition-of-ready.md`, `dual-status-adr.md`, `release-runbook.md`, `vocab-adr.md`) — two fewer than at Step 1, because `architecture.md` and `test-strategy.md` were updated |
+| `cmp` of both mirrors and of the INDEX snapshot | byte-identical |
+| stale-wording grep (17 surfaces) | empty |
+
 ## Milestone completion summary
 
-_Not complete._
+**Implementation complete (2026-10-28) — Phases 1–10 done.** The tracker row
+stays `active`. The Step 2 review (*Step 2 review-pass-001*) and the Step 3
+second simplify pass and archive closeout remain. 2.1.0 is **unreleased**;
+publishing is a separate milestone (*Follow-ups* item 4; the hand-off is in
+`feedback-log.md`).
+
+- **What shipped** (branch `lifecycle-and-free-form-relate/phases-5-10` on top
+  of Step 1):
+  - `docs lifecycle <file>... <state>` (D1–D3), which never reaches
+    `archived` (D2);
+  - one-sided free-form `docs relate add|remove` within `[a-z][a-z0-9-]*`
+    (D4–D6, R1–R4), with recognized verbs byte-for-byte unchanged;
+  - archive-candidate and strand invariance, locked (D7);
+  - the `--body-from` leading-`Related:` route, locked and documented (D8);
+  - `parse()` honouring the tree's vocabulary and `date_format` at every
+    call site, extension-role INDEX groups, and the `docs stamp` refusal
+    (D10);
+  - surface parity across the help text, `cli.md`, `convention.md`, the
+    bundled skill and its byte-identical references, README and CHANGELOG
+    (D9);
+  - version 2.1.0, with `## 2.1.0 — UNRELEASED`.
+- **Evidence headline:**
+  - **1656 passed**, 0 failed, with ruff, format, mypy and `docs check`
+    clean. Mirrors and the INDEX snapshot are byte-identical.
+  - Every pre-existing id is present and GREEN under the authoritative old →
+    new mapping (the id and AST proof against `e48adb9`).
+  - Mutation smoke **45/45 killed**. Property 16 and fuzz 24 passed. 0 mocks.
+  - The primary use case was dogfooded with zero hand-edits, and both suite
+    probes pass on a locally built wheel.
+  - Closeout records are identical for `relate`-linked and hand-linked
+    trios, including the real M30 trio.
+  - This tree reindexes byte-identically to v2.0.0.
+- **Corrections and decisions in Step 2:**
+  - DEF-1 and DEF-2 (authored checks corrected under Check calibration,
+    Phase 8);
+  - the message-preserving grammar mutants M16b and M17b (Phase 8);
+  - S1 (`/simplify`, Phase 10);
+  - S2R-OQ-1 … 6 (conductor-resolved at the Step 2 resume planning, Phase 8).
+- **Open follow-ups**, all in `feedback-log.md` and none blocking:
+  - the 2026-10-26 promotion entry, open until the suite pin moves, which
+    carries the hand-off;
+  - six 2026-10-27 entries (*Follow-ups* items 1, 2, 3, 7, 8, 9);
+  - the 2026-10-28 candidate convention (item 10).
+- **Remaining risks:**
+  - the intermittent `test_d4_install_skill_is_idempotent` segfault (not
+    seen in Step 2; no product code involved);
+  - the host symlink `~/.claude/skills/docs-local-source-backup-20260525-134621`
+    → this repository's skill, which shows the 2.1 skill beside the 2.0.0
+    host binary until the publish milestone refreshes the host (Phase 7
+    observation, in the hand-off).

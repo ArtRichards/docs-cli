@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: log
 Project: docs
-Updated: 2026-10-27
+Updated: 2026-10-28
 
 ## Purpose
 
@@ -14,6 +14,13 @@ without starting implementation. When feedback is promoted, its entry remains
 as the discovery and decision audit source and records the owning milestones.
 
 ## Entries
+
+### 2026-10-28 — Candidate project convention: state a binding decision once
+
+- Source: M30 Step 1 review (claude-T4), waived for M30 and recorded as its *Follow-ups* item 10. The Step 2 resume planning (S2R-OQ-2, conductor-resolved) registered it here.
+- Observation: M30's task plan restates its binding decision D10 in six or more places — the Contract, the Deliverables, the success criteria, the upgrade note, the matrix and the decision itself. So the Step 1 review's wording correction (gpt-S3 / claude-S1) had to touch every copy. A milestone doc that states each binding decision once, and points to it everywhere else, would make that drift impossible.
+- Why a candidate, not a rule: it rests on one waived finding. The compounding rule promotes a convention into agent context only once it is proven and recurring, so this is offered as a taste anchor at the next milestone's setup rather than written into `CLAUDE.md`.
+- Ownership: the next milestone's setup (offer it as a taste anchor). Status: **open, unowned.**
 
 ### 2026-10-27 — `docs new --body-from` admits any leading bare-label group as metadata, not only `Related:`
 
@@ -86,6 +93,18 @@ as the discovery and decision audit source and records the owning milestones.
   - **Finding 3 stopgap → the suite drops its carve-outs.** `create-milestones` and its siblings stop sanctioning hand-edits of `Lifecycle:` and free-form `Related:` and ask the operator instead, until M30 ships and the suite prescribes the verbs. The alternative — the bundled skill sanctioning the carve-outs — was declined, keeping *run the verb* unweakened.
 - Observation from the promotion itself: `docs new --body-from` accepts a body whose first block is a `Related:` group and the result parses as metadata (`docs list --json` shows the edges; `docs check` clean). So free-form edges **can** be written through the CLI at creation time today — the gap is editing them on an existing document. M30 Phase 1 should decide whether that is a supported path to document or an accident to pin.
 - M30 answers and status (2026-10-27, Phase 7): setup questions Q1–Q9 are answered as M30's binding decisions D1–D10 — **finding 1** → `docs lifecycle <file>... <state>`, a flat verb with `docs project set`'s grammar over the top-level states, never `archived` as a target and never an archived document as a source, `Updated:` bumped only where the lifecycle moved, one reindex (D1–D3; Q1); **finding 2** → `docs relate add|remove` writes a free-form verb one-sided, on SOURCE alone, within the operator-chosen grammar `[a-z][a-z0-9-]*` (D4, D6; Q3), an archived SOURCE refused and any existing file accepted as TARGET (D5; Q2, Q6), recognized verbs byte-for-byte unchanged, and the archive candidate set and strand refusal locked unchanged (D7); **the observation above** → the `--body-from` leading-`Related:` group is a supported creation-time route, locked by test and stated in `cli.md`, with the bundled skill's two sidecar examples rewritten to forms that work (D8; Q5); **release** → 2.1.0 through a separate publish milestone, with the hand-off recorded here at M30's closeout (D9; Q4, Q9); and, by operator decision on Q7, `parse()` honours the tree's configured vocabulary and date format in every verb (D10), closing the two config-blindness entries in this log. Risk Standard (Q8, operator). Implemented and GREEN on `lifecycle-and-free-form-relate/phases-5-10` — **unreleased**, pending the 2.1.0 publish. This entry stays **open**: the stopgap retires only in the Agent Playbook Suite release that pins the docs-cli version carrying M30.
+- Hand-off (2026-10-28, M30 Phase 10), for the publish milestone that ships 2.1.0. No such milestone is registered yet (M30 *Follow-ups* item 4, operator); it follows the M19 → M20 pattern. Its closeout must:
+  1. **Publish 2.1.0** per [`release-runbook.md`](release-runbook.md): date the `## 2.1.0 — UNRELEASED` CHANGELOG header at publish and strip its "A separate publish milestone ships it." sentence.
+  2. **Re-run both Agent Playbook Suite probes against the PyPI-served wheel** — the replicas `tests/test_cli_lifecycle.py::test_help_verb_list_names_lifecycle_for_the_playbook_guard` and `tests/test_cli_relate.py::test_playbook_guard_free_form_dry_run_probe_exits_0`, plus the raw probes. This validates M30's assumption that the suite guard's probes stay as measured on 2026-10-26; M30 Phase 9 already passed them on a locally built wheel.
+  3. **Refresh the host skills**, per `CLAUDE.md`: `docs install-skill --force` from the published version, then sweep the workflow skills' docs-cli prescriptions for the new surface. Note that `~/.claude/skills/docs-local-source-backup-20260525-134621` is a pre-existing symlink to this repository's `src/docs_cli/skill`, so it already shows the 2.1 skill while the host binary is 2.0.0 (M30 Phase 7 observation).
+
+  The Agent Playbook Suite pin-bump PR that follows must:
+  - bump `DOCS_CLI_VERSION`;
+  - replace every operator-approved `Lifecycle:` and free-form `Related:` hand-edit prescription with `docs lifecycle` / `docs relate add|remove`;
+  - delete `_shared/references/verbless-metadata-edits.md`;
+  - drop ship-milestone Step 0's up-front approval.
+
+  After that, its CI guard *Validate verbless-metadata stopgap matches the pinned docs-cli* must read `lifecycle verb: True` and `free-form relate: True`. This entry stays **open** until that suite release ships.
 
 ### 2026-08-15 — Issue #1: cascade parent-archiving, archived re-dating, and post-move validation gaps
 

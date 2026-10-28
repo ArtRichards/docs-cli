@@ -33,8 +33,8 @@ _Generated 2026-10-28. 16 docs active, 61 archived._
 
 ### Active — Log
 
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-28.
 - [lifecycle-and-free-form-relate-impl.md](lifecycle-and-free-form-relate-impl.md) — _log_ — Chronological implementation log for M30 — Lifecycle verb and free-form `docs relate` (semantic slug…. Updated 2026-10-28.
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-27.
 
 ### Active — Decision
 
@@ -47,8 +47,8 @@ _Generated 2026-10-28. 16 docs active, 61 archived._
 
 ### Active — Reference
 
-- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-08-16.
-- [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-08-16.
+- [architecture.md](architecture.md) — _reference_ — Single Python module at `src/docs_cli/cli.py`, exposed as the `docs` console-script via the `docs_cli.cli:main` entry…. Updated 2026-10-28.
+- [test-strategy.md](test-strategy.md) — _reference_ — | Layer | Tool | Scope | |---|---|---| | Unit | pytest | Parser, walker, render, vocab loading. Pure-function focus. |…. Updated 2026-10-28.
 - [definition-of-ready.md](definition-of-ready.md) — _reference_ — Gate-check before implementation begins. Implementation does not start until every item is green.. Updated 2026-05-22.
 
 ## Project — ideas

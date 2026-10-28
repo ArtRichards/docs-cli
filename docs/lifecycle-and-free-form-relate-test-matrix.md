@@ -343,6 +343,9 @@ Agent Playbook Suite probes against a locally built wheel
   - 43 planned mutants plus 2 message-preserving variants of the grammar
     mutants.
   - M05 survived at first; correcting the authored fixture (DEF-2) killed it.
+  - Phase 10's `/simplify` (S1) rewrote `docs stamp`'s completeness test.
+    M40–M43 were re-proven on the simplified code with the same kill counts
+    (6, 12, 1, 1), so adequacy is unchanged.
 - Fuzz (Phase 8): **24 passed**, seed `20261027`.
   - The pure predicate: 300 valid, 300 invalid and `""`.
   - The CLI: 30 valid verbs plus 11 invalid categories.

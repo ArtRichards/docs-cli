@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: reference
 Project: docs
-Updated: 2026-08-16
+Updated: 2026-10-28
 
 Related:
 - pairs-with: architecture.md
@@ -112,6 +112,18 @@ Three sources of test docs, in increasing realism:
      window is ever passed to them, so nothing rots. Mutation-shaped cases
      use inline `tmp_path` builders instead, because those tests write and
      then byte-compare — a `copytree` would be pure overhead.
+   - `vocab-extension/` — the M30 tree for walk-level D10 assertions. Its
+     `.docs.toml` adds `add_lifecycles = ["shipped"]` and
+     `add_roles = ["adr"]`. It holds three documents: one in the `shipped`
+     extension state, one with the `adr` extension role, and one in the
+     built-in vocabulary.
+     - The walking-verb locks copy it: walker, `list`, `touch`, `mv`,
+       `project set`, `project rename`.
+     - The `docs check` sweeps include it.
+     - The configuration-selected parse-agreement sweep leaves it out,
+       because it configures extensions.
+     - Structure only, never dates.
+     - Every non-default `date_format` case uses inline `tmp_path` builders.
 3. **`docs/`** (this repo's own docs root) — real-world tree, used for dogfood and integration tests. Anything that breaks here breaks the project's own self-documentation.
 
 ## Critical paths
@@ -131,6 +143,12 @@ Each must have at least one test before merging:
 - Archive apply: a mid-execution `OSError` produces an exact partial-state admission naming what moved and what did not — never a silent partial write that exits 0.
 - Coordinated move: a rename and a scoped archive each leave `docs check` **clean**, with the diff touching only destination tokens and the metadata the move already owned — the tool must never produce a tree that fails its own gate.
 - Strand-check leg 1: a plan that would archive a document a still-active document declares itself `child-of` refuses at exit 2 with **zero bytes written** and both ends named, while a legitimate milestone closeout **completes** — the over-fire lock is as required as the refusal, because a check that fires on correct trees is one operators route around.
+- Lifecycle: no `docs lifecycle` transition reaches `archived`. Each of these refuses at exit 2 with zero bytes written, and the whole batch refuses when it holds any one of them:
+  - the target state `archived`;
+  - a source under the archive subtree;
+  - an active-tree source already reading `Lifecycle: archived`.
+  `docs archive` alone moves lifecycle and location together.
+- Free-form relate: a free-form `docs relate add|remove` rewrites **exactly one** managed document — SOURCE — plus one INDEX refresh. TARGET is never written, and a no-op or `--dry-run` writes nothing, INDEX included.
 
 ## Coverage targets
 
