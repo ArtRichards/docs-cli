@@ -948,7 +948,7 @@ replaces this section's values and says so.
 | D9 re-runs | Three, all 2026-10-28: after the audit's docstring change (*Step 1 audit*), after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*), and after Step 2's G2 calibration (*Phase 5* › *D9 re-run for the G2 calibration*). Every probe result line equals the Phase 4 record below |
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
-| Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` |
+| Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` — the Phase 1 record. Since Phase 9.3 the recorded destination is `~/.claude/skills/docs` (D10); host checks compare pairwise (OQ-S2-3) |
 | `~/.pypirc` shape (P1.5's command, as fixed by the re-review) | `mode 0o600`; `sections-are-distutils,pypi,testpypi True`; `pypi username==__token__ True password-starts-pypi- True password-len>100 True`; the same line for `testpypi` |
 | `origin/main` (R8c's reference) | `193fc718439c39facfa7b3b60066c61d925314f7`, equal to GitHub's `main` via `gh api`; no fetch was needed |
 
@@ -1502,7 +1502,7 @@ false-stop risks. The conductor resolved all five under Standard authority
 
 | # | Question | Resolution | Where it lands |
 |---|---|---|---|
-| OQ-S2-1 | G2 compares `docs index --dry-run` with the copy's `INDEX.md` byte for byte, but `render_index` stamps today's date; on any day after `d5a23ef`'s `_Generated 2026-10-28.`, Phase 7's probe would fail G2 after the upload | **(A)**: calibrate G2 before build (c) — normalise only the `_Generated YYYY-MM-DD.` stamp on both sides with the product test's regex; reproduce first; run D9's script re-run set plus a cross-day control and an edited-entry mutant. Not a release input, so no `.postN` | P1.2 (G2 row); *Release anchors (current)*; the record below |
+| OQ-S2-1 | G2 compares `docs index --dry-run` with the copy's `INDEX.md` byte for byte, but `render_index` stamps today's date; on any day after `d5a23ef`'s `_Generated 2026-10-28.`, Phase 7's probe would fail G2 after the upload | **(A)**: calibrate G2 before build (c) — normalise only the `_Generated YYYY-MM-DD.` stamp on both sides with the product test's regex; reproduce first; run D9's script re-run set plus a cross-day control and an edited-entry mutant. Not a release input, so no `.postN` | P1.2 (G2 row); *Release anchors (current)*; the record below (D9 and the Phase 5 objective point here) |
 | OQ-S2-2 | The known intermittent `test_d4_install_skill_is_idempotent` segfault (M30's log) would trip "pytest other than 1671 passed" at the upload gate | **(B)**: one full re-run, only when that test crashing is the sole non-pass; the re-run must report 1671 passed; both runs recorded; anything else stops | *Error cases*, the general P1.5 expectation row |
 | OQ-S2-3 | The update cache's 24-hour throttle lets any unisolated host `docs` run move its sha against the Phase 1 baseline | **(B)**: pairwise — each block's after-sha against its before-sha; a change between blocks is recorded with its mtime, not attributed to the milestone | P1.3 (*The host check*); the host-state stop row points there |
 | OQ-S2-4 | Phase 7's `pip install` and Phase 9's `pipx upgrade` had no index-lag poll; a lagging index would hit a stop row after the upload | **(A)**: poll the PEP 691 simple JSON (at most 10 × 30 s) until both 2.1.0 files are listed with sha256 = (c)'s | P1.5 Phase 7; the Phase 9 objective points there |
@@ -1549,12 +1549,14 @@ the write check (`p.unchanged`) stays, and the display name is unchanged.
 ### D9 re-run for the G2 calibration
 
 The probe changed after its Phase 4 run, so D9's script re-run applies. No
-release input changed, so `X` stands and there is no `.postN`. Every run used
-a fresh venv and scratch XDG; the host check was unchanged across the block.
+release input changed, so `X` stands and there is no `.postN`. Every wheel
+ran from a fresh venv, and every `docs` call ran with `HOME` and XDG in
+scratch (the probe's own isolation); runs 4, 6 and 7 used the editable
+build. The host check was unchanged across the block.
 
 | # | Run | Result |
 |---|---|---|
-| 1 | Rebuild from `X` in a scratch clone, `--outdir` in scratch, `SOURCE_DATE_EPOCH` unset | wheel `2c5fa0b3…`, sdist `1d327a97…` — equal to (a); `Generator: hatchling 1.33.0`; the isolated build env resolved `hatchling-1.33.0 packaging-26.3 pathspec-1.1.1 …`, the anchors' set |
+| 1 | Rebuild from `X` in a scratch clone, `--outdir` in scratch, `SOURCE_DATE_EPOCH` unset | wheel `2c5fa0b3…`, sdist `1d327a97…` — equal to (a); `Generator: hatchling 1.33.0`; the verbose log's install line began `hatchling-1.33.0 packaging-26.3 pathspec-1.1.1` (wrapped), and the equal wheel sha is the byte guard |
 | 2 | Probe, new blob, on a fresh venv of that wheel, `--group all --expect-version 2.1.0` | exit 0, 25 passed; result lines **identical** to the anchors' block |
 | 3 | Probe on a fresh `--index-url https://test.pypi.org/simple/ --no-deps` install of `docs-cli-rehearsal==2.1.0` (its `docs_cli/` equal to (a)'s extraction before running), `--no-version-check` | exit 0, 24 passed, 1 skipped; lines **identical** to the anchors' block with W1 SKIP |
 | 4 | Probe on the editable build, contract group | exit 0, 21 passed; lines equal the anchors' first 21 |
@@ -2018,7 +2020,8 @@ operator for `CLAUDE.md`; it stays open pending that decision.
   300–500 anchor).
 - **State-once, measured this step:** the five OQ-S2 decisions touched seven
   task-plan sites, five operative and two pointers, and no matrix or
-  `status.md` text (10.2).
+  `status.md` text (10.2); the closing audit added two dated pointers (D9,
+  the Phase 5 objective).
 
 ### 10.6–10.7 Cleanup and the gate
 
@@ -2080,6 +2083,65 @@ Step 3's own preview remains the authoritative one.
 - **The D13 merge sentence for the final report:** *merge promptly, with a
   merge commit, not squash or rebase — the PyPI page links `main`'s
   CHANGELOG; `v2.1.0` is at `33c936f447dfb31078dc0c07c9e4fd2297ed747d`*.
+
+## Step 2 audit — consistency, completeness and accuracy
+
+Date: 2026-10-29. The same-instance audit of Phases 5–10, run item by item
+against ship-milestone's consistency check, after the Phase 10 commit
+`fb57981`.
+
+### Findings and fixes
+
+| # | Finding | Fix |
+|---|---|---|
+| A1 | The feedback-log hand-off listed the sweep's prescription sites but not the census behind them, so it did not stand alone as the sweep table the success criteria name | It gains the census: patterns frozen and oracle-checked; 10 / 18 / 32 matched lines by target; the non-prescription lines named |
+| A2 | The 2026-10-26 entry carried two undated "Status:" bullets | The new one is dated `Status (2026-10-29)` |
+| A3 | *Release anchors (current)*' host row read as if the recorded destination were still absent | Marked as the Phase 1 record, with the Phase 9.3 transition and the pairwise comparison (OQ-S2-3) |
+| A4 | The G2 D9 record said every run used a fresh venv; runs 4, 6 and 7 used the editable build | Reworded: every wheel ran from a fresh venv, every `docs` call under the probe's scratch isolation |
+| A5 | The same record claimed the rebuild resolved the anchors' whole build environment; its log line was wrapped after `pathspec-1.1.1` and the scratch is gone | Reworded to what was seen; the equal wheel sha is the byte guard |
+| A6 | The plan's Phase 5 *Files* line omitted the probe and the amended plan rows | A dated note names both (OQ-S2-1) |
+| A7 | D9 said a script change is re-run "before Step 1 closes"; the G2 re-run ran in Step 2 | A dated note records that the same re-run ran in Phase 5, before build (c) |
+
+A6 and A7 are pointers, so the trial's measured site count now says so (the
+feedback log and *Taste triage (Step 2)*). None of the seven changes scope,
+a decision, a check's behaviour or anything shipped.
+
+### Checked and clean
+
+- **Completeness.** Every Phase 5–10 deliverable is ticked with evidence;
+  each phase has a log section, a dated progress row and a ticked checklist
+  item. Every success criterion in Step 2's range holds; the closeout ones
+  (the archive, the tracker row, the README's links after the archive) are
+  Step 3's. No TODO, placeholder or commented-out code.
+- **Code against spec.** `without_generated_date` implements P1.2's
+  amended G2 row: the product test's regex, both sides, one match; every
+  other byte and the write check unchanged; display name unchanged.
+- **Documents.** The tracker row is unchanged and `active`
+  (`milestone-plan.md` has no diff since `8515f1c`); `status.md` narrates
+  without counts or rows and points at D13 for the merge; the plan, log and
+  matrix agree on progress, counts, dates and the OQ-S2 resolutions; every
+  edited document was touched; the INDEX equals its snapshot and
+  `docs check .` exits 0. The remaining `UNRELEASED` mentions are dated
+  history or check definitions.
+- **Scope.** `d5a23ef..HEAD` touches only `CHANGELOG.md` (one line), the
+  probe (+11/−1), `docs/` and the INDEX snapshot; the release inputs are
+  unchanged since `X`; no host path under `$S` is committed.
+- **Liveness.** 9.6's walk; the new helper has one caller.
+- **Tests and adequacy.** GREEN from Phase 8 on; no check weakened — G2
+  still rejects an edited entry; no mocks; display names unchanged.
+- **Footprint.** The runbook's size is flagged for the reviewers (*Taste
+  triage (Step 2)*); the scripts' size stays carried to Step 3.
+
+### Surfaced for the operator
+
+- **The state-once convention's promotion into `CLAUDE.md`** — the trial's
+  verdict recommends it (the feedback-log 2026-10-28 entry); outside D1, so
+  not done. The conductor's report carries the decision packet.
+- **pipx touched its shared-libs pip marker** during the authorized `pipx
+  upgrade` (9.2). Recorded as part of that command, with no package changed;
+  surfaced for awareness, not as a stop.
+- **The merge** stays the operator's (D13), with *Frozen values for Step 3*'s
+  sentence.
 
 ## Milestone completion summary
 

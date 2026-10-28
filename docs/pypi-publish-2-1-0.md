@@ -361,6 +361,9 @@ Phase 4 run, it is re-run before Step 1 closes against two targets:
 - wheel (a);
 - a fresh install of the already-served rehearsal.
 
+*2026-10-28 (Step 2, OQ-S2-1): the G2 calibration changed the probe after
+Step 1 closed; the same re-run ran in Step 2's Phase 5, before build (c).*
+
 **A rehearsal failure is a stop**, not a re-run. The runbook's remedy, a
 version bump, would change what this milestone ships.
 
@@ -942,7 +945,9 @@ closes with `final-sync: ready`.
 - Objective: P1.5's Phase 5 block — the stop table's pre-upload
   preconditions, a D7 re-date if the day has rolled, and build (c) at the
   clean `HEAD`, the tag-target commit.
-- Files: the log, and `CHANGELOG.md` only if re-dated.
+- Files: the log, and `CHANGELOG.md` only if re-dated. *2026-10-28 (Step 2,
+  OQ-S2-1): also `tests/manual/release_probe.py` (the G2 calibration), and
+  this plan's rows amended by OQ-S2-1–5.*
 - Exit: every precondition is true and recorded. Otherwise, stop with nothing
   uploaded.
 
