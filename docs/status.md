@@ -58,7 +58,10 @@ moving through Step 2:
 - The version is bumped to 2.1.0, **unreleased**.
 
 The full suite of 1656 tests is GREEN. A hand-applied mutation smoke killed
-all 45 mutants. Per-phase evidence is in the
+all 45 mutants. A dogfood run on throwaway copies of this tree completed the
+primary use case — scaffold, link and promote a milestone trio — with zero
+hand-edits. Both Agent Playbook Suite probes pass against a locally built
+2.1.0 wheel. Per-phase evidence is in the
 [implementation log](lifecycle-and-free-form-relate-impl.md).
 
 **M30 milestone setup complete (2026-10-27).**

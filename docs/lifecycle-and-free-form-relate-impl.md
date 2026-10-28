@@ -37,7 +37,7 @@ checklist and the test matrix synchronized.
 - Step 2 (Phases 5–10): **in progress** on
   `lifecycle-and-free-form-relate/phases-5-10` from base `3e2c3ca`.
   Phases 5–7 are complete. Step 2 was interrupted after Phase 7 and resumed
-  on 2026-10-28; Phase 8 is complete. See the phase sections below.
+  on 2026-10-28; Phases 8–9 are complete. See the phase sections below.
 - Progress: **Milestone setup complete (2026-10-27); all nine setup
   questions RESOLVED — Q3, Q7 and Q8 by operator decision on 2026-10-27, each
   as recommended; Q1, Q2, Q4, Q5, Q6 and Q9 conductor-resolved. Step 0
@@ -123,7 +123,7 @@ checklist and the test matrix synchronized.
 | 6. Implement Offline/Core Path | Complete | 2026-10-27 | `docs lifecycle` registered (final help) over the planner; free-form `relate` with R1, R2, R4 and the never-parsed TARGET; the config at the seven `parse()` sites; `render_index`'s extension groups; the stamp refusal. 9 failed / 1647 passed: the 8 Phase-7 ids plus the expected transient skill-completeness guard. |
 | 7. Update Tool/Wrapper Layer | Complete | 2026-10-27 | Help text for `relate`, `stamp`, `--body-from` and `main()`; specs reconciled (no change needed); the skill body, *Three things never to hand-edit*, *Quality artifacts*, `use-cases.md` (frozen P1.3 row + two new rows), the adoption playbook (frozen P1.3 bullet), *Linking reports*; README; 2.1.0 and `## 2.1.0 — UNRELEASED`; feedback-log closures, the promotion note, follow-ups 1, 2, 3, 7, 8, 9 registered. 1656 passed; stale-wording grep empty. |
 | 8. Run Tests (GREEN) | Complete | 2026-10-28 | 1656 passed; ruff, format, mypy, `docs check`, mirrors and snapshot clean. Id/AST proof against `e48adb9` is exactly the authoritative mapping (1504 → 1656, the 4 renamed ids removed, 156 added). Property 16, fuzz 24, schema and security passed. Mutation smoke 45/45 killed: 43 planned plus 2 message-preserving variants, after correcting DEF-2's fixture (M05). 0 mocks. DEF-1 (a help assertion that depended on terminal width) fixed. |
-| 9. Integrate / Accept / Dogfood | Pending | — | The primary use case on a throwaway copy of this tree with zero hand-edits; both suite probes against the editable build and a local wheel; closeout-plan identity for a `relate`-linked trio; the extension-vocabulary and non-default-`date_format` trees (D10); this tree reindexing byte-identically; runtime recorded. |
+| 9. Integrate / Accept / Dogfood | Complete | 2026-10-28 | F1–F10 on throwaway trees, unattended. The primary use case needed zero hand-edits and a repeat was a zero-byte no-op. Both suite probes pass on the editable build and a local wheel and fail on 2.0.0. Closeout records are identical for the dogfood trio (with a byte-identical `--body-from` twin) and for the real M30 trio rewritten through verbs. The leg-1 refusal and the archive-boundary refusals hold. The D10 extension and date-format trees work, with the E11 and E12 contrasts. This tree reindexes identically to v2.0.0. Runtime recorded; real tree and host untouched. |
 | 10. Quality, Docs, Refactor | Pending | — | `/simplify`; close `architecture.md` and `test-strategy.md`; hand-off note to a live home; taste triage and boundary sweep; completion summaries. |
 
 ## Setup record — 2026-10-26
@@ -2041,6 +2041,291 @@ test was edited, and `src/` did not change.
   byte-identical.
 - `git diff 1683116 -- src/` is empty. The only test changes are the two
   corrections above.
+
+## Phase 9 — Integrate / Accept / Dogfood — 2026-10-28
+
+### Objective
+
+Run the primary use case and every acceptance flow unattended, on throwaway
+trees only.
+
+### Setup and safety
+
+- **Where it ran.** Every flow ran on a `cp -a` copy of `docs/` or on a tree
+  built from scratch, all under the session scratchpad's `p9/`. Before every
+  command, a guarded `cd` asserted that the working directory was under that
+  folder and was neither the repository nor its `docs/`. This guards against
+  M28a's Phase-9 incident.
+- **Environment.**
+  - Every docs-cli call ran with `DOCS_CLI_NO_UPDATE_CHECK=1`, with
+    `XDG_CACHE_HOME` and `XDG_STATE_HOME` pointing into the scratch folder,
+    and with stdin from `/dev/null`. No prompt was possible.
+  - The editable build is `.venv/bin/docs` (2.1.0).
+- **The oracle (S2R-OQ-5).** It is a `git archive v2.0.0 src` extraction,
+  run by the same interpreter. `git diff v2.0.0 e48adb9 -- src/
+  pyproject.toml` is empty, so this is exactly the product code before M30.
+  - Its `--version` prints the venv's installed metadata (2.1.0), so the
+    label is not evidence of which code ran.
+  - Its behaviour is: `lifecycle` is an "invalid choice", and its `docs_cli`
+    imports resolve to the extraction.
+- **Before starting.** `git status --porcelain` was empty, and HEAD was
+  `42f9eae`.
+
+### Flows and results
+
+**F1 — the primary use case, on a copy of this tree.** These are the
+`create-milestones` setup steps, run through verbs only:
+1. `docs new milestone dogfood-probe` and `docs new log dogfood-probe-impl`,
+   then `docs new spec dogfood-probe-test-matrix`;
+2. six `docs relate add … pairs-with …` calls, linking each companion both
+   ways;
+3. `docs relate add dogfood-probe.md child-of milestone-plan.md`, then
+   `… implements charter.md`;
+4. `docs lifecycle dogfood-probe.md dogfood-probe-test-matrix.md
+   dogfood-probe-impl.md active --json`;
+5. `docs check .`.
+
+Results:
+- **Every call exited 0**, with zero hand-edits and zero prompts.
+- `docs check .` reported "no violations found".
+- The before/after manifest shows exactly the three added documents plus a
+  changed `INDEX.md`. `milestone-plan.md` and `charter.md` are byte-identical,
+  because a free-form TARGET is never written.
+- The record was `applied: true`, `index_refreshed: true`, with three `set`
+  edits from `draft`.
+- **Run again**, the same `docs lifecycle` call printed "no change — … is
+  already active" three times and returned `applied: false` and
+  `index_refreshed: false`. The manifest, INDEX included, was unchanged.
+
+**F2 — both Agent Playbook Suite probes against three builds.** These are
+exact replicas of the product-test probes:
+- the help probe matches `\{([a-z0-9,\-]+)\}` on `docs --help` and looks for
+  `lifecycle`;
+- the relate probe uses an empty `.docs.toml` and two `docs new spec` files,
+  then runs `docs relate add a.md pairs-with b.md --dry-run` from the tree's
+  cwd with no `--root`; it must exit 0 with an unchanged manifest.
+
+| Build | help probe | relate probe |
+|---|---|---|
+| editable `.venv/bin/docs` (2.1.0) | **True** | **True** (exit 0, unchanged) |
+| local wheel `docs_cli-2.1.0-py3-none-any.whl` in a fresh venv (`python -m build`, `pip install --no-index`; `docs --version` → `docs 2.1.0`) | **True** | **True** (exit 0, unchanged) |
+| control: host `~/.local/bin/docs` (2.0.0) | False | False (exit 2, `unknown verb 'pairs-with'`) |
+
+The control shows each probe can reject a wrong build. The wheel venv's
+`docs install-skill --dest <scratch>/skill`, with XDG redirected, installed
+a skill identical to the bundled one (`diff -ru` against
+`src/docs_cli/skill` is empty). Its state file landed in the redirected
+`XDG_STATE_HOME`, not on the host.
+
+**F3a — closeout invariance, `relate`-linked vs hand-linked (D7).**
+- **The twin.** A twin copy built the same trio through the supported D8
+  route: `docs new … --body-from -`, each body opening with a `Related:`
+  group carrying the same edges. It was then promoted with the same `docs
+  lifecycle` call, and `docs check` was clean.
+- **Byte identity.** The three twin files are **byte-identical** to the
+  `relate`-linked ones, which is stronger than the record identity required.
+- **Preview records.** Both `docs archive dogfood-probe.md --cascade-dry-run
+  --json` and the scoped `--cascade-only 'dogfood-probe-*'` preview give
+  records that are identical across the two trees (`json.load` equality).
+  - The unscoped preview lists three candidates: both companions
+    (`pairs-with`) and `milestone-plan.md` (`child-of`).
+  - The scoped preview selects exactly the two companions.
+- **Applied closeout.** Applying `--cascade-only 'dogfood-probe-*' --reason
+  dogfood` on both exited 0. The run reported "3 candidate(s): 2 selected, 1
+  not selected", and `docs check` was clean. Afterwards `diff -r` of the two
+  trees is **empty**.
+
+**F3b — the real M30 trio**, the "real milestone trio" generalization
+category.
+- **Setup.** Copies A and B. In B, verbs only: read each trio document's
+  edges and `Updated:` through `parse()` (read-only), then:
+  - `docs relate remove` every `Related:` bullet, 13 across the three
+    documents, which drops each group;
+  - then `docs relate add` each one back in its original order with
+    `--date` equal to the document's `Updated:`.
+- **The rewrite.** All 26 calls exited 0. Each trio file in A and B is
+  byte-identical, and so is the whole tree (`diff -rq` empty, INDEX
+  included).
+  - The trio's `Updated:` was today, because Phase 8 touched it, so `--date`
+    matched the default here.
+  - The byte identity shows that dropping and re-creating a group restores
+    it exactly.
+- **Preview records.** Both previews are identical across A and B:
+  `--cascade-dry-run` and `--cascade-only 'lifecycle-and-free-form-relate-*'`.
+  - The unscoped preview's candidates are `milestone-plan.md` (`child-of`),
+    both companions, `cli.md`, `convention.md`, `test-strategy.md` and
+    `status.md` (`pairs-with`).
+  - The scoped preview selects exactly the two companions.
+  - The leg-2 strands are body links only, in `feedback-log.md` (3),
+    `milestone-plan.md` (1) and `status.md`.
+- **Applied closeout.** Applying the scoped closeout on both exited 0, with
+  `docs check` clean. `diff -r A B` is **empty** afterwards.
+
+**F3c — leg 1 (strand refusal).**
+- On a fresh copy, `docs relate add status.md child-of
+  lifecycle-and-free-form-relate.md` exited 0.
+- The scoped closeout then exited 2 with: "status.md is still active and
+  declares 'child-of: lifecycle-and-free-form-relate.md', which this
+  operation would archive; refusing before any write … zero bytes written".
+- The manifest is unchanged.
+
+**F4 — the archive boundary**, on a copy of the post-F1 tree. A manifest
+was compared around every refusal, and each refusal left the tree
+byte-identical.
+
+| Call | Exit | Message (abridged) |
+|---|---|---|
+| `docs lifecycle dogfood-probe.md archived` | 2 | L5: "'archived' is not a lifecycle target — docs archive <file> moves lifecycle and location together" |
+| `docs lifecycle dogfood-probe.md Archived` | 2 | L6: "unknown state 'Archived'; expected one of: active, blocked, done, draft, superseded" |
+| `docs lifecycle archive/2026-08-16/m29-pypi-publish-2-0-0.md active` | 2 | L7: "… is under the archive subtree (read-only)" |
+| `docs lifecycle stray.md active` (setup write: a stray active-tree file reading `Lifecycle: archived`, removed afterwards) | 2 | L11: "… (status-drift); refusing — only docs archive sets archived" |
+| `docs relate add archive/2026-08-16/m29-pypi-publish-2-0-0.md references charter.md` | 2 | R2: "a free-form edge is never written to an archived document" |
+| `docs relate add dogfood-probe.md references archive/2026-08-16/m29-pypi-publish-2-0-0.md` (no `--reason`) | **0** | bullet added; the archived TARGET is byte-identical; `docs check` clean |
+
+**F5a — an extension-vocabulary tree**, built from scratch. Its config is
+`add_lifecycles = ["shipped"]`, `add_roles = ["adr"]` and `[exclude] dirs =
+["drafts"]`.
+- **The E7 replay — every call exited 0:**
+  - `docs lifecycle a.md shipped`, `docs index .` and `docs touch b.md`;
+  - `docs list --json`, which lists `a.md` as `shipped`;
+  - `docs relate add b.md precedes a.md`, which parses both endpoints and
+    writes `follows: b.md` into `a.md`;
+  - `docs archive a.md --cascade-dry-run --json` and `docs mv a.md a2.md
+    --dry-run`.
+- **The primary use case with state `shipped`** (trio, six `pairs-with`
+  calls, one `docs lifecycle … shipped`): every call exited 0.
+- **The extension role.** After `docs new adr decision-x` and `docs index .`,
+  the INDEX renders `### Active — Adr` after the Spec, Milestone and Log
+  groups.
+- **Stamp.** `docs stamp a.md`, on the `shipped` document carrying a
+  `Related:` edge, printed "already stamped — refreshed Updated:", and the
+  file is byte-identical because `Updated:` was already today.
+- **Contrast.** The v2.0.0 oracle's `stamp a.md` on a twin reproduces E12:
+  - `shipped` → `draft` and `spec` → `notes`;
+  - `Related:` is demoted to a body `Migrated-Related:` group;
+  - then it exits 2 on its own reindex.
+- `docs check .` exited 0.
+
+**F5b — a non-default `date_format` tree**, built from scratch with
+`[archive] dir = "attic"` and `date_format = "%d-%m-%Y"`.
+- `docs new` writes `Updated: 28-10-2026`.
+- The trio, six `relate add` calls, `docs lifecycle … active`, `docs index
+  .` and `docs touch` all exited 0, so E8 is fixed. The lifecycle record's
+  `date` is `28-10-2026`.
+- `docs archive old.md --reason dogfood` exited 0, writing
+  `attic/28-10-2026/old.md` with `Updated:` and `Archived:` both
+  `28-10-2026`.
+- `docs check .` exited 0.
+
+**F5c — the E11 shape**, on the same tree. A setup write added `iso.md`
+with `Updated: 2026-10-27`, which is ISO on a `%d-%m-%Y` tree.
+- `docs check .` exited 2 with `[bad-date] Updated: malformed date
+  '2026-10-27' (expected %d-%m-%Y)`.
+- `docs index .` exited 2 with the same diagnosis, prefixed by the path.
+- `docs list --json` omits `iso.md`.
+- `docs stamp iso.md` exited 1 with the P1.5 refusal, naming `Updated:`.
+- The manifest is unchanged across all four.
+
+**F6 — the remaining generalization categories**, on the extension tree.
+Every call exited 0 except the two refusals, and `docs check` ended clean.
+- **Nested:** `docs new spec sub/deep`.
+- **Duplicate spellings in one batch:** `docs lifecycle sub/deep.md
+  ./sub/deep.md sub/../sub/deep.md active --json` gives one edit.
+- **Non-canonical TARGET:** `./b.md` and then `sub/../b.md` give one
+  canonical bullet, `references: b.md`; the second call is a no-op.
+- **Non-Markdown TARGET:** `coverage.xml` (setup write) is accepted and left
+  untouched.
+- **Excluded TARGET:** `drafts/scratch.md` is accepted and left untouched.
+- **Boundary verbs:** `a`, `x--y`, `a1b` and `v-` are accepted.
+- **Refused verbs:** `Pairs-With` and `see also` exit 2 with the R1 message
+  and zero bytes.
+
+**F7 — this tree reindexes byte-identically.** On twin copies, on the same
+day, under the same interpreter:
+- `NEW index .` and `OLD index .` give identical `INDEX.md` files, and both
+  are identical to the committed INDEX;
+- `list --json` is identical, and `check --json` is identical (`[]`);
+- `diff -rq` of the two trees is empty.
+
+The tree has 16 active and 61 archived documents.
+`tests/test_cli_index.py::test_index_output_matches_frozen_snapshot` pins
+the same fact in the suite.
+
+**F8 — runtime** (recorded, not budgeted). Median of 5 runs, each series on
+its own fresh copy of this tree, same interpreter, update check off.
+
+| Command | v2.0.0 | 2.1.0 |
+|---|---|---|
+| `check .` | 257 ms | 277 ms |
+| `index .` | 120 ms | 119 ms |
+| `list --json` | 108 ms | 112 ms |
+| `touch a b c` (three documents plus a reindex, the nearest analogue) | 125 ms | 129 ms |
+| `lifecycle a b c draft\|active`, alternating | — | 131 ms |
+| `relate add\|remove … precedes …` (recognized, two documents) | 121 ms | 124 ms |
+| `relate add\|remove … references …` (free-form, one document) | — | 121 ms |
+
+- **`docs lifecycle`** costs about `touch` plus 2 ms, even though it parses
+  each named document twice (accepted at Phase 6).
+- **Free-form `relate`** is no slower than a recognized pair.
+- **`check .`** was re-measured over two 15-run rounds: v2.0.0 263 / 275 ms
+  and 2.1.0 280 / 281 ms. That is +6 to +17 ms, while v2.0.0's own spread
+  between rounds is 12 ms.
+  - `check`'s path (`check_tree` → `_iter_doc_texts` → `check_doc`) has no
+    M30 change, and its output is byte-identical (F7).
+  - Process start-up (`--version`) is +1 to +4 ms for the larger module.
+  - The remainder was not isolated, and is recorded as measured.
+
+**F9 — the real tree and the host stayed untouched.**
+- After the flows, `git status --porcelain` is empty and HEAD is still
+  `42f9eae`.
+- `~/.cache/docs-cli` is unchanged (mtime and size), and
+  `~/.local/state/docs-cli` is absent before and after.
+- Nothing under `~/.claude/skills` changed.
+
+**F10 — backward liveness walk.** Starting from each observable output and
+working back through the P1.9 map:
+- **`docs lifecycle` record and lines.** Each `LifecyclePlan` /
+  `LifecycleEdit` field has a reader:
+  - `state` and `date_str` feed the record and lines;
+  - `rel`, `before` and `change` feed the record and lines; `change` also
+    filters `apply` and the no-op check;
+  - `path` and `new_text` feed `apply_lifecycle_plan`.
+- **The free-form record.** `RelatePlan.inverse` drives `plan_relate`'s
+  branch and is read by `relate_plan_to_json`.
+- **Grammar.** `relate_verb_in_grammar` is read by `plan_relate` and R1.
+  `_RELATE_VERB_RE` is read by the predicate and by R1's message.
+- **TARGET resolution.** `parse_endpoint` is passed `not free_form` for
+  TARGET and keeps its default for SOURCE.
+- **Config.** `parse(config=)` is read at nine sites.
+- **Stamp.** `_stamp_config_failure` is read by `_cmd_stamp`'s refusal.
+- **INDEX.** The extension role groups appear in `INDEX.md`.
+
+Nothing is produced but unconsumed.
+
+### Decisions / issues
+
+- **Setup writes, named as such.** These were deliberate fixture writes on
+  throwaway trees, never part of the use case:
+  - `stray.md` (F4, L11);
+  - `iso.md` (F5c);
+  - `coverage.xml` and `drafts/scratch.md` (F6);
+  - each `.docs.toml` of the from-scratch trees.
+  No metadata block was hand-edited in any flow.
+- **The F3 twin needed no hand-edit (S2R-OQ-5).** The D8 `--body-from` route
+  built it, and it came out byte-identical to the `relate`-linked trio.
+- **The F3b real-trio leg-2 strands** are body links that the closeout
+  reports and does not refuse. Step 3's own preview is the authoritative
+  one, and Phase 10 re-runs this preview on the final tree.
+
+### Verification
+
+- Every flow ran unattended with no stdin, on throwaway trees, and every exit
+  code is recorded above.
+- The real tree is untouched: porcelain empty, HEAD `42f9eae`.
+- Both probes pass on the editable build and on the local wheel, and fail on
+  2.0.0.
+- The closeout records are identical in F3a and F3b.
+- The runtime is recorded.
 
 ## Milestone completion summary
 

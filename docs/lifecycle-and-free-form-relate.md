@@ -33,7 +33,7 @@ Related:
 - Progress: setup complete and Step 0 reviewed; Step 1 (Phases 1–4)
   complete, reviewed and synced — the contract is frozen in *Decisions
   (Phase 1 — BINDING)* and the RED baseline recorded; Step 2 (Phases 5–10)
-  in progress — Phases 5–8 complete. The narrative, evidence headline and
+  in progress — Phases 5–9 complete. The narrative, evidence headline and
   per-phase results live in the implementation log.
 
 ### Identity note
@@ -1356,7 +1356,7 @@ an agent running a suite workflow — first the Agent Playbook Suite's
 - [x] Phase 6 — Implement Offline/Core Path
 - [x] Phase 7 — Update Tool/Wrapper Layer
 - [x] Phase 8 — Run Tests (GREEN)
-- [ ] Phase 9 — Integrate / Accept / Dogfood
+- [x] Phase 9 — Integrate / Accept / Dogfood
 - [ ] Phase 10 — Quality, Docs, Refactor
 
 ## Decisions carried from discovery

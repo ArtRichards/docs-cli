@@ -316,7 +316,26 @@ Agent Playbook Suite probes against a locally built wheel
     fixture that a second guard masked. Both are in the implementation log's
     Phase 8.
 - Hidden/generalization: categories only (the repository is fully visible).
-  Phase 9 exercises them on throwaway trees.
+  Phase 9 (2026-10-28) exercised every category on throwaway trees, all as
+  the contract says (implementation log, *Phase 9*):
+  - extension vocabularies (F5a);
+  - non-default `date_format` and `[archive] dir = "attic"` (F5b, F5c);
+  - nested subdirectory documents, duplicate spellings in one batch,
+    non-canonical TARGETs (`./b.md`, `sub/../b.md`), non-Markdown and
+    excluded TARGETs, and grammar-boundary verbs (F6);
+  - the real M30 trio from this tree, rewritten through verbs, with closeout
+    records identical to the hand-written edges (F3b).
+- External consumer (Phase 9 F2): both suite probes return True / True on
+  the editable build and on a locally built 2.1.0 wheel in a fresh venv. The
+  host 2.0.0 control returns False / False.
+- Runtime (Phase 9 F8, recorded, not budgeted; median of 5 on this tree of 16
+  active and 61 archived documents):
+  - `docs lifecycle` on three documents: 131 ms, against `touch` at 129 ms;
+  - free-form `relate`: 121 ms, against recognized at 124 ms;
+  - `index` and `list`: within 4 ms of v2.0.0;
+  - `check`: +6 to +17 ms, with no M30 change on its path.
+- Reindex identity (Phase 9 F7): `INDEX.md`, `list --json` and
+  `check --json` over this tree are byte-identical under 2.1.0 and v2.0.0.
 - Property/stateful (Phase 8): **16 passed**, covering idempotence, the
   add-then-remove round trip, no `status-drift`, and write footprint.
 - Mutation (Phase 8): hand-applied smoke **45/45 killed**, covering all
