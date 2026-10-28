@@ -48,6 +48,29 @@ Related:
 
 ## Current milestone
 
+**M31 milestone setup complete (2026-10-28).**
+[`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to PyPI as
+docs-cli 2.1.0. It now has three documents:
+- a ten-phase task plan that maps
+  [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
+- an [implementation log](pypi-publish-2-1-0-impl.md) carrying the setup
+  readiness record;
+- a [test matrix](pypi-publish-2-1-0-test-matrix.md).
+
+Setup measured the release read-only. The 2.1.0 slots are free on PyPI and
+under the TestPyPI rehearsal name, the credentials are present, and the suite
+is GREEN at 1671. Because M30 already bumped the version, the CHANGELOG needs
+only its date and the README three synopsis fixes. The operator chose to
+upload automatically once Step 1's reviews close and the TestPyPI rehearsal
+passes.
+
+The operator also answered both setup questions:
+- The `v2.1.0` tag and the GitHub release follow the upload in the same step.
+- After the publish, this host's binary is upgraded with pipx, and its `docs`
+  skill is refreshed at `~/.claude/skills/docs`.
+
+Milestone state lives in the [Milestone Plan](milestone-plan.md).
+
 **M30 complete and archived (2026-10-28).**
 [`lifecycle-and-free-form-relate`](archive/2026-10-28/lifecycle-and-free-form-relate.md)
 is complete: all ten phases, the Step 0–2 reviews, and Step 3's second

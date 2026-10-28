@@ -48,7 +48,7 @@ M-number survives only as a prose label.
 | Order | Milestone | State | Depends on | Notes |
 |---:|---|---|---|---|
 | 100 | [lifecycle-and-free-form-relate](archive/2026-10-28/lifecycle-and-free-form-relate.md) | complete | — | M30 — `docs lifecycle` verb + one-sided free-form `docs relate`; from feedback-log 2026-10-26 |
-| 200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate | M31 — publish docs-cli 2.1.0 (M30) to PyPI per release-runbook.md |
+| 200 | [pypi-publish-2-1-0](pypi-publish-2-1-0.md) | active | lifecycle-and-free-form-relate | M31 — publish docs-cli 2.1.0 (M30) to PyPI per release-runbook.md |
 
 ## Sequencing
 

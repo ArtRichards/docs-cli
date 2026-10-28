@@ -5,7 +5,7 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-10-28. 13 docs active, 64 archived._
+_Generated 2026-10-28. 16 docs active, 64 archived._
 
 ## Project — docs
 
@@ -24,11 +24,17 @@ _Generated 2026-10-28. 13 docs active, 64 archived._
 ### Active — Spec
 
 - [cli.md](cli.md) — _spec_ — This spec defines the `docs` command-line surface: subcommands, flags, output formats, and exit codes. The on-disk…. Updated 2026-10-28.
+- [pypi-publish-2-1-0-test-matrix.md](pypi-publish-2-1-0-test-matrix.md) — _spec_ — Standard. Updated 2026-10-28.
 - [convention.md](convention.md) — _spec_ — This spec defines the on-disk convention that `docs` reads and writes. It is the portable, tool-independent part: any…. Updated 2026-10-27.
+
+### Active — Milestone
+
+- [pypi-publish-2-1-0.md](pypi-publish-2-1-0.md) — _milestone_ — > **Registered 2026-10-28** (`193fc71`) and claimed `active` the same day > (`be7f809`), straight after M30 merged to…. Updated 2026-10-28.
 
 ### Active — Log
 
 - [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-28.
+- [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md) — _log_ — This is the chronological implementation log for M31 — Publish docs-cli 2.1.0 to PyPI (semantic slug…. Updated 2026-10-28.
 
 ### Active — Decision
 

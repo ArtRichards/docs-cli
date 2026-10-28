@@ -47,6 +47,7 @@ as the discovery and decision audit source and records the owning milestones.
 - Observation: M30's task plan restates its binding decision D10 in six or more places — the Contract, the Deliverables, the success criteria, the upgrade note, the matrix and the decision itself. So the Step 1 review's wording correction (gpt-S3 / claude-S1) had to touch every copy. A milestone doc that states each binding decision once, and points to it everywhere else, would make that drift impossible.
 - Why a candidate, not a rule: it rests on one waived finding. The compounding rule promotes a convention into agent context only once it is proven and recurring, so this is offered as a taste anchor at the next milestone's setup rather than written into `CLAUDE.md`.
 - Ownership: the next milestone's setup (offer it as a taste anchor). Status: **open, unowned.**
+- Offered (2026-10-28) at the setup of `pypi-publish-2-1-0` (M31, [milestone doc](pypi-publish-2-1-0.md)) and adopted there as a taste-anchor trial. That task plan states each binding decision (D1–D13) once, in *Binding decisions*, and refers to it by id everywhere else. The entry stays **open**: a single milestone's use is a trial, not the recurrence the compounding rule needs before a `CLAUDE.md` rule. M31's Phase 10 records how the trial went.
 
 ### 2026-10-27 — `docs new --body-from` admits any leading bare-label group as metadata, not only `Related:`
 
@@ -131,6 +132,7 @@ as the discovery and decision audit source and records the owning milestones.
   - drop ship-milestone Step 0's up-front approval.
 
   After that, its CI guard *Validate verbless-metadata stopgap matches the pinned docs-cli* must read `lifecycle verb: True` and `free-form relate: True`. This entry stays **open** until that suite release ships.
+- Publish milestone registered and claimed (2026-10-28): `pypi-publish-2-1-0` (M31, [milestone doc](pypi-publish-2-1-0.md), order 200 in [`milestone-plan.md`](milestone-plan.md)) owns hand-off items 1–3 and records their evidence here at its closeout. The suite pin-bump PR items stay open, with the Agent Playbook Suite.
 
 ### 2026-08-15 — Issue #1: cascade parent-archiving, archived re-dating, and post-move validation gaps
 
