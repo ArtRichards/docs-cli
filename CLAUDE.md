@@ -28,6 +28,38 @@ Two different update channels — do not mix them up:
   `XDG_STATE_HOME` and `XDG_CACHE_HOME`, or it overwrites the host's
   recorded destination (`~/.claude/skills/docs`). Procedure:
   docs/release-runbook.md *Isolation and hygiene*.
+- **The Agent Playbook Suite rides its own release cycle.**
+  `~/opt/agent-playbook-suite` (marketplace and plugin-cache copies under
+  `~/.claude/plugins/`) pins a docs-cli version per suite release and
+  vendors the bundled `docs` skill from it. Never change it ad hoc from a
+  docs-cli change; update it after a docs-cli publish, and only when the
+  operator asks, on a release branch per the suite's
+  `marketplace-publishing-guide.md`. A docs-cli milestone records what the
+  suite needs in a feedback-log hand-off instead of editing the suite.
+
+## Normative surfaces change only through a milestone (operator policy, 2026-06)
+
+A change to `docs/convention.md`, `src/docs_cli/skill/SKILL.md` or the
+bundled `references/` is scoped as a milestone and driven through the
+10-phase TDD flow with a RED pinning test first (M16 is the precedent) —
+never hand-edited directly. These surfaces are normative and parity-gated
+(tests/test_skill_refs.py, tests/test_skill.py). Stage the CHANGELOG under
+the next `UNRELEASED` version; the feature milestone owns the version bump,
+and a separate publish milestone ships it.
+
+## docs-cli stays agent-agnostic and out of the user's skills (operator policy, 2026-06-29)
+
+- **Never inspect or police an installed skill.** No skill-drift
+  detection, no diffing an installed skill against the bundled one, no
+  "your skill is stale" checks. The only skill action docs-cli takes is
+  installing it where the user asks. Recording the user's `--dest` and
+  replaying it (M23's update hint) is fine; judging its content is not.
+- **Never assume a particular agent.** The axis is "which directory"
+  (`--dest`), not "which agent": no hard-coded agent paths presented as
+  the only home, no agent auto-detection. On a TTY ask; for a non-TTY
+  caller never block on a prompt.
+- A network update check that only says a newer docs-cli exists inspects
+  nothing of the user's and is fine (M21).
 
 ## Milestone docs: state each binding fact once (operator policy, 2026-10-29)
 
