@@ -40,9 +40,12 @@ Related:
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 2 is complete (2026-10-29): `docs-cli==2.1.0` is on
-  PyPI, tagged `v2.1.0` and released, and this host runs it.** Step 3 is
-  next. The log's *Milestone completion summary* carries the record, and its
-  *Step 2 review-pass-001* is closed with `final-sync` `ready`.
+  PyPI, tagged `v2.1.0` and released, and this host runs it.** Step 3
+  (2026-10-29) ran `/simplify` (three behaviour-preserving readiness
+  simplifications; the probe unchanged) and the explicit-scope archive
+  closeout whose frozen values the log's *Step 3 — Simplify and closeout*
+  names. The log's *Milestone completion summary* carries the record, and
+  its *Step 2 review-pass-001* is closed with `final-sync` `ready`.
   - Step 1 (Phases 1–4) is complete (2026-10-28), its review pass closed with
     `final-sync` `ready`; Step 0 likewise.
 
@@ -1733,5 +1736,6 @@ the suite's guard step, then tagged and released (D13). The host binary and
 skill follow it (D10), the runbook carries the lessons, and the suite
 hand-off stays open (D12). The record, with every sha, time and deviation,
 is the [implementation log](pypi-publish-2-1-0-impl.md)'s *Milestone
-completion summary*. Step 3 — `/simplify` and the explicit-scope archive —
-remains, as does the operator's merge (D13).
+completion summary*. Step 3 (2026-10-29) ran `/simplify` and the
+explicit-scope archive closeout (the log's *Step 3 — Simplify and
+closeout*); the operator's merge remains (D13).

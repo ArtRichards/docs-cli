@@ -314,8 +314,12 @@ mutation and hidden-suite tooling are not configured in this project.
   against wheel (a) and a fresh install of the served rehearsal, with
   identical result lines. Readiness's Step 2 review change (an empty
   `--drop-sentence`) was re-run at HEAD, at the tag target and with the
-  served wheel's `--help`, 25/25 each, with its controls. The log's anchors
-  carry the current blobs.
+  served wheel's `--help`, 25/25 each, with its controls. Step 3's
+  `/simplify` changed readiness only, behaviour-preserving: every recorded
+  readiness mutant and control, plus a new unparseable-verb-list control,
+  gave identical output under the old and new blobs, and readiness passed
+  25/25 at HEAD, at the tag target and with the served wheel's `--help`.
+  The probe is unchanged. The log's anchors carry the current blobs.
 - Fuzz: not applicable.
 - Benchmark/security/schema: schema — `twine check` passed on both builds,
   `Metadata-Version: 2.5`, the dependency oracle holds, CHANGELOG is in
@@ -354,7 +358,10 @@ mutation and hidden-suite tooling are not configured in this project.
   release-bound checks. Reported apart, as passing controls rather than
   kills: the G2 cross-day INDEX (fails the old check, passes the new) and
   the unchanged section with an empty `--drop-sentence` (fails the old
-  readiness, passes the new)
+  readiness, passes the new). Step 3 re-ran the 11 readiness mutants and
+  the four empty-`--drop-sentence` controls under the simplified blob: each
+  mutant is still killed by exactly its intended check, and every output is
+  identical to the old blob's (the log's *Step 3 — Simplify and closeout*)
 - property/stateful result: pass (Phases 4–9)
 - fuzz result: not applicable
 - benchmark delta: not applicable; elapsed times recorded

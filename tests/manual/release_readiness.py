@@ -117,9 +117,9 @@ class Help:
             self._cache[words] = _usage_tokens(proc.stdout, words) if proc.returncode == 0 else None
         return self._cache[words]
 
-    def sub_verbs(self, verb: str) -> list[str]:
-        """The bare `{a,b}` group of `docs <verb> --help`, if the verb has sub-verbs."""
-        for tok in self.usage(verb) or []:
+    def verb_group(self, *words: str) -> list[str]:
+        """The first bare `{a,b}` group of `docs [words] --help`: verbs, or sub-verbs."""
+        for tok in self.usage(*words) or []:
             match = _VERB_GROUP.fullmatch(tok)
             if match:
                 return match.group(1).split(",")
@@ -214,13 +214,13 @@ def check_changelog(report: Report, args: argparse.Namespace, repo: Path) -> Non
         None if first == expected else f"first heading {first!r}, expected {expected!r}",
     )
     body = changelog_section(text, args.version)
-    claims = [] if body is None else [ln for ln in body.splitlines() if _PUBLISH_STATE.search(ln)]
     claim: str | None
     if body is None:
         claim = f"no `## {args.version}` section"
     elif args.drop_sentence and args.drop_sentence in body:
         claim = f"still says {args.drop_sentence!r}"
     else:
+        claims = [ln for ln in body.splitlines() if _PUBLISH_STATE.search(ln)]
         claim = f"publish-state wording: {claims[0]!r}" if claims else None
     report.check("The release's CHANGELOG section makes no publish-state claim", claim)
 
@@ -229,10 +229,10 @@ def check_changelog(report: Report, args: argparse.Namespace, repo: Path) -> Non
     if body is None or base_body is None:
         drift: str | None = f"section missing here or at {args.changelog_base}"
     else:
-        # An empty --drop-sentence means the release removes nothing.
-        drop = " " + args.drop_sentence if args.drop_sentence else None
-        ours = body.replace(drop, "") if drop else body
-        theirs = base_body.replace(drop, "") if drop else base_body
+        ours, theirs = body, base_body
+        if args.drop_sentence:  # an empty --drop-sentence means the release removes nothing
+            drop = " " + args.drop_sentence
+            ours, theirs = ours.replace(drop, ""), theirs.replace(drop, "")
         diff = difflib.unified_diff(theirs.splitlines(), ours.splitlines(), n=0, lineterm="")
         changed = [d for d in list(diff)[2:] if not d.startswith("@@")]
         drift = "; ".join(changed[:4]) if changed else None
@@ -245,18 +245,16 @@ def check_changelog(report: Report, args: argparse.Namespace, repo: Path) -> Non
 
 def check_readme(report: Report, docs_help: Help, repo: Path, repository: str) -> None:
     readme = (repo / "README.md").read_text(encoding="utf-8")
-    top = docs_help.usage() or []
-    group = next((m for m in map(_VERB_GROUP.fullmatch, top) if m), None)
-    verbs = group.group(1).split(",") if group else []
+    verbs = docs_help.verb_group()
     required: set[tuple[str, str | None]] = {(v, None) for v in verbs}
-    required |= {(v, s) for v in verbs for s in docs_help.sub_verbs(v)}
+    required |= {(v, s) for v in verbs for s in docs_help.verb_group(v)}
 
     listed: set[tuple[str, str | None]] = set()
     parsed: list[tuple[str, list[str], list[str]]] = []
     for line in readme_synopses(readme):
         tokens = _TOKEN.findall(line)
         verb, rest = tokens[1], tokens[2:]
-        has_subs = rest and verb in verbs and docs_help.sub_verbs(verb)
+        has_subs = rest and verb in verbs and docs_help.verb_group(verb)
         subs = rest.pop(0).split("|") if has_subs else []
         listed |= {(verb, None)} | {(verb, s) for s in subs}
         parsed.append((verb, subs, rest))

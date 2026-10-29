@@ -26,14 +26,20 @@ the test matrix stay synchronized with it. The phases are the
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
   2026-10-28). See [milestone-plan.md](milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
-- Progress: **Step 2 is complete (2026-10-29) on
-  `pypi-publish-2-1-0/phases-5-10`: `docs-cli==2.1.0` is on PyPI, tagged
-  `v2.1.0` at `33c936f`, released, and installed on this host.** Phases 5–10
-  are done; *Milestone completion summary* has the record. *Step 2
-  review-pass-001* is closed with `final-sync` `ready`: both providers
-  returned, no finding hit the shipped bytes, and every document finding is
-  fixed in `ff2e7c5` or waived with a reason. Step 3 (`/simplify` and the
-  explicit-scope archive) is next.
+- Progress: **Milestone complete (2026-10-29): `docs-cli==2.1.0` is on PyPI,
+  tagged `v2.1.0` at `33c936f`, released, and installed on this host; Step 3
+  ran `/simplify` and the explicit-scope archive closeout.** *Milestone
+  completion summary* has the record.
+  - Step 3 (simplify and closeout) ran 2026-10-29 on
+    `pypi-publish-2-1-0/simplify` from the immutable Step 2 base `2288f05`.
+    `/simplify` took three behaviour-preserving readiness simplifications
+    (blob `c94549f0…`) and left the probe unchanged; the frozen archive
+    values are in *Step 3 — Simplify and closeout*.
+  - Step 2 is complete (2026-10-29) on `pypi-publish-2-1-0/phases-5-10`:
+    Phases 5–10 are done, and *Step 2 review-pass-001* is closed with
+    `final-sync` `ready`: both providers returned, no finding hit the
+    shipped bytes, and every document finding is fixed in `ff2e7c5` or
+    waived with a reason.
   - Step 1 is complete (2026-10-28) on `pypi-publish-2-1-0/phases-1-4`:
     Phases 1–4 are done, the TestPyPI rehearsal is GO, and Step 1
     review-pass-001 is closed with `final-sync` `ready` (`d5a23ef`).
@@ -77,6 +83,12 @@ the test matrix stay synchronized with it. The phases are the
   growth demanded); gpt-T1 and claude-S2-T1 are fixed, claude-S2-T2 and T3
   waived; T4 and the scripts' size stay carried to Step 3. See *Phase 10* ›
   *Taste triage (Step 2)* and *Step 2 review-pass-001*.
+- Taste triage, Step 3: the scripts' size is fixed where it was genuine
+  duplication (three readiness simplifications) and otherwise re-waived —
+  the remainder is the frozen 25-check catalogue. claude-T4 stays waived,
+  because fragment assertions would weaken P1.2's frozen G6 and G9
+  assertions; claude-S2-T2 and S2-T3 stay waived. See *Step 3 — Simplify
+  and closeout* › *Taste-triage updates*.
 
 ## TDD phase progress
 
@@ -946,9 +958,9 @@ replaces this section's values and says so.
 | Rehearsal wheel, served = local = JSON | `docs_cli_rehearsal-2.1.0-py3-none-any.whl` `fd2f787c85d95d3ace8944f0f00846f0644ebca4f69e3feb422dbff910b7b318` |
 | Rehearsal sdist, served = local = JSON | `docs_cli_rehearsal-2.1.0.tar.gz` `0241b9eb0ad906f3136b886f4ef08b83ef37ee723d3ec51db4036c4b1ecc3d1a` |
 | The next rehearsal version under D9 | `2.1.0.post1` (404 at Phase 1) |
-| `release_readiness.py` blob | `9cf861cb6feb6c21fd96c9af2eab5918cf077174` — *replaced 2026-10-29 by the Step 2 review's gpt-S3 fix (an empty `--drop-sentence` drops nothing)*; 25 lines. Earlier: Step 1's review `cb542802bba447d4fb7ee72eaf1b454b2773653f` (R8 split into R8a–R8c); Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`; the audit's D9 re-run `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` |
+| `release_readiness.py` blob | `c94549f0b3a25109c0aea6c318356967290bafaf` — *replaced 2026-10-29 by Step 3's `/simplify`, behaviour-preserving (*Step 3 — Simplify and closeout*)*; 25 lines. Earlier: the Step 2 review's gpt-S3 fix (an empty `--drop-sentence` drops nothing) `9cf861cb6feb6c21fd96c9af2eab5918cf077174`; Step 1's review `cb542802bba447d4fb7ee72eaf1b454b2773653f` (R8 split into R8a–R8c); Phase 4 ran `b1f739e3dd352f63b9286d77feae175da56c9fb5`; the audit's D9 re-run `a90ab8c6eb0dd67f3421dbb16dcbce21d4bf4d48` |
 | `release_probe.py` blob | `763b7dd7c22c7305f8215b1415b1ff67eb2d3fb1` — *replaced 2026-10-28 by Step 2's G2 calibration (Phase 5 › D9 re-run for the G2 calibration)*. Earlier: Phase 4 ran `55d5e33a5573ea5d58cc7809b4f47fea7cb7d024`; the audit's D9 re-run `88043c87b4eff5c8dcc164b06e4160c6d1ea444d`; Step 1's review `2d6a0c31b1cac8ee25ef858671002e3b7f9d7830` |
-| D9 re-runs | Three, all 2026-10-28: after the audit's docstring change (*Step 1 audit*), after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*), after Step 2's G2 calibration (*Phase 5* › *D9 re-run for the G2 calibration*), and — 2026-10-29 — after the Step 2 review's readiness fix (*Step 2 review-pass-001*, item 5). Every probe result line equals the Phase 4 record below; readiness passes 25/25 |
+| D9 re-runs | Three on 2026-10-28: after the audit's docstring change (*Step 1 audit*), after the review's strengthened checks (*Step 1 review-pass-001* › *D9 re-run*), after Step 2's G2 calibration (*Phase 5* › *D9 re-run for the G2 calibration*); and two on 2026-10-29: after the Step 2 review's readiness fix (*Step 2 review-pass-001*, item 5) and after Step 3's readiness simplification (*Step 3 — Simplify and closeout*; the probe is unchanged by Step 3). Every probe result line equals the Phase 4 record below; readiness passes 25/25 |
 | Toolchain (`.venv`) | twine 7.0.0, build 1.5.0, pip 24.0, Python 3.12.3 |
 | Suite guard step | `validate.yml@a997954` lines 1210–1293, dedented by ten spaces: 84 lines, sha256 `2e2fc83d9b6fb4eb0108cbadc5222a786218e87dfe41f6f613a30f67236253ca` |
 | Host baseline | recorded destination absent; update cache sha256 `39739c2975454ebf10a673cf5de786966254edb3b90636613066b045ed28253d` — the Phase 1 record. Since Phase 9.3 the recorded destination is `~/.claude/skills/docs` (D10); host checks compare pairwise (OQ-S2-3) |
@@ -2049,7 +2061,9 @@ operator for `CLAUDE.md`; it stays open pending that decision.
   release".
 - **Carried to Step 3's `/simplify`, unchanged:** claude-T4 (G6 and G9 mirror
   product-test golden strings) and the scripts' size (1043 lines against the
-  300–500 anchor).
+  300–500 anchor). *2026-10-29 (Step 3): the size is fixed where it was
+  genuine duplication and otherwise re-waived; T4 stays waived — see* Step 3
+  — Simplify and closeout › *Taste-triage updates*.
 - **State-once, measured this step:** the five OQ-S2 decisions touched seven
   task-plan sites, five operative and two pointers, and no matrix or
   `status.md` text (10.2); the closing audit added two dated pointers (D9,
@@ -2460,11 +2474,179 @@ spot-check of `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde` (2026-10-29):
 
 - final-sync: `ready`.
 
+## Step 3 — Simplify and closeout — 2026-10-29
+
+### Objective
+
+- Run `/simplify` over this milestone's only code, the two release-check
+  scripts `tests/manual/release_readiness.py` and
+  `tests/manual/release_probe.py`, behaviour-preserving.
+- Take or re-waive the carried taste findings.
+- Close out with the explicit-scope archive (D11) and complete the tracker
+  row.
+
+Risk is **Standard** (accepted at setup). The High-risk simplify review gate
+does not apply. Nothing irreversible runs in this step: 2.1.0 is already on
+PyPI, tagged and released.
+
+### Baseline
+
+- The branch `pypi-publish-2-1-0/simplify` was created clean at the
+  immutable Step 2 base `2288f05a9f9f5baaec746aec7b331fab291392e5`.
+- Fresh gate run at `2288f05`, in a stateless scratch environment
+  (`HOME` real, XDG state and cache in scratch, the update check off):
+  - `ruff check` clean; `ruff format --check` reports 52 files formatted;
+    `mypy src/ tests/` finds no issues in 53 files;
+  - pytest gives **1671 passed**, 1671 collected;
+  - `docs check .` exits 0; the INDEX dry-run, the INDEX snapshot and both
+    mirrors are `cmp`-identical;
+  - readiness (P1.4's arguments, `--release-date 2026-10-29`) exits 0, 25
+    passed, at blob `9cf861cb…`.
+- The scripts were 374 + 675 = 1049 lines. Neither is collected or imported
+  by pytest.
+
+### `/simplify`
+
+**Taken — three readiness simplifications** (`release_readiness.py` +11 /
+−13, 374 → 372 lines; blob `9cf861cb…` → **`c94549f0b3a25109c0aea6c318356967290bafaf`**).
+No display name, message, exit code or argument changed.
+- **S3-1 — one rule, written once.** R5's verb list and each verb's
+  sub-verbs come from the same rule, the first bare `{…}` group of a usage
+  line. `check_readme` spelled it inline for `docs --help`, and
+  `Help.sub_verbs` spelled it again for `docs <verb> --help`. One method,
+  `Help.verb_group(*words)`, now serves both: `verb_group()` gives the verbs
+  and `verb_group(v)` a verb's sub-verbs, with the same cache key, tokens
+  and first match as before.
+- **S3-2 — a guard that only the last branch needed.** R3's publish-state
+  scan ran before the branch, with its own `body is None` guard, and only
+  the final branch read it. It now runs inside that branch, and the guard is
+  gone.
+- **S3-3 — the empty `--drop-sentence` rule once, not three times.** The
+  Step 2 review's fix (gpt-S3) spelled "empty drops nothing" as three
+  conditional expressions on `drop`. It is one `if args.drop_sentence:`
+  block now, with the rule as its comment.
+
+**Evaluated and rejected:**
+
+| Candidate | Rejected because |
+|---|---|
+| claude-T4 — fragment assertions for G6 (five lines) and G9 (two lines) | A change to P1.2's binding G6 and G9 rows ("the five lines the test freezes", "both frozen lines"), and it reduces protection. The strings pin the 2.0 contract: the preview's `note.md:13` and `sub/deep.md:10` positions (M28 — D7) and the refusal's escape-hatch wording. Fragments that keep those positions are no less brittle; fragments that drop them stop catching a mis-reported position. 2.1.0 and the 2.0.0 control would read the same either way, but `/simplify` does not trade protection for maintenance. If the goldens move in a later release, they are re-quoted from the product tests. |
+| One shared module for `git_blob_sha`, `isolated_env` and `_VERB_GROUP`, which both scripts carry (about 20 lines) | P1's *Common to both scripts* makes each script standalone, run by path from any checkout. A shared import adds a module, a path dependency and coupling between the release-input check and the executable probe, to save about 20 lines. |
+| The probe: merge `snapshot` and `files_under` | They differ by design. `snapshot` (bytes, every file) backs the "writes nothing" checks; `files_under` adds mtimes and skips `__pycache__` for the N2 and W3 idempotency checks. Merging them changes what one of them detects. |
+| The probe: `itertools.takewhile` for N7's heading group; a constant for the repeated probe `.docs.toml` | Rewrites that only look different. The clarity gain is too small to re-baseline the script that verified the served wheel. |
+| The probe: `version_is(expected)`'s closure | It adapts W1 to the uniform `Check` signature that `run_check`'s crash handling needs. A flag on `Probe`, or a lambda, moves the same concept elsewhere. |
+| claude-S2-T2 — the runbook's *From M31* echoes, and the twine bullet's retelling of M29 | Not code. The *Cumulative lessons* are append-only, so a trim is not trivially safe. |
+| claude-S2-T3 — G2's display name | Line identity with the anchored result block; the runbook's *From M31* G2 lesson schedules the wording for the next release. |
+
+Nothing else in the two scripts simplifies further. Their size is the 25
+probe checks and 25 readiness lines with their frozen strings. The probe is
+unchanged (`763b7dd7…`), so Phase 7's served-wheel record stands and no
+probe re-run is required.
+
+### Verification
+
+Every differential case ran the old blob (`9cf861cb…`, saved to scratch from
+`2288f05`) and the new one on the same scratch clone of `2288f05`, with
+`--release-date 2026-10-29`. "Identical" means the same exit code and every
+output line equal except the blob header.
+
+| Run | Result |
+|---|---|
+| Readiness at HEAD, P1.4's arguments, new blob | exit 0, 25 passed; every result line equal to the baseline's |
+| The GREEN clone, and mutants 1, 2, 3, 4, 5, 5b, 6, 1b, 9a, 9b and 9c (P1.4; the Step 1 review) | GREEN 25/25; each mutant killed by exactly its intended check — R2, R3, R4, R5 ("no synopsis for: mv"), R6 for `touch`, R6 for `mv` (`--force`), R9 for `cli.md`, R1, R8a, R8a and R8c — as recorded; old = new for all 12 |
+| The Step 2 review's empty `--drop-sentence` controls (gpt-S3): the unchanged section against base `HEAD`; one word changed; one space added; the sentence restored against `bf09748` | 25 passed; FAIL R4; FAIL R4; FAIL R3 — as recorded; old = new for all 4 |
+| New: an executable whose `--help` has no `{…}` group (the branch S3-1 touches) | R5 "could not parse the verb list" and every R6 "gave no usage", 10 passed and 15 failed; old = new |
+| Readiness on a clone at the tag target `33c936f`, with `--docs` the editable build and then the served wheel; and on the HEAD clone with the served wheel | 25/25 each; old = new; result lines equal to HEAD's |
+| The served wheel: `pip download --no-deps docs-cli==2.1.0 --index-url https://pypi.org/simple/` into an empty scratch directory | sha `2c5fa0b3…`, equal to the anchor and checked before a `--no-deps --no-index` install into a fresh venv; it prints `docs 2.1.0` |
+| The host check across the block | unchanged: update cache `39739c29…`; recorded destination `~/.claude/skills/docs` |
+
+20 of 20 differential runs are identical. Nothing under test lost
+protection, and no test count moved.
+
+### Taste-triage updates
+
+| Source | Finding | State | Reason |
+|---|---|---|---|
+| Step 1 review (patch bloat); *Phase 10* › *Taste triage (Step 2)* | The scripts at about twice the 300–500 anchor | **fixed** where it was genuine duplication (S3-1 to S3-3); the remainder re-waived | The duplication was R5's twice-written group rule and the triple drop guard. What remains is the frozen 25-check catalogue (P1.1, P1.2), and `/simplify` does not chase line count. The *Phase 10* bullet carries a dated pointer here. |
+| Step 1 review | claude-T4 (G6 and G9 mirror product-test goldens) | waived (Step 3 reason) | A contract change that reduces protection; see the rejected-candidates table. |
+| Step 2 review | claude-S2-T2 (runbook *From M31* echoes; the twine bullet) | waived (unchanged) | The M29 precedent; append-only lessons; not code. |
+| Step 2 review | claude-S2-T3 (G2's display name) | waived (unchanged) | Line identity; the runbook schedules the wording. |
+
+The closed review ledgers (*Step 1 review-pass-001*, *Step 2
+review-pass-001*) keep their text; this table and the dated pointers carry
+the Step 3 state.
+
+### Gates — before and after
+
+| Gate | `2288f05` | Simplify candidate |
+|---|---|---|
+| `.venv/bin/ruff check .` | clean | clean |
+| `.venv/bin/ruff format --check .` | 52 files formatted | 52 files formatted |
+| `.venv/bin/mypy src/ tests/` | no issues in 53 files | no issues in 53 files |
+| `.venv/bin/python -m pytest -q`; `--collect-only` | **1671 passed**; 1671 collected | **1671 passed**; 1671 collected |
+| `docs check .` (from the docs root) | exit 0 | exit 0 |
+| `cmp` of the INDEX snapshot and both mirrors; the INDEX dry-run | identical | identical |
+| Readiness at HEAD | 25/25, blob `9cf861cb…` | 25/25, blob `c94549f0…`, lines identical |
+| Readiness mutants and controls | as recorded (Phase 2, Step 1 and Step 2 reviews) | identical under both blobs (above) |
+| The probe | `763b7dd7…`, 25/25 on the served wheel (Phase 7) | unchanged |
+| The token search; the D1 scope check | clean; clean | clean; clean |
+
+### Step 3 closeout — frozen values
+
+- **Risk and gate:** Standard (accepted at setup; the matrix's *Risk
+  level*). The simplify review gate is `not required`, because it applies
+  only at High risk.
+- **Step 2 base (immutable):** `2288f05a9f9f5baaec746aec7b331fab291392e5`.
+- **Code-change classification:** a code change
+  (`tests/manual/release_readiness.py`, an explicit non-product check),
+  proven behaviour-preserving above. `src/` and the probe are unchanged.
+- **Identity:**
+  - project `docs`, at project path `""` (a dedicated root);
+  - artifact stem `pypi-publish-2-1-0`;
+  - semantic slug `pypi-publish-2-1-0`;
+  - branch root `pypi-publish-2-1-0/`;
+  - tracker `milestone-plan.md`; status `status.md`.
+- **Expected set** (root-relative, frozen):
+  - `pypi-publish-2-1-0.md`, the primary;
+  - `pypi-publish-2-1-0-impl.md`;
+  - `pypi-publish-2-1-0-test-matrix.md`.
+
+  These equal `{project_path}{artifact_stem}.md`, `-impl.md` and
+  `-test-matrix.md`.
+- **Archive scope:** `'pypi-publish-2-1-0-*'`, literally
+  `{project_path}{artifact_stem}-*` (D11).
+- **Archive date:** `2026-10-29` (`[archive] date_format = "%Y-%m-%d"`).
+- **Archive reason:** `Milestone M31 complete; docs-cli==2.1.0 shipped to
+  PyPI 2026-10-29` (*Frozen values for Step 3*).
+- **Planned destinations:** `archive/2026-10-29/` plus each of the three
+  basenames. No `archive/2026-10-29/` exists yet, and no other path under
+  the docs root carries these basenames.
+- **Expected not selected:** `milestone-plan.md` (`child-of`),
+  `release-runbook.md` and `status.md` (`pairs-with`). `feedback-log.md`
+  (`references`) and the archived M30 document (`follows`, `depends-on`)
+  are not candidates.
+- **Preview command:** `docs archive pypi-publish-2-1-0.md
+  --cascade-dry-run --cascade-only 'pypi-publish-2-1-0-*' --date 2026-10-29
+  --reason "<reason>" --json`. The apply command is the same without
+  `--cascade-dry-run`.
+- **The D13 merge sentence for the final report:** *merge promptly, with a
+  merge commit, not squash or rebase — the PyPI page links `main`'s
+  CHANGELOG; `v2.1.0` is at `33c936f447dfb31078dc0c07c9e4fd2297ed747d`*.
+
+This log moves with the archive, and none of the three documents is edited
+or touched after the move. The following are recorded in the checkpoint
+commit's trailers, the Step 3 sync commit and `status.md`:
+- the checkpoint SHA and tree;
+- the preview and apply records;
+- the tracker change (`active` → `complete`, with the archive link
+  preserved);
+- the final `docs check`.
+
 ## Milestone completion summary
 
-**Step 2 complete (2026-10-29): `docs-cli==2.1.0` is published, tagged,
-released, and on this host; *Step 2 review-pass-001* is closed.** Step 3
-(`/simplify` and the explicit-scope archive) remains.
+**Milestone complete (2026-10-29): `docs-cli==2.1.0` is published, tagged,
+released, and on this host; *Step 2 review-pass-001* is closed; Step 3 ran
+`/simplify` and the explicit-scope archive closeout.**
 - **Phase 5** calibrated G2 against the calendar (OQ-S2-1) with its D9
   re-run, re-dated the CHANGELOG to the upload day (D7), passed P1.5's
   pre-upload block and built (c) with the wheel equal to (a); the tag target
@@ -2485,8 +2667,21 @@ released, and on this host; *Step 2 review-pass-001* is closed.** Step 3
 - **Phase 10** corrected the runbook and added its *From M31* lessons,
   closed hand-off items 1–3 with a self-contained pin-bump block left open,
   and recorded the state-once trial's verdict.
+- **Step 3** simplified the readiness script three ways, behaviour-preserving
+  (blob `c94549f0…`; 20 of 20 differential runs identical, readiness 25/25
+  at HEAD, at the tag target and with the served wheel's `--help`). It left
+  the probe unchanged, dispositioned the carried taste findings, and closed
+  out with the explicit-scope archive of exactly this trio (*Step 3 —
+  Simplify and closeout*). The gate is GREEN: 1671 passed, ruff, the
+  formatter and mypy clean, `docs check .` exit 0, the INDEX snapshot and
+  mirrors identical.
 
 **Deviations:** the G2 calibration (a check defect found by planning); the
 midnight wait and one-line re-date; pipx touching its shared-libs pip
 marker during the authorized upgrade. No stop row fired, and D2 held at
 every action.
+
+**Open elsewhere:** the suite pin-bump PR (the `feedback-log.md` hand-off,
+D12) and the operator's merge (D13): *merge promptly, with a merge commit,
+not squash or rebase — the PyPI page links `main`'s CHANGELOG; `v2.1.0` is
+at `33c936f447dfb31078dc0c07c9e4fd2297ed747d`*.
