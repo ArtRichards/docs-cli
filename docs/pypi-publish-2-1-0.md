@@ -40,9 +40,9 @@ Related:
 - Implementation log:
   [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md)
 - Progress: **Step 2 is complete (2026-10-29): `docs-cli==2.1.0` is on
-  PyPI, tagged `v2.1.0` and released, and this host runs it.** Step 3
-  remains. The log's *Milestone completion summary* carries the record, and
-  its *Step 2 review-pass-001* awaits both reviewers.
+  PyPI, tagged `v2.1.0` and released, and this host runs it.** Step 3 is
+  next. The log's *Milestone completion summary* carries the record, and its
+  *Step 2 review-pass-001* is closed with `final-sync` `ready`.
   - Step 1 (Phases 1–4) is complete (2026-10-28), its review pass closed with
     `final-sync` `ready`; Step 0 likewise.
 

@@ -49,7 +49,7 @@ Related:
 ## Current milestone
 
 **M31 Step 2 complete (2026-10-29): docs-cli 2.1.0 is live on PyPI, tagged
-and released, and this host runs it.**
+and released, and this host runs it; Step 2's review pass is closed.**
 [`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) uploaded the release once,
 under the operator's automatic-release authorization, after Step 2's
 planning fixed a release check that would have failed on any day after the
@@ -60,7 +60,10 @@ The host's pipx binary and its `docs` skill at `~/.claude/skills/docs` now
 come from the published release, and a 2.0.0 install was seen announcing it.
 The release runbook carries this publish's corrections and lessons. The
 suite's pin-bump hand-off stays open in [`feedback-log.md`](feedback-log.md),
-with a read-only sweep of the prescriptions it must replace. Two things
+with a read-only sweep of the prescriptions it must replace. Both Step 2
+reviews returned; none found a defect in what shipped, and their document
+findings — among them an unisolated vendoring command in the hand-off and
+wrapped prescriptions the first sweep missed — are fixed. Two things
 remain: Step 3's simplify pass and archive, and the operator's merge of the
 stack into `main`, as the task plan's D13 describes. The
 [implementation log](pypi-publish-2-1-0-impl.md) carries the record.

@@ -29,9 +29,11 @@ the test matrix stay synchronized with it. The phases are the
 - Progress: **Step 2 is complete (2026-10-29) on
   `pypi-publish-2-1-0/phases-5-10`: `docs-cli==2.1.0` is on PyPI, tagged
   `v2.1.0` at `33c936f`, released, and installed on this host.** Phases 5–10
-  are done; *Milestone completion summary* has the record, and *Step 2
-  review-pass-001* awaits both reviewers. The review runs after the
-  irreversible actions, so D2's post-upload triage applies to it.
+  are done; *Milestone completion summary* has the record. *Step 2
+  review-pass-001* is closed with `final-sync` `ready`: both providers
+  returned, no finding hit the shipped bytes, and every document finding is
+  fixed in `ff2e7c5` or waived with a reason. Step 3 (`/simplify` and the
+  explicit-scope archive) is next.
   - Step 1 is complete (2026-10-28) on `pypi-publish-2-1-0/phases-1-4`:
     Phases 1–4 are done, the TestPyPI rehearsal is GO, and Step 1
     review-pass-001 is closed with `final-sync` `ready` (`d5a23ef`).
@@ -2182,11 +2184,15 @@ a decision, a check's behaviour or anything shipped.
   `docs/pypi-publish-2-1-0-impl.md#step-2-review-pass-001`).
 - Predecessor: `Step 1 review-pass-001` — closed, `final-sync` `ready`,
   synced in `d5a23ef`. That entry and its frozen packet are unchanged.
-- Status: **dispositioned** (2026-10-29). Both provider slots are terminal
-  and returned; every finding is **fixed** in the review-resolution
-  checkpoint that records this table (the return report gives its sha), or
-  waived by the conductor with a reason; re-review is **not required**.
-  The pass awaits the conductor's spot-check; `final-sync` stays `pending`.
+- Status: **`closed`** (2026-10-29).
+  - Both provider slots are terminal, and both returned.
+  - Every finding is dispositioned **fixed** in the correcting checkpoint
+    `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde` (`pypi-publish-2-1-0(phase 5-10): resolve Step 2
+    review-pass-001 findings`); the taste findings are fixed or waived by
+    the conductor with a reason.
+  - Re-review is recorded **not required**, with the conductor's reason and
+    spot-check evidence.
+  - `final-sync` is `ready`.
 - **This review runs after the irreversible actions.** `docs-cli==2.1.0` is
   on PyPI, `v2.1.0` is pushed and the GitHub release is published, so D2's
   post-upload triage applies: a finding against the shipped bytes — the
@@ -2273,12 +2279,13 @@ a decision, a check's behaviour or anything shipped.
 
 Line references are to `ba37ee2`. Every finding is document-class, so D2's
 "fixed normally" applies; none touches the wheel, the sdist, the tag or the
-release. Every disposition is **fixed** in the review-resolution checkpoint.
+release. Every disposition is **fixed** in the correcting checkpoint
+**`ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde`**.
 
 | # | Source ids | Severity | Finding | Fix and evidence |
 |---|---|---|---|---|
-| 1 | gpt-B1 | blocker (host-state safety) | The hand-off's vendoring command `docs install-skill --dest plugins/agent-playbook-suite/skills/docs --force` (feedback-log :147) had no XDG isolation; every successful `install-skill` records its destination, so following it would overwrite this host's recorded `~/.claude/skills/docs` | The hand-off now runs it under `env XDG_STATE_HOME="$T/state" XDG_CACHE_HOME="$T/cache" DOCS_CLI_NO_UPDATE_CHECK=1`, hashing the real record (`${XDG_STATE_HOME:-$HOME/.local/state}/docs-cli/install-skill.json`) before and after and requiring `cmp` to print nothing. The runbook's *Isolation and hygiene* gains the same rule for any `install-skill` other than the host step. **Proof:** the snippet, extracted verbatim from the edited log with `--dest` pointed at scratch and the host's 2.1.0 binary, exited 0 with the host record unchanged (`{"dest": "/home/user/.claude/skills/docs"}`; host check unchanged); **control:** the bare command under a scratch `HOME` recorded `{"dest": "<scratch>/bare"}` — the hazard is real |
-| 2 | claude-S2-B1 | blocker | The line-based sweep missed about nine wrapped hand-edit prescriptions and misclassified `project-foundation/SKILL.md` | A read-only **paragraph-joined** re-census (`git archive` exports of `554ebf2` and `a997954`, and the installed cache; the suite untouched, clean at `a997954`; nothing in the cache newer than the session) with the extra stems `promot`, `flip`, `touched in place`, `editing the`: 23 matches at 0.8.3 (the cache's skills equal `main`'s byte for byte, and their hits are identical) and 32 at `a997954`. Classified: **17 prescriptions at 0.8.3**; the rest archive-lifecycle text or prohibitions. **All nine reviewer sites confirmed**, no others found: `project-foundation/SKILL.md:78–80`, `role-mapping.md:5–6`, `foundation-playbook.md:647–648` and `:845–846`, `milestone-tracker.md:206–207` and `:271–272`, `manage-milestone-tracker/SKILL.md:110–111` and `:122–123`, `use-cases-playbook.md:105–106`. The multi-word C/D phrases do not wrap anywhere (joined counts equal line counts). **Seeded negative control:** three prescriptions wrapped across lines in a scratch copy — the paragraph scan found 3/3, the original line patterns 0/3; on the real sites the line patterns found 8 of 17. The hand-off now carries a per-file checklist with both targets' lines (gpt-T1); 9.4 carries a dated correction; runbook step 4 now says to scan paragraph-joined text and seed a wrapped control, because an oracle of known sites measures recall only on those sites |
+| 1 | gpt-B1 | blocker (host-state safety) — **fixed** in `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde` | The hand-off's vendoring command `docs install-skill --dest plugins/agent-playbook-suite/skills/docs --force` (feedback-log :147) had no XDG isolation; every successful `install-skill` records its destination, so following it would overwrite this host's recorded `~/.claude/skills/docs` | The hand-off now runs it under `env XDG_STATE_HOME="$T/state" XDG_CACHE_HOME="$T/cache" DOCS_CLI_NO_UPDATE_CHECK=1`, hashing the real record (`${XDG_STATE_HOME:-$HOME/.local/state}/docs-cli/install-skill.json`) before and after and requiring `cmp` to print nothing. The runbook's *Isolation and hygiene* gains the same rule for any `install-skill` other than the host step. **Proof:** the snippet, extracted verbatim from the edited log with `--dest` pointed at scratch and the host's 2.1.0 binary, exited 0 with the host record unchanged (`{"dest": "/home/user/.claude/skills/docs"}`; host check unchanged); **control:** the bare command under a scratch `HOME` recorded `{"dest": "<scratch>/bare"}` — the hazard is real |
+| 2 | claude-S2-B1 | blocker — **fixed** in `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde` | The line-based sweep missed about nine wrapped hand-edit prescriptions and misclassified `project-foundation/SKILL.md` | A read-only **paragraph-joined** re-census (`git archive` exports of `554ebf2` and `a997954`, and the installed cache; the suite untouched, clean at `a997954`; nothing in the cache newer than the session) with the extra stems `promot`, `flip`, `touched in place`, `editing the`: 23 matches at 0.8.3 (the cache's skills equal `main`'s byte for byte, and their hits are identical) and 32 at `a997954`. Classified: **17 prescriptions at 0.8.3**; the rest archive-lifecycle text or prohibitions. **All nine reviewer sites confirmed**, no others found: `project-foundation/SKILL.md:78–80`, `role-mapping.md:5–6`, `foundation-playbook.md:647–648` and `:845–846`, `milestone-tracker.md:206–207` and `:271–272`, `manage-milestone-tracker/SKILL.md:110–111` and `:122–123`, `use-cases-playbook.md:105–106`. The multi-word C/D phrases do not wrap anywhere (joined counts equal line counts). **Seeded negative control:** three prescriptions wrapped across lines in a scratch copy — the paragraph scan found 3/3, the original line patterns 0/3; on the real sites the line patterns found 8 of 17. The hand-off now carries a per-file checklist with both targets' lines (gpt-T1); 9.4 carries a dated correction; runbook step 4 now says to scan paragraph-joined text and seed a wrapped control, because an oracle of known sites measures recall only on those sites |
 | 3 | gpt-S1, claude-S2-S1 | should-fix | The runbook's condensed upload rule (:547–553) omitted success, case (4) and the re-send's success condition, and left "4xx" ambiguous against a lagging JSON 404 | Rewritten: "Unless twine exits 0 and the per-version JSON lists both files after polling", then the four cases in order — a hard refusal is an upload-origin 4xx reported by twine, never a JSON 404; the one by-name re-send succeeds only if it exits 0 and the JSON then lists both; any other error stops; twine 0 with fewer than both listed stops |
 | 4 | gpt-S2 | should-fix | The runbook's pre-upload gate (:519) dropped P1.5's `origin/main` freshness comparison before readiness | Carried into the gate, with the exact `[ … ] \|\| git fetch origin main` command and "record whether a fetch ran", before readiness |
 | 5 | gpt-S3 | should-fix | `--drop-sentence ""` failed a valid section (`release_readiness.py:221`: `"" in body` is always true) and stripped every space from both bodies | Empty now means "drop nothing": both the containment check and the replacement are guarded, and `--help` says so; P1.1 records it with a dated note. New blob **`9cf861cb6feb6c21fd96c9af2eab5918cf077174`** (+10/−4; ruff, format, mypy clean). **Controls** (scratch clones, old blob → new): an unchanged section with base `HEAD` and `--drop-sentence ""` — FAIL R3 → 25 passed; one word changed — FAIL R4 under the new blob; one space added — the old blob's R4 masked it, the new fails R4; the real sentence restored against `bf09748` — FAIL R3 under both. **Re-runs:** readiness 25/25 at HEAD, 25/25 at the tag target `33c936f` (`--release-date 2026-10-29`, in a worktree, removed after), and 25/25 at HEAD with the PyPI-served wheel's `--help`. Not a release input; nothing is re-published |
@@ -2332,6 +2339,22 @@ control and the listed sites; gpt-S3 by its controls. Nothing touches the
 shipped artifacts, the tag or an operator decision. The conductor
 spot-checks the census and the hand-off block before finalization.
 
+Confirmed at finalization: **no re-review was run.** The conductor's
+spot-check of `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde` (2026-10-29):
+- the tree is clean;
+- three installed-cache sites read verbatim as the hand-off states —
+  `project-foundation/references/role-mapping.md:5–6` ("Lifecycle
+  transitions happen by editing the `Lifecycle:` value"),
+  `manage-milestone-tracker/SKILL.md:110–111` ("promote only that field to
+  `Lifecycle: active`") and `project-foundation/SKILL.md:78–80` ("only two
+  metadata fields are touched in place: `Lifecycle:` … and free-form
+  `Related:` entries");
+- the hand-off's vendoring snippet (`feedback-log.md:149–151`) runs under a
+  scratch `XDG_STATE_HOME` and `XDG_CACHE_HOME` with
+  `DOCS_CLI_NO_UPDATE_CHECK=1` and checks the real record;
+- the host's `docs 2.1.0` and its recorded destination `{"dest":
+  "/home/user/.claude/skills/docs"}` are intact.
+
 ### Verification at the review-resolution checkpoint
 
 - ruff clean; 52 files formatted; mypy no issues in 53 files.
@@ -2344,13 +2367,104 @@ spot-checks the census and the hand-off block before finalization.
 - The host check unchanged across every block (update cache `39739c29…`;
   recorded destination `~/.claude/skills/docs`).
 
-- final-sync: `pending`.
+### Closure check
+
+- **The predecessor chain is unbroken.** The predecessor is `Step 1
+  review-pass-001` (closed, `ready` in `d5a23ef`); it and `Step 0
+  review-pass-001`, with their frozen packets, are byte-identical to their
+  `d5a23ef` text. No other sequence entry exists; no `contract-rework` entry
+  applies to Step 2.
+- **One frozen packet.** Base `d5a23ef411fe010f3f7a6318e03b4fa26900799f`,
+  review HEAD `ba37ee22e3210e0c472f73d0ab5c94d5cd0959f5`.
+- **Both provider slots are terminal.** Both returned, from different
+  families, with their effective identities recorded above.
+- **Every reviewer-labeled blocker is dispositioned with evidence.** gpt-B1
+  and claude-S2-B1 are fixed in `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde`, each with its proof and control.
+- **Every accepted should-fix and nit is fixed** in `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde`.
+- **Every taste finding is fixed or waived with a reason.** gpt-T1 and
+  claude-S2-T1 are fixed; claude-S2-T2 and claude-S2-T3 are waived by the
+  conductor with reasons; the footprint is re-triaged (anchors under-set).
+- **Re-review** is recorded `not required`, with the reason and the
+  conductor's spot-check.
+- **The tracker row is unchanged and still `active`:**
+  `200 | [pypi-publish-2-1-0](pypi-publish-2-1-0.md) | active |
+  lifecycle-and-free-form-relate | M31 — …`; `milestone-plan.md` has no diff
+  since `8515f1c`.
+- **No finding hit the shipped bytes**, so no yank-or-patch decision arose
+  (D2).
+
+### Verification report (sync-and-commit, ship-milestone Step 2)
+
+- Risk level: Standard (accepted at setup).
+- Fast gate commands run: `ruff check .`; `ruff format --check .`; `mypy
+  src/ tests/`; `pytest -q` and `--collect-only`; from the docs root, `docs
+  index .`, `docs check .` and `docs check . --stale 14`; `cmp` of `INDEX.md`
+  with its snapshot and of both bundled references with `docs/`; readiness
+  (`--release-date 2026-10-29`); the frozen non-disclosing token search and
+  the D1 scope check on the staged diff. Code is unchanged since `ff2e7c52d17982a0cdd2e5cb2961f52f2bf0bcde`, so
+  its ruff, mypy and pytest results are reused; the docs checks, mirrors,
+  readiness, token search and scope check are re-run for this commit.
+- Deep gate commands run: Phase 5's D9 script re-run and build (c);
+  Phase 6's upload and JSON poll; Phase 7's served-byte custody, single-index
+  install, served-wheel probe and guard step; Phase 8's tag-target worktree
+  gate and full guard; Phase 9's host checks and sweep; the review's
+  paragraph-joined re-census, its seeded control, the vendoring-isolation
+  proof and the readiness controls.
+- Deferred or not configured: coverage, the hidden suite and mutation
+  tooling are not configured.
+- Visible test result: 1671 passed, 1671 collected.
+- Expected visible-test state: GREEN (Phase 8 onward).
+- Hidden/generalization result: one result set across the three wheel
+  installs (W1 skipped on the rehearsal only); the 2.0.0 install announced
+  2.1.0.
+- Coverage: not configured.
+- Mutation: 21/21 hand-applied negative mutants and controls detected, with
+  the two passing calibration controls reported apart (the matrix).
+- Property/stateful: N2 and W3 pass on the served wheel; one wheel sha
+  across (a), (b), (c) and served; the sdist bit-perfect against PyPI.
+- Fuzz: not applicable.
+- Benchmark/security/schema/migration: schema and security pass — `twine
+  check`, the dependency oracle, served = local = JSON digests, one upload
+  with no file re-sent, no credential printed or committed; benchmark and
+  migration not applicable.
+- Mock audit: no mocks.
+- Taste triage: complete — gpt-T1 and claude-S2-T1 fixed; claude-S2-T2 and
+  T3 waived with reasons; none untriaged.
+- Ship-milestone Step 2 review ledger: this pass is closed, and
+  `final-sync` is `ready`.
+- Semantic tracker row and branch identity: row
+  `200 | pypi-publish-2-1-0 | active | lifecycle-and-free-form-relate`;
+  project `docs`, project path empty, artifact stem `pypi-publish-2-1-0`;
+  branch `pypi-publish-2-1-0/phases-5-10` under root `pypi-publish-2-1-0/`;
+  both recognized pairs with the archived M30 document present;
+  `status.md` links the tracker without copying rows or naming next work.
+- Contract/test matrix status: current — C1–C19 with Step 2's results and
+  adequacy.
+- Docs check: `docs check .` exit 0; `--stale 14` exit 1 with only the
+  pre-existing `stale` warnings on four evergreen documents, reviewed.
+- Diff scope: `d5a23ef..HEAD` touches only D1's allowed paths —
+  `CHANGELOG.md` (one line), the two `tests/manual/` scripts, `docs/` and
+  the INDEX snapshot; `src/`, `pyproject.toml`, `README.md`, `LICENSE` and
+  `.gitignore` are unchanged since `X`.
+- Operator approvals: D2, D10 and D13 (setup); the OQ-S2 resolutions and
+  this pass's taste decisions are the conductor's, under Standard authority.
+- High-risk RED-baseline approval: not applicable (Standard).
+- Remaining risks: none for the shipped release. Open elsewhere: the suite
+  pin-bump PR (the feedback-log hand-off), the operator's merge (D13), and
+  the `CLAUDE.md` promotion recommendation (the feedback log).
+- Commit: the sync commit that records this report; the return report gives
+  its sha.
+- Push: `git push -u origin pypi-publish-2-1-0/phases-5-10` (this branch's
+  first push; never `main`, no tags — `v2.1.0` is already on origin); the
+  return report gives the result.
+
+- final-sync: `ready`.
 
 ## Milestone completion summary
 
 **Step 2 complete (2026-10-29): `docs-cli==2.1.0` is published, tagged,
-released, and on this host.** Step 3 (`/simplify` and the explicit-scope
-archive) remains.
+released, and on this host; *Step 2 review-pass-001* is closed.** Step 3
+(`/simplify` and the explicit-scope archive) remains.
 - **Phase 5** calibrated G2 against the calendar (OQ-S2-1) with its D9
   re-run, re-dated the CHANGELOG to the upload day (D7), passed P1.5's
   pre-upload block and built (c) with the wheel equal to (a); the tag target
