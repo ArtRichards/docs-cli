@@ -1,13 +1,14 @@
 # M31 — Publish docs-cli 2.1.0 to PyPI — Test Matrix
 
-Lifecycle: active
+Lifecycle: archived
 Role: spec
 Project: docs
 Updated: 2026-10-29
+Archived: 2026-10-29
 
 Related:
-- pairs-with: pypi-publish-2-1-0.md
-- pairs-with: pypi-publish-2-1-0-impl.md
+- pairs-with: archive/2026-10-29/pypi-publish-2-1-0.md
+- pairs-with: archive/2026-10-29/pypi-publish-2-1-0-impl.md
 
 ## Risk level
 

@@ -17,8 +17,8 @@ Related:
 - pairs-with: test-strategy.md
 - pairs-with: status.md
 - references: feedback-log.md
-- precedes: pypi-publish-2-1-0.md
-- required-by: pypi-publish-2-1-0.md
+- precedes: archive/2026-10-29/pypi-publish-2-1-0.md
+- required-by: archive/2026-10-29/pypi-publish-2-1-0.md
 
 Revision:
 - 2026-10-28: relate add 'precedes: pypi-publish-2-1-0.md'; reason: Synchronize pypi-publish-2-1-0 with milestone tracker

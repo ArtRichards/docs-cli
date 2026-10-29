@@ -72,7 +72,7 @@ frozen irreversible commands before they run; Step 2 uploads, verifies
 the served bytes, tags, releases and refreshes the host. The milestone's
 task plan freezes the exact command lines; this runbook keeps the
 procedure and the standing checks. The [M31 task
-plan](pypi-publish-2-1-0.md)'s *Decisions (Phase 1 — BINDING)* (P1.1–P1.6)
+plan](archive/2026-10-29/pypi-publish-2-1-0.md)'s *Decisions (Phase 1 — BINDING)* (P1.1–P1.6)
 and *Error cases* are the worked reference for every command named below.
 
 ## Operator one-time prep (do BEFORE the first publish)

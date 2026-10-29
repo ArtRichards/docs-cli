@@ -1,13 +1,14 @@
 # M31 — Publish docs-cli 2.1.0 to PyPI — Implementation Log
 
-Lifecycle: active
+Lifecycle: archived
 Role: log
 Project: docs
 Updated: 2026-10-29
+Archived: 2026-10-29
 
 Related:
-- pairs-with: pypi-publish-2-1-0.md
-- pairs-with: pypi-publish-2-1-0-test-matrix.md
+- pairs-with: archive/2026-10-29/pypi-publish-2-1-0.md
+- pairs-with: archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md
 
 ## Overview
 
@@ -15,7 +16,7 @@ This is the chronological implementation log for M31 — Publish docs-cli 2.1.0
 to PyPI (semantic slug `pypi-publish-2-1-0`). Each TDD phase gets one
 evidence-backed section, and the progress table, the milestone checklist and
 the test matrix stay synchronized with it. The phases are the
-[release-runbook.md](release-runbook.md) mapped onto ship-milestone's steps
+[release-runbook.md](../../release-runbook.md) mapped onto ship-milestone's steps
 (task plan D3). No phase changes product code (D1).
 
 ## Implementation metadata
@@ -24,7 +25,7 @@ the test matrix stay synchronized with it. The phases are the
 - Milestone: `pypi-publish-2-1-0` — M31, Publish docs-cli 2.1.0 to PyPI
 - Tracker: order 200, `active` since the claim commit `be7f809`. It depends on
   `lifecycle-and-free-form-relate` (order 100, `complete`, archived
-  2026-10-28). See [milestone-plan.md](milestone-plan.md).
+  2026-10-28). See [milestone-plan.md](../../milestone-plan.md).
 - Started: 2026-10-28 (milestone setup); Phase 1 started 2026-10-28.
 - Progress: **Milestone complete (2026-10-29): `docs-cli==2.1.0` is on PyPI,
   tagged `v2.1.0` at `33c936f`, released, and installed on this host; Step 3
@@ -49,7 +50,7 @@ the test matrix stay synchronized with it. The phases are the
     re-verified E1–E4 and froze *Decisions (Phase 1 — BINDING)* in the task
     plan.
 - Source: the canonical tracker row (`193fc71`), and M30's hand-off in
-  [feedback-log.md](feedback-log.md) (2026-10-26 entry, *Hand-off*).
+  [feedback-log.md](../../feedback-log.md) (2026-10-26 entry, *Hand-off*).
 - Branch: `pypi-publish-2-1-0/milestone-setup` for setup. Implementation
   follows the ship-milestone stack: `pypi-publish-2-1-0/phases-1-4`,
   `…/phases-5-10` and `…/simplify`.
@@ -124,20 +125,20 @@ written.
   - ship-milestone and its prompts;
   - the shared quality model, the tracker contract and the
     operator-interaction policy;
-  - [milestone-plan.md](milestone-plan.md): its tracker row and *Ongoing
+  - [milestone-plan.md](../../milestone-plan.md): its tracker row and *Ongoing
     conventions*;
-  - [release-runbook.md](release-runbook.md) in full, *Cumulative lessons*
+  - [release-runbook.md](../../release-runbook.md) in full, *Cumulative lessons*
     included;
-  - [feedback-log.md](feedback-log.md): every open entry, and especially the
+  - [feedback-log.md](../../feedback-log.md): every open entry, and especially the
     2026-10-26 hand-off;
   - `CHANGELOG.md`, `README.md` and `pyproject.toml`;
-  - [charter.md](charter.md) and
-    [definition-of-ready.md](definition-of-ready.md);
-  - [status.md](status.md).
+  - [charter.md](../../charter.md) and
+    [definition-of-ready.md](../../definition-of-ready.md);
+  - [status.md](../../status.md).
 - **Read the precedents:**
-  - M29's [task plan](archive/2026-08-16/m29-pypi-publish-2-0-0.md) and
-    [log](archive/2026-10-26/m29-pypi-publish-2-0-0-impl.md);
-  - M30's trio, both [as finally archived](archive/2026-10-28/lifecycle-and-free-form-relate.md)
+  - M29's [task plan](../2026-08-16/m29-pypi-publish-2-0-0.md) and
+    [log](../2026-10-26/m29-pypi-publish-2-0-0-impl.md);
+  - M30's trio, both [as finally archived](../2026-10-28/lifecycle-and-free-form-relate.md)
     and at its setup commits `f8ec7f0` and `e48adb9`.
 - **Ran read-only probes** of:
   - the PyPI and TestPyPI JSON APIs;
@@ -1979,7 +1980,7 @@ phase.
 
 ### 10.1 The runbook
 
-[release-runbook.md](release-runbook.md)'s body is corrected in place by
+[release-runbook.md](../../release-runbook.md)'s body is corrected in place by
 P1.6's list and the Phase 10 objective, and *From M31* is appended; no past
 lesson is rewritten.
 - **New:** a ship-milestone note in the introduction, pointing at this
@@ -2024,7 +2025,7 @@ lesson is rewritten.
 
 ### 10.2 The hand-off and the trial
 
-[feedback-log.md](feedback-log.md)'s 2026-10-26 entry closes hand-off items
+[feedback-log.md](../../feedback-log.md)'s 2026-10-26 entry closes hand-off items
 1–3 with evidence and gains a self-contained *For the suite pin-bump PR
 (open)* block — the pin, the re-vendor, the sweep's sites, the deletion, the
 Step 0 approval, the branch choice and the CI expectations — and stays open

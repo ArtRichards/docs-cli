@@ -1,15 +1,17 @@
 # M31 — Publish docs-cli 2.1.0 to PyPI
 
-Lifecycle: active
+Lifecycle: archived
 Role: milestone
 Project: docs
 Updated: 2026-10-29
+Archived: 2026-10-29
+Archived-reason: Milestone M31 complete; docs-cli==2.1.0 shipped to PyPI 2026-10-29
 
 Related:
 - child-of: milestone-plan.md
 - implements: charter.md
-- pairs-with: pypi-publish-2-1-0-impl.md
-- pairs-with: pypi-publish-2-1-0-test-matrix.md
+- pairs-with: archive/2026-10-29/pypi-publish-2-1-0-impl.md
+- pairs-with: archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md
 - pairs-with: release-runbook.md
 - pairs-with: status.md
 - references: feedback-log.md
@@ -18,7 +20,7 @@ Related:
 
 > **Registered 2026-10-28** (`193fc71`) and claimed `active` the same day
 > (`be7f809`), straight after M30 merged to `main` (`bf09748`). The operative
-> checklist is [release-runbook.md](release-runbook.md). This document maps it
+> checklist is [release-runbook.md](../../release-runbook.md). This document maps it
 > onto ship-milestone's steps and records the decisions setup froze. The
 > per-phase record lives in
 > [pypi-publish-2-1-0-impl.md](pypi-publish-2-1-0-impl.md).
@@ -200,7 +202,7 @@ that rule. This milestone never pushes `main`.
 
 ### D3 — The runbook runs through ship-milestone (operator, 2026-10-28)
 
-M9–M29 walked [release-runbook.md](release-runbook.md) directly, with no TDD
+M9–M29 walked [release-runbook.md](../../release-runbook.md) directly, with no TDD
 phases. The operator chose to run this publish through ship-milestone. The
 accepted mapping is:
 - **Step 1, Phases 1–4:** everything before the irreversible upload, reviewed
@@ -408,13 +410,13 @@ The implementation log does **not** stay at the root, as M17's, M20's, M24's
 and M29's did; the 2026-10-26 migration archived those four logs.
 
 Anything that must outlive the archive lives in a live document:
-- the hand-off, in [feedback-log.md](feedback-log.md);
-- the narrative, in [status.md](status.md);
-- the procedure, in [release-runbook.md](release-runbook.md).
+- the hand-off, in [feedback-log.md](../../feedback-log.md);
+- the narrative, in [status.md](../../status.md);
+- the procedure, in [release-runbook.md](../../release-runbook.md).
 
 ### D12 — The suite hand-off stays open
 
-M30's hand-off is the 2026-10-26 entry in [feedback-log.md](feedback-log.md).
+M30's hand-off is the 2026-10-26 entry in [feedback-log.md](../../feedback-log.md).
 It splits in two:
 - **Items 1–3 close here, with evidence:** the publish, the served-wheel probe
   replay, and the host refresh.
@@ -643,11 +645,11 @@ These are the stop conditions. Each one voids D2 until the operator decides.
 ### Taste anchors
 
 **Reference material to read like:**
-- M29's [task plan](archive/2026-08-16/m29-pypi-publish-2-0-0.md) and
-  [log](archive/2026-10-26/m29-pypi-publish-2-0-0-impl.md): the phase
+- M29's [task plan](../2026-08-16/m29-pypi-publish-2-0-0.md) and
+  [log](../2026-10-26/m29-pypi-publish-2-0-0-impl.md): the phase
   narrative, sha tables and lessons voice.
 - The runbook's *Cumulative lessons*, appended to and never rewritten.
-- M30's [trio](archive/2026-10-28/lifecycle-and-free-form-relate.md): the
+- M30's [trio](../2026-10-28/lifecycle-and-free-form-relate.md): the
   ledgers and the matrix shape.
 - For the scripts: `tests/manual/m7_success_criteria.py`, and the exact probe
   code of the two suite-probe replica tests.

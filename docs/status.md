@@ -48,29 +48,43 @@ Related:
 
 ## Current milestone
 
-**M31 Step 2 complete (2026-10-29): docs-cli 2.1.0 is live on PyPI, tagged
-and released, and this host runs it; Step 2's review pass is closed.**
-[`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) uploaded the release once,
-under the operator's automatic-release authorization, after Step 2's
-planning fixed a release check that would have failed on any day after the
-tree was indexed. The bytes PyPI serves are exactly the build the tag points at;
-the release probe and the Agent Playbook Suite's guard step passed against
-the served wheel before `v2.1.0` was tagged and the GitHub release published.
-The host's pipx binary and its `docs` skill at `~/.claude/skills/docs` now
-come from the published release, and a 2.0.0 install was seen announcing it.
-The release runbook carries this publish's corrections and lessons. The
-suite's pin-bump hand-off stays open in [`feedback-log.md`](feedback-log.md),
-with a read-only sweep of the prescriptions it must replace. Both Step 2
-reviews returned; none found a defect in what shipped, and their document
-findings — among them an unisolated vendoring command in the hand-off and
-wrapped prescriptions the first sweep missed — are fixed. Two things
-remain: Step 3's simplify pass and archive, and the operator's merge of the
-stack into `main`, as the task plan's D13 describes. The
-[implementation log](pypi-publish-2-1-0-impl.md) carries the record.
+**M31 complete and archived (2026-10-29): docs-cli 2.1.0 is live on PyPI,
+tagged and released, and this host runs it.**
+[`pypi-publish-2-1-0`](archive/2026-10-29/pypi-publish-2-1-0.md) is
+complete: all ten phases, the Step 0–2 reviews, and Step 3's `/simplify`
+pass and closeout. The task plan, its
+[implementation log](archive/2026-10-29/pypi-publish-2-1-0-impl.md) and its
+[test matrix](archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md) moved
+together to `archive/2026-10-29/`. The archive used an explicit
+`--cascade-only` scope that selected exactly the two companions.
+- The release was uploaded once, under the operator's automatic-release
+  authorization, after Step 2's planning fixed a release check that would
+  have failed on any day after the tree was indexed.
+- The bytes PyPI serves are exactly the build the tag points at. The
+  release probe and the Agent Playbook Suite's guard step passed against the
+  served wheel before `v2.1.0` was tagged and the GitHub release published.
+- The host's pipx binary and its `docs` skill at `~/.claude/skills/docs`
+  come from the published release, and a 2.0.0 install was seen announcing
+  it.
+- The [release runbook](release-runbook.md) carries this publish's
+  corrections and lessons.
+
+Both Step 2 reviews returned; none found a defect in what shipped, and
+their document findings — among them an unisolated vendoring command in the
+hand-off and wrapped prescriptions the first sweep missed — are fixed. Step
+3's simplify pass made the readiness check state each of its rules once;
+every recorded control reads the same before and after, and the suite of
+1671 tests is GREEN. The suite's pin-bump hand-off stays open in
+[`feedback-log.md`](feedback-log.md), with a read-only sweep of the
+prescriptions it must replace. The operator's merge of the stack into
+`main` is pending: per the task plan's D13 it is a merge commit, not a
+squash or rebase, so the tagged commit `33c936f` reaches `main`, and it
+should follow promptly because the PyPI page links `main`'s CHANGELOG.
+Milestone state lives in the [Milestone Plan](milestone-plan.md).
 
 **M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI
 rehearsal is GO, and Step 1's review pass is closed.**
-[`pypi-publish-2-1-0`](pypi-publish-2-1-0.md) publishes M30 to PyPI as
+[`pypi-publish-2-1-0`](archive/2026-10-29/pypi-publish-2-1-0.md) publishes M30 to PyPI as
 docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the scratch
 layout and every command line through the tag, including Step 2's, so the
 Step 1 reviewers see the irreversible commands before they run. It
@@ -102,9 +116,9 @@ the operator's automatic-release authorization. The milestone has three
 documents:
 - a ten-phase task plan that maps
   [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
-- an [implementation log](pypi-publish-2-1-0-impl.md) carrying the setup
+- an [implementation log](archive/2026-10-29/pypi-publish-2-1-0-impl.md) carrying the setup
   readiness record;
-- a [test matrix](pypi-publish-2-1-0-test-matrix.md).
+- a [test matrix](archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md).
 
 Setup measured the release read-only. The 2.1.0 slots were free on PyPI
 and under the TestPyPI rehearsal name, the credentials were present, and
