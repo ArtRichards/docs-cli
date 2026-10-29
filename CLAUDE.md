@@ -21,6 +21,13 @@ Two different update channels — do not mix them up:
   new surface at that point. Binary and skill move together in the same
   step: a refreshed skill prescribing verbs the old binary lacks is the
   gap M29 left open and M31 closed (operator decision, 2026-10-29).
+- **Every other `install-skill` run is state-isolated.** `docs
+  install-skill` records its destination on every success, so any run
+  other than the host refresh above — re-vendoring into the Agent
+  Playbook Suite, a smoke test, a throwaway tree — sets scratch
+  `XDG_STATE_HOME` and `XDG_CACHE_HOME`, or it overwrites the host's
+  recorded destination (`~/.claude/skills/docs`). Procedure:
+  docs/release-runbook.md *Isolation and hygiene*.
 
 ## Milestone docs: state each binding fact once (operator policy, 2026-10-29)
 
