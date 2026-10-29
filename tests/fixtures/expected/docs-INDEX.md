@@ -5,13 +5,13 @@ This directory is the docs root for the `docs` CLI itself. We eat our own dog fo
 The hand-written preamble (this paragraph, and anything outside the marker block) is preserved by the tool. Only content between `<!-- docs:generated start -->` and `<!-- docs:generated end -->` is rewritten.
 
 <!-- docs:generated start -->
-_Generated 2026-10-28. 13 docs active, 64 archived._
+_Generated 2026-10-29. 13 docs active, 67 archived._
 
 ## Project — docs
 
 ### Active — Status
 
-- [status.md](status.md) — _status_ — **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in…. Updated 2026-10-28.
+- [status.md](status.md) — _status_ — **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in…. Updated 2026-10-29.
 
 ### Active — Charter
 
@@ -19,7 +19,7 @@ _Generated 2026-10-28. 13 docs active, 64 archived._
 
 ### Active — Plan
 
-- [milestone-plan.md](milestone-plan.md) — _plan_ — This table is the canonical tracker under the Agent Playbook Suite milestone contract: it alone owns milestone…. Updated 2026-10-28.
+- [milestone-plan.md](milestone-plan.md) — _plan_ — This table is the canonical tracker under the Agent Playbook Suite milestone contract: it alone owns milestone…. Updated 2026-10-29.
 
 ### Active — Spec
 
@@ -28,7 +28,7 @@ _Generated 2026-10-28. 13 docs active, 64 archived._
 
 ### Active — Log
 
-- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-28.
+- [feedback-log.md](feedback-log.md) — _log_ — This log records operator and downstream-consumer feedback that may become a future docs-cli milestone. Entries…. Updated 2026-10-29.
 
 ### Active — Decision
 
@@ -37,7 +37,7 @@ _Generated 2026-10-28. 13 docs active, 64 archived._
 
 ### Active — Runbook
 
-- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-08-16.
+- [release-runbook.md](release-runbook.md) — _runbook_ — The operator-driven checklist for shipping `docs-cli` to PyPI. This runbook drove **M9 — `docs-cli==1.3.0`** (shipped…. Updated 2026-10-29.
 
 ### Active — Reference
 
@@ -53,6 +53,9 @@ _Generated 2026-10-28. 13 docs active, 64 archived._
 
 ## Archived
 
+- [archive/2026-10-29/pypi-publish-2-1-0-impl.md](archive/2026-10-29/pypi-publish-2-1-0-impl.md) — _log_ — This is the chronological implementation log for M31 — Publish docs-cli 2.1.0 to PyPI (semantic slug…. Updated 2026-10-29.
+- [archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md](archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md) — _spec_ — Standard. Updated 2026-10-29.
+- [archive/2026-10-29/pypi-publish-2-1-0.md](archive/2026-10-29/pypi-publish-2-1-0.md) — _milestone_ — > **Registered 2026-10-28** (`193fc71`) and claimed `active` the same day > (`be7f809`), straight after M30 merged to…. Updated 2026-10-29.
 - [archive/2026-10-28/lifecycle-and-free-form-relate-impl.md](archive/2026-10-28/lifecycle-and-free-form-relate-impl.md) — _log_ — Chronological implementation log for M30 — Lifecycle verb and free-form `docs relate` (semantic slug…. Updated 2026-10-28.
 - [archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md](archive/2026-10-28/lifecycle-and-free-form-relate-test-matrix.md) — _spec_ — Standard. Updated 2026-10-28.
 - [archive/2026-10-28/lifecycle-and-free-form-relate.md](archive/2026-10-28/lifecycle-and-free-form-relate.md) — _milestone_ — - Milestone: M30 (first post-2.0 milestone; first under the canonical tracker) - Slug: `lifecycle-and-free-form-relate`…. Updated 2026-10-28.

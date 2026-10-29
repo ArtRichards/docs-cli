@@ -3,7 +3,7 @@
 Lifecycle: draft
 Role: log
 Project: docs
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 ## Purpose
 
@@ -47,6 +47,12 @@ as the discovery and decision audit source and records the owning milestones.
 - Observation: M30's task plan restates its binding decision D10 in six or more places — the Contract, the Deliverables, the success criteria, the upgrade note, the matrix and the decision itself. So the Step 1 review's wording correction (gpt-S3 / claude-S1) had to touch every copy. A milestone doc that states each binding decision once, and points to it everywhere else, would make that drift impossible.
 - Why a candidate, not a rule: it rests on one waived finding. The compounding rule promotes a convention into agent context only once it is proven and recurring, so this is offered as a taste anchor at the next milestone's setup rather than written into `CLAUDE.md`.
 - Ownership: the next milestone's setup (offer it as a taste anchor). Status: **open, unowned.**
+- Offered (2026-10-28) at the setup of `pypi-publish-2-1-0` (M31, [milestone doc](archive/2026-10-29/pypi-publish-2-1-0.md)) and adopted there as a taste-anchor trial. The first draft did not hold to it: D10's host instructions and D13's merge rule were restated across the phases, the success criteria and the test matrix. Its Step 0 review flagged that as a gating anchor violation (gpt-B4 / claude-B1), and the plan was then deduplicated. Each binding decision's operative wording (D1–D13) now lives only under its D-id; other sections reference the id and keep only phase-specific commands and verification duties; the setup-question packets stay as the audit trail. Early evidence: a single-statement rule needs a review gate to hold, because the writer drifted from it in the same session that adopted it. The entry stays **open**: a single milestone's use is a trial, not the recurrence the compounding rule needs before a `CLAUDE.md` rule. M31's Phase 10 records how the trial went.
+- Trial outcome (2026-10-29, M31 Phase 10), from M31's [implementation log](archive/2026-10-29/pypi-publish-2-1-0-impl.md):
+  - **Where it broke.** The setup draft restated D10 and D13 across phases, criteria and the matrix (Step 0, gpt-B4 / claude-B1). Setup restated a *measured count* — the README synopses that lag — at nine sites; Phase 1 swept them (E7 correction), and Step 1's review still found the same count drifted again (claude-T1). The phase objectives re-listed P1's command sequences and P1.6 restated the dependency policy (claude-T2, T3). Every break was caught by a review or a sweep, not prevented at writing time.
+  - **Where it paid.** Step 1's stop-rule change (DP-1) replaced one stop-table row and every other site followed by reference. Step 2's five conductor-resolved questions touched seven task-plan sites — five operative amendments, each dated in place, and two pointers — with nothing restated in the matrix or `status.md`, and their measured evidence only in the log. Its closing audit added two more dated pointers (in D9 and the Phase 5 objective) where older text had become inaccurate, not restatements. That is the first time the rule held at writing time.
+  - **Verdict: recurring and useful.** It now spans two milestones (M30's T4, M31). The failure mode is narrower than "decisions": restated *measurements* and *command sequences* drift, because they are the text a writer copies to make a section read on its own. A refined rule: **decisions live once in their D-ids, commands once in the P1 catalogue, measured values once in the implementation log**; everything else points.
+  - **Recommendation to the operator:** promote the refined rule into `CLAUDE.md` as a project convention. That edit is outside M31's D1, so it is not made here; this entry stays **open** pending the operator's decision. The same promotion candidate — recorded, not acted on — is the M29/M31 lesson "upgrade the host binary together with the host skill at every production ship", which `CLAUDE.md`'s *Skill update flow* names only for the skill.
 
 ### 2026-10-27 — `docs new --body-from` admits any leading bare-label group as metadata, not only `Related:`
 
@@ -131,6 +137,45 @@ as the discovery and decision audit source and records the owning milestones.
   - drop ship-milestone Step 0's up-front approval.
 
   After that, its CI guard *Validate verbless-metadata stopgap matches the pinned docs-cli* must read `lifecycle verb: True` and `free-form relate: True`. This entry stays **open** until that suite release ships.
+- Publish milestone registered and claimed (2026-10-28): `pypi-publish-2-1-0` (M31, [milestone doc](archive/2026-10-29/pypi-publish-2-1-0.md), order 200 in [`milestone-plan.md`](milestone-plan.md)) owns hand-off items 1–3 and records their evidence here at its closeout. The suite pin-bump PR items stay open, with the Agent Playbook Suite.
+- Hand-off items 1–3 **closed** (2026-10-29, M31 Phase 10; evidence in its [implementation log](archive/2026-10-29/pypi-publish-2-1-0-impl.md), Phases 6–9):
+  1. **Published.** `docs-cli==2.1.0` is on PyPI (<https://pypi.org/project/docs-cli/2.1.0/>), uploaded 2026-10-29 00:04 CET: wheel `2c5fa0b3e3c3db05e4f452bc900b31fa7a7acb5b3f330cd8d52a9bd80c19a185`, sdist `c120fc1db71db08306ec1e002dedb1adcd95dc08bd5a8c1f775cda772696404d`, each equal to the served bytes and PyPI's digests. The heading reads `## 2.1.0 — 2026-10-29`, without the publish-state sentence. Tag `v2.1.0` peels to `33c936f447dfb31078dc0c07c9e4fd2297ed747d`; the release is <https://github.com/ArtRichards/docs-cli/releases/tag/v2.1.0>, *Latest*.
+  2. **The suite's probes pass against the PyPI-served wheel**: S1 and S2 within the full release probe (25/25), both replicas within the 1671 at the tag-target commit, and the guard step extracted verbatim from `validate.yml@a997954` reads `lifecycle verb: True, free-form relate: True`. M30's assumption holds.
+  3. **The host follows the release**: `pipx upgrade` gave `docs 2.1.0` from PyPI; `docs install-skill --force --dest ~/.claude/skills/docs` with that binary installed a skill byte-identical to the served wheel's, now the recorded destination; the backup symlink is untouched. The workflow-skill sweep is below.
+- **For the suite pin-bump PR (open).** This block stands alone, because M31's trio is archived at its closeout. Paths are under `plugins/agent-playbook-suite/skills/` unless stated.
+  - **Pin:** `.github/workflows/validate.yml:17` `DOCS_CLI_VERSION: "2.0.0"` → `"2.1.0"` (the same line on `main` `554ebf2` and on `a997954`); line 621 installs `docs-cli==${DOCS_CLI_VERSION}`.
+  - **Re-vendor in the same change** (`marketplace-publishing-guide.md:55`) with the published 2.1.0 binary, **isolated from the host's recorded destination**: every successful `install-skill` records its `--dest` (`src/docs_cli/cli.py`, `_cmd_install_skill`), so the guide's bare command would overwrite this host's `~/.claude/skills/docs` record. Run it as:
+    ```sh
+    R="${XDG_STATE_HOME:-$HOME/.local/state}/docs-cli/install-skill.json"   # the host's real record
+    T=$(mktemp -d); sha256sum "$R" > "$T/before" 2>/dev/null || :             # empty if none is recorded
+    env XDG_STATE_HOME="$T/state" XDG_CACHE_HOME="$T/cache" DOCS_CLI_NO_UPDATE_CHECK=1 \
+        docs install-skill --dest plugins/agent-playbook-suite/skills/docs --force
+    { sha256sum "$R" 2>/dev/null || :; } | cmp - "$T/before"                  # must print nothing: the record is unchanged
+    ```
+    Then the seven files must equal the 2.1.0 wheel's `docs_cli/skill/` (wheel sha `2c5fa0b3…`). This also replaces the vendored 2.0.0 text that still says "six recognized verbs" and `unknown verb` (eight lines in `docs/references/`).
+  - **Replace hand-edit prescriptions** with `docs lifecycle <files> active` and `docs relate add <src> pairs-with|child-of <dst>`. One row per file; lines are 0.8.3 (= `main` `554ebf2` = the installed cache) and `a997954`:
+
+    | File | 0.8.3 / `main` | `a997954` | Required change |
+    |---|---|---|---|
+    | `create-milestones/SKILL.md` | 117–118 (rule 3: direct edits of `Lifecycle:` and free-form `Related:`) | 121–124 (rule 3 citing the stopgap) | prescribe the two verbs |
+    | `create-milestones/references/milestone-playbook.md` | 513 (§2d, `Related:` by careful Edit); 600 (§2f, edit `Lifecycle:`); 953 (flip plan and matrix) | 513; 601–602; 956 | `docs relate add`; `docs lifecycle` |
+    | `project-foundation/SKILL.md` | 78–80 (rule 1: `Lifecycle:` and free-form `Related:` "touched in place") | 82–84, 86 | prescribe the two verbs (line 81's recognized-verb sentence stays) |
+    | `project-foundation/references/foundation-playbook.md` | 180–181 (careful Edit to add edges); 647–648 (flip the DoR and front-half docs); 845–846 (wizard flips them) | 180–181; 647–648; 847–848 | `docs relate add`; `docs lifecycle` |
+    | `project-foundation/references/role-mapping.md` | 5–6 (transitions "by editing the `Lifecycle:` value") | 5–6 | `docs lifecycle` |
+    | `_shared/references/milestone-tracker.md` | 206–207 (promote the tracker); 211–212 (promote a new status doc); 271–272 (the migration's promotion) | 206–207; 214–215; 274–275 | `docs lifecycle` |
+    | `manage-milestone-tracker/SKILL.md` | 110–111 (promote the tracker); 114 (the status doc); 122–123 (the migration's promotion) | 114–115; 119; 127–128 | `docs lifecycle` |
+    | `use-cases/references/use-cases-playbook.md` | 105–106 (`Related: pairs-with` by careful Edit); 109 (flip `Lifecycle:`) | 105–106; 109 | `docs relate add`; `docs lifecycle` |
+    | `ship-milestone/SKILL.md` | — | 55–57; 210–216 (Step 0's up-front approval) | drop (stopgap branch only) |
+    | `_shared/references/verbless-metadata-edits.md` | absent | the whole file | delete |
+
+    *Corrected 2026-10-29 (M31 Step 2 review, claude-S2-B1):* the first, line-based census listed eight of these seventeen 0.8.3 sites and misread `project-foundation/SKILL.md`; the paragraph-joined re-scan below found all of them.
+  - **Delete** `_shared/references/verbless-metadata-edits.md` and its references in seven files: `_shared/references/milestone-tracker.md`, `create-milestones/SKILL.md`, `create-milestones/references/milestone-playbook.md`, `manage-milestone-tracker/SKILL.md`, `project-foundation/SKILL.md`, `project-foundation/references/foundation-playbook.md` and `ship-milestone/SKILL.md`.
+  - **Drop ship-milestone Step 0's up-front approval** (`ship-milestone/SKILL.md:210–216` at `a997954`), which exists only on the stopgap branch.
+  - **Branch choice, the suite owner's:** build on `stopgap/verbless-metadata-edits` (`a997954`, two commits ahead of `main`, unmerged), which carries the guard step, or on `main`, which has neither the stopgap nor the guard.
+  - **CI expectations.** Today, against 2.1.0, the guard step run in the `a997954` tree exits 1 with exactly ten lines, which are the PR's checklist: two `pinned docs-cli performs … retire that half of plugins/agent-playbook-suite/skills/_shared/references/verbless-metadata-edits.md and prescribe the verb instead` (one per verb), one `both verbs are available; delete …verbless-metadata-edits.md`, and one `<path>: still references the retired stopgap` for each of the seven files above. After the PR it prints `verbless-metadata stopgap consistent with docs-cli pin (lifecycle verb: True, free-form relate: True)` and exits 0. The retired-flag check is unaffected, since 2.1.0 retires no flag.
+  - **The host's installed plugin** (the 0.8.3 cache) updates only through the suite's release.
+  - **The census behind these sites** (M31 Phase 9, re-run after its Step 2 review): four frozen patterns plus the stems `promot`, `flip`, `touched in place` and `editing the`, matched over paragraph-joined text so a wrapped phrase counts. It found 23 paragraph matches at 0.8.3 (= `main` = the installed cache) and 32 at `a997954`: the seventeen prescriptions above, the rest archive-lifecycle text (`Lifecycle: archived`) or prohibitions ("Never hand-edit metadata"). A seeded control — three prescriptions wrapped across lines in a scratch copy — was found 3 of 3 by this scan and 0 of 3 by the original line-based patterns. Two statements about the recognized verbs stay true under 2.1.0 (`_shared/references/milestone-tracker.md:192`, `project-foundation/SKILL.md:81` at 0.8.3).
+- Status (2026-10-29): **open** (M31 — D12) until that suite release ships.
 
 ### 2026-08-15 — Issue #1: cascade parent-archiving, archived re-dating, and post-move validation gaps
 

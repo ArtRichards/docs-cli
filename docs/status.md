@@ -3,7 +3,7 @@
 Lifecycle: active
 Role: status
 Project: docs
-Updated: 2026-10-28
+Updated: 2026-10-29
 
 Related:
 - pairs-with: milestone-plan.md
@@ -47,6 +47,100 @@ Related:
 **This is the project's narrative summary. Milestone identity, order, state, dependencies and next work live only in the canonical tracker, [Milestone Plan](milestone-plan.md); this file links to it and never restates it.**
 
 ## Current milestone
+
+**M31 complete and archived (2026-10-29): docs-cli 2.1.0 is live on PyPI,
+tagged and released, and this host runs it.**
+[`pypi-publish-2-1-0`](archive/2026-10-29/pypi-publish-2-1-0.md) is
+complete: all ten phases, the Step 0–2 reviews, and Step 3's `/simplify`
+pass and closeout. The task plan, its
+[implementation log](archive/2026-10-29/pypi-publish-2-1-0-impl.md) and its
+[test matrix](archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md) moved
+together to `archive/2026-10-29/`. The archive used an explicit
+`--cascade-only` scope that selected exactly the two companions.
+- The release was uploaded once, under the operator's automatic-release
+  authorization, after Step 2's planning fixed a release check that would
+  have failed on any day after the tree was indexed.
+- The bytes PyPI serves are exactly the build the tag points at. The
+  release probe and the Agent Playbook Suite's guard step passed against the
+  served wheel before `v2.1.0` was tagged and the GitHub release published.
+- The host's pipx binary and its `docs` skill at `~/.claude/skills/docs`
+  come from the published release, and a 2.0.0 install was seen announcing
+  it.
+- The [release runbook](release-runbook.md) carries this publish's
+  corrections and lessons.
+
+Both Step 2 reviews returned; none found a defect in what shipped, and
+their document findings — among them an unisolated vendoring command in the
+hand-off and wrapped prescriptions the first sweep missed — are fixed. Step
+3's simplify pass made the readiness check state each of its rules once;
+every recorded control reads the same before and after, and the suite of
+1671 tests is GREEN. The suite's pin-bump hand-off stays open in
+[`feedback-log.md`](feedback-log.md), with a read-only sweep of the
+prescriptions it must replace. The operator's merge of the stack into
+`main` is pending: per the task plan's D13 it is a merge commit, not a
+squash or rebase, so the tagged commit `33c936f` reaches `main`, and it
+should follow promptly because the PyPI page links `main`'s CHANGELOG.
+Milestone state lives in the [Milestone Plan](milestone-plan.md).
+
+**M31 Step 1 complete (2026-10-28): Phases 1–4 are done, the TestPyPI
+rehearsal is GO, and Step 1's review pass is closed.**
+[`pypi-publish-2-1-0`](archive/2026-10-29/pypi-publish-2-1-0.md) publishes M30 to PyPI as
+docs-cli 2.1.0. Phase 1 froze the release checks' catalogues, the scratch
+layout and every command line through the tag, including Step 2's, so the
+Step 1 reviewers see the irreversible commands before they run. It
+re-verified the registries, the credentials' shape and the toolchain with
+no drift, and found a fourth README synopsis that lags the CLI. Phase 2
+wrote the two release checks under `tests/manual/`: readiness fails for
+exactly the expected reasons, and the probe passes on the development
+build while the host's 2.0.0 binary fails every 2.1-only check. Phase 3
+dated the CHANGELOG and fixed the four README synopses, and readiness now
+passes. Phase 4 built the 2.1.0 wheel and sdist, passed all 25 probe checks
+on the wheel, and rehearsed the upload on TestPyPI under
+`docs-cli-rehearsal`: the served bytes matched the local build, the
+installed payload matched the wheel, and a rebuild reproduced both shas.
+Both Step 1 reviews returned. GPT blocked on two defects in the frozen
+procedure: a token search that would print any token it caught, and
+conflicting stop rules for a partial upload. Both are fixed, with the
+reviewers' other findings, and the strengthened release checks were re-run
+against the wheel and the rehearsal. A targeted GPT re-review confirmed
+five fixes and found three remaining defects in the frozen procedure:
+- the new token search could fail open;
+- the upload stop rules still overlapped;
+- the credential-shape command could echo a malformed line.
+
+A second checkpoint fixes all three, each proven on synthetic inputs, and
+the conductor re-verified them before closing the pass. The RED-baseline
+checkpoint passed under Standard, so Step 2 — the PyPI upload, served
+verification, the tag and release, and the host refresh — may proceed under
+the operator's automatic-release authorization. The milestone has three
+documents:
+- a ten-phase task plan that maps
+  [release-runbook.md](release-runbook.md) onto ship-milestone's steps;
+- an [implementation log](archive/2026-10-29/pypi-publish-2-1-0-impl.md) carrying the setup
+  readiness record;
+- a [test matrix](archive/2026-10-29/pypi-publish-2-1-0-test-matrix.md).
+
+Setup measured the release read-only. The 2.1.0 slots were free on PyPI
+and under the TestPyPI rehearsal name, the credentials were present, and
+the suite was GREEN at 1671. Because M30 had already bumped the version,
+the release inputs needed little:
+- the CHANGELOG needed only its date and the removal of one sentence;
+- the README needed its lagging synopses fixed. Setup found three and
+  Phase 1 a fourth; Phase 3 fixed all four.
+
+The operator chose to upload automatically once Step 1's reviews close and
+the TestPyPI rehearsal passes. The Step 0 review found four blockers in the
+first draft — a wrong dependency oracle, an editable-versus-wheel probe
+contradiction, the tag and release ordered before served verification, and
+restated decisions — and all are fixed. The review pass is closed, so
+Step 0 is complete.
+
+The operator also answered both setup questions:
+- The `v2.1.0` tag and the GitHub release follow the upload in the same step.
+- After the publish, this host's binary is upgraded with pipx, and its `docs`
+  skill is refreshed at `~/.claude/skills/docs`.
+
+Milestone state lives in the [Milestone Plan](milestone-plan.md).
 
 **M30 complete and archived (2026-10-28).**
 [`lifecycle-and-free-form-relate`](archive/2026-10-28/lifecycle-and-free-form-relate.md)
